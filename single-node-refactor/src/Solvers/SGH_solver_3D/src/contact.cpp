@@ -1706,7 +1706,7 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
         } // end bucket_lid
     } // end patch_lid
 
-    // print check
+    /* // print check
     for (int i = 0; i < num_contact_nodes; i++) {
         for (int j = 0; j < 7; j++) {
             if (nodes_pen_surfs(i,j) != mesh.num_surfs) {
@@ -1715,7 +1715,7 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
         }
         std::cout << std::endl;
     }
-    std::cout << std::endl;
+    std::cout << std::endl; */
 
     // looping through nodes_pen_surfs and finding most appropriate penetrated surface to pair to
     for (int node_lid = 0; node_lid < num_contact_nodes; node_lid++) {
@@ -1796,10 +1796,57 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
                 P(0) = px + c*surf_normal(0);
                 P(1) = py + c*surf_normal(1);
                 P(2) = pz + c*surf_normal(2);
-                std::cout << "Node: " << nodes_pen_surfs(node_lid,0) << " with contact point: " << P(0) << "  " << P(1) << "  " << P(2) << std::endl;
+                //std::cout << "Node: " << nodes_pen_surfs(node_lid,0) << " with contact point: " << P(0) << "  " << P(1) << "  " << P(2) << std::endl;
+                // mapping P to isoparametric coordinates
+                CArrayKokkos <double> elem_pos(3,8);
+                for (int j = 0; j < 3; j++) {
+                    for (int k = 0; k < 8; k++) {
+                        elem_pos(j,k) = State.node.coords(mesh.nodes_in_elem(mesh.elems_in_patch(nodes_pen_surfs(node_lid,surf_lid),0),k),j);
+                    }
+                }
+                CArrayKokkos <double> iso_P(3);
+                isoparametric_inverse(P, elem_pos, iso_P);
+                //std::cout << "Node: " << nodes_pen_surfs(node_lid,0) << " with isoparametric contact point: " << iso_P(0) << "  " << iso_P(1) << "  " << iso_P(2) << std::endl;
+                // finding contact surface local id wrt the element
+                size_t surf_elem_id;
+                for (int j = 0; j < 6; j++) {
+                    if (nodes_pen_surfs(node_lid,surf_lid) == mesh.patches_in_elem(mesh.elems_in_patch(patches_gid(i), 0),j)) {
+                        surf_elem_id = j;
+                        break;
+                    }
+                }
+                // map (xi,eta,zeta) to patch local (xi,eta)
+                double xi;
+                double eta;
+                switch (surf_elem_id) {
+                    case 0:
+                        xi = iso_P(2);
+                        eta = iso_P(1);
+                        break;
+                    case 1:
+                        xi = iso_P(1);
+                        eta = iso_P(2);
+                        break;
+                    case 2:
+                        xi = iso_P(0);
+                        eta = iso_P(2);
+                        break;
+                    case 3:
+                        xi = -iso_P(0);
+                        eta = iso_P(2);
+                        break;
+                    case 4:
+                        xi = iso_P(1);
+                        eta = iso_P(0);
+                        break;
+                    case 5:
+                        xi = iso_P(0);
+                        eta = iso_P(1);
+                        break;
+                }
             }
         }
-        
+
     }
 
 } // end initial_penetration
@@ -1869,6 +1916,7 @@ bool contact_patches_t::penetration_check(const contact_node_t node, const CArra
 void contact_patches_t::isoparametric_inverse(const CArrayKokkos<double> pos, const CArrayKokkos<double> elem_pos, CArrayKokkos<double> &iso_pos)
 {
     // setting initial guess as center of the element
+    iso_pos.set_values(0);
     CArrayKokkos <double> iso_pos_iter(3);
     iso_pos_iter.set_values(0);
     CArrayKokkos <double> pos_iter(3);
@@ -1882,41 +1930,42 @@ void contact_patches_t::isoparametric_inverse(const CArrayKokkos<double> pos, co
     pos_iter(1) /= 8;
     pos_iter(2) /= 8;
 
-    // array to store shape function derivatives and jacobian
+    // array to store shape functions, their derivatives, jacobian, and inv(J)
+    CArrayKokkos <double> phi(8);
     CArrayKokkos <double> dphi(8,3);
     CArrayKokkos <double> J(3,3);
     CArrayKokkos <double> Jinv(3,3);
-
+    
     // iteration loop
     int max_iter = 50;
     for (int i = 0; i < max_iter; i++) {
         // dphi_dxi
-        dphi(0,0) = -0.125*(1-iso_pos(1))*(1-iso_pos(2));
-        dphi(1,0) = 0.125*(1-iso_pos(1))*(1-iso_pos(2));
-        dphi(2,0) = -0.125*(1+iso_pos(1))*(1-iso_pos(2));
-        dphi(3,0) = 0.125*(1+iso_pos(1))*(1-iso_pos(2));
-        dphi(4,0) = -0.125*(1-iso_pos(1))*(1+iso_pos(2));
-        dphi(5,0) = 0.125*(1-iso_pos(1))*(1+iso_pos(2));
-        dphi(6,0) = -0.125*(1+iso_pos(1))*(1+iso_pos(2));
-        dphi(7,0) = 0.125*(1+iso_pos(1))*(1+iso_pos(2));
+        dphi(0,0) = -0.125*(1-iso_pos_iter(1))*(1-iso_pos_iter(2));
+        dphi(1,0) = 0.125*(1-iso_pos_iter(1))*(1-iso_pos_iter(2));
+        dphi(2,0) = -0.125*(1+iso_pos_iter(1))*(1-iso_pos_iter(2));
+        dphi(3,0) = 0.125*(1+iso_pos_iter(1))*(1-iso_pos_iter(2));
+        dphi(4,0) = -0.125*(1-iso_pos_iter(1))*(1+iso_pos_iter(2));
+        dphi(5,0) = 0.125*(1-iso_pos_iter(1))*(1+iso_pos_iter(2));
+        dphi(6,0) = -0.125*(1+iso_pos_iter(1))*(1+iso_pos_iter(2));
+        dphi(7,0) = 0.125*(1+iso_pos_iter(1))*(1+iso_pos_iter(2));
         // dphi_deta
-        dphi(0,1) = -0.125*(1-iso_pos(0))*(1-iso_pos(2));
-        dphi(1,1) = -0.125*(1+iso_pos(0))*(1-iso_pos(2));
-        dphi(2,1) = 0.125*(1-iso_pos(0))*(1-iso_pos(2));
-        dphi(3,1) = 0.125*(1+iso_pos(0))*(1-iso_pos(2));
-        dphi(4,1) = -0.125*(1-iso_pos(0))*(1+iso_pos(2));
-        dphi(5,1) = -0.125*(1+iso_pos(0))*(1+iso_pos(2));
-        dphi(6,1) = 0.125*(1-iso_pos(0))*(1+iso_pos(2));
-        dphi(7,1) = 0.125*(1+iso_pos(0))*(1+iso_pos(2));
+        dphi(0,1) = -0.125*(1-iso_pos_iter(0))*(1-iso_pos_iter(2));
+        dphi(1,1) = -0.125*(1+iso_pos_iter(0))*(1-iso_pos_iter(2));
+        dphi(2,1) = 0.125*(1-iso_pos_iter(0))*(1-iso_pos_iter(2));
+        dphi(3,1) = 0.125*(1+iso_pos_iter(0))*(1-iso_pos_iter(2));
+        dphi(4,1) = -0.125*(1-iso_pos_iter(0))*(1+iso_pos_iter(2));
+        dphi(5,1) = -0.125*(1+iso_pos_iter(0))*(1+iso_pos_iter(2));
+        dphi(6,1) = 0.125*(1-iso_pos_iter(0))*(1+iso_pos_iter(2));
+        dphi(7,1) = 0.125*(1+iso_pos_iter(0))*(1+iso_pos_iter(2));
         // dphi_dzeta
-        dphi(0,2) = -0.125*(1-iso_pos(0))*(1-iso_pos(1));
-        dphi(1,2) = -0.125*(1+iso_pos(0))*(1-iso_pos(1));
-        dphi(2,2) = -0.125*(1-iso_pos(0))*(1+iso_pos(1));
-        dphi(3,2) = -0.125*(1+iso_pos(0))*(1+iso_pos(1));
-        dphi(4,2) = 0.125*(1-iso_pos(0))*(1-iso_pos(1));
-        dphi(5,2) = 0.125*(1+iso_pos(0))*(1-iso_pos(1));
-        dphi(6,2) = 0.125*(1-iso_pos(0))*(1+iso_pos(1));
-        dphi(7,2) = 0.125*(1+iso_pos(0))*(1+iso_pos(1));
+        dphi(0,2) = -0.125*(1-iso_pos_iter(0))*(1-iso_pos_iter(1));
+        dphi(1,2) = -0.125*(1+iso_pos_iter(0))*(1-iso_pos_iter(1));
+        dphi(2,2) = -0.125*(1-iso_pos_iter(0))*(1+iso_pos_iter(1));
+        dphi(3,2) = -0.125*(1+iso_pos_iter(0))*(1+iso_pos_iter(1));
+        dphi(4,2) = 0.125*(1-iso_pos_iter(0))*(1-iso_pos_iter(1));
+        dphi(5,2) = 0.125*(1+iso_pos_iter(0))*(1-iso_pos_iter(1));
+        dphi(6,2) = 0.125*(1-iso_pos_iter(0))*(1+iso_pos_iter(1));
+        dphi(7,2) = 0.125*(1+iso_pos_iter(0))*(1+iso_pos_iter(1));
 
         // calculating Jacobian
         J.set_values(0);
@@ -1939,6 +1988,40 @@ void contact_patches_t::isoparametric_inverse(const CArrayKokkos<double> pos, co
         Jinv(2, 0) = (J(1, 0)*J(2, 1) - J(1, 1)*J(2, 0))/det_J;
         Jinv(2, 1) = (J(0, 1)*J(2, 0) - J(0, 0)*J(2, 1))/det_J;
         Jinv(2, 2) = (J(0, 0)*J(1, 1) - J(0, 1)*J(1, 0))/det_J;
+        
+        // xi_k+1 = xi_k + (J^-1)(x_p - x_k)
+        iso_pos.set_values(0);
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 3; k++) {
+                iso_pos(j) += iso_pos_iter(j) + Jinv(j,k)*(pos(k) - pos_iter(k));
+            }
+        }
+        
+        // updating pos_iter
+        phi(0) = 0.125 * (1 - iso_pos(0)) * (1 - iso_pos(1)) * (1 - iso_pos(2));
+        phi(1) = 0.125 * (1 + iso_pos(0)) * (1 - iso_pos(1)) * (1 - iso_pos(2));
+        phi(2) = 0.125 * (1 - iso_pos(0)) * (1 + iso_pos(1)) * (1 - iso_pos(2));
+        phi(3) = 0.125 * (1 + iso_pos(0)) * (1 + iso_pos(1)) * (1 - iso_pos(2));
+        phi(4) = 0.125 * (1 - iso_pos(0)) * (1 - iso_pos(1)) * (1 + iso_pos(2));
+        phi(5) = 0.125 * (1 + iso_pos(0)) * (1 - iso_pos(1)) * (1 + iso_pos(2));
+        phi(6) = 0.125 * (1 - iso_pos(0)) * (1 + iso_pos(1)) * (1 + iso_pos(2));
+        phi(7) = 0.125 * (1 + iso_pos(0)) * (1 + iso_pos(1)) * (1 + iso_pos(2));
+        pos_iter.set_values(0);
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 8; k++) {
+                pos_iter(j) += elem_pos(j,k)*phi(k);
+            }
+        }
+
+        // convergence check
+        if (sqrt((pos(0)-pos_iter(0))*(pos(0)-pos_iter(0)) + (pos(1)-pos_iter(1))*(pos(1)-pos_iter(1)) + (pos(2)-pos_iter(2))*(pos(2)-pos_iter(2))) < pow(10,-6)) {
+            break;
+        }
+
+        // updating iso_pos_iter
+        iso_pos_iter(0) = iso_pos(0);
+        iso_pos_iter(1) = iso_pos(1);
+        iso_pos_iter(2) = iso_pos(2);
 
     }
 
