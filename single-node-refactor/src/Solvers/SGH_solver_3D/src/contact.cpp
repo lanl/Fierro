@@ -1628,7 +1628,6 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
     // setting all values to an initially impossible number for surf ids (i.e. greater than total number of surfs)
     // NOTE: mesh.num_surfs only works for first order elements as of 7/10/2025
     nodes_pen_surfs.set_values(mesh.num_surfs);
-    std::cout << "NUM SURFS IS " << mesh.num_surfs << std::endl;
 
     // populating node gids
     FOR_ALL(i,0,num_contact_nodes,{
@@ -1719,14 +1718,27 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
     std::cout << std::endl;
 
     // looping through nodes_pen_surfs and finding most appropriate penetrated surface to pair to
-    
-    // pairing step 2) vector going from penetrating node to centroid of average of centroids
-    // pairing step 3) dot product of vector from (2) with normal of each surf being penetrated by the node
-    // pairing step 4) pair node and surf with max value of dot product from (3)
     for (int node_lid = 0; node_lid < num_contact_nodes; node_lid++) {
         // centroid variable for pairing step 1
         CArrayKokkos <double> centroid(3);
         centroid.set_values(0);
+
+        // node to centroid vector for pairing step 2
+        CArrayKokkos <double> n_to_c(3);
+
+        // normal vector for pairing step 3
+        double surf_normal_arr[3];
+        ViewCArrayKokkos<double> surf_normal(&surf_normal_arr[0], 3);
+
+        // dot product local and max variables for pairing step 3
+        double dot_prod = 0;
+        double dot_prod_loc = 0;
+
+        // local surface id for referencing nodes_pen_surfs
+        size_t surf_lid = 6;
+
+        // array for global frame point calculated in pairing step 5
+        CArrayKokkos<double> P(3);
 
         // pairing step 1) find centroid corresponding to penetrating node (centroid of element if 1 element, average of centroids if more than 1 element)
         for (int i = 0; i < mesh.elems_in_node.stride(nodes_pen_surfs(node_lid,0)); i++) {
@@ -1742,7 +1754,52 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
         centroid(1) /= mesh.elems_in_node.stride(nodes_pen_surfs(node_lid,0));
         centroid(2) /= mesh.elems_in_node.stride(nodes_pen_surfs(node_lid,0));
 
-        std::cout << nodes_pen_surfs(node_lid,0) << "   " << centroid(0) << " " << centroid(1) << " " << centroid(2) << std::endl;
+        // pairing step 2) vector going from penetrating node to centroid or average of centroids
+        n_to_c(0) = centroid(0) - State.node.coords(nodes_pen_surfs(node_lid,0),0);
+        n_to_c(1) = centroid(1) - State.node.coords(nodes_pen_surfs(node_lid,0),1);
+        n_to_c(2) = centroid(2) - State.node.coords(nodes_pen_surfs(node_lid,0),2);
+
+        // pairing step 3) dot product of vector from (2) with normal of each surf being penetrated by the node
+        // todo: need to get nodes_pen_surfs as a dynamic ragged type to make this loop more efficient
+        // todo: what are the edge cases for pairing step 3?
+        for (int i = 0; i < 6; i++) {
+            // todo: replace if statement with known in order to remove loop j entirely
+            for (int j = 0; j < num_contact_patches; j++) {
+                if (contact_patches(j).gid == nodes_pen_surfs(node_lid,i+1)) {
+                    contact_patches(j).get_normal(0,0,0,surf_normal);
+                    dot_prod_loc = surf_normal(0)*n_to_c(0) + surf_normal(1)*n_to_c(1) + surf_normal(2)*n_to_c(2);
+                    // pairing step 4) find surf with max value of dot product from (3)
+                    if (dot_prod_loc > dot_prod) {
+                        dot_prod = dot_prod_loc;
+                        surf_lid = i+1;
+                    }
+                }
+            } // end j
+        } // end i
+        
+        // pairing step 5) find closest point on surf in normal direction from node
+        // plane can be defined from any of the 4 nodes by A(x-xn)+B(y-yn)+C(z-zn)=0 where n=<A,B,C>
+        // given coords of penetrating node "p" we find point of contact "P"
+        // P = p + c*norm_vec, solve for c from equation of plane
+        // todo: is it necessary to define these as double or should it just be one line to calculate c? readability would bad if one line
+        // todo: replace if statement with known in order to remove outer loop entirely
+        for (int i = 0; i < num_contact_patches; i++) {
+            if (contact_patches(i).gid == nodes_pen_surfs(node_lid,surf_lid)) {
+                contact_patches(i).get_normal(0,0,0,surf_normal);
+                double px = State.node.coords(nodes_pen_surfs(node_lid,0),0);
+                double py = State.node.coords(nodes_pen_surfs(node_lid,0),1);
+                double pz = State.node.coords(nodes_pen_surfs(node_lid,0),2);
+                double xn = State.node.coords(contact_patches(i).nodes_gid(0),0);
+                double yn = State.node.coords(contact_patches(i).nodes_gid(0),1);
+                double zn = State.node.coords(contact_patches(i).nodes_gid(0),2);
+                double c = (surf_normal(0)*(px-xn)+surf_normal(1)*(py-yn)+surf_normal(2)*(pz-zn))/(-surf_normal(0)*surf_normal(0) - surf_normal(1)*surf_normal(1) - surf_normal(2)*surf_normal(2));
+                P(0) = px + c*surf_normal(0);
+                P(1) = py + c*surf_normal(1);
+                P(2) = pz + c*surf_normal(2);
+                std::cout << "Node: " << nodes_pen_surfs(node_lid,0) << " with contact point: " << P(0) << "  " << P(1) << "  " << P(2) << std::endl;
+            }
+        }
+        
     }
 
 } // end initial_penetration
@@ -1807,6 +1864,84 @@ bool contact_patches_t::penetration_check(const contact_node_t node, const CArra
     }
     
     return penetration;
+}
+
+void contact_patches_t::isoparametric_inverse(const CArrayKokkos<double> pos, const CArrayKokkos<double> elem_pos, CArrayKokkos<double> &iso_pos)
+{
+    // setting initial guess as center of the element
+    CArrayKokkos <double> iso_pos_iter(3);
+    iso_pos_iter.set_values(0);
+    CArrayKokkos <double> pos_iter(3);
+    pos_iter.set_values(0);
+    for(int i = 0; i < 8; i++) {
+        pos_iter(0) += elem_pos(0,i);
+        pos_iter(1) += elem_pos(1,i);
+        pos_iter(2) += elem_pos(2,i);
+    }
+    pos_iter(0) /= 8;
+    pos_iter(1) /= 8;
+    pos_iter(2) /= 8;
+
+    // array to store shape function derivatives and jacobian
+    CArrayKokkos <double> dphi(8,3);
+    CArrayKokkos <double> J(3,3);
+    CArrayKokkos <double> Jinv(3,3);
+
+    // iteration loop
+    int max_iter = 50;
+    for (int i = 0; i < max_iter; i++) {
+        // dphi_dxi
+        dphi(0,0) = -0.125*(1-iso_pos(1))*(1-iso_pos(2));
+        dphi(1,0) = 0.125*(1-iso_pos(1))*(1-iso_pos(2));
+        dphi(2,0) = -0.125*(1+iso_pos(1))*(1-iso_pos(2));
+        dphi(3,0) = 0.125*(1+iso_pos(1))*(1-iso_pos(2));
+        dphi(4,0) = -0.125*(1-iso_pos(1))*(1+iso_pos(2));
+        dphi(5,0) = 0.125*(1-iso_pos(1))*(1+iso_pos(2));
+        dphi(6,0) = -0.125*(1+iso_pos(1))*(1+iso_pos(2));
+        dphi(7,0) = 0.125*(1+iso_pos(1))*(1+iso_pos(2));
+        // dphi_deta
+        dphi(0,1) = -0.125*(1-iso_pos(0))*(1-iso_pos(2));
+        dphi(1,1) = -0.125*(1+iso_pos(0))*(1-iso_pos(2));
+        dphi(2,1) = 0.125*(1-iso_pos(0))*(1-iso_pos(2));
+        dphi(3,1) = 0.125*(1+iso_pos(0))*(1-iso_pos(2));
+        dphi(4,1) = -0.125*(1-iso_pos(0))*(1+iso_pos(2));
+        dphi(5,1) = -0.125*(1+iso_pos(0))*(1+iso_pos(2));
+        dphi(6,1) = 0.125*(1-iso_pos(0))*(1+iso_pos(2));
+        dphi(7,1) = 0.125*(1+iso_pos(0))*(1+iso_pos(2));
+        // dphi_dzeta
+        dphi(0,2) = -0.125*(1-iso_pos(0))*(1-iso_pos(1));
+        dphi(1,2) = -0.125*(1+iso_pos(0))*(1-iso_pos(1));
+        dphi(2,2) = -0.125*(1-iso_pos(0))*(1+iso_pos(1));
+        dphi(3,2) = -0.125*(1+iso_pos(0))*(1+iso_pos(1));
+        dphi(4,2) = 0.125*(1-iso_pos(0))*(1-iso_pos(1));
+        dphi(5,2) = 0.125*(1+iso_pos(0))*(1-iso_pos(1));
+        dphi(6,2) = 0.125*(1-iso_pos(0))*(1+iso_pos(1));
+        dphi(7,2) = 0.125*(1+iso_pos(0))*(1+iso_pos(1));
+
+        // calculating Jacobian
+        J.set_values(0);
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 3; k++) {
+                for (int m = 0; m < 8; m++) {
+                    J(j,k) += elem_pos(j,m)*dphi(m,k);
+                }
+            }
+        }
+
+        // inverting Jacobian
+        double det_J = J(0, 0)*(J(1, 1)*J(2, 2) - J(1, 2)*J(2, 1)) - J(0, 1)*(J(1, 0)*J(2, 2) - J(1, 2)*J(2, 0)) + J(0, 2)*(J(1, 0)*J(2, 1) - J(1, 1)*J(2, 0));
+        Jinv(0, 0) = (J(1, 1)*J(2, 2) - J(1, 2)*J(2, 1))/det_J;
+        Jinv(0, 1) = (J(0, 2)*J(2, 1) - J(0, 1)*J(2, 2))/det_J;
+        Jinv(0, 2) = (J(0, 1)*J(1, 2) - J(0, 2)*J(1, 1))/det_J;
+        Jinv(1, 0) = (J(1, 2)*J(2, 0) - J(1, 0)*J(2, 2))/det_J;
+        Jinv(1, 1) = (J(0, 0)*J(2, 2) - J(0, 2)*J(2, 0))/det_J;
+        Jinv(1, 2) = (J(0, 2)*J(1, 0) - J(0, 0)*J(1, 2))/det_J;
+        Jinv(2, 0) = (J(1, 0)*J(2, 1) - J(1, 1)*J(2, 0))/det_J;
+        Jinv(2, 1) = (J(0, 1)*J(2, 0) - J(0, 0)*J(2, 1))/det_J;
+        Jinv(2, 2) = (J(0, 0)*J(1, 1) - J(0, 1)*J(1, 0))/det_J;
+
+    }
+
 }
 
 void contact_patches_t::get_contact_pairs(const double &del_t)

@@ -454,6 +454,20 @@ struct contact_patches_t
     bool penetration_check(const contact_node_t node, const CArrayKokkos <contact_patch_t> &surfaces, const int surf_lid) const;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn isoparametric_inverse
+    ///
+    /// \brief Finds (xi,eta,zeta) corresponding to (x,y,z)
+    ///
+    /// Newton solve to invert an isoparametric map
+    ///
+    /// \param pos (x,y,z) position value
+    /// \param elem_pos element nodal coordinates
+    /// \param iso_pos isoparametric position (xi,eta,zeta) output
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    KOKKOS_FUNCTION
+    void isoparametric_inverse(const CArrayKokkos<double> pos, const CArrayKokkos<double> elem_pos, CArrayKokkos<double> &iso_pos);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn get_contact_pairs
     ///
     /// \brief Constructs the contact pairs
