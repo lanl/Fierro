@@ -339,7 +339,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 contact_bank.update_nodes(mesh, State);
                 if (time_start == time_value) {
                     contact_bank.sort();
-                    contact_bank.initial_penetration(State, mesh);
+                    contact_bank.initial_penetration(State, mesh, dt);
                 }
                 boundary_contact_force(dt*rk_alpha);
             }

@@ -1559,7 +1559,7 @@ void contact_patches_t::find_nodes(contact_patch_t &contact_patch, const double 
     }
 }  // end find_nodes
 
-void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
+void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh, const double &del_t)
 {
     // start of finding penetration depth criterion
     // finding min of nodal x,y,z domains
@@ -1718,6 +1718,7 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
     std::cout << std::endl; */
 
     // looping through nodes_pen_surfs and finding most appropriate penetrated surface to pair to
+    num_active_pairs = 0;
     for (int node_lid = 0; node_lid < num_contact_nodes; node_lid++) {
         // centroid variable for pairing step 1
         CArrayKokkos <double> centroid(3);
@@ -1844,11 +1845,15 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh)
                         eta = iso_P(1);
                         break;
                 }
+                contact_pair_t &current_pair = contact_pairs(nodes_pen_surfs(node_lid,0));
+                current_pair = contact_pair_t(*this, contact_patches(i), contact_nodes(nodes_pen_surfs(node_lid,0)), xi, eta, del_t, surf_normal);
+                current_pair.active = true;
+                active_pairs(num_active_pairs) = nodes_pen_surfs(node_lid,0);
+                num_active_pairs += 1;
             }
         }
 
     }
-
 } // end initial_penetration
 
 KOKKOS_FUNCTION
@@ -2347,10 +2352,11 @@ void contact_patches_t::force_resolution(const double &del_t)
             if (pair.contact_type == contact_pair_t::contact_types::frictionless)
             {
                 pair.frictionless_increment(del_t);
-                pair.distribute_frictionless_force(1.0);  // if not doing serial, then this would be called in the second loop
+                pair.distribute_frictionless_force(0.00000001);  // if not doing serial, then this would be called in the second loop
                 forces_view(j) = pair.fc_inc;
             } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
         }
+        
         // Kokkos::fence();
 
         // check convergence (the force increments should be zero)

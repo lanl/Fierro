@@ -433,7 +433,7 @@ struct contact_patches_t
     /// \param State Necessary to pull nodal coords for defining penetration depth cap criterion
     /// \param mesh Necessary to pull total number of nodes
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void initial_penetration(State_t& State, const Mesh_t &mesh);
+    void initial_penetration(State_t& State, const Mesh_t &mesh, const double &del_t);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn penetration_check
