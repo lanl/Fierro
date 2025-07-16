@@ -241,6 +241,7 @@ struct Mesh_t
     size_t num_lob_gauss_in_elem; ///< Number of Gauss Lobatto points in an element
 
     DistributedDCArray<size_t> nodes_in_elem; ///< Nodes in an element
+    DistributedDCArray<size_t> local_nodes_in_elem; ///< Nodes in uniquely distributed element (subview of above)
     CArrayKokkos<size_t> corners_in_elem; ///< Corners in an element -- this can just be a functor
 
     RaggedRightArrayKokkos<size_t> elems_in_elem; ///< Elements connected to an element
@@ -606,6 +607,10 @@ struct Mesh_t
         }
 
         nodes_in_elem.update_device();
+
+        /*connectivity data for uniquely assigned elements (used mostly to simplify file output comms)
+          constructed as a subview of nodes_in_elem*/
+        local_nodes_in_elem = DistributedDCArray<size_t>(nodes_in_elem,local_element_map);
 
         // element_map->describe(*fos,Teuchos::VERB_EXTREME);
         // element_map->describe(*fos,Teuchos::VERB_EXTREME);

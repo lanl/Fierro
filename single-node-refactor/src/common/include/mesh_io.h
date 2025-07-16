@@ -3765,14 +3765,13 @@ public:
         
         //host version of local element map for argument compatibility
         HostDistributedMap host_local_element_map;
-        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_elements;
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_elements(mesh.num_local_elems);
         for(int ielem = 0; ielem < mesh.num_local_elems; ielem++){
             global_indices_of_local_elements(ielem) = mesh.local_element_map.getGlobalIndex(ielem);
         }
         host_local_element_map = HostDistributedMap(global_indices_of_local_elements);
         auto elem_fields = DistributedCArray<double>(host_local_element_map, num_scalar_vars);
         int  elem_switch = 1;
-
 
         DCArrayKokkos<double> speed(num_elems, "speed");
         FOR_ALL(elem_gid, 0, mesh.num_local_elems, {
@@ -3832,7 +3831,7 @@ public:
 
         // export element centric data
         double e_switch = 1;
-        for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+        for (size_t elem_gid = 0; elem_gid < mesh.num_local_elems; elem_gid++) {
             elem_fields(elem_gid, 3) = State.GaussPoints.vol.host(elem_gid);
             elem_fields(elem_gid, 6) = speed.host(elem_gid);
             elem_fields(elem_gid, 8) = e_switch;
@@ -3844,10 +3843,32 @@ public:
         long long int num_collective_elem_indices = 0;
         if(myrank==0) num_collective_elem_indices = mesh.global_num_elems;
         collective_elem_map = HostDistributedMap(mesh.global_num_elems, num_collective_elem_indices);
+
+        //collective vector and comms to the collective vector for elem fields
+        DistributedCArray<double> collective_elem_fields(collective_elem_map, num_scalar_vars);
+        HostCommPlan<double> collective_elem_comms(collective_elem_fields, elem_fields);
+        collective_elem_comms.execute_comms();
+
+        //host of node in elem for Trilinos template argument compatibility
+        DistributedCArray<size_t> host_local_nodes_in_elem(host_local_element_map, mesh.num_nodes_in_elem);
+
+        //convert nodes in elem back to global (convert back to local after we've collected global ids in collective vector)
+        for (size_t elem_id = 0; elem_id < mesh.num_local_elems; elem_id++) {
+            for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                host_local_nodes_in_elem(elem_id, node_lid) = mesh.all_node_map.getGlobalIndex(mesh.local_nodes_in_elem(elem_id, node_lid));
+            }
+        } // end for elem_gid
+
+        //collect nodes in elem with a conversion back to global node ids
+        DistributedCArray<size_t> collective_nodes_in_elem(collective_elem_map, mesh.num_nodes_in_elem);
+        HostCommPlan<size_t> nodes_in_elem_comms(collective_nodes_in_elem, host_local_nodes_in_elem);
+
+        nodes_in_elem_comms.execute_comms();
         
-        //host version of local element map for argument compatibility
+        //NODE DATA COLLECTION
+        //host version of local node map for argument compatibility
         HostDistributedMap host_node_map;
-        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_nodes;
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_nodes(mesh.num_local_nodes);
         for(int inode = 0; inode < mesh.num_local_nodes; inode++){
             global_indices_of_local_nodes(inode) = mesh.node_map.getGlobalIndex(inode);
         }
@@ -3856,7 +3877,7 @@ public:
         // save the vertex vector fields to an array for exporting to graphics files
         DistributedCArray<double> vec_fields(host_node_map, num_vec_vars, 3);
 
-        for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
+        for (size_t node_gid = 0; node_gid < mesh.num_local_nodes; node_gid++) {
             // position, var 0
             vec_fields(node_gid, 0, 0) = State.node.coords.host(node_gid, 0);
             vec_fields(node_gid, 0, 1) = State.node.coords.host(node_gid, 1);
@@ -3896,226 +3917,232 @@ public:
         if(myrank==0) num_collective_node_indices = mesh.global_num_nodes;
         collective_node_map = HostDistributedMap(mesh.global_num_nodes, num_collective_node_indices);
 
-        //  ---------------------------------------------------------------------------
-        //  Setup of file and directoring for exporting
-        //  ---------------------------------------------------------------------------
-        FILE* out[20];   // the output files that are written to
-        char  filename[128];
-        int   max_len = sizeof filename;
-        int   str_output_len;
+        //collective vector and comms to the collective vector for node fields
+        DistributedCArray<double> collective_vec_fields(collective_node_map, num_vec_vars, 3);
+        HostCommPlan<double> collective_node_comms(collective_vec_fields, vec_fields);
+        collective_node_comms.execute_comms();
 
-        struct stat st;
+        if(myrank==0){
+            //  ---------------------------------------------------------------------------
+            //  Setup of file and directoring for exporting
+            //  ---------------------------------------------------------------------------
+            FILE* out[20];   // the output files that are written to
+            char  filename[128];
+            int   max_len = sizeof filename;
+            int   str_output_len;
 
-        if (stat("ensight", &st) != 0) {
-            system("mkdir ensight");
-        }
+            struct stat st;
 
-        if (stat("ensight/data", &st) != 0) {
-            system("mkdir ensight/data");
-        }
-
-        //  ---------------------------------------------------------------------------
-        //  Write the Geometry file
-        //  ---------------------------------------------------------------------------
-        // sprintf(filename, "ensight/data/%s.%05d.geo", name, graphics_id);
-        str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.geo", name, graphics_id);
-        // filename has the full string
-        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-
-        out[0] = fopen(filename, "w");
-
-        fprintf(out[0], "A graphics dump by Fierro \n");
-
-        fprintf(out[0], "%s", "EnSight Gold geometry\n");
-        fprintf(out[0], "%s", "node id assign\n");
-        fprintf(out[0], "%s", "element id assign\n");
-
-        fprintf(out[0], "part\n");
-        fprintf(out[0], "%10d\n", 1);
-        fprintf(out[0], "Mesh\n");
-
-        // --- vertices ---
-        fprintf(out[0], "coordinates\n");
-        fprintf(out[0], "%10lu\n", num_nodes);
-
-        // write all components of the point coordinates
-        for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-            fprintf(out[0], "%12.5e\n", State.node.coords.host(node_gid, 0));
-        }
-
-        for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-            fprintf(out[0], "%12.5e\n", State.node.coords.host(node_gid, 1));
-        }
-
-        for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-            if (num_dims == 3) {
-                fprintf(out[0], "%12.5e\n", State.node.coords.host(node_gid, 2));
+            if (stat("ensight", &st) != 0) {
+                system("mkdir ensight");
             }
-            else{
-                fprintf(out[0], "%12.5e\n", 0.0);
+
+            if (stat("ensight/data", &st) != 0) {
+                system("mkdir ensight/data");
             }
-        }
 
-        // --- elements ---
-        if (num_dims == 3) {
-            fprintf(out[0], "hexa8\n");
-        }
-        else{
-            fprintf(out[0], "quad4\n");
-        }
-        fprintf(out[0], "%10lu\n", num_elems);
-
-
-        int convert_ijk_to_ensight[8];
-        if(mesh.num_dims==3){
-            convert_ijk_to_ensight[0] = 0;
-            convert_ijk_to_ensight[1] = 1;
-            convert_ijk_to_ensight[2] = 3;
-            convert_ijk_to_ensight[3] = 2;
-            convert_ijk_to_ensight[4] = 4;
-            convert_ijk_to_ensight[5] = 5;
-            convert_ijk_to_ensight[6] = 7;
-            convert_ijk_to_ensight[7] = 6;
-        }
-        else{
-        
-            convert_ijk_to_ensight[0] = 0;
-            convert_ijk_to_ensight[1] = 1;
-            convert_ijk_to_ensight[2] = 2;
-            convert_ijk_to_ensight[3] = 3;
-            convert_ijk_to_ensight[4] = 4;
-            convert_ijk_to_ensight[5] = 5;
-            convert_ijk_to_ensight[6] = 6;
-            convert_ijk_to_ensight[7] = 7;
-        } // end if
-
-
-        // write all global point numbers for this cell
-        for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-            for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                fprintf(out[0], "%10lu\t", mesh.nodes_in_elem.host(elem_gid, convert_ijk_to_ensight[node_lid]) + 1); // note: node_gid starts at 1
-            }
-            fprintf(out[0], "\n");
-        }
-
-        fclose(out[0]);
-
-        // ---------------------------------------------------------------------------
-        // Write the Scalar variable files
-        // ---------------------------------------------------------------------------
-
-        // ensight_vars = (den, pres,...)
-        for (int var = 0; var < num_scalar_vars; var++) {
-            // write a scalar value
-            // sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
-            str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+            //  ---------------------------------------------------------------------------
+            //  Write the Geometry file
+            //  ---------------------------------------------------------------------------
+            // sprintf(filename, "ensight/data/%s.%05d.geo", name, graphics_id);
+            str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.geo", name, graphics_id);
+            // filename has the full string
             if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
 
             out[0] = fopen(filename, "w");
 
-            fprintf(out[0], "Per_elem scalar values\n");
+            fprintf(out[0], "A graphics dump by Fierro \n");
+
+            fprintf(out[0], "%s", "EnSight Gold geometry\n");
+            fprintf(out[0], "%s", "node id assign\n");
+            fprintf(out[0], "%s", "element id assign\n");
+
             fprintf(out[0], "part\n");
             fprintf(out[0], "%10d\n", 1);
+            fprintf(out[0], "Mesh\n");
+
+            // --- vertices ---
+            fprintf(out[0], "coordinates\n");
+            fprintf(out[0], "%10lu\n", mesh.global_num_nodes);
+
+            // write all components of the point coordinates
+            for (int node_gid = 0; node_gid < mesh.global_num_nodes; node_gid++) {
+                fprintf(out[0], "%12.5e\n", collective_vec_fields(node_gid, 0, 0));
+            }
+
+            for (int node_gid = 0; node_gid < mesh.global_num_nodes; node_gid++) {
+                fprintf(out[0], "%12.5e\n", collective_vec_fields(node_gid, 0, 1));
+            }
+
+            for (int node_gid = 0; node_gid < mesh.global_num_nodes; node_gid++) {
+                if (num_dims == 3) {
+                    fprintf(out[0], "%12.5e\n", collective_vec_fields(node_gid, 0, 2));
+                }
+                else{
+                    fprintf(out[0], "%12.5e\n", 0.0);
+                }
+            }
+
+            // --- elements ---
             if (num_dims == 3) {
                 fprintf(out[0], "hexa8\n");
             }
             else{
                 fprintf(out[0], "quad4\n");
             }
+            fprintf(out[0], "%10lu\n", mesh.global_num_elems);
 
-            for (int elem_id = 0; elem_id < num_elems; elem_id++) {
-                fprintf(out[0], "%12.5e\n", elem_fields(elem_id, var));
+
+            int convert_ijk_to_ensight[8];
+            if(mesh.num_dims==3){
+                convert_ijk_to_ensight[0] = 0;
+                convert_ijk_to_ensight[1] = 1;
+                convert_ijk_to_ensight[2] = 3;
+                convert_ijk_to_ensight[3] = 2;
+                convert_ijk_to_ensight[4] = 4;
+                convert_ijk_to_ensight[5] = 5;
+                convert_ijk_to_ensight[6] = 7;
+                convert_ijk_to_ensight[7] = 6;
+            }
+            else{
+            
+                convert_ijk_to_ensight[0] = 0;
+                convert_ijk_to_ensight[1] = 1;
+                convert_ijk_to_ensight[2] = 2;
+                convert_ijk_to_ensight[3] = 3;
+                convert_ijk_to_ensight[4] = 4;
+                convert_ijk_to_ensight[5] = 5;
+                convert_ijk_to_ensight[6] = 6;
+                convert_ijk_to_ensight[7] = 7;
+            } // end if
+
+
+            // write all global point numbers for this cell
+            for (int elem_gid = 0; elem_gid < mesh.global_num_elems; elem_gid++) {
+                for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                    fprintf(out[0], "%10lu\t", collective_nodes_in_elem(elem_gid, convert_ijk_to_ensight[node_lid]) + 1); // note: node_gid starts at 1
+                }
+                fprintf(out[0], "\n");
             }
 
             fclose(out[0]);
-        } // end for var
 
-        //  ---------------------------------------------------------------------------
-        //  Write the Vector variable files
-        //  ---------------------------------------------------------------------------
+            // ---------------------------------------------------------------------------
+            // Write the Scalar variable files
+            // ---------------------------------------------------------------------------
 
-        // ensight vector vars = (position, velocity, force)
-        for (int var = 0; var < num_vec_vars; var++) {
-            // sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
-            str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+            // ensight_vars = (den, pres,...)
+            for (int var = 0; var < num_scalar_vars; var++) {
+                // write a scalar value
+                // sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+                str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+                if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+
+                out[0] = fopen(filename, "w");
+
+                fprintf(out[0], "Per_elem scalar values\n");
+                fprintf(out[0], "part\n");
+                fprintf(out[0], "%10d\n", 1);
+                if (num_dims == 3) {
+                    fprintf(out[0], "hexa8\n");
+                }
+                else{
+                    fprintf(out[0], "quad4\n");
+                }
+
+                for (int elem_id = 0; elem_id < mesh.global_num_elems; elem_id++) {
+                    fprintf(out[0], "%12.5e\n", collective_elem_fields(elem_id, var));
+                }
+
+                fclose(out[0]);
+            } // end for var
+
+            //  ---------------------------------------------------------------------------
+            //  Write the Vector variable files
+            //  ---------------------------------------------------------------------------
+
+            // ensight vector vars = (position, velocity, force)
+            for (int var = 0; var < num_vec_vars; var++) {
+                // sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+                str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+                if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+
+                out[0] = fopen(filename, "w");
+                // fprintf(out[0],"Per_node vector values\n");
+                // fprintf(out[0],"part\n");
+                // fprintf(out[0],"%10d \n",1);
+                // fprintf(out[0],"hexa8\n"); // WARNING, maybe bug here?
+
+                fprintf(out[0], "Per_node vector values\n");
+                fprintf(out[0], "part\n");
+                fprintf(out[0], "%10d\n", 1);
+                fprintf(out[0], "block\n");
+
+                for (int node_gid = 0; node_gid < mesh.global_num_nodes; node_gid++) {
+                    fprintf(out[0], "%12.5e\n", collective_vec_fields(node_gid, var, 0));
+                }
+
+                for (int node_gid = 0; node_gid < mesh.global_num_nodes; node_gid++) {
+                    fprintf(out[0], "%12.5e\n", collective_vec_fields(node_gid, var, 1));
+                }
+
+                for (int node_gid = 0; node_gid < mesh.global_num_nodes; node_gid++) {
+                    fprintf(out[0], "%12.5e\n", collective_vec_fields(node_gid, var, 2));
+                }
+
+                fclose(out[0]);
+            } // end for var
+
+            // ---------------------------------------------------------------------------
+            // Write the case file
+            // ---------------------------------------------------------------------------
+
+            // sprintf(filename, "ensight/%s.case", name);
+            str_output_len = snprintf(filename, max_len, "ensight/%s.case", name);
             if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
 
             out[0] = fopen(filename, "w");
-            // fprintf(out[0],"Per_node vector values\n");
-            // fprintf(out[0],"part\n");
-            // fprintf(out[0],"%10d \n",1);
-            // fprintf(out[0],"hexa8\n"); // WARNING, maybe bug here?
 
-            fprintf(out[0], "Per_node vector values\n");
-            fprintf(out[0], "part\n");
-            fprintf(out[0], "%10d\n", 1);
-            fprintf(out[0], "block\n");
+            fprintf(out[0], "FORMAT\n");
+            fprintf(out[0], "type: ensight gold\n");
+            fprintf(out[0], "GEOMETRY\n");
 
-            for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-                fprintf(out[0], "%12.5e\n", vec_fields(node_gid, var, 0));
+            // sprintf(filename, "model: data/%s.*****.geo\n", name);
+            str_output_len = snprintf(filename, max_len, "model: data/%s.*****.geo\n", name);
+            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+
+            fprintf(out[0], "%s", filename);
+            fprintf(out[0], "VARIABLE\n");
+
+            for (int var = 0; var < num_scalar_vars; var++) {
+                // sprintf(filename, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
+                str_output_len = snprintf(filename, max_len, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
+                if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+
+                fprintf(out[0], "%s", filename);
             }
 
-            for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-                fprintf(out[0], "%12.5e\n", vec_fields(node_gid, var, 1));
+            for (int var = 0; var < num_vec_vars; var++) {
+                // sprintf(filename, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
+                str_output_len = snprintf(filename, max_len, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
+                if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+                fprintf(out[0], "%s", filename);
             }
 
-            for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-                fprintf(out[0], "%12.5e\n", vec_fields(node_gid, var, 2));
-            }
+            fprintf(out[0], "TIME\n");
+            fprintf(out[0], "time set: 1\n");
+            fprintf(out[0], "number of steps: %4d\n", graphics_id + 1);
+            fprintf(out[0], "filename start number: 0\n");
+            fprintf(out[0], "filename increment: 1\n");
+            fprintf(out[0], "time values: \n");
 
+            graphics_times(graphics_id) = time_value;
+
+            for (int i = 0; i <= graphics_id; i++) {
+                fprintf(out[0], "%12.5e\n", graphics_times(i));
+            }
             fclose(out[0]);
-        } // end for var
-
-        // ---------------------------------------------------------------------------
-        // Write the case file
-        // ---------------------------------------------------------------------------
-
-        // sprintf(filename, "ensight/%s.case", name);
-        str_output_len = snprintf(filename, max_len, "ensight/%s.case", name);
-        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-
-        out[0] = fopen(filename, "w");
-
-        fprintf(out[0], "FORMAT\n");
-        fprintf(out[0], "type: ensight gold\n");
-        fprintf(out[0], "GEOMETRY\n");
-
-        // sprintf(filename, "model: data/%s.*****.geo\n", name);
-        str_output_len = snprintf(filename, max_len, "model: data/%s.*****.geo\n", name);
-        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-
-        fprintf(out[0], "%s", filename);
-        fprintf(out[0], "VARIABLE\n");
-
-        for (int var = 0; var < num_scalar_vars; var++) {
-            // sprintf(filename, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
-            str_output_len = snprintf(filename, max_len, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
-            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-
-            fprintf(out[0], "%s", filename);
         }
-
-        for (int var = 0; var < num_vec_vars; var++) {
-            // sprintf(filename, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
-            str_output_len = snprintf(filename, max_len, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
-            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-            fprintf(out[0], "%s", filename);
-        }
-
-        fprintf(out[0], "TIME\n");
-        fprintf(out[0], "time set: 1\n");
-        fprintf(out[0], "number of steps: %4d\n", graphics_id + 1);
-        fprintf(out[0], "filename start number: 0\n");
-        fprintf(out[0], "filename increment: 1\n");
-        fprintf(out[0], "time values: \n");
-
-        graphics_times(graphics_id) = time_value;
-
-        for (int i = 0; i <= graphics_id; i++) {
-            fprintf(out[0], "%12.5e\n", graphics_times(i));
-        }
-        fclose(out[0]);
-
         // ---------------------------------------------------------------------------
         // Done writing the graphics dump
         // ---------------------------------------------------------------------------
@@ -4124,7 +4151,7 @@ public:
         graphics_id++;
 
         delete[] name;
-
+        
 
         return;
     }
