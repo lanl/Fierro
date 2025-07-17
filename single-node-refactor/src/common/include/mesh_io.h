@@ -2102,6 +2102,7 @@ public:
           before the global mesh data on rank 0 falls out of scope*/
         int global_num_nodes, global_num_elems;
         CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer;
+        CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer_edof;
         CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace> global_coords;
         CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace> global_nodes_in_elem;
 
@@ -2366,7 +2367,7 @@ public:
 
         // read in element connectivity
         // we're gonna reallocate for the words per line expected for the element connectivity
-        read_buffer = CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_LINES, num_nodes_in_elem);
+        read_buffer_edof = CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_LINES, num_nodes_in_elem);
 
         // calculate buffer iterations to read number of lines
         buffer_iterations = global_num_elems / BUFFER_LINES;
@@ -2394,7 +2395,7 @@ public:
                 {
                     for (int inode = 0; inode < num_nodes_in_elem; inode++)
                     {
-                        read_buffer(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_LINES + buffer_loop, inode);
+                        read_buffer_edof(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_LINES + buffer_loop, inode);
                     }
                     // std::cout <<std::endl;
                 }
@@ -2405,7 +2406,7 @@ public:
                 while (buffer_iteration * BUFFER_LINES + buffer_loop < global_num_elems) {
                     for (int inode = 0; inode < num_nodes_in_elem; inode++)
                     {
-                        read_buffer(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_LINES + buffer_loop, inode);
+                        read_buffer_edof(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_LINES + buffer_loop, inode);
                     }
                     // std::cout <<std::endl;
                     buffer_loop++;
@@ -2414,7 +2415,7 @@ public:
             }
 
             // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-            MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * num_nodes_in_elem, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            MPI_Bcast(read_buffer_edof.pointer(), BUFFER_LINES * num_nodes_in_elem, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
             // broadcast how many nodes were read into this buffer iteration
             MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -2431,8 +2432,8 @@ public:
                 {
                     // as we loop through the nodes belonging to this element we store them
                     // if any of these nodes belongs to this rank this list is used to store the element locally
-                    node_gid = read_buffer(scan_loop, inode);
-                    node_store(inode) = node_gid; // subtract 1 since file index start is 1 but code expects 0
+                    node_gid = read_buffer_edof(scan_loop, inode);
+                    node_store(inode) = node_gid;
                     // first we add the elements to a dynamically allocated list
                     if (node_map.isProcessGlobalIndex(node_gid) && !assign_flag)
                     {

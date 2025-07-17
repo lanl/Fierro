@@ -525,16 +525,16 @@ struct Mesh_t
         }
 
         // copy over from buffer to compressed storage
-        DCArrayKokkos<long long int> Element_Global_Indices(nonoverlapping_count, "Element_Global_Indices");
+        DCArrayKokkos<long long int> Local_Element_Global_Indices(nonoverlapping_count, "Local_Element_Global_Indices");
         for (int ibuffer = 0; ibuffer < nonoverlapping_count; ibuffer++)
         {
-            Element_Global_Indices.host(ibuffer) = Initial_Element_Global_Indices.host(ibuffer);
+            Local_Element_Global_Indices.host(ibuffer) = Initial_Element_Global_Indices.host(ibuffer);
         }
         num_local_elems = nonoverlapping_count;
-        Element_Global_Indices.update_device();
+        Local_Element_Global_Indices.update_device();
 
         // create nonoverlapping element map
-        local_element_map = DistributedMap(Element_Global_Indices);
+        local_element_map = DistributedMap(Local_Element_Global_Indices);
 
         // sort element connectivity so nonoverlaps are sequentially found first
         // define initial sorting of global indices
@@ -545,6 +545,7 @@ struct Mesh_t
         {
             Initial_Element_Global_Indices.host(ielem) = element_map.getGlobalIndex(ielem);
         }
+        Initial_Element_Global_Indices.update_device();
 
         // re-sort so local elements in the nonoverlapping map are first in storage
         CArrayKokkos<long long int, Kokkos::LayoutLeft, HostSpace> Temp_Nodes(num_nodes_in_elem);
@@ -552,6 +553,7 @@ struct Mesh_t
         long long int  temp_element_gid, current_element_gid;
         int last_storage_index = num_elems - 1;
         
+        //nodes_in_elem.print();
 
         for (int ielem = 0; ielem < num_local_elems; ielem++)
         {
@@ -575,7 +577,7 @@ struct Mesh_t
 
                 // test if swapped element is also not part of the non overlap map; if so lower loop counter to repeat the above
                 temp_element_gid = Initial_Element_Global_Indices.host(ielem);
-                if (!element_map.isProcessGlobalIndex(temp_element_gid))
+                if (!local_element_map.isProcessGlobalIndex(temp_element_gid))
                 {
                     ielem--;
                 }
@@ -598,15 +600,26 @@ struct Mesh_t
         }
         //nodes_in_elem_temp.update_device();
         nodes_in_elem = nodes_in_elem_temp;
+        //nodes_in_elem.print();
 
         //convert global ids stored in nodes_in_elem to local node ids spanning 0:num_nodes on this process
         for(int ielem= 0; ielem < num_elems; ielem++) {
             for(int inode = 0; inode < num_nodes_in_elem; inode++){
-                nodes_in_elem.host(ielem, inode) = all_node_map.getLocalIndex(nodes_in_elem(ielem, inode));
+                nodes_in_elem.host(ielem, inode) = all_node_map.getLocalIndex(nodes_in_elem.host(ielem, inode));
             }
         }
 
         nodes_in_elem.update_device();
+
+        //local element map may need resorting after above permuting; update the order
+        for (int ielem = 0; ielem < num_local_elems; ielem++)
+        {
+            Local_Element_Global_Indices.host(ielem) = element_map.getGlobalIndex(ielem);
+        }
+        Local_Element_Global_Indices.update_device();
+        local_element_map = DistributedMap(Local_Element_Global_Indices);
+
+        //nodes_in_elem.print();
 
         /*connectivity data for uniquely assigned elements (used mostly to simplify file output comms)
           constructed as a subview of nodes_in_elem*/
