@@ -776,6 +776,8 @@ void contact_pair_t::frictionless_increment(const double &del_t)
 KOKKOS_FUNCTION
 void contact_pair_t::distribute_frictionless_force(const double &force_scale)
 {
+    // this function updating contact_force direction is why one node is handled at a time
+
     double force_val = force_scale*fc_inc;
 
     // get phi_k
