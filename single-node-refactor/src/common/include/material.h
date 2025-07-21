@@ -55,9 +55,11 @@ namespace model
     {
         noStrengthModel = 0,
         userDefinedStrength = 1,
-        hypoElasticPlasticStrength = 2,
-        hypoElasticPlasticStrengthRZ = 3,
+        hypoPlasticityStrength = 2,
+        hypoPlasticityStrengthRZ = 3,
         hostANNStrength = 4,
+        hypoElasticPlasticStrength = 5,
+        hypoElasticPlasticStrengthRZ = 6,
     };
 
     // EOS model types
@@ -76,7 +78,8 @@ namespace model
         voidEOS = 2,        ///<  a void material, no sound speed and no pressure
         userDefinedEOS = 3, ///<  an eos function defined by the user
         hostUserDefinedEOS = 4, 
-        mieGruneisenEOS = 5,
+        linearElasticEOS = 5, ///< a constant bulk modulus material
+        mieGruneisenEOS = 6,
     };
 
     // failure models
@@ -157,6 +160,8 @@ static std::map<std::string, model::StrengthModels> strength_models_map
 {
     { "no_strength", model::noStrengthModel },
     { "user_defined_strength", model::userDefinedStrength },
+    { "hypo_plasticity_strength", model::hypoPlasticityStrength },
+    { "hypo_plasticity_strength_rz", model::hypoPlasticityStrengthRZ },
     { "hypo_elastic_plastic_strength", model::hypoElasticPlasticStrength },
     { "hypo_elastic_plastic_strength_rz", model::hypoElasticPlasticStrengthRZ },
     { "host_ann_strength", model::hostANNStrength },
@@ -178,6 +183,7 @@ static std::map<std::string, model::EOSModels> eos_models_map
     { "user_defined_eos", model::userDefinedEOS },
     { "host_user_defined_eos", model::hostUserDefinedEOS },
     { "mie_gruneisen_eos", model::mieGruneisenEOS },
+    { "linear_elastic_eos", model::linearElasticEOS }
 };
 
 
@@ -296,25 +302,27 @@ struct MaterialFunctions_t
     // -- EOS --
 
     // Equation of state (EOS) function pointers
-    void (*calc_pressure)(const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
+    void (*calc_pressure)(
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
-        const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie,
         const RaggedRightArrayKokkos<double>& eos_global_vars) = NULL;
 
-    void (*calc_sound_speed)(const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
+    void (*calc_sound_speed)(
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
-        const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie,
-        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
         const RaggedRightArrayKokkos<double>& eos_global_vars) = NULL;
 
     // -- Strength --
@@ -325,15 +333,15 @@ struct MaterialFunctions_t
         const DCArrayKokkos<double>  &node_coords,
         const DCArrayKokkos<double>  &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
-        const DCArrayKokkos<double>  &MaterialPoints_pres,
-        const DCArrayKokkos<double>  &MaterialPoints_stress,
-        const DCArrayKokkos<double>  &MaterialPoints_stress_n0,
-        const DCArrayKokkos<double>  &MaterialPoints_sspd,
-        const DCArrayKokkos<double>  &MaterialPoints_eos_state_vars,
-        const DCArrayKokkos<double>  &MaterialPoints_strength_state_vars,
+        const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress_n0,
+        const DRaggedRightArrayKokkos<double>  &MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<double>  &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<double>  &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
-        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
@@ -348,8 +356,8 @@ struct MaterialFunctions_t
         const size_t elem_gid) = NULL;
     
     void (*init_strength_state_vars)(
-        const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
+        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
         const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
@@ -363,15 +371,16 @@ struct MaterialFunctions_t
     double erode_density_val;   ///< density threshold to initiate erosion
     // above should be removed, they go in CArrayKokkos<double> erosion_global_vars;
     void (*erode)(
-        const DCArrayKokkos<bool>& MaterialPoints_eroded,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<bool>& MaterialPoints_eroded,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
         const double MaterialPoint_pres,
         const double MaterialPoint_den,
         const double MaterialPoint_sie,
         const double MaterialPoint_sspd,
         const double erode_tension_val,
         const double erode_density_val,
-        const size_t mat_point_lid) = NULL;
+        const size_t mat_point_lid,
+        const size_t mat_id) = NULL;
 
 
     // -- Dissipation --
@@ -380,10 +389,10 @@ struct MaterialFunctions_t
         const ViewCArrayKokkos<size_t> elem_node_gids,
         const RaggedRightArrayKokkos <double>& dissipation_global_vars,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
-        const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+        const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
         const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& MaterialPoints_den,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         const ViewCArrayKokkos<double>& disp_corner_forces,
         const ViewCArrayKokkos<double>& area_normal,
         const RaggedRightArrayKokkos<size_t>& elems_in_elem,

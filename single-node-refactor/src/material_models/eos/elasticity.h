@@ -32,16 +32,16 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef VOID_EOS_H
-#define VOID_EOS_H
+#ifndef ELASTICITY_H
+#define ELASTICITY_H
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn VoidEOSModel
+/// \fn LinearElasticity
 ///
-/// \brief void eos
+/// \brief linear elasticity model, constant bulk modulus
 ///
-/// This is a void, as in a vacuum, eos
+/// This is the no eos (empty function)
 ///
 /// \param Element pressure
 /// \param Element stress
@@ -53,8 +53,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param Material specific internal energy
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace VoidEOSModel {
-
+namespace LinearElasticEOS {
+    
     // host side function
     static void initialize(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
                            const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
@@ -67,6 +67,7 @@ namespace VoidEOSModel {
                            const RaggedRightArrayKokkos<double> &eos_global_vars,
                            const size_t num_vars)
     {
+
 
 
 
@@ -84,8 +85,12 @@ namespace VoidEOSModel {
                               const double sie,
                               const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
-        // pressure of a void is 0
-        MaterialPoints_pres(mat_id, mat_pt_lid) = 0.0;
+        
+        const double B = eos_global_vars(mat_id,0); // bulk modulus
+        const double den0 = eos_global_vars(mat_id,2); // ref density
+
+        // pressure
+        MaterialPoints_pres(mat_id, mat_pt_lid) = B*(den/den0 - 1.0);
 
         return;
     } // end func
@@ -103,17 +108,18 @@ namespace VoidEOSModel {
                                  const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
 
-        // sound speed of a void is 0, machine small must be used for CFL calculation
-        MaterialPoints_sspd(mat_id, mat_pt_lid) = 1.0e-32;
+        // sspd = sqrt((B + 4/3G)/rho)
+        const double B = eos_global_vars(mat_id,0); // bulk modulus
+        const double G = eos_global_vars(mat_id,1); // shear modulus  
+        //const double den0 = eos_global_vars(mat_id,2); // ref density
+        const double csmin = eos_global_vars(mat_id,3); // minimum sound speed
+
+        // sound speed
+        MaterialPoints_sspd(mat_id, mat_pt_lid) = fmax(csmin, sqrt((B + (4.0/3.0)*G)/den));
 
         return;
     } // end func
 
 } // end namespace
-
-
-
-
-
 
 #endif // end Header Guard

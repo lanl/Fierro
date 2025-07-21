@@ -61,12 +61,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace HostUserDefinedEOSModel
 {
     // host side function
-    static void initialize(const DCArrayKokkos<double>& MaterialPoints_pres,
-                           const DCArrayKokkos<double>& MaterialPoints_stress,
+    static void initialize(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+                           const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
                            const size_t mat_pt_lid,
                            const size_t mat_id,
-                           const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                           const DCArrayKokkos<double>& MaterialPoints_sspd,
+                           const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                           const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                            const double den,
                            const double sie,
                            const RaggedRightArrayKokkos<double> &eos_global_vars,
@@ -78,12 +78,12 @@ namespace HostUserDefinedEOSModel
         return;
     } // end func
 
-    static void calc_pressure(const DCArrayKokkos<double>& MaterialPoints_pres,
-                              const DCArrayKokkos<double>& MaterialPoints_stress,
+    static void calc_pressure(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+                              const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
                               const size_t mat_pt_lid,
                               const size_t mat_id,
-                              const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                              const DCArrayKokkos<double>& MaterialPoints_sspd,
+                              const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                              const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                               const double den,
                               const double sie,
                               const RaggedRightArrayKokkos<double> &eos_global_vars)
@@ -104,15 +104,15 @@ namespace HostUserDefinedEOSModel
     } // end for user_eos_model
 
 
-    static void calc_sound_speed(const DCArrayKokkos<double>& MaterialPoints_pres,
-                                 const DCArrayKokkos<double>& MaterialPoints_stress,
+    static void calc_sound_speed(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
                                  const size_t mat_pt_lid,
                                  const size_t mat_id,
-                                 const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                                 const DCArrayKokkos<double>& MaterialPoints_sspd,
+                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                                  const double den,
                                  const double sie,
-                                 const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
+                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
                                  const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
         
@@ -158,12 +158,12 @@ namespace HostUserDefinedEOSModel
 namespace HostNotionalEOSModel {
 
     // host side function
-    static void initialize(const DCArrayKokkos<double>& MaterialPoints_pres,
-                           const DCArrayKokkos<double>& MaterialPoints_stress,
+    static void initialize(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+                           const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
                            const size_t mat_pt_lid,
                            const size_t mat_id,
-                           const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                           const DCArrayKokkos<double>& MaterialPoints_sspd,
+                           const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                           const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                            const double den,
                            const double sie,
                            const RaggedRightArrayKokkos<double> &eos_global_vars,
@@ -176,12 +176,12 @@ namespace HostNotionalEOSModel {
     } // end func
 
 
-    static void calc_pressure(const DCArrayKokkos<double>& MaterialPoints_pres,
-                              const DCArrayKokkos<double>& MaterialPoints_stress,
+    static void calc_pressure(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+                              const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
                               const size_t mat_pt_lid,
                               const size_t mat_id,
-                              const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                              const DCArrayKokkos<double>& MaterialPoints_sspd,
+                              const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                              const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                               const double den,
                               const double sie,
                               const RaggedRightArrayKokkos<double> &eos_global_vars)
@@ -201,15 +201,15 @@ namespace HostNotionalEOSModel {
     } // end func
 
 
-    static void calc_sound_speed(const DCArrayKokkos<double>& MaterialPoints_pres,
-                                 const DCArrayKokkos<double>& MaterialPoints_stress,
+    static void calc_sound_speed(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
                                  const size_t mat_pt_lid,
                                  const size_t mat_id,
-                                 const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                                 const DCArrayKokkos<double>& MaterialPoints_sspd,
+                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                                  const double den,
                                  const double sie,
-                                 const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
+                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
                                  const RaggedRightArrayKokkos<double> &eos_global_vars)
     {
         
