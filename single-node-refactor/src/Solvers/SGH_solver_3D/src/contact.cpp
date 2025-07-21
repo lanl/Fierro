@@ -1848,6 +1848,7 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh, 
                 contact_pair_t &current_pair = contact_pairs(nodes_pen_surfs(node_lid,0));
                 current_pair = contact_pair_t(*this, contact_patches(i), contact_nodes(nodes_pen_surfs(node_lid,0)), xi, eta, del_t, surf_normal);
                 current_pair.active = true;
+                current_pair.force_factor = 0.00000001;
                 active_pairs(num_active_pairs) = nodes_pen_surfs(node_lid,0);
                 num_active_pairs += 1;
             }
@@ -2199,6 +2200,7 @@ void contact_patches_t::get_contact_pairs(const double &del_t)
                     ViewCArrayKokkos<double> normal(&normal_arr[0], 3);
                     contact_patch.get_normal(xi_val, eta_val, del_t, normal);
                     current_pair = contact_pair_t(*this, contact_patch, node, xi_val, eta_val, del_tc, normal);
+                    current_pair.force_factor = 1.0;
                 }
             }
         }
@@ -2352,7 +2354,7 @@ void contact_patches_t::force_resolution(const double &del_t)
             if (pair.contact_type == contact_pair_t::contact_types::frictionless)
             {
                 pair.frictionless_increment(del_t);
-                pair.distribute_frictionless_force(0.00000001);  // if not doing serial, then this would be called in the second loop
+                pair.distribute_frictionless_force(pair.force_factor);  // if not doing serial, then this would be called in the second loop
                 forces_view(j) = pair.fc_inc;
             } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
         }
