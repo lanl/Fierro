@@ -316,7 +316,7 @@ struct contact_pair_t
     ///
     /// \return true if the contact pair should be removed; false otherwise
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    bool should_remove(const double &del_t);
+    bool should_remove(const double &del_t, bool penetrating);
 };
 
 struct contact_patches_t
@@ -436,7 +436,7 @@ struct contact_patches_t
     /// \param State Necessary to pull nodal coords for defining penetration depth cap criterion
     /// \param mesh Necessary to pull total number of nodes
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void initial_penetration(State_t& State, const Mesh_t &mesh, const double &del_t);
+    void penetration_sweep(State_t& State, const Mesh_t &mesh, const double &del_t);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn penetration_check
@@ -484,7 +484,7 @@ struct contact_patches_t
     ///
     /// \param del_t current time step in the analysis
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void get_contact_pairs(const double &del_t);
+    void get_contact_pairs(State_t& State, const Mesh_t &mesh, const double &del_t);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn remove_pair

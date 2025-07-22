@@ -828,11 +828,14 @@ void contact_pair_t::distribute_frictionless_force(const double &force_scale)
     }
 }  // end distribute_frictionless_force
 
-bool contact_pair_t::should_remove(const double &del_t)
+bool contact_pair_t::should_remove(const double &del_t, bool penetrating)
 {
     if (fc_inc_total == 0.0 || fabs(xi) > 1.0 + edge_tol || fabs(eta) > 1.0 + edge_tol)
     {
         fc_inc_total = 0.0;
+        return true;
+    } else if (force_factor != 1.0 && penetrating == false)
+    {
         return true;
     } else
     {
@@ -1561,7 +1564,7 @@ void contact_patches_t::find_nodes(contact_patch_t &contact_patch, const double 
     }
 }  // end find_nodes
 
-void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh, const double &del_t)
+void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, const double &del_t)
 {
     // start of finding penetration depth criterion
     // finding min of nodal x,y,z domains
@@ -1679,7 +1682,7 @@ void contact_patches_t::initial_penetration(State_t& State, const Mesh_t &mesh, 
                 // If the node is in the current element, then continue; else, add it to possible_nodes
                 for (int j = 0; j < mesh.num_nodes_in_elem; j++)
                 {
-                    if (node_gid == mesh.nodes_in_elem(mesh.elems_in_patch(surf.gid,0)),j)
+                    if (node_gid == mesh.nodes_in_elem(mesh.elems_in_patch(surf.gid,0),j))
                     {
                         add_node = false;
                         break;
@@ -2035,7 +2038,7 @@ void contact_patches_t::isoparametric_inverse(const CArrayKokkos<double> pos, co
 
 }
 
-void contact_patches_t::get_contact_pairs(const double &del_t)
+void contact_patches_t::get_contact_pairs(State_t& State, const Mesh_t &mesh, const double &del_t)
 {
     // clear the is_patch_node and is_pen_node arrays to be false
     FOR_ALL_CLASS(i, 0, is_patch_node.size(), {
@@ -2221,6 +2224,7 @@ void contact_patches_t::get_contact_pairs(const double &del_t)
             num_active_pairs += 1;
         }
     }
+    //penetration_sweep(State,mesh,del_t);
 }  // end get_contact_pairs
 
 KOKKOS_FUNCTION
@@ -2398,7 +2402,8 @@ void contact_patches_t::remove_pairs(const double &del_t)
         bool should_remove = false;
         if (pair.contact_type == contact_pair_t::contact_types::frictionless)
         {
-            should_remove = pair.should_remove(del_t);
+            bool penetrating = penetration_check(contact_nodes(node_gid), penetration_patches, pair.patch.lid);
+            should_remove = pair.should_remove(del_t, penetrating);
         } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
 
         if (should_remove)
@@ -2556,7 +2561,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const Mesh_t &mes
         std::cout << "Patch with nodes 18 19 23 22 is paired with node 10" << std::endl;
         std::cout << "vs." << std::endl;
         contact_patches_obj.sort();
-        contact_patches_obj.get_contact_pairs(0.1);
+        contact_patches_obj.get_contact_pairs(State, mesh, 0.1);
         for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {
             for (int j = 0; j < contact_patches_obj.contact_pairs_access.stride(i); j++)
@@ -2582,7 +2587,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const Mesh_t &mes
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 16" << std::endl;
         std::cout << "vs." << std::endl;
         contact_patches_obj.sort();
-        contact_patches_obj.get_contact_pairs(1.0);
+        contact_patches_obj.get_contact_pairs(State, mesh, 1.0);
         for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {
             for (int j = 0; j < contact_patches_obj.contact_pairs_access.stride(i); j++)
@@ -2607,7 +2612,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const Mesh_t &mes
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 17" << std::endl;
         std::cout << "vs." << std::endl;
         contact_patches_obj.sort();
-        contact_patches_obj.get_contact_pairs(1.0);
+        contact_patches_obj.get_contact_pairs(State, mesh, 1.0);
         for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {
             for (int j = 0; j < contact_patches_obj.contact_pairs_access.stride(i); j++)
@@ -2642,7 +2647,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const Mesh_t &mes
         std::cout << " ---> Pushback Direction: 0 0.447214 0.894427" << std::endl;
         std::cout << "vs." << std::endl;
         contact_patches_obj.sort();
-        contact_patches_obj.get_contact_pairs(1.0);
+        contact_patches_obj.get_contact_pairs(State, mesh, 1.0);
         for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {
             for (int j = 0; j < contact_patches_obj.contact_pairs_access.stride(i); j++)

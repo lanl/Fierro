@@ -111,10 +111,11 @@ void SGH3D::boundary_contact(const Mesh_t& mesh,
 /// \param The time step size
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D:: boundary_contact_force(const double &del_t)
+void SGH3D:: boundary_contact_force(State_t& State, const Mesh_t &mesh, const double &del_t)
 {
     contact_bank.sort();
-    contact_bank.get_contact_pairs(del_t);
+    //contact_bank.penetration_sweep(State, mesh, del_t);
+    contact_bank.get_contact_pairs(State, mesh, del_t);
     contact_bank.force_resolution(del_t);
     contact_bank.remove_pairs(del_t);
 } // end boundary_contact_force function
