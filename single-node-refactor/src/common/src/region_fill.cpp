@@ -184,7 +184,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
         // The actual storage, that is, the actual number of mat_elems, mat_points, mat_corners, etc.  No buffer!
         // The exact size plus a buffer is for e.g., remap.  The buffers are shortly below here.
-        State.MaterialToMeshMaps.num_material_elems.host(mat_id) = num_elems_saved_for_mat.host(mat_id);
+        State.MaterialToMeshMaps.num_mat_elems.host(mat_id) = num_elems_saved_for_mat.host(mat_id);
         State.MaterialPoints.num_material_points.host(mat_id)   = num_elems_saved_for_mat.host(mat_id) * num_mat_pts_in_elem;
         State.MaterialCorners.num_material_corners.host(mat_id) = num_elems_saved_for_mat.host(mat_id) * mesh.num_nodes_in_elem;
         State.MaterialZones.num_material_zones.host(mat_id)     = num_elems_saved_for_mat.host(mat_id) * mesh.num_zones_in_elem;
@@ -193,20 +193,20 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
         // for ALE, add a buffer to num_elems_for_mat, like 10% of num_elems up to num_elems.
         // the num_elems_buffer is used when allocating the size of all material state
         size_t buffer = 0;
-        State.MaterialToMeshMaps.num_material_elems_buffer.host(mat_id) = num_elems_saved_for_mat.host(mat_id)+buffer;
+        State.MaterialToMeshMaps.num_mat_elems_buffer.host(mat_id) = num_elems_saved_for_mat.host(mat_id)+buffer;
         State.MaterialPoints.num_material_points_buffer.host(mat_id)    = (num_elems_saved_for_mat.host(mat_id)+buffer) * num_mat_pts_in_elem;
         State.MaterialCorners.num_material_corners_buffer.host(mat_id)  = (num_elems_saved_for_mat.host(mat_id)+buffer) * mesh.num_nodes_in_elem;
         State.MaterialZones.num_material_zones_buffer.host(mat_id)      = (num_elems_saved_for_mat.host(mat_id)+buffer) * mesh.num_zones_in_elem;
     } // end
 
     // copy to device the actual sizes
-    State.MaterialToMeshMaps.num_material_elems.update_device();
+    State.MaterialToMeshMaps.num_mat_elems.update_device();
     State.MaterialPoints.num_material_points.update_device();
     State.MaterialCorners.num_material_corners.update_device();
     State.MaterialZones.num_material_zones.update_device();
 
     // copy to the device the actual+buffer sizes
-    State.MaterialToMeshMaps.num_material_elems_buffer.update_device();
+    State.MaterialToMeshMaps.num_mat_elems_buffer.update_device();
     State.MaterialPoints.num_material_points_buffer.update_device();
     State.MaterialCorners.num_material_corners_buffer.update_device();
     State.MaterialZones.num_material_zones_buffer.update_device();
@@ -854,7 +854,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
         std::cout << "Number of elements = " << 
-            State.MaterialToMeshMaps.num_material_elems.host(mat_id) << " for material " << mat_id << "\n";
+            State.MaterialToMeshMaps.num_mat_elems.host(mat_id) << " for material " << mat_id << "\n";
     
     } // end for loop over mats
 

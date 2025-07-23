@@ -104,7 +104,7 @@ namespace TiptonEquilibrationModel {
                 dt,
                 rk_alpha,
                 fuzz,
-                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                 mat_id);
 
         } // end for mat_id
@@ -142,7 +142,7 @@ namespace TiptonEquilibrationModel {
                 fuzz,
                 Materials.equilibration_global_vars,
                 Materials.num_equilibration_global_vars,
-                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                 mat_id);
 
         } // end for mat_id
@@ -151,7 +151,7 @@ namespace TiptonEquilibrationModel {
         // calculate volfrac and energy change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
         
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
             
             update_state_equilibration (
                 mesh,
@@ -177,7 +177,7 @@ namespace TiptonEquilibrationModel {
                 dt,
                 rk_alpha,
                 fuzz,
-                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                 mat_id);
 
         } // end for mat_id
@@ -226,7 +226,7 @@ namespace TiptonEquilibrationModel {
                 dt,
                 rk_alpha,
                 fuzz,
-                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                 mat_id);
 
         } // end for mat_id
@@ -264,7 +264,7 @@ namespace TiptonEquilibrationModel {
                 fuzz,
                 Materials.equilibration_global_vars,
                 Materials.num_equilibration_global_vars,
-                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                 mat_id);
 
         } // end for mat_id
@@ -273,7 +273,7 @@ namespace TiptonEquilibrationModel {
         // calculate volfrac and energy change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
 
 
             update_state_equilibration (
@@ -300,7 +300,7 @@ namespace TiptonEquilibrationModel {
                 dt,
                 rk_alpha,
                 fuzz,
-                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                 mat_id);
 
 

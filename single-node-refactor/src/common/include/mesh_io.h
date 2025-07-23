@@ -2568,7 +2568,7 @@ public:
                                     State.MaterialToMeshMaps.elem,
                                     SimulationParamaters.output_options.output_elem_state,
                                     SimulationParamaters.output_options.output_gauss_pt_state,
-                                    State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                                    State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                                     mat_id,
                                     num_elems,
                                     den_id,
@@ -2708,7 +2708,7 @@ public:
 
                 for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
-                    const size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+                    const size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
 
                     // only save material data if the mat lives on the mesh, ie. has state allocated
                     if (num_mat_elems>0){
@@ -2995,7 +2995,7 @@ public:
 
         // export material centeric data to the elements
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
 
             for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
                 // 1 material per element
@@ -3418,7 +3418,7 @@ public:
 
         // export material centeric data to the elements
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
 
             for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
                 // 1 material per element
@@ -4745,7 +4745,7 @@ public:
         // write out values for the elem
         for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
 
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
 
             for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++)
             {

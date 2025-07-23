@@ -413,8 +413,8 @@ struct MeshtoMaterialMap_t
 /////////////////////////////////////////////////////////////////////////////
 struct MaterialToMeshMap_t
 {
-    DCArrayKokkos <size_t> num_material_elems;        ///< returns the exact number of matpts
-    DCArrayKokkos <size_t> num_material_elems_buffer; ///< returns the number of matpts plus buffer
+    DCArrayKokkos <size_t> num_mat_elems;        ///< returns the exact number of matpts
+    DCArrayKokkos <size_t> num_mat_elems_buffer; ///< returns the number of matpts plus buffer
 
     DRaggedRightArrayKokkos<size_t> elem;             ///< returns the elem for this material
 
@@ -422,21 +422,21 @@ struct MaterialToMeshMap_t
     void initialize()
     {
         if (elem.size() == 0){ 
-            this->elem = DRaggedRightArrayKokkos<size_t>(this->num_material_elems_buffer, "material_space_to_elem");
+            this->elem = DRaggedRightArrayKokkos<size_t>(this->num_mat_elems_buffer, "material_space_to_elem");
         }
 
     }; // end method
 
     void initialize_num_mats(size_t num_mats)
     {
-        // Note: num_material_elems is allocated in problem setup
-        if (num_material_elems.size() == 0){
-            this->num_material_elems = DCArrayKokkos <size_t> (num_mats, "num_material_elems"); 
+        // Note: num_mat_elems is allocated in problem setup
+        if (num_mat_elems.size() == 0){
+            this->num_mat_elems = DCArrayKokkos <size_t> (num_mats, "num_mat_elems"); 
         }
 
-        // Note: num_material_elems_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
-        if (num_material_elems_buffer.size() == 0){
-            this->num_material_elems_buffer = DCArrayKokkos <size_t> (num_mats, "num_material_elems_with_buffer"); 
+        // Note: num_mat_elems_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
+        if (num_mat_elems_buffer.size() == 0){
+            this->num_mat_elems_buffer = DCArrayKokkos <size_t> (num_mats, "num_mat_elems_with_buffer"); 
         }
 
     }; // end method
