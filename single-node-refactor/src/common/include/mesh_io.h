@@ -2565,7 +2565,7 @@ public:
                                     State.GaussPoints,
                                     elem_scalar_fields,
                                     elem_tensor_fields,
-                                    State.MaterialToMeshMaps.elem,
+                                    State.MaterialToMeshMaps.elem_in_mat_elem,
                                     SimulationParamaters.output_options.output_elem_state,
                                     SimulationParamaters.output_options.output_gauss_pt_state,
                                     State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
@@ -2726,7 +2726,7 @@ public:
                         concatenate_mat_fields(State.MaterialPoints,
                                                mat_elem_scalar_fields,
                                                mat_elem_tensor_fields,
-                                               State.MaterialToMeshMaps.elem,
+                                               State.MaterialToMeshMaps.elem_in_mat_elem,
                                                SimulationParamaters.output_options.output_mat_pt_state,
                                                num_mat_elems,
                                                mat_id,
@@ -2762,7 +2762,7 @@ public:
                                                        State.node.coords,
                                                        mat_node_coords,
                                                        mat_nodes_in_mat_elem,
-                                                       State.MaterialToMeshMaps.elem,
+                                                       State.MaterialToMeshMaps.elem_in_mat_elem,
                                                        mat_id,
                                                        num_mat_nodes,
                                                        num_mat_elems,
@@ -3001,7 +3001,7 @@ public:
                 // 1 material per element
 
                 // get elem gid
-                size_t elem_gid = State.MaterialToMeshMaps.elem.host(mat_id, mat_elem_lid);
+                size_t elem_gid = State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, mat_elem_lid);
 
                 // save outputs
                 elem_fields(elem_gid, 0) = State.MaterialPoints.den.host(mat_id, mat_elem_lid);
@@ -3424,7 +3424,7 @@ public:
                 // 1 material per element
 
                 // get elem gid
-                size_t elem_gid = State.MaterialToMeshMaps.elem.host(mat_id, mat_elem_lid);
+                size_t elem_gid = State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, mat_elem_lid);
 
                 // save outputs
                 elem_fields(elem_gid, 0) = State.MaterialPoints.den.host(mat_id,mat_elem_lid);
@@ -3650,7 +3650,7 @@ public:
     /// \param MaterialPoints a struct containing the material point state arrays
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
-    /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
+    /// \param elem_in_mat_elem a listing of the element ids the material resides in
     /// \param output_elem_state a std::vector of enums specifying the elem avg outputs
     /// \param num_mat_elems the number of elements the material resides in
     /// \param mat_id the index for the material
@@ -3660,7 +3660,7 @@ public:
                                  const GaussPoint_t& GaussPoints,
                                  DCArrayKokkos<double>& elem_scalar_fields,
                                  DCArrayKokkos<double>& elem_tensor_fields,
-                                 const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                                 const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                                  const std::vector<material_pt_state>& output_elem_state,
                                  const std::vector<gauss_pt_state>& output_gauss_pt_states,
                                  const size_t num_mat_elems,
@@ -3689,7 +3689,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         elem_scalar_fields(den_id, elem_gid) += MaterialPoints.den(mat_id, mat_elem_lid)*
@@ -3701,7 +3701,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         elem_scalar_fields(pres_id, elem_gid) += MaterialPoints.pres(mat_id, mat_elem_lid)*
@@ -3713,7 +3713,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         // extensive ie here, but after this function, it will become specific ie
@@ -3725,7 +3725,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         elem_scalar_fields(sspd_id, elem_gid) += MaterialPoints.sspd(mat_id, mat_elem_lid)*
@@ -3737,7 +3737,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         elem_scalar_fields(mass_id, elem_gid) += MaterialPoints.mass(mat_id, mat_elem_lid);
@@ -3750,7 +3750,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         // average tensor fields, it is always 3D
@@ -3773,7 +3773,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         elem_scalar_fields(conductivity_id, elem_gid) += MaterialPoints.conductivity(mat_id, mat_elem_lid)*
@@ -3786,7 +3786,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         elem_scalar_fields(specific_heat_id, elem_gid) += MaterialPoints.specific_heat(mat_id, mat_elem_lid)*
@@ -3878,7 +3878,7 @@ public:
     /// \param MaterialPoints a struct containing the material point state arrays
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
-    /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
+    /// \param elem_in_mat_elem a listing of the element ids the material resides in
     /// \param output_material_pt_states a std::vector of enums specifying the model
     /// \param num_mat_elems the number of elements the material resides in
     /// \param mat_id the index for the material
@@ -3887,7 +3887,7 @@ public:
     void concatenate_mat_fields(const MaterialPoint_t& MaterialPoints,
                                 DCArrayKokkos<double>& mat_elem_scalar_fields,
                                 DCArrayKokkos<double>& mat_elem_tensor_fields,
-                                const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                                const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                                 const std::vector<material_pt_state>& output_material_pt_states,
                                 const size_t num_mat_elems,
                                 const size_t mat_id,
@@ -3994,7 +3994,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         mat_elem_scalar_fields(mat_conductivity_id, elem_gid) += MaterialPoints.conductivity(mat_id, mat_elem_lid);
@@ -4005,7 +4005,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         mat_elem_scalar_fields(mat_specific_heat_id, elem_gid) += MaterialPoints.specific_heat(mat_id, mat_elem_lid);
@@ -4039,7 +4039,7 @@ public:
     /// \param Node a struct containing the material point state arrays
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
-    /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
+    /// \param elem_in_mat_elem a listing of the element ids the material resides in
     /// \param output_node_states a std::vector of enums specifying the model
     /// \param num_mat_elems the number of elements the material resides in
     /// \param mat_id the index for the material
@@ -4588,7 +4588,7 @@ public:
         const DCArrayKokkos<double>& state_node_coords,
         DCArrayKokkos<double>& mat_node_coords,
         DCArrayKokkos <size_t>& mat_nodes_in_mat_elem,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t mat_id,
         size_t& num_mat_nodes,
         const size_t num_mat_elems,
@@ -4604,7 +4604,7 @@ public:
         // tag and count the number of nodes in this part
         FOR_ALL (mat_elem_lid, 0, num_mat_elems, {
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);  // WARNING not GPU compatible
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);  // WARNING not GPU compatible
             
             // parallel loop over the nodes in the element
             for(size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++) {
@@ -4649,7 +4649,7 @@ public:
         // save the new node id's
         FOR_ALL (mat_elem_lid, 0, num_mat_elems, {
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
             
             // parallel loop over the nodes in the element
             for(size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++) {
@@ -4750,7 +4750,7 @@ public:
             for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++)
             {
 
-                const size_t elem_gid = State.MaterialToMeshMaps.elem.host(mat_id, mat_elem_lid);
+                const size_t elem_gid = State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, mat_elem_lid);
 
                 double elem_coords[3];
                 elem_coords[0] = 0.0;

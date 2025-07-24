@@ -69,7 +69,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                         mesh,
                         State.MaterialPoints.eos_state_vars,
                         State.MaterialPoints.strength_state_vars,
-                        State.MaterialToMeshMaps.elem,
+                        State.MaterialToMeshMaps.elem_in_mat_elem,
                         State.MaterialPoints.num_material_points.host(mat_id),
                         mat_id);
 
@@ -100,7 +100,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                          State.node.mass,
                          State.corner.mass,
                          State.MaterialPoints.mass,
-                         State.MaterialToMeshMaps.elem,
+                         State.MaterialToMeshMaps.elem_in_mat_elem,
                          State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                          mat_id);
     } // end for mat_id

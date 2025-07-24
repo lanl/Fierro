@@ -416,13 +416,13 @@ struct MaterialToMeshMap_t
     DCArrayKokkos <size_t> num_mat_elems;        ///< returns the exact number of matpts
     DCArrayKokkos <size_t> num_mat_elems_buffer; ///< returns the number of matpts plus buffer
 
-    DRaggedRightArrayKokkos<size_t> elem;             ///< returns the elem for this material
+    DRaggedRightArrayKokkos<size_t> elem_in_mat_elem;             ///< returns the elem for this material
 
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize()
     {
-        if (elem.size() == 0){ 
-            this->elem = DRaggedRightArrayKokkos<size_t>(this->num_mat_elems_buffer, "material_space_to_elem");
+        if (elem_in_mat_elem.size() == 0){ 
+            this->elem_in_mat_elem = DRaggedRightArrayKokkos<size_t>(this->num_mat_elems_buffer, "material_space_to_elem");
         }
 
     }; // end method
@@ -931,7 +931,7 @@ struct State_t
     // ---------------------------------------------------------------------
     //    material to mesh maps and mesh to material maps
     // ---------------------------------------------------------------------
-    MaterialToMeshMap_t MaterialToMeshMaps; ///< access as MaterialToMeshMaps.elem(mat_id, mat_storage_lid)
+    MaterialToMeshMap_t MaterialToMeshMaps; ///< access as MaterialToMeshMaps.elem_in_mat_elem(mat_id, mat_storage_lid)
     MeshtoMaterialMap_t MeshtoMaterialMaps; ///< acces as MeshtoMaterialMaps.mat_id(elem, mat_lid)
 
     // ---------------------------------------------------------------------

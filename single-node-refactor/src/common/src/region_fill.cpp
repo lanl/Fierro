@@ -739,7 +739,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
             size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);
 
             // --- mapping from material elem lid to elem ---
-            State.MaterialToMeshMaps.elem.host(mat_id, mat_elem_lid) = elem_gid;
+            State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, mat_elem_lid) = elem_gid;
 
             // --- mapping from elem to material index space ---
             State.MeshtoMaterialMaps.mat_storage_lid.host(elem_gid, a_mat_in_elem) = mat_elem_lid;
@@ -847,7 +847,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
 
         } // end loop over materials in this element
     } // end serial for loop over all elements
-    State.MaterialToMeshMaps.elem.update_device();
+    State.MaterialToMeshMaps.elem_in_mat_elem.update_device();
 
 
     // copy the state to the device
@@ -2107,7 +2107,7 @@ void init_state_vars(const Material_t& Materials,
                      const Mesh_t& mesh,
                      const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
                      const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
-                     const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                      const size_t num_mat_pts,
                      const size_t mat_id)
 {
@@ -2125,7 +2125,7 @@ void init_state_vars(const Material_t& Materials,
                                 MaterialPoints_strength_state_vars,
                                 Materials.eos_global_vars,
                                 Materials.strength_global_vars,
-                                MaterialToMeshMaps_elem,
+                                elem_in_mat_elem,
                                 num_mat_pts,
                                 mat_id);
 
@@ -2267,7 +2267,7 @@ void calc_corner_mass(const Material_t& Materials,
                       const DCArrayKokkos<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-                      const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                      const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                       const size_t num_mat_elems,
                       const size_t mat_id)
 {
@@ -2276,7 +2276,7 @@ void calc_corner_mass(const Material_t& Materials,
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);  
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);  
 
         // calculate the fraction of matpt mass to scatter to each corner
         double corner_frac = 1.0/((double)mesh.num_nodes_in_elem);  // =1/8

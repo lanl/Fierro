@@ -83,7 +83,7 @@ void SGH3D::get_force(const Material_t& Materials,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_geo_volfrac,
                       const corners_in_mat_t corners_in_mat_elem,
-                      const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                      const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                       const size_t num_mat_elems,
                       const size_t mat_id,
                       const double fuzz,
@@ -99,7 +99,7 @@ void SGH3D::get_force(const Material_t& Materials,
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid); 
 
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_lid = mat_elem_lid;

@@ -92,7 +92,7 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
                          State.node.mass,
                          State.corner.mass,
                          State.MaterialPoints.mass,
-                         State.MaterialToMeshMaps.elem,
+                         State.MaterialToMeshMaps.elem_in_mat_elem,
                          State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                          mat_id);
     } // end for mat_id

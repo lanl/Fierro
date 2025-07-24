@@ -99,7 +99,7 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.pres,
                 State.MaterialPoints.den,
                 State.MaterialPoints.sspd,
-                State.MaterialToMeshMaps.elem,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
@@ -135,7 +135,7 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.den,
                 State.MaterialPoints.sspd,
                 State.MaterialPoints.mass,
-                State.MaterialToMeshMaps.elem,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
@@ -172,7 +172,7 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.stress,
                 State.MaterialPoints.shear_modulii,
                 State.MaterialPoints.eos_state_vars,
-                State.MaterialToMeshMaps.elem,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
@@ -221,7 +221,7 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.pres,
                 State.MaterialPoints.den,
                 State.MaterialPoints.sspd,
-                State.MaterialToMeshMaps.elem,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
@@ -257,7 +257,7 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.den,
                 State.MaterialPoints.sspd,
                 State.MaterialPoints.mass,
-                State.MaterialToMeshMaps.elem,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
@@ -295,7 +295,7 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.stress,
                 State.MaterialPoints.shear_modulii,
                 State.MaterialPoints.eos_state_vars,
-                State.MaterialToMeshMaps.elem,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
@@ -323,7 +323,7 @@ namespace TiptonEquilibrationModel {
         const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
@@ -336,7 +336,7 @@ namespace TiptonEquilibrationModel {
         FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
             // get elem gid for this material at this lid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
             // loop over gauss points in this element
             for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
@@ -422,7 +422,7 @@ namespace TiptonEquilibrationModel {
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
@@ -437,7 +437,7 @@ namespace TiptonEquilibrationModel {
         FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
             // get elem gid for this material at this lid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
             // loop over gauss points in this element
             for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
@@ -511,7 +511,7 @@ namespace TiptonEquilibrationModel {
         const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
@@ -524,7 +524,7 @@ namespace TiptonEquilibrationModel {
         FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
             // get elem gid for this material at this lid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
             // loop over gauss points in this element
             for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){

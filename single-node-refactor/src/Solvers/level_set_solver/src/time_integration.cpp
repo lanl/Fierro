@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void LevelSet::rk_init(
     DCArrayKokkos<double>& GaussPoints_level_set,
     DCArrayKokkos<double>& GaussPoints_level_set_n0,
-    DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    DRaggedRightArrayKokkos<size_t>& elem_mat_elem,
     const size_t num_dims,
     const size_t num_mat_elems,
     const size_t mat_id) const
@@ -61,7 +61,7 @@ void LevelSet::rk_init(
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get the element
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_lid);
 
         // Note:
         // loop gauss point, this method is for a single quadrature point element
@@ -96,7 +96,7 @@ void LevelSet::get_timestep(
     const Material_t& Materials,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& GaussPoints_vol,
-    const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const DRaggedRightArrayKokkos<size_t>& elem_mat_elem,
     const size_t num_mat_elems,
     const size_t mat_id,
     const double time_value,
@@ -116,7 +116,7 @@ void LevelSet::get_timestep(
     double dt_lcl;
     double min_dt_calc;
     FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_lid);
 
         double coords0[24];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 8, 3);
@@ -223,7 +223,7 @@ void LevelSet::get_timestep_2D(
     const Material_t& Materials,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& GaussPoints_vol,
-    const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const DRaggedRightArrayKokkos<size_t>& elem_mat_elem,
     const size_t num_mat_elems,
     const size_t mat_id,
     const double time_value,
@@ -243,7 +243,7 @@ void LevelSet::get_timestep_2D(
     double min_dt_calc;
     FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
 
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
+        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_lid); 
 
         double coords0[8];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 4, 2);

@@ -124,7 +124,7 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
                             State.node.mass,
                             State.corner.mass,
                             State.MaterialPoints.den,
-                            State.MaterialToMeshMaps.elem,
+                            State.MaterialToMeshMaps.elem_in_mat_elem,
                             State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                             mat_id);
     } // end for mat_id
@@ -158,7 +158,7 @@ void calc_corner_mass_rz(const Material_t& Materials,
                          const DCArrayKokkos<double>& node_mass,
                          const DCArrayKokkos<double>& corner_mass,
                          const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-                         const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                          const size_t num_mat_elems,
                          const size_t mat_id)
 {
@@ -166,7 +166,7 @@ void calc_corner_mass_rz(const Material_t& Materials,
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid); 
 
         // facial area of the corners
         double corner_areas_array[4];

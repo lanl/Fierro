@@ -108,7 +108,7 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
                        DRaggedRightArrayKokkos<double>& MaterialPoints_density,
                        DRaggedRightArrayKokkos<double>& MaterialPoints_specific_heat,
                        DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-                       DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                       DRaggedRightArrayKokkos<size_t>& elem_mat_elem,
                        size_t num_mat_elems,
                        double time_value,
                        const double graphics_time,
@@ -127,7 +127,7 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
     double dt_lcl;
     double min_dt_calc;
     FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_lid);
 
         double coords0[24];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 8, 3);

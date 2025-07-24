@@ -207,7 +207,7 @@ void LevelSet::update_level_set(
     const DCArrayKokkos<double>& GaussPoints_level_set_n0,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& corner_normal,
-    const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const size_t num_mat_elems,
     const size_t mat_id,
     const double fuzz,
@@ -223,7 +223,7 @@ void LevelSet::update_level_set(
     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid); 
 
         // it is a 1-point quadrature point element
         size_t gauss_point = elem_gid;
