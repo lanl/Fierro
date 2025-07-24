@@ -60,7 +60,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     const size_t num_dims  = mesh.num_dims;
     const size_t num_elems = mesh.num_elems;
     const size_t num_nodes = mesh.num_nodes;
-    const size_t num_gauss_points = mesh.num_leg_gauss_in_elem*mesh.num_elems;  
+    const size_t num_gauss_points = mesh.num_gauss_in_elem*mesh.num_elems;  
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
@@ -173,14 +173,14 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
     // data structures to access indices in other material index spaces
     State.corners_in_mat_elem = corners_in_mat_t(mesh.num_nodes_in_elem);
-    State.points_in_mat_elem  = points_in_mat_t(mesh.num_leg_gauss_in_elem);  // was 1 material point per element
+    State.points_in_mat_elem  = points_in_mat_t(mesh.num_gauss_in_elem);  // was 1 material point per element
     State.zones_in_mat_elem  = zones_in_mat_t(mesh.num_zones_in_elem);  
     
 
     
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
-        const size_t num_mat_pts_in_elem = mesh.num_leg_gauss_in_elem;  // mat_pts = guass points
+        const size_t num_mat_pts_in_elem = mesh.num_gauss_in_elem;  // mat_pts = guass points
 
         // The actual storage, that is, the actual number of mat_elems, mat_points, mat_corners, etc.  No buffer!
         // The exact size plus a buffer is for e.g., remap.  The buffers are shortly below here.
@@ -459,7 +459,7 @@ void fill_regions(
             // for high-order, we loop over gauss points in element
             // gauss_gid = elem_gid for low-order solvers
             //---------
-            for (size_t gauss_lid=0; gauss_lid<mesh.num_leg_gauss_in_elem; gauss_lid++){
+            for (size_t gauss_lid=0; gauss_lid<mesh.num_gauss_in_elem; gauss_lid++){
 
                 // get gauss git using elem and gauss_lid in the element
                 size_t gauss_gid = elem_gid + gauss_lid;
@@ -692,8 +692,8 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     //const size_t num_dims  = mesh.num_dims;
     const size_t num_elems = mesh.num_elems;
     const size_t num_nodes = mesh.num_nodes;
-    const size_t num_gauss_points = mesh.num_leg_gauss_in_elem*mesh.num_elems;  
-    const size_t num_gauss_points_in_elem = mesh.num_leg_gauss_in_elem;  
+    const size_t num_gauss_points = mesh.num_gauss_in_elem*mesh.num_elems;  
+    const size_t num_gauss_points_in_elem = mesh.num_gauss_in_elem;  
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 

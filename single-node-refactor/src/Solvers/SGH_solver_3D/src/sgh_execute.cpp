@@ -80,10 +80,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     double dt = dt_start;
 
     // local memory for this solver
-    CArrayKokkos <double> GaussPoint_pres(mesh.num_elems*mesh.num_leg_gauss_in_elem);
-    CArrayKokkos <double> GaussPoint_pres_denominator(mesh.num_elems*mesh.num_leg_gauss_in_elem);
-    CArrayKokkos <double> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_leg_gauss_in_elem);
-    CArrayKokkos <double> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_leg_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_pres(mesh.num_elems*mesh.num_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_pres_denominator(mesh.num_elems*mesh.num_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_gauss_in_elem);
     
 
     // Create mesh writer

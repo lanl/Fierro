@@ -339,10 +339,10 @@ namespace TiptonEquilibrationModel {
             size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
             // loop over gauss points in this element
-            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
+            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_gauss_in_elem; gauss_pt_lid++){
 
                 // get the gauss gid for this point in the element
-                size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
+                size_t gauss_gid = mesh.gauss_in_elem(elem_gid, gauss_pt_lid);
 
                 // get the mat_gauss_pt_storage_lid
                 size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_sid, gauss_pt_lid);
@@ -389,10 +389,10 @@ namespace TiptonEquilibrationModel {
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
             // loop over gauss points in this element
-            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
+            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_gauss_in_elem; gauss_pt_lid++){
 
                 // get the gauss gid for this point in the element
-                size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
+                size_t gauss_gid = mesh.gauss_in_elem(elem_gid, gauss_pt_lid);
 
                 GaussPoint_pres(gauss_gid) /= (GaussPoint_pres_denominator(gauss_gid)+fuzz); 
 
@@ -440,10 +440,10 @@ namespace TiptonEquilibrationModel {
             size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
             // loop over gauss points in this element
-            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
+            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_gauss_in_elem; gauss_pt_lid++){
 
                 // get the gauss gid for this point in the element
-                size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
+                size_t gauss_gid = mesh.gauss_in_elem(elem_gid, gauss_pt_lid);
 
                 // get the mat_gauss_pt_storage_lid
                 size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_sid, gauss_pt_lid);
@@ -527,10 +527,10 @@ namespace TiptonEquilibrationModel {
             size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
             // loop over gauss points in this element
-            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
+            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_gauss_in_elem; gauss_pt_lid++){
 
                 // get the gauss gid for this point in the element
-                size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
+                size_t gauss_gid = mesh.gauss_in_elem(elem_gid, gauss_pt_lid);
 
                 // get the mat_gauss_pt_storage_lid
                 size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_sid, gauss_pt_lid);

@@ -832,29 +832,29 @@ struct zones_in_mat_t
 };
 
 // if material points are defined strictly internal to the element.
-struct legendre_in_mat_t
+struct gauss_in_mat_t
 {
     private:
-        size_t num_leg_gauss_in_elem_;
+        size_t num_gauss_in_elem_;
     public:
-        legendre_in_mat_t() {
+        gauss_in_mat_t() {
         };
 
-        legendre_in_mat_t(const size_t num_leg_gauss_in_elem_inp) {
-                this->num_leg_gauss_in_elem_ = num_leg_gauss_in_elem_inp;
+        gauss_in_mat_t(const size_t num_gauss_in_elem_inp) {
+                this->num_gauss_in_elem_ = num_gauss_in_elem_inp;
         };
 
         // return global gauss index for given local gauss index in a material storage
         size_t  host(const size_t mat_storage_lid, const size_t leg_gauss_lid) const
         {
-            return mat_storage_lid * num_leg_gauss_in_elem_ + leg_gauss_lid;
+            return mat_storage_lid * num_gauss_in_elem_ + leg_gauss_lid;
         };
 
         // Return the global gauss ID given a material storage gloabl ID and a local gauss ID
         KOKKOS_INLINE_FUNCTION
         size_t operator()(const size_t mat_storage_lid, const size_t leg_gauss_lid) const
         {
-            return mat_storage_lid * num_leg_gauss_in_elem_ + leg_gauss_lid;
+            return mat_storage_lid * num_gauss_in_elem_ + leg_gauss_lid;
         };
 };
 
