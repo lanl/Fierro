@@ -114,8 +114,14 @@ void SGH3D::boundary_contact(const Mesh_t& mesh,
 void SGH3D:: boundary_contact_force(State_t& State, const Mesh_t &mesh, const double &del_t)
 {
     contact_bank.sort();
-    //contact_bank.penetration_sweep(State, mesh, del_t);
+    contact_bank.penetration_sweep(State, mesh, del_t);
+    /* for (int i = 0; i < contact_bank.num_active_pairs; i++) {
+        std::cout << contact_bank.active_pairs(i) << std::endl;
+    }
+    std::cout << std::endl; */
+    //std::cout << "AFTER PEN SWEEP: " << contact_bank.num_active_pairs << std::endl;
     contact_bank.get_contact_pairs(State, mesh, del_t);
+    //std::cout << "AFTER GET PAIRS: " << contact_bank.num_active_pairs << std::endl;
     contact_bank.force_resolution(del_t);
     contact_bank.remove_pairs(del_t);
 } // end boundary_contact_force function

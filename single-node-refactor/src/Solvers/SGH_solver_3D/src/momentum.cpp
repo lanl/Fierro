@@ -90,7 +90,7 @@ void SGH3D::update_velocity(double rk_alpha,
             node_vel(node_gid, dim) = node_vel_n0(node_gid, dim) +
                     rk_alpha * dt * node_force(node_gid,dim) / node_mass(node_gid);
         } // end for dim
-        std::cout << node_gid << "    vel:"  << node_vel(node_gid,0) <<  "    "  << node_vel(node_gid,1) << "    "  << node_vel(node_gid,2) << std::endl;
+        //std::cout << node_gid << "    vel:"  << node_vel(node_gid,0) <<  "    "  << node_vel(node_gid,1) << "    "  << node_vel(node_gid,2) << std::endl;
     }); // end for parallel for over nodes
     Kokkos::fence();
 

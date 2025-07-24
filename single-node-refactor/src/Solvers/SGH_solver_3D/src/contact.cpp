@@ -777,7 +777,6 @@ KOKKOS_FUNCTION
 void contact_pair_t::distribute_frictionless_force(const double &force_scale)
 {
     // this function updating contact_force direction is why one node is handled at a time
-
     double force_val = force_scale*fc_inc;
 
     // get phi_k
@@ -1455,6 +1454,9 @@ void contact_patches_t::sort()
     //       with this one is that nb changes through the iterations. lbox and npoint might need to change to Views.
     // Initializing the nbox, lbox, nsort, and npoint arrays
     size_t nb = Sx*Sy*Sz;  // total number of buckets
+    //std::cout << x_max << "    " << x_min << std::endl;
+    //std::cout << Sx << "    " << Sy << "    " << Sz << std::endl;
+    //std::cout << "nb = " << nb << "    " << "bucket_size = " << bucket_size << std::endl; 
     nbox = CArrayKokkos<size_t>(nb);
     lbox = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
     nsort = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
@@ -1623,7 +1625,7 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
     
     // comparing bucket size and mesh size to define penetration depth maximum (cap) for consideration
     // todo: the multiplication values are currently arbitrary and should be checked for performance
-    double depth_cap = std::min(dim_min/2,3*bucket_size);
+    double depth_cap = std::min(dim_min/4,3*bucket_size);
 
     // allocating array to store surfaces a node is penetrating
     // first columns holds node gid and second through final columns store the surfaces that node is penetrating
@@ -1812,7 +1814,8 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
                 }
                 CArrayKokkos <double> iso_P(3);
                 isoparametric_inverse(P, elem_pos, iso_P);
-                //std::cout << "Node: " << nodes_pen_surfs(node_lid,0) << " with isoparametric contact point: " << iso_P(0) << "  " << iso_P(1) << "  " << iso_P(2) << std::endl;
+                std::cout << "Iso_P: " << nodes_pen_surfs(node_lid,0) << "   " << iso_P(0) << "   " << iso_P(1) << "   " << iso_P(2) << std::endl;
+                std::cout << "Real_P: " << nodes_pen_surfs(node_lid,0) << "   " << P(0) << "   " << P(1) << "   " << P(2) << std::endl;
                 // finding contact surface local id wrt the element
                 size_t surf_elem_id;
                 for (int j = 0; j < 6; j++) {
@@ -1850,11 +1853,19 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
                         eta = iso_P(1);
                         break;
                 }
+
                 contact_pair_t &current_pair = contact_pairs(nodes_pen_surfs(node_lid,0));
-                current_pair = contact_pair_t(*this, contact_patches(i), contact_nodes(nodes_pen_surfs(node_lid,0)), xi, eta, del_t, surf_normal);
-                current_pair.active = true;
-                current_pair.force_factor = 0.00000001;
-                active_pairs(num_active_pairs) = nodes_pen_surfs(node_lid,0);
+                // if pair is not active, make active
+                if (current_pair.active == false) { 
+                    current_pair = contact_pair_t(*this, contact_patches(i), contact_nodes(nodes_pen_surfs(node_lid,0)), xi, eta, del_t, surf_normal);
+                    current_pair.active = true;
+                    current_pair.force_factor = 0.00000001;
+                    active_pairs(num_active_pairs) = nodes_pen_surfs(node_lid,0);
+                } else // update contact location
+                {
+                    current_pair.xi = xi;
+                    current_pair.eta = eta;
+                }
                 num_active_pairs += 1;
             }
         }
@@ -1948,7 +1959,7 @@ void contact_patches_t::isoparametric_inverse(const CArrayKokkos<double> pos, co
     CArrayKokkos <double> Jinv(3,3);
     
     // iteration loop
-    int max_iter = 50;
+    int max_iter = 5;
     for (int i = 0; i < max_iter; i++) {
         // dphi_dxi
         dphi(0,0) = -0.125*(1-iso_pos_iter(1))*(1-iso_pos_iter(2));
@@ -2025,7 +2036,8 @@ void contact_patches_t::isoparametric_inverse(const CArrayKokkos<double> pos, co
         }
 
         // convergence check
-        if (sqrt((pos(0)-pos_iter(0))*(pos(0)-pos_iter(0)) + (pos(1)-pos_iter(1))*(pos(1)-pos_iter(1)) + (pos(2)-pos_iter(2))*(pos(2)-pos_iter(2))) < pow(10,-6)) {
+        if (sqrt((pos(0)-pos_iter(0))*(pos(0)-pos_iter(0)) + (pos(1)-pos_iter(1))*(pos(1)-pos_iter(1)) + (pos(2)-pos_iter(2))*(pos(2)-pos_iter(2))) < pow(10,-4)) {
+            std::cout << "CONVERGED" << std::endl;
             break;
         }
 
@@ -2075,10 +2087,10 @@ void contact_patches_t::get_contact_pairs(State_t& State, const Mesh_t &mesh, co
 
             double xi_val, eta_val, del_tc;
             bool is_hitting = contact_patch.contact_check(node, del_t, xi_val, eta_val, del_tc);
-            /* bool penetrating = penetration_check(node,penetration_patches,patch_lid);
+            bool penetrating = penetration_check(node,penetration_patches,patch_lid);
             if (penetrating) {
-                //std::cout << node.gid << " is penetrating patch with nodes " << contact_patch.nodes_gid(0) << " " << contact_patch.nodes_gid(1) << " " << contact_patch.nodes_gid(2) << " " << contact_patch.nodes_gid(3) << std::endl;
-            } */
+                std::cout << node.gid << " is penetrating patch with nodes " << contact_patch.nodes_gid(0) << " " << contact_patch.nodes_gid(1) << " " << contact_patch.nodes_gid(2) << " " << contact_patch.nodes_gid(3) << std::endl;
+            }
 
             if (is_hitting && !is_pen_node(node_gid) && !is_patch_node(node_gid))
             {
@@ -2198,6 +2210,11 @@ void contact_patches_t::get_contact_pairs(State_t& State, const Mesh_t &mesh, co
                 {
                     add_current_pair = true;
                 }
+
+                // if the node is penetrating, the contact pair will be formed in penetration_sweep()
+                /* if (penetrating) {
+                    add_current_pair = false;
+                } */
 
                 if (add_current_pair)
                 {
