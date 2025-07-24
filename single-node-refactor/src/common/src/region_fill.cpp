@@ -115,7 +115,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  fillGaussState.level_set,
                  fillElemState.volfrac,
                  fillElemState.geo_volfrac,
-                 State.MeshtoMaterialMaps.mat_id,
+                 State.MeshtoMaterialMaps.mats_in_elem,
                  State.MeshtoMaterialMaps.num_mats_in_elem,
                  voxel_elem_mat_id,
                  SimulationParamaters.mesh_input.object_ids,
@@ -147,7 +147,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
             for (size_t a_mat_in_elem=0; a_mat_in_elem < State.MeshtoMaterialMaps.num_mats_in_elem(elem_gid); a_mat_in_elem++){
 
                 // check to see if it is mat_id
-                if (State.MeshtoMaterialMaps.mat_id(elem_gid, a_mat_in_elem) == mat_id) {
+                if (State.MeshtoMaterialMaps.mats_in_elem(elem_gid, a_mat_in_elem) == mat_id) {
                     // increment the number of elements the materials live in
                     sum_local++;
                 } // end if a_mat is equal to mat_id
@@ -733,7 +733,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
         for (size_t a_mat_in_elem=0; a_mat_in_elem < State.MeshtoMaterialMaps.num_mats_in_elem.host(elem_gid); a_mat_in_elem++){
 
             // get the material_id in this element
-            size_t mat_id = State.MeshtoMaterialMaps.mat_id.host(elem_gid,a_mat_in_elem);
+            size_t mat_id = State.MeshtoMaterialMaps.mats_in_elem.host(elem_gid,a_mat_in_elem);
 
             // mat elem lid (compressed storage) to save the data to, for this material mat_id
             size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);

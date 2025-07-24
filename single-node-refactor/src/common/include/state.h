@@ -382,8 +382,8 @@ struct GaussPoint_t
 struct MeshtoMaterialMap_t
 {
     DCArrayKokkos<size_t> num_mats_in_elem; ///< returns the exact number of materials in elem
-    DCArrayKokkos<size_t> mat_id;           ///< returns the mat_id 
-    DCArrayKokkos<size_t> mat_storage_lid;  ///< returns the material storage local index
+    DCArrayKokkos<size_t> mats_in_elem;           ///< returns the mat_id 
+    DCArrayKokkos<size_t> mat_storage_lid;  ///< returns the material storage local index of the elem
 
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize(size_t num_elem_max, size_t num_mats_per_elem_max)
@@ -393,8 +393,8 @@ struct MeshtoMaterialMap_t
             this->num_mats_in_elem.set_values(0); // initialize all elems to storing 0 materials
             this->num_mats_in_elem.update_host(); // copy from GPU to CPU
         }
-        if (mat_id.size() == 0){
-            this->mat_id = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_id_in_elem");
+        if (mats_in_elem.size() == 0){
+            this->mats_in_elem = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_id_in_elem");
         }
         if (mat_storage_lid.size() == 0){
             this->mat_storage_lid = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_storage_lid_in_elem");
@@ -932,7 +932,7 @@ struct State_t
     //    material to mesh maps and mesh to material maps
     // ---------------------------------------------------------------------
     MaterialToMeshMap_t MaterialToMeshMaps; ///< access as MaterialToMeshMaps.elem_in_mat_elem(mat_id, mat_storage_lid)
-    MeshtoMaterialMap_t MeshtoMaterialMaps; ///< acces as MeshtoMaterialMaps.mat_id(elem, mat_lid)
+    MeshtoMaterialMap_t MeshtoMaterialMaps; ///< access as MeshtoMaterialMaps.mats_in_elem(elem, mat_lid)
 
     // ---------------------------------------------------------------------
     //    material to material maps
