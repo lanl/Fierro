@@ -742,7 +742,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
             State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, mat_elem_sid) = elem_gid;
 
             // --- mapping from elem to material index space ---
-            State.MeshtoMaterialMaps.mat_elem_in_elem.host(elem_gid, a_mat_in_elem) = mat_elem_sid;
+            State.MeshtoMaterialMaps.mat_elems_in_elem.host(elem_gid, a_mat_in_elem) = mat_elem_sid;
             
 
             // -----------------------

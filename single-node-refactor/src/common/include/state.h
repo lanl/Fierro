@@ -383,7 +383,7 @@ struct MeshtoMaterialMap_t
 {
     DCArrayKokkos<size_t> num_mats_in_elem; ///< returns the exact number of materials in elem
     DCArrayKokkos<size_t> mats_in_elem;     ///< returns the mat_id 
-    DCArrayKokkos<size_t> mat_elem_in_elem; ///< returns the material storage local index of the mat elem
+    DCArrayKokkos<size_t> mat_elems_in_elem; ///< returns the material storage local index of the mat elem
 
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize(size_t num_elem_max, size_t num_mats_per_elem_max)
@@ -396,8 +396,8 @@ struct MeshtoMaterialMap_t
         if (mats_in_elem.size() == 0){
             this->mats_in_elem = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_id_in_elem");
         }
-        if (mat_elem_in_elem.size() == 0){
-            this->mat_elem_in_elem = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_elem_in_elem");
+        if (mat_elems_in_elem.size() == 0){
+            this->mat_elems_in_elem = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_elem_in_elem");
         }
         
     }; // end method
