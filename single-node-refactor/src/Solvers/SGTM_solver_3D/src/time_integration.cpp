@@ -126,8 +126,8 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
 
     double dt_lcl;
     double min_dt_calc;
-    FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
-        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_lid);
+    FOR_REDUCE_MIN(mat_elem_sid, 0, num_mat_elems, dt_lcl, {
+        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_sid);
 
         double coords0[24];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 8, 3);
@@ -178,13 +178,13 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        double dt_cfl = 1.0; //dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_lid) + fuzz);
+        double dt_cfl = 1.0; //dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_sid) + fuzz);
 
         // dt_cfl = 1.0; // WARNING: Fix once evolving position
 
         // Thermal diffusivity
-        double alpha = MaterialPoints_conductivity(mat_id, mat_elem_lid) / 
-            (MaterialPoints_density(mat_id, mat_elem_lid)*MaterialPoints_specific_heat(mat_id, mat_elem_lid));
+        double alpha = MaterialPoints_conductivity(mat_id, mat_elem_sid) / 
+            (MaterialPoints_density(mat_id, mat_elem_sid)*MaterialPoints_specific_heat(mat_id, mat_elem_sid));
 
         // Local dt calc based on thermal conductivity (VN Stability)
         double h = (dist_min); // maybe half?
@@ -192,7 +192,7 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
 
         dt_vn *= 0.9; // stability factor
  
-        // if (MaterialPoints_eroded(mat_elem_lid) == true) {
+        // if (MaterialPoints_eroded(mat_elem_sid) == true) {
         //     dt_cfl = 1.0e32;  // a huge time step as this element doesn't exist
         // }
 

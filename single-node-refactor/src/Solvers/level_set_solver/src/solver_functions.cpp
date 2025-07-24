@@ -220,10 +220,10 @@ void LevelSet::update_level_set(
 
 
     // --- update the level set field ---
-    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid); 
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
         // it is a 1-point quadrature point element
         size_t gauss_point = elem_gid;

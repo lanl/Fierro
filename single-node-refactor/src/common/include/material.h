@@ -379,7 +379,7 @@ struct MaterialFunctions_t
         const double MaterialPoint_sspd,
         const double erode_tension_val,
         const double erode_density_val,
-        const size_t mat_point_lid,
+        const size_t mat_point_sid,
         const size_t mat_id) = NULL;
 
 
@@ -401,7 +401,7 @@ struct MaterialFunctions_t
         const double fuzz,
         const double small,
         const double elem_gid,
-        const size_t mat_point_lid,
+        const size_t mat_point_sid,
         const size_t mat_id) = NULL;
         // in 2D, in place of vol, the elem facial area is passed
 

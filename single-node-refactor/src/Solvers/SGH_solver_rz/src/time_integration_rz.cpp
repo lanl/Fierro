@@ -134,9 +134,9 @@ void SGHRZ::get_timestep_rz(Mesh_t& mesh,
 
     double dt_lcl;
     double min_dt_calc;
-    FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
+    FOR_REDUCE_MIN(mat_elem_sid, 0, num_mat_elems, dt_lcl, {
 
-        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid); 
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
         double coords0[8];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 4, 2);
@@ -172,10 +172,10 @@ void SGHRZ::get_timestep_rz(Mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_id, mat_elem_lid) + fuzz);
+        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_id, mat_elem_sid) + fuzz);
 
 
-        if (MaterialPoints_eroded(mat_id, mat_elem_lid) == true){
+        if (MaterialPoints_eroded(mat_id, mat_elem_sid) == true){
             dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
         }
 

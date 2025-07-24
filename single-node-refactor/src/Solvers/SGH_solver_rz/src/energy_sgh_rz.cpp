@@ -72,13 +72,13 @@ void SGHRZ::update_energy_rz(
 {
 
     // loop over all the elements in the mesh
-    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid); 
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
         // the material point index = the material elem index for a 1-point element
-        size_t mat_point_lid = mat_elem_lid;
+        size_t mat_point_sid = mat_elem_sid;
 
         
         double MaterialPoints_power = 0.0;
@@ -99,7 +99,7 @@ void SGHRZ::update_energy_rz(
             //size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
 
             // Get the material corner lid
-            size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
+            size_t mat_corner_lid = corners_in_mat_elem(mat_elem_sid, corner_lid);
 
             // 2D RZ needs node radius
             double node_radius = node_coords(node_gid, 1);
@@ -115,8 +115,8 @@ void SGHRZ::update_energy_rz(
         } // end for node_lid
 
         // update the specific energy
-        MaterialPoints_sie(mat_id, mat_point_lid) = MaterialPoints_sie_n0(mat_id, mat_point_lid) -
-                                rk_alpha * dt / MaterialPoints_mass(mat_id, mat_point_lid) * MaterialPoints_power;
+        MaterialPoints_sie(mat_id, mat_point_sid) = MaterialPoints_sie_n0(mat_id, mat_point_sid) -
+                                rk_alpha * dt / MaterialPoints_mass(mat_id, mat_point_sid) * MaterialPoints_power;
 
        
     }); // end parallel loop over the elements

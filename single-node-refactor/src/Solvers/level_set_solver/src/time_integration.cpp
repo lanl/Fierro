@@ -58,10 +58,10 @@ void LevelSet::rk_init(
     const size_t mat_id) const
 {
     // save elem quantities
-    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
         // get the element
-        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_lid);
+        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_sid);
 
         // Note:
         // loop gauss point, this method is for a single quadrature point element
@@ -115,8 +115,8 @@ void LevelSet::get_timestep(
 
     double dt_lcl;
     double min_dt_calc;
-    FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
-        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_lid);
+    FOR_REDUCE_MIN(mat_elem_sid, 0, num_mat_elems, dt_lcl, {
+        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_sid);
 
         double coords0[24];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 8, 3);
@@ -241,9 +241,9 @@ void LevelSet::get_timestep_2D(
 
     double dt_lcl;
     double min_dt_calc;
-    FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
+    FOR_REDUCE_MIN(mat_elem_sid, 0, num_mat_elems, dt_lcl, {
 
-        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_lid); 
+        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_sid); 
 
         double coords0[8];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 4, 2);

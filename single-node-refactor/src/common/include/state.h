@@ -382,8 +382,8 @@ struct GaussPoint_t
 struct MeshtoMaterialMap_t
 {
     DCArrayKokkos<size_t> num_mats_in_elem; ///< returns the exact number of materials in elem
-    DCArrayKokkos<size_t> mats_in_elem;           ///< returns the mat_id 
-    DCArrayKokkos<size_t> mat_storage_lid;  ///< returns the material storage local index of the elem
+    DCArrayKokkos<size_t> mats_in_elem;     ///< returns the mat_id 
+    DCArrayKokkos<size_t> mat_elem_in_elem; ///< returns the material storage local index of the mat elem
 
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize(size_t num_elem_max, size_t num_mats_per_elem_max)
@@ -396,8 +396,8 @@ struct MeshtoMaterialMap_t
         if (mats_in_elem.size() == 0){
             this->mats_in_elem = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_id_in_elem");
         }
-        if (mat_storage_lid.size() == 0){
-            this->mat_storage_lid = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_storage_lid_in_elem");
+        if (mat_elem_in_elem.size() == 0){
+            this->mat_elem_in_elem = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_elem_in_elem");
         }
         
     }; // end method
@@ -937,8 +937,8 @@ struct State_t
     // ---------------------------------------------------------------------
     //    material to material maps
     // ---------------------------------------------------------------------
-    corners_in_mat_t corners_in_mat_elem; ///< access the corner mat lid using (mat_elem_lid, corn_lid)
-    points_in_mat_t points_in_mat_elem;   ///< for accessing e.g., gauss points mat lid with arbitrary-order FE (mat_elem_lid, gauss_lid)
+    corners_in_mat_t corners_in_mat_elem; ///< access the corner mat lid using (mat_elem_sid, corn_lid)
+    points_in_mat_t points_in_mat_elem;   ///< for accessing e.g., gauss points mat lid with arbitrary-order FE (mat_elem_sid, gauss_lid)
     zones_in_mat_t zones_in_mat_elem;     ///< for accessing sub-zones mat lid with arbitrary-order FE
 
     // ---------------------------------------------------------------------

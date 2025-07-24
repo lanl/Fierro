@@ -163,10 +163,10 @@ void calc_corner_mass_rz(const Material_t& Materials,
                          const size_t mat_id)
 {
 
-    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid); 
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
         // facial area of the corners
         double corner_areas_array[4];
@@ -179,7 +179,7 @@ void calc_corner_mass_rz(const Material_t& Materials,
         // loop over the corners of the element and calculate the mass
         for (size_t corner_lid = 0; corner_lid < 4; corner_lid++) {
             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
-            corner_mass(corner_gid) += corner_areas(corner_lid) * MaterialPoints_den(mat_id, mat_elem_lid); // node radius is added later
+            corner_mass(corner_gid) += corner_areas(corner_lid) * MaterialPoints_den(mat_id, mat_elem_sid); // node radius is added later
         } // end for over corners
     });
 

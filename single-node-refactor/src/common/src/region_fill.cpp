@@ -735,14 +735,14 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
             // get the material_id in this element
             size_t mat_id = State.MeshtoMaterialMaps.mats_in_elem.host(elem_gid,a_mat_in_elem);
 
-            // mat elem lid (compressed storage) to save the data to, for this material mat_id
-            size_t mat_elem_lid = num_elems_saved_for_mat.host(mat_id);
+            // mat elem sid (compressed storage id) to save the data to, for this material mat_id
+            size_t mat_elem_sid = num_elems_saved_for_mat.host(mat_id);
 
-            // --- mapping from material elem lid to elem ---
-            State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, mat_elem_lid) = elem_gid;
+            // --- mapping from material elem sid to elem ---
+            State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, mat_elem_sid) = elem_gid;
 
             // --- mapping from elem to material index space ---
-            State.MeshtoMaterialMaps.mat_storage_lid.host(elem_gid, a_mat_in_elem) = mat_elem_lid;
+            State.MeshtoMaterialMaps.mat_elem_in_elem.host(elem_gid, a_mat_in_elem) = mat_elem_sid;
             
 
             // -----------------------
@@ -754,11 +754,11 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
 
                 size_t gauss_gid = elem_gid + gauss_lid;  // gauss_gid in the element
 
-                size_t mat_point_lid = mat_elem_lid + gauss_lid; // for more than 1 gauss point, this increments
+                size_t mat_point_sid = mat_elem_sid + gauss_lid; // for more than 1 gauss point, this increments
 
                 // --- volume fraction ---
-                State.MaterialPoints.volfrac.host(mat_id,mat_point_lid) = fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
-                State.MaterialPoints.geo_volfrac.host(mat_id,mat_point_lid) = fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
+                State.MaterialPoints.volfrac.host(mat_id,mat_point_sid) = fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
+                State.MaterialPoints.geo_volfrac.host(mat_id,mat_point_sid) = fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
 
                 const double mat_vol = State.GaussPoints.vol.host(gauss_gid) * 
                             fillElemState.volfrac.host(elem_gid,a_mat_in_elem)*fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
@@ -767,16 +767,16 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                 if( State.MaterialPoints.den.size()>0 ){
 
                     // add an array that we set to true or false if we set this state here
-                    State.MaterialPoints.den.host(mat_id,mat_point_lid)  = 
+                    State.MaterialPoints.den.host(mat_id,mat_point_sid)  = 
                             fillGaussState.den.host(gauss_gid,a_mat_in_elem);
 
-                    State.MaterialPoints.mass.host(mat_id,mat_point_lid) = 
+                    State.MaterialPoints.mass.host(mat_id,mat_point_sid) = 
                             fillGaussState.den.host(gauss_gid,a_mat_in_elem) * mat_vol;
                 }
 
                 // --- set eroded flag to false ---
                 if( State.MaterialPoints.eroded.size()>0 ){
-                    State.MaterialPoints.eroded.host(mat_id,mat_point_lid) = false; // set to default
+                    State.MaterialPoints.eroded.host(mat_id,mat_point_sid) = false; // set to default
                 }
 
                 // --- specific internal energy ---
@@ -784,25 +784,25 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                     // save state, that is integrated in time
                     
                         if(fillGaussState.use_sie.host(gauss_gid,a_mat_in_elem)){
-                            State.MaterialPoints.sie.host(mat_id,mat_point_lid) = 
+                            State.MaterialPoints.sie.host(mat_id,mat_point_sid) = 
                                 fillGaussState.sie.host(gauss_gid,a_mat_in_elem);
                         }
                         else {
-                            State.MaterialPoints.sie.host(mat_id,mat_point_lid) = 
-                                fillGaussState.ie.host(gauss_gid,a_mat_in_elem)/State.MaterialPoints.mass.host(mat_id,mat_point_lid);
+                            State.MaterialPoints.sie.host(mat_id,mat_point_sid) = 
+                                fillGaussState.ie.host(gauss_gid,a_mat_in_elem)/State.MaterialPoints.mass.host(mat_id,mat_point_sid);
                         }
                     
                 }
 
                 // --- thermal conductivity ---
                 if( State.MaterialPoints.conductivity.size()>0 ){
-                    State.MaterialPoints.conductivity.host(mat_id,mat_point_lid) = 
+                    State.MaterialPoints.conductivity.host(mat_id,mat_point_sid) = 
                                 fillGaussState.thermal_conductivity.host(gauss_gid,a_mat_in_elem); 
                 }
 
                 // --- specific heat ---
                 if( State.MaterialPoints.specific_heat.size()>0 ){
-                    State.MaterialPoints.specific_heat.host(mat_id,mat_point_lid) = 
+                    State.MaterialPoints.specific_heat.host(mat_id,mat_point_sid) = 
                                 fillGaussState.specific_heat.host(gauss_gid,a_mat_in_elem); 
                 }
 
@@ -842,7 +842,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
             } // 
 
 
-            // update counter for how many mat_elem_lid values have been saved
+            // update counter for how many mat_elem_sid values have been saved
             num_elems_saved_for_mat.host(mat_id)++;
 
         } // end loop over materials in this element
@@ -2180,11 +2180,11 @@ void init_press_sspd_stress(const Material_t& Materials,
     // loop over the material points
 
     if (MaterialPoints_shear_modulii.size()>0) {
-        FOR_ALL(mat_point_lid, 0, num_mat_pts, {
+        FOR_ALL(mat_point_sid, 0, num_mat_pts, {
 
             // setting shear modulii to zero, corresponds to a gas
             for(size_t i=0; i<3; i++){
-                MaterialPoints_shear_modulii(mat_id, mat_point_lid, i) = 0.0;
+                MaterialPoints_shear_modulii(mat_id, mat_point_sid, i) = 0.0;
             } // end for
 
         });
@@ -2192,7 +2192,7 @@ void init_press_sspd_stress(const Material_t& Materials,
 
     
     // --- stress tensor ---
-    FOR_ALL(mat_point_lid, 0, num_mat_pts, {
+    FOR_ALL(mat_point_sid, 0, num_mat_pts, {
 
         // always 3D even for 2D-RZ
         for (size_t i = 0; i < 3; i++) {
@@ -2201,7 +2201,7 @@ void init_press_sspd_stress(const Material_t& Materials,
                 // ===============
                 //  Call the strength model here
                 // ===============
-                MaterialPoints_stress(mat_id, mat_point_lid, i, j) = 0.0;
+                MaterialPoints_stress(mat_id, mat_point_sid, i, j) = 0.0;
             }
         }  // end for i,j
                             
@@ -2211,30 +2211,30 @@ void init_press_sspd_stress(const Material_t& Materials,
 
     // --- pressure and sound speed ---
     // loop over the material points
-    FOR_ALL(mat_point_lid, 0, num_mat_pts, {
+    FOR_ALL(mat_point_sid, 0, num_mat_pts, {
 
         // --- Pressure ---
         Materials.MaterialFunctions(mat_id).calc_pressure(
                                         MaterialPoints_pres,
                                         MaterialPoints_stress,
-                                        mat_point_lid,
+                                        mat_point_sid,
                                         mat_id,
                                         MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
-                                        MaterialPoints_den(mat_id, mat_point_lid),
-                                        MaterialPoints_sie(mat_id, mat_point_lid),
+                                        MaterialPoints_den(mat_id, mat_point_sid),
+                                        MaterialPoints_sie(mat_id, mat_point_sid),
                                         Materials.eos_global_vars);   
 
         // --- Sound Speed ---                               
         Materials.MaterialFunctions(mat_id).calc_sound_speed(
                                         MaterialPoints_pres,
                                         MaterialPoints_stress,
-                                        mat_point_lid,
+                                        mat_point_sid,
                                         mat_id,
                                         MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
-                                        MaterialPoints_den(mat_id, mat_point_lid),
-                                        MaterialPoints_sie(mat_id, mat_point_lid),
+                                        MaterialPoints_den(mat_id, mat_point_sid),
+                                        MaterialPoints_sie(mat_id, mat_point_sid),
                                         MaterialPoints_shear_modulii,
                                         Materials.eos_global_vars);
     }); // end pressure and sound speed
@@ -2273,10 +2273,10 @@ void calc_corner_mass(const Material_t& Materials,
 {
 
 
-    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);  
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);  
 
         // calculate the fraction of matpt mass to scatter to each corner
         double corner_frac = 1.0/((double)mesh.num_nodes_in_elem);  // =1/8
@@ -2284,7 +2284,7 @@ void calc_corner_mass(const Material_t& Materials,
         // partion the mass to the corners
         for(size_t corner_lid=0; corner_lid<mesh.num_nodes_in_elem; corner_lid++){
             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
-            corner_mass(corner_gid) += corner_frac*MaterialPoints_mass(mat_id, mat_elem_lid);
+            corner_mass(corner_gid) += corner_frac*MaterialPoints_mass(mat_id, mat_elem_sid);
         } // end for
 
     }); // end parallel for over mat elem local ids

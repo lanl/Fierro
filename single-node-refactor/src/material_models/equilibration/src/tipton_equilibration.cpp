@@ -333,10 +333,10 @@ namespace TiptonEquilibrationModel {
     {
 
         // loop over all ellements the material lives in
-        FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+        FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
             // get elem gid for this material at this lid
-            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
             // loop over gauss points in this element
             for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
@@ -345,7 +345,7 @@ namespace TiptonEquilibrationModel {
                 size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
 
                 // get the mat_gauss_pt_storage_lid
-                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
+                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_sid, gauss_pt_lid);
 
                 // only do pressure relaxation on materials that have volfrac<1
                 if (MaterialPoints_volfrac(mat_id, mat_point_storage_lid )<1.0-fuzz){
@@ -434,10 +434,10 @@ namespace TiptonEquilibrationModel {
     {
 
         // loop over all ellements the material lives in
-        FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+        FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
             // get elem gid for this material at this lid
-            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
             // loop over gauss points in this element
             for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
@@ -446,7 +446,7 @@ namespace TiptonEquilibrationModel {
                 size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
 
                 // get the mat_gauss_pt_storage_lid
-                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
+                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_sid, gauss_pt_lid);
 
                 // divergence at the Gauss point
                 double div = 0.0;
@@ -521,10 +521,10 @@ namespace TiptonEquilibrationModel {
     {
 
         // loop over all ellements the material lives in
-        FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+        FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
             // get elem gid for this material at this lid
-            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
             // loop over gauss points in this element
             for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
@@ -533,7 +533,7 @@ namespace TiptonEquilibrationModel {
                 size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
 
                 // get the mat_gauss_pt_storage_lid
-                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
+                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_sid, gauss_pt_lid);
 
 
                 // limited volfrac change 
