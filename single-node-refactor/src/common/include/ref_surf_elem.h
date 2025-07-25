@@ -54,8 +54,8 @@ struct fe_ref_surf_t
     size_t num_dofs_in_surf;
 
     // Thermodynamic Dofs
-    size_t num_elem_dofs_1d;
-    size_t num_elem_dofs_in_surf;
+    size_t num_dg_dofs_1d;
+    size_t num_dg_dofs_in_surf;
 
     // // Gauss Points
     size_t num_lobatto_1d;
@@ -72,40 +72,40 @@ struct fe_ref_surf_t
     // kinematic
     size_t num_basis;
     // thermodynamic
-    size_t num_elem_basis;
+    size_t num_dg_basis;
 
     // Kinematic basis evaluation at nodes
-    CArrayKokkos<double> lobotto_basis;
-    CArrayKokkos<double> gauss_basis;
+    CArrayKokkos<double> lobotto_point_basis;
+    CArrayKokkos<double> gauss_point_basis;
 
     // Thermodynamic basis evaluation at nodes
-    CArrayKokkos<double> lobotto_elem_basis;
-    CArrayKokkos<double> gauss_elem_basis;
+    CArrayKokkos<double> lobotto_point_dg_basis;
+    CArrayKokkos<double> gauss_point_dg_basis;
 
     // Gradient of basis
     // CArrayKokkos <double> lobotto_grad_basis;
-    CArrayKokkos<double> gauss_grad_basis;
+    CArrayKokkos<double> gauss_point_grad_basis;
 
     // Gauss and DOF positions
     CArrayKokkos<double> lob_nodes_1D;
     CArrayKokkos<double> leg_nodes_1D;
 
-    CArrayKokkos<double> lobotto_positions;
-    CArrayKokkos<double> gauss_positions;
+    CArrayKokkos<double> lobotto_point_positions;
+    CArrayKokkos<double> gauss_point_positions;
     CArrayKokkos<double> gauss_surf_positions;
 
     CArrayKokkos<double> dof_positions;
     CArrayKokkos<double> dof_positions_1d;
 
-    CArrayKokkos<double> elem_dof_positions;
-    CArrayKokkos<double> elem_dof_positions_1d;
+    CArrayKokkos<double> dg_dof_positions;
+    CArrayKokkos<double> dg_dof_positions_1d;
 
     // Quadrature Weights
     CArrayKokkos<double> lob_weights_1D;
     CArrayKokkos<double> leg_weights_1D;
 
-    CArrayKokkos<double> lobotto_weights;
-    CArrayKokkos<double> gauss_weights;
+    CArrayKokkos<double> lobotto_point_weights;
+    CArrayKokkos<double> gauss_point_weights;
     CArrayKokkos<double> gauss_surf_weights;
 
     /////////////////////////////////////////////////////////////////////////////
@@ -132,7 +132,7 @@ struct fe_ref_surf_t
             num_lobatto_1d = 2; // num gauss lobatto points in 1d
             num_gauss_1d = 1;
             num_dofs_1d = 2;
-            num_elem_dofs_1d  = 1; // This is for the e.g. thermodynamic basis
+            num_dg_dofs_1d  = 1; // This is for the e.g. thermodynamic basis
             num_patch_1d      = 1;
             num_patch_in_surf = num_patch_1d * num_patch_1d;
         }
@@ -141,7 +141,7 @@ struct fe_ref_surf_t
             num_gauss_1d = 2 * p_order;
 
             num_dofs_1d = p_order + 1;
-            num_elem_dofs_1d = p_order;
+            num_dg_dofs_1d = p_order;
 
             num_patch_1d = (num_dofs_1d - 1) / 2;
             num_patch_in_elem = num_patch_1d * num_patch_1d;
@@ -156,43 +156,43 @@ struct fe_ref_surf_t
         num_dofs_in_surf = 1;
 
         // WARNING WARNING: go back and change thermo basis names to patch or zones
-        num_elem_dofs_in_surf = 1;
+        num_dg_dofs_in_surf = 1;
 
         for (int dim = 0; dim < num_dim; dim++) {
             num_lobatto_in_surf *= num_lobatto_1d;
             num_gauss_in_surf *= num_gauss_1d;
 
             num_dofs_in_surf *= num_dofs_1d;
-            num_elem_dofs_in_surf *= num_elem_dofs_1d;
+            num_dg_dofs_in_surf *= num_dg_dofs_1d;
         }
 
         // keeping both for now. being able to call ref_elem.num_basis is convenient for computations. //
         num_basis = num_dofs_in_surf;
-        num_elem_basis = num_elem_dofs_in_surf;
+        num_dg_basis = num_dg_dofs_in_surf;
 
         // allocate memory
         dof_positions    = CArrayKokkos<double>(num_dofs_in_surf, num_dim, "dof_positions");
         dof_positions_1d = CArrayKokkos<double>(num_dofs_1d, "dof_positions_1d");
 
-        elem_dof_positions    = CArrayKokkos<double>(num_elem_dofs_in_surf, num_dim, "elem_dof_positions");
-        elem_dof_positions_1d = CArrayKokkos<double>(num_elem_dofs_1d, "elem_dof_positions_1d");
+        dg_dof_positions    = CArrayKokkos<double>(num_dg_dofs_in_surf, num_dim, "dg_dof_positions");
+        dg_dof_positions_1d = CArrayKokkos<double>(num_dg_dofs_1d, "dg_dof_positions_1d");
 
-        lobotto_weights = CArrayKokkos<double>(num_lobatto_in_surf, "lobotto_weights");
-        gauss_weights = CArrayKokkos<double>(num_gauss_in_surf, "gauss_weights");
+        lobotto_point_weights = CArrayKokkos<double>(num_lobatto_in_surf, "lobotto_point_weights");
+        gauss_point_weights = CArrayKokkos<double>(num_gauss_in_surf, "gauss_point_weights");
 
         // Memory for gradients
         lobotto_grad_basis = CArrayKokkos<double>(num_lobatto_in_surf, num_basis, num_dim, "lobotto_grad_basis");
-        gauss_grad_basis = CArrayKokkos<double>(num_gauss_in_surf, num_basis, num_dim, "gauss_grad_basis");
+        gauss_point_grad_basis = CArrayKokkos<double>(num_gauss_in_surf, num_basis, num_dim, "gauss_point_grad_basis");
 
         // Basis evaluation at the nodes
-        lobotto_basis = CArrayKokkos<double>(num_lobatto_in_surf, num_basis, "lobotto_basis");
-        gauss_basis = CArrayKokkos<double>(num_gauss_in_surf, num_basis, "gauss_basis");
+        lobotto_point_basis = CArrayKokkos<double>(num_lobatto_in_surf, num_basis, "lobotto_point_basis");
+        gauss_point_basis = CArrayKokkos<double>(num_gauss_in_surf, num_basis, "gauss_point_basis");
 
-        lobotto_elem_basis = CArrayKokkos<double>(num_lobatto_in_surf, num_elem_basis, "lobotto_elem_basis");
-        gauss_elem_basis = CArrayKokkos<double>(num_gauss_in_surf, num_elem_basis, "gauss_elem_basis");
+        lobotto_point_dg_basis = CArrayKokkos<double>(num_lobatto_in_surf, num_dg_basis, "lobotto_point_dg_basis");
+        gauss_point_dg_basis = CArrayKokkos<double>(num_gauss_in_surf, num_dg_basis, "gauss_point_dg_basis");
 
         lobotto_positions = CArrayKokkos<double>(num_lobatto_in_surf, num_dim, "lobotto_positions");
-        gauss_positions = CArrayKokkos<double>(num_gauss_in_surf, num_dim, "gauss_positions");
+        gauss_point_positions = CArrayKokkos<double>(num_gauss_in_surf, num_dim, "gauss_point_positions");
 
         // gauss_surf_positions = CArrayKokkos <double> (num_surfs, num_gauss_in_surfs, num_dim-1, "gauss_surf_positions");
         // gauss_surf_weights = CArrayKokkos <double> (num_surfs, num_gauss_in_surfs, "gauss_surf_weights");
@@ -229,7 +229,7 @@ struct fe_ref_surf_t
             lobotto_positions(lob_rid, 0) = lob_nodes_1D(i);
             lobotto_positions(lob_rid, 1) = lob_nodes_1D(j);
 
-            lobotto_weights(lob_rid) = lob_weights_1D(i) * lob_weights_1D(j);
+            lobotto_point_weights(lob_rid) = lob_weights_1D(i) * lob_weights_1D(j);
         });
         Kokkos::fence();
 
@@ -238,10 +238,10 @@ struct fe_ref_surf_t
             int leg_rid = legendre_rid_2D(i, j, k);
 
             // printf(" leg_node_1D value = %f \n", leg_nodes_1D(i) );
-            gauss_positions(leg_rid, 0) = leg_nodes_1D(i);
-            gauss_positions(leg_rid, 1) = leg_nodes_1D(j);
+            gauss_point_positions(leg_rid, 0) = leg_nodes_1D(i);
+            gauss_point_positions(leg_rid, 1) = leg_nodes_1D(j);
             // printf(" leg_weight: %f \n", leg_weights_1D(i));
-            gauss_weights(leg_rid) = leg_weights_1D(i) * leg_weights_1D(j);
+            gauss_point_weights(leg_rid) = leg_weights_1D(i) * leg_weights_1D(j);
         });
         Kokkos::fence();
 
@@ -254,12 +254,12 @@ struct fe_ref_surf_t
         //             // i min
         //             gauss_surf_positions(0, leg_rid,0) = leg_nodes_1D(j);
         //             gauss_surf_positions(0, leg_rid,1) = leg_nodes_1D(k);
-        //             gauss_weights(0,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
+        //             gauss_point_weights(0,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
 
         //             // i max
         //             gauss_surf_positions(1, leg_rid,0) = leg_nodes_1D(j);
         //             gauss_surf_positions(1, leg_rid,1) = leg_nodes_1D(k);
-        //             gauss_weights(1,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
+        //             gauss_point_weights(1,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
         // });
         // Kokkos::fence();
 
@@ -272,12 +272,12 @@ struct fe_ref_surf_t
         //             // j min
         //             gauss_surf_positions(2, leg_rid,0) = leg_nodes_1D(i);
         //             gauss_surf_positions(2, leg_rid,1) = leg_nodes_1D(k);
-        //             gauss_weights(2,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
+        //             gauss_point_weights(2,leg_rid) = leg_weights_1D(j)*leg_weights_1D(k);
 
         //             // j max
         //             gauss_surf_positions(3, leg_rid,0) = leg_nodes_1D(i);
         //             gauss_surf_positions(3, leg_rid,1) = leg_nodes_1D(k);
-        //             gauss_weights(3,leg_rid) = leg_weights_1D(i)*leg_weights_1D(k);
+        //             gauss_point_weights(3,leg_rid) = leg_weights_1D(i)*leg_weights_1D(k);
         // });
         // Kokkos::fence();
 
@@ -290,12 +290,12 @@ struct fe_ref_surf_t
         //             // k min
         //             gauss_surf_positions(4, leg_rid,0) = leg_nodes_1D(i);
         //             gauss_surf_positions(4, leg_rid,1) = leg_nodes_1D(j);
-        //             gauss_weights(4,leg_rid) = leg_weights_1D(i)*leg_weights_1D(j);
+        //             gauss_point_weights(4,leg_rid) = leg_weights_1D(i)*leg_weights_1D(j);
 
         //             // k max
         //             gauss_surf_positions(5, leg_rid,0) = leg_nodes_1D(i);
         //             gauss_surf_positions(5, leg_rid,1) = leg_nodes_1D(j);
-        //             gauss_weights(5,leg_rid) = leg_weights_1D(i)*leg_weights_1D(j);
+        //             gauss_point_weights(5,leg_rid) = leg_weights_1D(i)*leg_weights_1D(j);
         // });
         // Kokkos::fence();
 
@@ -332,13 +332,13 @@ struct fe_ref_surf_t
 
         // temp variables hold evaluations at a single point for each dof //
         CArrayKokkos<double> temp_nodal_basis(num_dofs_in_surf);
-        CArrayKokkos<double> temp_elem_basis(num_elem_dofs_in_surf);
+        CArrayKokkos<double> temp_elem_basis(num_dg_dofs_in_surf);
 
         CArrayKokkos<double> val_1d(num_dofs_1d);
         CArrayKokkos<double> val_2d(num_dofs_1d, 2);
 
-        CArrayKokkos<double> elem_val_1d(num_elem_dofs_1d);
-        CArrayKokkos<double> elem_val_2d(num_elem_dofs_1d, 2);
+        CArrayKokkos<double> elem_val_1d(num_dg_dofs_1d);
+        CArrayKokkos<double> elem_val_2d(num_dg_dofs_1d, 2);
 
         CArrayKokkos<double> point(2);
 
@@ -359,7 +359,7 @@ struct fe_ref_surf_t
 
         //     for(int basis_id = 0; basis_id < num_dofs_in_surf; basis_id++){
         //         //printf(" computed basis value = %f \n", temp_nodal_basis(basis_id) );
-        //         lobotto_basis(lobotto_rid, basis_id) = temp_nodal_basis(basis_id);
+        //         lobotto_point_basis(lobotto_rid, basis_id) = temp_nodal_basis(basis_id);
         //         //check_basis += temp_nodal_basis(basis_id);
         //      temp_nodal_basis(basis_id) = 0.0;
         //     }
@@ -384,7 +384,7 @@ struct fe_ref_surf_t
 
                 for (int basis_id = 0; basis_id < num_dofs_in_surf; basis_id++) {
                     // printf(" computed basis value = %f \n", temp_nodal_basis(basis_id) );
-                    lobotto_basis(lobotto_rid, basis_id) = temp_nodal_basis(basis_id);
+                    lobotto_point_basis(lobotto_rid, basis_id) = temp_nodal_basis(basis_id);
                     // check_basis += temp_nodal_basis(basis_id);
                     temp_nodal_basis(basis_id) = 0.0;
                 }
@@ -398,7 +398,7 @@ struct fe_ref_surf_t
 
         //     // Get the nodal coordinates
         //     for(int dim = 0; dim < 3; dim++){
-        //         point(dim) = gauss_positions(gauss_rid, dim);
+        //         point(dim) = gauss_point_positions(gauss_rid, dim);
         //         //printf(" point value = %f \n", point(dim) );
         //     }
 
@@ -408,7 +408,7 @@ struct fe_ref_surf_t
 
         //     for(int basis_id = 0; basis_id < num_dofs_in_surf; basis_id++){
         //         //printf(" computed basis value = %f \n", temp_nodal_basis(basis_id) );
-        //         gauss_basis(gauss_rid, basis_id) = temp_nodal_basis(basis_id);
+        //         gauss_point_basis(gauss_rid, basis_id) = temp_nodal_basis(basis_id);
         //         check_basis += temp_nodal_basis(basis_id);
         //         temp_nodal_basis(basis_id) = 0.0;
         //     }
@@ -421,7 +421,7 @@ struct fe_ref_surf_t
             for (int gauss_rid = 0; gauss_rid < num_gauss_in_surf; gauss_rid++) {
                 // Get the nodal coordinates
                 for (int dim = 0; dim < 2; dim++) {
-                    point(dim) = gauss_positions(gauss_rid, dim);
+                    point(dim) = gauss_point_positions(gauss_rid, dim);
                     // printf(" point value = %f \n", point(dim) );
                 }
 
@@ -431,7 +431,7 @@ struct fe_ref_surf_t
 
                 for (int basis_id = 0; basis_id < num_dofs_in_surf; basis_id++) {
                     // printf(" computed basis value = %f \n", temp_nodal_basis(basis_id) );
-                    gauss_basis(gauss_rid, basis_id) = temp_nodal_basis(basis_id);
+                    gauss_point_basis(gauss_rid, basis_id) = temp_nodal_basis(basis_id);
                     // check_basis += temp_nodal_basis(basis_id);
                     temp_nodal_basis(basis_id) = 0.0;
                 }
@@ -453,9 +453,9 @@ struct fe_ref_surf_t
 
         //     //double check_basis = 0.0;
 
-        //     for(int basis_id = 0; basis_id < num_elem_dofs_in_surf; basis_id++){
+        //     for(int basis_id = 0; basis_id < num_dg_dofs_in_surf; basis_id++){
 
-        //         lobotto_elem_basis(lobotto_rid, basis_id) = temp_elem_basis(basis_id);
+        //         lobotto_point_dg_basis(lobotto_rid, basis_id) = temp_elem_basis(basis_id);
         //         //check_basis += temp_elem_basis(basis_id);
         //      temp_elem_basis(basis_id) = 0.0;
         //     }
@@ -475,8 +475,8 @@ struct fe_ref_surf_t
 
                 // double check_basis = 0.0;
 
-                for (int basis_id = 0; basis_id < num_elem_dofs_in_surf; basis_id++) {
-                    lobotto_elem_basis(lobotto_rid, basis_id) = temp_elem_basis(basis_id);
+                for (int basis_id = 0; basis_id < num_dg_dofs_in_surf; basis_id++) {
+                    lobotto_point_dg_basis(lobotto_rid, basis_id) = temp_elem_basis(basis_id);
                     // check_basis += temp_elem_basis(basis_id);
                     temp_elem_basis(basis_id) = 0.0;
                 }
@@ -490,16 +490,16 @@ struct fe_ref_surf_t
 
         //     // Get the nodal coordinates
         //     for(int dim = 0; dim < 3; dim++){
-        //         point(dim) = gauss_positions(gauss_rid, dim);
+        //         point(dim) = gauss_point_positions(gauss_rid, dim);
         //     }
 
         //     get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_2d, point);
 
         //     //double check_basis = 0.0;
 
-        //     for(int basis_id = 0; basis_id < num_elem_dofs_in_surf; basis_id++){
+        //     for(int basis_id = 0; basis_id < num_dg_dofs_in_surf; basis_id++){
 
-        //         gauss_elem_basis(gauss_rid, basis_id) = temp_elem_basis(basis_id);
+        //         gauss_point_dg_basis(gauss_rid, basis_id) = temp_elem_basis(basis_id);
         //         //check_basis += temp_elem_basis(basis_id);
         //         temp_elem_basis(basis_id) = 0.0;
         // }
@@ -512,15 +512,15 @@ struct fe_ref_surf_t
             for (int gauss_rid = 0; gauss_rid < num_gauss_in_surf; gauss_rid++) {
                 // Get the nodal coordinates
                 for (int dim = 0; dim < 2; dim++) {
-                    point(dim) = gauss_positions(gauss_rid, dim);
+                    point(dim) = gauss_point_positions(gauss_rid, dim);
                 }
 
                 get_bernstein_basis(temp_elem_basis, elem_val_1d, elem_val_2d, point);
 
                 // double check_basis = 0.0;
 
-                for (int basis_id = 0; basis_id < num_elem_dofs_in_surf; basis_id++) {
-                    gauss_elem_basis(gauss_rid, basis_id) = temp_elem_basis(basis_id);
+                for (int basis_id = 0; basis_id < num_dg_dofs_in_surf; basis_id++) {
+                    gauss_point_dg_basis(gauss_rid, basis_id) = temp_elem_basis(basis_id);
                     // check_basis += temp_elem_basis(basis_id);
                     temp_elem_basis(basis_id) = 0.0;
                 }
@@ -605,7 +605,7 @@ struct fe_ref_surf_t
 
         //     // Get the nodal coordinates
         //     for(int dim = 0; dim < 3; dim++){
-        //         point(dim) = gauss_positions(gauss_rid, dim);
+        //         point(dim) = gauss_point_positions(gauss_rid, dim);
         //     }
 
         //     partial_xi_basis(temp_partial_xi, val_1d, val_2d, Dval_1d, Dval_2d, point);
@@ -617,12 +617,12 @@ struct fe_ref_surf_t
 
         //     for(int basis_id = 0; basis_id < num_dofs_in_surf; basis_id++){
 
-        //         gauss_grad_basis(gauss_rid, basis_id, 0) = temp_partial_xi(basis_id);
-        //         //printf(" grad basis value : %f \n ", gauss_grad_basis(gauss_rid, basis_id, 0) );
-        //         gauss_grad_basis(gauss_rid, basis_id, 1) = temp_partial_eta(basis_id);
-        //         //printf(" grad basis value : %f \n ", gauss_grad_basis(gauss_rid, basis_id, 1) );
-        //         gauss_grad_basis(gauss_rid, basis_id, 2) = temp_partial_mu(basis_id);
-        //         //printf(" grad basis value : %f \n ", gauss_grad_basis(gauss_rid, basis_id, 2) );
+        //         gauss_point_grad_basis(gauss_rid, basis_id, 0) = temp_partial_xi(basis_id);
+        //         //printf(" grad basis value : %f \n ", gauss_point_grad_basis(gauss_rid, basis_id, 0) );
+        //         gauss_point_grad_basis(gauss_rid, basis_id, 1) = temp_partial_eta(basis_id);
+        //         //printf(" grad basis value : %f \n ", gauss_point_grad_basis(gauss_rid, basis_id, 1) );
+        //         gauss_point_grad_basis(gauss_rid, basis_id, 2) = temp_partial_mu(basis_id);
+        //         //printf(" grad basis value : %f \n ", gauss_point_grad_basis(gauss_rid, basis_id, 2) );
 
         //        check[0] += temp_partial_xi(basis_id);
         //        check[1] += temp_partial_eta(basis_id);
@@ -641,7 +641,7 @@ struct fe_ref_surf_t
             for (int gauss_rid = 0; gauss_rid < num_gauss_in_surf; gauss_rid++) {
                 // Get the nodal coordinates
                 for (int dim = 0; dim < 2; dim++) {
-                    point(dim) = gauss_positions(gauss_rid, dim);
+                    point(dim) = gauss_point_positions(gauss_rid, dim);
                 }
 
                 partial_xi_basis(temp_partial_xi, val_1d, val_2d, Dval_1d, Dval_2d, point);
@@ -651,10 +651,10 @@ struct fe_ref_surf_t
                 // for (int i = 0; i < 2; i++) check[i] = 0.0;
 
                 for (int basis_id = 0; basis_id < num_dofs_in_surf; basis_id++) {
-                    gauss_grad_basis(gauss_rid, basis_id, 0) = temp_partial_xi(basis_id);
-                    // printf(" grad basis value : %f \n ", gauss_grad_basis(gauss_rid, basis_id, 0) );
-                    gauss_grad_basis(gauss_rid, basis_id, 1) = temp_partial_eta(basis_id);
-                    // printf(" grad basis value : %f \n ", gauss_grad_basis(gauss_rid, basis_id, 1) );
+                    gauss_point_grad_basis(gauss_rid, basis_id, 0) = temp_partial_xi(basis_id);
+                    // printf(" grad basis value : %f \n ", gauss_point_grad_basis(gauss_rid, basis_id, 0) );
+                    gauss_point_grad_basis(gauss_rid, basis_id, 1) = temp_partial_eta(basis_id);
+                    // printf(" grad basis value : %f \n ", gauss_point_grad_basis(gauss_rid, basis_id, 1) );
 
                     // check[0] += temp_partial_xi(basis_id);
                     // check[1] += temp_partial_eta(basis_id);
@@ -698,7 +698,7 @@ struct fe_ref_surf_t
     KOKKOS_INLINE_FUNCTION
     int elem_dof_rid_2D(int i, int j) const
     {
-        return i + j * num_elem_dofs_1d;
+        return i + j * num_dg_dofs_1d;
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1061,7 +1061,7 @@ struct fe_ref_surf_t
         const CArrayKokkos<double>& point) const
     {
         // initialize to zero //
-        for (int i = 0; i < num_elem_dofs_1d; i++) {
+        for (int i = 0; i < num_dg_dofs_1d; i++) {
             elem_val_1d(i) = 0.0;
         }
 
@@ -1069,7 +1069,7 @@ struct fe_ref_surf_t
         bernstein_basis_1D(elem_val_1d, point(0));
 
         // Save the basis value at the point to a temp array and zero out the temp array
-        for (int i = 0; i < num_elem_dofs_1d; i++) {
+        for (int i = 0; i < num_dg_dofs_1d; i++) {
             elem_val_2d(i, 0) = elem_val_1d(i);
             elem_val_1d(i)    = 0.0;
         }
@@ -1078,21 +1078,21 @@ struct fe_ref_surf_t
         bernstein_basis_1D(elem_val_1d, point(1));
 
         // Save the basis value at the point to a temp array and zero out the temp array
-        for (int i = 0; i < num_elem_dofs_1d; i++) {
+        for (int i = 0; i < num_dg_dofs_1d; i++) {
             elem_val_2d(i, 1) = elem_val_1d(i);
             elem_val_1d(i)    = 0.0;
         }
 
         // Multiply the i, j, k components of the basis from each node
         // to get the tensor product basis for the node
-        for (int j = 0; j < num_elem_dofs_1d; j++) {
-            for (int i = 0; i < num_elem_dofs_1d; i++) {
+        for (int j = 0; j < num_dg_dofs_1d; j++) {
+            for (int i = 0; i < num_dg_dofs_1d; i++) {
                 int dof_rlid = elem_dof_rid_2D(i, j);
                 elem_basis(dof_rlid) = elem_val_2d(i, 0) * elem_val_2d(j, 1);
             }
         }
 
-        for (int i = 0; i < num_elem_dofs_1d; i++) {
+        for (int i = 0; i < num_dg_dofs_1d; i++) {
             elem_val_1d(i)    = 0.0;
             elem_val_2d(i, 0) = 0.0;
             elem_val_2d(i, 1) = 0.0;
@@ -1218,8 +1218,8 @@ struct fe_ref_surf_t
         const CArrayKokkos<double>& interp,
         const double X) const
     {
-        for (int dof_i = 0; dof_i < num_elem_dofs_1d; dof_i++) {
-            interp(dof_i) = eval_bernstein(num_elem_dofs_1d - 1, dof_i, X);
+        for (int dof_i = 0; dof_i < num_dg_dofs_1d; dof_i++) {
+            interp(dof_i) = eval_bernstein(num_dg_dofs_1d - 1, dof_i, X);
         }
     }
 
