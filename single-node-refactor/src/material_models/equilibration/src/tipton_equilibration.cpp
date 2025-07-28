@@ -99,12 +99,12 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.pres,
                 State.MaterialPoints.den,
                 State.MaterialPoints.sspd,
-                State.MaterialToMeshMaps.elem,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
                 fuzz,
-                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                 mat_id);
 
         } // end for mat_id
@@ -135,14 +135,14 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.den,
                 State.MaterialPoints.sspd,
                 State.MaterialPoints.mass,
-                State.MaterialToMeshMaps.elem,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
                 fuzz,
                 Materials.equilibration_global_vars,
                 Materials.num_equilibration_global_vars,
-                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                 mat_id);
 
         } // end for mat_id
@@ -151,7 +151,7 @@ namespace TiptonEquilibrationModel {
         // calculate volfrac and energy change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
         
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
             
             update_state_equilibration (
                 mesh,
@@ -172,12 +172,12 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.stress,
                 State.MaterialPoints.shear_modulii,
                 State.MaterialPoints.eos_state_vars,
-                State.MaterialToMeshMaps.elem,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
                 fuzz,
-                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                 mat_id);
 
         } // end for mat_id
@@ -221,12 +221,12 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.pres,
                 State.MaterialPoints.den,
                 State.MaterialPoints.sspd,
-                State.MaterialToMeshMaps.elem,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
                 fuzz,
-                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                 mat_id);
 
         } // end for mat_id
@@ -257,14 +257,14 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.den,
                 State.MaterialPoints.sspd,
                 State.MaterialPoints.mass,
-                State.MaterialToMeshMaps.elem,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
                 fuzz,
                 Materials.equilibration_global_vars,
                 Materials.num_equilibration_global_vars,
-                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                 mat_id);
 
         } // end for mat_id
@@ -273,7 +273,7 @@ namespace TiptonEquilibrationModel {
         // calculate volfrac and energy change
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
 
 
             update_state_equilibration (
@@ -295,12 +295,12 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.stress,
                 State.MaterialPoints.shear_modulii,
                 State.MaterialPoints.eos_state_vars,
-                State.MaterialToMeshMaps.elem,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
                 dt,
                 rk_alpha,
                 fuzz,
-                State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                 mat_id);
 
 
@@ -323,7 +323,7 @@ namespace TiptonEquilibrationModel {
         const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
@@ -333,19 +333,19 @@ namespace TiptonEquilibrationModel {
     {
 
         // loop over all ellements the material lives in
-        FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+        FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
             // get elem gid for this material at this lid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
             // loop over gauss points in this element
-            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
+            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_gauss_in_elem; gauss_pt_lid++){
 
                 // get the gauss gid for this point in the element
-                size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
+                size_t gauss_gid = mesh.gauss_in_elem(elem_gid, gauss_pt_lid);
 
                 // get the mat_gauss_pt_storage_lid
-                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
+                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_sid, gauss_pt_lid);
 
                 // only do pressure relaxation on materials that have volfrac<1
                 if (MaterialPoints_volfrac(mat_id, mat_point_storage_lid )<1.0-fuzz){
@@ -389,10 +389,10 @@ namespace TiptonEquilibrationModel {
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
             // loop over gauss points in this element
-            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
+            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_gauss_in_elem; gauss_pt_lid++){
 
                 // get the gauss gid for this point in the element
-                size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
+                size_t gauss_gid = mesh.gauss_in_elem(elem_gid, gauss_pt_lid);
 
                 GaussPoint_pres(gauss_gid) /= (GaussPoint_pres_denominator(gauss_gid)+fuzz); 
 
@@ -422,7 +422,7 @@ namespace TiptonEquilibrationModel {
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
@@ -434,19 +434,19 @@ namespace TiptonEquilibrationModel {
     {
 
         // loop over all ellements the material lives in
-        FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+        FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
             // get elem gid for this material at this lid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
             // loop over gauss points in this element
-            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
+            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_gauss_in_elem; gauss_pt_lid++){
 
                 // get the gauss gid for this point in the element
-                size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
+                size_t gauss_gid = mesh.gauss_in_elem(elem_gid, gauss_pt_lid);
 
                 // get the mat_gauss_pt_storage_lid
-                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
+                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_sid, gauss_pt_lid);
 
                 // divergence at the Gauss point
                 double div = 0.0;
@@ -511,7 +511,7 @@ namespace TiptonEquilibrationModel {
         const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const points_in_mat_t& points_in_mat_elem,
         const double dt,
         const double rk_alpha,
@@ -521,19 +521,19 @@ namespace TiptonEquilibrationModel {
     {
 
         // loop over all ellements the material lives in
-        FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+        FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
             // get elem gid for this material at this lid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
             // loop over gauss points in this element
-            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_leg_gauss_in_elem; gauss_pt_lid++){
+            for (size_t gauss_pt_lid = 0; gauss_pt_lid < mesh.num_gauss_in_elem; gauss_pt_lid++){
 
                 // get the gauss gid for this point in the element
-                size_t gauss_gid = mesh.legendre_in_elem(elem_gid, gauss_pt_lid);
+                size_t gauss_gid = mesh.gauss_in_elem(elem_gid, gauss_pt_lid);
 
                 // get the mat_gauss_pt_storage_lid
-                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_lid, gauss_pt_lid);
+                size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_sid, gauss_pt_lid);
 
 
                 // limited volfrac change 

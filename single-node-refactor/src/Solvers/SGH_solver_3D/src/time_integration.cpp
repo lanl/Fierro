@@ -113,7 +113,7 @@ void SGH3D::get_timestep(Mesh_t& mesh,
                        DCArrayKokkos<double>& GaussPoints_vol,
                        DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                        DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-                       DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                       DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                        size_t num_mat_elems,
                        double time_value,
                        const double graphics_time,
@@ -131,8 +131,8 @@ void SGH3D::get_timestep(Mesh_t& mesh,
 
     double dt_lcl;
     double min_dt_calc;
-    FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+    FOR_REDUCE_MIN(mat_elem_sid, 0, num_mat_elems, dt_lcl, {
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
         double coords0[24];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 8, 3);
@@ -183,9 +183,9 @@ void SGH3D::get_timestep(Mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_id, mat_elem_lid) + fuzz);
+        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_id, mat_elem_sid) + fuzz);
 
-        if (MaterialPoints_eroded(mat_id, mat_elem_lid) == true) {
+        if (MaterialPoints_eroded(mat_id, mat_elem_sid) == true) {
             dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
         }
 
