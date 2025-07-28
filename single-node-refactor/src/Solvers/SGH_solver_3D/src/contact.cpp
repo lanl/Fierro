@@ -1680,17 +1680,13 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
             for (size_t i = 0; i < nbox(b); i++)
             {
                 size_t node_gid = nsort(npoint(b) + i);
-                bool add_node = true;
+                bool add_node = penetration_check(contact_nodes(node_gid),penetration_patches,patch_lid);
                 // If the node is in the current element, then continue; else, add it to possible_nodes
                 for (int j = 0; j < mesh.num_nodes_in_elem; j++)
                 {
                     if (node_gid == mesh.nodes_in_elem(mesh.elems_in_patch(surf.gid,0),j))
                     {
                         add_node = false;
-                        break;
-                    }
-                    else {
-                        add_node = penetration_check(contact_nodes(node_gid),penetration_patches,patch_lid);
                         break;
                     }
                 }
@@ -1804,7 +1800,7 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
                 P(0) = px + c*surf_normal(0);
                 P(1) = py + c*surf_normal(1);
                 P(2) = pz + c*surf_normal(2);
-                //std::cout << "Node: " << nodes_pen_surfs(node_lid,0) << " with contact point: " << P(0) << "  " << P(1) << "  " << P(2) << std::endl;
+
                 // mapping P to isoparametric coordinates
                 CArrayKokkos <double> elem_pos(3,8);
                 for (int j = 0; j < 3; j++) {
@@ -1814,8 +1810,7 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
                 }
                 CArrayKokkos <double> iso_P(3);
                 isoparametric_inverse(P, elem_pos, iso_P);
-                std::cout << "Iso_P: " << nodes_pen_surfs(node_lid,0) << "   " << iso_P(0) << "   " << iso_P(1) << "   " << iso_P(2) << std::endl;
-                std::cout << "Real_P: " << nodes_pen_surfs(node_lid,0) << "   " << P(0) << "   " << P(1) << "   " << P(2) << std::endl;
+
                 // finding contact surface local id wrt the element
                 size_t surf_elem_id;
                 for (int j = 0; j < 6; j++) {
@@ -1859,7 +1854,8 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
                 if (current_pair.active == false) { 
                     current_pair = contact_pair_t(*this, contact_patches(i), contact_nodes(nodes_pen_surfs(node_lid,0)), xi, eta, del_t, surf_normal);
                     current_pair.active = true;
-                    current_pair.force_factor = 0.00000001;
+                    current_pair.force_factor = 1.0;
+                    current_pair.time_factor = 50.0;
                     active_pairs(num_active_pairs) = nodes_pen_surfs(node_lid,0);
                 } else // update contact location
                 {
@@ -1959,7 +1955,7 @@ void contact_patches_t::isoparametric_inverse(const CArrayKokkos<double> pos, co
     CArrayKokkos <double> Jinv(3,3);
     
     // iteration loop
-    int max_iter = 5;
+    int max_iter = 50;
     for (int i = 0; i < max_iter; i++) {
         // dphi_dxi
         dphi(0,0) = -0.125*(1-iso_pos_iter(1))*(1-iso_pos_iter(2));
@@ -2014,8 +2010,9 @@ void contact_patches_t::isoparametric_inverse(const CArrayKokkos<double> pos, co
         // xi_k+1 = xi_k + (J^-1)(x_p - x_k)
         iso_pos.set_values(0);
         for (int j = 0; j < 3; j++) {
+            iso_pos(j) += iso_pos_iter(j);
             for (int k = 0; k < 3; k++) {
-                iso_pos(j) += iso_pos_iter(j) + Jinv(j,k)*(pos(k) - pos_iter(k));
+                iso_pos(j) += Jinv(j,k)*(pos(k) - pos_iter(k));
             }
         }
         
@@ -2034,10 +2031,9 @@ void contact_patches_t::isoparametric_inverse(const CArrayKokkos<double> pos, co
                 pos_iter(j) += elem_pos(j,k)*phi(k);
             }
         }
-
+        
         // convergence check
-        if (sqrt((pos(0)-pos_iter(0))*(pos(0)-pos_iter(0)) + (pos(1)-pos_iter(1))*(pos(1)-pos_iter(1)) + (pos(2)-pos_iter(2))*(pos(2)-pos_iter(2))) < pow(10,-4)) {
-            std::cout << "CONVERGED" << std::endl;
+        if (sqrt((pos(0)-pos_iter(0))*(pos(0)-pos_iter(0)) + (pos(1)-pos_iter(1))*(pos(1)-pos_iter(1)) + (pos(2)-pos_iter(2))*(pos(2)-pos_iter(2))) < pow(10,-6)) {
             break;
         }
 
@@ -2087,10 +2083,6 @@ void contact_patches_t::get_contact_pairs(State_t& State, const Mesh_t &mesh, co
 
             double xi_val, eta_val, del_tc;
             bool is_hitting = contact_patch.contact_check(node, del_t, xi_val, eta_val, del_tc);
-            bool penetrating = penetration_check(node,penetration_patches,patch_lid);
-            if (penetrating) {
-                std::cout << node.gid << " is penetrating patch with nodes " << contact_patch.nodes_gid(0) << " " << contact_patch.nodes_gid(1) << " " << contact_patch.nodes_gid(2) << " " << contact_patch.nodes_gid(3) << std::endl;
-            }
 
             if (is_hitting && !is_pen_node(node_gid) && !is_patch_node(node_gid))
             {
@@ -2211,11 +2203,6 @@ void contact_patches_t::get_contact_pairs(State_t& State, const Mesh_t &mesh, co
                     add_current_pair = true;
                 }
 
-                // if the node is penetrating, the contact pair will be formed in penetration_sweep()
-                /* if (penetrating) {
-                    add_current_pair = false;
-                } */
-
                 if (add_current_pair)
                 {
                     double normal_arr[3];
@@ -2223,6 +2210,7 @@ void contact_patches_t::get_contact_pairs(State_t& State, const Mesh_t &mesh, co
                     contact_patch.get_normal(xi_val, eta_val, del_t, normal);
                     current_pair = contact_pair_t(*this, contact_patch, node, xi_val, eta_val, del_tc, normal);
                     current_pair.force_factor = 1.0;
+                    current_pair.time_factor = 1.0;
                 }
             }
         }
@@ -2376,7 +2364,7 @@ void contact_patches_t::force_resolution(const double &del_t)
             // mesh do frictionless contact and another portion do glue contact.
             if (pair.contact_type == contact_pair_t::contact_types::frictionless)
             {
-                pair.frictionless_increment(del_t);
+                pair.frictionless_increment(del_t*pair.time_factor);
                 pair.distribute_frictionless_force(pair.force_factor);  // if not doing serial, then this would be called in the second loop
                 forces_view(j) = pair.fc_inc;
             } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
