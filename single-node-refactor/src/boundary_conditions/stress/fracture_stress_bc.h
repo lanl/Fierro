@@ -55,19 +55,19 @@ struct BoundaryConditionEnums_t;
 /// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace FractureStressBC
+namespace fractureStressBC
 {
 // add an enum for boundary statevars and global vars
 
     KOKKOS_FUNCTION
     static void stress(const Mesh_t& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
+    const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,
     const ViewCArrayKokkos <double>& corner_surf_force,
     const ViewCArrayKokkos <double>& corner_surf_normal,
     const double time_value,
-    const size_t rk_stage,
+    //const size_t rk_stage,
     const size_t bdy_node_gid,
     const size_t bdy_set)
     {

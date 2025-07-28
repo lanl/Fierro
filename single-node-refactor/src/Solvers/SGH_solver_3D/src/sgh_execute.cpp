@@ -335,10 +335,11 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // call body forces routine
             
             // this is where there will be a snippet to apply fracture forces to boundary surfs
-            // do not work on this section until ready to work with the vcz update function
+            // do not work on this section (forces of this section) until ready to work with the vcz update function
             //if (doing_fracture) 
             //{
-            //    cohesive_zones_bank.update_nodes(mesh, State);
+           //     cohesive_zones_bank.update_nodes(mesh, State);
+           // }
             //    if (time_start == time_value) {
                 
             //    }

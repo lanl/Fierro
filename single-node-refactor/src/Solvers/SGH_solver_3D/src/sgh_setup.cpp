@@ -117,8 +117,8 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
         // checking if fracture is allowed... if = 0 then fracture is not enabled; if = 1, then fracture is enabled:
         std::cout << "Boundary.allow_fracture = " << Boundary.allow_fracture << std::endl;
         if (Boundary.allow_fracture) {
-        std::cout << "Setting up global fracture (cohesive zones)" << std::endl;
-        //doing_fracture = true;
+            std::cout << "Setting up global fracture (cohesive zones)" << std::endl;
+            doing_fracture = true;
         
         // test to see if function is being entered
         std::cout << "Calling initialize()..." << std::endl;

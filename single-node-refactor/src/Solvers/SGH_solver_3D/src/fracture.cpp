@@ -824,23 +824,31 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
                    
     // counting the number of boundary nodes
     size_t num_bdy_nodes = mesh.num_bdy_nodes;
-    std::cout << "Number of boundary nodes: " << num_bdy_nodes << std::endl;
+    //std::cout << "Number of boundary nodes: " << num_bdy_nodes << std::endl;
     std::cout << "Total boundary nodes: " << mesh.num_bdy_nodes << std::endl;
 
     // total number of boundary nodes across all sets
-    size_t total_bdy_nodes = 0;
-    for (size_t i = 0; i < mesh.num_bdy_sets; ++i) {
-        std::cout << "Boundary nodes in set " << i << ": " << mesh.num_bdy_nodes_in_set(i) << std::endl;
-    }
+    //size_t total_bdy_nodes = 0;
+    //for (size_t i = 0; i < mesh.num_bdy_sets; ++i) {
+    //    std::cout << "Boundary nodes in set " << i << ": " << mesh.num_bdy_nodes_in_set(i) << std::endl;
+    
     
 
     size_t overlap_count = 0;
 
     const double tol = 0.000001; //0.000001; //e-3; // adjust as needed; added just in case coordinate pairs are close but not exactly equal
 
+    CArrayKokkos<size_t> overlapping_node_ids; // stores overlapping node IDs to avoid duplicates
+
+    // pre-allocate max size for overlapping_node_ids
+    size_t max_overlapping_nodes = mesh.num_bdy_nodes; // assuming worst case all nodes overlap. change in the future. this is 1D, this needs to be changed to make the max array only = overlapping node pairs instead of max = number of boundary nodes
+    overlapping_node_ids = CArrayKokkos<size_t>(max_overlapping_nodes, "overlapping_node_ids");
+    size_t overlap_index = 0;
+
     for (size_t i = 0; i < mesh.num_bdy_nodes; ++i) { // outer loop goes through each boundary node
         size_t node_i = mesh.bdy_nodes(i);
-        for (size_t j = i + 1; j < mesh.num_bdy_nodes; ++j) { // Avoid duplicate pairs and i == j (starts from i +1), for each pair, compares coordinates k = 0, 1, 2
+
+        for (size_t j = i + 1; j < mesh.num_bdy_nodes; ++j) { // avoid duplicate pairs and i == j (starts from i + 1), for each pair, compares coordinates k = 0, 1, 2
             size_t node_j = mesh.bdy_nodes(j);
             bool overlap = true;
 
@@ -852,28 +860,73 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
                 }
             }
             if (overlap) {
-            std::cout << "Overlap found between node " << node_i << " and node " << node_j << std::endl;
+            std::cout << "Overlap (cohesive zone) found between node " << node_i << " and node " << node_j << std::endl;
             ++overlap_count;
+            //overlapping_node_ids.insert(node_i);
+            //overlapping_node_ids.insert(node_j);
+
+
+            // checks to avoid inserting the same node multiple times 
+            // insert node_i if not already in overlapping_node_ids
+                bool overlap_exists = false;
+                for (size_t m = 0; m < overlap_index; ++m) {
+                    if (overlapping_node_ids(m) == node_i) {
+                        overlap_exists = true;
+                        break;
+                    }
+                }
+                if (!overlap_exists && overlap_index < max_overlapping_nodes) {
+                    overlapping_node_ids(overlap_index++) = node_i;
+                }
+
+                // insert node_j if not already in overlapping_node_ids
+                overlap_exists = false;
+                for (size_t m = 0; m < overlap_index; ++m) {
+                    if (overlapping_node_ids(m) == node_j) {
+                        overlap_exists = true;
+                        break;
+                    }
+                }
+                if (!overlap_exists && overlap_index < max_overlapping_nodes) {
+                    overlapping_node_ids(overlap_index++) = node_j;
+                }
             }
         }
     }
-
+            
     std::cout << "Total overlapping node pairs: " << overlap_count << std::endl; //prints overlapping node pairs
 
     // printing nodal coordinates to check for overlaps 
-    for (size_t i = 0; i < mesh.num_bdy_nodes; ++i) {
-        size_t node_id = mesh.bdy_nodes(i);
-        std::cout << "Node " << node_id << " coordinates: ";
-        for (size_t k = 0; k < 3; ++k) { // 3D
+    //for (size_t i = 0; i < mesh.num_bdy_nodes; ++i) {
+    //    size_t node_id = mesh.bdy_nodes(i);
+    //    std::cout << "Node " << node_id << " coordinates: ";
+    //    for (size_t k = 0; k < 3; ++k) { // 3D
+    //        std::cout << State.node.coords(node_id, k) << " ";
+    //    }
+    //    std::cout << std::endl;
+    //}   
+
+    // only print coordinates of the overlapping nodes
+    //for (size_t node_id : overlapping_node_ids) {
+    //    std::cout << "Overlapping Node " << node_id << " coordinates: ";
+    //    for (size_t k = 0; k < 3; ++k) { // 3D
+    //        std::cout << State.node.coords(node_id, k) << " ";
+    //    }
+    //    std::cout << std::endl;
+    //}
+
+    for (size_t i = 0; i < overlap_index; ++i) {
+        size_t node_id = overlapping_node_ids(i);
+        std::cout << "Overlapping Node " << node_id << " coordinates: ";
+        for (size_t k = 0; k < 3; ++k) {
             std::cout << State.node.coords(node_id, k) << " ";
         }
         std::cout << std::endl;
-    }   
-
+    }
 
 }
 
-/* 
+
 
 // returns max number of elements any VCZ node is part of connectivity for in order to define VCZ array sizes properly
 int elcount(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int> vczconn) {
@@ -908,159 +961,159 @@ int elcount(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int
     return maxel;
 }
 
-// inputs: nodes, conn, ne, nvcz, vczconn
-// outputs: vczelem
-CArray<int> elems(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int> vczconn, int maxel) {
-    // initializing output array
-    auto vczelem = CArray <int> (nvcz,2*maxel);
-    for (int i = 0; i < nvcz; i++) {
-        for (int j = 0; j < 2*maxel; j++) {
-            vczelem(i,j) = -1;
-        }
-    }
+// // inputs: nodes, conn, ne, nvcz, vczconn
+// // outputs: vczelem
+// CArray<int> elems(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int> vczconn, int maxel) {
+//     // initializing output array
+//     auto vczelem = CArray <int> (nvcz,2*maxel);
+//     for (int i = 0; i < nvcz; i++) {
+//         for (int j = 0; j < 2*maxel; j++) {
+//             vczelem(i,j) = -1;
+//         }
+//     }
 
-    // initialize intermediate variables 
-    int count0 = 0;
-    int count1 = 0;
+//     // initialize intermediate variables 
+//     int count0 = 0;
+//     int count1 = 0;
     
-    // looping over all VCZ elements
-    for (int i = 0; i < nvcz; i++) {
-        // find how many elements the nodes are part of the connectivity for
-        count0 = 0;
-        count1 = 0;
-        for (int j = 0; j < ne; j++) {
-            for (int k = 0; k < 8; k++) {
-                if (vczconn(i,0) == conn(j,k)) {
-                    vczelem(i,count0) = j;
-                    count0 += 1;
-                }
-                if (vczconn(i,1) == conn(j,k)) {
-                    vczelem(i,count1 + maxel) = j;
-                    count1 += 1;
-                }
-            }
-        }
-    }
-    return vczelem;
-}
+//     // looping over all VCZ elements
+//     for (int i = 0; i < nvcz; i++) {
+//         // find how many elements the nodes are part of the connectivity for
+//         count0 = 0;
+//         count1 = 0;
+//         for (int j = 0; j < ne; j++) {
+//             for (int k = 0; k < 8; k++) {
+//                 if (vczconn(i,0) == conn(j,k)) {
+//                     vczelem(i,count0) = j;
+//                     count0 += 1;
+//                 }
+//                 if (vczconn(i,1) == conn(j,k)) {
+//                     vczelem(i,count1 + maxel) = j;
+//                     count1 += 1;
+//                 }
+//             }
+//         }
+//     }
+//     return vczelem;
+// }
 
-// inputs: NODES, conn, interpvals, patch number, element number
-// output: n vector, r vector, s vector, and center of face in physical coordinates
-void paravecs(CArray<double> nodes, CArray<int> conn, FArray<double> interpvals, int pn, int en, CArray<double> n, CArray<double> r, CArray<double> s, CArray<double> cenface) {
-    // reset cenface, r, and s vectors
-    for (int i = 0; i < 3; i++) {
-        r(i,0) = 0;
-        s(i,0) = 0;
-        cenface(i,0) = 0;
-    }
+// // inputs: NODES, conn, interpvals, patch number, element number
+// // output: n vector, r vector, s vector, and center of face in physical coordinates
+// void paravecs(CArray<double> nodes, CArray<int> conn, FArray<double> interpvals, int pn, int en, CArray<double> n, CArray<double> r, CArray<double> s, CArray<double> cenface) {
+//     // reset cenface, r, and s vectors
+//     for (int i = 0; i < 3; i++) {
+//         r(i,0) = 0;
+//         s(i,0) = 0;
+//         cenface(i,0) = 0;
+//     }
     
-    // populate interpvals based on patch number, note patch has constant normal vector so any point on the patch is fine
-    // pull node numbers for the patch
-    auto pnodes = CArray <int> (4,1);
-    // pull which master dof are tangent
-    auto mastan = CArray <int> (2,1);
-    switch (pn) {
-    case -1:
-        break;
-    case 0:
-        MasterShapes(interpvals,-1, 0, 0);
-        pnodes(0,0) = 0;
-        pnodes(1,0) = 1;
-        pnodes(2,0) = 4;
-        pnodes(3,0) = 5;
-        mastan(0,0) = 1;
-        mastan(1,0) = 2;
-        break;
-    case 1:
-        MasterShapes(interpvals,1, 0, 0);
-        pnodes(0,0) = 2;
-        pnodes(1,0) = 3;
-        pnodes(2,0) = 6;
-        pnodes(3,0) = 7;
-        mastan(0,0) = 1;
-        mastan(1,0) = 2;
-        break;
-    case 2:
-        MasterShapes(interpvals,0, -1, 0);
-        pnodes(0,0) = 0;
-        pnodes(1,0) = 1;
-        pnodes(2,0) = 2;
-        pnodes(3,0) = 3;
-        mastan(0,0) = 0;
-        mastan(1,0) = 2;
-        break;
-    case 3:
-        MasterShapes(interpvals,0, 1, 0);
-        pnodes(0,0) = 4;
-        pnodes(1,0) = 5;
-        pnodes(2,0) = 6;
-        pnodes(3,0) = 7;
-        mastan(0,0) = 0;
-        mastan(1,0) = 2;
-        break;
-    case 4:
-        MasterShapes(interpvals,0, 0, -1);
-        pnodes(0,0) = 0;
-        pnodes(1,0) = 3;
-        pnodes(2,0) = 4;
-        pnodes(3,0) = 7;
-        mastan(0,0) = 0;
-        mastan(1,0) = 1;
-        break;
-    case 5:
-        MasterShapes(interpvals,0, 0, 1);
-        pnodes(0,0) = 1;
-        pnodes(1,0) = 2;
-        pnodes(2,0) = 5;
-        pnodes(3,0) = 6;
-        mastan(0,0) = 0;
-        mastan(1,0) = 1;
-        break;
-    }
+//     // populate interpvals based on patch number, note patch has constant normal vector so any point on the patch is fine
+//     // pull node numbers for the patch
+//     auto pnodes = CArray <int> (4,1);
+//     // pull which master dof are tangent
+//     auto mastan = CArray <int> (2,1);
+//     switch (pn) {
+//     case -1:
+//         break;
+//     case 0:
+//         MasterShapes(interpvals,-1, 0, 0);
+//         pnodes(0,0) = 0;
+//         pnodes(1,0) = 1;
+//         pnodes(2,0) = 4;
+//         pnodes(3,0) = 5;
+//         mastan(0,0) = 1;
+//         mastan(1,0) = 2;
+//         break;
+//     case 1:
+//         MasterShapes(interpvals,1, 0, 0);
+//         pnodes(0,0) = 2;
+//         pnodes(1,0) = 3;
+//         pnodes(2,0) = 6;
+//         pnodes(3,0) = 7;
+//         mastan(0,0) = 1;
+//         mastan(1,0) = 2;
+//         break;
+//     case 2:
+//         MasterShapes(interpvals,0, -1, 0);
+//         pnodes(0,0) = 0;
+//         pnodes(1,0) = 1;
+//         pnodes(2,0) = 2;
+//         pnodes(3,0) = 3;
+//         mastan(0,0) = 0;
+//         mastan(1,0) = 2;
+//         break;
+//     case 3:
+//         MasterShapes(interpvals,0, 1, 0);
+//         pnodes(0,0) = 4;
+//         pnodes(1,0) = 5;
+//         pnodes(2,0) = 6;
+//         pnodes(3,0) = 7;
+//         mastan(0,0) = 0;
+//         mastan(1,0) = 2;
+//         break;
+//     case 4:
+//         MasterShapes(interpvals,0, 0, -1);
+//         pnodes(0,0) = 0;
+//         pnodes(1,0) = 3;
+//         pnodes(2,0) = 4;
+//         pnodes(3,0) = 7;
+//         mastan(0,0) = 0;
+//         mastan(1,0) = 1;
+//         break;
+//     case 5:
+//         MasterShapes(interpvals,0, 0, 1);
+//         pnodes(0,0) = 1;
+//         pnodes(1,0) = 2;
+//         pnodes(2,0) = 5;
+//         pnodes(3,0) = 6;
+//         mastan(0,0) = 0;
+//         mastan(1,0) = 1;
+//         break;
+//     }
     
-    // calculating tangent vectors and cenface values
-    if (pn != -1) {
-        for (int i = 0; i < 4; i++) {
-            cenface(0,0) += nodes(conn(en,pnodes(i,0)),0) * interpvals(pnodes(i,0),0);
-            cenface(1,0) += nodes(conn(en,pnodes(i,0)),1) * interpvals(pnodes(i,0),0);
-            cenface(2,0) += nodes(conn(en,pnodes(i,0)),2) * interpvals(pnodes(i,0),0);
+//     // calculating tangent vectors and cenface values
+//     if (pn != -1) {
+//         for (int i = 0; i < 4; i++) {
+//             cenface(0,0) += nodes(conn(en,pnodes(i,0)),0) * interpvals(pnodes(i,0),0);
+//             cenface(1,0) += nodes(conn(en,pnodes(i,0)),1) * interpvals(pnodes(i,0),0);
+//             cenface(2,0) += nodes(conn(en,pnodes(i,0)),2) * interpvals(pnodes(i,0),0);
 
-            r(0,0) += nodes(conn(en,pnodes(i,0)),0) * interpvals(pnodes(i,0),mastan(0,0) + 1);
-            r(1,0) += nodes(conn(en,pnodes(i,0)),1) * interpvals(pnodes(i,0),mastan(0,0) + 1);
-            r(2,0) += nodes(conn(en,pnodes(i,0)),2) * interpvals(pnodes(i,0),mastan(0,0) + 1);
+//             r(0,0) += nodes(conn(en,pnodes(i,0)),0) * interpvals(pnodes(i,0),mastan(0,0) + 1);
+//             r(1,0) += nodes(conn(en,pnodes(i,0)),1) * interpvals(pnodes(i,0),mastan(0,0) + 1);
+//             r(2,0) += nodes(conn(en,pnodes(i,0)),2) * interpvals(pnodes(i,0),mastan(0,0) + 1);
 
-            s(0,0) += nodes(conn(en,pnodes(i,0)),0) * interpvals(pnodes(i,0),mastan(1,0) + 1);
-            s(1,0) += nodes(conn(en,pnodes(i,0)),1) * interpvals(pnodes(i,0),mastan(1,0) + 1);
-            s(2,0) += nodes(conn(en,pnodes(i,0)),2) * interpvals(pnodes(i,0),mastan(1,0) + 1);
-        }
-    }
+//             s(0,0) += nodes(conn(en,pnodes(i,0)),0) * interpvals(pnodes(i,0),mastan(1,0) + 1);
+//             s(1,0) += nodes(conn(en,pnodes(i,0)),1) * interpvals(pnodes(i,0),mastan(1,0) + 1);
+//             s(2,0) += nodes(conn(en,pnodes(i,0)),2) * interpvals(pnodes(i,0),mastan(1,0) + 1);
+//         }
+//     }
 
-    // cross product for normal vector
-    if (pn == 1 || pn == 2 || pn == 5) {
-        // s cross r
-        n(0,0) = s(1,0) * r(2,0) - r(1,0) * s(2,0);
-        n(1,0) = s(0,0) * r(2,0) - r(0,0) * s(2,0);
-        n(2,0) = s(0,0) * r(1,0) - r(0,0) * s(1,0);
-    }
-    else {
-        n(0,0) = r(1,0) * s(2,0) - s(1,0) * r(2,0);
-        n(1,0) = r(0,0) * s(2,0) - s(0,0) * r(2,0);
-        n(2,0) = r(0,0) * s(1,0) - s(0,0) * r(1,0);
-    }
+//     // cross product for normal vector
+//     if (pn == 1 || pn == 2 || pn == 5) {
+//         // s cross r
+//         n(0,0) = s(1,0) * r(2,0) - r(1,0) * s(2,0);
+//         n(1,0) = s(0,0) * r(2,0) - r(0,0) * s(2,0);
+//         n(2,0) = s(0,0) * r(1,0) - r(0,0) * s(1,0);
+//     }
+//     else {
+//         n(0,0) = r(1,0) * s(2,0) - s(1,0) * r(2,0);
+//         n(1,0) = r(0,0) * s(2,0) - s(0,0) * r(2,0);
+//         n(2,0) = r(0,0) * s(1,0) - s(0,0) * r(1,0);
+//     }
 
-    // normalizing to direction vectors
-    double lenr = sqrt(r(0,0) * r(0,0) + r(1,0) * r(1,0) + r(2,0) * r(2,0));
-    double lens = sqrt(s(0,0) * s(0,0) + s(1,0) * s(1,0) + s(2,0) * s(2,0));
-    double lenn = sqrt(n(0,0) * n(0,0) + n(1,0) * n(1,0) + n(2,0) * n(2,0));
+//     // normalizing to direction vectors
+//     double lenr = sqrt(r(0,0) * r(0,0) + r(1,0) * r(1,0) + r(2,0) * r(2,0));
+//     double lens = sqrt(s(0,0) * s(0,0) + s(1,0) * s(1,0) + s(2,0) * s(2,0));
+//     double lenn = sqrt(n(0,0) * n(0,0) + n(1,0) * n(1,0) + n(2,0) * n(2,0));
 
-    for (int i = 0; i < 3; i++) {
-        n(i,0) /= lenn;
-        r(i,0) /= lenr;
-        s(i,0) /= lens;
-    }
+//     for (int i = 0; i < 3; i++) {
+//         n(i,0) /= lenn;
+//         r(i,0) /= lenr;
+//         s(i,0) /= lens;
+//     }
 
-}
- */
+// }
+
 
 // // inputs: NODES, conn, NE, NVCZ, VCZconn, VCZelem, interpvals
 // // outputs: VCZinfo

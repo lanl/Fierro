@@ -422,7 +422,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             });
                             break;
                       
-                        case boundary_conditions::FractureStressBC:                                  // case of setting up global fracture stress bc
+                        case boundary_conditions::fractureStressBC:                                  // case of setting up global fracture stress bc
                             std::cout << "Setting global fracture stress bc " << std::endl;
                             BoundaryConditions.allow_fracture = true;
                             break;

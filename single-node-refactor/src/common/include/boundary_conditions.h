@@ -52,7 +52,7 @@ enum BdyTag
     zPlane = 2,     // tag an z-plane
     cylinder = 3,   // tag an cylindrical surface
     sphere = 4,     // tag a spherical surface
-    global = 5      // tag the full boundary 
+    global = 5      // tag the full boundary for fracture
 };
 // future options
 //     read_file = 5   // read from a file currently unsupported
@@ -87,7 +87,7 @@ enum BCStressModels
     constantStressBC = 1,
     timeVaryingStressBC = 2,
     userDefinedStressBC = 3,
-    FractureStressBC = 4,        // special BC to open all fracture surfaces
+    fractureStressBC = 4,        // special BC to open all fracture surfaces
 };
 // future model options:
 //    displacementBC                            
@@ -149,7 +149,7 @@ static std::map<std::string, boundary_conditions::BCStressModels> bc_stress_mode
     { "constant", boundary_conditions::constantStressBC },
     { "time_varying", boundary_conditions::timeVaryingStressBC },
     { "user_defined", boundary_conditions::userDefinedStressBC },
-    { "fracture", boundary_conditions::FractureStressBC }          // special BC to open all fracture surfaces
+    { "fracture", boundary_conditions::fractureStressBC }          // special BC to open all fracture surfaces
 };
 
 
@@ -270,7 +270,7 @@ struct BoundaryCondition_t
     size_t num_bcs; // the number of boundary conditions
 
     // boolean for whether fracture should occur
-    bool allow_fracture = true; // set to true for test. when figure out the fracture model and associated boundary conditions, this will be set to false
+    bool allow_fracture = false; // set to true /(hardcoded) for test. when figure out the fracture model and associated boundary conditions, this will be set to false
 
     // making a psuedo dual ragged right
     DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver_id, bc_lid)

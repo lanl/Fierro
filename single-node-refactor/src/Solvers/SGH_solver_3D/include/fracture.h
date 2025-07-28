@@ -26,8 +26,8 @@ struct fracture_nodes_t {
 struct cohesive_zones_t {
     size_t gid; // global node id
     size_t lid; // local node id
-    CArrayKokkos<size_t> nodes_gid; // global ids of the nodes in the cohesive zone
-    CArrayKokkos <size_t> node_pairs; // node pairs with overlapping coordinates ; // will need to size this inside of a function in the source file 
+    CArrayKokkos <size_t> nodes_gid; // global ids of the nodes in the cohesive zone
+    CArrayKokkos <size_t> overlapping_node_ids; // node pairs with overlapping coordinates ; // will need to size this inside of a function in the source file 
     // member functions defined in this header file and sized inside of the source file
 
     // Iso-parametric coordinates of the patch nodes (1D array of size mesh.num_nodes_in_surf)

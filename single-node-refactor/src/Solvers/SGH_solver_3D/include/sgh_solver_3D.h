@@ -307,7 +307,9 @@ public:
         DCArrayKokkos<double>& node_vel_n0,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& node_force,
+        //const DCArrayKokkos<double>& corner_force) const;
         const DCArrayKokkos<double>& corner_force) const;
+        //const CArrayKokkos<fracture_nodes_t>& fracture_nodes) const;
 
     void get_velgrad(
         DCArrayKokkos<double>& vel_grad,
