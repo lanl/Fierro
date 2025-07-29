@@ -511,6 +511,61 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         } // end if
 
                     } // end if type
+                    else if (a_subfield_word.compare("x1") == 0) {
+                        // inner plane
+
+                        double x1 = bc_yaml[bc_id]["boundary_condition"]["surface"]["x1"].As<double>();
+
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).box[0] = x1;
+                        });
+                    } // x1
+                    else if (a_subfield_word.compare("x2") == 0) {
+                        // outer plane
+
+                        double x2 = bc_yaml[bc_id]["boundary_condition"]["surface"]["x2"].As<double>();
+
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).box[1] = x2;
+                        });
+                    } // x2
+                    else if (a_subfield_word.compare("y1") == 0) {
+                        // inner plane
+
+                        double y1 = bc_yaml[bc_id]["boundary_condition"]["surface"]["y1"].As<double>();
+
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).box[2] = y1;
+                        });
+                    } // y1
+                    else if (a_subfield_word.compare("y2") == 0) {
+                        // outer plane
+
+                        double y2 = bc_yaml[bc_id]["boundary_condition"]["surface"]["y2"].As<double>();
+
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).box[3] = y2;
+                        });
+                    } // y2
+                    else if (a_subfield_word.compare("z1") == 0) {
+                        // inner plane
+
+                        double z1 = bc_yaml[bc_id]["boundary_condition"]["surface"]["z1"].As<double>();
+
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).box[4] = z1;
+                        });
+                    } // z1
+                    else if (a_subfield_word.compare("z2") == 0) {
+                        // outer plane
+
+                        double z2 = bc_yaml[bc_id]["boundary_condition"]["surface"]["z2"].As<double>();
+
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).box[5] = z2;
+                        });
+                    } // z2
+                    
                     else if (a_subfield_word.compare("plane_position") == 0) {
                         double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
                         RUN({

@@ -61,7 +61,7 @@ void SGH3D::boundary_velocity(const Mesh_t&      mesh,
         size_t bdy_set = BoundaryConditions.vel_bdy_sets_in_solver.host(this->solver_id, bc_lid);
 
         // Loop over boundary nodes in a boundary set
-        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
+        FOR_ALL_CLASS(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
             // get the global index for this node on the boundary
             size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 

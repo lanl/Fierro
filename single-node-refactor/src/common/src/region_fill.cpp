@@ -57,7 +57,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 {
 
     // the number of elems and nodes in the mesh
-    const size_t num_dims  = mesh.num_dims;
+    // const size_t num_dims  = mesh.num_dims;
     const size_t num_elems = mesh.num_elems;
     const size_t num_nodes = mesh.num_nodes;
     const size_t num_gauss_points = mesh.num_leg_gauss_in_elem*mesh.num_elems;  

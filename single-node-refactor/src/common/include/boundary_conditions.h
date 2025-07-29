@@ -51,7 +51,8 @@ enum BdyTag
     yPlane = 1,     // tag an y-plane
     zPlane = 2,     // tag an z-plane
     cylinder = 3,   // tag an cylindrical surface
-    sphere = 4      // tag a spherical surface
+    sphere = 4,     // tag a spherical surface
+    box = 5         // tag all patches inside of a box
 };
 // future options
 //     read_file = 5   // read from a file currently unsupported
@@ -109,7 +110,8 @@ static std::map<std::string, boundary_conditions::BdyTag> bc_surface_map
     { "y_plane", boundary_conditions::yPlane },
     { "z_plane", boundary_conditions::zPlane },
     { "cylinder", boundary_conditions::cylinder },
-    { "sphere", boundary_conditions::sphere }
+    { "sphere", boundary_conditions::sphere },
+    { "box_volume", boundary_conditions::box }
 };
 // future options
 //     { "read_file", boundary_conditions::read_file }
@@ -169,6 +171,7 @@ struct BoundaryConditionSetup_t
     double origin[3] = { 0.0, 0.0, 0.0 };  ///< origin of surface being tagged, e.g., sphere or cylinder surface
     double value     = 0.0;                ///< value = position, radius, etc. defining the surface geometric shape
     double tolerance = 1.0e-7;  ///< tolerance for tagging a boundary surface
+    double box[6] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };  ///< box for tagging a boundary surface (x1, x2, y1, y2, z1, z2)
 }; // end boundary condition setup
 
 /////////////////////////////////////////////////////////////////////////////
@@ -328,7 +331,13 @@ static std::vector<std::string> str_bc_surface_inps
     "plane_position",
     "radius",
     "tolerance",
-    "origin"
+    "origin",
+    "x1",
+    "x2",
+    "y1",
+    "y2",
+    "z1",
+    "z2"
 };
 
 // ----------------------------------

@@ -631,7 +631,8 @@ size_t check_bdy(const size_t patch_gid,
     const double  orig_y,
     const double  orig_z,
     const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords)
+    const DCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<double>& box)
 {
     size_t num_dims = mesh.num_dims;
 
@@ -687,6 +688,14 @@ size_t check_bdy(const size_t patch_gid,
                 is_on_bdy += 1;
             }
         } // end if on type
+        // If patch coords fall within the box
+        else if (this_bc_tag == 5) {
+            if (these_patch_coords[0] >= box(0,0) && these_patch_coords[0] <= box(0,1) && // if between x1 and x2
+                these_patch_coords[1] >= box(1,0) && these_patch_coords[1] <= box(1,1) && // if between y1 and y2
+                these_patch_coords[2] >= box(2,0) && these_patch_coords[2] <= box(2,1)) { // if between z1 and z2
+                is_on_bdy += 1;
+            }
+        } // end if on type
     } // end for nodes in the patch
 
     // if all nodes in the patch are on the geometry
@@ -738,7 +747,16 @@ void tag_bdys(const BoundaryCondition_t& boundary,
         double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
         double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
         double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
-        
+
+
+        double box_arr[6];
+        ViewCArrayKokkos<double> box(&box_arr[0], 3,2);
+        box(0,0) = boundary.BoundaryConditionSetup(bdy_set).box[0];
+        box(0,1) = boundary.BoundaryConditionSetup(bdy_set).box[1];
+        box(1,0) = boundary.BoundaryConditionSetup(bdy_set).box[2];
+        box(1,1) = boundary.BoundaryConditionSetup(bdy_set).box[3];
+        box(2,0) = boundary.BoundaryConditionSetup(bdy_set).box[4];
+        box(2,1) = boundary.BoundaryConditionSetup(bdy_set).box[5];
 
 
         // save the boundary patches to this set that are on the plane, spheres, etc.
@@ -746,7 +764,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
             // save the patch index
             size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
 
-            // check to see if this patch is on the specified plane
+            // check to see if this patch is on the specified plane or within a bounding box
             size_t is_on_bdy = check_bdy(bdy_patch_gid,
                                          bc_tag_id,
                                          value,
@@ -755,10 +773,11 @@ void tag_bdys(const BoundaryCondition_t& boundary,
                                          orig_y,
                                          orig_z,
                                          mesh,
-                                         node_coords); // no=0, yes=1
+                                         node_coords,
+                                         box); 
 
             if (is_on_bdy == 1) {
-                size_t index =temp_bdy_patches_in_set.stride(bdy_set);
+                size_t index = temp_bdy_patches_in_set.stride(bdy_set);
 
                 // increment the number of boundary patches saved
                 temp_bdy_patches_in_set.stride(bdy_set)++;
@@ -773,6 +792,9 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     Kokkos::fence();
     mesh.num_bdy_patches_in_set.update_host(); // save to host
 
+    for(size_t bdy_set = 0; bdy_set<mesh.num_bdy_sets; bdy_set++){
+        printf("Number of boundary patches in set %d: %d\n", bdy_set, mesh.num_bdy_patches_in_set.host(bdy_set));
+    }
 
     // allocate RaggedRightArray
     mesh.bdy_patches_in_set = RaggedRightArrayKokkos<size_t>(mesh.num_bdy_patches_in_set, "mesh.bdy_patches_in_set");

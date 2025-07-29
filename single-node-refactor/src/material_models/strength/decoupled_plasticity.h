@@ -162,7 +162,6 @@ namespace HypoPlasticityModel {
         // --strength
         // statev(0) = shear modulus
         // statev(1) = yield strength
-    
 
         // shear modulus
         double G_stress = strength_global_vars(mat_id, 0);

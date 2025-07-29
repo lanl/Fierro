@@ -222,7 +222,8 @@ size_t check_bdy(const size_t patch_gid,
     const double  orig_y,
     const double  orig_z,
     const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords);
+    const DCArrayKokkos<double>& node_coords,
+    const ViewCArrayKokkos<double>& box);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
