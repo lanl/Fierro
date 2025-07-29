@@ -1568,60 +1568,8 @@ void contact_patches_t::find_nodes(contact_patch_t &contact_patch, const double 
 
 void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, const double &del_t)
 {
-    // start of finding penetration depth criterion
-    // finding min of nodal x,y,z domains
-    double xmin;
-    double xmax;
-    double ymin;
-    double ymax;
-    double zmin;
-    double zmax;
-    double dim_min;
-    double local_xmin = 0.0;
-    FOR_REDUCE_MIN(i, 0, mesh.num_nodes, local_xmin, {
-        if (local_xmin > State.node.coords(i,0))
-        {
-            local_xmin = State.node.coords(i,0);
-        }
-    }, xmin);
-    double local_ymin = 0.0;
-    FOR_REDUCE_MIN(i, 0, mesh.num_nodes, local_ymin, {
-        if (local_ymin > State.node.coords(i,1))
-        {
-            local_ymin = State.node.coords(i,1);
-        }
-    }, ymin);
-    double local_zmin = 0.0;
-    FOR_REDUCE_MIN(i, 0, mesh.num_nodes, local_zmin, {
-        if (local_zmin > State.node.coords(i,2))
-        {
-            local_zmin = State.node.coords(i,2);
-        }
-    }, zmin);
-    double local_xmax = 0.0;
-    FOR_REDUCE_MAX(i, 0, mesh.num_nodes, local_xmax, {
-        if (local_xmax < State.node.coords(i,0))
-        {
-            local_xmax = State.node.coords(i,0);
-        }
-    }, xmax);
-    double local_ymax = 0.0;
-    FOR_REDUCE_MAX(i, 0, mesh.num_nodes, local_ymax, {
-        if (local_ymax < State.node.coords(i,1))
-        {
-            local_ymax = State.node.coords(i,1);
-        }
-    }, ymax);
-    double local_zmax = 0.0;
-    FOR_REDUCE_MAX(i, 0, mesh.num_nodes, local_zmax, {
-        if (local_zmax < State.node.coords(i,2))
-        {
-            local_zmax = State.node.coords(i,2);
-        }
-    }, zmax);
-    Kokkos::fence();
-    dim_min = std::min(xmax-xmin,ymax-ymin);
-    dim_min = std::min(dim_min,zmax-zmin);
+    // finding penetration depth criterion
+    double dim_min = std::min(std::min(x_max-x_min,y_max-y_min),z_max-z_min);
     
     // comparing bucket size and mesh size to define penetration depth maximum (cap) for consideration
     // todo: the multiplication values are currently arbitrary and should be checked for performance
@@ -1708,17 +1656,6 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
             } // end i
         } // end bucket_lid
     } // end patch_lid
-
-    /* // print check
-    for (int i = 0; i < num_contact_nodes; i++) {
-        for (int j = 0; j < 7; j++) {
-            if (nodes_pen_surfs(i,j) != mesh.num_surfs) {
-                std::cout << nodes_pen_surfs(i,j) << " ";
-            }
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl; */
 
     // looping through nodes_pen_surfs and finding most appropriate penetrated surface to pair to
     num_active_pairs = 0;
