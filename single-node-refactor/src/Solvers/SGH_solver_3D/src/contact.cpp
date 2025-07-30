@@ -1168,6 +1168,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
     //       corner_t objects.
     // Initialize the contact_nodes and contact_pairs arrays
     contact_nodes = CArrayKokkos<contact_node_t>(max_index + 1);
+    nodes_contact_forces = CArrayKokkos<double>(max_index + 1);
     contact_pairs = CArrayKokkos<contact_pair_t>(max_index + 1);
     contact_pairs_access = DynamicRaggedRightArrayKokkos<size_t>(num_contact_patches,
                                                                  contact_patch_t::max_contacting_nodes_in_patch);
@@ -1294,6 +1295,9 @@ void contact_patches_t::update_nodes(const Mesh_t &mesh, State_t& State)
             }
         }
     });
+
+    // resetting contact force array
+    nodes_contact_forces.set_values(0);
 
     // update penetration node objects
     FOR_ALL_CLASS(i, 0, contact_patches_t::num_pen_nodes, {
@@ -1791,8 +1795,8 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
                 if (current_pair.active == false) { 
                     current_pair = contact_pair_t(*this, contact_patches(i), contact_nodes(nodes_pen_surfs(node_lid,0)), xi, eta, del_t, surf_normal);
                     current_pair.active = true;
-                    current_pair.force_factor = 1.0;
-                    current_pair.time_factor = 50.0;
+                    current_pair.force_factor = 0.2;
+                    current_pair.time_factor = 500.0;
                     active_pairs(num_active_pairs) = nodes_pen_surfs(node_lid,0);
                 } else // update contact location
                 {
@@ -2302,9 +2306,20 @@ void contact_patches_t::force_resolution(const double &del_t)
             if (pair.contact_type == contact_pair_t::contact_types::frictionless)
             {
                 pair.frictionless_increment(del_t*pair.time_factor);
-                pair.distribute_frictionless_force(pair.force_factor);  // if not doing serial, then this would be called in the second loop
+                //pair.distribute_frictionless_force(pair.force_factor);  // if not doing serial, then this would be called in the second loop
                 forces_view(j) = pair.fc_inc;
+                nodes_contact_forces(node_gid) = pair.fc_inc;
             } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
+        }
+        for (int j = 0; j < nodes_contact_forces.size(); j++) {
+            std::cout << nodes_contact_forces(j) << std::endl;
+        }
+        std::cout << std::endl;
+
+        for (int j = 0; j < num_active_pairs; j++) {
+            const size_t &node_gid = active_pairs(j);
+            contact_pair_t &pair = contact_pairs(node_gid);
+            pair.distribute_frictionless_force(pair.force_factor);
         }
         
         // Kokkos::fence();

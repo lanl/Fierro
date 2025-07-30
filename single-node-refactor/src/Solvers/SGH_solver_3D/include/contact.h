@@ -328,6 +328,7 @@ struct contact_patches_t
     CArrayKokkos<contact_node_t> penetration_nodes;  // all nodes that are in penetration_patches (accessed through node gid)
     CArrayKokkos<size_t> patches_gid;  // global patch ids
     CArrayKokkos<size_t> nodes_gid;  // global node ids
+    CArrayKokkos<double> nodes_contact_forces;  // a place to store contact force values to allow parallel calculation
     CArrayKokkos<size_t> pen_nodes_gid;  // global node ids for nodes in penetration patches
     size_t num_contact_patches;  // total number of patches that will be checked for contact
     RaggedRightArrayKokkos<size_t> patches_in_node;  // each row is the node gid and the columns are the patches (local to contact_patches) that the node is in
