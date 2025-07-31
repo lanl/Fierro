@@ -802,7 +802,6 @@ void contact_pair_t::distribute_frictionless_force(const double &force_scale)
                 patch_node.contact_force(i) += fc_inc_total*normal(i)*phi_k(k);
             }
         }
-
         fc_inc_total = 0.0;
         fc_inc = 0.0;
     } else
@@ -2295,7 +2294,7 @@ void contact_patches_t::force_resolution(const double &del_t)
         // find force increment for each pair
         // todo: having trouble breaking this into two parts, find force and apply force. It's not giving the right
         //       results so keep it serial for now.
-        for (int j = 0; j < num_active_pairs; j++)
+        FOR_ALL(j, 0, num_active_pairs,
         {
             const size_t &node_gid = active_pairs(j);
             contact_pair_t &pair = contact_pairs(node_gid);
@@ -2310,19 +2309,23 @@ void contact_patches_t::force_resolution(const double &del_t)
                 forces_view(j) = pair.fc_inc;
                 nodes_contact_forces(node_gid) = pair.fc_inc;
             } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
-        }
-        for (int j = 0; j < nodes_contact_forces.size(); j++) {
-            std::cout << nodes_contact_forces(j) << std::endl;
-        }
-        std::cout << std::endl;
+        });
 
-        for (int j = 0; j < num_active_pairs; j++) {
+        for(int j = 0; j < num_active_pairs; j++)
+        {
             const size_t &node_gid = active_pairs(j);
             contact_pair_t &pair = contact_pairs(node_gid);
             pair.distribute_frictionless_force(pair.force_factor);
         }
+
+        /* FOR_ALL(j, 0, num_active_pairs,
+        {
+            const size_t &node_gid = active_pairs(j);
+            contact_pair_t &pair = contact_pairs(node_gid);
+            pair.distribute_frictionless_force(pair.force_factor);
+        }); */
         
-        // Kokkos::fence();
+        Kokkos::fence();
 
         // check convergence (the force increments should be zero)
         if (norm(forces_view) <= tol)
