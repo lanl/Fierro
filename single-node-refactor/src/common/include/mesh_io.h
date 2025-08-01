@@ -3547,6 +3547,17 @@ public:
         collective_node_scalars_comms.execute_comms();
         collective_node_vectors_comms.execute_comms();
 
+        //collect nodal coordinates
+        //convert nodes in elem back to global (convert back to local after we've collected global ids in collective vector)
+        DistributedFArray<size_t> host_node_coords(host_node_map, mesh.num_dims);
+        for (size_t node_id = 0; node_id < mesh.num_local_nodes; node_id++) {
+            for (int idim = 0; idim < mesh.num_dims; idim++) {
+                host_node_coords(elem_id, node_lid) = State.node.coords.host(node_gid, 0);
+            }
+        } // end for elem_gid
+        DistributedFArray<double> collective_node_coords(collective_node_map, mesh.num_dims);
+        HostCommPlan<double> collective_node_coords_comms(collective_node_coords, host_node_coords, collective_node_scalars_comms);
+        collective_node_coords_comms.execute_comms();
 
         // ********************************
         //  Write the collective nodal and elem fields 
@@ -3597,17 +3608,13 @@ public:
             // call the .vtu writer for element fields
             std::string elem_fields_name = "fields";
 
-            // make a view of node coords for passing into functions
-            ViewCArray <double> node_coords_host(&State.node.coords.host(0,0), num_nodes, num_dims);
-            ViewCArray <size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0,0), num_elems, num_nodes_in_elem);
 
-
-            write_vtu(node_coords_host,
-                      nodes_in_elem_host,
-                      elem_scalar_fields,
-                      elem_tensor_fields,
-                      node_scalar_fields,
-                      node_vector_fields,
+            write_vtu(collective_node_coords,
+                      collective_nodes_in_elem,
+                      collective_elem_scalar_fields,
+                      collective_elem_tensor_fields,
+                      collective_node_scalar_fields,
+                      collective_node_vector_fields,
                       elem_scalar_var_names,
                       elem_tensor_var_names,
                       node_scalar_var_names,
@@ -3633,77 +3640,101 @@ public:
 
                 for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
-                    const size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+                    const size_t num_mat_local_elems = State.MaterialToMeshMaps.num_material_local_elems.host(mat_id);
+                    //array storing number of local elems for this material on each process
+                    CArray<long long int> processes_num_local_mat_elems;
+                    if(myrank==0){
+                        processes_num_local_mat_elems = CArray<size_t>(nranks);
+                    }
+                    MPI_Gather(&num_mat_elems,1,MPI_LONG_LONG_INT,processes_num_local_mat_elems.pointer(),1,
+                                MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
 
-                    // only save material data if the mat lives on the mesh, ie. has state allocated
-                    if (num_mat_elems>0){
+                    //set global element indices on this rank
+                    HostDistributedMap host_mat_elem_map;
+                    DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_mat_elems(num_mat_local_elems);
+                    for(int ielem = 0; ielem < num_mat_local_elems; ielem++){
+                        global_indices_of_local_mat_elems(ielem) =  State.MaterialToMeshMaps.elem(ielem);
+                    }
+                    host_mat_elem_map = HostDistributedMap(global_indices_of_local_nodes);
 
-                        // set the nodal vars to zero size, we don't write these fields again
-                        node_scalar_var_names.clear();
-                        node_vector_var_names.clear();
+                    //collect global element indices on rank 0 for this mat
+                    //tally total number of mat elems for rank 0
+                    DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_collective_mat_elems;
+                    long long int num_mat_collective_elems = 0;
+                    if(myrank==0){
+                        for(int irank=0; irank < nranks; irank++){
+                            num_mat_collective_elems += processes_num_local_mat_elems(irank);
+                        }
+                    global_indices_of_collective_mat_elems = DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace>(num_mat_local_elems);
+                    }
+                    MPI_Gatherv();
+                    // set the nodal vars to zero size, we don't write these fields again
+                    node_scalar_var_names.clear();
+                    node_vector_var_names.clear();
 
-                        // the arrays storing all the material field data
-                        DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
-                        DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
-
-
-                        // concatenate material fields into a single array
-                        concatenate_mat_fields(State.MaterialPoints,
-                                               mat_elem_scalar_fields,
-                                               mat_elem_tensor_fields,
-                                               State.MaterialToMeshMaps.elem,
-                                               SimulationParameters.output_options.output_mat_pt_state,
-                                               num_mat_elems,
-                                               mat_id,
-                                               mat_den_id,
-                                               mat_pres_id,
-                                               mat_sie_id,
-                                               mat_sspd_id,
-                                               mat_mass_id,
-                                               mat_volfrac_id,
-                                               mat_geo_volfrac_id,  
-                                               mat_eroded_id,
-                                               mat_stress_id,
-                                               mat_conductivity_id,
-                                               mat_specific_heat_id);
-                        Kokkos::fence();
-                        mat_elem_scalar_fields.update_host();
-                        mat_elem_tensor_fields.update_host();
+                    // the arrays storing all the material field data
+                    DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
+                    DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
 
 
-                        std::string str_mat_val = std::to_string(mat_id);                       
-                        std::string mat_fields_name = "mat";
-                        mat_fields_name += str_mat_val;  // add the mat number
+                    // concatenate material fields into a single array
+                    concatenate_mat_fields(State.MaterialPoints,
+                                            collective_mat_elem_scalar_fields,
+                                            collective_mat_elem_tensor_fields,
+                                            State.MaterialToMeshMaps.elem,
+                                            SimulationParameters.output_options.output_mat_pt_state,
+                                            num_mat_local_elems,
+                                            mat_id,
+                                            mat_den_id,
+                                            mat_pres_id,
+                                            mat_sie_id,
+                                            mat_sspd_id,
+                                            mat_mass_id,
+                                            mat_volfrac_id,
+                                            mat_geo_volfrac_id,  
+                                            mat_eroded_id,
+                                            mat_stress_id,
+                                            mat_conductivity_id,
+                                            mat_specific_heat_id);
+                    Kokkos::fence();
+                    mat_elem_scalar_fields.update_host();
+                    mat_elem_tensor_fields.update_host();
 
-                        // save the nodes belonging to this part (i.e., the material)
-                        DCArrayKokkos <double> mat_node_coords(num_nodes,num_dims, "mat_node_coords");
-                        DCArrayKokkos <size_t> mat_nodes_in_mat_elem(num_mat_elems, num_nodes_in_elem, "mat_nodes_in_mat_elem");
 
-                        // the number of actual nodes belonging to the part (i.e., the material)
-                        size_t num_mat_nodes = 0;
+                    std::string str_mat_val = std::to_string(mat_id);                       
+                    std::string mat_fields_name = "mat";
+                    mat_fields_name += str_mat_val;  // add the mat number
 
-                        // build a unique mesh (element and nodes) for the material (i.e., the part)
-                        build_material_elem_node_lists(mesh,
-                                                       State.node.coords,
-                                                       mat_node_coords,
-                                                       mat_nodes_in_mat_elem,
-                                                       State.MaterialToMeshMaps.elem,
-                                                       mat_id,
-                                                       num_mat_nodes,
-                                                       num_mat_elems,
-                                                       num_nodes_in_elem,
-                                                       num_dims);
+                    // save the nodes belonging to this part (i.e., the material)
+                    DCArrayKokkos <size_t> mat_nodes_in_mat_elem(num_mat_elems, num_nodes_in_elem, "mat_nodes_in_mat_elem");
 
-                        ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
-                        ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
-                        
+                    // the number of actual nodes belonging to the part (i.e., the material)
+                    size_t num_mat_nodes = 0;
+
+                    // build a unique mesh (element and nodes) for the material (i.e., the part)
+                    build_material_elem_node_lists(mesh,
+                                                    State.node.coords,
+                                                    mat_node_coords,
+                                                    mat_nodes_in_mat_elem,
+                                                    State.MaterialToMeshMaps.elem,
+                                                    mat_id,
+                                                    num_mat_nodes,
+                                                    num_mat_elems,
+                                                    num_nodes_in_elem,
+                                                    num_dims);
+
+                    ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
+                    ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
+                    
+                    // only write material data if the mat lives on the mesh, ie. has state allocated
+                    if (global_num_mat_elems>0){
                         // write out a vtu file this 
-                        write_vtu(mat_node_coords_host,
-                                  mat_nodes_in_elem_host,
-                                  mat_elem_scalar_fields,
-                                  mat_elem_tensor_fields,
-                                  node_scalar_fields,
-                                  node_vector_fields,
+                        write_vtu(collective_node_coords,
+                                  collective_mat_nodes_in_elem_host,
+                                  collective_mat_elem_scalar_fields,
+                                  collective_mat_elem_tensor_fields,
+                                  collective_node_scalar_fields,
+                                  collective_node_vector_fields,
                                   mat_elem_scalar_var_names,
                                   mat_elem_tensor_var_names,
                                   node_scalar_var_names,
@@ -3754,22 +3785,23 @@ public:
 
             // call the vtm file writer
             std::string mat_fields_name = "mat";
-            write_vtm(graphics_times,
-                      elem_fields_name,
-                      mat_fields_name,
-                      time_value,
-                      graphics_id,
-                      num_mat_files_written,
-                      write_mesh_state,
-                      write_mat_pt_state,
-                      solver_id);
+            if(myrank==0){
+                write_vtm(graphics_times,
+                        elem_fields_name,
+                        mat_fields_name,
+                        time_value,
+                        graphics_id,
+                        num_mat_files_written,
+                        write_mesh_state,
+                        write_mat_pt_state,
+                        solver_id);
 
-            // call the pvd file writer
-            write_pvd(graphics_times,
-                      time_value,
-                      graphics_id,
-                      solver_id);
-
+                // call the pvd file writer
+                write_pvd(graphics_times,
+                        time_value,
+                        graphics_id,
+                        solver_id);
+            }
 
             // increment graphics id counter
             graphics_id++; // this is private variable in the class
