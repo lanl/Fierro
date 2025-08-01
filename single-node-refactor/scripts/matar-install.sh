@@ -10,9 +10,9 @@ cmake_options=(
     -D CMAKE_INSTALL_PREFIX="${MATAR_INSTALL_DIR}"
 )
 
-if [ "$debug" = "true" ]; then
+if [ "$debug" = "enabled" ]; then
 
-    echo "Setting debug to true for CMAKE build type"
+    echo "Setting debug to enabled for CMAKE build type"
     cmake_options+=(
         -DCMAKE_BUILD_TYPE=Debug
     )
