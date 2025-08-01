@@ -51,6 +51,10 @@ show_help() {
     echo "      --build_cores                   The number of build cores to be used by make and make install commands. The default is 1" 
     echo " "
     echo "      --debug                         Build with debug. Default is false." 
+    echo " "
+    echo "          enabled                     Build with debug flags"
+    echo "          disabled                    Build without debug flags"
+    echo " "
     return 1
 }
 
@@ -62,7 +66,7 @@ kokkos_build_type="openmp"
 build_cores="1"
 trilinos="disabled"
 intel_mkl="disabled"
-debug="false"
+debug="disabled"
 
 # Define arrays of valid options
 valid_build_action=("full-app" "set-env" "install-kokkos" "fierro")
@@ -71,7 +75,7 @@ valid_kokkos_build_types=("serial" "openmp" "pthreads" "cuda" "hip")
 valid_machines=("darwin" "chicoma" "linux" "mac")
 valid_trilinos=("disabled" "enabled")
 valid_intel_mkl=("disabled" "enabled")
-valid_debug=("true" "false")
+valid_debug=("enabled" "disabled")
 
 # Parse command line arguments
 for arg in "$@"; do
@@ -151,7 +155,7 @@ for arg in "$@"; do
             if [[ " ${valid_debug[*]} " == *" $option "* ]]; then
                 debug="$option"
             else
-                echo "Error: debug must be true or false, default is false."
+                echo "Error: debug must be enabled or disabled, default is disabled."
                 show_help
                 return 1
             fi
