@@ -3642,9 +3642,10 @@ public:
 
                     const size_t num_mat_local_elems = State.MaterialToMeshMaps.num_material_local_elems.host(mat_id);
                     //array storing number of local elems for this material on each process
-                    CArray<long long int> processes_num_local_mat_elems;
+                    CArray<int> processes_num_local_mat_elems, gatherv_displacements;
                     if(myrank==0){
-                        processes_num_local_mat_elems = CArray<size_t>(nranks);
+                        processes_num_local_mat_elems = CArray<int>(nranks);
+                        gatherv_displacements = CArray<int>(nranks);
                     }
                     MPI_Gather(&num_mat_elems,1,MPI_LONG_LONG_INT,processes_num_local_mat_elems.pointer(),1,
                                 MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
@@ -3657,30 +3658,41 @@ public:
                     }
                     host_mat_elem_map = HostDistributedMap(global_indices_of_local_nodes);
 
+                    //allocate arrays for distributed mat elem data
+                    DistributedFArray<double> host_mat_elem_scalar_fields(host_mat_elem_map, num_elem_scalar_vars, "mat_elem_scalars");
+                    DistributedFArray<double> host_mat_elem_tensor_fields(host_mat_elem_map, num_elem_tensor_vars, 3, 3, "mat_elem_tensors");
+
                     //collect global element indices on rank 0 for this mat
                     //tally total number of mat elems for rank 0
                     DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_collective_mat_elems;
                     long long int num_mat_collective_elems = 0;
                     if(myrank==0){
                         for(int irank=0; irank < nranks; irank++){
+                            gatherv_displacements(irank) = num_mat_collective_elems;
                             num_mat_collective_elems += processes_num_local_mat_elems(irank);
                         }
                     global_indices_of_collective_mat_elems = DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace>(num_mat_local_elems);
                     }
-                    MPI_Gatherv();
+                    MPI_Gatherv(global_indices_of_local_mat_elems.device_pointer(), num_mat_local_elems, MPI_LONG_LONG_INT,
+                                global_indices_of_collective_mat_elems.device_pointer(), processes_num_local_mat_elems.pointer(),
+                                gatherv_displacements.pointer(), MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+
+                    //use indices on rank 0 to construct rank 0 collective map for this mat
+                    HostDistributedMap collective_mat_elem_map;
+                    collective_mat_elem_map = HostDistributedMap(global_indices_of_collective_mat_elems);
+
+                    //collective storage for scalars and tensors using collective elem mat map
+                    DistributedFArray<double> collective_mat_elem_scalar_fields(collective_mat_elem_map, num_elem_scalar_vars, "mat_elem_scalars_collective");
+                    DistributedFArray<double> collective_mat_elem_tensor_fields(collective_mat_elem_map, num_elem_tensor_vars, 3, 3, "mat_elem_tensors_collective");
+
                     // set the nodal vars to zero size, we don't write these fields again
                     node_scalar_var_names.clear();
                     node_vector_var_names.clear();
 
-                    // the arrays storing all the material field data
-                    DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
-                    DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
-
-
                     // concatenate material fields into a single array
                     concatenate_mat_fields(State.MaterialPoints,
-                                            collective_mat_elem_scalar_fields,
-                                            collective_mat_elem_tensor_fields,
+                                            host_mat_elem_scalar_fields,
+                                            host_mat_elem_tensor_fields,
                                             State.MaterialToMeshMaps.elem,
                                             SimulationParameters.output_options.output_mat_pt_state,
                                             num_mat_local_elems,
@@ -3696,9 +3708,6 @@ public:
                                             mat_stress_id,
                                             mat_conductivity_id,
                                             mat_specific_heat_id);
-                    Kokkos::fence();
-                    mat_elem_scalar_fields.update_host();
-                    mat_elem_tensor_fields.update_host();
 
 
                     std::string str_mat_val = std::to_string(mat_id);                       
@@ -3706,31 +3715,42 @@ public:
                     mat_fields_name += str_mat_val;  // add the mat number
 
                     // save the nodes belonging to this part (i.e., the material)
-                    DCArrayKokkos <size_t> mat_nodes_in_mat_elem(num_mat_elems, num_nodes_in_elem, "mat_nodes_in_mat_elem");
+                    DistributedFArray<size_t> mat_nodes_in_mat_elem(host_mat_elem_map, num_nodes_in_elem, "mat_nodes_in_mat_elem");
 
                     // the number of actual nodes belonging to the part (i.e., the material)
                     size_t num_mat_nodes = 0;
 
                     // build a unique mesh (element and nodes) for the material (i.e., the part)
-                    build_material_elem_node_lists(mesh,
-                                                    State.node.coords,
-                                                    mat_node_coords,
-                                                    mat_nodes_in_mat_elem,
-                                                    State.MaterialToMeshMaps.elem,
-                                                    mat_id,
-                                                    num_mat_nodes,
-                                                    num_mat_elems,
-                                                    num_nodes_in_elem,
-                                                    num_dims);
+                    // build_material_elem_node_lists(mesh,
+                    //                                 State.node.coords,
+                    //                                 mat_node_coords,
+                    //                                 mat_nodes_in_mat_elem,
+                    //                                 State.MaterialToMeshMaps.elem,
+                    //                                 mat_id,
+                    //                                 num_mat_nodes,
+                    //                                 num_mat_elems,
+                    //                                 num_nodes_in_elem,
+                    //                                 num_dims);
 
-                    ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
-                    ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
+                    //communicate scalars, tensors, and nodes in elem to collective mat arrays on rank 0
+                    
+                    //collect nodes in elem for this material on rank 0
+                    DistributedFArray<size_t> collective_mat_nodes_in_mat_elem(collective_mat_elem_map, num_nodes_in_elem, "collective_mat_nodes_in_mat_elem");
+                    HostCommPlan<size_t> mat_nodes_in_elem_comms(collective_mat_nodes_in_mat_elem,collective_nodes_in_elem); //doesnt really do comms since all on rank 0
+
+                    mat_nodes_in_elem_comms.execute_comms();\
+
+                    HostCommPlan<size_t> mat_elem_scalars_comms(collective_mat_elem_scalar_fields,host_mat_elem_scalar_fields); //doesnt really do comms since all on rank 0
+                    mat_elem_scalars_comms.execute_comms();
+
+                    HostCommPlan<size_t> mat_elem_tensors_comms(collective_mat_elem_tensor_fields,host_mat_elem_tensor_fields); //doesnt really do comms since all on rank 0
+                    mat_elem_tensors_comms.execute_comms();
                     
                     // only write material data if the mat lives on the mesh, ie. has state allocated
                     if (global_num_mat_elems>0){
                         // write out a vtu file this 
                         write_vtu(collective_node_coords,
-                                  collective_mat_nodes_in_elem_host,
+                                  collective_mat_nodes_in_mat_elem,
                                   collective_mat_elem_scalar_fields,
                                   collective_mat_elem_tensor_fields,
                                   collective_node_scalar_fields,
@@ -5114,8 +5134,8 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void concatenate_mat_fields(const MaterialPoint_t& MaterialPoints,
-                                DCArrayKokkos<double>& mat_elem_scalar_fields,
-                                DCArrayKokkos<double>& mat_elem_tensor_fields,
+                                DistributedFArray<double>& mat_elem_scalar_fields,
+                                DistributedFArray<double>& mat_elem_tensor_fields,
                                 const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
                                 const std::vector<material_pt_state>& output_material_pt_states,
                                 const size_t num_mat_elems,
@@ -5139,70 +5159,70 @@ public:
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+                    for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
 
                         // field
-                        mat_elem_scalar_fields(mat_den_id, mat_elem_lid) = MaterialPoints.den(mat_id, mat_elem_lid);
-                    });
+                        mat_elem_scalar_fields(mat_den_id, mat_elem_lid) = MaterialPoints.den.host(mat_id, mat_elem_lid);
+                    }
                     break;
                 case material_pt_state::pressure:
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+                    for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
 
                         // field
-                        mat_elem_scalar_fields(mat_pres_id, mat_elem_lid) = MaterialPoints.pres(mat_id, mat_elem_lid);
-                    });
+                        mat_elem_scalar_fields(mat_pres_id, mat_elem_lid) = MaterialPoints.pres.host(mat_id, mat_elem_lid);
+                    }
                     break;
                 case material_pt_state::specific_internal_energy:
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+                    for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
                         // extensive ie here, but after this function, it will become specific ie
-                        mat_elem_scalar_fields(mat_sie_id, mat_elem_lid) = MaterialPoints.sie(mat_id, mat_elem_lid);
-                    });
+                        mat_elem_scalar_fields(mat_sie_id, mat_elem_lid) = MaterialPoints.sie.host(mat_id, mat_elem_lid);
+                    }
                     break;
                 case material_pt_state::sound_speed:
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+                    for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
-                        mat_elem_scalar_fields(mat_sspd_id, mat_elem_lid) = MaterialPoints.sspd(mat_id, mat_elem_lid);
-                    });
+                        mat_elem_scalar_fields(mat_sspd_id, mat_elem_lid) = MaterialPoints.sspd.host(mat_id, mat_elem_lid);
+                    }
                     break;
                 case material_pt_state::mass:
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+                    for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
-                        mat_elem_scalar_fields(mat_mass_id, mat_elem_lid) = MaterialPoints.mass(mat_id, mat_elem_lid);
-                    });
+                        mat_elem_scalar_fields(mat_mass_id, mat_elem_lid) = MaterialPoints.mass.host(mat_id, mat_elem_lid);
+                    }
                     break;
                 case material_pt_state::volume_fraction:
                     // material volume fraction
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+                    for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++)
 
                         // field
                         // this is the volume fraction of a material within a part
-                        mat_elem_scalar_fields(mat_volfrac_id, mat_elem_lid) = MaterialPoints.volfrac(mat_id, mat_elem_lid);
-                    });
+                        mat_elem_scalar_fields(mat_volfrac_id, mat_elem_lid) = MaterialPoints.volfrac.host(mat_id, mat_elem_lid);
+                    }
 
                     // geometric volume fraction
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+                    for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
                         // this is the geometric volume fraction (interface reconstruction)
-                        mat_elem_scalar_fields(mat_geo_volfrac_id, mat_elem_lid) = MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
-                    });
+                        mat_elem_scalar_fields(mat_geo_volfrac_id, mat_elem_lid) = MaterialPoints.geo_volfrac.host(mat_id, mat_elem_lid);
+                    }
                     break;
                 case material_pt_state::eroded_flag:
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+                    for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
-                        mat_elem_scalar_fields(mat_eroded_id, mat_elem_lid) = (double)MaterialPoints.eroded(mat_id, mat_elem_lid);
-                    });
+                        mat_elem_scalar_fields(mat_eroded_id, mat_elem_lid) = (double)MaterialPoints.eroded.host(mat_id, mat_elem_lid);
+                    }
                     break;
                 // ---------------    
                 // tensor vars
                 // ---------------
                 case material_pt_state::stress:
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+                    for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
                         // average tensor fields, it is always 3D
@@ -5212,33 +5232,27 @@ public:
 
                                 // stress tensor 
                                 mat_elem_tensor_fields(mat_stress_id, mat_elem_lid, i, j) =
-                                                MaterialPoints.stress(mat_id, mat_elem_lid,i,j);
+                                                MaterialPoints.stress.host(mat_id, mat_elem_lid,i,j);
                             } // end for
                         } // end for
-                    });
+                    }
                     break;
 
                 // thermal solver vars
                 case material_pt_state::thermal_conductivity:
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
-
-                        // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                    for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
-                        mat_elem_scalar_fields(mat_conductivity_id, elem_gid) += MaterialPoints.conductivity(mat_id, mat_elem_lid);
-                    });
+                        mat_elem_scalar_fields(mat_conductivity_id, mat_elem_lid) = MaterialPoints.conductivity.host(mat_id, mat_elem_lid);
+                    }
                     break;
 
                 case material_pt_state::specific_heat:
-                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
-
-                        // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                    for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
-                        mat_elem_scalar_fields(mat_specific_heat_id, elem_gid) += MaterialPoints.specific_heat(mat_id, mat_elem_lid);
-                    });
+                        mat_elem_scalar_fields(mat_specific_heat_id, mat_elem_lid) = MaterialPoints.specific_heat.host(mat_id, mat_elem_lid);
+                    }
                     break;
 
                 // add other variables here
