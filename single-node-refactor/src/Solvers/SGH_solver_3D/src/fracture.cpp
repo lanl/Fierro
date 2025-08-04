@@ -812,7 +812,7 @@ CArray <double> gpglob(int NEL, double gp, CArray <double> elcoords, CArray <dou
 // START OF VISCOELASTIC COHESIVE ZONE FUNCTIONS
 
 cohesive_zones_t::cohesive_zones_t() {
-    // constructor for cohesive zones
+// constructor for cohesive zones
 }
 
 // initialize the identification of cohesive zones
@@ -832,135 +832,161 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     //for (size_t i = 0; i < mesh.num_bdy_sets; ++i) {
     //    std::cout << "Boundary nodes in set " << i << ": " << mesh.num_bdy_nodes_in_set(i) << std::endl;
     
+    const double tol = 0.000001; //0.000001; //e-3; // adjust as needed; added just in case coordinate pairs are close but not exactly equa
+    size_t overlap_index = 0; // counts unique overlapping nodes (2 unique overlapping nodes = 1 overlapping node pair)
+    size_t pair_count = 0; // counts how many overlapping node pairs exist
     
-
-    size_t overlap_count = 0;
-
-    const double tol = 0.000001; //0.000001; //e-3; // adjust as needed; added just in case coordinate pairs are close but not exactly equal
-
-    CArrayKokkos<size_t> overlapping_node_ids; // stores overlapping node IDs to avoid duplicates
-
-    // pre-allocate max size for overlapping_node_ids
-    size_t max_overlapping_nodes = mesh.num_bdy_nodes; // assuming worst case all nodes overlap. change in the future. this is 1D, this needs to be changed to make the max array only = overlapping node pairs instead of max = number of boundary nodes
-    overlapping_node_ids = CArrayKokkos<size_t>(max_overlapping_nodes, "overlapping_node_ids");
-    size_t overlap_index = 0;
-
-    for (size_t i = 0; i < mesh.num_bdy_nodes; ++i) { // outer loop goes through each boundary node
+    
+    // count unique overlapping nodes
+    for (size_t i = 0; i < num_bdy_nodes; ++i) {
         size_t node_i = mesh.bdy_nodes(i);
-
-        for (size_t j = i + 1; j < mesh.num_bdy_nodes; ++j) { // avoid duplicate pairs and i == j (starts from i + 1), for each pair, compares coordinates k = 0, 1, 2
+        for (size_t j = i + 1; j < num_bdy_nodes; ++j) {
             size_t node_j = mesh.bdy_nodes(j);
-            bool overlap = true;
 
+            bool overlap = true;
             for (size_t k = 0; k < 3; ++k) {
-                double diff = State.node.coords(node_i, k) - State.node.coords(node_j, k);
-                if (std::abs(diff) > tol) {
-                 overlap = false;
-                break;
+                if (std::abs(State.node.coords(node_i, k) - State.node.coords(node_j, k)) > tol) {
+                    overlap = false;
+                    break;
                 }
             }
+
             if (overlap) {
-            std::cout << "Overlap (cohesive zone) found between node " << node_i << " and node " << node_j << std::endl;
-            ++overlap_count;
-            //overlapping_node_ids.insert(node_i);
-            //overlapping_node_ids.insert(node_j);
-
-
-            // checks to avoid inserting the same node multiple times 
-            // insert node_i if not already in overlapping_node_ids
-                bool overlap_exists = false;
-                for (size_t m = 0; m < overlap_index; ++m) {
-                    if (overlapping_node_ids(m) == node_i) {
-                        overlap_exists = true;
-                        break;
-                    }
-                }
-                if (!overlap_exists && overlap_index < max_overlapping_nodes) {
-                    overlapping_node_ids(overlap_index++) = node_i;
-                }
-
-                // insert node_j if not already in overlapping_node_ids
-                overlap_exists = false;
-                for (size_t m = 0; m < overlap_index; ++m) {
-                    if (overlapping_node_ids(m) == node_j) {
-                        overlap_exists = true;
-                        break;
-                    }
-                }
-                if (!overlap_exists && overlap_index < max_overlapping_nodes) {
-                    overlapping_node_ids(overlap_index++) = node_j;
-                }
+                ++pair_count;
             }
         }
     }
-            
-    std::cout << "Total overlapping node pairs: " << overlap_count << std::endl; //prints overlapping node pairs
 
-    // printing nodal coordinates to check for overlaps 
-    //for (size_t i = 0; i < mesh.num_bdy_nodes; ++i) {
-    //    size_t node_id = mesh.bdy_nodes(i);
-    //    std::cout << "Node " << node_id << " coordinates: ";
-    //    for (size_t k = 0; k < 3; ++k) { // 3D
-    //        std::cout << State.node.coords(node_id, k) << " ";
-    //    }
-    //    std::cout << std::endl;
-    //}   
+    
+    // allocate only the size of overlapping nodes 
+    CArrayKokkos<size_t> overlapping_node_ids(pair_count, 2, "overlapping_node_ids");
+    
+    // second pass: store actual overlapping node pairs
+    size_t pair_index = 0; // fills the rows (pairs) that are added to 2D overlapping_node_ids array 
+    
+    // store node IDs in the array
+    for (size_t i = 0; i < num_bdy_nodes; ++i) {
+        size_t node_i = mesh.bdy_nodes(i);
+        for (size_t j = i + 1; j < num_bdy_nodes; ++j) {
+            size_t node_j = mesh.bdy_nodes(j);
 
-    // only print coordinates of the overlapping nodes
-    //for (size_t node_id : overlapping_node_ids) {
-    //    std::cout << "Overlapping Node " << node_id << " coordinates: ";
-    //    for (size_t k = 0; k < 3; ++k) { // 3D
-    //        std::cout << State.node.coords(node_id, k) << " ";
-    //    }
-    //    std::cout << std::endl;
-    //}
+            bool overlap = true;
+            for (size_t k = 0; k < 3; ++k) {
+                if (std::abs(State.node.coords(node_i, k) - State.node.coords(node_j, k)) > tol) {
+                    overlap = false;
+                    break;
+                }
+            }
 
-    for (size_t i = 0; i < overlap_index; ++i) {
-        size_t node_id = overlapping_node_ids(i);
-        std::cout << "Overlapping Node " << node_id << " coordinates: ";
+            if (overlap) {
+                //++pair_count;
+                std::cout << "Overlap (cohesive zone) found between node " << node_i << " and node " << node_j << std::endl;
+                overlapping_node_ids(pair_index, 0) = node_i;
+                overlapping_node_ids(pair_index, 1) = node_j;
+                ++pair_index;
+               
+            }
+        }
+    }
+
+    std::cout << "Total overlapping node pairs: " << pair_count << std::endl;
+
+    // print overlapping node coordinates
+    for (size_t i = 0; i < pair_index; ++i) {
+        size_t node_i = overlapping_node_ids(i, 0);
+        size_t node_j = overlapping_node_ids(i, 1);
+
+        std::cout << "Overlapping Pair: " << node_i << " <-> " << node_j << std::endl;
+
+        std::cout << "    Node " << node_i << " coords: ";
         for (size_t k = 0; k < 3; ++k) {
-            std::cout << State.node.coords(node_id, k) << " ";
+            std::cout << State.node.coords(node_i, k) << " ";
+        }
+    std::cout << std::endl;
+
+        std::cout << "    Node " << node_j << " coords: ";
+        for (size_t k = 0; k < 3; ++k) {
+            std::cout << State.node.coords(node_j, k) << " ";
         }
         std::cout << std::endl;
     }
 
+    // // ******************************test for function for elcount in fracture.cpp: which finds the max number of elements that any cohesive zone node is part of******************************
+   
+    size_t maxel = elcount(overlapping_node_ids, mesh.elems_in_node);
+
+    std::cout << "Max elements connected to any cohesive zone node: " << maxel << std::endl;
+
+    // // ******************************test for function in elcount fracture.cpp: which finds the max number of elements that any cohesive zone node is part of******************************
+
 }
 
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
+// this function returns max number of elements any VCZ node is part of connectivity for in order to define VCZ array sizes properly
+// (finds the max number of elements that any cohesive zone node is part of)
+// int elcount(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int> vczconn) {
+//     // initializing variables for intermediate calculations:
+//     int count0 = 0;
+//     int count1 = 0;f
+//     int maxel = 0;
+//     // looping over all VCZ elements
+//     for (int i = 0; i < nvcz; i++) {
+//         count0 = 0;
+//         count1 = 0;
+//         // find how many elements the nodes are part of the connectivity for
+//         for (int j = 0; j < ne; j++) {
+//             for (int k = 0; k < 8; k++) {
+//                 if (vczconn(i,0) == conn(j,k)) {
+//                     count0 += 1;
+//                 }
+//                 if (vczconn(i,1) == conn(j,k)) {
+//                     count1 += 1;
+//                 }
+//             }
+//         }
 
+//         // updating maxel
+//         if (count0 > maxel) {
+//             maxel = count0;
+//         }
+//         if (count1 > maxel) {
+//             maxel = count1;
+//         }
+//     }
+//     return maxel;
+// }
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 
-// returns max number of elements any VCZ node is part of connectivity for in order to define VCZ array sizes properly
-int elcount(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int> vczconn) {
-    // initializing variables for intermediate calculations:
-    int count0 = 0;
-    int count1 = 0;
-    int maxel = 0;
-    // looping over all VCZ elements
-    for (int i = 0; i < nvcz; i++) {
-        count0 = 0;
-        count1 = 0;
-        // find how many elements the nodes are part of the connectivity for
-        for (int j = 0; j < ne; j++) {
-            for (int k = 0; k < 8; k++) {
-                if (vczconn(i,0) == conn(j,k)) {
-                    count0 += 1;
-                }
-                if (vczconn(i,1) == conn(j,k)) {
-                    count1 += 1;
-                }
-            }
-        }
+// **************************************************************** Fierro Conversion **************************************************************** 
 
-        // updating maxel
-        if (count0 > maxel) {
-            maxel = count0;
-        }
-        if (count1 > maxel) {
-            maxel = count1;
-        }
+// this function returns max number of elements any VCZ node is part of connectivity for in order to define VCZ array sizes properly
+// (finds the max number of elements that any cohesive zone node is part of)
+/// \brief Computes the maximum number of elements any cohesive zone node is connected to
+/// \param overlapping_node_ids 2D array (num_pairs x 2) containing node pairs (node0, node1). dims(0) = number of rows; dims(1) = number of columns
+/// \param elems_in_node RaggedRightArray giving elements connected to each node
+/// \return Maximum number of elements connected to any node in any cohesive pair
+size_t elcount(const CArrayKokkos<size_t>& overlapping_node_ids, const RaggedRightArrayKokkos<size_t>& elems_in_node) {
+    size_t maxel = 0;
+
+    for (size_t i = 0; i < overlapping_node_ids.dims(0); ++i) {
+        size_t node0 = overlapping_node_ids(i, 0);
+        size_t node1 = overlapping_node_ids(i, 1);
+
+        size_t count0 = elems_in_node.stride(node0);
+        size_t count1 = elems_in_node.stride(node1);
+
+        if (count0 > maxel) maxel = count0;
+        if (count1 > maxel) maxel = count1;
     }
+
     return maxel;
 }
 
+// **************************************************************** Fierro Conversion **************************************************************** 
+
+// next function
+
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 // // inputs: nodes, conn, ne, nvcz, vczconn
 // // outputs: vczelem
 // CArray<int> elems(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int> vczconn, int maxel) {
@@ -996,6 +1022,8 @@ int elcount(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int
 //     }
 //     return vczelem;
 // }
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
+
 
 // // inputs: NODES, conn, interpvals, patch number, element number
 // // output: n vector, r vector, s vector, and center of face in physical coordinates

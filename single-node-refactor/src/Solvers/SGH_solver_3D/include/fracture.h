@@ -11,8 +11,8 @@ struct fracture_nodes_t {
     double mass; // mass of the node
     CArrayKokkos<double> pos = CArrayKokkos<double>(3);  // position of the node
     CArrayKokkos<double> vel = CArrayKokkos<double>(3);  // velocity of the node
-    CArrayKokkos<double> internal_force = CArrayKokkos<double>(3);  // any force that is not due to fracture
-    CArrayKokkos<double> fracture_force = CArrayKokkos<double>(3);  // force due to fracture
+    //CArrayKokkos<double> internal_force = CArrayKokkos<double>(3);  // any force that is not due to fracture
+    //CArrayKokkos<double> fracture_force = CArrayKokkos<double>(3);  // force due to fracture
 
     fracture_nodes_t();
 
@@ -24,11 +24,14 @@ struct fracture_nodes_t {
 // struct for fracture cohesive zones
 
 struct cohesive_zones_t {
+    // member functions defined in this header file and sized inside of the source file
     size_t gid; // global node id
     size_t lid; // local node id
+    size_t nvcz; // number of actual cohesive zone pairs
     CArrayKokkos <size_t> nodes_gid; // global ids of the nodes in the cohesive zone
     CArrayKokkos <size_t> overlapping_node_ids; // node pairs with overlapping coordinates ; // will need to size this inside of a function in the source file 
-    // member functions defined in this header file and sized inside of the source file
+    CArrayKokkos <size_t> vczconn; // 2D [num_pairs][2] definition for function finds the max number of elements that any cohesive zone node is part of
+    
 
     // Iso-parametric coordinates of the patch nodes (1D array of size mesh.num_nodes_in_surf)
     // For a standard linear hex, xi = [-1.0, 1.0, 1.0, -1.0], eta = [-1.0, -1.0, 1.0, 1.0]
@@ -54,6 +57,9 @@ struct cohesive_zones_t {
    
 };
 
-
+// ******************************test for elcount function in fracture.cpp: which finds the max number of elements that any cohesive zone node is part of******************************
+// elcount declaration:
+size_t elcount(const CArrayKokkos<size_t>& overlapping_node_ids, const RaggedRightArrayKokkos<size_t>& elems_in_node);
+// ******************************test for elcount function in fracture.cpp: which finds the max number of elements that any cohesive zone node is part of******************************
 
 #endif

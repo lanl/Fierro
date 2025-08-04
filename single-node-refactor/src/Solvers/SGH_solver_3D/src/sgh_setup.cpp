@@ -126,6 +126,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
         cohesive_zones_bank.initialize(mesh, State);
         // to see if function is being entered
         std::cout << "Done calling initialize()..." << std::endl;
+
         // Example from Gavin's code for running fracture tests:
         // run_fracture_tests(cohesive_zones_bank, mesh, State, sim_param);
 
@@ -134,112 +135,6 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     }
     // end setting up fracture
 
-
-// ********************************************************** notes ************** ignore for now ******************* will clean up later *************************************************************
-/*     // the following code counts the number of boundary nodes and checks for node overlaps (2 nodes with the same coordinates)
-    // this is the beginning step to setting up cohesive zones for fracture
-                   
-    // counting the number of boundary nodes
-    size_t num_bdy_nodes = mesh.num_bdy_nodes;
-    std::cout << "Number of boundary nodes: " << num_bdy_nodes << std::endl;
-    std::cout << "Total boundary nodes: " << mesh.num_bdy_nodes << std::endl;
-
-    // total number of boundary nodes across all sets
-    size_t total_bdy_nodes = 0;
-    for (size_t i = 0; i < mesh.num_bdy_sets; ++i) {
-        std::cout << "Boundary nodes in set " << i << ": " << mesh.num_bdy_nodes_in_set(i) << std::endl;
-    }
-    
-
-    size_t overlap_count = 0;
-
-    const double tol = 0.000001; //0.000001; //e-3; // adjust as needed; added just in case coordinate pairs are close but not exactly equal
-
-    for (size_t i = 0; i < mesh.num_bdy_nodes; ++i) { // outer loop goes through each boundary node
-        size_t node_i = mesh.bdy_nodes(i);
-        for (size_t j = i + 1; j < mesh.num_bdy_nodes; ++j) { // Avoid duplicate pairs and i == j (starts from i +1), for each pair, compares coordinates k = 0, 1, 2
-            size_t node_j = mesh.bdy_nodes(j);
-            bool overlap = true;
-
-            for (size_t k = 0; k < 3; ++k) {
-                double diff = State.node.coords(node_i, k) - State.node.coords(node_j, k);
-                if (std::abs(diff) > tol) {
-                 overlap = false;
-                break;
-                }
-            }
-            if (overlap) {
-            std::cout << "Overlap found between node " << node_i << " and node " << node_j << std::endl;
-            ++overlap_count;
-            }
-        }
-    }
-
-    std::cout << "Total overlapping node pairs: " << overlap_count << std::endl; //prints overlapping node pairs
-
-    // printing nodal coordinates to check for overlaps 
-    for (size_t i = 0; i < mesh.num_bdy_nodes; ++i) {
-        size_t node_id = mesh.bdy_nodes(i);
-        std::cout << "Node " << node_id << " coordinates: ";
-        for (size_t k = 0; k < 3; ++k) { // 3D
-            std::cout << State.node.coords(node_id, k) << " ";
-        }
-        std::cout << std::endl;
-    }   
- */
-// ********************************************************** notes ************** ignore for now ******************* will clean up later *************************************************************
-// ********************************************************** notes ************** ignore for now ******************* will clean up later *************************************************************
-    // below is where fracture will be set up
-    // if fracture is allowed, then set up the fracture bank
-    // this will be a function inside of the fracture code and will have to be called in the SGH setup function
-    // fills out UPs
-    // UPs are Unique Pairs = unique node pairs with cohesive zone between them
-    // this function finds all of the boundary nodes
-    // loops again to count how many overlaps
-
-    /*      // setting up fracture
-     for (size_t i=0; mesh.num_bdy_nodes; i++) {
-        if (Boundary.allow_fracture) {
-            std::cout << "Setting up fracture" << std::endl;
-            doing_fracture = true;
-
-        //    fracture_bank.initialize(mesh, mesh.num_bdy_nodes, );
-        })
-            }
-        }
-     } */
-    /*     // this will be a function inside of the fracture code and will have to be called in the SGH setup function
-    // fills out UPs
-    // UPs are Unique Pairs = unique node pairs with cohesive zone between them
-    // this function finds all of the boundary nodes
-
-    // loops again to count how many overlaps
-    size_t num_vczs = 0;
-    // if (overlap) -> num_vczs += 1;
-
-    CArrayKokkos <size_t> vcz_pairs(num_vczs,2);
-
-    bool overlap = true;
-    size_t count = 0;
-    for (int i = 0; i < mesh.num_bdy_nodes; i++) {
-        for (int j = 0; j < mesh.num_bdy_nodes; j++) {
-            if (i != j) {
-                for (int k = 0; k < 3; k++) {
-                    if (State.node.coords(mesh.bdy_nodes(i),k) != State.node.coords(mesh.bdy_nodes(j),k)) {
-                    overlap = false;
-                }
-            }
-
-            if (overlap) {
-                // store mesh.bdy_nodes(i) and mesh.bdy_nodes(j) into vcz_pairs
-                vcz_pairs(count,0) = mesh.bdy_nodes(i);
-                vcz_pairs(count,1) = mesh.bdy_nodes(j);
-                count += 1;
-            }
-        }
-    }
-    }  */
-    // ********************************************************** notes ************** ignore for now ******************* will clean up later *************************************************************
 } // end SGH setup    
 
  
