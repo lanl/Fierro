@@ -2721,7 +2721,10 @@ public:
         std::vector<material_pt_state> material_pt_states,
         const size_t solver_id)
     {
-
+        
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
 
         // node_state is an enum for possible fields (e.g., coords, velocity, etc.), see state.h
         // gauss_pt_state is an enum for possible fields (e.g., vol, divergence, etc.)
@@ -3562,9 +3565,6 @@ public:
         // ********************************
         //  Write the collective nodal and elem fields 
         // ********************************
-        int myrank, nranks;
-        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
-        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
 
         if (SimulationParameters.output_options.format == output_options::viz ||
             SimulationParameters.output_options.format == output_options::viz_and_state) {
@@ -3608,26 +3608,26 @@ public:
             // call the .vtu writer for element fields
             std::string elem_fields_name = "fields";
 
-
-            write_vtu(collective_node_coords,
-                      collective_nodes_in_elem,
-                      collective_elem_scalar_fields,
-                      collective_elem_tensor_fields,
-                      collective_node_scalar_fields,
-                      collective_node_vector_fields,
-                      elem_scalar_var_names,
-                      elem_tensor_var_names,
-                      node_scalar_var_names,
-                      node_vector_var_names,
-                      elem_fields_name,
-                      graphics_id,
-                      mesh.global_num_nodes,
-                      mesh.global_num_elems,
-                      num_nodes_in_elem,
-                      Pn_order,
-                      num_dims,
-                      solver_id);
-
+            if(myrank==0){
+                write_vtu(collective_node_coords,
+                        collective_nodes_in_elem,
+                        collective_elem_scalar_fields,
+                        collective_elem_tensor_fields,
+                        collective_node_scalar_fields,
+                        collective_node_vector_fields,
+                        elem_scalar_var_names,
+                        elem_tensor_var_names,
+                        node_scalar_var_names,
+                        node_vector_var_names,
+                        elem_fields_name,
+                        graphics_id,
+                        mesh.global_num_nodes,
+                        mesh.global_num_elems,
+                        num_nodes_in_elem,
+                        Pn_order,
+                        num_dims,
+                        solver_id);
+            }
 
             // ********************************
             //  Build and write the mat fields 
@@ -3647,7 +3647,7 @@ public:
                         processes_num_local_mat_elems = CArray<int>(nranks);
                         gatherv_displacements = CArray<int>(nranks);
                     }
-                    MPI_Gather(&num_mat_elems,1,MPI_LONG_LONG_INT,processes_num_local_mat_elems.pointer(),1,
+                    MPI_Gather(&num_mat_local_elems,1,MPI_LONG_LONG_INT,processes_num_local_mat_elems.pointer(),1,
                                 MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
 
                     //set global element indices on this rank
@@ -3714,47 +3714,64 @@ public:
                     std::string mat_fields_name = "mat";
                     mat_fields_name += str_mat_val;  // add the mat number
 
-                    // save the nodes belonging to this part (i.e., the material)
-                    DistributedFArray<size_t> mat_nodes_in_mat_elem(host_mat_elem_map, num_nodes_in_elem, "mat_nodes_in_mat_elem");
-
                     // the number of actual nodes belonging to the part (i.e., the material)
                     size_t num_mat_nodes = 0;
-
-                    // build a unique mesh (element and nodes) for the material (i.e., the part)
-                    // build_material_elem_node_lists(mesh,
-                    //                                 State.node.coords,
-                    //                                 mat_node_coords,
-                    //                                 mat_nodes_in_mat_elem,
-                    //                                 State.MaterialToMeshMaps.elem,
-                    //                                 mat_id,
-                    //                                 num_mat_nodes,
-                    //                                 num_mat_elems,
-                    //                                 num_nodes_in_elem,
-                    //                                 num_dims);
 
                     //communicate scalars, tensors, and nodes in elem to collective mat arrays on rank 0
                     
                     //collect nodes in elem for this material on rank 0
                     DistributedFArray<size_t> collective_mat_nodes_in_mat_elem(collective_mat_elem_map, num_nodes_in_elem, "collective_mat_nodes_in_mat_elem");
                     HostCommPlan<size_t> mat_nodes_in_elem_comms(collective_mat_nodes_in_mat_elem,collective_nodes_in_elem); //doesnt really do comms since all on rank 0
-
-                    mat_nodes_in_elem_comms.execute_comms();\
+                    mat_nodes_in_elem_comms.execute_comms();
 
                     HostCommPlan<size_t> mat_elem_scalars_comms(collective_mat_elem_scalar_fields,host_mat_elem_scalar_fields); //doesnt really do comms since all on rank 0
                     mat_elem_scalars_comms.execute_comms();
 
                     HostCommPlan<size_t> mat_elem_tensors_comms(collective_mat_elem_tensor_fields,host_mat_elem_tensor_fields); //doesnt really do comms since all on rank 0
                     mat_elem_tensors_comms.execute_comms();
+
+                    //define set of nodes for this mat, collect on rank 0, comms on coords, scalars, and vectors for nodes for this mat
                     
+                    // build a unique mesh (element and nodes) for the material (i.e., the part)
+                    DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> collective_mat_node_indices;
+                    if(myrank==0){
+                    build_material_node_list(mesh,
+                                            collective_mat_node_indices,
+                                            collective_mat_nodes_in_mat_elem,
+                                            State.MaterialToMeshMaps.elem,
+                                            mat_id,
+                                            num_mat_nodes,
+                                            num_mat_collective_elems,
+                                            num_nodes_in_elem,
+                                            num_dims);
+                    }
+                    
+                    //map object for mat node indices
+                    collective_mat_node_map = HostDistributedMap(collective_mat_node_indices);
+
+                    DistributedFArray<size_t> collective_mat_node_coords(collective_mat_node_map, num_dims, "collective_mat_node_coords");
+                    HostCommPlan<size_t> mat_node_coords_comms(collective_mat_node_coords,collective_node_coords); //doesnt really do comms since all on rank 0
+                    mat_node_coords_comms.execute_comms();
+
+                    DistributedFArray<size_t> collective_mat_node_coords(collective_mat_node_map, num_node_scalar_vars, "collective_mat_node_scalars");
+                    HostCommPlan<size_t> mat_node_scalars_comms(collective_mat_node_scalar_fields,collective_node_scalar_fields); //doesnt really do comms since all on rank 0
+                    mat_node_scalars_comms.execute_comms();
+
+                    DistributedFArray<size_t> collective_mat_node_vectors(collective_mat_node_map, num_node_vector_vars, "collective_mat_node_vectors");
+                    HostCommPlan<size_t> mat_node_vectors_comms(collective_mat_node_vector_fields,collective_node_vector_fields); //doesnt really do comms since all on rank 0
+                    mat_node_vectors_comms.execute_comms();
+                    
+
+                    HostDistributedMap collective_mat_node_map;
                     // only write material data if the mat lives on the mesh, ie. has state allocated
-                    if (global_num_mat_elems>0){
+                    if (global_num_mat_elems>0&&myrank==0){
                         // write out a vtu file this 
-                        write_vtu(collective_node_coords,
+                        write_vtu(collective_mat_node_coords,
                                   collective_mat_nodes_in_mat_elem,
                                   collective_mat_elem_scalar_fields,
                                   collective_mat_elem_tensor_fields,
-                                  collective_node_scalar_fields,
-                                  collective_node_vector_fields,
+                                  collective_mat_node_scalar_fields,
+                                  collective_mat_node_vector_fields,
                                   mat_elem_scalar_var_names,
                                   mat_elem_tensor_var_names,
                                   node_scalar_var_names,
@@ -3762,7 +3779,7 @@ public:
                                   mat_fields_name,
                                   graphics_id,
                                   num_mat_nodes,
-                                  num_mat_elems,
+                                  num_mat_collective_elems,
                                   num_nodes_in_elem,
                                   Pn_order,
                                   num_dims,
@@ -5561,9 +5578,6 @@ public:
         const size_t solver_id
         )
     {   
-        int myrank, nranks;
-        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
-        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
         
         FILE* out[20];   // the output files that are written to
         char  filename[100]; // char string
@@ -6041,7 +6055,63 @@ public:
 
     } // end build part (i.e., material elem and point lists) function
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn build_material_elem_node_lists
+    ///
+    /// \brief Creates elems and nodes for a unique mesh of a material (i.e, a part)
+    ///
+    /// \param Simulation mesh
+    /// \param State node data
+    /// \param Material node coordinates
+    /// \param Material nodes in the material element
+    /// \param Material to mesh map for elements
+    /// \param number of material nodes
+    /// \param number of material elements
+    /// \param number of nodes in the element
+    /// \param number of dimensions 
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void build_material_node_list(
+        const Mesh_t& mesh,
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> collective_mat_node_indices,
+        DistributedFArray<size_t>& mat_nodes_in_mat_elem,
+        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const size_t mat_id,
+        size_t& num_mat_nodes,
+        const size_t num_mat_elems,
+        const size_t num_nodes_in_elem,
+        const size_t num_dims)
+    {
 
+        
+        std::set<long long int> mat_node_set;
+        long long int node_gid;
+        for (int elem_mat_id = 0; elem_mat_id < num_mat_elems; elem_mat_id++)
+        {
+            // set nodes per element
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
+            {
+                node_gid = mat_nodes_in_mat_elem(elem_mat_id, node_lid); //nodes in elem still stores global indices
+                mat_node_set.insert(node_gid);
+            }
+        }
+
+        // save the number of nodes defining the material region, i.e., the part
+        num_mat_nodes = mat_node_set.size();
+
+        //copy set to matar view
+        int  inode = 0;
+        auto it     = mat_node_set.begin();
+
+        // create a Map for ghost node indices
+        collective_mat_node_indices = DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace>(num_mat_nodes, "mat_nodes");
+        while (it != mat_node_set.end()) {
+            collective_mat_node_indices(ighost++) = *it;
+            it++;
+        }
+
+    } // end build part (i.e., material elem and point lists) function
 
 
 
