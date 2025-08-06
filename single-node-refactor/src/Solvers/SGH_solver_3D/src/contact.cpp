@@ -790,7 +790,8 @@ void contact_pair_t::distribute_frictionless_force(const double &force_scale)
         // update penetrating node
         for (int i = 0; i < 3; i++)
         {
-            node.contact_force(i) -= fc_inc_total*normal(i);
+            Kokkos::atomic_add(&node.contact_force(i), -fc_inc_total*normal(i));
+            //node.contact_force(i) -= fc_inc_total*normal(i);
         }
 
         // update patch nodes
@@ -799,7 +800,8 @@ void contact_pair_t::distribute_frictionless_force(const double &force_scale)
             contact_node_t &patch_node = patch.nodes_obj(k);
             for (int i = 0; i < 3; i++)
             {
-                patch_node.contact_force(i) += fc_inc_total*normal(i)*phi_k(k);
+                Kokkos::atomic_add(&patch_node.contact_force(i), fc_inc_total*normal(i)*phi_k(k));
+                //patch_node.contact_force(i) += fc_inc_total*normal(i)*phi_k(k);
             }
         }
         fc_inc_total = 0.0;
@@ -811,7 +813,8 @@ void contact_pair_t::distribute_frictionless_force(const double &force_scale)
         // update penetrating node
         for (int i = 0; i < 3; i++)
         {
-            node.contact_force(i) += force_val*normal(i);
+            Kokkos::atomic_add(&node.contact_force(i), force_val*normal(i));
+            //node.contact_force(i) += force_val*normal(i);
         }
 
         // update patch nodes
@@ -820,7 +823,8 @@ void contact_pair_t::distribute_frictionless_force(const double &force_scale)
             contact_node_t &patch_node = patch.nodes_obj(k);
             for (int i = 0; i < 3; i++)
             {
-                patch_node.contact_force(i) -= force_val*normal(i)*phi_k(k);
+                Kokkos::atomic_add(&patch_node.contact_force(i), -force_val*normal(i)*phi_k(k));
+                //patch_node.contact_force(i) -= force_val*normal(i)*phi_k(k);
             }
         }
     }
@@ -2311,19 +2315,20 @@ void contact_patches_t::force_resolution(const double &del_t)
             } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
         });
 
-        for(int j = 0; j < num_active_pairs; j++)
+        /* for(int j = 0; j < num_active_pairs; j++)
         {
             const size_t &node_gid = active_pairs(j);
             contact_pair_t &pair = contact_pairs(node_gid);
             pair.distribute_frictionless_force(pair.force_factor);
-        }
+        } */
 
-        /* FOR_ALL(j, 0, num_active_pairs,
+        // made distribute_frictionless_force use Kokkos::atomic_add to allow this to be parallel
+        FOR_ALL(j, 0, num_active_pairs,
         {
             const size_t &node_gid = active_pairs(j);
             contact_pair_t &pair = contact_pairs(node_gid);
             pair.distribute_frictionless_force(pair.force_factor);
-        }); */
+        });
         
         Kokkos::fence();
 
