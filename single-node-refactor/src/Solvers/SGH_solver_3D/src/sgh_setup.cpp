@@ -113,6 +113,14 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     // Setting up contact
     // todo: should this be handled inside of src/boundary_conditions/stress/global_contact ?
     for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
+        if (Boundary.allow_preload) {
+            std::cout << "Setting up preload contact" << std::endl;
+            doing_preload = true;
+            doing_contact = true;
+
+            contact_bank.initialize(mesh, mesh.bdy_patches, State);
+            break;
+        }
         if (Boundary.allow_contact) {
             std::cout << "Setting up global contact" << std::endl;
             doing_contact = true;

@@ -245,9 +245,13 @@ struct contact_pair_t
     double fc_inc = 0.0;  // force increment to be added to contact_node_t::contact_force
     double fc_inc_total = 0.0;  // all previous force increments get summed to this member (see contact_patches_t::force_resolution())
 
-    // force scalar multiplier to be able to flip between collission and penetration type
+    // force scaling factor
     double force_factor = 1.0;
+
+    // acceleration limiter variables
     double time_factor = 1.0;
+    double length_limit = 0;
+
 
     enum contact_types
     {
@@ -318,6 +322,18 @@ struct contact_pair_t
     /// \return true if the contact pair should be removed; false otherwise
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     bool should_remove(const double &del_t, bool penetrating);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn get_length_limit
+    ///
+    /// \brief Determines length limit for acceleration
+    ///
+    /// Length limit based on 1/10 of the length of lines from contact node within elements it is part of
+    ///
+    /// \param State
+    /// \param mesh
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void get_length_limit(State_t& State, const Mesh_t &mesh, const double del_t);
 };
 
 struct contact_patches_t

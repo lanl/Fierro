@@ -143,6 +143,7 @@ public:
 
     contact_patches_t contact_bank;  // keeps track of contact patches
     bool doing_contact = false;  // Condition used in SGH::execute
+    bool doing_preload = false;  // Condition used in SGH::execute
 
     SGH3D()  : Solver()
     {

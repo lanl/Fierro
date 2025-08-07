@@ -338,11 +338,11 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             if (doing_contact) 
             {
                 contact_bank.update_nodes(mesh, State);
-                /* if (time_start == time_value) {
-                    contact_bank.sort();
-                    contact_bank.penetration_sweep(State, mesh, dt);
-                } */
-                boundary_contact_force(State, mesh, dt*rk_alpha);
+                if (doing_preload) {
+                    boundary_contact_force(State, mesh, time_final-time_value);
+                } else {
+                    boundary_contact_force(State, mesh, fmax(dt*rk_alpha,0.01));
+                }
             }
 
             // ---- Update nodal velocities ---- //

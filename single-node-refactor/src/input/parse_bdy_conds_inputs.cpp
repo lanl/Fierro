@@ -426,6 +426,12 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             std::cout << "Setting contact bc " << std::endl;
                             BoundaryConditions.allow_contact = true;
                             break;
+
+                        case boundary_conditions::preloadContact:
+                            std::cout << "Setting preload contact bc " << std::endl;
+                            BoundaryConditions.allow_preload = true;
+                            BoundaryConditions.allow_contact = true;
+                            break;
                       
                         default:
                             

@@ -677,6 +677,32 @@ void contact_pair_t::frictionless_increment(const double &del_t)
     sol[0] = xi;
     sol[1] = eta;
     sol[2] = fc_inc;
+    
+    // getting initial guess for initial penetration cases
+    // NOTE: THIS ONLY WORKS WITH FIRST ORDER HEX ELEMENTS******************************************
+    CArrayKokkos <double> pos_diff(3);
+    patch.phi(phi_k, xi, eta);
+    for (int i = 0; i < 3; i++) {
+        pos_diff(i) = -node.pos(i);
+        for (int j = 0; j < 4; j++) {
+            const contact_node_t &patch_node = patch.nodes_obj(j);
+            pos_diff(i) += patch_node.pos(i)*phi_k(j);
+        }
+    }
+    double n_dot_n = normal(0)*normal(0) + normal(1)*normal(1) + normal(2)*normal(2);
+    double n_dot_pos_diff = pos_diff(0)*normal(0) + pos_diff(1)*normal(1) + pos_diff(2)*normal(2);
+    double inv_mass_sum = 1/node.mass;
+    for (int i = 0; i < 4; i++) {
+        const contact_node_t &patch_node = patch.nodes_obj(i);
+        inv_mass_sum += 1/patch_node.mass;
+    }
+    double fc_guess = 2/(del_t*del_t*n_dot_n*inv_mass_sum)*n_dot_pos_diff;
+    //std::cout << "FC GUESS: " << fc_guess << std::endl;
+    if (fc_inc == 0) {
+        sol[2] = fc_guess;
+    }
+
+    // *********************************************************************************************
 
     double grad_arr[3];  // J_inv*F term
     ViewCArrayKokkos<double> grad(&grad_arr[0], 3);
@@ -692,6 +718,9 @@ void contact_pair_t::frictionless_increment(const double &del_t)
                 const contact_node_t &patch_node = patch.nodes_obj(k);
                 ak = (patch_node.internal_force(j) - fc_inc*normal(j)*phi_k(k) +
                       patch_node.contact_force(j))/patch_node.mass;
+                if (ak > length_limit/(2*del_t*del_t)) {
+                    //ak = length_limit;
+                }
                 A(j, k) = patch_node.pos(j) + patch_node.vel(j)*del_t + 0.5*ak*del_t*del_t;
             }
         }
@@ -701,6 +730,9 @@ void contact_pair_t::frictionless_increment(const double &del_t)
         for (int j = 0; j < 3; j++)
         {
             as = (node.internal_force(j) + fc_inc*normal(j) + node.contact_force(j))/node.mass;
+            if (as > length_limit/(2*del_t*del_t)) {
+                //as = length_limit;
+            }
             lhs = node.pos(j) + node.vel(j)*del_t + 0.5*as*del_t*del_t;
             F(j) = lhs - rhs(j);
         }
@@ -854,6 +886,82 @@ bool contact_pair_t::should_remove(const double &del_t, bool penetrating)
         return false;
     }
 }  // end should_remove
+
+void contact_pair_t::get_length_limit(State_t& State, const Mesh_t &mesh, const double del_t)
+{
+    // i -> elements that the node is part of the connectivity for
+    double local_min = 0;
+    FOR_REDUCE_MIN(i, 0, mesh.elems_in_node.stride(node.gid), local_min, {
+                        // finding node id local to element
+                        size_t pen_node_lid;
+                        for (int k = 0; k < 8; k++){
+                            if (node.gid == mesh.nodes_in_elem(mesh.elems_in_node(node.gid,i),k)) {
+                                pen_node_lid = k;
+                            }
+                        }
+
+                        // switch case to decide which 3 nodes to look at
+                        CArrayKokkos <double> nodes_to_check (3);
+                        switch (pen_node_lid) {
+                            case 0:
+                                nodes_to_check(0) = 1;
+                                nodes_to_check(1) = 2;
+                                nodes_to_check(2) = 3;
+                                break;
+                            case 1:
+                                nodes_to_check(0) = 0;
+                                nodes_to_check(1) = 3;
+                                nodes_to_check(2) = 5;
+                                break;
+                            case 2:
+                                nodes_to_check(0) = 0;
+                                nodes_to_check(1) = 3;
+                                nodes_to_check(2) = 6;
+                                break;
+                            case 3:
+                                nodes_to_check(0) = 1;
+                                nodes_to_check(1) = 2;
+                                nodes_to_check(2) = 7;
+                                break;
+                            case 4:
+                                nodes_to_check(0) = 0;
+                                nodes_to_check(1) = 5;
+                                nodes_to_check(2) = 6;
+                                break;
+                            case 5:
+                                nodes_to_check(0) = 1;
+                                nodes_to_check(1) = 4;
+                                nodes_to_check(2) = 7;
+                                break;
+                            case 6:
+                                nodes_to_check(0) = 2;
+                                nodes_to_check(1) = 4;
+                                nodes_to_check(2) = 7;
+                                break;
+                            case 7:
+                                nodes_to_check(0) = 3;
+                                nodes_to_check(1) = 5;
+                                nodes_to_check(2) = 6;
+                                break;
+                        }
+
+                        // get the minimum distance between the 3
+                        CArrayKokkos <double> node_distances(3);
+                        for (int k = 0; k < 3; k++) {
+                            double sum_sq = 0.0;
+                            for (int m = 0; m < 3; m++) {
+                                sum_sq += pow(State.node.coords(node.gid, m) - State.node.coords(mesh.nodes_in_elem(mesh.elems_in_node(node.gid,i),nodes_to_check(k)), m), 2);
+                            }
+                            node_distances(k) = sqrt(sum_sq);
+                        }
+
+                        local_min = fmin(node_distances(0),fmin(node_distances(1),node_distances(2)));
+
+
+                    }, length_limit);
+    length_limit *= del_t*del_t/2;
+
+} // end get_length_limit
 /// end of contact_pair_t member functions /////////////////////////////////////////////////////////////////////////////
 
 /// beginning of contact_patches_t member functions ////////////////////////////////////////////////////////////////////
@@ -1744,7 +1852,7 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
                 P(0) = px + c*surf_normal(0);
                 P(1) = py + c*surf_normal(1);
                 P(2) = pz + c*surf_normal(2);
-
+                double ptoPmag = sqrt((px-P(0))*(px-P(0))+(py-P(1))*(py-P(1))+(pz-P(2))*(pz-P(2)));
                 // mapping P to isoparametric coordinates
                 CArrayKokkos <double> elem_pos(3,8);
                 for (int j = 0; j < 3; j++) {
@@ -1799,7 +1907,8 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
                     current_pair = contact_pair_t(*this, contact_patches(i), contact_nodes(nodes_pen_surfs(node_lid,0)), xi, eta, del_t, surf_normal);
                     current_pair.active = true;
                     current_pair.force_factor = 0.2;
-                    current_pair.time_factor = 500.0;
+                    current_pair.get_length_limit(State,mesh, del_t);
+                    current_pair.time_factor = 1.0;
                     active_pairs(num_active_pairs) = nodes_pen_surfs(node_lid,0);
                 } else // update contact location
                 {
@@ -2173,7 +2282,6 @@ void contact_patches_t::get_contact_pairs(State_t& State, const Mesh_t &mesh, co
             num_active_pairs += 1;
         }
     }
-    //penetration_sweep(State,mesh,del_t);
 }  // end get_contact_pairs
 
 KOKKOS_FUNCTION
@@ -2309,18 +2417,23 @@ void contact_patches_t::force_resolution(const double &del_t)
             if (pair.contact_type == contact_pair_t::contact_types::frictionless)
             {
                 pair.frictionless_increment(del_t*pair.time_factor);
-                //pair.distribute_frictionless_force(pair.force_factor);  // if not doing serial, then this would be called in the second loop
                 forces_view(j) = pair.fc_inc;
                 nodes_contact_forces(node_gid) = pair.fc_inc;
             } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
         });
 
-        /* for(int j = 0; j < num_active_pairs; j++)
-        {
+        for (int j = 0; j < num_active_pairs; j++) {
             const size_t &node_gid = active_pairs(j);
             contact_pair_t &pair = contact_pairs(node_gid);
-            pair.distribute_frictionless_force(pair.force_factor);
-        } */
+            double vel_mag = sqrt(pair.node.vel(0)*pair.node.vel(0)+pair.node.vel(1)*pair.node.vel(1)+pair.node.vel(2)*pair.node.vel(2));
+            double force_mag = sqrt(pair.node.contact_force(0)*pair.node.contact_force(0)+pair.node.contact_force(1)*pair.node.contact_force(1)+pair.node.contact_force(2)*pair.node.contact_force(2));
+            double check = fmin(0.2,fmax(0,(pair.length_limit-vel_mag*del_t)/(del_t*del_t*force_mag/pair.node.mass/2)));
+            if (fabs(force_mag) < 1e-8) {
+                check = 1.0e-8;
+            }
+            //pair.force_factor = check;
+            //std::cout << "LIMITED FORCE FACTOR: " << check << std::endl;
+        }
 
         // made distribute_frictionless_force use Kokkos::atomic_add to allow this to be parallel
         FOR_ALL(j, 0, num_active_pairs,
@@ -2335,6 +2448,7 @@ void contact_patches_t::force_resolution(const double &del_t)
         // check convergence (the force increments should be zero)
         if (norm(forces_view) <= tol)
         {
+            //std::cout << "HERE" << std::endl;
             break;
         }
 

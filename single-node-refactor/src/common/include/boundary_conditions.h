@@ -88,6 +88,7 @@ enum BCStressModels
     timeVaryingStressBC = 2,
     userDefinedStressBC = 3,
     globalContact = 4,
+    preloadContact = 5,
 };
 // future model options:
 //    displacementBC                            
@@ -150,6 +151,7 @@ static std::map<std::string, boundary_conditions::BCStressModels> bc_stress_mode
     { "time_varying", boundary_conditions::timeVaryingStressBC },
     { "user_defined", boundary_conditions::userDefinedStressBC },
     { "global_contact", boundary_conditions::globalContact },
+    { "preload_contact", boundary_conditions::preloadContact},
 };
 
 
@@ -271,6 +273,7 @@ struct BoundaryCondition_t
 
     // boolean for whether contact should occur
     bool allow_contact = false;
+    bool allow_preload = false;
 
     // making a psuedo dual ragged right
     DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver_id, bc_lid)
