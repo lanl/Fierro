@@ -1811,6 +1811,17 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
         centroid(2) /= mesh.elems_in_node.stride(nodes_pen_surfs(node_lid,0));
 
         // pairing step 2) vector going from penetrating node to centroid or average of centroids
+        // to tackle edge cases the if statement was added to use velocity as elements distort
+        /* double node_vel_mag = sqrt(pow(State.node.vel(nodes_pen_surfs(node_lid,0),0),2) + pow(State.node.vel(nodes_pen_surfs(node_lid,0),1),2) + pow(State.node.vel(nodes_pen_surfs(node_lid,0),2),2));
+        if (node_vel_mag < 1e-8) {
+            n_to_c(0) = centroid(0) - State.node.coords(nodes_pen_surfs(node_lid,0),0);
+            n_to_c(1) = centroid(1) - State.node.coords(nodes_pen_surfs(node_lid,0),1);
+            n_to_c(2) = centroid(2) - State.node.coords(nodes_pen_surfs(node_lid,0),2);
+        } else {
+            n_to_c(0) = State.node.vel(nodes_pen_surfs(node_lid,0),0);
+            n_to_c(1) = State.node.vel(nodes_pen_surfs(node_lid,0),1);
+            n_to_c(2) = State.node.vel(nodes_pen_surfs(node_lid,0),2);
+        } */
         n_to_c(0) = centroid(0) - State.node.coords(nodes_pen_surfs(node_lid,0),0);
         n_to_c(1) = centroid(1) - State.node.coords(nodes_pen_surfs(node_lid,0),1);
         n_to_c(2) = centroid(2) - State.node.coords(nodes_pen_surfs(node_lid,0),2);
