@@ -3410,7 +3410,7 @@ public:
 
         // make specific fields for the element average
         if (sie_id>=0){
-            FOR_ALL(elem_gid, 0, num_elems, {
+            FOR_ALL(elem_gid, 0, num_local_elems, {
                 // get sie by dividing by the mass
                 elem_scalar_fields(elem_gid, sie_id) /= (elem_scalar_fields(elem_gid, mass_id)+1.e-20); 
             });
@@ -3527,7 +3527,7 @@ public:
         DistributedFArray<size_t> host_local_nodes_in_elem(host_local_element_map, mesh.num_nodes_in_elem);
 
         //convert nodes in elem back to global (convert back to local after we've collected global ids in collective vector)
-        for (size_t elem_id = 0; elem_id < mesh.num_local_elems; elem_id++) {
+        for (size_t elem_id = 0; elem_id < num_local_elems; elem_id++) {
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
                 host_local_nodes_in_elem(elem_id, node_lid) = mesh.all_node_map.getGlobalIndex(mesh.local_nodes_in_elem(elem_id, node_lid));
             }
@@ -3557,7 +3557,7 @@ public:
         //collect nodal coordinates
         //convert nodes in elem back to global (convert back to local after we've collected global ids in collective vector)
         DistributedFArray<double> host_node_coords(host_node_map, mesh.num_dims);
-        for (size_t node_id = 0; node_id < mesh.num_local_nodes; node_id++) {
+        for (size_t node_id = 0; node_id < num_local_nodes; node_id++) {
             for (int idim = 0; idim < mesh.num_dims; idim++) {
                 host_node_coords(node_id, idim) = State.node.coords.host(node_id, idim);
             }
@@ -3651,14 +3651,15 @@ public:
                         processes_num_local_mat_elems = CArray<int>(nranks);
                         gatherv_displacements = CArray<int>(nranks);
                     }
-                    MPI_Gather(&num_mat_local_elems,1,MPI_LONG_LONG_INT,processes_num_local_mat_elems.pointer(),1,
-                                MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+                    MPI_Gather(&num_mat_local_elems,1,MPI_INT,processes_num_local_mat_elems.pointer(),1,
+                                MPI_INT, 0, MPI_COMM_WORLD);
 
                     //set global element indices on this rank
                     HostDistributedMap host_mat_elem_map;
+                    DistributedMap element_map = mesh.element_map;
                     DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_mat_elems(num_mat_local_elems);
                     for(int ielem = 0; ielem < num_mat_local_elems; ielem++){
-                        global_indices_of_local_mat_elems(ielem) =  State.MaterialToMeshMaps.elem.host(mat_id, ielem);
+                        global_indices_of_local_mat_elems(ielem) = element_map.getGlobalIndex(State.MaterialToMeshMaps.elem.host(mat_id, ielem));
                     }
                     host_mat_elem_map = HostDistributedMap(global_indices_of_local_nodes);
 
@@ -3675,8 +3676,14 @@ public:
                             gatherv_displacements(irank) = num_mat_collective_elems;
                             num_mat_collective_elems += processes_num_local_mat_elems(irank);
                         }
-                    global_indices_of_collective_mat_elems = DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace>(num_mat_local_elems);
+                        global_indices_of_collective_mat_elems = DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace>(num_mat_collective_elems);
                     }
+                    // if(myrank==0){
+                    //     for(int irank=0; irank < nranks; irank++){
+                    //         std::cout << "NUM local mat elem on rank " << irank << " is " << processes_num_local_mat_elems(irank) << std::endl;
+                    //         std::cout << "gatherv displacement on rank " << irank << " is " << gatherv_displacements(irank) << std::endl;
+                    //     }
+                    // }
                     MPI_Gatherv(global_indices_of_local_mat_elems.device_pointer(), num_mat_local_elems, MPI_LONG_LONG_INT,
                                 global_indices_of_collective_mat_elems.device_pointer(), processes_num_local_mat_elems.pointer(),
                                 gatherv_displacements.pointer(), MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
