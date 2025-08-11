@@ -3412,7 +3412,7 @@ public:
         if (sie_id>=0){
             FOR_ALL(elem_gid, 0, num_elems, {
                 // get sie by dividing by the mass
-                elem_scalar_fields(elem_gid, sie_id) /= (elem_scalar_fields(mass_id, elem_gid)+1.e-20); 
+                elem_scalar_fields(elem_gid, sie_id) /= (elem_scalar_fields(elem_gid, mass_id)+1.e-20); 
             });
         } // end if
 
@@ -3548,7 +3548,7 @@ public:
 
         //collective vector and comms to the collective vector for node fields
         DistributedFArray<double> collective_node_scalar_fields(collective_node_map, num_node_scalar_vars);
-        DistributedFArray<double> collective_node_vector_fields(collective_node_map, num_node_vector_vars);
+        DistributedFArray<double> collective_node_vector_fields(collective_node_map, num_node_vector_vars, 3);
         HostCommPlan<double> collective_node_scalars_comms(collective_node_scalar_fields, host_node_scalar_fields);
         HostCommPlan<double> collective_node_vectors_comms(collective_node_vector_fields, host_node_vector_fields, collective_node_scalars_comms);
         collective_node_scalars_comms.execute_comms();
@@ -3761,7 +3761,7 @@ public:
                     HostCommPlan<double> mat_node_scalars_comms(collective_mat_node_scalar_fields,collective_node_scalar_fields); //doesnt really do comms since all on rank 0
                     mat_node_scalars_comms.execute_comms();
 
-                    DistributedFArray<double> collective_mat_node_vector_fields(collective_mat_node_map, num_node_vector_vars, "collective_mat_node_vectors");
+                    DistributedFArray<double> collective_mat_node_vector_fields(collective_mat_node_map, num_node_vector_vars, 3, "collective_mat_node_vectors");
                     HostCommPlan<double> mat_node_vectors_comms(collective_mat_node_vector_fields,collective_node_vector_fields); //doesnt really do comms since all on rank 0
                     mat_node_vectors_comms.execute_comms();
                     
@@ -3813,7 +3813,6 @@ public:
             {
                 write_mesh_state = true;
             }
-
             // check to see if a mat state was written
             bool write_mat_pt_state = false;
             if( num_mat_pt_scalar_vars > 0 ||
@@ -5181,14 +5180,14 @@ public:
                     for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
 
                         // field
-                        mat_elem_scalar_fields(mat_den_id, mat_elem_lid) = MaterialPoints.den.host(mat_id, mat_elem_lid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_den_id) = MaterialPoints.den.host(mat_id, mat_elem_lid);
                     }
                     break;
                 case material_pt_state::pressure:
                     for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
 
                         // field
-                        mat_elem_scalar_fields(mat_pres_id, mat_elem_lid) = MaterialPoints.pres.host(mat_id, mat_elem_lid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_pres_id) = MaterialPoints.pres.host(mat_id, mat_elem_lid);
                     }
                     break;
                 case material_pt_state::specific_internal_energy:
@@ -5196,21 +5195,21 @@ public:
 
                         // field
                         // extensive ie here, but after this function, it will become specific ie
-                        mat_elem_scalar_fields(mat_sie_id, mat_elem_lid) = MaterialPoints.sie.host(mat_id, mat_elem_lid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_sie_id) = MaterialPoints.sie.host(mat_id, mat_elem_lid);
                     }
                     break;
                 case material_pt_state::sound_speed:
                     for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
-                        mat_elem_scalar_fields(mat_sspd_id, mat_elem_lid) = MaterialPoints.sspd.host(mat_id, mat_elem_lid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_sspd_id) = MaterialPoints.sspd.host(mat_id, mat_elem_lid);
                     }
                     break;
                 case material_pt_state::mass:
                     for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
-                        mat_elem_scalar_fields(mat_mass_id, mat_elem_lid) = MaterialPoints.mass.host(mat_id, mat_elem_lid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_mass_id) = MaterialPoints.mass.host(mat_id, mat_elem_lid);
                     }
                     break;
                 case material_pt_state::volume_fraction:
@@ -5219,7 +5218,7 @@ public:
 
                         // field
                         // this is the volume fraction of a material within a part
-                        mat_elem_scalar_fields(mat_volfrac_id, mat_elem_lid) = MaterialPoints.volfrac.host(mat_id, mat_elem_lid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_volfrac_id) = MaterialPoints.volfrac.host(mat_id, mat_elem_lid);
                     }
 
                     // geometric volume fraction
@@ -5227,14 +5226,14 @@ public:
 
                         // field
                         // this is the geometric volume fraction (interface reconstruction)
-                        mat_elem_scalar_fields(mat_geo_volfrac_id, mat_elem_lid) = MaterialPoints.geo_volfrac.host(mat_id, mat_elem_lid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_geo_volfrac_id) = MaterialPoints.geo_volfrac.host(mat_id, mat_elem_lid);
                     }
                     break;
                 case material_pt_state::eroded_flag:
                     for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
-                        mat_elem_scalar_fields(mat_eroded_id, mat_elem_lid) = (double)MaterialPoints.eroded.host(mat_id, mat_elem_lid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_eroded_id) = (double)MaterialPoints.eroded.host(mat_id, mat_elem_lid);
                     }
                     break;
                 // ---------------    
@@ -5250,7 +5249,7 @@ public:
                             for(size_t j=0; j<3; j++){
 
                                 // stress tensor 
-                                mat_elem_tensor_fields(mat_stress_id, mat_elem_lid, i, j) =
+                                mat_elem_tensor_fields(mat_elem_lid, mat_stress_id, i, j) =
                                                 MaterialPoints.stress.host(mat_id, mat_elem_lid,i,j);
                             } // end for
                         } // end for
@@ -5262,7 +5261,7 @@ public:
                     for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
-                        mat_elem_scalar_fields(mat_conductivity_id, mat_elem_lid) = MaterialPoints.conductivity.host(mat_id, mat_elem_lid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_conductivity_id) = MaterialPoints.conductivity.host(mat_id, mat_elem_lid);
                     }
                     break;
 
@@ -5270,7 +5269,7 @@ public:
                     for(int mat_elem_lid= 0; mat_elem_lid < num_mat_elems; mat_elem_lid++){
 
                         // field
-                        mat_elem_scalar_fields(mat_specific_heat_id, mat_elem_lid) = MaterialPoints.specific_heat.host(mat_id, mat_elem_lid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_specific_heat_id) = MaterialPoints.specific_heat.host(mat_id, mat_elem_lid);
                     }
                     break;
 
@@ -5744,9 +5743,9 @@ public:
                
                 for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
                     fprintf(out[0], "          %f %f %f\n",
-                            node_vector_fields(a_var, node_gid, 0),
-                            node_vector_fields(a_var, node_gid, 1),
-                            node_vector_fields(a_var, node_gid, 2));
+                            node_vector_fields(node_gid, a_var, 0),
+                            node_vector_fields(node_gid, a_var, 1),
+                            node_vector_fields(node_gid, a_var, 2));
                 } // end for nodes
                 fprintf(out[0], "        </DataArray>\n");
 
@@ -5757,7 +5756,7 @@ public:
             for (int a_var = 0; a_var < num_node_scalar_vars; a_var++) {
                 fprintf(out[0], "        <DataArray type=\"Float32\" Name=\"%s\" format=\"ascii\">\n", node_scalar_var_names[a_var].c_str());
                 for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
-                    fprintf(out[0], "          %f\n", node_scalar_fields(a_var, node_gid));
+                    fprintf(out[0], "          %f\n", node_scalar_fields(node_gid, a_var));
                 } // end for nodes
                 fprintf(out[0], "        </DataArray>\n");
             } // end for vec_vars
@@ -5782,7 +5781,7 @@ public:
                 fprintf(out[0], "        <DataArray type=\"Float32\" Name=\"%s\" format=\"ascii\">\n", elem_scalar_var_names[a_var].c_str()); // the 1 is number of scalar components [1:4]
 
                 for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-                    fprintf(out[0], "          %f\n", elem_scalar_fields(a_var, elem_gid));
+                    fprintf(out[0], "          %f\n", elem_scalar_fields(elem_gid, a_var));
                 } // end for elem
                 fprintf(out[0], "        </DataArray>\n");
             } // end for elem scalar_vars
@@ -5797,7 +5796,7 @@ public:
                     // Txx  Txy  Txz  Tyx  Tyy  Tyz  Tzx  Tzy  Tzz
                     for (size_t i=0; i<3; i++){
                         for(size_t j=0; j<3; j++){
-                            fprintf(out[0], "          %f ", elem_tensor_fields(a_var, elem_gid, i, j));
+                            fprintf(out[0], "          %f ", elem_tensor_fields(elem_gid, a_var, i, j));
                         } // end j
                     } // end i
                 } // end for elem
@@ -6077,7 +6076,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void build_material_node_list(
         const Mesh_t& mesh,
-        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> collective_mat_node_indices,
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace>& collective_mat_node_indices,
         DistributedFArray<size_t>& mat_nodes_in_mat_elem,
         const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
         const size_t mat_id,
