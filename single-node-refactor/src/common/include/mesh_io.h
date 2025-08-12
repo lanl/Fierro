@@ -3661,11 +3661,11 @@ public:
                     for(int ielem = 0; ielem < num_mat_local_elems; ielem++){
                         global_indices_of_local_mat_elems(ielem) = element_map.getGlobalIndex(State.MaterialToMeshMaps.elem.host(mat_id, ielem));
                     }
-                    host_mat_elem_map = HostDistributedMap(global_indices_of_local_nodes);
+                    host_mat_elem_map = HostDistributedMap(global_indices_of_local_mat_elems);
 
                     //allocate arrays for distributed mat elem data
-                    DistributedFArray<double> host_mat_elem_scalar_fields(host_mat_elem_map, num_elem_scalar_vars, "mat_elem_scalars");
-                    DistributedFArray<double> host_mat_elem_tensor_fields(host_mat_elem_map, num_elem_tensor_vars, 3, 3, "mat_elem_tensors");
+                    DistributedFArray<double> host_mat_elem_scalar_fields(host_mat_elem_map, num_mat_pt_scalar_vars, "mat_elem_scalars");
+                    DistributedFArray<double> host_mat_elem_tensor_fields(host_mat_elem_map, num_mat_pt_tensor_vars, 3, 3, "mat_elem_tensors");
 
                     //collect global element indices on rank 0 for this mat
                     //tally total number of mat elems for rank 0
@@ -3691,10 +3691,11 @@ public:
                     //use indices on rank 0 to construct rank 0 collective map for this mat
                     HostDistributedMap collective_mat_elem_map;
                     collective_mat_elem_map = HostDistributedMap(global_indices_of_collective_mat_elems);
+                    //collective_mat_elem_map.print();
 
                     //collective storage for scalars and tensors using collective elem mat map
-                    DistributedFArray<double> collective_mat_elem_scalar_fields(collective_mat_elem_map, num_elem_scalar_vars, "mat_elem_scalars_collective");
-                    DistributedFArray<double> collective_mat_elem_tensor_fields(collective_mat_elem_map, num_elem_tensor_vars, 3, 3, "mat_elem_tensors_collective");
+                    DistributedFArray<double> collective_mat_elem_scalar_fields(collective_mat_elem_map, num_mat_pt_scalar_vars, "mat_elem_scalars_collective");
+                    DistributedFArray<double> collective_mat_elem_tensor_fields(collective_mat_elem_map, num_mat_pt_tensor_vars, 3, 3, "mat_elem_tensors_collective");
 
                     // set the nodal vars to zero size, we don't write these fields again
                     node_scalar_var_names.clear();
@@ -3735,10 +3736,10 @@ public:
                     HostCommPlan<size_t> mat_nodes_in_elem_comms(collective_mat_nodes_in_mat_elem,collective_nodes_in_elem); //doesnt really do comms since all on rank 0
                     mat_nodes_in_elem_comms.execute_comms();
 
-                    HostCommPlan<double> mat_elem_scalars_comms(collective_mat_elem_scalar_fields,host_mat_elem_scalar_fields); //doesnt really do comms since all on rank 0
+                    HostCommPlan<double> mat_elem_scalars_comms(collective_mat_elem_scalar_fields,host_mat_elem_scalar_fields);
                     mat_elem_scalars_comms.execute_comms();
 
-                    HostCommPlan<double> mat_elem_tensors_comms(collective_mat_elem_tensor_fields,host_mat_elem_tensor_fields); //doesnt really do comms since all on rank 0
+                    HostCommPlan<double> mat_elem_tensors_comms(collective_mat_elem_tensor_fields,host_mat_elem_tensor_fields);
                     mat_elem_tensors_comms.execute_comms();
 
                     //define set of nodes for this mat, collect on rank 0, comms on coords, scalars, and vectors for nodes for this mat
