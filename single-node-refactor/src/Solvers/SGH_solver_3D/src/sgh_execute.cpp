@@ -339,9 +339,15 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             {
                 contact_bank.update_nodes(mesh, State);
                 if (doing_preload) {
-                    boundary_contact_force(State, mesh, time_final-time_value);
+                    double preload_time = (time_final-time_value)/2;
+                    //preload_time = 1;
+                    if (time_value < preload_time) {
+                        boundary_contact_force(State, mesh, preload_time);
+                    } else {
+                        boundary_contact_force(State, mesh, 5*dt*rk_alpha);
+                    }
                 } else {
-                    boundary_contact_force(State, mesh, fmax(dt*rk_alpha,0.01));
+                    boundary_contact_force(State, mesh, 5*dt*rk_alpha);
                 }
             }
 

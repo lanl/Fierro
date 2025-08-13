@@ -1688,7 +1688,7 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
     
     // comparing bucket size and mesh size to define penetration depth maximum (cap) for consideration
     // todo: the multiplication values are currently arbitrary and should be checked for performance
-    double depth_cap = std::min(dim_min/4,3*bucket_size);
+    double depth_cap = std::min(dim_min/5,3*bucket_size);
 
     // allocating array to store surfaces a node is penetrating
     // first columns holds node gid and second through final columns store the surfaces that node is penetrating
@@ -1772,6 +1772,13 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
         } // end bucket_lid
     } // end patch_lid
 
+    /* for (int i = 0; i < nodes_pen_surfs.dims(0); i++) {
+        for (int j = 0; j < nodes_pen_surfs.dims(1); j++) {
+            std::cout << nodes_pen_surfs(i,j) << "   ";
+        }
+        std::cout << std::endl;
+    } */
+
     // looping through nodes_pen_surfs and finding most appropriate penetrated surface to pair to
     num_active_pairs = 0;
     for (int node_lid = 0; node_lid < num_contact_nodes; node_lid++) {
@@ -1811,17 +1818,6 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
         centroid(2) /= mesh.elems_in_node.stride(nodes_pen_surfs(node_lid,0));
 
         // pairing step 2) vector going from penetrating node to centroid or average of centroids
-        // to tackle edge cases the if statement was added to use velocity as elements distort
-        /* double node_vel_mag = sqrt(pow(State.node.vel(nodes_pen_surfs(node_lid,0),0),2) + pow(State.node.vel(nodes_pen_surfs(node_lid,0),1),2) + pow(State.node.vel(nodes_pen_surfs(node_lid,0),2),2));
-        if (node_vel_mag < 1e-8) {
-            n_to_c(0) = centroid(0) - State.node.coords(nodes_pen_surfs(node_lid,0),0);
-            n_to_c(1) = centroid(1) - State.node.coords(nodes_pen_surfs(node_lid,0),1);
-            n_to_c(2) = centroid(2) - State.node.coords(nodes_pen_surfs(node_lid,0),2);
-        } else {
-            n_to_c(0) = State.node.vel(nodes_pen_surfs(node_lid,0),0);
-            n_to_c(1) = State.node.vel(nodes_pen_surfs(node_lid,0),1);
-            n_to_c(2) = State.node.vel(nodes_pen_surfs(node_lid,0),2);
-        } */
         n_to_c(0) = centroid(0) - State.node.coords(nodes_pen_surfs(node_lid,0),0);
         n_to_c(1) = centroid(1) - State.node.coords(nodes_pen_surfs(node_lid,0),1);
         n_to_c(2) = centroid(2) - State.node.coords(nodes_pen_surfs(node_lid,0),2);
@@ -2273,7 +2269,7 @@ void contact_patches_t::get_contact_pairs(State_t& State, const Mesh_t &mesh, co
                     ViewCArrayKokkos<double> normal(&normal_arr[0], 3);
                     contact_patch.get_normal(xi_val, eta_val, del_t, normal);
                     current_pair = contact_pair_t(*this, contact_patch, node, xi_val, eta_val, del_tc, normal);
-                    current_pair.force_factor = 1.0;
+                    current_pair.force_factor = 0.2;
                     current_pair.time_factor = 1.0;
                 }
             }
