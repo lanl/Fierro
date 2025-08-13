@@ -3772,6 +3772,13 @@ public:
                     DistributedFArray<double> collective_mat_node_vector_fields(collective_mat_node_map, num_node_vector_vars, 3, "collective_mat_node_vectors");
                     HostCommPlan<double> mat_node_vectors_comms(collective_mat_node_vector_fields,collective_node_vector_fields); //doesnt really do comms since all on rank 0
                     mat_node_vectors_comms.execute_comms();
+
+                    //convert collective mat_nodes_in_mat_elem so it uses contiguous node ids for this mat portion of the mesh
+                    for (size_t elem_id = 0; elem_id < num_mat_collective_elems; elem_id++) {
+                        for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                            collective_mat_nodes_in_mat_elem(elem_id, node_lid) = collective_mat_node_map.getLocalIndex(collective_mat_nodes_in_mat_elem(elem_id, node_lid));
+                        }
+                    } // end for elem_gid
                     
                     // only write material data if the mat lives on the mesh, ie. has state allocated
                     if (num_mat_collective_elems>0&&myrank==0){
