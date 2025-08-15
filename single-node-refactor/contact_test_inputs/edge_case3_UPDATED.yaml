@@ -1,10 +1,10 @@
 # num_dims: 3
 
 dynamic_options:
-  time_final: 1.0
-  dt_min: 0.5
-  dt_max: 0.5
-  dt_start: 1.e-2
+  time_final: 5.0
+  dt_min: 1e-6
+  dt_max: 0.05
+  dt_start: 1.e-5
   cycle_stop: 300000
 
 
@@ -25,7 +25,7 @@ mesh_options:
 output_options:
   timer_output_level: thorough
   output_file_format: ensight
-  graphics_time_step: 0.5
+  graphics_time_step: 0.02
   # graphics_iteration_step: 10
 
 solver_options:

@@ -2,9 +2,9 @@
 
 dynamic_options:
   time_final: 3.0
-  dt_min: 0.02
+  dt_min: 1.e-6
   dt_max: 0.05
-  dt_start: 1.e-2
+  dt_start: 1.e-5
   cycle_stop: 300000
 
 

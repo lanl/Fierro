@@ -1,10 +1,10 @@
 # num_dims: 3
 
 dynamic_options:
-  time_final: 1.0
-  dt_min: 0.5
-  dt_max: 0.5
-  dt_start: 1.e-2
+  time_final: 3.0
+  dt_min: 1e-6
+  dt_max: 0.05
+  dt_start: 1.e-5
   cycle_stop: 300000
 
 
@@ -25,7 +25,7 @@ mesh_options:
 output_options:
   timer_output_level: thorough
   output_file_format: ensight
-  graphics_time_step: 0.5
+  graphics_time_step: 0.05
   # graphics_iteration_step: 10
 
 solver_options:
@@ -39,6 +39,13 @@ solver_options:
 
 boundary_conditions:
 
+  # global contact condition (this should be used when it is not clear what the contact surface(s) will be)
+  - boundary_condition:
+      solver_id: 0
+      surface:
+          type: global
+      stress_model: global_contact
+
   # Tag Z plane
   - boundary_condition:
       solver_id: 0
@@ -47,16 +54,11 @@ boundary_conditions:
           plane_position: 0.0
       velocity_model: reflected
       velocity_bc_global_vars:
-          - 0
-          - 0
-          - 1
+          - 0   # x
+          - 0   # y
+          - 1   # z
 
-  # global contact condition (this should be used when it is not clear what the contact surface(s) will be)
-  - boundary_condition:
-      solver_id: 0
-      surface:
-          type: global
-      stress_model: global_contact
+  
 
 materials:
   - material:
