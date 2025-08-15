@@ -342,7 +342,7 @@ struct MaterialFunctions_t
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
         const double vol,
@@ -360,7 +360,7 @@ struct MaterialFunctions_t
         const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_id) = NULL;
 
@@ -379,7 +379,7 @@ struct MaterialFunctions_t
         const double MaterialPoint_sspd,
         const double erode_tension_val,
         const double erode_density_val,
-        const size_t mat_point_lid,
+        const size_t mat_point_sid,
         const size_t mat_id) = NULL;
 
 
@@ -401,7 +401,7 @@ struct MaterialFunctions_t
         const double fuzz,
         const double small,
         const double elem_gid,
-        const size_t mat_point_lid,
+        const size_t mat_point_sid,
         const size_t mat_id) = NULL;
         // in 2D, in place of vol, the elem facial area is passed
 

@@ -56,7 +56,7 @@ namespace NoDissipationModel {
                                   const double fuzz,
                                   const double small,
                                   const double elem_gid,
-                                  const size_t mat_point_lid,
+                                  const size_t mat_point_sid,
                                   const size_t mat_id)
                                   {
 

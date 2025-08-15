@@ -77,7 +77,7 @@ namespace UserDefinedEquilibrationModel
         const double fuzz,
         const RaggedRightArrayKokkos<double> &equilibration_global_vars,
         const size_t num_vars,
-        const size_t mat_point_lid,
+        const size_t mat_point_sid,
         const size_t mat_id)
     {
         // -----------------------------------------------------------------------------
