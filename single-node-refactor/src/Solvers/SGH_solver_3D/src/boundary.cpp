@@ -127,6 +127,17 @@ void SGH3D:: boundary_contact_force(State_t& State, const Mesh_t &mesh, const do
     }
     std::cout << std::endl; */
     contact_bank.get_contact_pairs(State, mesh, del_t);
+    /* for (int i = 0; i < contact_bank.num_active_pairs; i++) {
+        const size_t &node_gid = contact_bank.active_pairs(i);
+        contact_pair_t &pair = contact_bank.contact_pairs(node_gid);
+        std::cout << pair.node.gid << " paired to patch: " << pair.patch.gid << " with nodes: ";
+        for (int j = 0; j < 4; j++) {
+            contact_node_t node = pair.patch.nodes_obj(j);
+            std::cout << node.gid << "   ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl; */
     contact_bank.force_resolution(del_t);
     contact_bank.remove_pairs(del_t);
 } // end boundary_contact_force function

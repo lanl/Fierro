@@ -1305,6 +1305,7 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
             //       this is only a problem if the node mass is changing
             node_obj.mass = State.node.mass(node_gid);
             node_obj.gid = node_gid;
+            node_obj.num_patch_conn += 1;
             contact_patch.nodes_obj(j) = node_obj;
             if (node_count(node_gid) == 1)
             {
@@ -1405,6 +1406,89 @@ void contact_patches_t::update_nodes(const Mesh_t &mesh, State_t& State)
                 contact_node.internal_force(j) += State.corner.force(corner_gid, j);
             }
         }
+
+        // resetting normal vector
+        contact_node.normal_dir.set_values(0);
+    });
+
+    // updating contact node normals
+    // Loop over boundary nodes in a boundary set
+    FOR_ALL(bdy_patch_lid, 0, contact_patches_t::num_contact_patches, {
+
+        // get the global index for this patch on the boundary
+        size_t bdy_patch_gid = contact_patches(bdy_patch_lid).gid;
+
+        // --- calculate surfaced area ---
+        double avg_coords[3];
+        avg_coords[0] = 0.0;
+        avg_coords[1] = 0.0;
+        avg_coords[2] = 0.0;
+        for (size_t node_lid=0; node_lid<mesh.num_nodes_in_patch; node_lid++){
+            
+            // get the node id
+            size_t node_gid = mesh.nodes_in_patch(bdy_patch_gid, node_lid);
+
+
+            for (size_t dim=0; dim<mesh.num_dims; dim++){
+                avg_coords[dim] += State.node.coords(node_gid, dim);
+            } // end for dim
+
+        } // end for
+
+        for (size_t dim=0; dim<mesh.num_dims; dim++){
+            avg_coords[dim] /= (double)mesh.num_nodes_in_patch;
+        } // end for dim
+
+
+        // allocate the corner surface normals
+        double corn_patch_normal_1D[3];
+        ViewCArrayKokkos <double> corn_patch_normal(&corn_patch_normal_1D[0],3);
+        corn_patch_normal.set_values(0);
+
+        double vec_a[3];
+        double vec_b[3];
+        for (size_t node_lid=0; node_lid<mesh.num_nodes_in_patch; node_lid++){
+            
+            // get the node ids for the triangle
+            size_t node_gid_0 = mesh.nodes_in_patch(bdy_patch_gid, node_lid);
+            size_t node_gid_1;
+            if(node_lid<mesh.num_nodes_in_patch-1){
+                node_gid_1 = mesh.nodes_in_patch(bdy_patch_gid, node_lid+1);
+            } else {
+                node_gid_1 = mesh.nodes_in_patch(bdy_patch_gid, 0);
+            } // end if
+        
+            for (size_t dim=0; dim<mesh.num_dims; dim++){
+                vec_a[dim] = State.node.coords(node_gid_0, dim) - avg_coords[dim];
+                vec_b[dim] = State.node.coords(node_gid_1, dim) - avg_coords[dim];
+            } // end for dim
+
+            // calculating the cross product of the 2 vectors
+            corn_patch_normal(0) += (vec_a[1]*vec_b[2] - vec_a[2]*vec_b[1]);
+            corn_patch_normal(1) += (vec_a[2]*vec_b[0] - vec_a[0]*vec_b[2]);
+            corn_patch_normal(2) += (vec_a[0]*vec_b[1] - vec_a[1]*vec_b[0]);
+            
+            // normalizing
+            for (int i = 0; i < 3; i++) {
+                corn_patch_normal(i) /= norm(corn_patch_normal);
+            }
+            
+            // adding to the nodes
+            for (int i = 0; i < 3; i++) {
+                contact_nodes(node_gid_0).normal_dir(i) += corn_patch_normal(i);
+                contact_nodes(node_gid_1).normal_dir(i) += corn_patch_normal(i);
+            }
+
+        } // end for node_lid in patch
+    });
+
+    // averaging the normals
+    FOR_ALL(i, 0, contact_patches_t::num_contact_nodes, {
+        contact_node_t &node = contact_nodes(i);
+        double mag = sqrt(pow(node.normal_dir(0),2) + pow(node.normal_dir(1),2) + pow(node.normal_dir(2),2));
+        for (int j = 0; j < 3; j++) {
+            node.normal_dir(j) /= mag;
+        }
     });
 
     // resetting contact force array
@@ -1461,6 +1545,14 @@ void contact_patches_t::sort()
         }
     });  // end parallel for
     Kokkos::fence();
+
+    /* for (int i = 0; i < points.dims(1); i++) {
+        for (int j = 0; j < points.dims(0); j++) {
+            std::cout << points(j,i) << "   ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl; */
 
     // Find the max and min for each dimension
     double local_x_max = 0.0;
@@ -1569,9 +1661,9 @@ void contact_patches_t::sort()
     //       with this one is that nb changes through the iterations. lbox and npoint might need to change to Views.
     // Initializing the nbox, lbox, nsort, and npoint arrays
     size_t nb = Sx*Sy*Sz;  // total number of buckets
-    //std::cout << x_max << "    " << x_min << std::endl;
-    //std::cout << Sx << "    " << Sy << "    " << Sz << std::endl;
-    //std::cout << "nb = " << nb << "    " << "bucket_size = " << bucket_size << std::endl; 
+    /* std::cout << x_max << "    " << x_min << std::endl;
+    std::cout << Sx << "    " << Sy << "    " << Sz << std::endl;
+    std::cout << "nb = " << nb << "    " << "bucket_size = " << bucket_size << std::endl;  */
     nbox = CArrayKokkos<size_t>(nb);
     lbox = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
     nsort = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
@@ -1692,8 +1784,16 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
 
     // allocating array to store surfaces a node is penetrating
     // first columns holds node gid and second through final columns store the surfaces that node is penetrating
-    // todo: is 6 columns for max surfs being penetrated a safe number? 
-    CArrayKokkos <size_t> nodes_pen_surfs(num_contact_nodes,7);
+
+    // *****************************************************************************************************************************
+    // if code segfaults due to accessing nodes_pen_surfs, increase number of columns
+    // segfaulting on accessing this array means that the penetrating node is on a face or corner of so many elements that it
+    // is penetrating more boundary patches than the column number will allow
+    // *****************************************************************************************************************************
+
+    // todo: the number of columns should be defined based on the mesh in the future
+    //       currently set for penetrating up to 3 elements fully
+    CArrayKokkos <size_t> nodes_pen_surfs(num_contact_nodes,19);
     
     // setting all values to an initially impossible number for surf ids (i.e. greater than total number of surfs)
     // NOTE: mesh.num_surfs only works for first order elements as of 7/10/2025
@@ -1777,7 +1877,8 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
             std::cout << nodes_pen_surfs(i,j) << "   ";
         }
         std::cout << std::endl;
-    } */
+    }
+    std::cout << std::endl; */
 
     // looping through nodes_pen_surfs and finding most appropriate penetrated surface to pair to
     num_active_pairs = 0;
@@ -1908,13 +2009,51 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
                         break;
                 }
 
+                /* // interpolating the normal if on an edge or corner
+                if ((fabs(xi) > 1-edge_tol) || (fabs(eta) > 1-edge_tol)) {
+                    // forcing xi and eta to conform if detected as penetrating
+                    if (xi > 1) {
+                        xi = 1;
+                    } else if (xi < -1) {
+                        xi = -1;
+                    }
+                    if (eta > 1) {
+                        eta = 1;
+                    } else if (eta < -1) {
+                        eta = -1;
+                    }
+                    
+                    // getting shape functions at (xi,eta)
+                    double phi_1D[4];
+                    ViewCArrayKokkos<double> phi_k(&phi_1D[0],4);
+                    contact_patches(i).phi(phi_k,xi,eta);
+
+                    // getting vector in normal direction
+                    surf_normal.set_values(0);
+                    for (int j = 0; j < 4; j++) {
+                        for (int k = 0; k < 3; k++) {
+                            surf_normal(k) += contact_patches(i).nodes_obj(j).normal_dir(k) * phi_k(j);
+                        }
+                    }
+                    //surf_normal(0) = 0;
+                    //surf_normal(1) = 0;
+                    //surf_normal(2) = 1;
+
+                    // unitizing
+                    double mag = sqrt(pow(surf_normal(0),2) + pow(surf_normal(1),2) +pow(surf_normal(2),2));
+                    for (int j = 0; j < 3; j++) {
+                        surf_normal(j) /= mag;
+                    }
+                    std::cout << contact_nodes(nodes_pen_surfs(node_lid,0)).gid << "   " << surf_normal(0) << "   " << surf_normal(1) << "   " << surf_normal(2) << "   " << xi << "   " << eta << std::endl;
+                } */
+
                 contact_pair_t &current_pair = contact_pairs(nodes_pen_surfs(node_lid,0));
                 // if pair is not active, make active
                 if (current_pair.active == false) { 
                     current_pair = contact_pair_t(*this, contact_patches(i), contact_nodes(nodes_pen_surfs(node_lid,0)), xi, eta, del_t, surf_normal);
                     current_pair.active = true;
                     current_pair.force_factor = 0.2;
-                    current_pair.get_length_limit(State,mesh, del_t);
+                    //current_pair.get_length_limit(State,mesh, del_t);
                     current_pair.time_factor = 1.0;
                     active_pairs(num_active_pairs) = nodes_pen_surfs(node_lid,0);
                 } else // update contact location
@@ -1975,7 +2114,7 @@ bool contact_patches_t::penetration_check(const contact_node_t node, const CArra
         pen_dot_product = surf_to_node(0)*surf_normal(0) + surf_to_node(1)*surf_normal(1) + surf_to_node(2)*surf_normal(2);
 
         // counting if an individual surface is penetrated
-        if (pen_dot_product < 0 - tol) {
+        if (pen_dot_product < 1.0e-3) {
             count += 1;
         }
 
@@ -2015,7 +2154,7 @@ void contact_patches_t::isoparametric_inverse(const CArrayKokkos<double> pos, co
     CArrayKokkos <double> Jinv(3,3);
     
     // iteration loop
-    int max_iter = 50;
+    int max_iter = 1000;
     for (int i = 0; i < max_iter; i++) {
         // dphi_dxi
         dphi(0,0) = -0.125*(1-iso_pos_iter(1))*(1-iso_pos_iter(2));
@@ -2093,7 +2232,7 @@ void contact_patches_t::isoparametric_inverse(const CArrayKokkos<double> pos, co
         }
         
         // convergence check
-        if (sqrt((pos(0)-pos_iter(0))*(pos(0)-pos_iter(0)) + (pos(1)-pos_iter(1))*(pos(1)-pos_iter(1)) + (pos(2)-pos_iter(2))*(pos(2)-pos_iter(2))) < pow(10,-6)) {
+        if (sqrt((pos(0)-pos_iter(0))*(pos(0)-pos_iter(0)) + (pos(1)-pos_iter(1))*(pos(1)-pos_iter(1)) + (pos(2)-pos_iter(2))*(pos(2)-pos_iter(2))) < pow(10,-16)) {
             break;
         }
 
@@ -2429,18 +2568,10 @@ void contact_patches_t::force_resolution(const double &del_t)
             } // else if (pair.contact_type == contact_pair_t::contact_types::glue)
         });
 
-        for (int j = 0; j < num_active_pairs; j++) {
-            const size_t &node_gid = active_pairs(j);
-            contact_pair_t &pair = contact_pairs(node_gid);
-            double vel_mag = sqrt(pair.node.vel(0)*pair.node.vel(0)+pair.node.vel(1)*pair.node.vel(1)+pair.node.vel(2)*pair.node.vel(2));
-            double force_mag = sqrt(pair.node.contact_force(0)*pair.node.contact_force(0)+pair.node.contact_force(1)*pair.node.contact_force(1)+pair.node.contact_force(2)*pair.node.contact_force(2));
-            double check = fmin(0.2,fmax(0,(pair.length_limit-vel_mag*del_t)/(del_t*del_t*force_mag/pair.node.mass/2)));
-            if (fabs(force_mag) < 1e-8) {
-                check = 1.0e-8;
-            }
-            //pair.force_factor = check;
-            //std::cout << "LIMITED FORCE FACTOR: " << check << std::endl;
+        /* for (int j = 0; j < num_active_pairs; j++) {
+            std::cout << forces_view(j) << std::endl;
         }
+        std::cout << std::endl; */
 
         // made distribute_frictionless_force use Kokkos::atomic_add to allow this to be parallel
         FOR_ALL(j, 0, num_active_pairs,

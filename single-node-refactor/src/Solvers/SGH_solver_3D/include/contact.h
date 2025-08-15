@@ -15,11 +15,13 @@ static constexpr double edge_tol = 1e-3;  // tolerance for edge case solutions (
 struct contact_node_t
 {
     size_t gid;  // global node id
+    size_t num_patch_conn = 0;  // number of contact patches the node is part of
     double mass;  // mass of the node
     CArrayKokkos<double> pos = CArrayKokkos<double>(3);  // position of the node
     CArrayKokkos<double> vel = CArrayKokkos<double>(3);  // velocity of the node
     CArrayKokkos<double> internal_force = CArrayKokkos<double>(3);  // any force that is not due to contact
     CArrayKokkos<double> contact_force = CArrayKokkos<double>(3);  // force due to contact
+    CArrayKokkos<double> normal_dir = CArrayKokkos<double>(3);  // normal direction at the node
 
     contact_node_t();
 
