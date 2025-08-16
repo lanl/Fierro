@@ -83,7 +83,7 @@ void SGH3D::get_force(const Material_t& Materials,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_geo_volfrac,
                       const corners_in_mat_t corners_in_mat_elem,
-                      const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                      const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                       const size_t num_mat_elems,
                       const size_t mat_id,
                       const double fuzz,
@@ -96,13 +96,13 @@ void SGH3D::get_force(const Material_t& Materials,
 
 
     // --- calculate the forces acting on the nodes from the element ---
-    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
         // the material point index = the material elem index for a 1-point element
-        size_t mat_point_lid = mat_elem_lid;
+        size_t mat_point_sid = mat_elem_sid;
 
 
         // total Cauchy stress
@@ -127,7 +127,7 @@ void SGH3D::get_force(const Material_t& Materials,
 
 
         // create a view of the stress_matrix
-        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(mat_id, mat_point_lid, 0, 0), 3, 3);
+        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(mat_id, mat_point_sid, 0, 0), 3, 3);
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);
@@ -164,7 +164,7 @@ void SGH3D::get_force(const Material_t& Materials,
         // add the pressure if a decoupled model is used
         if (Materials.MaterialEnums(mat_id).EOSType == model::decoupledEOSType) {
             for (int i = 0; i < num_dims; i++) {
-                tau(i, i) -= MaterialPoints_pres(mat_id, mat_point_lid);
+                tau(i, i) -= MaterialPoints_pres(mat_id, mat_point_sid);
             } // end for
         }
 
@@ -185,7 +185,7 @@ void SGH3D::get_force(const Material_t& Materials,
                                     fuzz,
                                     small,
                                     elem_gid,
-                                    mat_point_lid,
+                                    mat_point_sid,
                                     mat_id);
         
 
@@ -204,11 +204,11 @@ void SGH3D::get_force(const Material_t& Materials,
             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
             // Get the material corner lid
-            size_t mat_corner_lid = corners_in_mat_elem(mat_elem_lid, corner_lid);
+            size_t mat_corner_lid = corners_in_mat_elem(mat_elem_sid, corner_lid);
             //printf("corner difference = %zu \n", mat_corner_lid-corner_gid);
 
             // loop over dimensions and calc corner forces
-            if (MaterialPoints_eroded(mat_id, mat_point_lid) == true) { // material(mat_id).blank_mat_id)
+            if (MaterialPoints_eroded(mat_id, mat_point_sid) == true) { // material(mat_id).blank_mat_id)
                 for (size_t dim = 0; dim < num_dims; dim++) {
                     corner_force(corner_gid, dim) = 0.0;
                     MaterialCorners_force(mat_id, mat_corner_lid, dim) = 0.0;
@@ -225,12 +225,12 @@ void SGH3D::get_force(const Material_t& Materials,
                         + disp_corner_forces(node_lid, dim);
 
                     // save the material corner force
-                    MaterialCorners_force(mat_id, mat_corner_lid, dim) = force_component*MaterialPoints_volfrac(mat_id, mat_point_lid)*
-                                                                 MaterialPoints_geo_volfrac(mat_id, mat_point_lid);
+                    MaterialCorners_force(mat_id, mat_corner_lid, dim) = force_component*MaterialPoints_volfrac(mat_id, mat_point_sid)*
+                                                                 MaterialPoints_geo_volfrac(mat_id, mat_point_sid);
 
                      // tally all material forces to the corner
-                    corner_force(corner_gid, dim) += force_component*MaterialPoints_volfrac(mat_id, mat_point_lid)*
-                                                     MaterialPoints_geo_volfrac(mat_id, mat_point_lid);
+                    corner_force(corner_gid, dim) += force_component*MaterialPoints_volfrac(mat_id, mat_point_sid)*
+                                                     MaterialPoints_geo_volfrac(mat_id, mat_point_sid);
                 } // end loop over dimension
             } // end if
 

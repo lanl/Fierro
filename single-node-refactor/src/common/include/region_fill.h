@@ -332,7 +332,7 @@ void init_state_vars(const Material_t& Materials,
                      const Mesh_t& mesh,
                      const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
                      const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
-                     const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                      const size_t num_mat_pts,
                      const size_t mat_id);
 
@@ -390,7 +390,7 @@ void calc_corner_mass(const Material_t& Materials,
                       const DistributedDCArray<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-                      const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                      const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                       const size_t num_mat_elems,
                       const size_t mat_id);
 

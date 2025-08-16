@@ -137,29 +137,29 @@ struct zones_in_elem_t
 };
 
 // if material points are defined strictly internal to the element.
-struct legendre_in_elem_t
+struct gauss_in_elem_t
 {
     private:
-        size_t num_leg_gauss_in_elem_;
+        size_t num_gauss_in_elem_;
     public:
-        legendre_in_elem_t() {
+        gauss_in_elem_t() {
         };
 
-        legendre_in_elem_t(const size_t num_leg_gauss_in_elem_inp) {
-            this->num_leg_gauss_in_elem_ = num_leg_gauss_in_elem_inp;
+        gauss_in_elem_t(const size_t num_gauss_in_elem_inp) {
+            this->num_gauss_in_elem_ = num_gauss_in_elem_inp;
         };
 
         // return global gauss index for given local gauss index in an element
         size_t  host(const size_t elem_gid, const size_t leg_gauss_lid) const
         {
-            return elem_gid * num_leg_gauss_in_elem_ + leg_gauss_lid;
+            return elem_gid * num_gauss_in_elem_ + leg_gauss_lid;
         };
 
         // Return the global gauss ID given an element gloabl ID and a local gauss ID
         KOKKOS_INLINE_FUNCTION
         size_t operator()(const size_t elem_gid, const size_t leg_gauss_lid) const
         {
-            return elem_gid * num_leg_gauss_in_elem_ + leg_gauss_lid;
+            return elem_gid * num_gauss_in_elem_ + leg_gauss_lid;
         };
 };
 
@@ -167,26 +167,26 @@ struct legendre_in_elem_t
 struct lobatto_in_elem_t
 {
     private:
-        size_t num_lob_gauss_in_elem_;
+        size_t num_lobatto_in_elem_;
     public:
         lobatto_in_elem_t() {
         };
 
-        lobatto_in_elem_t(const size_t num_lob_gauss_in_elem_inp) {
-            this->num_lob_gauss_in_elem_ = num_lob_gauss_in_elem_inp;
+        lobatto_in_elem_t(const size_t num_lobatto_in_elem_inp) {
+            this->num_lobatto_in_elem_ = num_lobatto_in_elem_inp;
         };
 
         // return global gauss index for given local gauss index in an element
         size_t  host(const size_t elem_gid, const size_t lob_gauss_lid) const
         {
-            return elem_gid * num_lob_gauss_in_elem_ + lob_gauss_lid;
+            return elem_gid * num_lobatto_in_elem_ + lob_gauss_lid;
         };
 
         // Return the global gauss ID given an element gloabl ID and a local gauss ID
         KOKKOS_INLINE_FUNCTION
         size_t operator()(const size_t elem_gid, const size_t lob_gauss_lid) const
         {
-            return elem_gid * num_lob_gauss_in_elem_ + lob_gauss_lid;
+            return elem_gid * num_lobatto_in_elem_ + lob_gauss_lid;
         };
 };
 
@@ -237,8 +237,8 @@ struct Mesh_t
     size_t num_surfs_in_elem;   ///< Number of surfaces in an element
     size_t num_zones_in_elem;   ///< Number of zones in an element
 
-    size_t num_leg_gauss_in_elem; ///< Number of Gauss Legendre points in an element
-    size_t num_lob_gauss_in_elem; ///< Number of Gauss Lobatto points in an element
+    size_t num_gauss_in_elem; ///< Number of Gauss points in an element
+    size_t num_lobatto_in_elem; ///< Number of Gauss Lobatto points in an element
 
     DistributedDCArray<size_t> nodes_in_elem; ///< Nodes in an element
     DistributedDCArray<size_t> local_nodes_in_elem; ///< Nodes in uniquely distributed element (subview of above)
@@ -253,7 +253,7 @@ struct Mesh_t
     // CArrayKokkos <size_t> zones_in_elem; ///< Zones in an element
     zones_in_elem_t zones_in_elem; ///< Zones in an element
     lobatto_in_elem_t lobatto_in_elem; ///< Gauss Lobatto points in an element
-    legendre_in_elem_t legendre_in_elem; ///< Gauss Legendre points in an element
+    gauss_in_elem_t gauss_in_elem; ///< Gauss points in an element
 
     // ---- Node Data Definitions ---- //
     size_t global_num_nodes; ///< Global Number of nodes in the mesh
@@ -291,7 +291,7 @@ struct Mesh_t
     size_t num_patches; ///< Number of patches in the mesh
     size_t num_nodes_in_patch;  ///< Number of nodes in a patch
     // size_t num_lobatto_in_patch; ///< Number of Gauss Lobatto nodes in a patch
-    // size_t num_legendre_in_patch; ///< Number of Gauss Legendre nodes in a patch
+    // size_t num_gauss_in_patch; ///< Number of Gauss nodes in a patch
 
     CArrayKokkos<size_t> nodes_in_patch; ///< Nodes connected to a patch
     CArrayKokkos<size_t> elems_in_patch; ///< Elements connected to a patch
@@ -342,12 +342,12 @@ struct Mesh_t
         corners_in_elem = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
 
         // 1 Gauss point per element
-        num_leg_gauss_in_elem = 1;
+        num_gauss_in_elem = 1;
 
         // 1 zone per element
         num_zones_in_elem = 1;
 
-        legendre_in_elem = legendre_in_elem_t(num_leg_gauss_in_elem);
+        gauss_in_elem = gauss_in_elem_t(num_gauss_in_elem);
 
         return;
     }; // end method
@@ -367,7 +367,7 @@ struct Mesh_t
 
         num_nodes_in_elem     = num_nodes_in_elem_inp;
         num_nodes_in_zone     = num_nodes_in_zone_inp;
-        num_leg_gauss_in_elem = num_gauss_leg_in_elem_inp;
+        num_gauss_in_elem = num_gauss_leg_in_elem_inp;
         num_zones_in_elem     = num_zones_in_elem_inp;
         num_surfs_in_elem     = num_surfs_in_elem_inp;
 
@@ -379,7 +379,7 @@ struct Mesh_t
         zones_in_elem    = zones_in_elem_t(num_zones_in_elem);
         surfs_in_elem    = CArrayKokkos<size_t>(num_elems, num_surfs_in_elem, "mesh.surfs_in_zone");
         nodes_in_zone    = CArrayKokkos<size_t>(num_zones, num_nodes_in_zone, "mesh.nodes_in_zone");
-        legendre_in_elem = legendre_in_elem_t(num_leg_gauss_in_elem);
+        gauss_in_elem = gauss_in_elem_t(num_gauss_in_elem);
 
         return;
     }; // end method
@@ -862,7 +862,7 @@ struct Mesh_t
 
         // num_lobatto_in_patch = int(pow(3, num_dims-1));
 
-        // num_legendre_in_patch = 2*(num_dims-1);
+        // num_gauss_in_patch = 2*(num_dims-1);
 
         size_t num_patches_in_surf;  // = Pn_order or = Pn_order*Pn_order
 
@@ -870,13 +870,13 @@ struct Mesh_t
 
         // num quad points 1D //
         // size_t num_lob_1D = 2*Pn + 1;
-        // size_t num_leg_1D = 2*Pn;
+        // size_t num_1D = 2*Pn;
 
         DCArrayKokkos<size_t> node_ordering_in_elem; // dimensions will be (num_patches_in_elem, num_nodes_in_patch);
 
         // DCArrayKokkos <size_t> lobatto_ordering_in_elem; // dimensions will be (num_patches_in_elem, num_lobatto_in_patch);
 
-        // DCArrayKokkos <size_t> legendre_ordering_in_elem; // dimensions will be (num_patches_in_elem, num_legendre_in_patch);
+        // DCArrayKokkos <size_t> gauss_ordering_in_elem; // dimensions will be (num_patches_in_elem, num_gauss_in_patch);
 
         printf("Number of dimensions = %zu \n", num_dims);
 
@@ -892,12 +892,12 @@ struct Mesh_t
 
             // lobatto_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_lobatto_in_patch);
 
-            // legendre_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_legendre_in_patch);
+            // gauss_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_gauss_in_patch);
 
             // printf("num_patches_in_elem = %zu \n", num_patches_in_elem);
             // printf("num_nodes_in_patch = %zu \n", num_nodes_in_patch);
             // printf("num_lobatto_in_patch = %zu \n", num_lobatto_in_patch);
-            // printf("num_legendre_in_patch = %zu \n", num_legendre_in_patch);
+            // printf("num_gauss_in_patch = %zu \n", num_gauss_in_patch);
             // printf("Number of surfaces = %zu \n", num_surfs_in_elem);
         }
         else {
@@ -908,7 +908,7 @@ struct Mesh_t
             // nodes in a patch in the element
             node_ordering_in_elem = DCArrayKokkos<size_t>(num_patches_in_elem, num_nodes_in_patch, "node_ordering_in_elem");
             // lobatto_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_lobatto_in_patch);
-            // legendre_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_legendre_in_patch);
+            // gauss_ordering_in_elem = DCArrayKokkos <size_t> (num_patches_in_elem, num_gauss_in_patch);
         } // end if dim
 
         // On the CPU, set the node order for the patches in an element
@@ -929,7 +929,7 @@ struct Mesh_t
                     for (size_t patch_lid = 0; patch_lid < num_patches_in_surf; patch_lid++) {
                         for (size_t node_lid = 0; node_lid < num_nodes_in_patch; node_lid++) {
                             node_ordering_in_elem.host(elem_patch_lid, node_lid) = temp_node_lids[count];
-                            // legendre_ordering_in_elem.host( elem_patch_lid, node_lid ) = temp_node_lids[count];
+                            // gauss_ordering_in_elem.host( elem_patch_lid, node_lid ) = temp_node_lids[count];
                             count++;
                         } // end for node_lid
                         elem_patch_lid++;
@@ -967,7 +967,7 @@ struct Mesh_t
                     for (size_t patch_lid = 0; patch_lid < num_patches_in_surf; patch_lid++) {
                         for (size_t node_lid = 0; node_lid < num_nodes_in_patch; node_lid++) {
                             node_ordering_in_elem.host(elem_patch_lid, node_lid) = temp_node_lids[count];
-                            // legendre_ordering_in_elem.host( elem_patch_lid, node_lid ) = temp_node_lids[count];
+                            // gauss_ordering_in_elem.host( elem_patch_lid, node_lid ) = temp_node_lids[count];
                             count++;
                         } // end for node_lid
                         elem_patch_lid++;

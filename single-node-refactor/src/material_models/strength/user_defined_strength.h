@@ -68,7 +68,7 @@ namespace UserDefinedStrengthModel {
         const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_id)
     {
@@ -77,7 +77,7 @@ namespace UserDefinedStrengthModel {
         FOR_ALL(mat_points_lid, 0, num_material_points, {
             
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_points_lid); // might be used with some models
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_points_lid); // might be used with some models
 
             // first index is matpt, second index is the number of vars
             size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dims(1); 
@@ -106,7 +106,7 @@ namespace UserDefinedStrengthModel {
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
         const double vol,
@@ -136,7 +136,7 @@ namespace UserDefinedStrengthModel {
         const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_ids)
     {
@@ -173,7 +173,7 @@ namespace NotionalStrengthModel {
         const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_id)
     {
@@ -182,7 +182,7 @@ namespace NotionalStrengthModel {
         FOR_ALL(mat_points_lid, 0, num_material_points, {
             
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_points_lid); // might be used with some models
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_points_lid); // might be used with some models
             
             // first index is matpt, second index is the number of vars
             size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dims(1); 
@@ -210,7 +210,7 @@ namespace NotionalStrengthModel {
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
         const double vol,
@@ -232,7 +232,7 @@ namespace NotionalStrengthModel {
         const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_ids)
     {

@@ -74,7 +74,7 @@ void SGTM3D::update_state(
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_statev,
     const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-    const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const DRaggedRightArrayKokkos<size_t>& elem_mat_elem,
     const double dt,
     const double rk_alpha,
     const size_t num_material_elems,
