@@ -80,10 +80,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
     double dt = dt_start;
 
     // local memory for this solver
-    CArrayKokkos <double> GaussPoint_pres(mesh.num_elems*mesh.num_leg_gauss_in_elem);
-    CArrayKokkos <double> GaussPoint_pres_denominator(mesh.num_elems*mesh.num_leg_gauss_in_elem);
-    CArrayKokkos <double> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_leg_gauss_in_elem);
-    CArrayKokkos <double> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_leg_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_pres(mesh.num_elems*mesh.num_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_pres_denominator(mesh.num_elems*mesh.num_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_gauss_in_elem);
+    CArrayKokkos <double> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_gauss_in_elem);
 
     int myrank, nranks;
     MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
@@ -226,8 +226,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                          State.GaussPoints.vol,
                          State.MaterialPoints.sspd,
                          State.MaterialPoints.eroded,
-                         State.MaterialToMeshMaps.elem,
-                         State.MaterialToMeshMaps.num_material_local_elems.host(mat_id),
+                         State.MaterialToMeshMaps.elem_in_mat_elem,
+                         State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id),
                          time_value,
                          graphics_time,
                          time_final,
@@ -313,8 +313,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                           State.MaterialPoints.volfrac,
                           State.MaterialPoints.geo_volfrac,
                           State.corners_in_mat_elem,
-                          State.MaterialToMeshMaps.elem,
-                          State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                          State.MaterialToMeshMaps.elem_in_mat_elem,
+                          State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                           mat_id,
                           fuzz,
                           small,
@@ -337,8 +337,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                                   State.MaterialPoints.eos_state_vars,
                                   State.MaterialPoints.strength_state_vars,
                                   State.MaterialPoints.shear_modulii,
-                                  State.MaterialToMeshMaps.elem,
-                                  State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                                  State.MaterialToMeshMaps.elem_in_mat_elem,
+                                  State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                                   mat_id,
                                   fuzz,
                                   small,
@@ -401,8 +401,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                               State.MaterialPoints.mass,
                               State.MaterialCorners.force,
                               State.corners_in_mat_elem,
-                              State.MaterialToMeshMaps.elem,
-                              State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                              State.MaterialToMeshMaps.elem_in_mat_elem,
+                              State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                               mat_id);
             } // end for mat_id
 
@@ -443,12 +443,12 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
                              State.MaterialPoints.strength_state_vars,
                              State.MaterialPoints.eroded,
                              State.MaterialPoints.shear_modulii,
-                             State.MaterialToMeshMaps.elem,
+                             State.MaterialToMeshMaps.elem_in_mat_elem,
                              time_value,
                              dt,
                              rk_alpha,
                              cycle,
-                             State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                             State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                              mat_id);
             } // end for mat_id
 

@@ -3388,10 +3388,10 @@ public:
                                     State.GaussPoints,
                                     elem_scalar_fields,
                                     elem_tensor_fields,
-                                    State.MaterialToMeshMaps.elem,
+                                    State.MaterialToMeshMaps.elem_in_mat_elem,
                                     SimulationParameters.output_options.output_elem_state,
                                     SimulationParameters.output_options.output_gauss_pt_state,
-                                    State.MaterialToMeshMaps.num_material_local_elems.host(mat_id),
+                                    State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id),
                                     mat_id,
                                     num_local_elems,
                                     den_id,
@@ -3431,10 +3431,10 @@ public:
                              elem_tensor_fields,
                              host_elem_scalar_fields,
                              host_elem_tensor_fields,
-                             State.MaterialToMeshMaps.elem,
+                             State.MaterialToMeshMaps.elem_in_mat_elem,
                              SimulationParameters.output_options.output_elem_state,
                              SimulationParameters.output_options.output_gauss_pt_state,
-                             State.MaterialToMeshMaps.num_material_local_elems.host(mat_id),
+                             State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id),
                              mat_id,
                              num_local_elems,
                              den_id,
@@ -3644,7 +3644,7 @@ public:
 
                 for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
-                    const size_t num_mat_local_elems = State.MaterialToMeshMaps.num_material_local_elems.host(mat_id);
+                    const size_t num_mat_local_elems = State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id);
                     //array storing number of local elems for this material on each process
                     CArray<int> processes_num_local_mat_elems, gatherv_displacements;
                     if(myrank==0){
@@ -3659,7 +3659,7 @@ public:
                     DistributedMap element_map = mesh.element_map;
                     DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_mat_elems(num_mat_local_elems);
                     for(int ielem = 0; ielem < num_mat_local_elems; ielem++){
-                        global_indices_of_local_mat_elems(ielem) = element_map.getGlobalIndex(State.MaterialToMeshMaps.elem.host(mat_id, ielem));
+                        global_indices_of_local_mat_elems(ielem) = element_map.getGlobalIndex(State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, ielem));
                     }
                     host_mat_elem_map = HostDistributedMap(global_indices_of_local_mat_elems);
 
@@ -3705,7 +3705,7 @@ public:
                     concatenate_mat_fields(State.MaterialPoints,
                                             host_mat_elem_scalar_fields,
                                             host_mat_elem_tensor_fields,
-                                            State.MaterialToMeshMaps.elem,
+                                            State.MaterialToMeshMaps.elem_in_mat_elem,
                                             SimulationParameters.output_options.output_mat_pt_state,
                                             num_mat_local_elems,
                                             mat_id,
@@ -3750,7 +3750,7 @@ public:
                     build_material_node_list(mesh,
                                             collective_mat_node_indices,
                                             collective_mat_nodes_in_mat_elem,
-                                            State.MaterialToMeshMaps.elem,
+                                            State.MaterialToMeshMaps.elem_in_mat_elem,
                                             mat_id,
                                             num_mat_nodes,
                                             num_mat_collective_elems,
@@ -4015,25 +4015,25 @@ public:
 
         // export material centeric data to the elements
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_local_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id);
 
-            for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
+            for (size_t mat_elem_sid = 0; mat_elem_sid < num_mat_elems; mat_elem_sid++) {
                 // 1 material per element
 
                 // get elem gid
-                size_t elem_gid = State.MaterialToMeshMaps.elem.host(mat_id, mat_elem_lid);
+                size_t elem_gid = State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, mat_elem_sid);
 
                 // save outputs
-                elem_fields(elem_gid, 0) = State.MaterialPoints.den.host(mat_id, mat_elem_lid);
-                elem_fields(elem_gid, 1) = State.MaterialPoints.pres.host(mat_id, mat_elem_lid);
-                elem_fields(elem_gid, 2) = State.MaterialPoints.sie.host(mat_id, mat_elem_lid);
+                elem_fields(elem_gid, 0) = State.MaterialPoints.den.host(mat_id, mat_elem_sid);
+                elem_fields(elem_gid, 1) = State.MaterialPoints.pres.host(mat_id, mat_elem_sid);
+                elem_fields(elem_gid, 2) = State.MaterialPoints.sie.host(mat_id, mat_elem_sid);
                 // 3 is guass point vol
-                elem_fields(elem_gid, 4) = State.MaterialPoints.mass.host(mat_id, mat_elem_lid);
-                elem_fields(elem_gid, 5) = State.MaterialPoints.sspd.host(mat_id, mat_elem_lid);
+                elem_fields(elem_gid, 4) = State.MaterialPoints.mass.host(mat_id, mat_elem_sid);
+                elem_fields(elem_gid, 5) = State.MaterialPoints.sspd.host(mat_id, mat_elem_sid);
                 // 6 is elem speed
                 elem_fields(elem_gid, 7) = (double)mat_id;
                 // 8 is the e_switch
-                elem_fields(elem_gid, 9) = (double)State.MaterialPoints.eroded.host(mat_id, mat_elem_lid);
+                elem_fields(elem_gid, 9) = (double)State.MaterialPoints.eroded.host(mat_id, mat_elem_sid);
             } // end for mat elems storage
         } // end parallel loop over materials
 
@@ -4496,25 +4496,25 @@ public:
 
         // export material centeric data to the elements
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_local_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id);
 
-            for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++) {
+            for (size_t mat_elem_sid = 0; mat_elem_sid < num_mat_elems; mat_elem_sid++) {
                 // 1 material per element
 
                 // get elem gid
-                size_t elem_gid = State.MaterialToMeshMaps.elem.host(mat_id, mat_elem_lid);
+                size_t elem_gid = State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, mat_elem_sid);
 
                 // save outputs
-                elem_fields(elem_gid, 0) = State.MaterialPoints.den.host(mat_id,mat_elem_lid);
-                elem_fields(elem_gid, 1) = State.MaterialPoints.pres.host(mat_id, mat_elem_lid);
-                elem_fields(elem_gid, 2) = State.MaterialPoints.sie.host(mat_id, mat_elem_lid);
+                elem_fields(elem_gid, 0) = State.MaterialPoints.den.host(mat_id,mat_elem_sid);
+                elem_fields(elem_gid, 1) = State.MaterialPoints.pres.host(mat_id, mat_elem_sid);
+                elem_fields(elem_gid, 2) = State.MaterialPoints.sie.host(mat_id, mat_elem_sid);
                 // 3 is guass point vol
-                elem_fields(elem_gid, 4) = State.MaterialPoints.mass.host(mat_id, mat_elem_lid);
-                elem_fields(elem_gid, 5) = State.MaterialPoints.sspd.host(mat_id, mat_elem_lid);
+                elem_fields(elem_gid, 4) = State.MaterialPoints.mass.host(mat_id, mat_elem_sid);
+                elem_fields(elem_gid, 5) = State.MaterialPoints.sspd.host(mat_id, mat_elem_sid);
                 // 6 is elem speed
                 elem_fields(elem_gid, 7) = (double)mat_id;
                 // 8 is the e_switch
-                elem_fields(elem_gid, 9) = (double)State.MaterialPoints.eroded.host(mat_id, mat_elem_lid);
+                elem_fields(elem_gid, 9) = (double)State.MaterialPoints.eroded.host(mat_id, mat_elem_sid);
                 elem_fields(elem_gid, 10) = (double)State.MaterialPoints.temp_grad.host(mat_id, elem_gid,0);
                 elem_fields(elem_gid, 11) = (double)State.MaterialPoints.temp_grad.host(mat_id, elem_gid,1);
                 elem_fields(elem_gid, 12) = (double)State.MaterialPoints.temp_grad.host(mat_id, elem_gid,2);
@@ -4742,7 +4742,7 @@ public:
     /// \param MaterialPoints a struct containing the material point state arrays
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
-    /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
+    /// \param elem_in_mat_elem a listing of the element ids the material resides in
     /// \param output_elem_state a std::vector of enums specifying the elem avg outputs
     /// \param num_mat_elems the number of elements the material resides in
     /// \param mat_id the index for the material
@@ -4752,7 +4752,7 @@ public:
                                  const GaussPoint_t& GaussPoints,
                                  DistributedDFArray<double>& elem_scalar_fields,
                                  DistributedDFArray<double>& elem_tensor_fields,
-                                 const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                                 const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                                  const std::vector<material_pt_state>& output_elem_state,
                                  const std::vector<gauss_pt_state>& output_gauss_pt_states,
                                  const size_t num_mat_elems,
@@ -4781,7 +4781,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         elem_scalar_fields(elem_gid, den_id) += MaterialPoints.den(mat_id, mat_elem_lid)*
@@ -4793,7 +4793,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         elem_scalar_fields(elem_gid, pres_id) += MaterialPoints.pres(mat_id, mat_elem_lid)*
@@ -4805,7 +4805,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         // extensive ie here, but after this function, it will become specific ie
@@ -4817,7 +4817,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         elem_scalar_fields(elem_gid, sspd_id) += MaterialPoints.sspd(mat_id, mat_elem_lid)*
@@ -4829,7 +4829,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         elem_scalar_fields(elem_gid, mass_id) += MaterialPoints.mass(mat_id, mat_elem_lid);
@@ -4842,7 +4842,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         // average tensor fields, it is always 3D
@@ -4865,7 +4865,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         elem_scalar_fields(elem_gid, conductivity_id) += MaterialPoints.conductivity(mat_id, mat_elem_lid)*
@@ -4878,7 +4878,7 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         elem_scalar_fields(elem_gid, specific_heat_id) += MaterialPoints.specific_heat(mat_id, mat_elem_lid)*
@@ -4970,7 +4970,7 @@ public:
     /// \param MaterialPoints a struct containing the material point state arrays
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
-    /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
+    /// \param elem_in_mat_elem a listing of the element ids the material resides in
     /// \param output_elem_state a std::vector of enums specifying the elem avg outputs
     /// \param num_mat_elems the number of elements the material resides in
     /// \param mat_id the index for the material
@@ -4980,7 +4980,7 @@ public:
                           DistributedDFArray<double>& elem_tensor_fields,
                           DistributedFArray<double>& host_elem_scalar_fields,
                           DistributedFArray<double>& host_elem_tensor_fields,
-                          const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                          const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                           const std::vector<material_pt_state>& output_elem_state,
                           const std::vector<gauss_pt_state>& output_gauss_pt_states,
                           const size_t num_mat_elems,
@@ -5160,7 +5160,7 @@ public:
     /// \param MaterialPoints a struct containing the material point state arrays
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
-    /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
+    /// \param elem_in_mat_elem a listing of the element ids the material resides in
     /// \param output_material_pt_states a std::vector of enums specifying the model
     /// \param num_mat_elems the number of elements the material resides in
     /// \param mat_id the index for the material
@@ -5169,7 +5169,7 @@ public:
     void concatenate_mat_fields(const MaterialPoint_t& MaterialPoints,
                                 DistributedFArray<double>& mat_elem_scalar_fields,
                                 DistributedFArray<double>& mat_elem_tensor_fields,
-                                const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                                const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                                 const std::vector<material_pt_state>& output_material_pt_states,
                                 const size_t num_mat_elems,
                                 const size_t mat_id,
@@ -5316,7 +5316,7 @@ public:
     /// \param Node a struct containing the material point state arrays
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
-    /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
+    /// \param elem_in_mat_elem a listing of the element ids the material resides in
     /// \param output_node_states a std::vector of enums specifying the model
     /// \param num_mat_elems the number of elements the material resides in
     /// \param mat_id the index for the material
@@ -5443,7 +5443,7 @@ public:
     /// \param Node a struct containing the material point state arrays
     /// \param elem_scalar_fields the scalar fields
     /// \param elem_tensor_fields the tensor fields
-    /// \param MaterialToMeshMaps_elem a listing of the element ids the material resides in
+    /// \param elem_in_mat_elem a listing of the element ids the material resides in
     /// \param output_node_states a std::vector of enums specifying the model
     /// \param num_mat_elems the number of elements the material resides in
     /// \param mat_id the index for the material
@@ -5994,7 +5994,7 @@ public:
         const DistributedDCArray<double>& state_node_coords,
         DCArrayKokkos<double>& mat_node_coords,
         DCArrayKokkos <size_t>& mat_nodes_in_mat_elem,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t mat_id,
         size_t& num_mat_nodes,
         const size_t num_mat_elems,
@@ -6008,9 +6008,9 @@ public:
         dummy_counter.set_values(0);
 
         // tag and count the number of nodes in this part
-        FOR_ALL (mat_elem_lid, 0, num_mat_elems, {
+        FOR_ALL (mat_elem_sid, 0, num_mat_elems, {
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);  // WARNING not GPU compatible
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);  // WARNING not GPU compatible
             
             // parallel loop over the nodes in the element
             for(size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++) {
@@ -6053,16 +6053,16 @@ public:
         num_mat_nodes = mat_node_gid;
         
         // save the new node id's
-        FOR_ALL (mat_elem_lid, 0, num_mat_elems, {
+        FOR_ALL (mat_elem_sid, 0, num_mat_elems, {
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
             
             // parallel loop over the nodes in the element
             for(size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++) {
                 size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
                 // save the mat_node to the mat elem list
-                mat_nodes_in_mat_elem(mat_elem_lid, node_lid) = access_mat_node_gids(node_gid);
+                mat_nodes_in_mat_elem(mat_elem_sid, node_lid) = access_mat_node_gids(node_gid);
 
             } // end for nodes in element
             
@@ -6093,7 +6093,7 @@ public:
         const Mesh_t& mesh,
         DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace>& collective_mat_node_indices,
         DistributedFArray<size_t>& mat_nodes_in_mat_elem,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t mat_id,
         size_t& num_mat_nodes,
         const size_t num_mat_elems,
@@ -6208,12 +6208,12 @@ public:
         // write out values for the elem
         for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
 
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_material_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
 
-            for (size_t mat_elem_lid = 0; mat_elem_lid < num_mat_elems; mat_elem_lid++)
+            for (size_t mat_elem_sid = 0; mat_elem_sid < num_mat_elems; mat_elem_sid++)
             {
 
-                const size_t elem_gid = State.MaterialToMeshMaps.elem.host(mat_id, mat_elem_lid);
+                const size_t elem_gid = State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, mat_elem_sid);
 
                 double elem_coords[3];
                 elem_coords[0] = 0.0;
@@ -6251,12 +6251,12 @@ public:
                          elem_coords[2],
                          rad2,
                          rad3,
-                         State.MaterialPoints.den.host(mat_id, mat_elem_lid),
-                         State.MaterialPoints.pres.host(mat_id, mat_elem_lid),
-                         State.MaterialPoints.sie.host(mat_id, mat_elem_lid),
-                         State.MaterialPoints.sspd.host(mat_id, mat_elem_lid),
+                         State.MaterialPoints.den.host(mat_id, mat_elem_sid),
+                         State.MaterialPoints.pres.host(mat_id, mat_elem_sid),
+                         State.MaterialPoints.sie.host(mat_id, mat_elem_sid),
+                         State.MaterialPoints.sspd.host(mat_id, mat_elem_sid),
                          State.GaussPoints.vol.host(elem_gid),
-                         State.MaterialPoints.mass.host(mat_id, mat_elem_lid) );
+                         State.MaterialPoints.mass.host(mat_id, mat_elem_sid) );
 
             } // end for elements
 

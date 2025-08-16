@@ -71,7 +71,7 @@ namespace HypoPlasticityModel {
      * @param MaterialPoints_strength_state_vars   State variables for the strength model at each material point.
      * @param eos_global_vars   Global variables for the equation of state.
      * @param strength_global_vars   Global variables for the strength model.
-     * @param MaterialToMeshMaps_elem   Mapping from material points to mesh elements.
+     * @param elem_in_mat_elem   Mapping from material points to mesh elements.
      * @param num_material_points   Number of material points for this material.
      * @param mat_id   Material ID.
      */
@@ -80,7 +80,7 @@ namespace HypoPlasticityModel {
         const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_id)
     {
@@ -107,7 +107,7 @@ namespace HypoPlasticityModel {
      * @param MaterialPoints_den   Density at the material point.
      * @param MaterialPoints_sie   Specific internal energy at the material point.
      * @param MaterialPoints_shear_modulii   Shear modulus at material points.
-     * @param MaterialToMeshMaps_elem   Mapping from material points to mesh elements.
+     * @param elem_in_mat_elem   Mapping from material points to mesh elements.
      * @param eos_global_vars   Global variables for the equation of state.
      * @param strength_global_vars   Global variables for the strength model.
      * @param vol   Volume of the element.
@@ -135,7 +135,7 @@ namespace HypoPlasticityModel {
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
         const double vol,
@@ -363,7 +363,7 @@ namespace HypoPlasticityRZModel {
      * @param MaterialPoints_strength_state_vars   State variables for the strength model at each material point.
      * @param eos_global_vars   Global variables for the equation of state.
      * @param strength_global_vars   Global variables for the strength model.
-     * @param MaterialToMeshMaps_elem   Mapping from material points to mesh elements.
+     * @param elem_in_mat_elem   Mapping from material points to mesh elements.
      * @param num_material_points   Number of material points.
      * @param mat_id   Material ID.
      */
@@ -372,7 +372,7 @@ namespace HypoPlasticityRZModel {
         const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_id)
     {
@@ -400,7 +400,7 @@ namespace HypoPlasticityRZModel {
      * @param MaterialPoints_den   Density at the material point.
      * @param MaterialPoints_sie   Specific internal energy at the material point.
      * @param MaterialPoints_shear_modulii   Shear modulus at material points.
-     * @param MaterialToMeshMaps_elem   Mapping from material points to mesh elements.
+     * @param elem_in_mat_elem   Mapping from material points to mesh elements.
      * @param eos_global_vars   Global variables for the equation of state.
      * @param strength_global_vars   Global variables for the strength model.
      * @param vol   Volume of the element.
@@ -428,7 +428,7 @@ namespace HypoPlasticityRZModel {
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
         const double vol,

@@ -600,8 +600,8 @@ struct GaussPoint_t
 struct MeshtoMaterialMap_t
 {
     DCArrayKokkos<size_t> num_mats_in_elem; ///< returns the exact number of materials in elem
-    DCArrayKokkos<size_t> mat_id;           ///< returns the mat_id 
-    DCArrayKokkos<size_t> mat_storage_lid;  ///< returns the material storage local index
+    DCArrayKokkos<size_t> mats_in_elem;     ///< returns the mat_id 
+    DCArrayKokkos<size_t> mat_elems_in_elem; ///< returns the material storage local index of the mat elem
 
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize(size_t num_elem_max, size_t num_mats_per_elem_max)
@@ -611,11 +611,11 @@ struct MeshtoMaterialMap_t
             this->num_mats_in_elem.set_values(0); // initialize all elems to storing 0 materials
             this->num_mats_in_elem.update_host(); // copy from GPU to CPU
         }
-        if (mat_id.size() == 0){
-            this->mat_id = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_id_in_elem");
+        if (mats_in_elem.size() == 0){
+            this->mats_in_elem = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_id_in_elem");
         }
-        if (mat_storage_lid.size() == 0){
-            this->mat_storage_lid = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_storage_lid_in_elem");
+        if (mat_elems_in_elem.size() == 0){
+            this->mat_elems_in_elem = DCArrayKokkos<size_t>(num_elem_max, num_mats_per_elem_max, "mat_elem_in_elem");
         }
         
     }; // end method
@@ -631,36 +631,36 @@ struct MeshtoMaterialMap_t
 /////////////////////////////////////////////////////////////////////////////
 struct MaterialToMeshMap_t
 {
-    DCArrayKokkos <size_t> num_material_elems;        ///< returns the exact number of matpts
-    DCArrayKokkos <size_t> num_material_elems_buffer; ///< returns the number of matpts plus buffer
-    DCArrayKokkos <size_t> num_material_local_elems;        ///< returns the exact number of matpts
+    DCArrayKokkos <size_t> num_mat_elems;        ///< returns the exact number of matpts
+    DCArrayKokkos <size_t> num_mat_elems_buffer; ///< returns the number of matpts plus buffer
+    DCArrayKokkos <size_t> num_mat_local_elems;        ///< returns the exact number of matpts
 
-    DRaggedRightArrayKokkos<size_t> elem;             ///< returns the elem for this material
+    DRaggedRightArrayKokkos<size_t> elem_in_mat_elem;             ///< returns the elem for this material
 
     // initialization method for FE-SGH and MPM methods (max number of elems needed)
     void initialize()
     {
-        if (elem.size() == 0){ 
-            this->elem = DRaggedRightArrayKokkos<size_t>(this->num_material_elems_buffer, "material_space_to_elem");
+        if (elem_in_mat_elem.size() == 0){ 
+            this->elem_in_mat_elem = DRaggedRightArrayKokkos<size_t>(this->num_mat_elems_buffer, "material_space_to_elem");
         }
 
     }; // end method
 
     void initialize_num_mats(size_t num_mats)
     {
-        // Note: num_material_elems is allocated in problem setup
-        if (num_material_elems.size() == 0){
-            this->num_material_elems = DCArrayKokkos <size_t> (num_mats, "num_material_elems"); 
+        // Note: num_mat_elems is allocated in problem setup
+        if (num_mat_elems.size() == 0){
+            this->num_mat_elems = DCArrayKokkos <size_t> (num_mats, "num_mat_elems"); 
         }
 
-        // Note: num_material_elems_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
-        if (num_material_elems_buffer.size() == 0){
-            this->num_material_elems_buffer = DCArrayKokkos <size_t> (num_mats, "num_material_elems_with_buffer"); 
+        // Note: num_mat_elems_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
+        if (num_mat_elems_buffer.size() == 0){
+            this->num_mat_elems_buffer = DCArrayKokkos <size_t> (num_mats, "num_mat_elems_with_buffer"); 
         }
 
-        // Note: num_material_elems is allocated in problem setup
-        if (num_material_local_elems.size() == 0){
-            this->num_material_local_elems = DCArrayKokkos <size_t> (num_mats, "num_material_local_elems"); 
+        // Note: num_mat_elems is allocated in problem setup
+        if (num_mat_local_elems.size() == 0){
+            this->num_mat_local_elems = DCArrayKokkos <size_t> (num_mats, "num_mat_local_elems"); 
         }
 
 
@@ -1062,29 +1062,29 @@ struct zones_in_mat_t
 };
 
 // if material points are defined strictly internal to the element.
-struct legendre_in_mat_t
+struct gauss_in_mat_t
 {
     private:
-        size_t num_leg_gauss_in_elem_;
+        size_t num_gauss_in_elem_;
     public:
-        legendre_in_mat_t() {
+        gauss_in_mat_t() {
         };
 
-        legendre_in_mat_t(const size_t num_leg_gauss_in_elem_inp) {
-                this->num_leg_gauss_in_elem_ = num_leg_gauss_in_elem_inp;
+        gauss_in_mat_t(const size_t num_gauss_in_elem_inp) {
+                this->num_gauss_in_elem_ = num_gauss_in_elem_inp;
         };
 
         // return global gauss index for given local gauss index in a material storage
         size_t  host(const size_t mat_storage_lid, const size_t leg_gauss_lid) const
         {
-            return mat_storage_lid * num_leg_gauss_in_elem_ + leg_gauss_lid;
+            return mat_storage_lid * num_gauss_in_elem_ + leg_gauss_lid;
         };
 
         // Return the global gauss ID given a material storage gloabl ID and a local gauss ID
         KOKKOS_INLINE_FUNCTION
         size_t operator()(const size_t mat_storage_lid, const size_t leg_gauss_lid) const
         {
-            return mat_storage_lid * num_leg_gauss_in_elem_ + leg_gauss_lid;
+            return mat_storage_lid * num_gauss_in_elem_ + leg_gauss_lid;
         };
 };
 
@@ -1161,14 +1161,14 @@ struct State_t
     // ---------------------------------------------------------------------
     //    material to mesh maps and mesh to material maps
     // ---------------------------------------------------------------------
-    MaterialToMeshMap_t MaterialToMeshMaps; ///< access as MaterialToMeshMaps.elem(mat_id, mat_storage_lid)
-    MeshtoMaterialMap_t MeshtoMaterialMaps; ///< acces as MeshtoMaterialMaps.mat_id(elem, mat_lid)
+    MaterialToMeshMap_t MaterialToMeshMaps; ///< access as MaterialToMeshMaps.elem_in_mat_elem(mat_id, mat_storage_lid)
+    MeshtoMaterialMap_t MeshtoMaterialMaps; ///< access as MeshtoMaterialMaps.mats_in_elem(elem, mat_lid)
 
     // ---------------------------------------------------------------------
     //    material to material maps
     // ---------------------------------------------------------------------
-    corners_in_mat_t corners_in_mat_elem; ///< access the corner mat lid using (mat_elem_lid, corn_lid)
-    points_in_mat_t points_in_mat_elem;   ///< for accessing e.g., gauss points mat lid with arbitrary-order FE (mat_elem_lid, gauss_lid)
+    corners_in_mat_t corners_in_mat_elem; ///< access the corner mat lid using (mat_elem_sid, corn_lid)
+    points_in_mat_t points_in_mat_elem;   ///< for accessing e.g., gauss points mat lid with arbitrary-order FE (mat_elem_sid, gauss_lid)
     zones_in_mat_t zones_in_mat_elem;     ///< for accessing sub-zones mat lid with arbitrary-order FE
 
     // ---------------------------------------------------------------------
