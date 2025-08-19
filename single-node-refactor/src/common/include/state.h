@@ -73,6 +73,8 @@ using DistributedFArray = TpetraDFArray<T,Kokkos::LayoutLeft,Kokkos::HostSpace>;
 template <typename T>
 using CommPlan = TpetraLRCommunicationPlan<T>;
 template <typename T>
+using OutputCommPlan = TpetraCommunicationPlan<T>;
+template <typename T>
 using HostCommPlanLR = TpetraLRCommunicationPlan<T,Kokkos::LayoutRight,Kokkos::HostSpace>;
 template <typename T>
 using HostCommPlan = TpetraCommunicationPlan<T,Kokkos::LayoutLeft,Kokkos::HostSpace>;
