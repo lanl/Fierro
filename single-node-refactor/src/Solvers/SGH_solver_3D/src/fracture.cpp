@@ -825,7 +825,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     // counting the number of boundary nodes
     size_t num_bdy_nodes = mesh.num_bdy_nodes;
     //std::cout << "Number of boundary nodes: " << num_bdy_nodes << std::endl;
-    std::cout << "Total boundary nodes: " << mesh.num_bdy_nodes << std::endl;
+    printf("Total boundary nodes: %zu\n", mesh.num_bdy_nodes);
 
     // total number of boundary nodes across all sets
     //size_t total_bdy_nodes = 0;
@@ -859,10 +859,10 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
 
     
     // allocate only the size of overlapping nodes 
-    CArrayKokkos<size_t> overlapping_node_ids(pair_count, 2, "overlapping_node_ids");
+    CArrayKokkos<size_t> overlapping_node_gids(pair_count, 2, "overlapping_node_gids");
     
     // second pass: store actual overlapping node pairs
-    size_t pair_index = 0; // fills the rows (pairs) that are added to 2D overlapping_node_ids array 
+    size_t pair_index = 0; // fills the rows (pairs) that are added to 2D overlapping_node_gids array 
     
     // store node IDs in the array
     for (size_t i = 0; i < num_bdy_nodes; ++i) {
@@ -880,46 +880,228 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
 
             if (overlap) {
                 //++pair_count;
-                std::cout << "Overlap (cohesive zone) found between node " << node_i << " and node " << node_j << std::endl;
-                overlapping_node_ids(pair_index, 0) = node_i;
-                overlapping_node_ids(pair_index, 1) = node_j;
+                printf("Overlap (cohesive zone) found between node %zu and node %zu\n", node_i, node_j);
+                overlapping_node_gids(pair_index, 0) = node_i;
+                overlapping_node_gids(pair_index, 1) = node_j;
                 ++pair_index;
                
             }
         }
     }
 
-    std::cout << "Total overlapping node pairs: " << pair_count << std::endl;
+    printf("Total overlapping node pairs: %zu\n", pair_count);
 
     // print overlapping node coordinates
     for (size_t i = 0; i < pair_index; ++i) {
-        size_t node_i = overlapping_node_ids(i, 0);
-        size_t node_j = overlapping_node_ids(i, 1);
+        size_t node_i = overlapping_node_gids(i, 0);
+        size_t node_j = overlapping_node_gids(i, 1);
 
-        std::cout << "Overlapping Pair: " << node_i << " <-> " << node_j << std::endl;
+        printf("Overlapping Pair: %zu <-> %zu\n", node_i, node_j);
 
-        std::cout << "    Node " << node_i << " coords: ";
+        printf("    Node %zu coords: ", node_i);
         for (size_t k = 0; k < 3; ++k) {
-            std::cout << State.node.coords(node_i, k) << " ";
+            printf("%g ", State.node.coords(node_i, k));
         }
-    std::cout << std::endl;
+        printf("\n");
 
-        std::cout << "    Node " << node_j << " coords: ";
-        for (size_t k = 0; k < 3; ++k) {
-            std::cout << State.node.coords(node_j, k) << " ";
-        }
-        std::cout << std::endl;
+        printf("    Node %zu coords: ", node_j);
+            for (size_t k = 0; k < 3; ++k) {
+                printf("%g ", State.node.coords(node_j, k));
+            }
+            printf("\n");
     }
 
     // // ******************************test for function for elcount in fracture.cpp: which finds the max number of elements that any cohesive zone node is part of******************************
-   
-    size_t maxel = elcount(overlapping_node_ids, mesh.elems_in_node);
+    size_t maxel = elcount(overlapping_node_gids, mesh.elems_in_node, mesh);
 
-    std::cout << "Max elements connected to any cohesive zone node: " << maxel << std::endl;
-
+    printf("Max elements connected to any cohesive zone node: %zu\n", maxel);
     // // ******************************test for function in elcount fracture.cpp: which finds the max number of elements that any cohesive zone node is part of******************************
+ 
+    // // ******************************test for function compute_face_geometry in fracture.cpp******************************
 
+    // ---- simple face-geometry debug dump for all elements & faces ----
+    // std::cout << "======================== face geometry debug ========================\n";
+
+    // // check to make sure mesh is hex8 and matches expected values
+    // std::cout << "num_elems=" << mesh.num_elems
+    //         << ", num_nodes_in_elem=" << mesh.num_nodes_in_elem
+    //         << ", num_dims=" << mesh.num_dims << "\n";
+
+    
+    // for (size_t elem = 0; elem < mesh.num_elems; ++elem) {
+    //     for (int surf = 0; surf < 6; ++surf) {  // HEX8 has 6 faces
+
+    //         // stack buffers + ViewCArrayKokkos wrappers 
+    //         // stack buffer = temporary memory that only exists in this function scope (temp raw storage)
+    //         double n_buf[3], r_buf[3], s_buf[3], cen_buf[3];
+    //         ViewCArrayKokkos<double> n(&n_buf[0], 3);
+    //         ViewCArrayKokkos<double> r(&r_buf[0], 3);
+    //         ViewCArrayKokkos<double> s(&s_buf[0], 3);
+    //         ViewCArrayKokkos<double> cenface(&cen_buf[0], 3);
+
+    //         // call geometry function 
+    //         compute_face_geometry(
+    //             State.node.coords,   
+    //             mesh,                
+    //             State.node.coords,   
+    //             mesh.nodes_in_elem,  
+    //             surf, elem,
+    //             n, r, s, cenface
+    //         );
+
+    //         // print results
+    //         std::cout << "Element " << elem << ", Face " << surf << "\n";
+    //         std::cout << "  centroid: " << cenface(0) << " " << cenface(1) << " " << cenface(2) << "\n";
+    //         std::cout << "  r:        " << r(0)      << " " << r(1)      << " " << r(2)      << "\n";
+    //         std::cout << "  s:        " << s(0)      << " " << s(1)      << " " << s(2)      << "\n";
+    //         std::cout << "  n:        " << n(0)      << " " << n(1)      << " " << n(2)      << "\n";
+    //     }
+    // }
+    // std::cout << "=====================================================================\n";
+    // std::cout.flush();
+
+    // // ---- print element connectivity and coordinates ----
+    // std::cout << "======================== element connectivity debug =================\n";
+    // for (size_t elem = 0; elem < mesh.num_elems; ++elem) {
+    //     std::cout << "Element " << elem << " nodes: ";
+
+    //     // list the node IDs
+    //     for (size_t n = 0; n < mesh.num_nodes_in_elem; ++n) {
+    //         size_t node_id = mesh.nodes_in_elem(elem, n);
+    //         std::cout << node_id << " ";
+    //     }
+    //     std::cout << "\n";
+
+    //     // list the coordinates for each node
+    //         for (size_t n = 0; n < mesh.num_nodes_in_elem; ++n) {
+    //             size_t node_id = mesh.nodes_in_elem(elem, n);
+    //             std::cout << "  Node " << node_id << " coords: ";
+    //             for (size_t k = 0; k < mesh.num_dims; ++k) {
+    //                 std::cout << State.node.coords(node_id, k) << " ";
+    //             }
+    //             std::cout << "\n";
+    //         }
+    // }
+    // std::cout << "=====================================================================\n";
+
+// ======================== face-by-face cross-check debug ========================
+{
+    // Fierro HEX8 [face-to-node local indexing] (outward normals):
+    // patch (or surf) 0: [0,4,6,2] (xi-minus)
+    // patch (or surf) 1: [1,3,7,5] (xi-plus)
+    // patch (or surf) 2: [0,1,5,4] (eta-minus)
+    // patch (or surf) 3: [3,2,6,7] (eta-plus)
+    // patch (or surf) 4: [0,2,3,1] (zeta-minus)
+    // patch (or surf) 5: [4,5,7,6] (zeta-plus)
+    constexpr int face_nodes[6][4] = {
+        {0,4,6,2},
+        {1,3,7,5},
+        {0,1,5,4},
+        {3,2,6,7},
+        {0,2,3,1},
+        {4,5,7,6}
+    };
+
+    // quick sanity
+    if (mesh.num_nodes_in_elem != 8 || mesh.num_dims != 3) {
+        printf("[debug] face-geometry check only implemented for HEX8/3D\n");
+    } else {
+        printf("======================== face-by-face cross-check ========================\n");
+
+    for (size_t elem = 0; elem < mesh.num_elems; ++elem) {
+        // print element connectivity once
+        printf("Element %zu nodes: ", elem);
+        for (size_t ln = 0; ln < mesh.num_nodes_in_elem; ++ln) {
+            printf("%zu ", mesh.nodes_in_elem(elem, ln));
+        }
+        printf("\n");
+
+            // loop faces
+            for (int surf = 0; surf < 6; ++surf) {
+                // gather the 4 global node IDs for this face
+                size_t g0 = mesh.nodes_in_elem(elem, face_nodes[surf][0]);
+                size_t g1 = mesh.nodes_in_elem(elem, face_nodes[surf][1]);
+                size_t g2 = mesh.nodes_in_elem(elem, face_nodes[surf][2]);
+                size_t g3 = mesh.nodes_in_elem(elem, face_nodes[surf][3]);
+
+                // print the IDs and coordinates
+                printf("  Face %d node IDs: %zu %zu %zu %zu\n",
+                        surf, g0, g1, g2, g3);
+
+                DCArrayKokkos<double> &X = State.node.coords; // (num_nodes x 3)
+                printf("    coords[gid0]: %g %g %g\n", X(g0,0), X(g0,1), X(g0,2));
+                printf("    coords[gid1]: %g %g %g\n", X(g1,0), X(g1,1), X(g1,2));
+                printf("    coords[gid2]: %g %g %g\n", X(g2,0), X(g2,1), X(g2,2));
+                printf("    coords[gid3]: %g %g %g\n", X(g3,0), X(g3,1), X(g3,2));
+
+                // simple centroid check: average of 4 face nodes
+                double cx_simple =
+                    0.25 * (X(g0,0) + X(g1,0) + X(g2,0) + X(g3,0));
+                double cy_simple =
+                    0.25 * (X(g0,1) + X(g1,1) + X(g2,1) + X(g3,1));
+                double cz_simple =
+                    0.25 * (X(g0,2) + X(g1,2) + X(g2,2) + X(g3,2));
+
+                
+                // stack buffers + ViewCArrayKokkos wrappers 
+                // stack buffer = temporary memory that only exists in this function scope (temp raw storage)
+                double n_buf[3], r_buf[3], s_buf[3], cen_buf[3];
+                ViewCArrayKokkos<double> n(&n_buf[0], 3);
+                ViewCArrayKokkos<double> r(&r_buf[0], 3);
+                ViewCArrayKokkos<double> s(&s_buf[0], 3);
+                ViewCArrayKokkos<double> cenface(&cen_buf[0], 3);
+
+                // call compute_face_geometry and compare
+                compute_face_geometry(
+                    State.node.coords,   
+                    mesh,
+                    State.node.coords,   
+                    mesh.nodes_in_elem,  
+                    surf,
+                    elem,
+                    n, r, s, cenface
+                );
+
+                printf("    centroid(simple avg): %g %g %g\n", cx_simple, cy_simple, cz_simple);
+                printf("    centroid(computed):   %g %g %g\n", cenface(0), cenface(1), cenface(2));
+                printf("    r: %g %g %g\n", r(0), r(1), r(2));
+                printf("    s: %g %g %g\n", s(0), s(1), s(2));
+                printf("    n: %g %g %g\n", n(0), n(1), n(2));
+            }
+        }
+
+        printf("==========================================================================\n");
+    }
 }
+// ====================== end face-by-face cross-check debug ======================
+}
+    // //     // // ******************************test for function compute_face_geometry in fracture.cpp******************************
+
+    // // ******************************test for function build_vczelem_from_nodes in fracture.cpp: which finds the max number of elements that any cohesive zone node is part of******************************
+    // // declare row_offsets
+    // CArrayKokkos<size_t> row_offsets;
+
+    // // call the function with row_offsets
+    // RaggedRightArrayKokkos<size_t> vczelem = build_vczelem_from_nodes(overlapping_node_gids, mesh.elems_in_node, row_offsets);
+
+    // size_t num_pairs = overlapping_node_gids.dims(0);
+
+    // for (size_t i = 0; i < num_pairs; ++i) {
+    //     // Use row_offsets to get number of elements connected to this pair
+    //     size_t num_elements = row_offsets(i + 1) - row_offsets(i);
+
+    //     std::cout << "Cohesive pair " << i << " is connected to " << num_elements << " elements: ";
+
+    //     for (size_t j = 0; j < num_elements; ++j) {
+    //         std::cout << vczelem(i, j) << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+    // // ******************************test for function build_vczelem_from_nodes in fracture.cpp: which finds the max number of elements that any cohesive zone node is part of******************************
+
+
+
 
 // **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 // this function returns max number of elements any VCZ node is part of connectivity for in order to define VCZ array sizes properly
@@ -958,34 +1140,33 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
 // **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 
 // **************************************************************** Fierro Conversion **************************************************************** 
-
-// this function returns max number of elements any VCZ node is part of connectivity for in order to define VCZ array sizes properly
-// (finds the max number of elements that any cohesive zone node is part of)
-/// \brief Computes the maximum number of elements any cohesive zone node is connected to
-/// \param overlapping_node_ids 2D array (num_pairs x 2) containing node pairs (node0, node1). dims(0) = number of rows; dims(1) = number of columns
-/// \param elems_in_node RaggedRightArray giving elements connected to each node
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn elcount
+/// \brief Returns the maximum number of elements connected to any node in the cohesive zone pairs
+/// This value is used to size data structures that depend on the maximum connectivity per node
+/// \param overlapping_node_gids 2D array (num_pairs x 2) containing node pairs involved in cohesive zones
+/// \param elems_in_node RaggedRightArray mapping each node to the elements it belongs to
+/// \param mesh Reference to the mesh containing connectivity information
 /// \return Maximum number of elements connected to any node in any cohesive pair
-size_t elcount(const CArrayKokkos<size_t>& overlapping_node_ids, const RaggedRightArrayKokkos<size_t>& elems_in_node) {
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+size_t cohesive_zones_t::elcount(const CArrayKokkos<size_t>& overlapping_node_gids,
+               const RaggedRightArrayKokkos<size_t>& elems_in_node, const Mesh_t& mesh) {
+
     size_t maxel = 0;
-
-    for (size_t i = 0; i < overlapping_node_ids.dims(0); ++i) {
-        size_t node0 = overlapping_node_ids(i, 0);
-        size_t node1 = overlapping_node_ids(i, 1);
-
-        size_t count0 = elems_in_node.stride(node0);
-        size_t count1 = elems_in_node.stride(node1);
-
-        if (count0 > maxel) maxel = count0;
-        if (count1 > maxel) maxel = count1;
-    }
+    FOR_REDUCE_MAX(i, 0, overlapping_node_gids.dims(0),
+                   j, 0, overlapping_node_gids.dims(1), maxel, {
+        if (maxel < mesh.elems_in_node.stride(overlapping_node_gids(i,j))) {
+            maxel = mesh.elems_in_node.stride(overlapping_node_gids(i,j));
+        }
+    }, maxel);
 
     return maxel;
 }
-
 // **************************************************************** Fierro Conversion **************************************************************** 
 
 // next function
 
+// it was decided that the following function is redundant, thus, it will not be converted to Fierro style since Fierro mesh already accounts for the following
 // **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 // // inputs: nodes, conn, ne, nvcz, vczconn
 // // outputs: vczelem
@@ -1024,7 +1205,9 @@ size_t elcount(const CArrayKokkos<size_t>& overlapping_node_ids, const RaggedRig
 // }
 // **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 
+// next function
 
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 // // inputs: NODES, conn, interpvals, patch number, element number
 // // output: n vector, r vector, s vector, and center of face in physical coordinates
 // void paravecs(CArray<double> nodes, CArray<int> conn, FArray<double> interpvals, int pn, int en, CArray<double> n, CArray<double> r, CArray<double> s, CArray<double> cenface) {
@@ -1141,8 +1324,124 @@ size_t elcount(const CArrayKokkos<size_t>& overlapping_node_ids, const RaggedRig
 //     }
 
 // }
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 
+// **************************************************************** Fierro Conversion **************************************************************** 
+/// \brief Computes face geometry vectors and centroid for a given element surface
+///
+/// This function computes the geometric properties of a specified surface (face) — 
+/// also referred to as a "patch" per the nodal indexing convention in mesh.h — 
+/// for a first-order hexahedral element.
+/// Specifically, it calculates the orthonormal in-plane basis vectors r and s, 
+/// the outward unit normal vector n, and the centroid cenface of the face in physical space
+///
+/// \param nodes Global nodal coordinates array (num_nodes x 3) from the mesh
+/// \param conn Element-to-node connectivity array (num_elems x nodes_in_elem) from the mesh
+/// \param surf Local surface (patch) ID [0–5] corresponding to a face of a hex element 
+///             (per the face-node ordering in mesh.h)
+/// \param elem Index of the element from which the surface is extracted
+/// \param n Output normal vector to the face (length 3, unit magnitude)
+/// \param r Output in-plane direction vector r (length 3, unit magnitude)
+/// \param s Output in-plane direction vector s (length 3, unit magnitude)
+/// \param cenface Output centroid of the face in physical space (length 3)
+///
+/// \note This function assumes first-order hexahedral elements (nodes_in_elem = 8)
+///
+KOKKOS_FUNCTION
+void cohesive_zones_t::compute_face_geometry(const DCArrayKokkos<double> &nodes,
+                            const Mesh_t &mesh,
+                            const DCArrayKokkos<double> &node_coords,
+                            const DCArrayKokkos<size_t> &conn,
+                            const int surf,
+                            const int elem,
+                            ViewCArrayKokkos<double> &n,
+                            ViewCArrayKokkos<double> &r,
+                            ViewCArrayKokkos<double> &s,
+                            ViewCArrayKokkos<double> &cenface) {
+ 
+    // face-to-node mapping for HEX8
+    // 6 row, 4 column
+    constexpr int face_nodes[6][4] = {
+        {0, 4, 6, 2}, // 0
+        {1, 3, 7, 5}, // 1
+        {0, 1, 5, 4}, // 2
+        {3, 2, 6, 7}, // 3
+        {0, 2, 3, 1}, // 4
+        {4, 5, 7, 6}  // 5
+    };
 
+    // shape function derivatives at face center
+    double xi = 0.0, eta = 0.0;
+    double dN_dxi[4], dN_deta[4];
+
+    dN_dxi[0]  = -0.25 * (1.0 - eta);
+    dN_dxi[1]  =  0.25 * (1.0 - eta);
+    dN_dxi[2]  =  0.25 * (1.0 + eta);
+    dN_dxi[3]  = -0.25 * (1.0 + eta);
+
+    dN_deta[0] = -0.25 * (1.0 - xi);
+    dN_deta[1] = -0.25 * (1.0 + xi);
+    dN_deta[2] =  0.25 * (1.0 + xi);
+    dN_deta[3] =  0.25 * (1.0 - xi);
+
+    // zero out accumulators
+    // r = (rx, ry, rz)
+    // s = (sx, sy, sz)
+    // orthogonal in-plane vectors
+    double rx = 0.0, ry = 0.0, rz = 0.0;
+    double sx = 0.0, sy = 0.0, sz = 0.0;
+
+    for (int j = 0; j < 3; ++j) cenface(j) = 0.0;
+
+    for (int a = 0; a < 4; ++a) {
+        size_t node_id = mesh.nodes_in_elem(elem, face_nodes[surf][a]);
+
+        double x = node_coords(node_id, 0);
+        double y = node_coords(node_id, 1);
+        double z = node_coords(node_id, 2);
+
+        // centroid
+        cenface(0) += 0.25 * x;
+        cenface(1) += 0.25 * y;
+        cenface(2) += 0.25 * z;
+
+        // derivatives
+        rx += dN_dxi[a]  * x;
+        ry += dN_dxi[a]  * y;
+        rz += dN_dxi[a]  * z;
+
+        sx += dN_deta[a] * x;
+        sy += dN_deta[a] * y;
+        sz += dN_deta[a] * z;
+    }
+
+    // normalize r
+    double mag_r = sqrt(rx*rx + ry*ry + rz*rz);
+    r(0) = rx / mag_r;
+    r(1) = ry / mag_r;
+    r(2) = rz / mag_r;
+
+    // normalize s
+    double mag_s = sqrt(sx*sx + sy*sy + sz*sz);
+    s(0) = sx / mag_s;
+    s(1) = sy / mag_s;
+    s(2) = sz / mag_s;
+
+    // cross product n = r x s
+    double nx = r(1)*s(2) - r(2)*s(1);
+    double ny = r(2)*s(0) - r(0)*s(2);
+    double nz = r(0)*s(1) - r(1)*s(0);
+
+    // normalize n
+    double mag_n = sqrt(nx*nx + ny*ny + nz*nz);
+    n(0) = nx / mag_n;
+    n(1) = ny / mag_n;
+    n(2) = nz / mag_n;
+
+}
+// **************************************************************** Fierro Conversion **************************************************************** 
+
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 // // inputs: NODES, conn, NE, NVCZ, VCZconn, VCZelem, interpvals
 // // outputs: VCZinfo
 // CArray<int> faces(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int> vczconn, CArray<int> vczelem, FArray<double> interpvals, int maxel) {
@@ -1320,7 +1619,9 @@ size_t elcount(const CArrayKokkos<size_t>& overlapping_node_ids, const RaggedRig
 //     return vczinfo;
 
 // }
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 // // sequentially calling preprocessing functions
 // CArray<int> VCZmeshpreprocess(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int> vczconn, FArray<double> interpvals) {
 //     int maxel = elcount(nodes, conn, ne, nvcz, vczconn);
@@ -1519,7 +1820,7 @@ size_t elcount(const CArrayKokkos<size_t>& overlapping_node_ids, const RaggedRig
 //         }
 //     }
 // }
-
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 
 
 // // calculates the opening of the crack in global coordinates and then maps it to local coordinates using normal vectors in

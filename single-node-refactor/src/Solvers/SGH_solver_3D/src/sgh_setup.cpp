@@ -115,17 +115,17 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
         // if fracture is allowed, then set up the fracture bank
         // note, allow_fracture is set in the parse_bdy_conds_inputs.cpp file and boundary_conditions.h file
         // checking if fracture is allowed... if = 0 then fracture is not enabled; if = 1, then fracture is enabled:
-        std::cout << "Boundary.allow_fracture = " << Boundary.allow_fracture << std::endl;
+        printf("Boundary.allow_fracture = %d\n", Boundary.allow_fracture);
         if (Boundary.allow_fracture) {
-            std::cout << "Setting up global fracture (cohesive zones)" << std::endl;
+            printf("Setting up global fracture (cohesive zones)\n");
             doing_fracture = true;
         
         // test to see if function is being entered
-        std::cout << "Calling initialize()..." << std::endl;
+        printf("Calling initialize()...\n");
         cohesive_zones_t cohesive_zones_bank;
         cohesive_zones_bank.initialize(mesh, State);
         // to see if function is being entered
-        std::cout << "Done calling initialize()..." << std::endl;
+        printf("Done calling initialize()...\n");
 
         // Example from Gavin's code for running fracture tests:
         // run_fracture_tests(cohesive_zones_bank, mesh, State, sim_param);
