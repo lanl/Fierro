@@ -20,7 +20,10 @@ using namespace mtr; // matar namespace
 
 // Functions used within MAIN
 std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, unsigned int> binary_stl_reader(std::string stl_file_path); // BINARY STL READER FUNCTION
-void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ, CArray<float> &normal, CArray<float> &v1X, CArray<float> &v1Y, CArray<float> &v1Z, CArray<float> &v2X, CArray<float> &v2Y, CArray<float> &v2Z, CArray<float> &v3X, CArray<float> &v3Y, CArray<float> &v3Z, unsigned int &n_facets, double &voxel_dx, double &voxel_dy, double &voxel_dz); // VOXELIZATION FUNCTION
+void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ, CArray<float> &normal, CArray<float> &v1X, CArray<float> &v1Y, CArray<float> &v1Z, CArray<float> &v2X, CArray<float> &v2Y, CArray<float> &v2Z, CArray<float> &v3X, CArray<float> &v3Y, CArray<float> &v3Z, unsigned int &n_facets, double &voxel_dx, double &voxel_dy, double &voxel_dz,
+    double &origin_x,
+    double &origin_y, 
+    double &origin_z); // VOXELIZATION FUNCTION
 
 // ==============================================================
 // ---------------------------- MAIN ----------------------------
@@ -57,6 +60,10 @@ std::tuple<CArray<bool>, double, double, double> Voxelizer::create_voxel_vtk(std
         double voxel_dx;
         double voxel_dy;
         double voxel_dz;
+
+        double origin_x;
+        double origin_y;
+        double origin_z;
     
         // X-direction voxelization
         CArray<bool> gridOUTPUTX(gridY+2,gridZ+2,gridX+2);
@@ -66,8 +73,8 @@ std::tuple<CArray<bool>, double, double, double> Voxelizer::create_voxel_vtk(std
             gridOUTPUTX(i,j,k) = 0;
         });
 //        Kokkos::fence();
-        main_function(gridOUTPUTX, gridY, gridZ, gridX, normal, v1Y, v1Z, v1X, v2Y, v2Z, v2X, v3Y, v3Z, v3X, n_facets, voxel_dx, voxel_dy, voxel_dz);
-        main_function(gridOUTPUTX, gridY, gridZ, gridX, normal, v1Y, v1Z, v1X, v2Y, v2Z, v2X, v3Y, v3Z, v3X, n_facets, voxel_dx, voxel_dy, voxel_dz);
+        main_function(gridOUTPUTX, gridY, gridZ, gridX, normal, v1Y, v1Z, v1X, v2Y, v2Z, v2X, v3Y, v3Z, v3X, n_facets, voxel_dx, voxel_dy, voxel_dz, origin_x, origin_y, origin_z);
+        main_function(gridOUTPUTX, gridY, gridZ, gridX, normal, v1Y, v1Z, v1X, v2Y, v2Z, v2X, v3Y, v3Z, v3X, n_facets, voxel_dx, voxel_dy, voxel_dz, origin_x, origin_y, origin_z);
         // Y-direction voxelization
         CArray<bool> gridOUTPUTY(gridZ+2,gridX+2,gridY+2);
         FOR_LOOP (i, 0, gridZ+2,
@@ -76,7 +83,7 @@ std::tuple<CArray<bool>, double, double, double> Voxelizer::create_voxel_vtk(std
             gridOUTPUTY(i,j,k) = 0;
         });
 //        Kokkos::fence();
-        main_function(gridOUTPUTY, gridZ, gridX, gridY, normal, v1Z, v1X, v1Y, v2Z, v2X, v2Y, v3Z, v3X, v3Y, n_facets, voxel_dx, voxel_dy, voxel_dz);
+        main_function(gridOUTPUTY, gridZ, gridX, gridY, normal, v1Z, v1X, v1Y, v2Z, v2X, v2Y, v3Z, v3X, v3Y, n_facets, voxel_dx, voxel_dy, voxel_dz, origin_x, origin_y, origin_z);
         
         // Z-direction voxelization
         CArray<bool> gridOUTPUTZ(gridX+2,gridY+2,gridZ+2);
@@ -86,7 +93,7 @@ std::tuple<CArray<bool>, double, double, double> Voxelizer::create_voxel_vtk(std
             gridOUTPUTZ(i,j,k) = 0;
         });
 //        Kokkos::fence();
-        main_function(gridOUTPUTZ, gridX, gridY, gridZ, normal, v1X, v1Y, v1Z, v2X, v2Y, v2Z, v3X, v3Y, v3Z, n_facets, voxel_dx, voxel_dy, voxel_dz);
+        main_function(gridOUTPUTZ, gridX, gridY, gridZ, normal, v1X, v1Y, v1Z, v2X, v2Y, v2Z, v3X, v3Y, v3Z, n_facets, voxel_dx, voxel_dy, voxel_dz, origin_x, origin_y, origin_z);
 
         // Sum the voxelization in the XYZ-directions
         CArray<int> TOTgrid(gridX+2,gridY+2,gridZ+2);
@@ -105,11 +112,11 @@ std::tuple<CArray<bool>, double, double, double> Voxelizer::create_voxel_vtk(std
 //        Kokkos::fence();
 
         // VTK WRITER
-        if (length_x*length_y*length_z > 0) {
-            voxel_dx = length_x/gridX;
-            voxel_dy = length_y/gridY;
-            voxel_dz = length_z/gridZ;
-        }
+        // if (length_x*length_y*length_z > 0) {
+        //     voxel_dx = length_x/gridX;
+        //     voxel_dy = length_y/gridY;
+        //     voxel_dz = length_z/gridZ;
+        // }
     
         int i,j,k;
         const char* cvtk_file_path = vtk_file_path.c_str(); // convert std::string to C-style string
@@ -203,7 +210,7 @@ std::tuple<double, double, double> Voxelizer::create_voxel_vtk_GUI(std::string s
             gridOUTPUTX(i,j,k) = 0;
         });
 //        Kokkos::fence();
-        main_function(gridOUTPUTX, gridY, gridZ, gridX, normal, v1Y, v1Z, v1X, v2Y, v2Z, v2X, v3Y, v3Z, v3X, n_facets, voxel_dx, voxel_dy, voxel_dz);
+        main_function(gridOUTPUTX, gridY, gridZ, gridX, normal, v1Y, v1Z, v1X, v2Y, v2Z, v2X, v3Y, v3Z, v3X, n_facets, voxel_dx, voxel_dy, voxel_dz, origin_x, origin_y, origin_z);
         // Y-direction voxelization
         CArray<bool> gridOUTPUTY(gridZ+2,gridX+2,gridY+2);
         FOR_LOOP (i, 0, gridZ+2,
@@ -212,7 +219,7 @@ std::tuple<double, double, double> Voxelizer::create_voxel_vtk_GUI(std::string s
             gridOUTPUTY(i,j,k) = 0;
         });
 //        Kokkos::fence();
-        main_function(gridOUTPUTY, gridZ, gridX, gridY, normal, v1Z, v1X, v1Y, v2Z, v2X, v2Y, v3Z, v3X, v3Y, n_facets, voxel_dx, voxel_dy, voxel_dz);
+        main_function(gridOUTPUTY, gridZ, gridX, gridY, normal, v1Z, v1X, v1Y, v2Z, v2X, v2Y, v3Z, v3X, v3Y, n_facets, voxel_dx, voxel_dy, voxel_dz, origin_x, origin_y, origin_z);
         
         // Z-direction voxelization
         CArray<bool> gridOUTPUTZ(gridX+2,gridY+2,gridZ+2);
@@ -222,7 +229,7 @@ std::tuple<double, double, double> Voxelizer::create_voxel_vtk_GUI(std::string s
             gridOUTPUTZ(i,j,k) = 0;
         });
 //        Kokkos::fence();
-        main_function(gridOUTPUTZ, gridX, gridY, gridZ, normal, v1X, v1Y, v1Z, v2X, v2Y, v2Z, v3X, v3Y, v3Z, n_facets, voxel_dx, voxel_dy, voxel_dz);
+        main_function(gridOUTPUTZ, gridX, gridY, gridZ, normal, v1X, v1Y, v1Z, v2X, v2Y, v2Z, v3X, v3Y, v3Z, n_facets, voxel_dx, voxel_dy, voxel_dz, origin_x, origin_y, origin_z);
 
         // Sum the voxelization in the XYZ-directions
         CArray<int> TOTgrid(gridX+2,gridY+2,gridZ+2);
@@ -241,11 +248,11 @@ std::tuple<double, double, double> Voxelizer::create_voxel_vtk_GUI(std::string s
 //        Kokkos::fence();
 
         // VTK WRITER
-        if (length_x*length_y*length_z > 0) {
-            voxel_dx = length_x/gridX;
-            voxel_dy = length_y/gridY;
-            voxel_dz = length_z/gridZ;
-        }
+        // if (length_x*length_y*length_z > 0) {
+        //     voxel_dx = length_x/gridX;
+        //     voxel_dy = length_y/gridY;
+        //     voxel_dz = length_z/gridZ;
+        // }
     
         int i,j,k;
         const char* cvtk_file_path = vtk_file_path.c_str(); // convert std::string to C-style string
@@ -390,7 +397,28 @@ std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<fl
 }
 
 // VOXELIZATION FUNCTION
-void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ, CArray<float> &normal, CArray<float> &v1X, CArray<float> &v1Y, CArray<float> &v1Z, CArray<float> &v2X, CArray<float> &v2Y, CArray<float> &v2Z, CArray<float> &v3X, CArray<float> &v3Y, CArray<float> &v3Z, unsigned int &n_facets, double &voxel_dx, double &voxel_dy, double &voxel_dz){
+void main_function(
+    CArray<bool> &gridOUTPUT, 
+    int &gridX, 
+    int &gridY, 
+    int &gridZ, 
+    CArray<float> &normal, 
+    CArray<float> &v1X, 
+    CArray<float> &v1Y, 
+    CArray<float> &v1Z, 
+    CArray<float> &v2X, 
+    CArray<float> &v2Y, 
+    CArray<float> &v2Z, 
+    CArray<float> &v3X, 
+    CArray<float> &v3Y, 
+    CArray<float> &v3Z, 
+    unsigned int &n_facets, 
+    double &voxel_dx, 
+    double &voxel_dy, 
+    double &voxel_dz,
+    double &origin_x,
+    double &origin_y, 
+    double &origin_z){
     // Find the global maximum and minimum values of the mesh
     float meshXmax;
     float meshXmin;
@@ -424,6 +452,7 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
             }
         }
     }, meshXmin);
+    origin_x = meshXmin;
 
     // Global maximum y-direction
     FOR_REDUCE_MAX(i,0,n_facets,meshYmax, {
@@ -450,6 +479,7 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
             }
         }
     }, meshYmin);
+    origin_y = meshYmin;
 
     // Global maximum z-direction
     FOR_REDUCE_MAX(i,0,n_facets,meshZmax, {
@@ -464,6 +494,7 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
         }
     }, meshZmax);
 
+
     // Global minimum z-direction
     FOR_REDUCE_MIN(i,0,n_facets,meshZmin, {
         if (v1Z(i) < meshZmin | v2Z(i) < meshZmin | v3Z(i) < meshZmin) {
@@ -476,6 +507,8 @@ void main_function(CArray<bool> &gridOUTPUT, int &gridX, int &gridY, int &gridZ,
             }
         }
     }, meshZmin);
+
+    origin_z = meshZmin;
 //    Kokkos::fence();
 
     // Define the grid that the voxel mesh will be generated on
