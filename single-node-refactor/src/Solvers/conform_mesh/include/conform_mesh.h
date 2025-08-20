@@ -164,6 +164,8 @@ public:
         // Any finalize goes here, remove allocated memory, etc
     }
 
+    std::tuple<CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, CArray<float>, unsigned int> binary_stl_reader(std::string stl_file_path); // BINARY STL READER FUNCTION
+
 };
 
 
