@@ -3525,7 +3525,7 @@ public:
         //host version of local element map for argument compatibility
         DistributedDFArray<double> elem_scalar_fields(local_element_map, num_elem_scalar_vars, "elem_scalars");
         DistributedDFArray<double> elem_tensor_fields(local_element_map, num_elem_tensor_vars, 3, 3, "elem_tensors");
-        DistributedDFArray<double> nonoverlap_nodes_in_elem(local_element_map, num_nodes_in_elem, "nonoverlap_nodes_in_elem");
+        DistributedDCArray<size_t> nonoverlap_nodes_in_elem(local_element_map, num_nodes_in_elem, "nonoverlap_nodes_in_elem");
         elem_scalar_fields.set_values(0.0);
         elem_tensor_fields.set_values(0.0);
 
@@ -3624,6 +3624,8 @@ public:
             }
         } // end for elem_gid
 
+        //nonoverlap_nodes_in_elem.print();
+
         if(myrank==0){
             // create the folder structure if it does not exist
             struct stat st;
@@ -3664,26 +3666,24 @@ public:
         // call the .vtu writer for element fields
         std::string elem_fields_name = "fields";
 
-        if(myrank==0){
-            write_vtu(nonoverlap_node_coords,
-                    nonoverlap_nodes_in_elem,
-                    elem_scalar_fields,
-                    elem_tensor_fields,
-                    nonoverlap_node_scalar_fields,
-                    nonoverlap_node_vector_fields,
-                    elem_scalar_var_names,
-                    elem_tensor_var_names,
-                    node_scalar_var_names,
-                    node_vector_var_names,
-                    elem_fields_name,
-                    graphics_id,
-                    nonoverlap_elem_node_map.size(),
-                    mesh.num_local_elems,
-                    num_nodes_in_elem,
-                    Pn_order,
-                    num_dims,
-                    solver_id);
-        }
+        write_vtu(nonoverlap_node_coords,
+                nonoverlap_nodes_in_elem,
+                elem_scalar_fields,
+                elem_tensor_fields,
+                nonoverlap_node_scalar_fields,
+                nonoverlap_node_vector_fields,
+                elem_scalar_var_names,
+                elem_tensor_var_names,
+                node_scalar_var_names,
+                node_vector_var_names,
+                elem_fields_name,
+                graphics_id,
+                nonoverlap_elem_node_map.size(),
+                mesh.num_local_elems,
+                num_nodes_in_elem,
+                Pn_order,
+                num_dims,
+                solver_id);
 
         // ********************************
         //  Build and write the mat fields 
@@ -3700,11 +3700,16 @@ public:
 
                 //set global element indices on this rank for this mat
                 DistributedMap element_map = mesh.element_map;
-                DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_mat_elems(num_mat_local_elems);
+                DCArrayKokkos<long long int> global_indices_of_local_mat_elems(num_mat_local_elems);
+                // FOR_ALL(ielem, 0, num_mat_local_elems,{
+                //     global_indices_of_local_mat_elems(ielem) = mesh.element_map(State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, ielem));
+                // });
                 for(int ielem = 0; ielem < num_mat_local_elems; ielem++){
-                    global_indices_of_local_mat_elems(ielem) = mesh.element_map.getGlobalIndex(State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, ielem));
+                    global_indices_of_local_mat_elems(ielem) = mesh.element_map.getGlobalIndex(State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, ielem));
                 }
+                global_indices_of_local_mat_elems.update_device();
                 DistributedMap mat_elem_map = DistributedMap(global_indices_of_local_mat_elems);
+                //mat_elem_map.print();
 
                 //allocate arrays for distributed mat elem data
                 DistributedDFArray<double> mat_elem_scalar_fields(mat_elem_map, num_mat_pt_scalar_vars, "mat_elem_scalars");
@@ -3749,10 +3754,17 @@ public:
                 CommPlan<size_t> mat_nodes_in_elem_comms(mat_nodes_in_mat_elem,mesh.nodes_in_elem); //shouldnt do comms since subview of map on this rank
                 mat_nodes_in_elem_comms.execute_comms();
 
+                //convert mesh.nodes_in_elem stores local indices and we communicated these in, convert to global
+                for (size_t elem_id = 0; elem_id < num_mat_local_elems; elem_id++) {
+                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                        mat_nodes_in_mat_elem(elem_id, node_lid) = mesh.all_node_map.getGlobalIndex(mat_nodes_in_mat_elem(elem_id, node_lid));
+                    }
+                } // end for elem_gid
+
                 //define set of nodes for this mat, collect on rank 0, comms on coords, scalars, and vectors for nodes for this mat
                 
                 // build a unique mesh (element and nodes) for the material (i.e., the part)
-                DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> mat_node_indices;
+                DCArrayKokkos<long long int> mat_node_indices;
                 build_material_node_list(mesh,
                                         mat_node_indices,
                                         mat_nodes_in_mat_elem,
@@ -3764,7 +3776,7 @@ public:
                                         num_dims);
                 
                 //map object for mat node indices
-                DistributedMap collective_mat_node_map = DistributedMap(mat_node_indices);
+                DistributedMap mat_node_map = DistributedMap(mat_node_indices);
 
                 DistributedDCArray<double> mat_node_coords(mat_node_map, num_dims, "mat_node_coords");
                 CommPlan<double> mat_node_coords_comms(mat_node_coords,State.node.coords); //shouldnt do comms since subview of map on this rank
@@ -3778,15 +3790,15 @@ public:
                 OutputCommPlan<double> mat_node_vectors_comms(mat_node_vector_fields,node_vector_fields); //shouldnt do comms since subview of map on this rank
                 mat_node_vectors_comms.execute_comms();
 
-                //convert collective mat_nodes_in_mat_elem so it uses contiguous node ids for this mat portion of the mesh
+                //convert mat_nodes_in_mat_elem so it uses contiguous local node ids for this mat portion of the mesh
                 for (size_t elem_id = 0; elem_id < num_mat_local_elems; elem_id++) {
                     for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                        mat_nodes_in_mat_elem(elem_id, node_lid) = mat_node_map.getLocalIndex(mesh.all_node_map.getGlobalIndex(mat_nodes_in_mat_elem(elem_id, node_lid)));
+                        mat_nodes_in_mat_elem(elem_id, node_lid) = mat_node_map.getLocalIndex(mat_nodes_in_mat_elem(elem_id, node_lid));
                     }
                 } // end for elem_gid
                 
                 // only write material data if the mat lives on the mesh, ie. has state allocated
-                if (num_mat_collective_elems>0&&myrank==0){
+                if (num_mat_local_elems>0){
                     // write out a vtu file this 
                     write_vtu(mat_node_coords,
                                 mat_nodes_in_mat_elem,
@@ -3843,6 +3855,8 @@ public:
 
         // call the vtm file writer
         std::string mat_fields_name = "mat";
+        //gather MPI ranks that are writing blocks
+
         if(myrank==0){
             write_vtm(graphics_times,
                     elem_fields_name,
@@ -5826,10 +5840,10 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
-                        mat_elem_scalar_fields(mat_elem_gid, mat_conductivity_id) += MaterialPoints.conductivity(mat_id, mat_elem_lid);
+                        mat_elem_scalar_fields(elem_gid, mat_conductivity_id) += MaterialPoints.conductivity(mat_id, mat_elem_lid);
                     });
                     break;
 
@@ -5837,10 +5851,10 @@ public:
                     FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
-                        mat_elem_scalar_fields(mat_elem_gid, mat_specific_heat_id) += MaterialPoints.specific_heat(mat_id, mat_elem_lid);
+                        mat_elem_scalar_fields(elem_gid, mat_specific_heat_id) += MaterialPoints.specific_heat(mat_id, mat_elem_lid);
                     });
                     break;
 
@@ -6156,6 +6170,11 @@ public:
         char  filename[100]; // char string
         int   max_len = sizeof filename;
         int   str_output_len;
+        int myrank;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        std::string str_rank_val = std::to_string(myrank);                       
+        std::string rank_fields_name = "rank";
+        rank_fields_name += str_rank_val;  // add the mat number
 
         const size_t num_elem_scalar_vars = elem_scalar_var_names.size();
         const size_t num_elem_tensor_vars = elem_tensor_var_names.size();
@@ -6165,8 +6184,8 @@ public:
 
 
         // create filename
-        str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%s.%05d.vtu", 
-                                                                 solver_id, partname.c_str(), graphics_id);
+        str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%s_%s.%05d.vtu", 
+                                                                 solver_id, partname.c_str(), rank_fields_name.c_str(), graphics_id);
 
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
         // mesh file
@@ -6647,7 +6666,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void build_material_node_list(
         const Mesh_t& mesh,
-        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace>& mat_node_indices,
+        DCArrayKokkos<long long int>& mat_node_indices,
         DistributedDCArray<size_t>& mat_nodes_in_mat_elem,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t mat_id,
@@ -6679,7 +6698,7 @@ public:
         auto it     = mat_node_set.begin();
 
         // create a Map for ghost node indices
-        mat_node_indices = DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace>(num_mat_nodes, "mat_nodes");
+        mat_node_indices = DCArrayKokkos<long long int>(num_mat_nodes, "mat_nodes");
         while (it != mat_node_set.end()) {
             mat_node_indices(ighost++) = *it;
             it++;
