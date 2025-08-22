@@ -40,6 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "sgh_solver_rz.h"
 #include "sgtm_solver_3D.h"
 #include "level_set_solver.h"
+#include "dec_cg_solver.h"
 
 #include "region_fill.h"
 
@@ -169,6 +170,24 @@ void Driver::initialize()
                               solver_id);
 
             solvers.push_back(level_set_solver);
+
+        } // end if level set solver
+        else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::DeC_CG) {
+
+            std::cout << "Initializing DeC CG solver" << std::endl;
+            DEC_CG* dec_cg_solver = new DEC_CG(); 
+        
+            dec_cg_solver->initialize(SimulationParamaters, 
+                                         Materials, 
+                                         mesh, 
+                                         BoundaryConditions,
+                                         State);
+
+            // set the variables in the solver class
+            setup_solver_vars(dec_cg_solver, 
+                              solver_id);
+
+            solvers.push_back(dec_cg_solver);
 
         } // end if level set solver
         else {

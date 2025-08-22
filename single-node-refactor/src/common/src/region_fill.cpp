@@ -335,6 +335,7 @@ void fill_regions(
         } // endif
           // add else if for other mesh reads including STL-2-voxel
 
+
         // parallel loop over elements in mesh
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
@@ -383,7 +384,7 @@ void fill_regions(
                 
                 // calculate volume fraction of the region intersecting the element
                 double geo_volfrac = 1.0; 
-             
+
                 // get the volfrac for the region
                 double vfrac = get_region_scalar(coords,
                                                  region_fills(fill_id).volfrac,

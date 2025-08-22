@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::execute(SimulationParameters_t& SimulationParamaters, 
+void DEC_CG::execute(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
                     Mesh_t& mesh, 
@@ -79,6 +79,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     double time_value = this->time_start;  // was 0.0
     double dt = dt_start;
 
+    auto time_1 = std::chrono::high_resolution_clock::now();
+
     // local memory for this solver
     CArrayKokkos <double> GaussPoint_pres(mesh.num_elems*mesh.num_gauss_in_elem);
     CArrayKokkos <double> GaussPoint_pres_denominator(mesh.num_elems*mesh.num_gauss_in_elem);
@@ -95,7 +97,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     size_t output_id = 0; // the id for the outputs written
 
     // Write initial state at t=0
-    printf("Writing outputs to file at %f \n", graphics_time);
+    // printf("Writing outputs to file at %f \n", graphics_time);
     mesh_writer.write_mesh(
         mesh, 
         State, 
@@ -103,14 +105,14 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         dt, 
         time_value, 
         graphics_times,
-        SGH3D_State::required_node_state,
-        SGH3D_State::required_gauss_pt_state,
-        SGH3D_State::required_material_pt_state,
+        DEC_CG_State::required_node_state,
+        DEC_CG_State::required_gauss_pt_state,
+        DEC_CG_State::required_material_pt_state,
         this->solver_id);
 
-    output_id++; // saved an output file
+    // output_id++; // saved an output file
 
-    graphics_time = time_value + graphics_dt_ival;
+    // graphics_time = time_value + graphics_dt_ival;
 
 
     auto time_2    = std::chrono::high_resolution_clock::now();
