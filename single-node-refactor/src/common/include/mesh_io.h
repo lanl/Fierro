@@ -3663,6 +3663,8 @@ public:
                 }
             }
         }
+
+        MPI_Barrier(MPI_COMM_WORLD);
         // call the .vtu writer for element fields
         std::string elem_fields_name = "fields";
 
@@ -3855,8 +3857,7 @@ public:
 
         // call the vtm file writer
         std::string mat_fields_name = "mat";
-        //gather MPI ranks that are writing blocks
-
+        //gather MPI ranks that are writing mat blocks
         if(myrank==0){
             write_vtm(graphics_times,
                     elem_fields_name,
@@ -3864,6 +3865,7 @@ public:
                     time_value,
                     graphics_id,
                     num_mat_files_written,
+                    nranks,
                     write_mesh_state,
                     write_mat_pt_state,
                     solver_id);
@@ -6477,6 +6479,7 @@ public:
                    double time_value,
                    int graphics_id,
                    int num_mats,
+                   int nranks,
                    bool write_mesh_state,
                    bool write_mat_pt_state,
                    const size_t solver_id)
@@ -6512,8 +6515,10 @@ public:
 
                     // elem and nodal fields are in this file
                     fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
-                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s.%05d.vtu\" time= \"%12.5e\" />\n", 
-                                                              file_id, solver_id, elem_part_name.c_str(), file_id, graphics_times(file_id) );
+                    for(int irank = 0; irank < nranks; irank++){
+                        fprintf(out[0], "        <DataSet index=\"%d\" file=\"Fierro.solver%zu.%s_rank%d.%05d.vtu\" />\n", 
+                                                                irank, solver_id, elem_part_name.c_str(), irank, file_id );
+                    }
                     fprintf(out[0], "      </Piece>\n");
 
                     // add other Mesh average output Pieces here
@@ -6528,8 +6533,10 @@ public:
                     
                     // output the material specific fields
                     fprintf(out[0], "      <Piece index=\"%zu\" name=\"Mat%zu\">\n", mat_id, mat_id);
-                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n", 
-                                                               file_id, solver_id, mat_part_name.c_str(), mat_id, file_id, graphics_times(file_id) );
+                    for(int irank = 0; irank < nranks; irank++){
+                        fprintf(out[0], "        <DataSet index=\"%d\" file=\"Fierro.solver%zu.%s%zu_rank%d.%05d.vtu\" />\n", 
+                                                                irank, solver_id, mat_part_name.c_str(), mat_id, irank, file_id );
+                    }
                     fprintf(out[0], "      </Piece>\n");
 
                 } // end for loop mat_id
