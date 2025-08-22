@@ -32,8 +32,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef SGH3D_SOLVER_H
-#define SGH3D_SOLVER_H
+#ifndef DEC_CG_SOLVER_H
+#define DEC_CG_SOLVER_H
 
 #include "solver.h"
 #include "state.h"
