@@ -17,7 +17,7 @@ include_directories(src)
 
 message("\n ****** ADDING DeC CG SOURCE FILES ******** \n ")
 
-set(SGH_3D_SRC_Files 
+set(DEC_CG_SRC_Files 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/dec_cg_setup.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/dec_cg_initialize.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/dec_cg_execute.cpp
