@@ -649,7 +649,7 @@ struct Mesh_t
                 // set nodes per element
                 for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
                 {
-                    node_gid = nodes_in_elem.host(cell_rid, node_lid);
+                    node_gid = all_node_map.getGlobalIndex(nodes_in_elem.host(cell_rid, node_lid));
                     nonoverlap_elem_node_set.insert(node_gid);
                 }
             }
