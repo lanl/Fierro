@@ -3694,11 +3694,16 @@ public:
 
         // note: the file path and folder was created in the elem and node outputs
         size_t num_mat_files_written = 0;
+        CArray<int> local_mats_in_rank(num_mats);
+        int local_num_mats = 0;
         if(num_mat_pt_scalar_vars > 0 || num_mat_pt_tensor_vars >0){
-
             for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
                 const size_t num_mat_local_elems = State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id);
+                if(num_mat_local_elems){
+                    local_mats_in_rank(local_num_mats) = mat_id;
+                    local_num_mats++;
+                }
 
                 //set global element indices on this rank for this mat
                 DistributedMap element_map = mesh.element_map;
@@ -3858,18 +3863,21 @@ public:
         // call the vtm file writer
         std::string mat_fields_name = "mat";
         //gather MPI ranks that are writing mat blocks
+        write_vtm(graphics_times,
+                elem_fields_name,
+                mat_fields_name,
+                time_value,
+                graphics_id,
+                num_mats,
+                local_num_mats,
+                local_mats_in_rank,
+                nranks,
+                myrank,
+                write_mesh_state,
+                write_mat_pt_state,
+                solver_id);
+        
         if(myrank==0){
-            write_vtm(graphics_times,
-                    elem_fields_name,
-                    mat_fields_name,
-                    time_value,
-                    graphics_id,
-                    num_mat_files_written,
-                    nranks,
-                    write_mesh_state,
-                    write_mat_pt_state,
-                    solver_id);
-
             // call the pvd file writer
             write_pvd(graphics_times,
                     time_value,
@@ -6479,77 +6487,139 @@ public:
                    double time_value,
                    int graphics_id,
                    int num_mats,
+                   int local_num_mats,
+                   CArray<int> local_mats_in_rank,
                    int nranks,
+                   int myrank,
                    bool write_mesh_state,
                    bool write_mat_pt_state,
                    const size_t solver_id)
-    {
-        // loop over all the files that were written 
-        for(int file_id=0; file_id<=graphics_id; file_id++){
+    {   
+        //gather number of mats on each rank
+        //array storing number of local elems for this material on each process
+        CArray<int> num_mats_in_rank, gatherv_displacements;
+        CArray<size_t> interface_mats_in_rank;
+        if(myrank==0){
+            num_mats_in_rank = CArray<int>(nranks);
+            interface_mats_in_rank = CArray<size_t>(nranks);
+            gatherv_displacements = CArray<int>(nranks);
+        }
+        MPI_Gather(&local_num_mats,1,MPI_INT,num_mats_in_rank.pointer(),1,
+                    MPI_INT, 0, MPI_COMM_WORLD);
 
-            FILE* out[20];   // the output files that are written to
-            char  filename[100]; // char string
-            int   max_len = sizeof filename;
-            int   str_output_len;
+        //gather which mats are present on each rank
+        long long int length_mats_in_rank = 0;
+        RaggedRightArray<int> mats_in_rank;
+        if(myrank==0){
+            for(int irank=0; irank < nranks; irank++){
+                gatherv_displacements(irank) = length_mats_in_rank;
+                interface_mats_in_rank(irank) = num_mats_in_rank(irank);
+                length_mats_in_rank += num_mats_in_rank(irank);
+            }
+            mats_in_rank = RaggedRightArray<int>(interface_mats_in_rank);
+        }
+        // if(myrank==0){
+        //     for(int irank=0; irank < nranks; irank++){
+        //         std::cout << "NUM local mat elem on rank " << irank << " is " << num_mats_in_rank(irank) << std::endl;
+        //         std::cout << "gatherv displacement on rank " << irank << " is " << gatherv_displacements(irank) << std::endl;
+        //     }
+        // }
+        MPI_Gatherv(local_mats_in_rank.pointer(), local_num_mats, MPI_INT,
+                    mats_in_rank.pointer(), num_mats_in_rank.pointer(),
+                    gatherv_displacements.pointer(), MPI_INT, 0, MPI_COMM_WORLD);
 
 
-            // Write time series metadata to the data file
-            str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%05d.vtm", solver_id, file_id); 
+        if(myrank==0){
 
-            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-            // mesh file
+            //invert map of rank to mat so its mat to rank
+            CArray<size_t> num_ranks_in_mat(num_mats);
+            num_ranks_in_mat.set_values(0);
 
-            out[0] = fopen(filename, "w");
-    
-            fprintf(out[0], "<?xml version=\"1.0\"?>\n");
-            fprintf(out[0], "<VTKFile type=\"vtkMultiBlockDataSet\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
-            fprintf(out[0], "  <vtkMultiBlockDataSet>\n");
-
-            
-            // Average mesh fields -- node and elem state written
-            size_t block_id = 0;  // this will need to be incremented based on the number of mesh fields written
-            if (write_mesh_state){
-                fprintf(out[0], "    <Block index=\"%zu\" name=\"Mesh\">\n", block_id);
-                {
-                    block_id++;  // increment block id for material outputs that follow the element avg block
-
-                    // elem and nodal fields are in this file
-                    fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
-                    for(int irank = 0; irank < nranks; irank++){
-                        fprintf(out[0], "        <DataSet index=\"%d\" file=\"Fierro.solver%zu.%s_rank%d.%05d.vtu\" />\n", 
-                                                                irank, solver_id, elem_part_name.c_str(), irank, file_id );
-                    }
-                    fprintf(out[0], "      </Piece>\n");
-
-                    // add other Mesh average output Pieces here
+            //count how many ranks each material is in
+            for(int irank = 0; irank < nranks; irank++){
+                for(int imat = 0; imat < num_mats_in_rank(irank); imat++){
+                    num_ranks_in_mat(mats_in_rank(irank,imat))++;
                 }
-                fprintf(out[0], "    </Block>\n");
-            } // end if write elem and node state is true
+            }
 
-            // note: the block_id was incremented if an element average field output was made
-            if (write_mat_pt_state){
-                fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
-                for (size_t mat_id=0; mat_id<num_mats; mat_id++){
-                    
-                    // output the material specific fields
-                    fprintf(out[0], "      <Piece index=\"%zu\" name=\"Mat%zu\">\n", mat_id, mat_id);
-                    for(int irank = 0; irank < nranks; irank++){
-                        fprintf(out[0], "        <DataSet index=\"%d\" file=\"Fierro.solver%zu.%s%zu_rank%d.%05d.vtu\" />\n", 
-                                                                irank, solver_id, mat_part_name.c_str(), mat_id, irank, file_id );
+            //allocate ragged storage and assign ranks to each mat
+            RaggedRightArray<int> ranks_in_mat(num_ranks_in_mat);
+            num_ranks_in_mat.set_values(0);
+
+            for(int irank = 0; irank < nranks; irank++){
+                for(int imat = 0; imat < num_mats_in_rank(irank); imat++){
+                    ranks_in_mat(mats_in_rank(irank,imat),num_ranks_in_mat(mats_in_rank(irank,imat))) = irank;
+                    num_ranks_in_mat(mats_in_rank(irank,imat))++;
+                }
+            }
+            
+            // loop over all the files that need to be written 
+            for(int file_id=0; file_id<=graphics_id; file_id++){
+
+                FILE* out[20];   // the output files that are written to
+                char  filename[100]; // char string
+                int   max_len = sizeof filename;
+                int   str_output_len;
+
+
+                // Write time series metadata to the data file
+                str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%05d.vtm", solver_id, file_id); 
+
+                if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+                // mesh file
+
+                out[0] = fopen(filename, "w");
+        
+                fprintf(out[0], "<?xml version=\"1.0\"?>\n");
+                fprintf(out[0], "<VTKFile type=\"vtkMultiBlockDataSet\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
+                fprintf(out[0], "  <vtkMultiBlockDataSet>\n");
+
+                
+                // Average mesh fields -- node and elem state written
+                size_t block_id = 0;  // this will need to be incremented based on the number of mesh fields written
+                if (write_mesh_state){
+                    fprintf(out[0], "    <Block index=\"%zu\" name=\"Mesh\">\n", block_id);
+                    {
+                        block_id++;  // increment block id for material outputs that follow the element avg block
+
+                        // elem and nodal fields are in this file
+                        fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
+                        for(int irank = 0; irank < nranks; irank++){
+                            fprintf(out[0], "        <DataSet index=\"%d\" file=\"Fierro.solver%zu.%s_rank%d.%05d.vtu\" />\n", 
+                                                                    irank, solver_id, elem_part_name.c_str(), irank, file_id );
+                        }
+                        fprintf(out[0], "      </Piece>\n");
+
+                        // add other Mesh average output Pieces here
                     }
-                    fprintf(out[0], "      </Piece>\n");
+                    fprintf(out[0], "    </Block>\n");
+                } // end if write elem and node state is true
 
-                } // end for loop mat_id
-                fprintf(out[0], "    </Block>\n");
-            } // end if write mat satte is true
+                // note: the block_id was incremented if an element average field output was made
+                if (write_mat_pt_state){
+                    fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
+                    for (size_t mat_id=0; mat_id<num_mats; mat_id++){
+                        
+                        // output the material specific fields
+                        fprintf(out[0], "      <Piece index=\"%zu\" name=\"Mat%zu\">\n", mat_id, mat_id);
+                        for(int irank = 0; irank < num_ranks_in_mat(mat_id); irank++){
+                            fprintf(out[0], "        <DataSet index=\"%d\" file=\"Fierro.solver%zu.%s%zu_rank%d.%05d.vtu\" />\n", 
+                                                                    irank, solver_id, mat_part_name.c_str(), mat_id, ranks_in_mat(mat_id, irank), file_id );
+                        }
+                        fprintf(out[0], "      </Piece>\n");
 
-            // done writing the files to be read by the vtm file
-            fprintf(out[0], "  </vtkMultiBlockDataSet>\n");
-            fprintf(out[0], "</VTKFile>"); 
+                    } // end for loop mat_id
+                    fprintf(out[0], "    </Block>\n");
+                } // end if write mat satte is true
 
-            fclose(out[0]);
+                // done writing the files to be read by the vtm file
+                fprintf(out[0], "  </vtkMultiBlockDataSet>\n");
+                fprintf(out[0], "</VTKFile>"); 
 
-        } // end for file_id
+                fclose(out[0]);
+
+            } // end for file_id
+        }
 
     } // end vtm
 
