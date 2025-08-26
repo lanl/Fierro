@@ -718,9 +718,6 @@ void contact_pair_t::frictionless_increment(const double &del_t)
                 const contact_node_t &patch_node = patch.nodes_obj(k);
                 ak = (patch_node.internal_force(j) - fc_inc*normal(j)*phi_k(k) +
                       patch_node.contact_force(j))/patch_node.mass;
-                if (ak > length_limit/(2*del_t*del_t)) {
-                    //ak = length_limit;
-                }
                 A(j, k) = patch_node.pos(j) + patch_node.vel(j)*del_t + 0.5*ak*del_t*del_t;
             }
         }
@@ -730,9 +727,6 @@ void contact_pair_t::frictionless_increment(const double &del_t)
         for (int j = 0; j < 3; j++)
         {
             as = (node.internal_force(j) + fc_inc*normal(j) + node.contact_force(j))/node.mass;
-            if (as > length_limit/(2*del_t*del_t)) {
-                //as = length_limit;
-            }
             lhs = node.pos(j) + node.vel(j)*del_t + 0.5*as*del_t*del_t;
             F(j) = lhs - rhs(j);
         }
@@ -886,82 +880,6 @@ bool contact_pair_t::should_remove(const double &del_t, bool penetrating)
         return false;
     }
 }  // end should_remove
-
-void contact_pair_t::get_length_limit(State_t& State, const Mesh_t &mesh, const double del_t)
-{
-    // i -> elements that the node is part of the connectivity for
-    double local_min = 0;
-    FOR_REDUCE_MIN(i, 0, mesh.elems_in_node.stride(node.gid), local_min, {
-                        // finding node id local to element
-                        size_t pen_node_lid;
-                        for (int k = 0; k < 8; k++){
-                            if (node.gid == mesh.nodes_in_elem(mesh.elems_in_node(node.gid,i),k)) {
-                                pen_node_lid = k;
-                            }
-                        }
-
-                        // switch case to decide which 3 nodes to look at
-                        CArrayKokkos <double> nodes_to_check (3);
-                        switch (pen_node_lid) {
-                            case 0:
-                                nodes_to_check(0) = 1;
-                                nodes_to_check(1) = 2;
-                                nodes_to_check(2) = 3;
-                                break;
-                            case 1:
-                                nodes_to_check(0) = 0;
-                                nodes_to_check(1) = 3;
-                                nodes_to_check(2) = 5;
-                                break;
-                            case 2:
-                                nodes_to_check(0) = 0;
-                                nodes_to_check(1) = 3;
-                                nodes_to_check(2) = 6;
-                                break;
-                            case 3:
-                                nodes_to_check(0) = 1;
-                                nodes_to_check(1) = 2;
-                                nodes_to_check(2) = 7;
-                                break;
-                            case 4:
-                                nodes_to_check(0) = 0;
-                                nodes_to_check(1) = 5;
-                                nodes_to_check(2) = 6;
-                                break;
-                            case 5:
-                                nodes_to_check(0) = 1;
-                                nodes_to_check(1) = 4;
-                                nodes_to_check(2) = 7;
-                                break;
-                            case 6:
-                                nodes_to_check(0) = 2;
-                                nodes_to_check(1) = 4;
-                                nodes_to_check(2) = 7;
-                                break;
-                            case 7:
-                                nodes_to_check(0) = 3;
-                                nodes_to_check(1) = 5;
-                                nodes_to_check(2) = 6;
-                                break;
-                        }
-
-                        // get the minimum distance between the 3
-                        CArrayKokkos <double> node_distances(3);
-                        for (int k = 0; k < 3; k++) {
-                            double sum_sq = 0.0;
-                            for (int m = 0; m < 3; m++) {
-                                sum_sq += pow(State.node.coords(node.gid, m) - State.node.coords(mesh.nodes_in_elem(mesh.elems_in_node(node.gid,i),nodes_to_check(k)), m), 2);
-                            }
-                            node_distances(k) = sqrt(sum_sq);
-                        }
-
-                        local_min = fmin(node_distances(0),fmin(node_distances(1),node_distances(2)));
-
-
-                    }, length_limit);
-    length_limit *= del_t*del_t/2;
-
-} // end get_length_limit
 /// end of contact_pair_t member functions /////////////////////////////////////////////////////////////////////////////
 
 /// beginning of contact_patches_t member functions ////////////////////////////////////////////////////////////////////
@@ -974,6 +892,147 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
         std::cerr << "Error: contact is only supported in 3D" << std::endl;
         exit(1);
     }
+    if (mesh.num_nodes_in_patch != 4) {
+        std::cerr << "Error: contact is only supported for first order hex elements" << std::endl;
+        exit(1);
+    }
+    
+    // WARNING: assuming first order hexes
+
+    // populating xi and eta
+    xi[0] = -1.0;
+    xi[1] = 1.0;
+    xi[2] = 1.0;
+    xi[3] = -1.0;
+    eta[0] = -1.0;
+    eta[1] = -1.0;
+    eta[2] = 1.0;
+    eta[3] = 1.0;
+
+    // sizing possible nodes and buckets
+    possible_nodes = CArrayKokkos<size_t>(mesh.num_bdy_nodes);
+    buckets = CArrayKokkos<size_t>(pow(buckets_in_dim,3));
+
+    // sizing arrays based on num of bdy patches and bdy nodes
+    contact_forces = CArrayKokkos<double>(mesh.num_bdy_nodes,3);
+    contact_forces.set_values(0);
+    penetration_surfaces = CArrayKokkos<size_t>(mesh.num_bdy_patches,5,4);
+
+    // populating penetration_surfaces and pen_surface_node_gids
+    for (int i = 0; i < mesh.num_bdy_patches; i++) {
+        // finding contact surface local id wrt the element (a boundary surface is only part of one element)
+        size_t surf_lid;
+        for (int j = 0; j < 6; j++) {
+            if (bdy_contact_patches(i) == mesh.patches_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),j)) {
+                surf_lid = j;
+                break;
+            }
+        }
+
+        // defining which patch should be left out of penetration column definition (isoparametric opposite of boundary surf lid)
+        size_t surfs_for_column[5];
+        switch (surf_lid) {
+            case(0):
+                surfs_for_column[0] = 0;
+                surfs_for_column[1] = 2;
+                surfs_for_column[2] = 3;
+                surfs_for_column[3] = 4;
+                surfs_for_column[4] = 5;
+                break;
+            case(1):
+                surfs_for_column[0] = 1;
+                surfs_for_column[1] = 2;
+                surfs_for_column[2] = 3;
+                surfs_for_column[3] = 4;
+                surfs_for_column[4] = 5;
+                break;
+            case(2):
+                surfs_for_column[0] = 0;
+                surfs_for_column[1] = 1;
+                surfs_for_column[2] = 2;
+                surfs_for_column[3] = 4;
+                surfs_for_column[4] = 5;
+                break;
+            case(3):
+                surfs_for_column[0] = 0;
+                surfs_for_column[1] = 1;
+                surfs_for_column[2] = 3;
+                surfs_for_column[3] = 4;
+                surfs_for_column[4] = 5;
+                break;
+            case(4):
+                surfs_for_column[0] = 0;
+                surfs_for_column[1] = 1;
+                surfs_for_column[2] = 2;
+                surfs_for_column[3] = 3;
+                surfs_for_column[4] = 4;
+                break;
+            case(5):
+                surfs_for_column[0] = 0;
+                surfs_for_column[1] = 1;
+                surfs_for_column[2] = 2;
+                surfs_for_column[3] = 3;
+                surfs_for_column[4] = 5;
+                break;
+        }
+
+        // grabbing gids based on surfs_for_column
+        for (int j = 0; j < 5; j++) {
+            switch (surfs_for_column[j]) {
+                case 0:
+                    penetration_surfaces(i,j,0) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),0);
+                    penetration_surfaces(i,j,1) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),4);
+                    penetration_surfaces(i,j,2) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),6);
+                    penetration_surfaces(i,j,3) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),2);
+                    break;
+                case 1:
+                    penetration_surfaces(i,j,0) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),1);
+                    penetration_surfaces(i,j,1) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),3);
+                    penetration_surfaces(i,j,2) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),7);
+                    penetration_surfaces(i,j,3) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),5);
+                    break;
+                case 2:
+                    penetration_surfaces(i,j,0) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),0);
+                    penetration_surfaces(i,j,1) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),1);
+                    penetration_surfaces(i,j,2) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),5);
+                    penetration_surfaces(i,j,3) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),4);
+                    break;
+                case 3:
+                    penetration_surfaces(i,j,0) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),3);
+                    penetration_surfaces(i,j,1) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),2);
+                    penetration_surfaces(i,j,2) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),6);
+                    penetration_surfaces(i,j,3) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),7);
+                    break;
+                case 4:
+                    penetration_surfaces(i,j,0) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),0);
+                    penetration_surfaces(i,j,1) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),2);
+                    penetration_surfaces(i,j,2) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),3);
+                    penetration_surfaces(i,j,3) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),1);
+                    break;
+                case 5:
+                    penetration_surfaces(i,j,0) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),4);
+                    penetration_surfaces(i,j,1) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),5);
+                    penetration_surfaces(i,j,2) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),7);
+                    penetration_surfaces(i,j,3) = mesh.nodes_in_elem(mesh.elems_in_patch(bdy_contact_patches(i), 0),6);
+                    break;
+            }
+        }
+    }
+
+    // sizing and filling contact_surface_map
+    contact_surface_map = CArrayKokkos<size_t>(mesh.num_bdy_patches,4);
+    for (int i = 0; i < mesh.num_bdy_patches; i++) {
+        for (int j = 0; j < 4; j++) {
+            for (int k = 0; k < mesh.num_bdy_nodes; k++) {
+                if (mesh.nodes_in_patch(mesh.bdy_patches(i),j) == mesh.bdy_nodes(k)) {
+                    contact_surface_map(i,j) = k;
+                }
+            }
+        }
+    }
+
+
+
 
     // Set up the patches that will be checked for contact
     patches_gid = bdy_contact_patches;
@@ -1521,7 +1580,71 @@ void contact_patches_t::update_nodes(const Mesh_t &mesh, State_t& State)
     //       nodes_obj member in contact_patch_t
 }
 
-void contact_patches_t::sort()
+// start surface specific functions ********************************************************************************
+
+KOKKOS_FUNCTION
+void contact_patches_t::capture_box(State_t &State, const Mesh_t &mesh, const size_t surf_lid, const double &dt)
+{
+    // WARNING: specific to first order hex elements
+    // [- or +][x y z][node0 node1 node2 node3]
+    double add_sub[2][3][4];
+    double max_v_arr[3];
+    max_v_arr[0] = vx_max;
+    max_v_arr[1] = vy_max;
+    max_v_arr[2] = vz_max;
+    double max_a_arr[3];
+    max_a_arr[0] = ax_max;
+    max_a_arr[1] = ay_max;
+    max_a_arr[2] = az_max;
+    for(int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            add_sub[0][j][i] = State.node.coords(mesh.nodes_in_patch(mesh.bdy_patches(surf_lid),i),j) + max_v_arr[j]*dt + 0.5*max_a_arr[j]*dt*dt;
+            add_sub[1][j][i] = State.node.coords(mesh.nodes_in_patch(mesh.bdy_patches(surf_lid),i),j) - max_v_arr[j]*dt - 0.5*max_a_arr[j]*dt*dt;
+        }
+    };
+
+    for (int i = 0; i < 3; i++)
+    {
+        // Find the max of dim i
+        double result_max;
+        result_max = fmax(add_sub[0][i][0],add_sub[0][i][1]);
+        result_max = fmax(result_max,add_sub[0][i][2]);
+        result_max = fmax(result_max,add_sub[0][i][3]);
+        bounding_box[i] = result_max;
+
+        // Find the min of dim i
+        double result_min;
+        result_min = fmin(add_sub[1][i][0],add_sub[1][i][1]);
+        result_min = fmin(result_min,add_sub[1][i][2]);
+        result_min = fmin(result_min,add_sub[1][i][3]);
+        bounding_box[i + 3] = result_min;
+    }
+} // end contact_patches_t::capture_box
+
+KOKKOS_FUNCTION
+void contact_patches_t::construct_basis(State_t &State, const Mesh_t &mesh, double A[3][4], size_t surf_lid, const double &del_t) const
+{
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            size_t node_gid = mesh.nodes_in_patch(mesh.bdy_patches(surf_lid,j));
+            double a = contact_forces(contact_surface_map(surf_lid,j),i);
+            for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++)
+            {
+                a += State.corner.force(mesh.corners_in_node(node_gid, corner_lid), i);
+            }
+            a /= State.node.mass(node_gid);
+            A[i][j] = State.node.coords(node_gid,i) + State.node.vel(node_gid,i)*del_t + 0.5*a*del_t*del_t;
+        }
+    }
+}  // end construct_basis
+
+// end surface specific functions **********************************************************************************
+
+void contact_patches_t::sort(State_t &State, const Mesh_t &mesh)
 {
     // todo: I don't think it's a good idea to have these allocated here. These should become member variables, and
     //       its allocation should be moved to initialize() because sort() is being called every step.
@@ -1546,80 +1669,80 @@ void contact_patches_t::sort()
     });  // end parallel for
     Kokkos::fence();
 
-    /* for (int i = 0; i < points.dims(1); i++) {
-        for (int j = 0; j < points.dims(0); j++) {
-            std::cout << points(j,i) << "   ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl; */
-
     // Find the max and min for each dimension
     double local_x_max = 0.0;
-    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_x_max, {
-        if (local_x_max < points(0, i))
+    FOR_REDUCE_MAX_CLASS(i, 0, mesh.num_bdy_nodes, local_x_max, {
+        if (local_x_max < State.node.coords(mesh.bdy_nodes(i),0))
         {
-            local_x_max = points(0, i);
+            local_x_max = State.node.coords(mesh.bdy_nodes(i),0);
         }
     }, x_max);
     double local_y_max = 0.0;
-    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_y_max, {
-        if (local_y_max < points(1, i))
+    FOR_REDUCE_MAX_CLASS(i, 0, mesh.num_bdy_nodes, local_y_max, {
+        if (local_y_max < State.node.coords(mesh.bdy_nodes(i),1))
         {
-            local_y_max = points(1, i);
+            local_y_max = State.node.coords(mesh.bdy_nodes(i),1);
         }
     }, y_max);
     double local_z_max = 0.0;
-    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_z_max, {
-        if (local_z_max < points(2, i))
+    FOR_REDUCE_MAX_CLASS(i, 0, mesh.num_bdy_nodes, local_z_max, {
+        if (local_z_max < State.node.coords(mesh.bdy_nodes(i),2))
         {
-            local_z_max = points(2, i);
+            local_z_max = State.node.coords(mesh.bdy_nodes(i),2);
         }
     }, z_max);
     double local_x_min = 0.0;
-    FOR_REDUCE_MIN_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_x_min, {
-        if (local_x_min > points(0, i))
+    FOR_REDUCE_MIN_CLASS(i, 0, mesh.num_bdy_nodes, local_x_min, {
+        if (local_x_min > State.node.coords(mesh.bdy_nodes(i),0))
         {
-            local_x_min = points(0, i);
+            local_x_min = State.node.coords(mesh.bdy_nodes(i),0);
         }
     }, x_min);
     double local_y_min = 0.0;
-    FOR_REDUCE_MIN_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_y_min, {
-        if (local_y_min > points(1, i))
+    FOR_REDUCE_MIN_CLASS(i, 0, mesh.num_bdy_nodes, local_y_min, {
+        if (local_y_min > State.node.coords(mesh.bdy_nodes(i),1))
         {
-            local_y_min = points(1, i);
+            local_y_min = State.node.coords(mesh.bdy_nodes(i),1);
         }
     }, y_min);
     double local_z_min = 0.0;
-    FOR_REDUCE_MIN_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_z_min, {
-        if (local_z_min > points(2, i))
+    FOR_REDUCE_MIN_CLASS(i, 0, mesh.num_bdy_nodes, local_z_min, {
+        if (local_z_min > State.node.coords(mesh.bdy_nodes(i),2))
         {
-            local_z_min = points(2, i);
+            local_z_min = State.node.coords(mesh.bdy_nodes(i),2);
         }
     }, z_min);
     double local_vx_max = 0.0;
-    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_vx_max, {
-        if (local_vx_max < velocities(0, i))
+    FOR_REDUCE_MAX_CLASS(i, 0, mesh.num_bdy_nodes, local_vx_max, {
+        if (local_vx_max < State.node.vel(mesh.bdy_nodes(i),0))
         {
-            local_vx_max = velocities(0, i);
+            local_vx_max = State.node.vel(mesh.bdy_nodes(i),0);
         }
     }, vx_max);
     double local_vy_max = 0.0;
-    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_vy_max, {
-        if (local_vy_max < velocities(1, i))
+    FOR_REDUCE_MAX_CLASS(i, 0, mesh.num_bdy_nodes, local_vy_max, {
+        if (local_vy_max < State.node.vel(mesh.bdy_nodes(i),1))
         {
-            local_vy_max = velocities(1, i);
+            local_vy_max = State.node.vel(mesh.bdy_nodes(i),1);
         }
     }, vy_max);
     double local_vz_max = 0.0;
-    FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_vz_max, {
-        if (local_vz_max < velocities(2, i))
+    FOR_REDUCE_MAX_CLASS(i, 0, mesh.num_bdy_nodes, local_vz_max, {
+        if (local_vz_max < State.node.vel(mesh.bdy_nodes(i),2))
         {
-            local_vz_max = velocities(2, i);
+            local_vz_max = State.node.vel(mesh.bdy_nodes(i),2);
         }
     }, vz_max);
     double local_ax_max = 0.0;
     FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_ax_max, {
+        /* double ax = 0;
+        for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(mesh.bdy_nodes(i)); corner_lid++)
+            {
+                ax += State.corner.force(mesh.corners_in_node(mesh.bdy_nodes(i), corner_lid), 0);
+            }
+        ax += contact_forces(i,0);
+        ax /= State.node.mass(mesh.bdy_nodes(i));
+        ax = fabs(ax); */
         if (local_ax_max < accelerations(0, i))
         {
             local_ax_max = accelerations(0, i);
@@ -1627,6 +1750,14 @@ void contact_patches_t::sort()
     }, ax_max);
     double local_ay_max = 0.0;
     FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_ay_max, {
+        /* double ay = 0;
+        for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(mesh.bdy_nodes(i)); corner_lid++)
+            {
+                ay += State.corner.force(mesh.corners_in_node(mesh.bdy_nodes(i), corner_lid), 1);
+            }
+        ay += contact_forces(i,1);
+        ay /= State.node.mass(mesh.bdy_nodes(i));
+        ay = fabs(ay); */
         if (local_ay_max < accelerations(1, i))
         {
             local_ay_max = accelerations(1, i);
@@ -1634,6 +1765,14 @@ void contact_patches_t::sort()
     }, ay_max);
     double local_az_max = 0.0;
     FOR_REDUCE_MAX_CLASS(i, 0, contact_patch_t::num_nodes_in_patch*num_contact_patches, local_az_max, {
+        /* double az = 0;
+        for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(mesh.bdy_nodes(i)); corner_lid++)
+            {
+                az += State.corner.force(mesh.corners_in_node(mesh.bdy_nodes(i), corner_lid), 2);
+            }
+        az += contact_forces(i,2);
+        az /= State.node.mass(mesh.bdy_nodes(i));
+        az = fabs(az); */
         if (local_az_max < accelerations(2, i))
         {
             local_az_max = accelerations(2, i);
@@ -1643,15 +1782,22 @@ void contact_patches_t::sort()
     
     // If the max velocity is zero, then we want to set it to a small value. The max velocity and acceleration are used
     // for creating a capture box around the contact patch. We want there to be at least some thickness to the box.
-    double* vel_max[3] = {&vx_max, &vy_max, &vz_max};
-    for (auto &i: vel_max)
-    {
-        if (*i == 0.0)
-        {
-            *i = 1.0e-3; // Set to a small value
-        }
+    if (vx_max == 0) {
+        vx_max = 1.0e-3;
+    }
+    if (vy_max == 0) {
+        vy_max = 1.0e-3;
+    }
+    if (vz_max == 0) {
+        vz_max = 1.0e-3;
     }
     
+    // calculate bucket size in each direction
+    bucket_size_dir[0] = (x_max-x_min)/buckets_in_dim;
+    bucket_size_dir[1] = (y_max-y_min)/buckets_in_dim;
+    bucket_size_dir[2] = (z_max-z_min)/buckets_in_dim;
+    //bucket_size = fmax(bucket_size_dir[0], fmax(bucket_size_dir[1],bucket_size_dir[2]));
+
     // Define Sx, Sy, and Sz
     Sx = floor((x_max - x_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
     Sy = floor((y_max - y_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
@@ -1661,23 +1807,18 @@ void contact_patches_t::sort()
     //       with this one is that nb changes through the iterations. lbox and npoint might need to change to Views.
     // Initializing the nbox, lbox, nsort, and npoint arrays
     size_t nb = Sx*Sy*Sz;  // total number of buckets
-    /* std::cout << x_max << "    " << x_min << std::endl;
-    std::cout << Sx << "    " << Sy << "    " << Sz << std::endl;
-    std::cout << "nb = " << nb << "    " << "bucket_size = " << bucket_size << std::endl;  */
+
     nbox = CArrayKokkos<size_t>(nb);
-    lbox = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
-    nsort = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
+    lbox = CArrayKokkos<size_t>(mesh.num_bdy_nodes);
+    nsort = CArrayKokkos<size_t>(mesh.num_bdy_nodes);
     npoint = CArrayKokkos<size_t>(nb);
-    CArrayKokkos<size_t> nsort_lid(contact_patches_t::num_contact_nodes);
+    CArrayKokkos<size_t> nsort_lid(mesh.num_bdy_nodes);
     
     // Find the bucket id for each node by constructing lbox
-    FOR_ALL_CLASS(i, 0, contact_patches_t::num_contact_nodes, {
-        size_t node_gid = nodes_gid(i);
-        
-        const contact_node_t &node = contact_nodes(node_gid);
-        double x = node.pos(0);
-        double y = node.pos(1);
-        double z = node.pos(2);
+    FOR_ALL_CLASS(i, 0, mesh.num_bdy_nodes, {
+        double x = State.node.coords(mesh.bdy_nodes(i),0);
+        double y = State.node.coords(mesh.bdy_nodes(i),1);
+        double z = State.node.coords(mesh.bdy_nodes(i),2);
         
         size_t Si_x = floor((x - x_min)/bucket_size);
         size_t Si_y = floor((y - y_min)/bucket_size);
@@ -1701,35 +1842,35 @@ void contact_patches_t::sort()
     Kokkos::fence();
 
     // Sort the slave nodes according to their bucket id into nsort
-    for (int i = 0; i < contact_patches_t::num_contact_nodes; i++)
+    for (int i = 0; i < mesh.num_bdy_nodes; i++)
     {
         nsort_lid(nbox(lbox(i)) + npoint(lbox(i))) = i;
         nbox(lbox(i)) += 1;
     }
 
     // Change nsort to reflect the global node id's
-    FOR_ALL_CLASS(i, 0, contact_patches_t::num_contact_nodes, {
+    FOR_ALL_CLASS(i, 0, mesh.num_bdy_nodes, {
         nsort(i) = nodes_gid(nsort_lid(i));
     });
     Kokkos::fence();
 }  // end sort
 
-void contact_patches_t::find_nodes(contact_patch_t &contact_patch, const double &del_t,
+void contact_patches_t::find_nodes(State_t &State, const Mesh_t &mesh, contact_patch_t &contact_patch, const size_t surf_lid, const double &del_t,
                                    size_t &num_nodes_found)
 {
     // Get capture box
-    contact_patch.capture_box(vx_max, vy_max, vz_max, ax_max, ay_max, az_max, del_t);
-    const CArrayKokkos<double> &bounds = contact_patch.bounds;
+    capture_box(State, mesh, surf_lid, del_t);
 
     // Determine the buckets that intersect with the capture box
-    size_t ibox_max = fmax(0, fmin(Sx - 1, floor((bounds(0) - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
-    size_t jbox_max = fmax(0, fmin(Sy - 1, floor((bounds(1) - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
-    size_t kbox_max = fmax(0, fmin(Sz - 1, floor((bounds(2) - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
-    size_t ibox_min = fmax(0, fmin(Sx - 1, floor((bounds(3) - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
-    size_t jbox_min = fmax(0, fmin(Sy - 1, floor((bounds(4) - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
-    size_t kbox_min = fmax(0, fmin(Sz - 1, floor((bounds(5) - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t ibox_max = fmax(0, fmin(Sx - 1, floor((bounding_box[0] - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t jbox_max = fmax(0, fmin(Sy - 1, floor((bounding_box[1] - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t kbox_max = fmax(0, fmin(Sz - 1, floor((bounding_box[2] - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t ibox_min = fmax(0, fmin(Sx - 1, floor((bounding_box[3] - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t jbox_min = fmax(0, fmin(Sy - 1, floor((bounding_box[4] - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t kbox_min = fmax(0, fmin(Sz - 1, floor((bounding_box[5] - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
 
-    size_t bucket_index = 0;
+    // get number of buckets to consider
+    size_t bucket_count = 0;
     for (size_t i = ibox_min; i < ibox_max + 1; i++)
     {
         for (size_t j = jbox_min; j < jbox_max + 1; j++)
@@ -1739,17 +1880,17 @@ void contact_patches_t::find_nodes(contact_patch_t &contact_patch, const double 
                 // todo: If there is a segfault here, then that means that we have more than max_number_buckets.
                 //       increase that value as this means that there was so much strain that the number of buckets
                 //       exceeded the value.
-                contact_patch.buckets(bucket_index) = k*Sx*Sy + j*Sx + i;
-                bucket_index += 1;
+                buckets(bucket_count) = k*Sx*Sy + j*Sx + i;
+                bucket_count += 1;
             }
         }
     }
 
     // Get all nodes in each bucket
     num_nodes_found = 0;  // local node index for possible_nodes member
-    for (int bucket_lid = 0; bucket_lid < bucket_index; bucket_lid++)
+    for (int bucket_lid = 0; bucket_lid < bucket_count; bucket_lid++)
     {
-        size_t b = contact_patch.buckets(bucket_lid);
+        size_t b = buckets(bucket_lid);
         for (size_t i = 0; i < nbox(b); i++)
         {
             size_t node_gid = nsort(npoint(b) + i);
@@ -1766,7 +1907,7 @@ void contact_patches_t::find_nodes(contact_patch_t &contact_patch, const double 
 
             if (add_node)
             {
-                contact_patch.possible_nodes(num_nodes_found) = node_gid;
+                possible_nodes(num_nodes_found) = node_gid;
                 num_nodes_found += 1;
             }
         }
@@ -2053,7 +2194,6 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
                     current_pair = contact_pair_t(*this, contact_patches(i), contact_nodes(nodes_pen_surfs(node_lid,0)), xi, eta, del_t, surf_normal);
                     current_pair.active = true;
                     current_pair.force_factor = 0.2;
-                    //current_pair.get_length_limit(State,mesh, del_t);
                     current_pair.time_factor = 1.0;
                     active_pairs(num_active_pairs) = nodes_pen_surfs(node_lid,0);
                 } else // update contact location
@@ -2259,11 +2399,11 @@ void contact_patches_t::get_contact_pairs(State_t& State, const Mesh_t &mesh, co
         contact_patch_t &contact_patch = contact_patches(patch_lid);
 
         size_t num_nodes_found;
-        find_nodes(contact_patch, del_t, num_nodes_found);
+        find_nodes(State, mesh, contact_patch, patch_lid, del_t, num_nodes_found);
         // todo: original plan was for this to be a parallel loop, but there are collisions in the contact_pairs_access
         for (int node_lid = 0; node_lid < num_nodes_found; node_lid++)
         {
-            const size_t &node_gid = contact_patch.possible_nodes(node_lid);
+            const size_t &node_gid = possible_nodes(node_lid);
             const contact_node_t &node = contact_nodes(node_gid);
             contact_pair_t &current_pair = contact_pairs(node_gid);
             // If this is already an active pair, then back out of the thread/continue
@@ -2777,7 +2917,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const Mesh_t &mes
         std::cout << "Patch with nodes 15 16 10 9 is paired with node 19" << std::endl;
         std::cout << "Patch with nodes 18 19 23 22 is paired with node 10" << std::endl;
         std::cout << "vs." << std::endl;
-        contact_patches_obj.sort();
+        contact_patches_obj.sort(State, mesh);
         contact_patches_obj.get_contact_pairs(State, mesh, 0.1);
         for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {
@@ -2803,7 +2943,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const Mesh_t &mes
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 12" << std::endl;
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 16" << std::endl;
         std::cout << "vs." << std::endl;
-        contact_patches_obj.sort();
+        contact_patches_obj.sort(State,mesh);
         contact_patches_obj.get_contact_pairs(State, mesh, 1.0);
         for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {
@@ -2828,7 +2968,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const Mesh_t &mes
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 16" << std::endl;
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 17" << std::endl;
         std::cout << "vs." << std::endl;
-        contact_patches_obj.sort();
+        contact_patches_obj.sort(State,mesh);
         contact_patches_obj.get_contact_pairs(State, mesh, 1.0);
         for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {
@@ -2863,7 +3003,7 @@ void run_contact_tests(contact_patches_t &contact_patches_obj, const Mesh_t &mes
         std::cout << "Patch with nodes 7 8 2 1 is paired with node 20";
         std::cout << " ---> Pushback Direction: 0 0.447214 0.894427" << std::endl;
         std::cout << "vs." << std::endl;
-        contact_patches_obj.sort();
+        contact_patches_obj.sort(State,mesh);
         contact_patches_obj.get_contact_pairs(State, mesh, 1.0);
         for (int i = 0; i < contact_patches_obj.num_contact_patches; i++)
         {

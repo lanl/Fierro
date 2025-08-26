@@ -252,7 +252,6 @@ struct contact_pair_t
 
     // acceleration limiter variables
     double time_factor = 1.0;
-    double length_limit = 0;
 
 
     enum contact_types
@@ -324,22 +323,22 @@ struct contact_pair_t
     /// \return true if the contact pair should be removed; false otherwise
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     bool should_remove(const double &del_t, bool penetrating);
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn get_length_limit
-    ///
-    /// \brief Determines length limit for acceleration
-    ///
-    /// Length limit based on 1/10 of the length of lines from contact node within elements it is part of
-    ///
-    /// \param State
-    /// \param mesh
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void get_length_limit(State_t& State, const Mesh_t &mesh, const double del_t);
 };
 
 struct contact_patches_t
 {
+    CArrayKokkos <double> contact_forces; // contact force for each boundary node
+    // WARNING: assuming first order hex elements
+    double xi[4]; // xi at nodes
+    double eta[4]; // eta at nodes
+    double bounding_box[6]; // spatial bounds for a surface to be searched for nodes that might make contact
+    size_t buckets_in_dim = 8; // max number of buckets allowed for a surface to consider when searching for nodes
+    double bucket_size_dir[3]; // bucket size in each direction to make standard max_buckets_in_dim^3 buckets
+    CArrayKokkos <size_t> buckets; // for carrying bucket ids as necessary in get_contact_pairs, size = buckets_in_dim^3
+    CArrayKokkos <size_t> possible_nodes; // for carrying node gids as necessary in get_contact_pairs
+    CArrayKokkos <size_t> penetration_surfaces; // stores node gids of surface in correct local order for taking normals
+    CArrayKokkos <size_t> contact_surface_map; // stores index for each node that corresponds to mesh.bdy_nodes indexing
+
     CArrayKokkos<contact_patch_t> contact_patches;  // patches that will be checked for contact
     CArrayKokkos<contact_node_t> contact_nodes;  // all nodes that are in contact_patches (accessed through node gid)
     CArrayKokkos<contact_patch_t> penetration_patches;  // patches that will be checked for boundary penetration
@@ -359,7 +358,7 @@ struct contact_patches_t
     ///
     /// \param mesh mesh object
     /// \param bdy_contact_patches global ids of patches that will be checked for contact
-    /// \param nodes node object that contains coordinates and velocities of all nodes
+    /// \param State state object
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void initialize(const Mesh_t &mesh, const CArrayKokkos<size_t> &bdy_contact_patches, State_t& State);
 
@@ -400,9 +399,9 @@ struct contact_patches_t
     double ax_max = 0.0;  // maximum x acceleration
     double ay_max = 0.0;  // maximum y acceleration
     double az_max = 0.0;  // maximum z acceleration
-    size_t Sx = 0;  // number of buckets in the x direction
-    size_t Sy = 0;  // number of buckets in the y direction
-    size_t Sz = 0;  // number of buckets in the z direction
+    size_t Sx = 8;  // number of buckets in the x direction
+    size_t Sy = 8;  // number of buckets in the y direction
+    size_t Sz = 8;  // number of buckets in the z direction
 
     CArrayKokkos<contact_pair_t> contact_pairs;  // contact pairs (accessed through node gid)
     DynamicRaggedRightArrayKokkos<size_t> contact_pairs_access;  // each row is the patch gid and the columns represent the node in contact with the patch; used for quick access and iterating
@@ -417,11 +416,10 @@ struct contact_patches_t
     ///
     /// \brief Constructs nbox, lbox, nsort, and npoint according to the Sandia Algorithm
     ///
+    /// \param State State object
     /// \param mesh mesh object
-    /// \param nodes node object that contains coordinates and velocities of all nodes
-    /// \param corner corner object that contains corner forces
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void sort();
+    void sort(State_t &State, const Mesh_t &mesh);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn update_nodes
@@ -434,6 +432,50 @@ struct contact_patches_t
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void update_nodes(const Mesh_t &mesh, State_t& State);
 
+    // start surface specific functions ********************************************************************************
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn capture_box
+    ///
+    /// \brief Constructs the capture box for the patch
+    ///
+    /// The capture box is used to determine which buckets penetrate the surface/patch. The nodes in the intersecting
+    /// buckets are considered for potential contact. The capture box is constructed from the maximum absolute value
+    /// of velocity and acceleration by considering the position at time dt, which is equal to
+    ///
+    /// position + velocity_max*dt + 0.5*acceleration_max*dt^2 and
+    /// position - velocity_max*dt - 0.5*acceleration_max*dt^2
+    ///
+    /// The maximum and minimum components of the capture box are recorded and will be used in
+    /// contact_patches_t::find_nodes.
+    ///
+    /// \param dt time step
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    KOKKOS_FUNCTION
+    void capture_box(State_t &State, const Mesh_t &mesh, const size_t surf_lid, const double &dt);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn construct_basis
+    ///
+    /// \brief Constructs the basis matrix for the surface
+    ///
+    /// The columns of A are defined as the position of each patch/surface node at time del_t. This is a 3x4 matrix for
+    /// a standard linear hex element and its columns are constructed like this:
+    ///
+    /// ⎡p_{nx} + v_{nx}*del_t + 0.5*a_{nx}*del_t^2 ... for each n⎤
+    /// ⎢                                                         ⎥
+    /// ⎡p_{ny} + v_{ny}*del_t + 0.5*a_{ny}*del_t^2 ... for each n⎤
+    /// ⎢                                                         ⎥
+    /// ⎣p_{nz} + v_{nz}*del_t + 0.5*a_{nz}*del_t^2 ... for each n⎦
+    ///
+    /// \param A basis matrix as defined above (will be changed in place)
+    /// \param del_t time step to construct the basis matrix
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    KOKKOS_FUNCTION
+    void construct_basis(State_t &State, const Mesh_t &mesh, double A[3][4], size_t surf_lid, const double &del_t) const;
+
+    // end surface specific functions **********************************************************************************
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn find_nodes
     ///
@@ -443,7 +485,7 @@ struct contact_patches_t
     /// \param del_t current time step in the analysis
     /// \param num_nodes_found number of nodes that could potentially contact the patch (used to access possible_nodes)
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void find_nodes(contact_patch_t &contact_patch, const double &del_t, size_t &num_nodes_found);
+    void find_nodes(State_t &State, const Mesh_t &mesh, contact_patch_t &contact_patch, const size_t surf_lid, const double &del_t, size_t &num_nodes_found);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn initial_penetration

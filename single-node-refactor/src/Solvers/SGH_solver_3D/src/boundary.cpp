@@ -113,7 +113,7 @@ void SGH3D::boundary_contact(const Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D:: boundary_contact_force(State_t& State, const Mesh_t &mesh, const double &del_t)
 {
-    contact_bank.sort();
+    contact_bank.sort(State, mesh);
     contact_bank.penetration_sweep(State, mesh, del_t);
     /* for (int i = 0; i < contact_bank.num_active_pairs; i++) {
         const size_t &node_gid = contact_bank.active_pairs(i);
