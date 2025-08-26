@@ -526,8 +526,8 @@ public:
 
     void compute_shape_optimization_gradient_full(Teuchos::RCP<const MV> design_coordinates_distributed, Teuchos::RCP<MV> design_gradients_distributed);
 
-    void compute_shape_optimization_gradient_tally(Teuchos::RCP<const MV> design_coordinates_distributed, Teuchos::RCP<MV> design_gradients_distributed,
-                                                      unsigned long cycle, real_t global_dt);
+    void compute_shape_optimization_gradient_tally(Teuchos::RCP<const MV> design_coordinates_distributed, const Teuchos::RCP<MV> design_gradients_distributed, const Teuchos::RCP<MV> adjoint_distributed,
+                                                      const Teuchos::RCP<MV> phi_adjoint_distributed, const Teuchos::RCP<MV> psi_adjoint_distributed, const real_t weight, const real_t global_dt);
 
     void compute_shape_optimization_gradient_IVP(Teuchos::RCP<const MV> design_coordinates_distributed, Teuchos::RCP<MV> design_gradients_distributed,
                                                       unsigned long cycle, real_t global_dt);
