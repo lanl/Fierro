@@ -432,50 +432,6 @@ struct contact_patches_t
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void update_nodes(const Mesh_t &mesh, State_t& State);
 
-    // start surface specific functions ********************************************************************************
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn capture_box
-    ///
-    /// \brief Constructs the capture box for the patch
-    ///
-    /// The capture box is used to determine which buckets penetrate the surface/patch. The nodes in the intersecting
-    /// buckets are considered for potential contact. The capture box is constructed from the maximum absolute value
-    /// of velocity and acceleration by considering the position at time dt, which is equal to
-    ///
-    /// position + velocity_max*dt + 0.5*acceleration_max*dt^2 and
-    /// position - velocity_max*dt - 0.5*acceleration_max*dt^2
-    ///
-    /// The maximum and minimum components of the capture box are recorded and will be used in
-    /// contact_patches_t::find_nodes.
-    ///
-    /// \param dt time step
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    KOKKOS_FUNCTION
-    void capture_box(State_t &State, const Mesh_t &mesh, const size_t surf_lid, const double &dt);
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn construct_basis
-    ///
-    /// \brief Constructs the basis matrix for the surface
-    ///
-    /// The columns of A are defined as the position of each patch/surface node at time del_t. This is a 3x4 matrix for
-    /// a standard linear hex element and its columns are constructed like this:
-    ///
-    /// ⎡p_{nx} + v_{nx}*del_t + 0.5*a_{nx}*del_t^2 ... for each n⎤
-    /// ⎢                                                         ⎥
-    /// ⎡p_{ny} + v_{ny}*del_t + 0.5*a_{ny}*del_t^2 ... for each n⎤
-    /// ⎢                                                         ⎥
-    /// ⎣p_{nz} + v_{nz}*del_t + 0.5*a_{nz}*del_t^2 ... for each n⎦
-    ///
-    /// \param A basis matrix as defined above (will be changed in place)
-    /// \param del_t time step to construct the basis matrix
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    KOKKOS_FUNCTION
-    void construct_basis(State_t &State, const Mesh_t &mesh, double A[3][4], size_t surf_lid, const double &del_t) const;
-
-    // end surface specific functions **********************************************************************************
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn find_nodes
     ///
@@ -485,7 +441,7 @@ struct contact_patches_t
     /// \param del_t current time step in the analysis
     /// \param num_nodes_found number of nodes that could potentially contact the patch (used to access possible_nodes)
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void find_nodes(State_t &State, const Mesh_t &mesh, contact_patch_t &contact_patch, const size_t surf_lid, const double &del_t, size_t &num_nodes_found);
+    void find_nodes(State_t &State, const Mesh_t &mesh, contact_patch_t &contact_patch, int surf_lid, const double &del_t, size_t &num_nodes_found);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn initial_penetration
@@ -667,6 +623,192 @@ bool all(const ViewCArrayKokkos<bool> &a, const size_t &size);
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 bool any(const ViewCArrayKokkos<bool> &a, const size_t &size);
+
+/// start of surface specific functions ****************************************************************************
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn capture_box
+///
+/// \brief Constructs the capture box for the patch
+///
+/// The capture box is used to determine which buckets penetrate the surface/patch. The nodes in the intersecting
+/// buckets are considered for potential contact. The capture box is constructed from the maximum absolute value
+/// of velocity and acceleration by considering the position at time dt, which is equal to
+///
+/// position + velocity_max*dt + 0.5*acceleration_max*dt^2 and
+/// position - velocity_max*dt - 0.5*acceleration_max*dt^2
+///
+/// The maximum and minimum components of the capture box are recorded and will be used in
+/// contact_patches_t::find_nodes.
+///
+/// \param dt time step
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void capture_box(const double &vx_max, const double &vy_max, const double &vz_max,
+                 const double &ax_max, const double &ay_max, const double &az_max,
+                 double bounding_box[],
+                 const DCArrayKokkos <double> coords, const CArrayKokkos <size_t> bdy_patches,
+                 const CArrayKokkos <size_t> nodes_in_patch, int surf_lid, const double &dt);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn construct_basis
+///
+/// \brief Constructs the basis matrix for the surface
+///
+/// The columns of A are defined as the position of each patch/surface node at time del_t. This is a 3x4 matrix for
+/// a standard linear hex element and its columns are constructed like this:
+///
+/// ⎡p_{nx} + v_{nx}*del_t + 0.5*a_{nx}*del_t^2 ... for each n⎤
+/// ⎢                                                         ⎥
+/// ⎡p_{ny} + v_{ny}*del_t + 0.5*a_{ny}*del_t^2 ... for each n⎤
+/// ⎢                                                         ⎥
+/// ⎣p_{nz} + v_{nz}*del_t + 0.5*a_{nz}*del_t^2 ... for each n⎦
+///
+/// \param A basis matrix as defined above (will be changed in place)
+/// \param del_t time step to construct the basis matrix
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void construct_basis(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                     CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> contact_surface_map,
+                     DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                     DCArrayKokkos <double> mass, DCArrayKokkos <double> coords,
+                     CArrayKokkos <size_t> num_corners_in_node,
+                     DCArrayKokkos <double> vel, double A[3][4], int &surf_lid, const double &del_t);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn phi
+///
+/// \brief Modifies the phi_k array to contain the basis function values at the given xi and eta values
+///
+/// \param phi_k basis function values that correspond to the `this->xi` and `this->eta` values
+/// \param xi_value xi value
+/// \param eta_value eta value
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////                 
+KOKKOS_FUNCTION
+void phi(double phi_k[4], double &xi_val, double &eta_val, double xi[4], double eta[4]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn ref_to_physical
+///
+/// \brief Converts the reference coordinates to physical coordinates
+///
+/// This method will convert the reference coordinates defined by 'this->xi' and 'this->eta' to the physical/global
+/// coordinates.
+///
+/// \param ref 1D reference coordinates (xi, eta)
+/// \param A basis matrix as defined in construct_basis
+/// \param phys 1D physical coordinates (x, y, z)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void ref_to_physical(const double ref[2], const double A[3][4], double phys[3], double xi[4], double eta[4]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn d_phi_d_xi
+///
+/// \brief Modifies the d_phi_k_d_xi array to contain the basis function derivatives with respect to xi at the given
+///        xi and eta values
+///
+/// \param d_phi_k_d_xi basis function values that correspond to the `this->xi` and `this->eta` values
+/// \param xi_value xi value
+/// \param eta_value eta value
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void d_phi_d_xi(double d_phi_d_xi[4], double &xi_value, double &eta_value, double xi[4], double eta[4]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn d_phi_d_eta
+///
+/// \brief Modifies the d_phi_k_d_eta array to contain the basis function derivatives with respect to eta at the
+///        given xi and eta values
+///
+/// \param d_phi_k_d_eta basis function values that correspond to the `this->xi` and `this->eta` values
+/// \param xi_value xi value
+/// \param eta_value eta value
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void d_phi_d_eta(double d_phi_d_eta[4], double &xi_value, double &eta_value, double xi[4], double eta[4]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn get_normal
+///
+/// \brief Computes the normal vector of the patch/surface at the given xi and eta values
+///
+/// \param xi_val xi value
+/// \param eta_val eta value
+/// \param del_t time step to compute the normal at
+/// \param normal kokkos view that will be changed in place
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void get_normal(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> contact_surface_map,
+                DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                DCArrayKokkos <double> mass, DCArrayKokkos <double> coords,
+                CArrayKokkos <size_t> num_corners_in_node,
+                DCArrayKokkos <double> vel, double &xi_val, double &eta_val, const double &del_t,
+                double normal[3], double xi[4], double eta[4], int &surf_lid);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn get_contact_point
+///
+/// \brief Finds the contact point in the reference space with the given contact node
+///
+/// The row node_lid of det_sol is taken as the guess which is of the order (xi, eta, del_tc) where del_tc is the
+/// time it takes for the node to penetrate the patch/surface. This will iteratively solve using a Newton-Raphson
+/// scheme and will change det_sol in place.
+///
+/// \param node Contact node object that is potentially penetrating this patch/surface
+/// \param xi_val xi value to change in place
+/// \param eta_val eta value to change in place
+/// \param del_tc del_tc value to change in place
+///
+/// \return true if a solution was found in less than max_iter iterations; false if the solution took up to max_iter
+///         iterations or if a singularity was encountered
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION  // will be called inside a macro
+bool get_contact_point(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                       CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> contact_surface_map,
+                       DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                       DCArrayKokkos <double> mass, DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes,
+                       CArrayKokkos <size_t> num_corners_in_node, DCArrayKokkos <double> vel,
+                       size_t &node_gid, size_t &node_lid, int &surf_lid, double &xi_val, double &eta_val,
+                       double &del_tc, double xi[4], double eta[4]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn contact_check
+///
+/// \brief Determines if a contact pair should be formed
+///
+/// This is responsible for getting a guess value to feed into the get_contact_point method as well as constructing
+/// the logic to determine if a contact pair should be formed. If a solution is found from that scheme, the
+/// reference coordinates of xi and eta are between -1 and 1, and the calculated del_tc is between 0 and the current
+/// time step (del_t), then this will return true and a contact pair should be formed. The exception to not adding a
+/// contact pair between 'this' and 'node' is if the solution is on the edge. This behavior is handled in
+/// contact_patches_t::get_contact_pairs.
+///
+/// As for the significance of the `tol` and `edge_tol` parameters, `tol` is used to determine the convergence of
+/// the Newton-Raphson scheme as well as the edge case for the time bound. The del_tc value is then considered true
+/// at `0 - tol` and `del_t + tol`. Similarly, `edge_tol` is used for the solution of `xi` and `eta` to determine if
+/// the solution is within the bounds of the patch/surface. If the absolute value of `xi` and `eta` are less than
+/// or equal to `1 + edge_tol`, then the node is passing through the patch/surface.
+///
+/// \param node Contact node object that is being checked for contact with 'this'
+/// \param del_t time step
+/// \param xi_val xi value to change in place
+/// \param eta_val eta value to change in place
+/// \param del_tc del_tc value to change in place
+///
+/// \return true if a contact pair should be formed; false otherwise
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                   CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> contact_surface_map,
+                   DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                   DCArrayKokkos <double> mass, DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes,
+                   CArrayKokkos <size_t> num_corners_in_node, DCArrayKokkos <double> vel,
+                   size_t &node_gid, size_t &node_lid, int &surf_lid, double &xi_val, double &eta_val,
+                   const double &del_t, double xi[4], double eta[4], double &del_tc);
+
+/// end of surface specific functions ******************************************************************************
 
 // run tests
 void run_contact_tests(contact_patches_t &contact_patches_obj, const Mesh_t &mesh, const node_t &nodes,

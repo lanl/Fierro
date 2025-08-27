@@ -6,6 +6,496 @@ double contact_patches_t::bucket_size;
 size_t contact_patches_t::num_contact_nodes;
 size_t contact_patches_t::num_pen_nodes;
 
+// start surface specific functions ********************************************************************************
+
+KOKKOS_FUNCTION
+void capture_box(double &vx_max, double &vy_max, double &vz_max,
+                 double &ax_max, double &ay_max, double &az_max,
+                 double bounding_box[],
+                 const DCArrayKokkos <double> coords, const CArrayKokkos <size_t> bdy_patches,
+                 const CArrayKokkos <size_t> nodes_in_patch, int &surf_lid, const double &dt)
+{
+    // WARNING: specific to first order hex elements
+    // [- or +][x y z][node0 node1 node2 node3]
+    double add_sub[2][3][4];
+    double max_v_arr[3];
+    max_v_arr[0] = vx_max;
+    max_v_arr[1] = vy_max;
+    max_v_arr[2] = vz_max;
+    double max_a_arr[3];
+    max_a_arr[0] = ax_max;
+    max_a_arr[1] = ay_max;
+    max_a_arr[2] = az_max;
+    for(int i = 0; i < 4; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            add_sub[0][j][i] = coords(nodes_in_patch(bdy_patches(surf_lid),i),j) + max_v_arr[j]*dt + 0.5*max_a_arr[j]*dt*dt;
+            add_sub[1][j][i] = coords(nodes_in_patch(bdy_patches(surf_lid),i),j) - max_v_arr[j]*dt - 0.5*max_a_arr[j]*dt*dt;
+        }
+    };
+
+    for (int i = 0; i < 3; i++)
+    {
+        // Find the max of dim i
+        double result_max;
+        result_max = fmax(add_sub[0][i][0],add_sub[0][i][1]);
+        result_max = fmax(result_max,add_sub[0][i][2]);
+        result_max = fmax(result_max,add_sub[0][i][3]);
+        bounding_box[i] = result_max;
+
+        // Find the min of dim i
+        double result_min;
+        result_min = fmin(add_sub[1][i][0],add_sub[1][i][1]);
+        result_min = fmin(result_min,add_sub[1][i][2]);
+        result_min = fmin(result_min,add_sub[1][i][3]);
+        bounding_box[i + 3] = result_min;
+    }
+} // end capture_box
+
+KOKKOS_FUNCTION
+void construct_basis(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                     CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> contact_surface_map,
+                     DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                     DCArrayKokkos <double> mass, DCArrayKokkos <double> coords,
+                     CArrayKokkos <size_t> num_corners_in_node,
+                     DCArrayKokkos <double> vel, double A[3][4], int &surf_lid, const double &del_t)
+{
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            size_t node_gid = nodes_in_patch(bdy_patches(surf_lid,j));
+            double a = contact_forces(contact_surface_map(surf_lid,j),i);
+            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
+            {
+                a += corner_force(corners_in_node(node_gid, corner_lid), i);
+            }
+            a /= mass(node_gid);
+            A[i][j] = coords(node_gid,i) + vel(node_gid,i)*del_t + 0.5*a*del_t*del_t;
+        }
+    }
+}  // end construct_basis
+
+void phi(double phi_k[4], double &xi_val, double &eta_val, double xi[4], double eta[4])
+{
+    for (int i = 0; i < 4; i++)
+        {
+            phi_k[i] = 0.25*(1.0 + xi[i]*xi_val)*(1.0 + eta[i]*eta_val);
+        }
+}  // end phi
+
+KOKKOS_FUNCTION
+void ref_to_physical(double ref[2], const double A[3][4], double phys[3], double xi[4], double eta[4])
+{
+    double phi_k[4];
+    phi(phi_k, ref[0], ref[1], xi, eta);
+    phys[0] = 0;
+    phys[1] = 0;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 4; j++) {
+            phys[i] += A[i][j]*phi_k[j];
+        }
+    }
+}  // end ref_to_physical
+
+KOKKOS_FUNCTION
+void d_phi_d_xi(double d_phi_d_xi[4], double &xi_value, double &eta_value, double xi[4], double eta[4])
+{
+    for (int i = 0; i < 4; i++)
+    {
+        d_phi_d_xi[i] = 0.25*xi[i]*(1.0 + eta[i]*eta_value);
+    }
+} // end d_phi_d_xi
+
+KOKKOS_FUNCTION
+void d_phi_d_eta(double d_phi_d_eta[4], double &xi_value, double &eta_value, double xi[4], double eta[4])
+{
+    for (int i = 0; i < 4; i++)
+    {
+        d_phi_d_eta[i] = 0.25*(1.0 + xi[i]*xi_value)*eta[i];
+    }
+}
+
+KOKKOS_FUNCTION
+void get_normal(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> contact_surface_map,
+                DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                DCArrayKokkos <double> mass, DCArrayKokkos <double> coords,
+                CArrayKokkos <size_t> num_corners_in_node, CArrayKokkos <size_t> bdy_nodes,
+                DCArrayKokkos <double> vel, double &xi_val, double &eta_val, const double &del_t,
+                double normal[3], double xi[4], double eta[4], int &surf_lid)
+{
+    // Get the derivative arrays
+    double d_phi_d_xi_arr[4];
+    d_phi_d_xi(d_phi_d_xi_arr, xi_val, eta_val, xi, eta);
+
+    double d_phi_d_eta_arr[4];
+    d_phi_d_eta(d_phi_d_eta_arr, xi_val, eta_val, xi, eta);
+
+    // Construct the basis matrix A
+    double A[3][4];
+    construct_basis(nodes_in_patch, bdy_patches, contact_forces,
+                    contact_surface_map, corner_force, corners_in_node,
+                    mass, coords, num_corners_in_node, vel,
+                    A, surf_lid, del_t);
+
+    // Get dr_dxi and dr_deta by performing the matrix multiplication A*d_phi_d_xi and A*d_phi_d_eta
+    double dr_dxi[3];
+    dr_dxi[0] = 0;
+    dr_dxi[1] = 0;
+    dr_dxi[2] = 0;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 4; j++) {
+            dr_dxi[i] += A[i][j]*d_phi_d_xi_arr[j];
+        }
+    }
+
+    double dr_deta[3];
+    dr_deta[0] = 0;
+    dr_deta[1] = 0;
+    dr_deta[2] = 0;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 4; j++) {
+            dr_deta[i] += A[i][j]*d_phi_d_eta_arr[j];
+        }
+    }
+
+    // Get the normal by performing the cross product between dr_dxi and dr_deta
+    normal[0] = dr_dxi[1]*dr_deta[2] - dr_dxi[2]*dr_deta[1];
+    normal[1] = dr_dxi[2]*dr_deta[0] - dr_dxi[0]*dr_deta[2];
+    normal[2] = dr_dxi[0]*dr_deta[1] - dr_dxi[1]*dr_deta[0];
+
+    // Make the normal a unit vector
+    double norm_val = sqrt(pow(normal[0],2) + pow(normal[1],2) + pow(normal[2],2));
+    normal[0] /= norm_val;
+    normal[1] /= norm_val;
+    normal[2] /= norm_val;
+}
+
+KOKKOS_FUNCTION  // will be called inside a macro
+bool get_contact_point(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                       CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> contact_surface_map,
+                       DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                       DCArrayKokkos <double> mass, DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes,
+                       CArrayKokkos <size_t> num_corners_in_node, DCArrayKokkos <double> vel,
+                       size_t &node_gid, size_t &node_lid, int &surf_lid, double &xi_val, double &eta_val,
+                       double &del_tc, double xi[4], double eta[4])
+{
+    // In order to understand this, just see this PDF:
+    // https://github.com/gabemorris12/contact_surfaces/blob/master/Finding%20the%20Contact%20Point.pdf
+
+    // The python version of this is also found in contact.py from that same repo.
+
+    // Using "max_nodes" for the array size to ensure that the array is large enough
+    double A[3][4];
+
+    double phi_k[4];
+
+    double d_phi_d_xi_arr[4];
+
+    double d_phi_d_eta_arr[4];
+
+    double d_A_d_del_t[3][4];
+
+    double rhs[3];  // right hand side (A_arr*phi_k)
+
+    double lhs;  // left hand side (node.pos + node.vel*del_t + 0.5*node.acc*del_t*del_t)
+
+    double F[3];  // defined as rhs - lhs
+
+    double J0[3];  // column 1 of jacobian
+
+    double J1[3];  // column 2 of jacobian
+
+    double J2[3];  // column 3 of jacobian
+
+    double J[3][3];  // jacobian
+
+    double J_inv[3][3];  // inverse of jacobian
+
+    double J_det;  // determinant of jacobian
+    double sol[3];  // solution containing (xi, eta, del_tc)
+    sol[0] = xi_val;
+    sol[1] = eta_val;
+    sol[2] = del_tc;
+
+    double grad[3];  // J_inv*F term
+
+    // begin Newton-Rasphson solver
+    size_t iters;  // need to keep track of the number of iterations outside the scope of the loop
+    for (int i = 0; i < max_iter; i++)
+    {
+        iters = i;
+        construct_basis(nodes_in_patch, bdy_patches, contact_forces,
+                        contact_surface_map, corner_force, corners_in_node,
+                        mass, coords, num_corners_in_node, vel,
+                        A, surf_lid, del_tc);
+        phi(phi_k, xi_val, eta_val, xi, eta);
+        rhs[0] = 0;
+        rhs[1] = 0;
+        rhs[2] = 0;
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                rhs[j] += A[j][k]*phi_k[k];
+            }
+        }
+        for (int j = 0; j < 3; j++)
+        {
+            double a = contact_forces(node_lid, j);
+            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
+            {
+                a += corner_force(corners_in_node(node_gid, corner_lid), j);
+            }
+            a /= mass(node_gid);
+            lhs = coords(node_gid,j) + vel(node_gid,j)*del_tc + 0.5*a*del_tc*del_tc;
+            F[j] = rhs[j] - lhs;
+        }
+
+        double norm_F = sqrt(pow(F[0],2) + pow(F[1],2) + pow(F[2],2));
+        if (norm_F <= tol)
+        {
+            break;
+        }
+
+        d_phi_d_xi(d_phi_d_xi_arr, xi_val, eta_val, xi, eta);
+        d_phi_d_eta(d_phi_d_eta_arr, xi_val, eta_val, xi, eta);
+
+        // Construct d_A_d_del_t
+        for (int j = 0; j < 3; j++)
+        {
+            for (int k = 0; k < 4; k++)
+            {
+                size_t patch_node_gid = bdy_nodes(contact_surface_map(surf_lid, k));
+                double a = contact_forces(contact_surface_map(surf_lid,k),j);
+                for (size_t corner_lid = 0; corner_lid < num_corners_in_node(patch_node_gid); corner_lid++)
+                {
+                    a += corner_force(corners_in_node(patch_node_gid, corner_lid), j);
+                }
+                a /= mass(patch_node_gid);
+                d_A_d_del_t[j][k] = vel(patch_node_gid, j) + a*del_tc;
+            }
+        }
+
+        J0[0] = 0;
+        J0[1] = 0;
+        J0[2] = 0;
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                J0[j] += A[j][k]*d_phi_d_xi_arr[k];
+            }
+        }
+
+        J1[0] = 0;
+        J1[1] = 0;
+        J1[2] = 0;
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                J1[j] += A[j][k]*d_phi_d_eta_arr[k];
+            }
+        }
+
+        J2[0] = 0;
+        J2[1] = 0;
+        J2[2] = 0;
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                J2[j] += d_A_d_del_t[j][k]*phi_k[k];
+            }
+        }
+
+        // lhs is a function of del_t, so have to subtract the derivative of lhs wrt del_t
+        for (int j = 0; j < 3; j++)
+        {
+            double a = contact_forces(node_lid, j);
+            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
+            {
+                a += corner_force(corners_in_node(node_gid, corner_lid), j);
+            }
+            a /= mass(node_gid);
+            J2[j] = J2[j] - vel(node_gid, j) - a*del_tc;
+        }
+
+        // Construct the Jacobian
+        for (int j = 0; j < 3; j++)
+        {
+            J[j][0] = J0[j];
+            J[j][1] = J1[j];
+            J[j][2] = J2[j];
+        }
+
+        // Construct the inverse of the Jacobian and check for singularity. Singularities occur when the node and patch
+        // are travelling at the same velocity (same direction) or if the patch is perfectly planar and the node travels
+        // parallel to the plane. Both cases mean no force resolution is needed and will return a false condition. These
+        // conditions can be seen in singularity_detection_check.py in the python version.
+        J_det = J[0][0]*(J[1][1]*J[2][2] - J[1][2]*J[2][1]) - J[0][1]*(J[1][0]*J[2][2] - J[1][2]*J[2][0]) +
+                J[0][2]*(J[1][0]*J[2][1] - J[1][1]*J[2][0]);
+        if (fabs(J_det) < tol)
+        {
+            return false;
+        }
+
+        J_inv[0][0] = (J[1][1]*J[2][2] - J[1][2]*J[2][1])/J_det;
+        J_inv[0][1] = (J[0][2]*J[2][1] - J[0][1]*J[2][2])/J_det;
+        J_inv[0][2] = (J[0][1]*J[1][2] - J[0][2]*J[1][1])/J_det;
+        J_inv[1][0] = (J[1][2]*J[2][0] - J[1][0]*J[2][2])/J_det;
+        J_inv[1][1] = (J[0][0]*J[2][2] - J[0][2]*J[2][0])/J_det;
+        J_inv[1][2] = (J[0][2]*J[1][0] - J[0][0]*J[1][2])/J_det;
+        J_inv[2][0] = (J[1][0]*J[2][1] - J[1][1]*J[2][0])/J_det;
+        J_inv[2][1] = (J[0][1]*J[2][0] - J[0][0]*J[2][1])/J_det;
+        J_inv[2][2] = (J[0][0]*J[1][1] - J[0][1]*J[1][0])/J_det;
+
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 3; k++) {
+                grad[j] += J_inv[j][k]*F[k];
+            }
+        }
+
+        for (int j = 0; j < 3; j++)
+        {
+            sol[j] = sol[j] - grad[j];
+        }
+        // update xi, eta, and del_tc
+        xi_val = sol[0];
+        eta_val = sol[1];
+        del_tc = sol[2];
+    }  // end solver loop
+    
+    if (iters == max_iter - 1)
+    {
+        return false;
+    } else
+    {
+        return true;
+    }
+}  // end get_contact_point
+
+KOKKOS_FUNCTION
+bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                   CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> contact_surface_map,
+                   DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                   DCArrayKokkos <double> mass, DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes,
+                   CArrayKokkos <size_t> num_corners_in_node, DCArrayKokkos <double> vel,
+                   size_t &node_gid, size_t &node_lid, int &surf_lid, double &xi_val, double &eta_val,
+                   const double &del_t, double xi[4], double eta[4], double &del_tc)
+{
+    // Constructing the guess value
+    // The guess is determined by projecting the node onto a plane formed by the patch at del_t/2.
+    // First, compute the centroid of the patch at time del_t/2
+    double A[3][4];
+    double half_dt = del_t/2;
+    construct_basis(nodes_in_patch, bdy_patches, contact_forces,
+                    contact_surface_map, corner_force, corners_in_node,
+                    mass, coords, num_corners_in_node, vel,
+                    A, surf_lid, half_dt);
+
+    double centroid[3];
+    for (int i = 0; i < 3; i++)
+    {
+        centroid[i] = 0.0;
+        for (int j = 0; j < 4; j++)
+        {
+            centroid[i] += A[i][j];
+        }
+        centroid[i] /= 4;
+    }
+
+    // Compute the position of the penetrating node at del_t/2
+    double node_later[3];
+    for (int i = 0; i < 3; i++)
+    {
+        double a = contact_forces(node_lid, i);
+        for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
+        {
+            a += corner_force(corners_in_node(node_gid, corner_lid), i);
+        }
+        a /= mass(node_gid);
+        node_later[i] = coords(node_gid,i) + vel(node_gid,i)*del_t/2 + 0.25*a*del_t*del_t;
+    }
+
+    // Construct the basis vectors. The first row of the matrix is the vector from the centroid to the reference point
+    // (1, 0) on the patch. The second row of the matrix is the vector from the centroid to the reference point (0, 1).
+    // The basis matrix is a 2x3 matrix always.
+    double b1[3];
+    double b2[3];
+    double p1[2];
+    p1[0] = 1.0;
+    p1[1] = 0.0;
+    double p2[2];
+    p2[0] = 0.0;
+    p2[1] = 1.0;
+    ref_to_physical(p1, A, b1, xi, eta);
+    ref_to_physical(p2, A, b2, xi, eta);
+
+    // Get b1, b2, and node_later relative to centroid
+    for (int i = 0; i < 3; i++)
+    {
+        b1[i] -= centroid[i];
+        b2[i] -= centroid[i];
+        node_later[i] -= centroid[i];
+    }
+
+    // b1 and b2 need to be unit vectors to ensure that the guess values are between -1 and 1.
+    double b1_norm = sqrt(pow(b1[0],2) + pow(b1[1],2) + pow(b1[2],2));
+    double b2_norm = sqrt(pow(b2[0],2) + pow(b2[1],2) + pow(b2[2],2));
+    for (int i = 0; i < 3; i++)
+    {
+        b1[i] /= b1_norm;
+        b2[i] /= b2_norm;
+    }
+    // v also needs to be a normal vector, but if its norm is zero, then we leave it as is.
+    double node_later_norm = sqrt(pow(node_later[0],2) + pow(node_later[1],2) + pow(node_later[2],2));
+    if (node_later_norm != 0.0)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            node_later[i] /= node_later_norm;
+        }
+    }
+
+    // Get A_basis, which is the basis vectors found above.
+    double A_basis[2][3];
+    for (int i = 0; i < 3; i++)
+    {
+        A_basis[0][i] = b1[i];
+        A_basis[1][i] = b2[i];
+    }
+
+    // The matrix multiplication of A_basis*v is the projection of the node onto the plane formed by the patch.
+    double guess[2];
+    guess[0] = 0;
+    guess[1] = 0;
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 3; j++) {
+            guess[i] += A_basis[i][j]*node_later[j];
+        }
+    }
+    xi_val = guess[0];
+    eta_val = guess[1];
+    del_tc = del_t/2;
+
+    // Get the solution
+    bool solution_found = get_contact_point(nodes_in_patch, bdy_patches, contact_forces,
+                                            contact_surface_map, corner_force, corners_in_node,
+                                            mass, coords, bdy_nodes, num_corners_in_node, vel,
+                                            node_gid, node_lid, surf_lid, xi_val, eta_val, del_tc,
+                                            xi, eta);
+
+    // checking if solutions falls within bounds for MAKING contact
+    // else solution does NOT require a contact pair to be formed
+    if (solution_found && fabs(xi_val) <= 1.0 + edge_tol && fabs(eta_val) <= 1.0 + edge_tol && del_tc >= 0.0 - tol &&
+        del_tc <= del_t + tol)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}  // end contact_check
+
+// end surface specific functions **********************************************************************************
+
 /// beginning of global, linear algebra functions //////////////////////////////////////////////////////////////////////
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCDFAInspection"
@@ -1580,70 +2070,6 @@ void contact_patches_t::update_nodes(const Mesh_t &mesh, State_t& State)
     //       nodes_obj member in contact_patch_t
 }
 
-// start surface specific functions ********************************************************************************
-
-KOKKOS_FUNCTION
-void contact_patches_t::capture_box(State_t &State, const Mesh_t &mesh, const size_t surf_lid, const double &dt)
-{
-    // WARNING: specific to first order hex elements
-    // [- or +][x y z][node0 node1 node2 node3]
-    double add_sub[2][3][4];
-    double max_v_arr[3];
-    max_v_arr[0] = vx_max;
-    max_v_arr[1] = vy_max;
-    max_v_arr[2] = vz_max;
-    double max_a_arr[3];
-    max_a_arr[0] = ax_max;
-    max_a_arr[1] = ay_max;
-    max_a_arr[2] = az_max;
-    for(int i = 0; i < 4; i++)
-    {
-        for (int j = 0; j < 3; j++)
-        {
-            add_sub[0][j][i] = State.node.coords(mesh.nodes_in_patch(mesh.bdy_patches(surf_lid),i),j) + max_v_arr[j]*dt + 0.5*max_a_arr[j]*dt*dt;
-            add_sub[1][j][i] = State.node.coords(mesh.nodes_in_patch(mesh.bdy_patches(surf_lid),i),j) - max_v_arr[j]*dt - 0.5*max_a_arr[j]*dt*dt;
-        }
-    };
-
-    for (int i = 0; i < 3; i++)
-    {
-        // Find the max of dim i
-        double result_max;
-        result_max = fmax(add_sub[0][i][0],add_sub[0][i][1]);
-        result_max = fmax(result_max,add_sub[0][i][2]);
-        result_max = fmax(result_max,add_sub[0][i][3]);
-        bounding_box[i] = result_max;
-
-        // Find the min of dim i
-        double result_min;
-        result_min = fmin(add_sub[1][i][0],add_sub[1][i][1]);
-        result_min = fmin(result_min,add_sub[1][i][2]);
-        result_min = fmin(result_min,add_sub[1][i][3]);
-        bounding_box[i + 3] = result_min;
-    }
-} // end contact_patches_t::capture_box
-
-KOKKOS_FUNCTION
-void contact_patches_t::construct_basis(State_t &State, const Mesh_t &mesh, double A[3][4], size_t surf_lid, const double &del_t) const
-{
-    for (int i = 0; i < 3; i++)
-    {
-        for (int j = 0; j < 4; j++)
-        {
-            size_t node_gid = mesh.nodes_in_patch(mesh.bdy_patches(surf_lid,j));
-            double a = contact_forces(contact_surface_map(surf_lid,j),i);
-            for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++)
-            {
-                a += State.corner.force(mesh.corners_in_node(node_gid, corner_lid), i);
-            }
-            a /= State.node.mass(node_gid);
-            A[i][j] = State.node.coords(node_gid,i) + State.node.vel(node_gid,i)*del_t + 0.5*a*del_t*del_t;
-        }
-    }
-}  // end construct_basis
-
-// end surface specific functions **********************************************************************************
-
 void contact_patches_t::sort(State_t &State, const Mesh_t &mesh)
 {
     // todo: I don't think it's a good idea to have these allocated here. These should become member variables, and
@@ -1855,11 +2281,13 @@ void contact_patches_t::sort(State_t &State, const Mesh_t &mesh)
     Kokkos::fence();
 }  // end sort
 
-void contact_patches_t::find_nodes(State_t &State, const Mesh_t &mesh, contact_patch_t &contact_patch, const size_t surf_lid, const double &del_t,
+void contact_patches_t::find_nodes(State_t &State, const Mesh_t &mesh, contact_patch_t &contact_patch, int surf_lid, const double &del_t,
                                    size_t &num_nodes_found)
 {
     // Get capture box
-    capture_box(State, mesh, surf_lid, del_t);
+    capture_box(vx_max, vy_max, vz_max, ax_max, ay_max, az_max, 
+                bounding_box, State.node.coords, mesh.bdy_patches,
+                mesh.nodes_in_patch, surf_lid, del_t);
 
     // Determine the buckets that intersect with the capture box
     size_t ibox_max = fmax(0, fmin(Sx - 1, floor((bounding_box[0] - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
@@ -2403,7 +2831,16 @@ void contact_patches_t::get_contact_pairs(State_t& State, const Mesh_t &mesh, co
         // todo: original plan was for this to be a parallel loop, but there are collisions in the contact_pairs_access
         for (int node_lid = 0; node_lid < num_nodes_found; node_lid++)
         {
-            const size_t &node_gid = possible_nodes(node_lid);
+            size_t &node_gid = possible_nodes(node_lid);
+
+            // getting node contact id
+            size_t contact_id;
+            for (int i = 0; i < mesh.num_bdy_nodes; i++) {
+                if (node_gid == mesh.bdy_nodes(i)) {
+                    contact_id = i;
+                }
+            }
+
             const contact_node_t &node = contact_nodes(node_gid);
             contact_pair_t &current_pair = contact_pairs(node_gid);
             // If this is already an active pair, then back out of the thread/continue
@@ -2421,7 +2858,11 @@ void contact_patches_t::get_contact_pairs(State_t& State, const Mesh_t &mesh, co
             }
 
             double xi_val, eta_val, del_tc;
-            bool is_hitting = contact_patch.contact_check(node, del_t, xi_val, eta_val, del_tc);
+            //bool is_hitting = contact_patch.contact_check(node, del_t, xi_val, eta_val, del_tc);
+            bool is_hitting = contact_check(mesh.nodes_in_patch, mesh.bdy_patches, contact_forces, contact_surface_map,
+                                            State.corner.force, mesh.corners_in_node, State.node.mass, State.node.coords,
+                                            mesh.bdy_nodes, mesh.num_corners_in_node, State.node.vel, node_gid, contact_id,
+                                            patch_lid, xi_val, eta_val, del_t, xi, eta, del_tc);
 
             if (is_hitting && !is_pen_node(node_gid) && !is_patch_node(node_gid))
             {
