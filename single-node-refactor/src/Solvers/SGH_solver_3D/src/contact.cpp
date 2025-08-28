@@ -345,6 +345,9 @@ bool get_contact_point(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_
         J_inv[2][1] = (J[0][1]*J[2][0] - J[0][0]*J[2][1])/J_det;
         J_inv[2][2] = (J[0][0]*J[1][1] - J[0][1]*J[1][0])/J_det;
 
+        grad[0] = 0;
+        grad[1] = 0;
+        grad[2] = 0;
         for (int j = 0; j < 3; j++) {
             for (int k = 0; k < 3; k++) {
                 grad[j] += J_inv[j][k]*F[k];
@@ -495,6 +498,452 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
 }  // end contact_check
 
 // end surface specific functions **********************************************************************************
+
+/// start of pair specific functions *******************************************************************************
+
+KOKKOS_FUNCTION
+void frictionless_increment(ViewCArrayKokkos <double> pair_vars, size_t &contact_id, double xi[4], double eta[4], double &del_t,
+                            DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes, ViewCArrayKokkos <size_t> contact_surface_map,
+                            DCArrayKokkos <double> mass, CArrayKokkos <double> contact_forces, DCArrayKokkos <double> corner_force,
+                            DCArrayKokkos <double> vel, RaggedRightArrayKokkos <size_t> corners_in_node,
+                            CArrayKokkos <size_t> num_corners_in_node)
+{
+    // In order to understand this, just see this PDF:
+    // https://github.com/gabemorris12/contact_surfaces/blob/master/Finding%20the%20Contact%20Force.pdf
+
+    double A[3][4];
+
+    double phi_k[4];
+
+    double d_phi_d_xi_arr[4];
+
+    double d_phi_d_eta_arr[4];
+
+    double ak;  // place to store acceleration of a patch node
+    double as;  // place to store acceleration of the penetrating node
+
+    double rhs[3];  // right hand side (A_arr*phi_k)
+
+    double lhs;  // left hand side (node.pos + node.vel*del_t + 0.5*node.acc*del_t*del_t)
+
+    double F[3];  // defined as lhs - rhs
+
+    double d_A_d_xi[3][4];  // derivative of A wrt xi
+
+    double d_A_d_eta[3][4];  // derivative of A wrt eta
+
+    double d_A_d_fc[3][4];  // derivative of A wrt fc_inc
+
+    double neg_normal[3];
+    for (int i = 0; i < 3; i++)
+    {
+        neg_normal[i] = -pair_vars(i+3);
+    }
+
+    double outer1[4];  // right segment in first outer product
+
+    double outer2[4];  // right segment in second outer product
+
+    double outer3[4];  // right segment in third outer product
+
+    double J0_first[3];  // first term in the J0 column calculation
+
+    double J0_second[3];  // second term in the J0 column calculation
+
+    double J1_first[3];  // first term in the J1 column calculation
+
+    double J1_second[3];  // second term in the J1 column calculation
+
+    double J2_second[3];  // second term in the J2 column calculation
+
+    double J0[3];  // column 1 of jacobian
+
+    double J1[3];  // column 2 of jacobian
+
+    double J2[3];  // column 3 of jacobian
+
+    double J[3][3];  // jacobian
+
+    double J_inv[3][3];  // inverse of jacobian
+
+    double J_det;  // determinant of jacobian
+    double sol[3];
+    sol[0] = pair_vars(0); // xi
+    sol[1] = pair_vars(1); // eta
+    sol[2] = pair_vars(6); // fc_inc
+    
+    // getting initial guess for initial penetration cases
+    // NOTE: THIS ONLY WORKS WITH FIRST ORDER HEX ELEMENTS******************************************
+    double pos_diff[3];
+    phi(phi_k, pair_vars(0), pair_vars(1), xi, eta);
+    for (int i = 0; i < 3; i++) {
+        pos_diff[i] = -coords(i);
+        for (int j = 0; j < 4; j++) {
+            size_t node_gid = bdy_nodes(contact_surface_map(i));
+            pos_diff[i] += coords(node_gid,i)*phi_k[j];
+        }
+    }
+    double n_dot_n = pair_vars(3)*pair_vars(3) + pair_vars(4)*pair_vars(4) + pair_vars(5)*pair_vars(5);
+    double n_dot_pos_diff = pos_diff[0]*pair_vars(3) + pos_diff[1]*pair_vars(4) + pos_diff[2]*pair_vars(5);
+    double inv_mass_sum = 1/mass(bdy_nodes(contact_id));
+    for (int i = 0; i < 4; i++) {
+        size_t node_gid = bdy_nodes(contact_surface_map(i));
+        inv_mass_sum += 1/mass(node_gid);
+    }
+    double fc_guess = 2/(del_t*del_t*n_dot_n*inv_mass_sum)*n_dot_pos_diff;
+    //std::cout << "FC GUESS: " << fc_guess << std::endl;
+    if (pair_vars(6) == 0) {
+        sol[2] = fc_guess;
+    }
+
+    // *********************************************************************************************
+
+    double grad[3];  // J_inv*F term
+
+    for (int i = 0; i < max_iter; i++)
+    {
+        phi(phi_k, pair_vars(0), pair_vars(1), xi, eta);
+        // construct A
+        for (int j = 0; j < 3; j++)
+        {
+            for (int k = 0; k < 4; k++)
+            {   
+                size_t node_gid = bdy_nodes(contact_surface_map(k));
+                ak = -pair_vars(6)*pair_vars(j+3)*phi_k[k];
+                ak += contact_forces(contact_surface_map(k),j)/mass(node_gid);
+                for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
+                {
+                    ak += corner_force(corners_in_node(node_gid, corner_lid), j);
+                }
+                A[j][k] = coords(node_gid,j) + vel(node_gid,j)*del_t + 0.5*ak*del_t*del_t;
+            }
+        }
+
+        // construct F
+        rhs[0] = 0;
+        rhs[1] = 0;
+        rhs[2] = 0;
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                rhs[j] += A[j][k]*phi_k[k];
+            }
+        }
+        for (int j = 0; j < 3; j++)
+        {
+            as = pair_vars(6)*pair_vars(j+3);
+            as += contact_forces(contact_id, j)/mass(bdy_nodes(contact_id));
+            for (size_t corner_lid = 0; corner_lid < num_corners_in_node(bdy_nodes(contact_id)); corner_lid++)
+            {
+                as += corner_force(corners_in_node(bdy_nodes(contact_id), corner_lid), j);
+            }
+            lhs = coords(bdy_nodes(contact_id),j) + vel(bdy_nodes(contact_id),j)*del_t + 0.5*as*del_t*del_t;
+            F[j] = lhs - rhs[j];
+        }
+        
+        double norm_F = F[0]*F[0] + F[1]*F[1] + F[2]*F[2];
+        if (norm_F <= tol)
+        {
+            break;
+        }
+
+        // construct J
+        d_phi_d_xi(d_phi_d_xi_arr, pair_vars(0), pair_vars(1), xi, eta);
+        d_phi_d_eta(d_phi_d_eta_arr, pair_vars(0), pair_vars(1), xi, eta);
+
+        for (int j = 0; j < 4; j++)
+        {
+            size_t node_gid = bdy_nodes(contact_surface_map(j));
+            outer1[j] = (0.5*d_phi_d_xi_arr[j]*pair_vars(6)*del_t*del_t)/mass(node_gid);
+            outer2[j] = (0.5*d_phi_d_eta_arr[j]*pair_vars(6)*del_t*del_t)/mass(node_gid);
+            outer3[j] = (0.5*phi_k[j]*del_t*del_t)/mass(node_gid);
+        }
+
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                d_A_d_xi[j][k] = neg_normal[j]*outer1[k];
+            }
+        }
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                d_A_d_eta[j][k] = neg_normal[j]*outer2[k];
+            }
+        }
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                d_A_d_fc[j][k] = neg_normal[j]*outer3[k];
+            }
+        }
+
+        J0_first[0] = 0;
+        J0_first[1] = 0;
+        J0_first[2] = 0;
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                J0_first[j] += A[j][k]*d_phi_d_xi_arr[k];
+            }
+        }
+
+        J0_second[0] = 0;
+        J0_second[1] = 0;
+        J0_second[2] = 0;
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                J0_second[j] += d_A_d_xi[j][k]*phi_k[k];
+            }
+        }
+
+        for (int j = 0; j < 3; j++)
+        {
+            J0[j] = -J0_first[j] - J0_second[j];
+        }
+
+        J1_first[0] = 0;
+        J1_first[1] = 0;
+        J1_first[2] = 0;
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                J1_first[j] += A[j][k]*d_phi_d_eta_arr[k];
+            }
+        }
+
+        J1_second[0] = 0;
+        J1_second[1] = 0;
+        J1_second[2] = 0;
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                J1_second[j] += d_A_d_eta[j][k]*phi_k[k];
+            }
+        }
+
+        for (int j = 0; j < 3; j++)
+        {
+            J1[j] = -J1_first[j] - J1_second[j];
+        }
+
+        J2_second[0] = 0;
+        J2_second[1] = 0;
+        J2_second[2] = 0;
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                J2_second[j] += d_A_d_fc[j][k]*phi_k[k];
+            }
+        }
+
+        for (int j = 0; j < 3; j++)
+        {
+            J2[j] = (0.5*del_t*del_t*pair_vars(j+3))/mass(bdy_nodes(contact_id)) - J2_second[j];
+        }
+
+        for (int j = 0; j < 3; j++)
+        {
+            J[j][0] = J0[j];
+            J[j][1] = J1[j];
+            J[j][2] = J2[j];
+        }
+
+        J_det = J[0][0]*(J[1][1]*J[2][2] - J[1][2]*J[2][1]) - J[0][1]*(J[1][0]*J[2][2] - J[1][2]*J[2][0]) +
+                J[0][2]*(J[1][0]*J[2][1] - J[1][1]*J[2][0]);  // there should be no singularities in this calculation
+        if (J_det == 0.0)
+        {
+            pair_vars(6) = 0.0;
+            printf("Error: Singularity detected in frictionless_increment\n");
+            break;
+        }
+
+        J_inv[0][0] = (J[1][1]*J[2][2] - J[1][2]*J[2][1])/J_det;
+        J_inv[0][1] = (J[0][2]*J[2][1] - J[0][1]*J[2][2])/J_det;
+        J_inv[0][2] = (J[0][1]*J[1][2] - J[0][2]*J[1][1])/J_det;
+        J_inv[1][0] = (J[1][2]*J[2][0] - J[1][0]*J[2][2])/J_det;
+        J_inv[1][1] = (J[0][0]*J[2][2] - J[0][2]*J[2][0])/J_det;
+        J_inv[1][2] = (J[0][2]*J[1][0] - J[0][0]*J[1][2])/J_det;
+        J_inv[2][0] = (J[1][0]*J[2][1] - J[1][1]*J[2][0])/J_det;
+        J_inv[2][1] = (J[0][1]*J[2][0] - J[0][0]*J[2][1])/J_det;
+        J_inv[2][2] = (J[0][0]*J[1][1] - J[0][1]*J[1][0])/J_det;
+
+        grad[0] = 0;
+        grad[1] = 0;
+        grad[2] = 0;
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 3; k++) {
+                grad[j] += J_inv[j][k]*F[k];
+            }
+        }
+
+        for (int j = 0; j < 3; j++)
+        {
+            sol[j] = sol[j] - grad[j];
+        }
+        pair_vars(0) = sol[0];
+        pair_vars(1) = sol[1];
+        pair_vars(2) = sol[2];
+    }
+}  // end frictionless increment
+
+KOKKOS_FUNCTION
+void distribute_frictionless_force(ViewCArrayKokkos <double> pair_vars, size_t &contact_id, CArrayKokkos <size_t> contact_surface_map,
+                                   double xi[4], double eta[4], CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> node_patch_pairs)
+{
+    // this function updating contact_force direction is why one node is handled at a time
+    double force_scale = 0.2;
+    double force_val = force_scale*pair_vars(6);
+
+    // get phi_k
+    double phi_k[4];
+    phi(phi_k, pair_vars(0), pair_vars(1), xi, eta);
+
+    // if tensile, then subtract left over fc_inc_total; if not, then distribute to nodes
+    if (force_val + pair_vars(7) < 0.0)
+    {
+        // update penetrating node
+        for (int i = 0; i < 3; i++)
+        {
+            Kokkos::atomic_add(&contact_forces(contact_id, i), -pair_vars(7)*pair_vars(i+3));
+            //node.contact_force(i) -= fc_inc_total*normal(i);
+        }
+
+        // update patch nodes
+        for (int k = 0; k < 4; k++)
+        {
+            size_t patch_node_contact_id = contact_surface_map(node_patch_pairs(contact_id),k);
+            for (int i = 0; i < 3; i++)
+            {
+                Kokkos::atomic_add(&contact_forces(patch_node_contact_id, i), pair_vars(7)*pair_vars(i+3)*phi_k[k]);
+                //patch_node.contact_force(i) += fc_inc_total*normal(i)*phi_k(k);
+            }
+        }
+        pair_vars(7) = 0.0;
+        pair_vars(6) = 0.0;
+    } else
+    {
+        pair_vars(7) += force_val;
+
+        // update penetrating node
+        for (int i = 0; i < 3; i++)
+        {
+            Kokkos::atomic_add(&contact_forces(contact_id, i), force_val*pair_vars(i+3));
+            //node.contact_force(i) += force_val*normal(i);
+        }
+
+        // update patch nodes
+        for (int k = 0; k < 4; k++)
+        {
+            size_t patch_node_contact_id = contact_surface_map(node_patch_pairs(contact_id),k);
+            for (int i = 0; i < 3; i++)
+            {
+                Kokkos::atomic_add(&contact_forces(patch_node_contact_id, i), -force_val*pair_vars(i+3)*phi_k[k]);
+                //patch_node.contact_force(i) -= force_val*normal(i)*phi_k(k);
+            }
+        }
+    }
+}  // end distribute_frictionless_force
+
+bool should_remove(ViewCArrayKokkos <double> pair_vars,
+                   CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                   CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> contact_surface_map,
+                   DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                   DCArrayKokkos <double> mass, DCArrayKokkos <double> coords,
+                   CArrayKokkos <size_t> num_corners_in_node, CArrayKokkos <size_t> bdy_nodes,
+                   DCArrayKokkos <double> vel, const double &del_t,
+                   double normal[3], double xi[4], double eta[4], int &surf_lid)
+{
+    if (pair_vars(7) == 0.0 || fabs(pair_vars(0)) > 1.0 + edge_tol || fabs(pair_vars(1)) > 1.0 + edge_tol)
+    {
+        pair_vars(7) = 0.0;
+        return true;
+    } else
+    {
+        // update the normal and zero fc_inc_total for the next iteration
+        double new_normal[3];
+        get_normal(nodes_in_patch, bdy_patches, contact_forces, contact_surface_map, corner_force,
+                   corners_in_node, mass, coords, num_corners_in_node, bdy_nodes, vel, pair_vars(0),
+                   pair_vars(1), del_t, new_normal, xi, eta, surf_lid);
+        for (int i = 0; i < 3; i++)
+        {
+            pair_vars(i+3) = new_normal[i];
+        }
+        pair_vars(7) = 0.0;
+
+        return false;
+    }
+}  // end should_remove
+
+/// end of pair specific functions *********************************************************************************
+
+/// start of contact state functions *******************************************************************************
+
+void find_nodes(double &vx_max, double &vy_max, double &vz_max, double &ax_max, double &ay_max, double &az_max,
+                DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_patches, CArrayKokkos <size_t> nodes_in_patch,
+                int &surf_lid, const double &del_t, size_t &Sx, size_t &Sy, size_t &Sz, double bounding_box[],
+                double &x_min, double &y_min, double &z_min, double &bucket_size, CArrayKokkos <size_t> buckets,
+                CArrayKokkos <size_t> possible_nodes, CArrayKokkos <size_t> contact_surface_map, size_t &num_nodes_found,
+                CArrayKokkos <size_t> nbox, CArrayKokkos <size_t> nsort, CArrayKokkos <size_t> npoint,
+                CArrayKokkos <size_t> bdy_nodes)
+{
+    // Get capture box
+    capture_box(vx_max, vy_max, vz_max, ax_max, ay_max, az_max, 
+                bounding_box, coords, bdy_patches,
+                nodes_in_patch, surf_lid, del_t);
+
+    // Determine the buckets that intersect with the capture box
+    size_t ibox_max = fmax(0, fmin(Sx - 1, floor((bounding_box[0] - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t jbox_max = fmax(0, fmin(Sy - 1, floor((bounding_box[1] - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t kbox_max = fmax(0, fmin(Sz - 1, floor((bounding_box[2] - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t ibox_min = fmax(0, fmin(Sx - 1, floor((bounding_box[3] - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t jbox_min = fmax(0, fmin(Sy - 1, floor((bounding_box[4] - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+    size_t kbox_min = fmax(0, fmin(Sz - 1, floor((bounding_box[5] - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+
+    // get number of buckets to consider
+    size_t bucket_count = 0;
+    for (size_t i = ibox_min; i < ibox_max + 1; i++)
+    {
+        for (size_t j = jbox_min; j < jbox_max + 1; j++)
+        {
+            for (size_t k = kbox_min; k < kbox_max + 1; k++)
+            {
+                // todo: If there is a segfault here, then that means that we have more than max_number_buckets.
+                //       increase that value as this means that there was so much strain that the number of buckets
+                //       exceeded the value.
+                buckets(bucket_count) = k*Sx*Sy + j*Sx + i;
+                bucket_count += 1;
+            }
+        }
+    }
+
+    // Get all nodes in each bucket
+    num_nodes_found = 0;  // local node index for possible_nodes member
+    for (int bucket_lid = 0; bucket_lid < bucket_count; bucket_lid++)
+    {
+        size_t b = buckets(bucket_lid);
+        for (size_t i = 0; i < nbox(b); i++)
+        {
+            size_t node_gid = nsort(npoint(b) + i);
+            bool add_node = true;
+            // If the node is in the current contact_patch, then continue; else, add it to possible_nodes
+            for (int j = 0; j < contact_patch_t::num_nodes_in_patch; j++)
+            {
+                if (node_gid == bdy_nodes(contact_surface_map(surf_lid,j)))
+                {
+                    add_node = false;
+                    break;
+                }
+            }
+
+            if (add_node)
+            {
+                possible_nodes(num_nodes_found) = node_gid;
+                num_nodes_found += 1;
+            }
+        }
+    }
+}  // end find_nodes
+
+/// end of contact state functions *********************************************************************************
+
+/// start of functions called in boundary.cpp **********************************************************************
+
+
+
+/// end of functions called in boundary.cpp ************************************************************************
 
 /// beginning of global, linear algebra functions //////////////////////////////////////////////////////////////////////
 #pragma clang diagnostic push
@@ -1520,6 +1969,13 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
             }
         }
     }
+
+    // sizing and filling pairing arrays
+    node_patch_pairs = CArrayKokkos <size_t> (mesh.num_bdy_nodes);
+    pair_vars = CArrayKokkos <double> (mesh.num_bdy_nodes, 8);
+    node_patch_pairs.set_values(mesh.num_bdy_nodes);
+    pair_vars.set_values(0);
+
 
 
 
@@ -2827,7 +3283,13 @@ void contact_patches_t::get_contact_pairs(State_t& State, const Mesh_t &mesh, co
         contact_patch_t &contact_patch = contact_patches(patch_lid);
 
         size_t num_nodes_found;
-        find_nodes(State, mesh, contact_patch, patch_lid, del_t, num_nodes_found);
+        ::find_nodes(vx_max, vy_max, vz_max, ax_max, ay_max, az_max,
+                     State.node.coords, mesh.bdy_patches, mesh.nodes_in_patch,
+                     patch_lid, del_t, Sx, Sy, Sz, bounding_box, x_min, y_min,
+                     z_min, bucket_size, buckets, possible_nodes,
+                     contact_surface_map, num_nodes_found, nbox, nsort,
+                     npoint, mesh.bdy_nodes);
+        //find_nodes(State, mesh, contact_patch, patch_lid, del_t, num_nodes_found);
         // todo: original plan was for this to be a parallel loop, but there are collisions in the contact_pairs_access
         for (int node_lid = 0; node_lid < num_nodes_found; node_lid++)
         {

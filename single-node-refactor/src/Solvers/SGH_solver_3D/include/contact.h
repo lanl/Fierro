@@ -338,6 +338,9 @@ struct contact_patches_t
     CArrayKokkos <size_t> possible_nodes; // for carrying node gids as necessary in get_contact_pairs
     CArrayKokkos <size_t> penetration_surfaces; // stores node gids of surface in correct local order for taking normals
     CArrayKokkos <size_t> contact_surface_map; // stores index for each node that corresponds to mesh.bdy_nodes indexing
+    CArrayKokkos <size_t> node_patch_pairs; // stores the patch contact id in the node contact id index when pair is formed
+    CArrayKokkos <double> pair_vars; // stores xi, eta, del_tc, normal_x, normal_y, normal_z, fc_inc, and fc_inc_total in node contact id index
+
 
     CArrayKokkos<contact_patch_t> contact_patches;  // patches that will be checked for contact
     CArrayKokkos<contact_node_t> contact_nodes;  // all nodes that are in contact_patches (accessed through node gid)
@@ -809,6 +812,102 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
                    const double &del_t, double xi[4], double eta[4], double &del_tc);
 
 /// end of surface specific functions ******************************************************************************
+
+/// start of pair specific functions *******************************************************************************
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn frictionless_increment
+///
+/// \brief Computes the force increment for the contact pair with no friction
+///
+/// This method will compute the force increment between a contact patch and node with no friction. The force is
+/// strictly calculated in the normal direction only. The xi, eta, and fc_inc members will be changed in place. The
+/// force increment value is determined by kinematic conditions and will result in the position of the node being
+/// on the patch/surface at time del_t.
+///
+/// \param contact_patches contact_patches object
+/// \param del_t current time step in the analysis
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void frictionless_increment(ViewCArrayKokkos <double> pair_vars, size_t &contact_id, double xi[4], double eta[4], double &del_t,
+                            DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes, ViewCArrayKokkos <size_t> contact_surface_map,
+                            DCArrayKokkos <double> mass, CArrayKokkos <double> contact_forces, DCArrayKokkos <double> corner_force,
+                            DCArrayKokkos <double> vel, RaggedRightArrayKokkos <size_t> corners_in_node,
+                            CArrayKokkos <size_t> num_corners_in_node);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn distribute_frictionless_force
+///
+/// \brief Distributes the force increment to the penetrating node and the patch nodes
+///
+/// This method will distribute an incremental force value (fc_inc member) to the penetrating node and the patch
+/// nodes. For the penetrating node, it's N*fc_inc and for the patch nodes, a value of -N*fc_inc*phi_k where N is
+/// the unit normal and phi_k is the basis function array values as defined in contact_patch_t::phi. This method
+/// will also add the force increment to fc_inc_total. If fc_inc_total is less than zero, then this means that a
+/// tensile force is required to keep the node on the patch, but this is not possible since contact is always
+/// compressive when there is no adhesive phenomena. When fc_inc_total goes below zero, fc_inc is set to zero,
+/// and the left over fc_inc_total will be subtracted from the penetrating node and the patch nodes, then
+/// fc_inc_total is set to zero.
+///
+/// \param force_scale instead of distributing the full fc_inc, a fraction of it can be distributed to prevent large
+///                    shocks to the solving scheme
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void distribute_frictionless_force(ViewCArrayKokkos <double> pair_vars, size_t &contact_id, CArrayKokkos <size_t> contact_surface_map,
+                                   double xi[4], double eta[4], CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> node_patch_pairs);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn should_remove
+///
+/// \brief Determines if the contact pair should be removed
+///
+/// This method will determine if the contact pair should be removed. If the fc_inc_total value is zero or if the
+/// xi and eta values are out of the bounds of the patch (not between -1 - edge_tol and 1 + edge_tol), then the pair
+/// will be removed. This method is not used for all contact types as some (i.e. glue) require different conditions.
+/// Additionally, this method will update the unit normal to the current xi and eta values. At the moment, this
+/// method is used for frictionless contact only.
+///
+/// \param del_t current time step in the analysis
+///
+/// \return true if the contact pair should be removed; false otherwise
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+bool should_remove(ViewCArrayKokkos <double> pair_vars,
+                   CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                   CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> contact_surface_map,
+                   DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                   DCArrayKokkos <double> mass, DCArrayKokkos <double> coords,
+                   CArrayKokkos <size_t> num_corners_in_node, CArrayKokkos <size_t> bdy_nodes,
+                   DCArrayKokkos <double> vel, const double &del_t,
+                   double normal[3], double xi[4], double eta[4], int &surf_lid);
+
+/// end of pair specific functions *********************************************************************************
+
+/// start of contact state functions *******************************************************************************
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn find_nodes
+///
+/// \brief Finds the nodes that could potentially contact a surface/patch
+///
+/// \param contact_patch patch object of interest
+/// \param del_t current time step in the analysis
+/// \param num_nodes_found number of nodes that could potentially contact the patch (used to access possible_nodes)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void find_nodes(double &vx_max, double &vy_max, double &vz_max, double &ax_max, double &ay_max, double &az_max,
+                DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_patches, CArrayKokkos <size_t> nodes_in_patch,
+                int &surf_lid, const double &del_t, size_t &Sx, size_t &Sy, size_t &Sz, double bounding_box[],
+                double &x_min, double &y_min, double &z_min, double &bucket_size, CArrayKokkos <size_t> buckets,
+                CArrayKokkos <size_t> possible_nodes, CArrayKokkos <size_t> contact_surface_map, size_t &num_nodes_found,
+                CArrayKokkos <size_t> nbox, CArrayKokkos <size_t> nsort, CArrayKokkos <size_t> npoint,
+                CArrayKokkos <size_t> bdy_nodes);
+
+/// end of contact state functions *********************************************************************************
+
+/// start of functions called in boundary.cpp **********************************************************************
+
+
+
+/// end of functions called in boundary.cpp ************************************************************************
 
 // run tests
 void run_contact_tests(contact_patches_t &contact_patches_obj, const Mesh_t &mesh, const node_t &nodes,
