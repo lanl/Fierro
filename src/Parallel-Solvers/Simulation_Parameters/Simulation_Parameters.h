@@ -382,11 +382,14 @@ struct Simulation_Parameters
             {OPTIMIZATION_MODULE_TYPE::Mass_Constraint_TopOpt,                       {FEA_MODULE_TYPE::Inertial       }},
             {OPTIMIZATION_MODULE_TYPE::Center_of_Mass_Constraint_TopOpt,             {FEA_MODULE_TYPE::Inertial       }},
             {OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_TopOpt,          {FEA_MODULE_TYPE::Inertial       }},
+            {OPTIMIZATION_MODULE_TYPE::Mass_Constraint_ShapeOpt,                     {FEA_MODULE_TYPE::Inertial       }},
+            {OPTIMIZATION_MODULE_TYPE::Moment_of_Inertia_Constraint_ShapeOpt,        {FEA_MODULE_TYPE::Inertial       }},
             {OPTIMIZATION_MODULE_TYPE::Strain_Energy_Minimize_TopOpt,                {FEA_MODULE_TYPE::Elasticity     }},
             {OPTIMIZATION_MODULE_TYPE::Displacement_Constraint_TopOpt,               {FEA_MODULE_TYPE::Elasticity     }},
             {OPTIMIZATION_MODULE_TYPE::Strain_Energy_Constraint_TopOpt,              {FEA_MODULE_TYPE::Elasticity     }},
             {OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_TopOpt,              {FEA_MODULE_TYPE::SGH            }},
             {OPTIMIZATION_MODULE_TYPE::Internal_Energy_Minimize_ShapeOpt,            {FEA_MODULE_TYPE::SGH            }},
+            {OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_ShapeOpt,             {FEA_MODULE_TYPE::SGH            }},
             {OPTIMIZATION_MODULE_TYPE::Kinetic_Energy_Minimize_TopOpt,               {FEA_MODULE_TYPE::SGH, FEA_MODULE_TYPE::Dynamic_Elasticity}},
         };
         if (map.count(type) == 0)

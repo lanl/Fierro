@@ -1532,8 +1532,13 @@ void Explicit_Solver::setup_topology_optimization_problem(){
    ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(design_node_densities_distributed);
   //construct direction vector for check
   Teuchos::RCP<MV> directions_distributed = Teuchos::rcp(new MV(map, 1));
+  ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
+  ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
   directions_distributed->putScalar(-1);
   //directions_distributed->randomize(-1,1);
+  //obj->update(*rol_x,ROL::UpdateType::Temp);
+  //real_t dummy_tol = 0;
+  //obj->gradient(*rol_d, *rol_x,dummy_tol);
   host_vec_array directions_view = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //constraints due to specified user regions
   const size_t num_fills = simparam.optimization_options.volume_bound_constraints.size();
@@ -1560,8 +1565,6 @@ void Explicit_Solver::setup_topology_optimization_problem(){
   host_vec_array directions = directions_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
   //for(int init = 1; init < nlocal_nodes; init++)
   //directions(4,0) = -0.3;
-  ROL::Ptr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>> rol_d =
-  ROL::makePtr<ROL::TpetraMultiVector<real_t,LO,GO,node_type>>(directions_distributed);
   if(simparam.optimization_options.check_objective_gradient){
     obj->checkGradient(*rol_x, *rol_d);
   }
@@ -1577,7 +1580,7 @@ void Explicit_Solver::setup_topology_optimization_problem(){
     
   // Solve optimization problem.
   //std::ostream outStream;
-  solver.solve(*fos);
+  //solver.solve(*fos);
 
   //print final constraint satisfaction
   //fea_elasticity->compute_element_masses(design_densities,false);
@@ -1654,8 +1657,8 @@ void Explicit_Solver::setup_shape_optimization_problem(){
   host_vec_array node_coordinates_lower_bound = lower_bound_node_coordinates_distributed->getLocalView<HostSpace> (Tpetra::Access::ReadWrite);
 
   //begin by assigning values of coordinate vectors to bound vectors
-  lower_bound_node_coordinates_distributed->assign(*all_node_coords_distributed);
-  upper_bound_node_coordinates_distributed->assign(*all_node_coords_distributed);
+  lower_bound_node_coordinates_distributed->assign(*node_coords_distributed);
+  upper_bound_node_coordinates_distributed->assign(*node_coords_distributed);
 
   //initialize densities to 1 for now; in the future there might be an option to read in an initial condition for each node
   for(int inode = 0; inode < nlocal_nodes; inode++){
