@@ -986,61 +986,56 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
 
 // ======================== face-by-face cross-check debug ========================
 {
-    // Fierro HEX8 [face-to-node local indexing] (outward normals):
-    // patch (or surf) 0: [0,4,6,2] (xi-minus)
-    // patch (or surf) 1: [1,3,7,5] (xi-plus)
-    // patch (or surf) 2: [0,1,5,4] (eta-minus)
-    // patch (or surf) 3: [3,2,6,7] (eta-plus)
-    // patch (or surf) 4: [0,2,3,1] (zeta-minus)
-    // patch (or surf) 5: [4,5,7,6] (zeta-plus)
-    constexpr int face_nodes[6][4] = {
-        {0,4,6,2},
-        {1,3,7,5},
-        {0,1,5,4},
-        {3,2,6,7},
-        {0,2,3,1},
-        {4,5,7,6}
-    };
-
-    // quick sanity
+    // quick sanity check
     if (mesh.num_nodes_in_elem != 8 || mesh.num_dims != 3) {
         printf("[debug] face-geometry check only implemented for HEX8/3D\n");
     } else {
         printf("======================== face-by-face cross-check ========================\n");
 
-    for (size_t elem = 0; elem < mesh.num_elems; ++elem) {
-        // print element connectivity once
-        printf("Element %zu nodes: ", elem);
-        for (size_t ln = 0; ln < mesh.num_nodes_in_elem; ++ln) {
-            printf("%zu ", mesh.nodes_in_elem(elem, ln));
+        for (size_t elem = 0; elem < mesh.num_elems; ++elem) {
+            // (optional) print element connectivity
+            printf("Element %zu nodes: ", elem);
+            for (size_t ln = 0; ln < mesh.num_nodes_in_elem; ++ln) {
+                printf("%zu ", mesh.nodes_in_elem(elem, ln));
+            }
+            printf("\n");
+        
+        // loop faces
+        for (size_t surf = 0; surf < 6; ++surf) {
+    
+        // mesh patch mapping (Fierro nodal indexing convention)
+        const size_t patch_id = mesh.patches_in_elem(elem, surf);
+        const size_t num_nodes_in_patch = mesh.num_nodes_in_patch; // 4 for HEX8
+        size_t g[4];
+        for (size_t a = 0; a < num_nodes_in_patch; ++a){
+            g[a] = mesh.nodes_in_patch(patch_id, a);
+        } 
+        
+        // flip the middle pair to match Fierro nodal indexing convention
+        if (surf == 1 || surf == 4){
+            // flip the middle pair to match Fierro nodal indexing convention
+            std::swap(g[1], g[3]);
+            // if above does not work on GPUs, write explicit swap:
+            // size_t tmp = g[1];
+            // g[1] = g[3];
+            // g[3] = tmp;
         }
-        printf("\n");
-
-            // loop faces
-            for (int surf = 0; surf < 6; ++surf) {
-                // gather the 4 global node IDs for this face
-                size_t g0 = mesh.nodes_in_elem(elem, face_nodes[surf][0]);
-                size_t g1 = mesh.nodes_in_elem(elem, face_nodes[surf][1]);
-                size_t g2 = mesh.nodes_in_elem(elem, face_nodes[surf][2]);
-                size_t g3 = mesh.nodes_in_elem(elem, face_nodes[surf][3]);
 
                 // print the IDs and coordinates
-                printf("  Face %d node IDs: %zu %zu %zu %zu\n",
-                        surf, g0, g1, g2, g3);
+                printf("  Face %zu node IDs: %zu %zu %zu %zu\n",
+                        surf, g[0], g[1], g[2], g[3]);
 
                 DCArrayKokkos<double> &X = State.node.coords; // (num_nodes x 3)
-                printf("    coords[gid0]: %g %g %g\n", X(g0,0), X(g0,1), X(g0,2));
-                printf("    coords[gid1]: %g %g %g\n", X(g1,0), X(g1,1), X(g1,2));
-                printf("    coords[gid2]: %g %g %g\n", X(g2,0), X(g2,1), X(g2,2));
-                printf("    coords[gid3]: %g %g %g\n", X(g3,0), X(g3,1), X(g3,2));
+
+                printf("    coords[gid0]: %g %g %g\n", X(g[0],0), X(g[0],1), X(g[0],2));
+                printf("    coords[gid1]: %g %g %g\n", X(g[1],0), X(g[1],1), X(g[1],2));
+                printf("    coords[gid2]: %g %g %g\n", X(g[2],0), X(g[2],1), X(g[2],2));
+                printf("    coords[gid3]: %g %g %g\n", X(g[3],0), X(g[3],1), X(g[3],2));
 
                 // simple centroid check: average of 4 face nodes
-                double cx_simple =
-                    0.25 * (X(g0,0) + X(g1,0) + X(g2,0) + X(g3,0));
-                double cy_simple =
-                    0.25 * (X(g0,1) + X(g1,1) + X(g2,1) + X(g3,1));
-                double cz_simple =
-                    0.25 * (X(g0,2) + X(g1,2) + X(g2,2) + X(g3,2));
+                double cx_simple = 0.25 * (X(g[0],0) + X(g[1],0) + X(g[2],0) + X(g[3],0));
+                double cy_simple = 0.25 * (X(g[0],1) + X(g[1],1) + X(g[2],1) + X(g[3],1));
+                double cz_simple = 0.25 * (X(g[0],2) + X(g[1],2) + X(g[2],2) + X(g[3],2));
 
                 
                 // stack buffers + ViewCArrayKokkos wrappers 
@@ -1062,6 +1057,10 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
                     n, r, s, cenface
                 );
 
+                // clean math before printing (prevent -0.0s in output)
+                auto pz = [](double v) { return (std::fabs(v) < 1e-13) ? 0.0 : v; };
+
+                // print calculated results
                 printf("    centroid(simple avg): %g %g %g\n", cx_simple, cy_simple, cz_simple);
                 printf("    centroid(computed):   %g %g %g\n", cenface(0), cenface(1), cenface(2));
                 printf("    r: %g %g %g\n", r(0), r(1), r(2));
@@ -1338,8 +1337,8 @@ size_t cohesive_zones_t::elcount(const CArrayKokkos<size_t>& overlapping_node_gi
 /// \param nodes Global nodal coordinates array (num_nodes x 3) from the mesh
 /// \param conn Element-to-node connectivity array (num_elems x nodes_in_elem) from the mesh
 /// \param surf Local surface (patch) ID [0–5] corresponding to a face of a hex element 
-///             (per the face-node ordering in mesh.h)
-/// \param elem Index of the element from which the surface is extracted
+///             (per the face-node ordering in mesh.h) (which face)
+/// \param elem Index of the element from which the surface is extracted (whcihc element)
 /// \param n Output normal vector to the face (length 3, unit magnitude)
 /// \param r Output in-plane direction vector r (length 3, unit magnitude)
 /// \param s Output in-plane direction vector s (length 3, unit magnitude)
@@ -1352,8 +1351,8 @@ void cohesive_zones_t::compute_face_geometry(const DCArrayKokkos<double> &nodes,
                             const Mesh_t &mesh,
                             const DCArrayKokkos<double> &node_coords,
                             const DCArrayKokkos<size_t> &conn,
-                            const int surf,
-                            const int elem,
+                            const size_t surf,
+                            const size_t elem,
                             ViewCArrayKokkos<double> &n,
                             ViewCArrayKokkos<double> &r,
                             ViewCArrayKokkos<double> &s,
@@ -1361,14 +1360,37 @@ void cohesive_zones_t::compute_face_geometry(const DCArrayKokkos<double> &nodes,
  
     // face-to-node mapping for HEX8
     // 6 row, 4 column
-    constexpr int face_nodes[6][4] = {
-        {0, 4, 6, 2}, // 0
-        {1, 3, 7, 5}, // 1
-        {0, 1, 5, 4}, // 2
-        {3, 2, 6, 7}, // 3
-        {0, 2, 3, 1}, // 4
-        {4, 5, 7, 6}  // 5
-    };
+    // hardcoded for now
+    // in future, use patches_in_elem, nodes_in_patch, nodes_in_elem from mesh.h
+    // and code into small function 
+    // constexpr int face_nodes[6][4] = {
+    //     {0, 4, 6, 2}, // 0
+    //     {1, 3, 7, 5}, // 1
+    //     {0, 1, 5, 4}, // 2
+    //     {3, 2, 6, 7}, // 3
+    //     {0, 2, 3, 1}, // 4
+    //     {4, 5, 7, 6}  // 5
+    // };
+
+    // face-to-node mapping for HEX8 from mesh.h
+    const size_t patch_id = mesh.patches_in_elem(elem, // mesh.patches_in_elem expects size_t
+                                                 surf);
+
+    const size_t num_nodes_in_patch = mesh.num_nodes_in_patch;
+    size_t face_gid[4];
+    for (size_t a = 0; a < num_nodes_in_patch; ++a) {
+        face_gid[a] = mesh.nodes_in_patch(patch_id, a); 
+    }
+
+    // fix orientation to match Fierro's nodal indexing convention
+    if (surf == 1 || surf == 4){
+        std::swap(face_gid[1], face_gid[3]);
+        // if above does not work on GPUs, write explicit swap:
+        // reverse the second and fourth entries: [g0, g1, g2, g3] -> [g0, g3, g2, g1]
+        //size_t tmp = face_gid[1];
+        //face_gid[1] = face_gid[3];
+        //face_gid[3] = temp;
+    }
 
     // shape function derivatives at face center
     double xi = 0.0, eta = 0.0;
@@ -1394,7 +1416,7 @@ void cohesive_zones_t::compute_face_geometry(const DCArrayKokkos<double> &nodes,
     for (int j = 0; j < 3; ++j) cenface(j) = 0.0;
 
     for (int a = 0; a < 4; ++a) {
-        size_t node_id = mesh.nodes_in_elem(elem, face_nodes[surf][a]);
+        size_t node_id = face_gid[a];
 
         double x = node_coords(node_id, 0);
         double y = node_coords(node_id, 1);
@@ -1438,8 +1460,46 @@ void cohesive_zones_t::compute_face_geometry(const DCArrayKokkos<double> &nodes,
     n(1) = ny / mag_n;
     n(2) = nz / mag_n;
 
+    // ensure normal points outward 
+    double ce0 = 0.0, ce1 = 0.0, ce2 = 0.0;
+    for (size_t ln = 0; ln < mesh.num_nodes_in_elem; ++ln) { // ln from 0 to mesh.num_nodes_in_elem-1 (all 8 nodes of hex element)
+        size_t gid = mesh.nodes_in_elem(elem, ln);
+        ce0 += node_coords(gid,0);
+        ce1 += node_coords(gid,1);
+        ce2 += node_coords(gid,2);
+    }
+    double inv = 1.0 / double(mesh.num_nodes_in_elem);
+    ce0 *= inv; ce1 *= inv; ce2 *= inv;
+
+    // vector from element centroid to face centroid (reference direction for outward normal)
+    double ox = cenface(0) - ce0;
+    double oy = cenface(1) - ce1;
+    double oz = cenface(2) - ce2;
+
+    // flip normal (and s) if inward
+    if (n(0)*ox + n(1)*oy + n(2)*oz < 0.0) {
+    n(0) = -n(0); n(1) = -n(1); n(2) = -n(2);
+    s(0) = -s(0); s(1) = -s(1); s(2) = -s(2); // keeps r×s = n
+    }
+
+    // recomputes s to enforce a clean right-handed orthonormal basis
+    // s := n × r  (then renormalize)
+    double sx_new = n(1)*r(2) - n(2)*r(1);
+    double sy_new = n(2)*r(0) - n(0)*r(2);
+    double sz_new = n(0)*r(1) - n(1)*r(0);
+    double ms = sqrt(sx_new*sx_new + sy_new*sy_new + sz_new*sz_new);
+    if (ms > 0.0) {
+         s(0)=sx_new/ms; s(1)=sy_new/ms; s(2)=sz_new/ms; }
+
+    // final cleanup of the -0.0s in the output vectors
+    auto zap0 = [](double &v){ if (fabs(v) < 1e-13) v = 0.0; };
+    zap0(r(0)); zap0(r(1)); zap0(r(2));
+    zap0(s(0)); zap0(s(1)); zap0(s(2));
+    zap0(n(0)); zap0(n(1)); zap0(n(2));
 }
 // **************************************************************** Fierro Conversion **************************************************************** 
+
+// next function
 
 // **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 // // inputs: NODES, conn, NE, NVCZ, VCZconn, VCZelem, interpvals
@@ -1620,6 +1680,155 @@ void cohesive_zones_t::compute_face_geometry(const DCArrayKokkos<double> &nodes,
 
 // }
 // **************************************************************** FROM GAVIN'S CODE **************************************************************** 
+
+// **************************************************************** Fierro Conversion **************************************************************** 
+// this function stores the releveant elements and surfaces for each cohesive zone
+// essentially, it makes a map to grab mesh info
+// Build VCZ info table in Fierro style (HEX8/3D, hardcoded face-node map)
+// vczinfo(i, :) has length 6*maxel as described above.
+//     CArrayKokkos<int> cohesive_zone_info(
+//         const Mesh_t& mesh,
+//         const State_t& state,
+//         const CArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2) == Gavin's vczconn
+//         const size_t maxel,                                 // from elcount()
+//         const double tol                                    // centroid coincidence tolerance
+//     ) {
+//     const size_t nvcz = overlapping_node_gids.dims(0);
+//     CArrayKokkos<int> vczinfo(nvcz, 6*maxel, "vczinfo");
+
+//     // Hardcoded HEX8 face->local-node map (outward normals); replace later with mesh patches if desired.
+//     // Face ids: 0..5, local nodes are 4-tuples from {0..7}
+//     static constexpr int face_nodes[6][4] = {
+//         {0,4,6,2}, {1,3,7,5}, {0,1,5,4},
+//         {3,2,6,7}, {0,2,3,1}, {4,5,7,6}
+//     };
+
+//     // Parallel over CZ pairs: fill vczinfo row i
+//     Kokkos::parallel_for("build_vczinfo_all_pairs",
+//         Kokkos::RangePolicy<size_t>(0, nvcz),
+//         KOKKOS_LAMBDA(const size_t i)
+//     {
+//         // init whole row with -1
+//         for (size_t c = 0; c < 6*maxel; ++c) vczinfo(i, c) = -1;
+
+//         const size_t nodeA = overlapping_node_gids(i, 0);
+//         const size_t nodeB = overlapping_node_gids(i, 1);
+
+//         // 1) fill incident element lists for A/B from mesh.elems_in_node
+//         const size_t degA = mesh.elems_in_node.stride(nodeA);
+//         for (size_t j = 0; j < maxel && j < degA; ++j) {
+//             vczinfo(i, 0 + j) = static_cast<int>( mesh.elems_in_node(nodeA, j) );
+//         }
+//         const size_t degB = mesh.elems_in_node.stride(nodeB);
+//         for (size_t j = 0; j < maxel && j < degB; ++j) {
+//             vczinfo(i, maxel + j) = static_cast<int>( mesh.elems_in_node(nodeB, j) );
+//         }
+
+//         // Buffers for face geometry
+//         double nA_buf[3], rA_buf[3], sA_buf[3], cA_buf[3];
+//         double nB_buf[3], rB_buf[3], sB_buf[3], cB_buf[3];
+//         ViewCArrayKokkos<double> nA(&nA_buf[0],3), rA(&rA_buf[0],3), sA(&sA_buf[0],3), cA(&cA_buf[0],3);
+//         ViewCArrayKokkos<double> nB(&nB_buf[0],3), rB(&rB_buf[0],3), sB(&sB_buf[0],3), cB(&cB_buf[0],3);
+
+//         // Small helpers (inline): find local corner index of a global node in an elem
+//         auto local_corner_index = [&](const size_t elem, const size_t gid)->int {
+//             for (size_t ln = 0; ln < mesh.num_nodes_in_elem; ++ln) {
+//                 if (mesh.nodes_in_elem(elem, ln) == gid) return static_cast<int>(ln);
+//             }
+//             return -1;
+//         };
+
+//         // Collect faces of 'elem' that contain 'needle_gid' (up to 3 possible)
+//         auto collect_faces_with_node = [&](const size_t elem, const size_t needle_gid,
+//                                           int faces_out[3], int& nfaces) {
+//             nfaces = 0;
+//             for (int f = 0; f < 6 && nfaces < 3; ++f) {
+//                 // check if any of the 4 local nodes on this face equals needle_gid
+//                 for (int q = 0; q < 4; ++q) {
+//                     const size_t ln  = static_cast<size_t>( face_nodes[f][q] );
+//                     const size_t gid = mesh.nodes_in_elem(elem, ln);
+//                     if (gid == needle_gid) { faces_out[nfaces++] = f; break; }
+//                 }
+//             }
+//             for (int k = nfaces; k < 3; ++k) faces_out[k] = -1;
+//         };
+
+//         // 2) find the first pair of opposing, coincident faces between A-side and B-side neighborhoods
+//         bool found = false;
+//         int  kA_match = -1, kB_match = -1;
+
+//         // loop over A candidates
+//         for (size_t jA = 0; jA < maxel && !found; ++jA) {
+//             const int elemA = vczinfo(i, 0 + jA);
+//             if (elemA < 0) continue;
+
+//             const int kA = local_corner_index(static_cast<size_t>(elemA), nodeA);
+
+//             int facesA[3], nfacesA = 0;
+//             collect_faces_with_node(static_cast<size_t>(elemA), nodeA, facesA, nfacesA);
+
+//             for (int pA = 0; pA < nfacesA && !found; ++pA) {
+//                 const int fA = facesA[pA];
+
+//                 // geometry on A
+//                 compute_face_geometry(
+//                     state.node.coords, mesh,
+//                     state.node.coords, mesh.nodes_in_elem,
+//                     fA, elemA, nA, rA, sA, cA
+//                 );
+
+//                 // loop over B candidates
+//                 for (size_t jB = 0; jB < maxel && !found; ++jB) {
+//                     const int elemB = vczinfo(i, maxel + jB);
+//                     if (elemB < 0) continue;
+
+//                     const int kB = local_corner_index(static_cast<size_t>(elemB), nodeB);
+
+//                     int facesB[3], nfacesB = 0;
+//                     collect_faces_with_node(static_cast<size_t>(elemB), nodeB, facesB, nfacesB);
+
+//                     for (int pB = 0; pB < nfacesB && !found; ++pB) {
+//                         const int fB = facesB[pB];
+
+//                         // geometry on B
+//                         compute_face_geometry(
+//                             state.node.coords, mesh,
+//                             state.node.coords, mesh.nodes_in_elem,
+//                             fB, elemB, nB, rB, sB, cB
+//                         );
+
+//                         // centroid coincidence
+//                         const double dx = cA(0) - cB(0);
+//                         const double dy = cA(1) - cB(1);
+//                         const double dz = cA(2) - cB(2);
+//                         const double d2 = dx*dx + dy*dy + dz*dz;
+
+//                         // normals opposite (unit vectors): nA · nB ≈ -1
+//                         const double dot = nA(0)*nB(0) + nA(1)*nB(1) + nA(2)*nB(2);
+
+//                         if (d2 <= tol*tol && (dot <= -1.0 + 1.0e-8)) {
+//                             // store in slot 0 of face/corner sections
+//                             vczinfo(i, 2*maxel + 0) = fA;
+//                             vczinfo(i, 3*maxel + 0) = fB;
+//                             vczinfo(i, 4*maxel + 0) = kA;
+//                             vczinfo(i, 5*maxel + 0) = kB;
+//                             kA_match = kA; kB_match = kB;
+//                             found = true;
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+
+//         // (nothing else to do if not found; row remains -1 for face/corner slots)
+//     });
+
+//     return vczinfo;
+// }
+
+
+
+// **************************************************************** Fierro Conversion **************************************************************** 
 
 // **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 // // sequentially calling preprocessing functions
