@@ -111,8 +111,13 @@ FEA_Module_SGH::FEA_Module_SGH(
     all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
 
     // Switch for optimization solver
-    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
+    if(simparam->topology_optimization_on){
         cached_design_gradients_distributed    = Teuchos::rcp(new MV(map, 1));
+    }
+    if(simparam->shape_optimization_on){
+        cached_design_gradients_distributed    = Teuchos::rcp(new MV(map, simparam->num_dims));
+    }
+    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
         all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         force_gradient_velocity                = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         force_gradient_position                = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
@@ -160,7 +165,7 @@ FEA_Module_SGH::FEA_Module_SGH(
     graphics_id    = simparam->output_options.graphics_id;
     rk_num_bins    = simparam->dynamic_options.rk_num_bins;
 
-    if (simparam->topology_optimization_on) {
+    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
         if(simparam->optimization_options.use_solve_checkpoints){
             max_time_steps                               = simparam->optimization_options.num_solve_checkpoints;
             dynamic_checkpoint_set                       = Teuchos::rcp(new std::set<Dynamic_Checkpoint>());
@@ -186,7 +191,7 @@ FEA_Module_SGH::FEA_Module_SGH(
         element_internal_energy_distributed = Teuchos::rcp(new MV(all_element_map, 1));
     }
 
-    if (simparam->topology_optimization_on) {
+    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
         forward_solve_velocity_data   = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         forward_solve_coordinate_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         forward_solve_internal_energy_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
@@ -1757,7 +1762,7 @@ void FEA_Module_SGH::sgh_solve()
     // }
 
     // simple setup to just calculate KE minimize objective for now
-    if (topology_optimization_on) {
+    if (topology_optimization_on || shape_optimization_on) {
         objective_function->global_reduction();
     }
 
