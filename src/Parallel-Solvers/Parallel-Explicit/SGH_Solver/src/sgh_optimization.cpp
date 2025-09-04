@@ -3658,7 +3658,7 @@ void FEA_Module_SGH::comm_variables(Teuchos::RCP<const MV> zp)
         all_node_densities_distributed->doImport(*test_node_densities_distributed, *importer, Tpetra::INSERT);
     }
     else if (simparam->shape_optimization_on) {
-        all_node_coords_distributed->doImport(*zp, *importer, Tpetra::INSERT);
+        all_design_node_coords_distributed->doImport(*zp, *importer, Tpetra::INSERT);
     }
 }
 

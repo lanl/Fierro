@@ -1072,7 +1072,14 @@ void FEA_Module_SGH::get_force_ugradient_sgh(const DCArrayKokkos<material_t>& ma
         ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
 
         // gradients of the element volume
-        get_vol_hex_ugradient(volume_gradients, elem_gid, node_coords, elem_node_gids, rk_level);
+        //set node coords of this element
+        FArray<double> current_node_coords(num_nodes_in_elem, num_dims);
+        for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+            current_node_coords(node_lid,0) = node_coords(rk_level, elem_node_gids(node_lid), 0);
+            current_node_coords(node_lid,1) = node_coords(rk_level, elem_node_gids(node_lid), 1);
+            current_node_coords(node_lid,2) = node_coords(rk_level, elem_node_gids(node_lid), 2);
+        } // end for
+        get_vol_hex_ugradient(volume_gradients, elem_gid, current_node_coords, elem_node_gids, rk_level);
 
         // //debug
         // for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){

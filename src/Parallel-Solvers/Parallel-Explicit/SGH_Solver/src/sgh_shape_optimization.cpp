@@ -110,6 +110,7 @@ void FEA_Module_SGH::update_forward_solve_SO(Teuchos::RCP<const MV> zp)
 
     //update starting coordinates; updated ghosts were already commed before this routine
     node_coords_distributed->assign(*zp);
+    all_node_coords_distributed->assign(*all_design_node_coords_distributed);
 
     // reset velocities to initial conditions
     node_velocities_distributed->assign(*initial_node_velocities_distributed);
@@ -490,6 +491,7 @@ void FEA_Module_SGH::compute_shape_optimization_gradient_tally(const Teuchos::RC
         {
                 //note that these are assigned backwards because the adjoint loop progresses backwards
             const_vec_array current_adjoint_vector  = all_adjoint_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array all_design_node_coords = all_design_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             
             
             const_vec_array node_accelerations = all_node_accelerations_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
@@ -502,15 +504,25 @@ void FEA_Module_SGH::compute_shape_optimization_gradient_tally(const Teuchos::RC
                 // std::cout << elem_mass(elem_id) <<std::endl;
                 ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_id, 0), max_nodes_per_element);
 
-                // gradients of the element volume
-                get_vol_hex_ugradient(volume_gradients, elem_id, node_coords, elem_node_gids, 1);
+                
+                //we need elem_den at t=0; multiply by elem_vol ratio
+                FArray<double> current_design_node_coords(num_nodes_in_elem, num_dim);
+                for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                    current_design_node_coords(node_lid,0) = all_design_node_coords(elem_node_gids(node_lid), 0);
+                    current_design_node_coords(node_lid,1) = all_design_node_coords(elem_node_gids(node_lid), 1);
+                    current_design_node_coords(node_lid,2) = all_design_node_coords(elem_node_gids(node_lid), 2);
+                } // end for
+                real_t vol0;
+                get_vol_hex(vol0, elem_id, current_design_node_coords, elem_node_gids, rk_level);
+                real_t vol = elem_mass(elem_id)/elem_den(elem_id);
+                get_vol_hex_ugradient(volume_gradients, elem_id, current_design_node_coords, elem_node_gids, 1);
 
                 inner_product = 0;
                 for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
                     node_id = nodes_in_elem(elem_id, ifill);
                     for (int idim = 0; idim < num_dim; idim++) {
                         
-                        inner_product += elem_den(elem_id) * current_adjoint_vector(node_id, idim) * node_accelerations(node_id,idim);
+                        inner_product += elem_den(elem_id) * vol/vol0 * current_adjoint_vector(node_id, idim) * node_accelerations(node_id,idim);
                     }
                 }
 
@@ -544,6 +556,7 @@ void FEA_Module_SGH::compute_shape_optimization_gradient_tally(const Teuchos::RC
         {
             //note that these are assigned backwards because the adjoint loop progresses backwards
             const_vec_array current_psi_adjoint_vector   = psi_adjoint_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array all_design_node_coords = all_design_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             
             const_vec_array element_specific_power = element_specific_power_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
@@ -555,9 +568,19 @@ void FEA_Module_SGH::compute_shape_optimization_gradient_tally(const Teuchos::RC
                 ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_id, 0), max_nodes_per_element);
 
                 // gradients of the element volume
-                get_vol_hex_ugradient(volume_gradients, elem_id, node_coords, elem_node_gids, 1);
+                //we need elem_den at t=0; multiply by elem_vol ratio
+                FArray<double> current_design_node_coords(num_nodes_in_elem, num_dim);
+                for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                    current_design_node_coords(node_lid,0) = all_design_node_coords(elem_node_gids(node_lid), 0);
+                    current_design_node_coords(node_lid,1) = all_design_node_coords(elem_node_gids(node_lid), 1);
+                    current_design_node_coords(node_lid,2) = all_design_node_coords(elem_node_gids(node_lid), 2);
+                } // end for
+                real_t vol0;
+                get_vol_hex(vol0, elem_id, current_design_node_coords, elem_node_gids, rk_level);
+                real_t vol = elem_mass(elem_id)/elem_den(elem_id);
+                get_vol_hex_ugradient(volume_gradients, elem_id, current_design_node_coords, elem_node_gids, 1);
 
-                inner_product = elem_den(elem_id) * element_specific_power(elem_id,0) * current_psi_adjoint_vector(elem_id, 0);
+                inner_product = elem_den(elem_id) * vol/vol0 * element_specific_power(elem_id,0) * current_psi_adjoint_vector(elem_id, 0);
 
                 for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                     for(int idim = 0; idim < num_dim; idim++){
@@ -627,6 +650,7 @@ void FEA_Module_SGH::compute_shape_optimization_gradient_IVP(Teuchos::RCP<const 
             const_vec_array current_psi_adjoint_vector;
             current_element_internal_energy = element_internal_energy_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             current_psi_adjoint_vector = psi_adjoint_vector_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array all_design_node_coords = all_design_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             
 
             // (*psi_adjoint_vector_data)[100]->describe(*fos,Teuchos::VERB_EXTREME);
@@ -639,10 +663,20 @@ void FEA_Module_SGH::compute_shape_optimization_gradient_IVP(Teuchos::RCP<const 
                 ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_id, 0), max_nodes_per_element);
 
                 // gradients of the element volume
-                get_vol_hex_ugradient(volume_gradients, elem_id, node_coords, elem_node_gids, rk_level);
+                //we need elem_den at t=0; multiply by elem_vol ratio
+                FArray<double> current_design_node_coords(num_nodes_in_elem, num_dim);
+                for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                    current_design_node_coords(node_lid,0) = all_design_node_coords(elem_node_gids(node_lid), 0);
+                    current_design_node_coords(node_lid,1) = all_design_node_coords(elem_node_gids(node_lid), 1);
+                    current_design_node_coords(node_lid,2) = all_design_node_coords(elem_node_gids(node_lid), 2);
+                } // end for
+                real_t vol0;
+                get_vol_hex(vol0, elem_id, current_design_node_coords, elem_node_gids, rk_level);
+                real_t vol = elem_mass(elem_id)/elem_den(elem_id);
+                get_vol_hex_ugradient(volume_gradients, elem_id, current_design_node_coords, elem_node_gids, 1);
 
                 if (elem_extensive_initial_energy_condition(elem_id)) {
-                    inner_product = -elem_den(elem_id) * current_psi_adjoint_vector(elem_id, 0) * current_element_internal_energy(elem_id, 0);
+                    inner_product = -elem_den(elem_id) * vol/vol0 * current_psi_adjoint_vector(elem_id, 0) * current_element_internal_energy(elem_id, 0);
                 }
                 else{
                     inner_product = 0;

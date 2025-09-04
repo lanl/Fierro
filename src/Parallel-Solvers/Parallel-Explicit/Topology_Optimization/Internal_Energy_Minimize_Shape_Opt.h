@@ -465,11 +465,13 @@ public:
         auto num_corners_in_node = FEM_SGH_->num_corners_in_node;
         auto relative_element_densities = FEM_SGH_->relative_element_densities;
         int max_nodes_per_element = FEM_SGH_->max_nodes_per_element;
+        auto all_design_node_coords_distributed = FEM_SGH_->all_design_node_coords_distributed;
         double volume_gradients_array[max_nodes_per_element * num_dim];
         auto elem_den = FEM_SGH_->elem_den;
         ViewCArrayKokkos<double> volume_gradients(volume_gradients_array, max_nodes_per_element, num_dim);
         // view scope
         {
+            const_vec_array all_design_node_coords = all_design_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
             if(optimization_objective_regions.size()){
                 int nobj_volumes = optimization_objective_regions.size();
                 const_vec_array all_initial_node_coords = FEM_SGH_->all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
@@ -477,7 +479,20 @@ public:
                     size_t node_id;
                     size_t corner_id;
                     real_t inner_product;
-                    // std::cout << elem_mass(elem_id) <<std::endl;
+
+                    // cut out the node_gids for this element
+                    ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_id, 0), max_nodes_per_element);
+
+                    //we need elem_den at t=0; multiply by elem_vol ratio
+                    FArray<double> current_design_node_coords(num_nodes_in_elem, num_dim);
+                    for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                        current_design_node_coords(node_lid,0) = all_design_node_coords(elem_node_gids(node_lid), 0);
+                        current_design_node_coords(node_lid,1) = all_design_node_coords(elem_node_gids(node_lid), 1);
+                        current_design_node_coords(node_lid,2) = all_design_node_coords(elem_node_gids(node_lid), 2);
+                    } // end for
+                    real_t vol0;
+                    FEM_SGH_->get_vol_hex(vol0, elem_id, current_design_node_coords, elem_node_gids, rk_level);
+                    real_t vol = elem_mass(elem_id)/elem_den(elem_id);
 
                     inner_product = 0;
                     for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
@@ -493,15 +508,12 @@ public:
                             }
                         }
                         if(contained){
-                            inner_product += elem_den(elem_id) * elem_sie(rk_level, elem_id);
+                            inner_product += elem_den(elem_id) * vol/vol0 * elem_sie(rk_level, elem_id);
                         }
                     }
 
-                    // cut out the node_gids for this element
-                    ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_id, 0), max_nodes_per_element);
-
-                    // gradients of the element volume
-                    FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, node_coords, elem_node_gids, rk_level);
+                    // gradients of the element volume at t=0 w.r.t to initial design coordinates
+                    FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, current_design_node_coords, elem_node_gids, rk_level);
 
                     for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         for(int idim = 0; idim < num_dim; idim++){
@@ -524,12 +536,23 @@ public:
                     // cut out the node_gids for this element
                     ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_id, 0), max_nodes_per_element);
 
+                    //we need elem_den at t=0; multiply by elem_vol ratio
+                    FArray<double> current_design_node_coords(num_nodes_in_elem, num_dim);
+                    for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                        current_design_node_coords(node_lid,0) = all_design_node_coords(elem_node_gids(node_lid), 0);
+                        current_design_node_coords(node_lid,1) = all_design_node_coords(elem_node_gids(node_lid), 1);
+                        current_design_node_coords(node_lid,2) = all_design_node_coords(elem_node_gids(node_lid), 2);
+                    } // end for
+                    real_t vol0;
+                    FEM_SGH_->get_vol_hex(vol0, elem_id, current_design_node_coords, elem_node_gids, rk_level);
+                    real_t vol = elem_mass(elem_id)/elem_den(elem_id);
+
                     // gradients of the element volume
-                    FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, node_coords, elem_node_gids, rk_level);
+                    FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, current_design_node_coords, elem_node_gids, rk_level);
 
                     inner_product = 0;
                     for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
-                            inner_product += elem_den(elem_id) * elem_sie(rk_level, elem_id);
+                            inner_product += elem_den(elem_id) * vol/vol0 * elem_sie(rk_level, elem_id);
                     }
 
                     for (int inode = 0; inode < num_nodes_in_elem; inode++) {
