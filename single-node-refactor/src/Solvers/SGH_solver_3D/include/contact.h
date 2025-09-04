@@ -340,6 +340,11 @@ struct contact_patches_t
     CArrayKokkos <size_t> contact_surface_map; // stores index for each node that corresponds to mesh.bdy_nodes indexing
     CArrayKokkos <size_t> node_patch_pairs; // stores the patch contact id in the node contact id index when pair is formed
     CArrayKokkos <double> pair_vars; // stores xi, eta, del_tc, normal_x, normal_y, normal_z, fc_inc, and fc_inc_total in node contact id index
+    CArrayKokkos <size_t> num_surfs_in_node; // strides for surfs_in_node
+    RaggedRightArrayKokkos <size_t> surfs_in_node; // stores surf ids corresponding to mesh.bdy_patches that a node is part of
+    size_t num_active = 0; // number of active pairs
+    CArrayKokkos <size_t> active_set; // for quick referencing of active pairs
+    CArrayKokkos <size_t> node_penetrations; // for use in find_penetrating_nodes
 
 
     CArrayKokkos<contact_patch_t> contact_patches;  // patches that will be checked for contact
@@ -654,6 +659,26 @@ void capture_box(const double &vx_max, const double &vy_max, const double &vz_ma
                  const CArrayKokkos <size_t> nodes_in_patch, int surf_lid, const double &dt);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn capture_box
+///
+/// \brief Constructs the capture box for the patch
+///
+/// The capture box is used to determine which buckets penetrate the surface/patch. The nodes in the intersecting
+/// buckets are considered for potential contact. The capture box is constructed from the maximum absolute value
+/// of velocity and acceleration by considering the position at time dt, which is equal to
+///
+/// position + velocity_max*dt + 0.5*acceleration_max*dt^2 and
+/// position - velocity_max*dt - 0.5*acceleration_max*dt^2
+///
+/// The maximum and minimum components of the capture box are recorded and will be used in
+/// contact_patches_t::find_nodes.
+///
+/// \param dt time step
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void penetration_capture_box(double depth_cap, double bounding_box[]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn construct_basis
 ///
 /// \brief Constructs the basis matrix for the surface
@@ -677,6 +702,26 @@ void construct_basis(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t>
                      DCArrayKokkos <double> mass, DCArrayKokkos <double> coords,
                      CArrayKokkos <size_t> num_corners_in_node,
                      DCArrayKokkos <double> vel, double A[3][4], int &surf_lid, const double &del_t);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn construct_penetration_basis
+///
+/// \brief Constructs the basis matrix for a surface without using mesh.bdy_patches
+///
+/// The columns of A are defined as the position of each patch/surface node at time del_t. This is a 3x4 matrix for
+/// a standard linear hex element and its columns are constructed like this:
+///
+/// ⎡p_{nx} + v_{nx}*del_t + 0.5*a_{nx}*del_t^2 ... for each n⎤
+/// ⎢                                                         ⎥
+/// ⎡p_{ny} + v_{ny}*del_t + 0.5*a_{ny}*del_t^2 ... for each n⎤
+/// ⎢                                                         ⎥
+/// ⎣p_{nz} + v_{nz}*del_t + 0.5*a_{nz}*del_t^2 ... for each n⎦
+///
+/// \param A basis matrix as defined above (will be changed in place)
+/// \param del_t time step to construct the basis matrix
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void construct_penetration_basis(size_t node_gids[4], DCArrayKokkos <double> coords, double A[3][4]);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn phi
@@ -749,6 +794,20 @@ void get_normal(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_
                 CArrayKokkos <size_t> num_corners_in_node,
                 DCArrayKokkos <double> vel, double &xi_val, double &eta_val, const double &del_t,
                 double normal[3], double xi[4], double eta[4], int &surf_lid);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn get_penetration_normal
+///
+/// \brief Computes the normal vector of the patch/surface at the given xi and eta values
+///
+/// \param xi_val xi value
+/// \param eta_val eta value
+/// \param del_t time step to compute the normal at
+/// \param normal kokkos view that will be changed in place
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void get_penetration_normal(DCArrayKokkos <double> coords, double &xi_val, double &eta_val,
+                            double normal[3], double xi[4], double eta[4], size_t node_gids[4]);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn get_contact_point
@@ -901,11 +960,127 @@ void find_nodes(double &vx_max, double &vy_max, double &vz_max, double &ax_max, 
                 CArrayKokkos <size_t> nbox, CArrayKokkos <size_t> nsort, CArrayKokkos <size_t> npoint,
                 CArrayKokkos <size_t> bdy_nodes);
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn get_edge_pair
+///
+/// \brief Determines the more dominant pair for the case when a penetrating node contacts an edge
+///
+/// This method will determine the best pair to use based off the most opposing normal. For each pair, the normal
+/// at the contact point is dotted with the surface normal of the penetrating node. The most negative dot product
+/// value indicates the superior patch to pair to. If the dot products are the same, then the second patch is used
+/// with a normal being the average of the two.
+///
+/// \param normal1 normal of the already existing pair
+/// \param normal2 normal of the current pair in the iterations
+/// \param node_gid global node id of the penetrating node
+/// \param del_t current time step in the analysis
+/// \param new_normal modified normal to be used in the case where a new pair should be added
+///
+/// \return true if a new pair should be added; false otherwise
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+bool get_edge_pair(double normal1[3], double normal2[3], size_t &node_gid, const double &del_t,
+                   double new_normal[3], CArrayKokkos <size_t> bdy_patches, size_t &contact_id,
+                   CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> contact_surface_map,
+                   CArrayKokkos <size_t> bdy_nodes, CArrayKokkos <double> contact_forces,
+                   DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                   DCArrayKokkos <double> mass, DCArrayKokkos <double> coords,
+                   CArrayKokkos <size_t> num_corners_in_node, DCArrayKokkos <double> vel,
+                   double xi[4], double eta[4], CArrayKokkos <size_t> num_surfs_in_node,
+                   RaggedRightArrayKokkos <size_t> surfs_in_node);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn remove_pair
+///
+/// \brief Removes a contact pair from the contact_pairs_access array
+///
+/// \param pair Contact pair object to remove
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void remove_pair(size_t &contact_id, CArrayKokkos <size_t> node_patch_pairs, CArrayKokkos <size_t> pair_vars);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn penetration_check
+///
+/// \brief Finds whether a node is penetrating a boundary element
+///
+/// The node being considered will have its position checked against the patches of the boundary element being
+/// checked based upon its position and the normal vector of each patch that is part of the element 
+/// that the boundary patch corresponds to.
+///
+/// \param node Contact node object being checked for penetration
+/// \param surfaces The 6 surfaces of the hex element being checked for penetration (view of penetration patches)
+/// \param surf_lid The index of contact patch based on contact_patches to pull row from penetration_patces
+///
+/// \return true if the node is penetrating the element; false otherwise
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+bool penetration_check(size_t node_gid, ViewCArrayKokkos <size_t> surfaces, DCArrayKokkos <double> coords, double xi[4],
+                       double eta[4]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn isoparametric_inverse
+///
+/// \brief Finds (xi,eta,zeta) corresponding to (x,y,z)
+///
+/// Newton solve to invert an isoparametric map
+///
+/// \param pos (x,y,z) position value
+/// \param elem_pos element nodal coordinates
+/// \param iso_pos isoparametric position (xi,eta,zeta) output
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void isoparametric_inverse(const double pos[3], const double elem_pos[3][8], double iso_pos[3]);
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn find_penetrating_nodes
+///
+/// \brief Populates node_penetrations()
+///
+/// Finds the boundary patches that each individual node is penetrating and populates node_penetrations array
+/// accordingly
+///
+/// \param pos (x,y,z) position value
+/// \param elem_pos element nodal coordinates
+/// \param iso_pos isoparametric position (xi,eta,zeta) output
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void find_penetrating_nodes(double depth_cap, double bounding_box[], DCArrayKokkos <double> coords,
+                            double num_bdy_patches, CArrayKokkos <size_t> penetration_surfaces,
+                            CArrayKokkos <size_t> bdy_patches, double Sx, double Sy, double Sz, double x_min,
+                            double y_min, double z_min, double bucket_size, CArrayKokkos <size_t> buckets,
+                            CArrayKokkos <size_t> node_penetrations, CArrayKokkos <size_t> npoint,
+                            size_t num_patches, CArrayKokkos <size_t> nbox, CArrayKokkos <size_t> nsort,
+                            DCArrayKokkos <size_t> nodes_in_elem, CArrayKokkos <size_t> elems_in_patch,
+                            size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch, double xi[4],
+                            double eta[4]);
+
 /// end of contact state functions *********************************************************************************
 
 /// start of functions called in boundary.cpp **********************************************************************
 
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn initial_penetration
+///
+/// \brief Finds nodes that are penetrating in the initial configuration
+///
+/// Special case of find_nodes designed to find contact_pairs when nodes are penetrating
+/// with no velocity or acceleration in the initial configuration
+///
+/// \param State Necessary to pull nodal coords for defining penetration depth cap criterion
+/// \param mesh Necessary to pull total number of nodes
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void penetration_sweep(double x_min, double y_min, double z_min, double bounding_box[], DCArrayKokkos <double> coords,
+                       double num_bdy_patches, CArrayKokkos <size_t> penetration_surfaces, CArrayKokkos <size_t> bdy_patches,
+                       double Sx, double Sy, double Sz, double bucket_size, CArrayKokkos <size_t> buckets,
+                       CArrayKokkos <size_t> node_penetrations, CArrayKokkos <size_t> npoint, size_t num_patches,
+                       CArrayKokkos <size_t> nbox, CArrayKokkos <size_t> nsort, DCArrayKokkos <size_t> nodes_in_elem,
+                       CArrayKokkos <size_t> elems_in_patch, size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch,
+                       double xi[4], double eta[4], double x_max, double y_max, double z_max, size_t &num_active,
+                       RaggedRightArrayKokkos <size_t> elems_in_node, CArrayKokkos <size_t> num_nodes_in_elem,
+                       CArrayKokkos <size_t> patches_in_elem, CArrayKokkos <size_t> &node_patch_pairs,
+                       CArrayKokkos <double> pair_vars, const double &del_t, CArrayKokkos <size_t> active_set);
 
 /// end of functions called in boundary.cpp ************************************************************************
 

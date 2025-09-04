@@ -115,29 +115,35 @@ void SGH3D:: boundary_contact_force(State_t& State, const Mesh_t &mesh, const do
 {
     contact_bank.sort(State, mesh);
     contact_bank.penetration_sweep(State, mesh, del_t);
-    /* for (int i = 0; i < contact_bank.num_active_pairs; i++) {
-        const size_t &node_gid = contact_bank.active_pairs(i);
-        contact_pair_t &pair = contact_bank.contact_pairs(node_gid);
-        std::cout << pair.node.gid << " paired to patch: " << pair.patch.gid << " with nodes: ";
+    penetration_sweep(contact_bank.x_min, contact_bank.y_min, contact_bank.z_min, contact_bank.bounding_box,
+                      State.node.coords, mesh.num_bdy_patches, contact_bank.penetration_surfaces,
+                      mesh.bdy_patches, contact_bank.Sx, contact_bank.Sy, contact_bank.Sz,
+                      contact_bank.bucket_size, contact_bank.buckets, contact_bank.node_penetrations,
+                      contact_bank.npoint, mesh.num_patches, contact_bank.nbox, contact_bank.nsort,
+                      mesh.nodes_in_elem, mesh.elems_in_patch, mesh.num_bdy_nodes, mesh.nodes_in_patch,
+                      contact_bank.xi, contact_bank.eta, contact_bank.x_max, contact_bank.y_max,
+                      contact_bank.z_max, contact_bank.num_active, mesh.elems_in_node, mesh.num_nodes_in_elem,
+                      mesh.patches_in_elem, contact_bank.node_patch_pairs, contact_bank.pair_vars, del_t,
+                      contact_bank.active_set);
+
+
+    /* for (int i = 0; i < mesh.num_bdy_nodes; i++) {
+        std::cout << contact_bank.node_patch_pairs(i) << std::endl;
+    }
+    std::cout << std::endl; */
+    /* for (int i = 0; i < contact_bank.num_active; i++) {
+        std::cout << mesh.bdy_nodes(contact_bank.active_set(i)) << std::endl;
+    }
+    std::cout << std::endl; */
+    /* for (int i = 0; i < contact_bank.num_active; i++) {
         for (int j = 0; j < 4; j++) {
-            contact_node_t node = pair.patch.nodes_obj(j);
-            std::cout << node.gid << "   ";
+            std::cout << mesh.nodes_in_patch(mesh.bdy_patches(contact_bank.node_patch_pairs(contact_bank.active_set(i))),j) << "  ";
         }
         std::cout << std::endl;
     }
     std::cout << std::endl; */
+
     contact_bank.get_contact_pairs(State, mesh, del_t);
-    /* for (int i = 0; i < contact_bank.num_active_pairs; i++) {
-        const size_t &node_gid = contact_bank.active_pairs(i);
-        contact_pair_t &pair = contact_bank.contact_pairs(node_gid);
-        std::cout << pair.node.gid << " paired to patch: " << pair.patch.gid << " with nodes: ";
-        for (int j = 0; j < 4; j++) {
-            contact_node_t node = pair.patch.nodes_obj(j);
-            std::cout << node.gid << "   ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl; */
     contact_bank.force_resolution(del_t);
     contact_bank.remove_pairs(del_t);
 } // end boundary_contact_force function
