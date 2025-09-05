@@ -213,8 +213,8 @@ inline bool extract_values_xml(T *values_xml,
 
 
 // find the number of points and number of cells in the mesh
-inline bool extract_num_points_and_cells_xml(int& numberOfPoints,
-                                      int& numberOfCells,
+inline bool extract_num_points_and_cells_xml(size_t& numberOfPoints,
+                                      size_t& numberOfCells,
                                       std::ifstream& in)
 {
     bool found = false;
@@ -383,314 +383,6 @@ public:
 
     }
 
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn read_ensight_mesh
-    ///
-    /// \brief Read .geo mesh file
-    ///
-    /// \param Simulation mesh
-    /// \param Element state struct
-    /// \param Node state struct
-    /// \param Corner state struct
-    /// \param Number of dimensions
-    ///
-    /////////////////////////////////////////////////////////////////////////////
-    // void read_ensight_mesh(Mesh_t& mesh,
-    //                        GaussPoint_t& GaussPoints,
-    //                        node_t&   node,
-    //                        corner_t& corner,
-    //                        mesh_input_t& mesh_inps,
-    //                        int num_dims)
-    // {
-    //     FILE* in;
-    //     char  ch;
-
-    //     size_t num_nodes_in_elem = 1;
-    //     for (int dim = 0; dim < num_dims; dim++) {
-    //         num_nodes_in_elem *= 2;
-    //     }
-
-    //     // read the mesh    WARNING: assumes a .geo file
-    //     in = fopen(mesh_file_, "r");
-
-    //     // skip 8 lines
-    //     for (int j = 1; j <= 8; j++) {
-    //         int i = 0;
-    //         while ((ch = (char)fgetc(in)) != '\n') {
-    //             i++;
-    //         }
-    //     }
-
-    //     // --- Read in the nodes in the mesh ---
-
-    //     size_t num_nodes = 0;
-
-    //     fscanf(in, "%lu", &num_nodes);
-    //     printf("Number of nodes read in %lu\n", num_nodes);
-
-        
-    //     mesh.initialize_nodes(num_nodes);
-
-    //     // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
-    //     std::vector<node_state> required_node_state = { node_state::coords };
-    //     node.initialize(num_nodes, num_dims, required_node_state);
-
-    //     // read the initial mesh coordinates
-    //     // x-coords
-    //     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-    //         fscanf(in, "%le", &node.coords.host(node_id, 0));
-    //         node.coords.host(node_id, 0)*= mesh_inps.scale_x;
-    //     }
-
-    //     // y-coords
-    //     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-    //         fscanf(in, "%le", &node.coords.host(node_id, 1));
-    //         node.coords.host(node_id, 1)*= mesh_inps.scale_y;
-    //     }
-
-    //     // z-coords
-    //     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-    //         if (num_dims == 3) {
-    //             fscanf(in, "%le", &node.coords.host(node_id, 2));
-    //             node.coords.host(node_id, 2)*= mesh_inps.scale_z;
-    //         }
-    //         else{
-    //             double dummy;
-    //             fscanf(in, "%le", &dummy);
-    //         }
-    //     } // end for
-
-
-    //     // Update device nodal positions
-    //     node.coords.update_device();
-
-    //     ch = (char)fgetc(in);
-
-    //     // skip 1 line
-    //     for (int j = 1; j <= 1; j++) {
-    //         int i = 0;
-    //         while ((ch = (char)fgetc(in)) != '\n') {
-    //             i++;
-    //         }
-    //     }
-
-    //     // --- read in the elements in the mesh ---
-    //     size_t num_elems = 0;
-
-    //     fscanf(in, "%lu", &num_elems);
-    //     printf("Number of elements read in %lu\n", num_elems);
-
-    //     // initialize elem variables
-    //     mesh.initialize_elems(num_elems, num_dims);
-    //     // GaussPoints.initialize(num_elems, 3); // always 3D here, even for 2D
-
-        
-    //     // for each cell read the list of associated nodes
-    //     for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-    //         for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-    //             fscanf(in, "%lu", &mesh.nodes_in_elem.host(elem_gid, node_lid));  // %d vs zu
-
-    //             // shift to start node index space at 0
-    //             mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;
-    //         }
-    //     }
-
-    //     // Convert from ensight to IJK mesh
-    //     int convert_ensight_to_ijk[8];
-    //     convert_ensight_to_ijk[0] = 0;
-    //     convert_ensight_to_ijk[1] = 1;
-    //     convert_ensight_to_ijk[2] = 3;
-    //     convert_ensight_to_ijk[3] = 2;
-    //     convert_ensight_to_ijk[4] = 4;
-    //     convert_ensight_to_ijk[5] = 5;
-    //     convert_ensight_to_ijk[6] = 7;
-    //     convert_ensight_to_ijk[7] = 6;
-
-    //     int tmp_ijk_indx[8];
-
-    //     for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-    //         for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-    //             tmp_ijk_indx[node_lid] = mesh.nodes_in_elem.host(elem_gid, convert_ensight_to_ijk[node_lid]);
-    //         }
-
-    //         for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
-    //             mesh.nodes_in_elem.host(elem_gid, node_lid) = tmp_ijk_indx[node_lid];
-    //         }
-    //     }
-    //     // update device side
-    //     mesh.nodes_in_elem.update_device();
-
-    //     // initialize corner variables
-    //     int num_corners = num_elems * mesh.num_nodes_in_elem;
-    //     mesh.initialize_corners(num_corners);
-    //     // corner.initialize(num_corners, num_dims);
-
-    //     // Close mesh input file
-    //     fclose(in);
-
-    //     return;
-    // } // end read ensight mesh
-
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn read_Abaqus_mesh
-    ///
-    /// \brief Read .inp mesh file
-    ///
-    /// \param Simulation mesh
-    /// \param Simulation state
-    /// \param Node state struct
-    /// \param Number of dimensions
-    ///
-    /////////////////////////////////////////////////////////////////////////////
-    // void read_Abaqus_mesh(Mesh_t& mesh,
-    //                       State_t& State,
-    //                       int num_dims)
-    // {
-
-    //     std::cout<<"Reading abaqus input file for mesh"<<std::endl;
-    //     std::ifstream inputFile(mesh_file_);
-    //     if (!inputFile.is_open()) {
-    //         std::cerr << "Failed to open the file." << std::endl;
-
-    //     }
-
-    //     std::vector<Node> nodes;
-    //     std::vector<Element> elements;
-
-    //     std::string line;
-    //     bool readingNodes = false;
-    //     bool readingElements = false;
-
-    //     while (std::getline(inputFile, line)) {
-    //         if (line.find("*Node") != std::string::npos) {
-    //             readingNodes = true;
-    //             std::cout<<"Found *Node"<<std::endl;
-
-    //         } 
-    //         else if (readingNodes && !line.find("*") ) { // End of nodes
-    //             readingNodes = false;
-    //         } 
-    //         else if (readingNodes) {
-    //             // std::cout<<"Reading Nodes"<<std::endl;
-    //             std::istringstream iss(line);
-    //             std::ws(iss); // Skip leading whitespace
-    //             std::string token;
-    //             Node node;
-
-    //             if (!(iss >> node.id && std::getline(iss, token, ',') && iss >> node.x &&
-    //                 std::getline(iss, token, ',') && iss >> node.y &&
-    //                 std::getline(iss, token, ',') && iss >> node.z)) {
-    //                 std::cerr << "Failed to parse line: " << line << std::endl;
-    //                 continue; // Skip this line if parsing failed
-    //             }
-    //             nodes.push_back(node);
-    //         }
-
-    //         if (line.find("*Element") != std::string::npos) {
-    //             readingElements = true;
-    //             std::cout<<"Found *Element*"<<std::endl;
-    //         } 
-    //         else if (readingElements &&  !line.find("*") ) { // End of elements
-    //             readingElements = false;
-    //         } 
-    //         else if (readingElements ) {
-    //             std::istringstream iss(line);
-    //             Element element;
-    //             std::string token;
-
-    //             if (!(iss >> element.id)){
-    //                 std::cout << "Failed to parse line: " << line << std::endl;
-    //                 continue; // Skip this line if parsing failed
-    //             } 
-
-    //             while ((std::getline(iss, token, ','))) { 
-    //                 // Now extract the integer, ignoring any trailing whitespace
-    //                 int val;
-    //                 iss >> val;
-    //                 element.connectivity.push_back(val);
-    //             }
-
-    //             // Convert from abaqus to IJK mesh
-    //             int convert_abq_to_ijk[8];
-    //             convert_abq_to_ijk[0] = 0;
-    //             convert_abq_to_ijk[1] = 1;
-    //             convert_abq_to_ijk[2] = 3;
-    //             convert_abq_to_ijk[3] = 2;
-    //             convert_abq_to_ijk[4] = 4;
-    //             convert_abq_to_ijk[5] = 5;
-    //             convert_abq_to_ijk[6] = 7;
-    //             convert_abq_to_ijk[7] = 6;
-
-    //             int tmp_ijk_indx[8];
-
-    //             for (int node_lid = 0; node_lid < 8; node_lid++) {
-    //                 tmp_ijk_indx[node_lid] = element.connectivity[convert_abq_to_ijk[node_lid]];
-    //             }
-
-    //             for (int node_lid = 0; node_lid < 8; node_lid++){
-    //                 element.connectivity[node_lid] = tmp_ijk_indx[node_lid];
-    //             }
-
-    //             elements.push_back(element);
-    //         }
-    //     }
-
-    //     inputFile.close();
-
-    //     size_t num_nodes = nodes.size();
-
-    //     printf("Number of nodes read in %lu\n", num_nodes);
-
-    //     // initialize node variables
-    //     mesh.initialize_nodes(num_nodes);
-
-    //     // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-    //     std::vector<node_state> required_node_state = { node_state::coords };
-
-    //     State.node.initialize(num_nodes, num_dims, required_node_state);
-
-
-    //     // Copy nodes to mesh
-    //     for(int node_gid = 0; node_gid < num_nodes; node_gid++){
-    //         State.node.coords.host(node_gid, 0) = nodes[node_gid].x;
-    //         State.node.coords.host(node_gid, 1) = nodes[node_gid].y;
-    //         State.node.coords.host(node_gid, 2) = nodes[node_gid].z;
-    //     }
-
-    //     // Update device nodal positions
-    //     State.node.coords.update_device();
-
-
-    //     // --- read in the elements in the mesh ---
-    //     size_t num_elems = elements.size();
-    //     printf("Number of elements read in %lu\n", num_elems);
-
-    //     // initialize elem variables
-    //     mesh.initialize_elems(num_elems, num_dims);
-
-
-    //     // for each cell read the list of associated nodes
-    //     for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-    //         for (int node_lid = 0; node_lid < 8; node_lid++) {
-    //             mesh.nodes_in_elem.host(elem_gid, node_lid) = elements[elem_gid].connectivity[node_lid];
-
-    //             // shift to start node index space at 0
-    //             mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;
-    //         }
-    //     }
-
-    //     // update device side
-    //     mesh.nodes_in_elem.update_device();
-
-    //     // initialize corner variables
-    //     int num_corners = num_elems * mesh.num_nodes_in_elem;
-    //     mesh.initialize_corners(num_corners);
-    //     // State.corner.initialize(num_corners, num_dims);
-
-    // } // end read abaqus mesh
-
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -704,227 +396,6 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    // void read_vtk_mesh(Mesh_t& mesh,
-    //                 GaussPoint_t& GaussPoints,
-    //                 node_t&   node,
-    //                 corner_t& corner,
-    //                 mesh_input_t& mesh_inps,
-    //                 int num_dims)
-    // {
-
-    //     std::cout<<"Reading VTK mesh"<<std::endl;
-    
-    //     int i;           // used for writing information to file
-    //     int node_gid;    // the global id for the point
-    //     int elem_gid;     // the global id for the elem
-    //     int myrank, nranks;
-    //     MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
-    //     MPI_Comm_size(MPI_COMM_WORLD,&nranks);
-
-    //     size_t num_nodes_in_elem = 1;
-    //     for (int dim = 0; dim < num_dims; dim++) {
-    //         num_nodes_in_elem *= 2;
-    //     }
-        
-
-    //     std::string token;
-        
-    //     bool found = false;
-    //     std::ifstream in;  // FILE *in;
-    //     if(myrank==0){
-    //         in.open(mesh_file_);
-            
-
-    //         // look for POINTS
-    //         i = 0;
-    //         while (found==false) {
-    //             std::string str;
-    //             std::string delimiter = " ";
-    //             std::getline(in, str);
-    //             std::vector<std::string> v = split (str, delimiter);
-                
-    //             // looking for the following text:
-    //             //      POINTS %d float
-    //             if(v[0] == "POINTS"){
-    //                 size_t num_nodes = std::stoi(v[1]);
-    //                 printf("Number of nodes read in %zu\n", num_nodes);
-    //                 mesh.initialize_nodes(num_nodes);
-
-    //                 std::vector<node_state> required_node_state = { node_state::coords };
-    //                 node.initialize(num_nodes, num_dims, required_node_state);
-                    
-    //                 found=true;
-    //             } // end if
-                
-                
-    //             if (i>1000){
-    //                 std::cerr << "ERROR: Failed to find POINTS in file" << std::endl;
-    //                 break;
-    //             } // end if
-                
-    //             i++;
-    //         } // end while
-    //     }
-
-        
-    //     if(myrank==0){
-    //         // read the node coordinates
-    //         for (node_gid=0; node_gid<mesh.num_nodes; node_gid++){
-                
-    //             std::string str;
-    //             std::getline(in, str);
-                
-    //             std::string delimiter = " ";
-    //             std::vector<std::string> v = split (str, delimiter);
-                
-    //             // save the nodal coordinates
-    //             node.coords.host(node_gid, 0) = mesh_inps.scale_x*std::stod(v[0]); // double
-    //             node.coords.host(node_gid, 1) = mesh_inps.scale_y*std::stod(v[1]); // double
-    //             if(num_dims==3){
-    //                 node.coords.host(node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
-    //             }
-                
-    //         } // end for nodes
-    //     }
-
-    //     // Update device nodal positions
-    //     node.coords.update_device();
-        
-    //     if(myrank==0){
-    //         found=false;
-
-    //         // look for CELLS
-    //         i = 0;
-    //         size_t num_elems = 0;
-    //         while (found==false) {
-    //             std::string str;
-    //             std::getline(in, str);
-                
-    //             std::string delimiter = " ";
-    //             std::vector<std::string> v = split (str, delimiter);
-    //             std::cout << v[0] << std::endl; // printing
-                
-    //             // looking for the following text:
-    //             //      CELLS num_elems size
-    //             if(v[0] == "CELLS"){
-    //                 num_elems = std::stoi(v[1]);
-    //                 printf("Number of elements read in %zu\n", num_elems);
-
-    //                 // initialize elem variables
-    //                 mesh.initialize_elems(num_elems, num_dims);
-                    
-    //                 found=true;
-    //             } // end if
-                
-                
-    //             if (i>1000){
-    //                 printf("ERROR: Failed to find CELLS \n");
-    //                 break;
-    //             } // end if
-                
-    //             i++;
-    //         } // end while
-    //     }
-        
-    //     if(myrank==0){
-    //         // read the node ids in the element
-    //         for (elem_gid=0; elem_gid<num_elems; elem_gid++) {
-                
-    //             std::string str;
-    //             std::getline(in, str);
-                
-    //             std::string delimiter = " ";
-    //             std::vector<std::string> v = split (str, delimiter);
-    //             num_nodes_in_elem = std::stoi(v[0]);
-                
-    //             for (size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
-    //                 mesh.nodes_in_elem.host(elem_gid, node_lid) = std::stod(v[node_lid+1]);
-    //                 //printf(" %zu ", elem_point_list(elem_gid,node_lid) ); // printing
-    //             }
-    //             //printf("\n"); // printing
-                
-    //         } // end for
-    //     }
-
-    //     // Convert from ensight to IJK mesh
-    //     size_t convert_ensight_to_ijk[8];
-    //     convert_ensight_to_ijk[0] = 0;
-    //     convert_ensight_to_ijk[1] = 1;
-    //     convert_ensight_to_ijk[2] = 3;
-    //     convert_ensight_to_ijk[3] = 2;
-    //     convert_ensight_to_ijk[4] = 4;
-    //     convert_ensight_to_ijk[5] = 5;
-    //     convert_ensight_to_ijk[6] = 7;
-    //     convert_ensight_to_ijk[7] = 6;
-
-    //     size_t tmp_ijk_indx[8];
-
-    //     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-    //         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-    //             tmp_ijk_indx[node_lid] = mesh.nodes_in_elem.host(elem_gid, convert_ensight_to_ijk[node_lid]);
-    //         }
-
-    //         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
-    //             mesh.nodes_in_elem.host(elem_gid, node_lid) = tmp_ijk_indx[node_lid];
-    //         }
-    //     }
-    //     // update device side
-    //     mesh.nodes_in_elem.update_device();
-
-
-    //     // initialize corner variables
-    //     size_t num_corners = num_elems * num_nodes_in_elem;
-    //     mesh.initialize_corners(num_corners);
-
-
-    //     found=false;
-
-    //     printf("\n");
-        
-        
-    //     // look for CELL_TYPE
-    //     if(myrank==0){
-    //         i = 0;
-    //         size_t elem_type = 0;
-    //         while (found==false) {
-    //             std::string str;
-    //             std::string delimiter = " ";
-    //             std::getline(in, str);
-    //             std::vector<std::string> v = split (str, delimiter);
-                
-    //             // looking for the following text:
-    //             //      CELLS num_elems size
-    //             if(v[0] == "CELL_TYPES"){
-
-    //                 std::getline(in, str);
-    //                 elem_type = std::stoi(str);
-                    
-    //                 found=true;
-    //             } // end if
-                
-                
-    //             if (i>1000){
-    //                 printf("ERROR: Failed to find elem_TYPE \n");
-    //                 break;
-    //             } // end if
-                
-    //             i++;
-    //         } // end while
-    //         printf("Element type = %zu \n", elem_type);
-    //         // elem types:
-    //         // linear hex = 12, linear quad = 9
-    //         found=false;
-            
-            
-    //         if(num_nodes_in_elem==8 & elem_type != 12) {
-    //             printf("Wrong element type of %zu \n", elem_type);
-    //             std::cerr << "ERROR: incorrect element type in VTK file" << std::endl;
-    //         }
-            
-    //         in.close();
-    //     }
-        
-    // } // end of VTKread function
 
     void read_vtk_mesh(Mesh_t& mesh,
                             GaussPoint_t& GaussPoints,
@@ -1454,302 +925,328 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    // void read_vtu_mesh(Mesh_t& mesh,
-    //                 GaussPoint_t& GaussPoints,
-    //                 node_t&   node,
-    //                 corner_t& corner,
-    //                 mesh_input_t& mesh_inps,
-    //                 int num_dims)
-    // {
+    void read_vtu_mesh(Mesh_t& mesh,
+                    GaussPoint_t& GaussPoints,
+                    node_t&   node,
+                    corner_t& corner,
+                    mesh_input_t& mesh_inps,
+                    int num_dims)
+    {
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
 
-    //     std::cout<<"Reading VTU file in a multiblock VTK mesh"<<std::endl;
-    
-    //     int i;           // used for writing information to file
-    //     int node_gid;    // the global id for the point
-    //     int elem_gid;    // the global id for the elem
+        int local_node_index, current_column_index;
+        int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
+
+        size_t read_index_start, node_rid, elem_gid;
+        long long int node_gid;
+        real_t dof_value;
+        real_t unit_scaling = 1;
+
+        CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer;
 
 
-    //     //
-    //     int Pn_order = mesh_inps.p_order;
-    //     size_t num_nodes_in_elem = 1;
-    //     for (int dim = 0; dim < num_dims; dim++) {
-    //         num_nodes_in_elem *= (Pn_order + 1);
-    //     }
+        // read the mesh
+        // --- Read the number of nodes in the mesh --- //
+        size_t global_num_nodes = 0;
+        size_t global_num_elems = 0;
+        int i;           // used for writing information to file
+        int node_gid;    // the global id for the point
+        int elem_gid;    // the global id for the elem
+
+
+        //
+        int Pn_order = mesh_inps.p_order;
+        size_t num_nodes_in_elem = 1;
+        for (int dim = 0; dim < num_dims; dim++) {
+            num_nodes_in_elem *= (Pn_order + 1);
+        }
+
+        if(myrank==0){
+            std::cout<<"Reading VTU file in a multiblock VTK mesh"<<std::endl;
         
-    //     bool found;
-        
-    //     std::ifstream in;  // FILE *in;
-    //     in.open(mesh_file_);
-        
-
-    //     // --- extract the number of points and cells from the XML file ---
-    //     int num_nodes;
-    //     int num_elems;
-    //     found = extract_num_points_and_cells_xml(num_nodes,
-    //                                              num_elems,
-    //                                              in);
-    //     if(found==false){
-    //         throw std::runtime_error("ERROR: number of points and/or cells not found in the XML file!");
-    //         //std::cout << "ERROR: number of points and cells not found in the XML file!" << std::endl;
-    //     }
-    //     std::cout << "Number of nodes in the mesh file: " << num_nodes << std::endl;
-    //     std::cout << "Number of elements in the mesh file: " << num_elems << std::endl;
-        
-    //     //------------------------------------
-    //     // allocate mesh class nodes and elems
-    //     mesh.initialize_nodes(num_nodes);
-    //     mesh.initialize_elems(num_elems, num_dims);
-
-    //     //------------------------------------
-    //     // allocate node coordinate state
-    //     std::vector<node_state> required_node_state = { node_state::coords };
-    //     node.initialize(num_nodes, num_dims, required_node_state);
-
-    //     //------------------------------------
-    //     // allocate the elem object id array
-    //     mesh_inps.object_ids = DCArrayKokkos <int> (num_elems, "ObjectIDs");
-
-
-    //     // ------------------------
-    //     // Mesh file storage order:
-    //     //     objectId
-    //     //     Points
-    //     //     connectivity
-    //     //     offsets
-    //     //     types
-    //     // ------------------------
-        
-    //     // temporary arrays
-    //     DCArrayKokkos<double> node_coords(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
-    //     DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem, "connectivity_vtu_file");
-    //     DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
-
-
-    //     // for all fields, we stop recording when we get to "<"
-    //     std::string stop = "<";
-
-    //     // the size of 1D storage from reading the mesh file
-    //     size_t size;
-
-    //     // ---
-    //     //  Object ids
-    //     // ---
-
-    //     // the object id in the element
-    //     // array dims are (num_elems)
-    //     found = extract_values_xml(mesh_inps.object_ids.host.pointer(),
-    //                             "\"ObjectId\"",
-    //                             stop,
-    //                             in,
-    //                             size);
-    //     if(found==false){
-    //         throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
-    //         //std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
-    //     }
-    //     mesh_inps.object_ids.update_device();
-
-
-    //     // ---
-    //     //  Nodal coordinates of mesh
-    //     // ---
-
-    //     // coordinates of the node
-    //     // array dims are (num_nodes,dims)
-    //     // must use the quotes around Points to read the point values
-    //     found = extract_values_xml(node_coords.host.pointer(),
-    //                             "\"Points\"",
-    //                             stop,
-    //                             in,
-    //                             size);
-    //     if(found==false){
-    //         throw std::runtime_error("**** ERROR: mesh nodes were not found in the XML file! ****");
-    //         //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
-    //     }
-    //     if (size!=num_nodes*3){
-    //         throw std::runtime_error("ERROR: failed to read all the mesh nodes!");
-    //         //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
-    //     }
-    //     node_coords.update_device();
-
-    //     // dimensional scaling of the mesh
-    //     const double scl_x = mesh_inps.scale_x;
-    //     const double scl_y = mesh_inps.scale_y;
-    //     const double scl_z = mesh_inps.scale_z;
-
-    //     // save the node coordinates to the state array
-    //     FOR_ALL(node_gid, 0, mesh.num_nodes, {
+            bool found;
             
-    //         // save the nodal coordinates
-    //         node.coords(node_gid, 0) = scl_x*node_coords(node_gid, 0); // double
-    //         node.coords(node_gid, 1) = scl_y*node_coords(node_gid, 1); // double
-    //         if(num_dims==3){
-    //             node.coords(node_gid, 2) = scl_z*node_coords(node_gid, 2); // double
-    //         }
-
-    //     }); // end for parallel nodes
-    //     node.coords.update_host();
-
-
-    //     // ---
-    //     //  Nodes in the element 
-    //     // ---
-
-    //     // fill temporary nodes in the element array
-    //     // array dims are (num_elems,num_nodes_in_elem)
-    //     found = extract_values_xml(connectivity.host.pointer(),
-    //                             "\"connectivity\"",
-    //                             stop,
-    //                             in,
-    //                             size);
-    //     if(found==false){
-    //         std::cout << "ERROR: mesh connectivity was not found in the XML file!" << std::endl;
-    //     }
-    //     connectivity.update_device();
-
-    //     // array dims are the (num_elems) 
-    //     //    8  = pixal i,j,k linear quad format
-    //     //    9  = linear quad ensight ordering
-    //     //    12 = linear ensight hex ordering
-    //     //    72 = VTK_LAGRANGE_HEXAHEDRON
-    //     // ....
-    //     found = extract_values_xml(elem_types.host.pointer(),
-    //                             "\"types\"",
-    //                             stop,
-    //                             in,
-    //                             size);
-    //     if(found==false){
-    //         std::cout << "ERROR: element types were not found in the XML file!" << std::endl;
-    //     }
-    //     elem_types.update_device();
-
-    //     // check that the element type is supported by Fierro
-    //     FOR_ALL (elem_gid, 0, mesh.num_elems, {
-    //         if(elem_types(elem_gid) == element_types::linear_quad || 
-    //            elem_types(elem_gid) == element_types::linear_hex_ijk ||
-    //            elem_types(elem_gid) == element_types::linear_hex ||
-    //            elem_types(elem_gid) == element_types::arbitrary_hex )
-    //         {
-    //             // at least one of them is true
-    //         }
-    //         else 
-    //         {
-    //            // unknown element used
-    //            Kokkos::abort("Unknown element type in the mesh \n");
-    //         }
-    //     });
-
-    //     // Convert from ensight linear hex to a IJK mesh
-    //     CArrayKokkos <size_t> convert_ensight_to_ijk(8, "convert_ensight_to_ijk");
-
-    //     // Convert the arbitrary order hex to a IJK mesh
-    //     DCArrayKokkos <size_t> convert_pn_vtk_to_ijk(mesh.num_nodes_in_elem, "convert_pn_vtk_to_ijk");
-
-    //     //build the connectivity for element type 12
-    //     // elem_types.host(0)
-    //     switch(elem_types.host(0)){
-
-    //         case element_types::linear_quad:
-    //             // the node order is correct, no changes required
-
-    //             FOR_ALL (elem_gid, 0, mesh.num_elems, {
-                    
-    //                 for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-    //                     mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
-    //                 }
-                    
-    //             }); // end for
-
-    //             break;
-    //             // next case
-
-    //         case element_types::linear_hex_ijk:
-
-    //             // read the node ids in the element, no maps required
-    //             FOR_ALL (elem_gid, 0, mesh.num_elems, {
-                    
-    //                 for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-    //                     mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
-    //                 }
-                    
-    //             }); // end for
-
-    //             break;
-    //             // next case
-
-    //         case element_types::linear_hex:
-
-    //             RUN({
-    //                 convert_ensight_to_ijk(0) = 0;
-    //                 convert_ensight_to_ijk(1) = 1;
-    //                 convert_ensight_to_ijk(2) = 3;
-    //                 convert_ensight_to_ijk(3) = 2;
-    //                 convert_ensight_to_ijk(4) = 4;
-    //                 convert_ensight_to_ijk(5) = 5;
-    //                 convert_ensight_to_ijk(6) = 7;
-    //                 convert_ensight_to_ijk(7) = 6;
-    //             });
-
-    //             // read the node ids in the element
-    //             FOR_ALL (elem_gid, 0, mesh.num_elems, {
-                    
-    //                 for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-    //                     mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_ensight_to_ijk(node_lid));
-    //                 }
-                    
-    //             }); // end for
-
-    //             break;
-    //             // next case
-
-    //         case element_types::arbitrary_hex:
-
-    //             // re-order the nodes to be in i,j,k format for Fierro
-    //             size_t this_node = 0;
-    //             for (int k=0; k<=Pn_order; k++){
-    //                 for (int j=0; j<=Pn_order; j++){
-    //                     for (int i=0; i<=Pn_order; i++){
-                            
-    //                         // convert this_node index to the FE index convention
-    //                         int order[3] = {Pn_order, Pn_order, Pn_order};
-    //                         int this_index = PointIndexFromIJK(i, j, k, order);
-                            
-    //                         // store the points in this elem according the the finite
-    //                         // element numbering convention
-    //                         convert_pn_vtk_to_ijk.host(this_index) = this_node;
-                            
-    //                         // increment the point counting index
-    //                         this_node = this_node + 1;
-                            
-    //                     } // end for icount
-    //                 } // end for jcount
-    //             }  // end for kcount
-    //             convert_pn_vtk_to_ijk.update_device();
-    //             Kokkos::fence();
-
-    //             // read the node ids in the element
-    //             FOR_ALL (elem_gid, 0, mesh.num_elems, {
-                    
-    //                 for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-    //                     mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_pn_vtk_to_ijk(node_lid));
-    //                 }
-                    
-    //             }); // end for
-
-    //             break;
-    //             // next case
-
-    //     } // end switch
-    //     mesh.nodes_in_elem.update_host();
-
-
-    //     // initialize corner variables
-    //     size_t num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
-    //     mesh.initialize_corners(num_corners);
-
-
-    //     in.close();
+            std::ifstream in;  // FILE *in;
+            in.open(mesh_file_);
             
-    // } // end of VTMread function
+
+            // --- extract the number of points and cells from the XML file ---
+            int num_nodes;
+            int num_elems;
+            found = extract_num_points_and_cells_xml(global_num_nodes,
+                                                    global_num_elems,
+                                                    in);
+            if(found==false){
+                throw std::runtime_error("ERROR: number of points and/or cells not found in the XML file!");
+                //std::cout << "ERROR: number of points and cells not found in the XML file!" << std::endl;
+            }
+            std::cout << "Number of nodes in the mesh file: " << num_nodes << std::endl;
+            std::cout << "Number of elements in the mesh file: " << num_elems << std::endl;
+        }
+        
+        // broadcast number of nodes
+        MPI_Bcast(&global_num_nodes, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+
+        // broadcast number of elems
+        MPI_Bcast(&global_num_elems, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+        
+        //------------------------------------
+        // allocate mesh class nodes and elems
+        mesh.initialize_nodes(num_nodes);
+        mesh.initialize_elems(num_elems, num_dims);
+
+        //------------------------------------
+        // allocate node coordinate state
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node.initialize(num_nodes, num_dims, required_node_state);
+
+        //------------------------------------
+        // allocate the elem object id array
+        mesh_inps.object_ids = DCArrayKokkos <int> (num_elems, "ObjectIDs");
+
+
+        // ------------------------
+        // Mesh file storage order:
+        //     objectId
+        //     Points
+        //     connectivity
+        //     offsets
+        //     types
+        // ------------------------
+        
+        // temporary arrays
+        DCArrayKokkos<double> node_coords(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
+        DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem, "connectivity_vtu_file");
+        DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
+
+
+        // for all fields, we stop recording when we get to "<"
+        std::string stop = "<";
+
+        // the size of 1D storage from reading the mesh file
+        size_t size;
+
+        // ---
+        //  Object ids
+        // ---
+
+        // the object id in the element
+        // array dims are (num_elems)
+        found = extract_values_xml(mesh_inps.object_ids.host.pointer(),
+                                "\"ObjectId\"",
+                                stop,
+                                in,
+                                size);
+        if(found==false){
+            throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
+            //std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
+        }
+        mesh_inps.object_ids.update_device();
+
+
+        // ---
+        //  Nodal coordinates of mesh
+        // ---
+
+        // coordinates of the node
+        // array dims are (num_nodes,dims)
+        // must use the quotes around Points to read the point values
+        found = extract_values_xml(node_coords.host.pointer(),
+                                "\"Points\"",
+                                stop,
+                                in,
+                                size);
+        if(found==false){
+            throw std::runtime_error("**** ERROR: mesh nodes were not found in the XML file! ****");
+            //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
+        }
+        if (size!=num_nodes*3){
+            throw std::runtime_error("ERROR: failed to read all the mesh nodes!");
+            //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
+        }
+        node_coords.update_device();
+
+        // dimensional scaling of the mesh
+        const double scl_x = mesh_inps.scale_x;
+        const double scl_y = mesh_inps.scale_y;
+        const double scl_z = mesh_inps.scale_z;
+
+        // save the node coordinates to the state array
+        FOR_ALL(node_gid, 0, mesh.num_nodes, {
+            
+            // save the nodal coordinates
+            node.coords(node_gid, 0) = scl_x*node_coords(node_gid, 0); // double
+            node.coords(node_gid, 1) = scl_y*node_coords(node_gid, 1); // double
+            if(num_dims==3){
+                node.coords(node_gid, 2) = scl_z*node_coords(node_gid, 2); // double
+            }
+
+        }); // end for parallel nodes
+        node.coords.update_host();
+
+
+        // ---
+        //  Nodes in the element 
+        // ---
+
+        // fill temporary nodes in the element array
+        // array dims are (num_elems,num_nodes_in_elem)
+        found = extract_values_xml(connectivity.host.pointer(),
+                                "\"connectivity\"",
+                                stop,
+                                in,
+                                size);
+        if(found==false){
+            std::cout << "ERROR: mesh connectivity was not found in the XML file!" << std::endl;
+        }
+        connectivity.update_device();
+
+        // array dims are the (num_elems) 
+        //    8  = pixal i,j,k linear quad format
+        //    9  = linear quad ensight ordering
+        //    12 = linear ensight hex ordering
+        //    72 = VTK_LAGRANGE_HEXAHEDRON
+        // ....
+        found = extract_values_xml(elem_types.host.pointer(),
+                                "\"types\"",
+                                stop,
+                                in,
+                                size);
+        if(found==false){
+            std::cout << "ERROR: element types were not found in the XML file!" << std::endl;
+        }
+        elem_types.update_device();
+
+        // check that the element type is supported by Fierro
+        FOR_ALL (elem_gid, 0, mesh.num_elems, {
+            if(elem_types(elem_gid) == element_types::linear_quad || 
+               elem_types(elem_gid) == element_types::linear_hex_ijk ||
+               elem_types(elem_gid) == element_types::linear_hex ||
+               elem_types(elem_gid) == element_types::arbitrary_hex )
+            {
+                // at least one of them is true
+            }
+            else 
+            {
+               // unknown element used
+               Kokkos::abort("Unknown element type in the mesh \n");
+            }
+        });
+
+        // Convert from ensight linear hex to a IJK mesh
+        CArrayKokkos <size_t> convert_ensight_to_ijk(8, "convert_ensight_to_ijk");
+
+        // Convert the arbitrary order hex to a IJK mesh
+        DCArrayKokkos <size_t> convert_pn_vtk_to_ijk(mesh.num_nodes_in_elem, "convert_pn_vtk_to_ijk");
+
+        //build the connectivity for element type 12
+        // elem_types.host(0)
+        switch(elem_types.host(0)){
+
+            case element_types::linear_quad:
+                // the node order is correct, no changes required
+
+                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                    
+                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
+                    }
+                    
+                }); // end for
+
+                break;
+                // next case
+
+            case element_types::linear_hex_ijk:
+
+                // read the node ids in the element, no maps required
+                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                    
+                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
+                    }
+                    
+                }); // end for
+
+                break;
+                // next case
+
+            case element_types::linear_hex:
+
+                RUN({
+                    convert_ensight_to_ijk(0) = 0;
+                    convert_ensight_to_ijk(1) = 1;
+                    convert_ensight_to_ijk(2) = 3;
+                    convert_ensight_to_ijk(3) = 2;
+                    convert_ensight_to_ijk(4) = 4;
+                    convert_ensight_to_ijk(5) = 5;
+                    convert_ensight_to_ijk(6) = 7;
+                    convert_ensight_to_ijk(7) = 6;
+                });
+
+                // read the node ids in the element
+                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                    
+                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_ensight_to_ijk(node_lid));
+                    }
+                    
+                }); // end for
+
+                break;
+                // next case
+
+            case element_types::arbitrary_hex:
+
+                // re-order the nodes to be in i,j,k format for Fierro
+                size_t this_node = 0;
+                for (int k=0; k<=Pn_order; k++){
+                    for (int j=0; j<=Pn_order; j++){
+                        for (int i=0; i<=Pn_order; i++){
+                            
+                            // convert this_node index to the FE index convention
+                            int order[3] = {Pn_order, Pn_order, Pn_order};
+                            int this_index = PointIndexFromIJK(i, j, k, order);
+                            
+                            // store the points in this elem according the the finite
+                            // element numbering convention
+                            convert_pn_vtk_to_ijk.host(this_index) = this_node;
+                            
+                            // increment the point counting index
+                            this_node = this_node + 1;
+                            
+                        } // end for icount
+                    } // end for jcount
+                }  // end for kcount
+                convert_pn_vtk_to_ijk.update_device();
+                Kokkos::fence();
+
+                // read the node ids in the element
+                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                    
+                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_pn_vtk_to_ijk(node_lid));
+                    }
+                    
+                }); // end for
+
+                break;
+                // next case
+
+        } // end switch
+        mesh.nodes_in_elem.update_host();
+
+
+        // initialize corner variables
+        size_t num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
+        mesh.initialize_corners(num_corners);
+
+
+        in.close();
+            
+    } // end of VTMread function
 
 
 }; // end of Mesh reader class
