@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 
-#define BUFFER_LINES 100000
+#define BUFFER_SIZE 100000
 #define MAX_WORD 30
 
 /////////////////////////////////////////////////////////////////////////////
@@ -492,11 +492,11 @@ public:
         int elem_words_per_line = num_nodes_in_elem;
 
         // allocate read buffer
-        read_buffer = CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_LINES, words_per_line, MAX_WORD);
+        read_buffer = CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE, words_per_line, MAX_WORD);
 
         dof_limit = global_num_nodes;
-        buffer_iterations = dof_limit / BUFFER_LINES;
-        if (dof_limit % BUFFER_LINES != 0)
+        buffer_iterations = dof_limit / BUFFER_SIZE;
+        if (dof_limit % BUFFER_SIZE != 0)
         {
             buffer_iterations++;
         }
@@ -521,7 +521,7 @@ public:
                 // pack buffer on rank 0
                 if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
                 {
-                    for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++)
+                    for (buffer_loop = 0; buffer_loop < BUFFER_SIZE; buffer_loop++)
                     {
                         getline(in, read_line);
                         line_parse.clear();
@@ -541,7 +541,7 @@ public:
                 else if (myrank == 0)
                 {
                     buffer_loop = 0;
-                    while (buffer_iteration * BUFFER_LINES + buffer_loop < global_num_nodes) {
+                    while (buffer_iteration * BUFFER_SIZE + buffer_loop < global_num_nodes) {
                         getline(in, read_line);
                         line_parse.clear();
                         line_parse.str(read_line);
@@ -559,7 +559,7 @@ public:
                 }
 
                 // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-                MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * words_per_line * MAX_WORD, MPI_CHAR, 0, MPI_COMM_WORLD);
+                MPI_Bcast(read_buffer.pointer(), BUFFER_SIZE * words_per_line * MAX_WORD, MPI_CHAR, 0, MPI_COMM_WORLD);
                 // broadcast how many nodes were read into this buffer iteration
                 MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -593,7 +593,7 @@ public:
                         }
                     }
                 }
-                read_index_start += BUFFER_LINES;
+                read_index_start += BUFFER_SIZE;
             }
             // end of coordinate readin
             node_coords_distributed.update_device();
@@ -683,19 +683,19 @@ public:
 
         // read in element connectivity
         // we're gonna reallocate for the words per line expected for the element connectivity
-        read_buffer = CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_LINES, elem_words_per_line, MAX_WORD);
+        read_buffer = CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE, elem_words_per_line, MAX_WORD);
 
         // calculate buffer iterations to read number of lines
-        buffer_iterations = global_num_elems / BUFFER_LINES;
+        buffer_iterations = global_num_elems / BUFFER_SIZE;
         int assign_flag;
 
         // dynamic buffer used to store elements before we know how many this rank needs
-        std::vector<size_t> element_temp(BUFFER_LINES * elem_words_per_line);
-        std::vector<size_t> global_indices_temp(BUFFER_LINES);
-        size_t buffer_max = BUFFER_LINES * elem_words_per_line;
-        size_t indices_buffer_max = BUFFER_LINES;
+        std::vector<size_t> element_temp(BUFFER_SIZE * elem_words_per_line);
+        std::vector<size_t> global_indices_temp(BUFFER_SIZE);
+        size_t buffer_max = BUFFER_SIZE * elem_words_per_line;
+        size_t indices_buffer_max = BUFFER_SIZE;
 
-        if (global_num_elems % BUFFER_LINES != 0)
+        if (global_num_elems % BUFFER_SIZE != 0)
         {
             buffer_iterations++;
         }
@@ -706,7 +706,7 @@ public:
             // pack buffer on rank 0
             if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
             {
-                for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++)
+                for (buffer_loop = 0; buffer_loop < BUFFER_SIZE; buffer_loop++)
                 {
                     getline(in, read_line);
                     line_parse.clear();
@@ -728,7 +728,7 @@ public:
             else if (myrank == 0)
             {
                 buffer_loop = 0;
-                while (buffer_iteration * BUFFER_LINES + buffer_loop < global_num_elems) {
+                while (buffer_iteration * BUFFER_SIZE + buffer_loop < global_num_elems) {
                     getline(in, read_line);
                     line_parse.clear();
                     line_parse.str(read_line);
@@ -749,7 +749,7 @@ public:
             }
 
             // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-            MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * elem_words_per_line * MAX_WORD, MPI_CHAR, 0, MPI_COMM_WORLD);
+            MPI_Bcast(read_buffer.pointer(), BUFFER_SIZE * elem_words_per_line * MAX_WORD, MPI_CHAR, 0, MPI_COMM_WORLD);
             // broadcast how many nodes were read into this buffer iteration
             MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -804,8 +804,8 @@ public:
                     {
                         if ((num_elems - 1) * elem_words_per_line + inode >= buffer_max)
                         {
-                            element_temp.resize((num_elems - 1) * elem_words_per_line + inode + BUFFER_LINES * elem_words_per_line);
-                            buffer_max = (num_elems - 1) * elem_words_per_line + inode + BUFFER_LINES * elem_words_per_line;
+                            element_temp.resize((num_elems - 1) * elem_words_per_line + inode + BUFFER_SIZE * elem_words_per_line);
+                            buffer_max = (num_elems - 1) * elem_words_per_line + inode + BUFFER_SIZE * elem_words_per_line;
                         }
                         element_temp[(num_elems - 1) * elem_words_per_line + inode] = node_store(inode);
                         // std::cout << "VECTOR STORAGE FOR ELEM " << num_elems << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
@@ -813,13 +813,13 @@ public:
                     // assign global element id to temporary list
                     if (num_elems - 1 >= indices_buffer_max)
                     {
-                        global_indices_temp.resize(num_elems - 1 + BUFFER_LINES);
-                        indices_buffer_max = num_elems - 1 + BUFFER_LINES;
+                        global_indices_temp.resize(num_elems - 1 + BUFFER_SIZE);
+                        indices_buffer_max = num_elems - 1 + BUFFER_SIZE;
                     }
                     global_indices_temp[num_elems - 1] = elem_gid;
                 }
             }
-            read_index_start += BUFFER_LINES;
+            read_index_start += BUFFER_SIZE;
         }
 
         //set global and local shared element counts
@@ -944,7 +944,7 @@ public:
         real_t dof_value;
         real_t unit_scaling = 1;
 
-        CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer;
+        CArray<real_t, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer(BUFFER_SIZE*num_dims);
 
 
         // read the mesh
@@ -954,6 +954,7 @@ public:
         int i;           // used for writing information to file
         int node_gid;    // the global id for the point
         int elem_gid;    // the global id for the elem
+        std::streampos objectid_streampos;
 
 
         //
@@ -994,57 +995,33 @@ public:
         
         //------------------------------------
         // allocate mesh class nodes and elems
-        mesh.initialize_nodes(num_nodes);
-        mesh.initialize_elems(num_elems, num_dims);
+        mesh.global_num_nodes = global_num_nodes;
 
-        //------------------------------------
-        // allocate node coordinate state
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dims, required_node_state);
+        //allocate initial contiguously partitioned node coordinate vector and get map of node indices
+        DistributedDFArray<real_t> node_coords_distributed(global_num_nodes, num_dims);
 
-        //------------------------------------
-        // allocate the elem object id array
-        mesh_inps.object_ids = DCArrayKokkos <int> (num_elems, "ObjectIDs");
+        // construct contiguous parallel row map now that we know the number of nodes
+        DistributedMap node_map = node_coords_distributed.pmap;
+        // map->describe(*fos,Teuchos::VERB_EXTREME);
 
-
-        // ------------------------
-        // Mesh file storage order:
-        //     objectId
-        //     Points
-        //     connectivity
-        //     offsets
-        //     types
-        // ------------------------
-        
-        // temporary arrays
-        DCArrayKokkos<double> node_coords(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
-        DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem, "connectivity_vtu_file");
-        DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
+        // set the vertices in the mesh read in
+        size_t num_local_nodes = node_map.size();
 
 
         // for all fields, we stop recording when we get to "<"
         std::string stop = "<";
 
         // the size of 1D storage from reading the mesh file
-        size_t size;
+        size_t size = 0;
 
         // ---
         //  Object ids
         // ---
 
-        // the object id in the element
-        // array dims are (num_elems)
-        found = extract_values_xml(mesh_inps.object_ids.host.pointer(),
-                                "\"ObjectId\"",
-                                stop,
-                                in,
-                                size);
-        if(found==false){
-            throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
-            //std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
+        //save fstream pointer for object ids for later after element map is decided (prevents more comms if object ids is always first)
+        if(myrank==0){
+            objectid_streampos = in.tellg();
         }
-        mesh_inps.object_ids.update_device();
-
 
         // ---
         //  Nodal coordinates of mesh
@@ -1053,19 +1030,115 @@ public:
         // coordinates of the node
         // array dims are (num_nodes,dims)
         // must use the quotes around Points to read the point values
-        found = extract_values_xml(node_coords.host.pointer(),
-                                "\"Points\"",
-                                stop,
-                                in,
-                                size);
-        if(found==false){
-            throw std::runtime_error("**** ERROR: mesh nodes were not found in the XML file! ****");
-            //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
+        dof_limit = global_num_nodes*num_dims;
+        buffer_iterations = dof_limit / (BUFFER_SIZE*num_dims);
+        size_t remainder_size = dof_limit % (BUFFER_SIZE*num_dims);
+        if (remainder_size != 0)
+        {
+            buffer_iterations++;
         }
-        if (size!=num_nodes*3){
-            throw std::runtime_error("ERROR: failed to read all the mesh nodes!");
-            //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
+
+        //first find the block with node coords data
+        if(myrank==0){
+
+            bool found = false;
+
+            std::string line;
+            const std::string word = "\"Points\"";
+
+            // Read the file line by line looking for specified word
+            while (std::getline(in, line)) {
+
+                if (line.find(word) != std::string::npos) { // Check if the portion of the word is in the line
+                    found = true;
+                } 
+                if(found) {
+
+                    if(found) break;
+
+                } // end if found
+
+            } // end while
+
+            if(found==false){
+                throw std::runtime_error("**** ERROR: mesh nodes were not found in the XML file! ****");
+                //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
+            }
         }
+
+
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+            // pack buffer on rank 0
+            size_t buffer_iteration_size;
+            if(buffer_iteration < buffer_iterations - 1){
+                buffer_iteration_size = BUFFER_SIZE*num_dims;
+            }
+            else{
+                buffer_iteration_size = remainder_size;
+            }
+            
+            if(myrank==0){
+
+                std::string line;
+
+                // loop over the lines in the file until the buffer limit is reached
+                for(int idata = 0; idata < buffer_iteration_size; idata++){
+
+                    // extract the individual values from the stream
+                    std::string value;
+                    in >> value;
+                    if (value == stop) { // Check if the stop word is in the line
+                        break;
+                    } // end if
+                    read_buffer(i) = std::stod(value);
+                    size++;
+                } // end for
+            }
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(read_buffer.pointer(), BUFFER_SIZE*num_dims, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_iteration_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            // debug_print
+            // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+            // for(int iprint=0; iprint < buffer_loop; iprint++)
+            // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+            // return;
+
+            // determine which data to store in the swage mesh members (the local node data)
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_iteration_size/num_dims; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                node_gid = read_index_start + scan_loop;
+                // let map decide if this node id belongs locally; if yes store data
+                if (node_map.isProcessGlobalIndex(node_gid))
+                {
+                    // set local node index in this mpi rank
+                    node_rid = node_map.getLocalIndex(node_gid);
+                    // extract nodal position from the read buffer
+                    // for tecplot format this is the three coords in the same line
+                    dof_value = read_buffer(scan_loop*num_dims);
+                    node_coords_distributed.host(node_rid, 0) = dof_value * unit_scaling;
+                    dof_value = atof(&read_buffer(scan_loop*num_dims + 1));
+                    node_coords_distributed.host(node_rid, 1) = dof_value * unit_scaling;
+                    if (num_dims == 3)
+                    {
+                        dof_value = atof(&read_buffer(scan_loop*num_dims + 2));
+                        node_coords_distributed.host(node_rid, 2) = dof_value * unit_scaling;
+                    }
+                }
+            }
+            read_index_start += buffer_iteration_size/num_dims;
+        }
+
+        if(myrank==0){        
+            if (size!=global_num_nodes*num_dims){
+                throw std::runtime_error("ERROR: failed to read all the mesh nodes!");
+                //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
+            }
+        }
+
         node_coords.update_device();
 
         // dimensional scaling of the mesh
@@ -1242,6 +1315,42 @@ public:
         // initialize corner variables
         size_t num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
+
+        
+        //------------------------------------
+        // allocate the elem object id array
+        mesh_inps.object_ids = DCArrayKokkos <int> (num_elems, "ObjectIDs");
+
+
+        // ------------------------
+        // Mesh file storage order:
+        //     objectId
+        //     Points
+        //     connectivity
+        //     offsets
+        //     types
+        // ------------------------
+        
+        // temporary arrays
+        DCArrayKokkos<double> node_coords(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
+        DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem, "connectivity_vtu_file");
+        DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
+
+        //reset file stream pointer to area where ObjectId is located before node coordinates
+        in.seekg(first_elem_line_streampos);
+        
+        // read the object id in the element
+        // array dims are (num_elems)
+        found = extract_values_xml(mesh_inps.object_ids.host.pointer(),
+                                "\"ObjectId\"",
+                                stop,
+                                in,
+                                size);
+        if(found==false){
+            throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
+            //std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
+        }
+        mesh_inps.object_ids.update_device();
 
 
         in.close();
@@ -1721,13 +1830,13 @@ public:
         // read coords
         read_index_start = 0;
         
-        buffer_iterations = global_num_nodes / BUFFER_LINES;
-        if (global_num_nodes % BUFFER_LINES != 0)
+        buffer_iterations = global_num_nodes / BUFFER_SIZE;
+        if (global_num_nodes % BUFFER_SIZE != 0)
         {
             buffer_iterations++;
         }
 
-        read_buffer = CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_LINES, num_dims);
+        read_buffer = CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE, num_dims);
 
         { //scoped so temp FArray data is auto deleted to save memory
             //allocate pre-partition node coords using contiguous decomposition
@@ -1745,7 +1854,7 @@ public:
                 // pack buffer on rank 0
                 if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
                 {
-                    for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++)
+                    for (buffer_loop = 0; buffer_loop < BUFFER_SIZE; buffer_loop++)
                     {
 
                         for (int idim = 0; idim < num_dims; idim++)
@@ -1753,27 +1862,27 @@ public:
                             // debug print
                             // std::cout<<" "<< substring <<std::endl;
                             // assign the substring variable as a word of the read buffer
-                            read_buffer(buffer_loop, idim) = global_coords(buffer_iteration * BUFFER_LINES + buffer_loop, idim);
+                            read_buffer(buffer_loop, idim) = global_coords(buffer_iteration * BUFFER_SIZE + buffer_loop, idim);
                         }
                     }
                 }
                 else if (myrank == 0)
                 {
                     buffer_loop = 0;
-                    while (buffer_iteration * BUFFER_LINES + buffer_loop < global_num_nodes) {
+                    while (buffer_iteration * BUFFER_SIZE + buffer_loop < global_num_nodes) {
                         for (int idim = 0; idim < num_dims; idim++)
                         {
                             // debug print
                             // std::cout<<" "<< substring <<std::endl;
                             // assign the substring variable as a word of the read buffer
-                            read_buffer(buffer_loop, idim) = global_coords(buffer_iteration * BUFFER_LINES + buffer_loop, idim);
+                            read_buffer(buffer_loop, idim) = global_coords(buffer_iteration * BUFFER_SIZE + buffer_loop, idim);
                         }
                         buffer_loop++;
                     }
                 }
 
                 // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-                MPI_Bcast(read_buffer.pointer(), BUFFER_LINES * num_dims, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                MPI_Bcast(read_buffer.pointer(), BUFFER_SIZE * num_dims, MPI_DOUBLE, 0, MPI_COMM_WORLD);
                 // broadcast how many nodes were read into this buffer iteration
                 MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -1807,7 +1916,7 @@ public:
                         }
                     }
                 }
-                read_index_start += BUFFER_LINES;
+                read_index_start += BUFFER_SIZE;
             }
             // end of coordinate readin
             node_coords_distributed.update_device();
@@ -1864,20 +1973,20 @@ public:
 
         // read in element connectivity
         // we're gonna reallocate for the words per line expected for the element connectivity
-        read_buffer_edof = CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_LINES, num_nodes_in_elem);
+        read_buffer_edof = CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE, num_nodes_in_elem);
 
         // calculate buffer iterations to read number of lines
-        buffer_iterations = global_num_elems / BUFFER_LINES;
+        buffer_iterations = global_num_elems / BUFFER_SIZE;
         int assign_flag;
 
         // dynamic buffer used to store elements before we know how many this rank needs
-        std::vector<size_t> element_temp(BUFFER_LINES * num_nodes_in_elem);
-        std::vector<size_t> global_indices_temp(BUFFER_LINES);
-        size_t buffer_max = BUFFER_LINES * num_nodes_in_elem;
-        size_t indices_buffer_max = BUFFER_LINES;
+        std::vector<size_t> element_temp(BUFFER_SIZE * num_nodes_in_elem);
+        std::vector<size_t> global_indices_temp(BUFFER_SIZE);
+        size_t buffer_max = BUFFER_SIZE * num_nodes_in_elem;
+        size_t indices_buffer_max = BUFFER_SIZE;
         size_t num_elems = 0;
 
-        if (global_num_elems % BUFFER_LINES != 0)
+        if (global_num_elems % BUFFER_SIZE != 0)
         {
             buffer_iterations++;
         }
@@ -1888,11 +1997,11 @@ public:
             // pack buffer on rank 0
             if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
             {
-                for (buffer_loop = 0; buffer_loop < BUFFER_LINES; buffer_loop++)
+                for (buffer_loop = 0; buffer_loop < BUFFER_SIZE; buffer_loop++)
                 {
                     for (int inode = 0; inode < num_nodes_in_elem; inode++)
                     {
-                        read_buffer_edof(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_LINES + buffer_loop, inode);
+                        read_buffer_edof(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_SIZE + buffer_loop, inode);
                     }
                     // std::cout <<std::endl;
                 }
@@ -1900,10 +2009,10 @@ public:
             else if (myrank == 0)
             {
                 buffer_loop = 0;
-                while (buffer_iteration * BUFFER_LINES + buffer_loop < global_num_elems) {
+                while (buffer_iteration * BUFFER_SIZE + buffer_loop < global_num_elems) {
                     for (int inode = 0; inode < num_nodes_in_elem; inode++)
                     {
-                        read_buffer_edof(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_LINES + buffer_loop, inode);
+                        read_buffer_edof(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_SIZE + buffer_loop, inode);
                     }
                     // std::cout <<std::endl;
                     buffer_loop++;
@@ -1912,7 +2021,7 @@ public:
             }
 
             // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
-            MPI_Bcast(read_buffer_edof.pointer(), BUFFER_LINES * num_nodes_in_elem, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+            MPI_Bcast(read_buffer_edof.pointer(), BUFFER_SIZE * num_nodes_in_elem, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
             // broadcast how many nodes were read into this buffer iteration
             MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -1945,8 +2054,8 @@ public:
                     {
                         if ((num_elems - 1) * num_nodes_in_elem + inode >= buffer_max)
                         {
-                            element_temp.resize((num_elems - 1) * num_nodes_in_elem + inode + BUFFER_LINES * num_nodes_in_elem);
-                            buffer_max = (num_elems - 1) * num_nodes_in_elem + inode + BUFFER_LINES * num_nodes_in_elem;
+                            element_temp.resize((num_elems - 1) * num_nodes_in_elem + inode + BUFFER_SIZE * num_nodes_in_elem);
+                            buffer_max = (num_elems - 1) * num_nodes_in_elem + inode + BUFFER_SIZE * num_nodes_in_elem;
                         }
                         element_temp[(num_elems - 1) * num_nodes_in_elem + inode] = node_store(inode);
                         // std::cout << "VECTOR STORAGE FOR ELEM " << num_elems << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
@@ -1954,13 +2063,13 @@ public:
                     // assign global element id to temporary list
                     if (num_elems - 1 >= indices_buffer_max)
                     {
-                        global_indices_temp.resize(num_elems - 1 + BUFFER_LINES);
-                        indices_buffer_max = num_elems - 1 + BUFFER_LINES;
+                        global_indices_temp.resize(num_elems - 1 + BUFFER_SIZE);
+                        indices_buffer_max = num_elems - 1 + BUFFER_SIZE;
                     }
                     global_indices_temp[num_elems - 1] = elem_gid;
                 }
             }
-            read_index_start += BUFFER_LINES;
+            read_index_start += BUFFER_SIZE;
         }
         //set global and local shared element counts
         mesh.global_num_elems = global_num_elems;
