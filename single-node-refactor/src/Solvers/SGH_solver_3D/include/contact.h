@@ -345,6 +345,8 @@ struct contact_patches_t
     size_t num_active = 0; // number of active pairs
     CArrayKokkos <size_t> active_set; // for quick referencing of active pairs
     CArrayKokkos <size_t> node_penetrations; // for use in find_penetrating_nodes
+    CArrayKokkos <double> f_c_incs; // stores contact force increments for checking convergence
+    CArrayKokkos <double> contact_force; // stores contact forces in gid locations
 
 
     CArrayKokkos<contact_patch_t> contact_patches;  // patches that will be checked for contact
@@ -888,7 +890,7 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
 /// \param del_t current time step in the analysis
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void frictionless_increment(ViewCArrayKokkos <double> pair_vars, size_t &contact_id, double xi[4], double eta[4], double &del_t,
+void frictionless_increment(ViewCArrayKokkos <double> pair_vars, size_t &contact_id, double xi[4], double eta[4], const double &del_t,
                             DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes, ViewCArrayKokkos <size_t> contact_surface_map,
                             DCArrayKokkos <double> mass, CArrayKokkos <double> contact_forces, DCArrayKokkos <double> corner_force,
                             DCArrayKokkos <double> vel, RaggedRightArrayKokkos <size_t> corners_in_node,
@@ -912,8 +914,8 @@ void frictionless_increment(ViewCArrayKokkos <double> pair_vars, size_t &contact
 ///                    shocks to the solving scheme
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void distribute_frictionless_force(ViewCArrayKokkos <double> pair_vars, size_t &contact_id, CArrayKokkos <size_t> contact_surface_map,
-                                   double xi[4], double eta[4], CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> node_patch_pairs);
+void distribute_frictionless_force(ViewCArrayKokkos <double> pair_vars, size_t &contact_id, ViewCArrayKokkos <size_t> contact_surface_map,
+                                   double xi[4], double eta[4], CArrayKokkos <double> contact_forces);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn should_remove
@@ -937,7 +939,7 @@ bool should_remove(ViewCArrayKokkos <double> pair_vars,
                    DCArrayKokkos <double> mass, DCArrayKokkos <double> coords,
                    CArrayKokkos <size_t> num_corners_in_node, CArrayKokkos <size_t> bdy_nodes,
                    DCArrayKokkos <double> vel, const double &del_t,
-                   double normal[3], double xi[4], double eta[4], int &surf_lid);
+                   double xi[4], double eta[4], int &surf_lid);
 
 /// end of pair specific functions *********************************************************************************
 
@@ -997,7 +999,7 @@ bool get_edge_pair(double normal1[3], double normal2[3], size_t &node_gid, const
 /// \param pair Contact pair object to remove
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void remove_pair(size_t &contact_id, CArrayKokkos <size_t> node_patch_pairs, CArrayKokkos <size_t> pair_vars);
+void remove_pair(size_t &contact_id, CArrayKokkos <size_t> node_patch_pairs, CArrayKokkos <double> pair_vars);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn penetration_check
@@ -1061,6 +1063,21 @@ void find_penetrating_nodes(double depth_cap, double bounding_box[], DCArrayKokk
 /// start of functions called in boundary.cpp **********************************************************************
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn sort
+///
+/// \brief Constructs nbox, lbox, nsort, and npoint according to the Sandia Algorithm
+///
+/// \param State State object
+/// \param mesh mesh object
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void sort(DCArrayKokkos <double> coords, size_t num_bdy_nodes, CArrayKokkos <size_t> bdy_nodes,
+          DCArrayKokkos <double> vel, CArrayKokkos <size_t> num_corners_in_node, RaggedRightArrayKokkos <size_t> corners_in_node,
+          DCArrayKokkos <double> corner_force, CArrayKokkos <double> contact_forces, DCArrayKokkos <double> mass,
+          double &x_max, double &y_max, double &z_max, double &x_min, double &y_min, double &z_min, double &vx_max, double &vy_max,
+          double &vz_max, double &ax_max, double &ay_max, double &az_max, size_t &Sx, size_t &Sy, size_t &Sz, double &bucket_size,
+          CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &lbox, CArrayKokkos <size_t> &nsort, CArrayKokkos <size_t> &npoint);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn initial_penetration
 ///
 /// \brief Finds nodes that are penetrating in the initial configuration
@@ -1081,6 +1098,41 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                        RaggedRightArrayKokkos <size_t> elems_in_node, CArrayKokkos <size_t> num_nodes_in_elem,
                        CArrayKokkos <size_t> patches_in_elem, CArrayKokkos <size_t> &node_patch_pairs,
                        CArrayKokkos <double> pair_vars, const double &del_t, CArrayKokkos <size_t> active_set);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn force_resolution
+///
+/// \brief Resolves the contact forces
+///
+/// todo: add more information here
+///
+/// \param del_t current time step in the analysis
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void force_resolution(CArrayKokkos <double> f_c_incs, size_t num_active, CArrayKokkos <size_t> active_set,
+                      CArrayKokkos <size_t> node_patch_pairs, CArrayKokkos <double> pair_vars, CArrayKokkos <size_t> contact_surface_map,
+                      DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes, DCArrayKokkos <double> mass,
+                      CArrayKokkos <double> contact_forces, DCArrayKokkos <double> corner_force, DCArrayKokkos <double> vel,
+                      RaggedRightArrayKokkos <size_t> corners_in_node, CArrayKokkos <size_t> num_corners_in_node,
+                      double xi[4], double eta[4], const double &del_t, CArrayKokkos <double> contact_force, size_t num_bdy_nodes);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn remove_pairs
+///
+/// \brief Loops through all active pairs and removes the pairs that don't meet the criteria
+///
+/// This method will walk through all the active contact pairs and remove the pairs that don't meet the criteria of
+/// the corresponding `should_remove` function.
+///
+/// \param del_t current time step in the analysis
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void remove_pairs(size_t num_active, CArrayKokkos <size_t> active_set, CArrayKokkos <double> pair_vars,
+                  CArrayKokkos <size_t> node_patch_pairs, CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                  CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> contact_surface_map,
+                  DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                  DCArrayKokkos <double> mass, DCArrayKokkos <double> coords,
+                  CArrayKokkos <size_t> num_corners_in_node, CArrayKokkos <size_t> bdy_nodes,
+                  DCArrayKokkos <double> vel, const double &del_t,
+                  double xi[4], double eta[4], size_t num_bdy_patches);
 
 /// end of functions called in boundary.cpp ************************************************************************
 

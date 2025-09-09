@@ -597,7 +597,7 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
 /// start of pair specific functions *******************************************************************************
 
 KOKKOS_FUNCTION
-void frictionless_increment(ViewCArrayKokkos <double> pair_vars, size_t &contact_id, double xi[4], double eta[4], double &del_t,
+void frictionless_increment(ViewCArrayKokkos <double> pair_vars, size_t &contact_id, double xi[4], double eta[4], const double &del_t,
                             DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes, ViewCArrayKokkos <size_t> contact_surface_map,
                             DCArrayKokkos <double> mass, CArrayKokkos <double> contact_forces, DCArrayKokkos <double> corner_force,
                             DCArrayKokkos <double> vel, RaggedRightArrayKokkos <size_t> corners_in_node,
@@ -666,15 +666,15 @@ void frictionless_increment(ViewCArrayKokkos <double> pair_vars, size_t &contact
     sol[0] = pair_vars(0); // xi
     sol[1] = pair_vars(1); // eta
     sol[2] = pair_vars(6); // fc_inc
-    
+    //std::cout << "NEW: " << sol[0] << "  " << sol[1] << "  " << sol[2] << std::endl;
     // getting initial guess for initial penetration cases
     // NOTE: THIS ONLY WORKS WITH FIRST ORDER HEX ELEMENTS******************************************
     double pos_diff[3];
     phi(phi_k, pair_vars(0), pair_vars(1), xi, eta);
     for (int i = 0; i < 3; i++) {
-        pos_diff[i] = -coords(i);
+        pos_diff[i] = -coords(bdy_nodes(contact_id),i);
         for (int j = 0; j < 4; j++) {
-            size_t node_gid = bdy_nodes(contact_surface_map(i));
+            size_t node_gid = bdy_nodes(contact_surface_map(j));
             pos_diff[i] += coords(node_gid,i)*phi_k[j];
         }
     }
@@ -690,7 +690,8 @@ void frictionless_increment(ViewCArrayKokkos <double> pair_vars, size_t &contact
     if (pair_vars(6) == 0) {
         sol[2] = fc_guess;
     }
-
+    //std::cout << "NEW: " << inv_mass_sum << std::endl;
+    //std::cout << "NEW guess: " << fc_guess << std::endl;
     // *********************************************************************************************
 
     double grad[3];  // J_inv*F term
@@ -705,11 +706,12 @@ void frictionless_increment(ViewCArrayKokkos <double> pair_vars, size_t &contact
             {   
                 size_t node_gid = bdy_nodes(contact_surface_map(k));
                 ak = -pair_vars(6)*pair_vars(j+3)*phi_k[k];
-                ak += contact_forces(contact_surface_map(k),j)/mass(node_gid);
+                ak += contact_forces(contact_surface_map(k),j);
                 for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
                 {
                     ak += corner_force(corners_in_node(node_gid, corner_lid), j);
                 }
+                ak /= mass(node_gid);
                 A[j][k] = coords(node_gid,j) + vel(node_gid,j)*del_t + 0.5*ak*del_t*del_t;
             }
         }
@@ -726,11 +728,12 @@ void frictionless_increment(ViewCArrayKokkos <double> pair_vars, size_t &contact
         for (int j = 0; j < 3; j++)
         {
             as = pair_vars(6)*pair_vars(j+3);
-            as += contact_forces(contact_id, j)/mass(bdy_nodes(contact_id));
+            as += contact_forces(contact_id, j);
             for (size_t corner_lid = 0; corner_lid < num_corners_in_node(bdy_nodes(contact_id)); corner_lid++)
             {
                 as += corner_force(corners_in_node(bdy_nodes(contact_id), corner_lid), j);
             }
+            as /= mass(bdy_nodes(contact_id));
             lhs = coords(bdy_nodes(contact_id),j) + vel(bdy_nodes(contact_id),j)*del_t + 0.5*as*del_t*del_t;
             F[j] = lhs - rhs[j];
         }
@@ -870,13 +873,13 @@ void frictionless_increment(ViewCArrayKokkos <double> pair_vars, size_t &contact
         }
         pair_vars(0) = sol[0];
         pair_vars(1) = sol[1];
-        pair_vars(2) = sol[2];
+        pair_vars(6) = sol[2];
     }
 }  // end frictionless increment
 
 KOKKOS_FUNCTION
-void distribute_frictionless_force(ViewCArrayKokkos <double> pair_vars, size_t &contact_id, CArrayKokkos <size_t> contact_surface_map,
-                                   double xi[4], double eta[4], CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> node_patch_pairs)
+void distribute_frictionless_force(ViewCArrayKokkos <double> pair_vars, size_t &contact_id, ViewCArrayKokkos <size_t> contact_surface_map,
+                                   double xi[4], double eta[4], CArrayKokkos <double> contact_forces)
 {
     // this function updating contact_force direction is why one node is handled at a time
     double force_scale = 0.2;
@@ -899,7 +902,7 @@ void distribute_frictionless_force(ViewCArrayKokkos <double> pair_vars, size_t &
         // update patch nodes
         for (int k = 0; k < 4; k++)
         {
-            size_t patch_node_contact_id = contact_surface_map(node_patch_pairs(contact_id),k);
+            size_t patch_node_contact_id = contact_surface_map(k);
             for (int i = 0; i < 3; i++)
             {
                 Kokkos::atomic_add(&contact_forces(patch_node_contact_id, i), pair_vars(7)*pair_vars(i+3)*phi_k[k]);
@@ -922,7 +925,7 @@ void distribute_frictionless_force(ViewCArrayKokkos <double> pair_vars, size_t &
         // update patch nodes
         for (int k = 0; k < 4; k++)
         {
-            size_t patch_node_contact_id = contact_surface_map(node_patch_pairs(contact_id),k);
+            size_t patch_node_contact_id = contact_surface_map(k);
             for (int i = 0; i < 3; i++)
             {
                 Kokkos::atomic_add(&contact_forces(patch_node_contact_id, i), -force_val*pair_vars(i+3)*phi_k[k]);
@@ -939,7 +942,7 @@ bool should_remove(ViewCArrayKokkos <double> pair_vars,
                    DCArrayKokkos <double> mass, DCArrayKokkos <double> coords,
                    CArrayKokkos <size_t> num_corners_in_node, CArrayKokkos <size_t> bdy_nodes,
                    DCArrayKokkos <double> vel, const double &del_t,
-                   double normal[3], double xi[4], double eta[4], int &surf_lid)
+                   double xi[4], double eta[4], int &surf_lid)
 {
     if (pair_vars(7) == 0.0 || fabs(pair_vars(0)) > 1.0 + edge_tol || fabs(pair_vars(1)) > 1.0 + edge_tol)
     {
@@ -1127,7 +1130,7 @@ bool get_edge_pair(double normal1[3], double normal2[3], size_t &node_gid, const
 }  // end get_edge_pair
 
 KOKKOS_FUNCTION
-void remove_pair(size_t &contact_id, CArrayKokkos <size_t> node_patch_pairs, CArrayKokkos <size_t> pair_vars, size_t num_bdy_patches)
+void remove_pair(size_t &contact_id, CArrayKokkos <size_t> node_patch_pairs, CArrayKokkos <double> pair_vars, size_t num_bdy_patches)
 {
     node_patch_pairs(contact_id) = num_bdy_patches;
     for (int i = 0; i < 8; i++) {
@@ -1187,7 +1190,7 @@ bool penetration_check(size_t node_gid, ViewCArrayKokkos <size_t> surfaces, DCAr
         pen_dot_product = surf_to_node[0]*surf_normal[0] + surf_to_node[1]*surf_normal[1] + surf_to_node[2]*surf_normal[2];
 
         // counting if an individual surface is penetrated
-        if (pen_dot_product < pow(10,-16)) {
+        if (pen_dot_product < pow(10,-3)) {
             count += 1;
         }
 
@@ -1203,7 +1206,7 @@ bool penetration_check(size_t node_gid, ViewCArrayKokkos <size_t> surfaces, DCAr
     }
     
     return penetration;
-}
+} // end penetration_check
 
 KOKKOS_FUNCTION
 void isoparametric_inverse(const double pos[3], const double elem_pos[3][8], double iso_pos[3])
@@ -1333,7 +1336,7 @@ void isoparametric_inverse(const double pos[3], const double elem_pos[3][8], dou
 
     }
 
-}
+} // end isoparametric_inverse
 
 KOKKOS_FUNCTION
 void find_penetrating_nodes(double depth_cap, double bounding_box[], DCArrayKokkos <double> coords,
@@ -1415,11 +1418,229 @@ void find_penetrating_nodes(double depth_cap, double bounding_box[], DCArrayKokk
             } // end i
         } // end bucket_lid
     } // end patch_lid
-}
+} // end find_penetrating_nodes
 
 /// end of contact state functions *********************************************************************************
 
 /// start of functions called in boundary.cpp **********************************************************************
+
+void sort(DCArrayKokkos <double> coords, size_t num_bdy_nodes, CArrayKokkos <size_t> bdy_nodes,
+          DCArrayKokkos <double> vel, CArrayKokkos <size_t> num_corners_in_node, RaggedRightArrayKokkos <size_t> corners_in_node,
+          DCArrayKokkos <double> corner_force, CArrayKokkos <double> contact_forces, DCArrayKokkos <double> mass,
+          double &x_max, double &y_max, double &z_max, double &x_min, double &y_min, double &z_min, double &vx_max, double &vy_max,
+          double &vz_max, double &ax_max, double &ay_max, double &az_max, size_t &Sx, size_t &Sy, size_t &Sz, double &bucket_size,
+          CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &lbox, CArrayKokkos <size_t> &nsort, CArrayKokkos <size_t> &npoint)
+{
+
+    // Find the max and min for each dimension
+    double temp = 0;
+    double local_x_max = 0.0;
+    FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_x_max, {
+        if (local_x_max < coords(bdy_nodes(i),0))
+        {
+            local_x_max = coords(bdy_nodes(i),0);
+        }
+    }, temp);
+    x_max = temp;
+    temp = 0;
+    double local_y_max = 0.0;
+    FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_y_max, {
+        if (local_y_max < coords(bdy_nodes(i),1))
+        {
+            local_y_max = coords(bdy_nodes(i),1);
+        }
+    }, temp);
+    y_max = temp;
+    temp = 0;
+    double local_z_max = 0.0;
+    FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_z_max, {
+        if (local_z_max < coords(bdy_nodes(i),2))
+        {
+            local_z_max = coords(bdy_nodes(i),2);
+        }
+    }, temp);
+    z_max = temp;
+    temp = 0;
+    double local_x_min = 0.0;
+    FOR_REDUCE_MIN(i, 0, num_bdy_nodes, local_x_min, {
+        if (local_x_min > coords(bdy_nodes(i),0))
+        {
+            local_x_min = coords(bdy_nodes(i),0);
+        }
+    }, temp);
+    x_min = temp;
+    temp = 0;
+    double local_y_min = 0.0;
+    FOR_REDUCE_MIN(i, 0, num_bdy_nodes, local_y_min, {
+        if (local_y_min > coords(bdy_nodes(i),1))
+        {
+            local_y_min = coords(bdy_nodes(i),1);
+        }
+    }, temp);
+    y_min = temp;
+    temp = 0;
+    double local_z_min = 0.0;
+    FOR_REDUCE_MIN(i, 0, num_bdy_nodes, local_z_min, {
+        if (local_z_min > coords(bdy_nodes(i),2))
+        {
+            local_z_min = coords(bdy_nodes(i),2);
+        }
+    }, temp);
+    z_min = temp;
+    temp = 0;
+    double local_vx_max = 0.0;
+    FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_vx_max, {
+        if (local_vx_max < vel(bdy_nodes(i),0))
+        {
+            local_vx_max = vel(bdy_nodes(i),0);
+        }
+    }, temp);
+    vx_max = temp;
+    temp = 0;
+    double local_vy_max = 0.0;
+    FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_vy_max, {
+        if (local_vy_max < vel(bdy_nodes(i),1))
+        {
+            local_vy_max = vel(bdy_nodes(i),1);
+        }
+    }, temp);
+    vy_max = temp;
+    temp = 0;
+    double local_vz_max = 0.0;
+    FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_vz_max, {
+        if (local_vz_max < vel(bdy_nodes(i),2))
+        {
+            local_vz_max = vel(bdy_nodes(i),2);
+        }
+    }, temp);
+    vz_max = temp;
+    temp = 0;
+    double local_ax_max = 0.0;
+    FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_ax_max, {
+        double ax = 0;
+        for (size_t corner_lid = 0; corner_lid < num_corners_in_node(bdy_nodes(i)); corner_lid++)
+            {
+                ax += corner_force(corners_in_node(bdy_nodes(i), corner_lid), 0);
+            }
+        ax += contact_forces(i,0);
+        ax /= mass(bdy_nodes(i));
+        ax = fabs(ax);
+        if (local_ax_max < ax)
+        {
+            local_ax_max = ax;
+        }
+    }, temp);
+    ax_max = temp;
+    temp = 0;
+    double local_ay_max = 0.0;
+    FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_ay_max, {
+        double ay = 0;
+        for (size_t corner_lid = 0; corner_lid < num_corners_in_node(bdy_nodes(i)); corner_lid++)
+            {
+                ay += corner_force(corners_in_node(bdy_nodes(i), corner_lid), 1);
+            }
+        ay += contact_forces(i,1);
+        ay /= mass(bdy_nodes(i));
+        ay = fabs(ay);
+        if (local_ay_max < ay)
+        {
+            local_ay_max = ay;
+        }
+    }, temp);
+    ay_max = temp;
+    temp = 0;
+    double local_az_max = 0.0;
+    FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_az_max, {
+        double az = 0;
+        for (size_t corner_lid = 0; corner_lid < num_corners_in_node(bdy_nodes(i)); corner_lid++)
+            {
+                az += corner_force(corners_in_node(bdy_nodes(i), corner_lid), 2);
+            }
+        az += contact_forces(i,2);
+        az /= mass(bdy_nodes(i));
+        az = fabs(az);
+        if (local_az_max < az)
+        {
+            local_az_max = az;
+        }
+    }, temp);
+    az_max = temp;
+    Kokkos::fence();
+    
+    // If the max velocity is zero, then we want to set it to a small value. The max velocity and acceleration are used
+    // for creating a capture box around the contact patch. We want there to be at least some thickness to the box.
+    if (vx_max == 0) {
+        vx_max = 1.0e-3;
+    }
+    if (vy_max == 0) {
+        vy_max = 1.0e-3;
+    }
+    if (vz_max == 0) {
+        vz_max = 1.0e-3;
+    }
+    
+    // calculate bucket size in each direction
+    /* bucket_size_dir[0] = (x_max-x_min)/buckets_in_dim;
+    bucket_size_dir[1] = (y_max-y_min)/buckets_in_dim;
+    bucket_size_dir[2] = (z_max-z_min)/buckets_in_dim; */
+    //bucket_size = fmax(bucket_size_dir[0], fmax(bucket_size_dir[1],bucket_size_dir[2]));
+
+    // Define Sx, Sy, and Sz
+    Sx = floor((x_max - x_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
+    Sy = floor((y_max - y_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
+    Sz = floor((z_max - z_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
+
+    // todo: Something similar to the points, velocities, and accelerations arrays above should be done here. The issue
+    //       with this one is that nb changes through the iterations. lbox and npoint might need to change to Views.
+    // Initializing the nbox, lbox, nsort, and npoint arrays
+    size_t nb = Sx*Sy*Sz;  // total number of buckets
+
+    nbox = CArrayKokkos<size_t>(nb);
+    lbox = CArrayKokkos<size_t>(num_bdy_nodes);
+    nsort = CArrayKokkos<size_t>(num_bdy_nodes);
+    npoint = CArrayKokkos<size_t>(nb);
+    CArrayKokkos<size_t> nsort_lid(num_bdy_nodes);
+    
+    // Find the bucket id for each node by constructing lbox
+    FOR_ALL(i, 0, num_bdy_nodes, {
+        double x = coords(bdy_nodes(i),0);
+        double y = coords(bdy_nodes(i),1);
+        double z = coords(bdy_nodes(i),2);
+        
+        size_t Si_x = floor((x - x_min)/bucket_size);
+        size_t Si_y = floor((y - y_min)/bucket_size);
+        size_t Si_z = floor((z - z_min)/bucket_size);
+        
+        lbox(i) = Si_z*Sx*Sy + Si_y*Sx + Si_x;
+        nbox(lbox(i)) += 1;  // increment nbox
+    });
+    Kokkos::fence();
+    
+    // Calculate the pointer for each bucket into a sorted list of nodes
+    for (size_t i = 1; i < nb; i++)
+    {
+        npoint(i) = npoint(i - 1) + nbox(i - 1);
+    }
+
+    // Zero nbox
+    FOR_ALL(i, 0, nb, {
+        nbox(i) = 0;
+    });
+    Kokkos::fence();
+
+    // Sort the slave nodes according to their bucket id into nsort
+    for (int i = 0; i < num_bdy_nodes; i++)
+    {
+        nsort_lid(nbox(lbox(i)) + npoint(lbox(i))) = i;
+        nbox(lbox(i)) += 1;
+    }
+
+    // Change nsort to reflect the global node id's
+    FOR_ALL(i, 0, num_bdy_nodes, {
+        nsort(i) = bdy_nodes(nsort_lid(i));
+    });
+    Kokkos::fence();
+}  // end sort
 
 void penetration_sweep(double x_min, double y_min, double z_min, double bounding_box[], DCArrayKokkos <double> coords,
                        double num_bdy_patches, CArrayKokkos <size_t> penetration_surfaces, CArrayKokkos <size_t> bdy_patches,
@@ -1605,18 +1826,111 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
 
                 node_patch_pairs(node_lid) = i;
                 active_set(num_active) = node_lid;
-                pair_vars(i,0) = xi_val;
-                pair_vars(i,1) = eta_val;
-                pair_vars(i,2) = del_t;
-                pair_vars(i,3) = surf_normal[0];
-                pair_vars(i,4) = surf_normal[1];
-                pair_vars(i,5) = surf_normal[2];
+                pair_vars(node_lid,0) = xi_val;
+                pair_vars(node_lid,1) = eta_val;
+                pair_vars(node_lid,2) = del_t;
+                pair_vars(node_lid,3) = surf_normal[0];
+                pair_vars(node_lid,4) = surf_normal[1];
+                pair_vars(node_lid,5) = surf_normal[2];
                 num_active += 1;
             }
         }
 
     }
 } // end penetration_sweep
+
+void force_resolution(CArrayKokkos <double> f_c_incs, size_t num_active, CArrayKokkos <size_t> active_set,
+                      CArrayKokkos <size_t> node_patch_pairs, CArrayKokkos <double> pair_vars, CArrayKokkos <size_t> contact_surface_map,
+                      DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes, DCArrayKokkos <double> mass,
+                      CArrayKokkos <double> contact_forces, DCArrayKokkos <double> corner_force, DCArrayKokkos <double> vel,
+                      RaggedRightArrayKokkos <size_t> corners_in_node, CArrayKokkos <size_t> num_corners_in_node,
+                      double xi[4], double eta[4], const double &del_t, CArrayKokkos <double> contact_force, size_t num_bdy_nodes)
+{
+    ViewCArrayKokkos<double> incs_view(&f_c_incs(0), num_active);
+    for (int i = 0; i < max_iter; i++)
+    {
+        // find force increment for each pair
+        FOR_ALL(j, 0, num_active,
+        {
+            size_t contact_id = active_set(j);
+            ViewCArrayKokkos <size_t> surface_map(&contact_surface_map(node_patch_pairs(contact_id),0), 4);
+            ViewCArrayKokkos <double> pair(&pair_vars(contact_id,0), 8);
+
+            frictionless_increment(pair, contact_id, xi, eta, del_t, coords, bdy_nodes, surface_map, mass,
+                                   contact_forces, corner_force, vel, corners_in_node, num_corners_in_node);
+            incs_view(j) = pair_vars(contact_id, 6);
+        });
+
+        Kokkos::fence();
+
+        /* std::cout << "NEW" << std::endl;
+        for (int j = 0; j < num_active; j++) {
+            std::cout << bdy_nodes(active_set(j)) << "   " << incs_view(j) << std::endl;
+        }
+        std::cout << std::endl; */
+
+        // made distribute_frictionless_force use Kokkos::atomic_add to allow this to be parallel
+        FOR_ALL(j, 0, num_active,
+        {
+            size_t contact_id = active_set(j);
+            ViewCArrayKokkos <size_t> surface_map(&contact_surface_map(node_patch_pairs(contact_id),0), 4);
+            ViewCArrayKokkos <double> pair(&pair_vars(contact_id,0), 8);
+            distribute_frictionless_force(pair, contact_id, surface_map, xi, eta, contact_forces);
+        });
+        
+        Kokkos::fence();
+
+        // check convergence (the force increments should be zero)
+        double norm_incs = 0;
+        for (int j = 0; j < num_active; j++) {
+            norm_incs += incs_view(j)*incs_view(j);
+        }
+        norm_incs = sqrt(norm_incs);
+
+        if (norm_incs <= tol)
+        {
+            /* std::cout << "NEW" << std::endl;
+            for (int j = 0; j < num_active; j++) {
+                std::cout << incs_view(j) << std::endl;
+            }
+            std::cout << std::endl; */
+            break;
+        }
+
+    }
+    for (int i = 0; i < num_bdy_nodes; i++) {
+        for (int j = 0; j < 3; j++) {
+            contact_force(bdy_nodes(i), j) = contact_forces(i,j);
+        }
+    }
+} // end force_resolution
+
+void remove_pairs(size_t num_active, CArrayKokkos <size_t> active_set, CArrayKokkos <double> pair_vars,
+                  CArrayKokkos <size_t> node_patch_pairs, CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                  CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> contact_surface_map,
+                  DCArrayKokkos <double> corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                  DCArrayKokkos <double> mass, DCArrayKokkos <double> coords,
+                  CArrayKokkos <size_t> num_corners_in_node, CArrayKokkos <size_t> bdy_nodes,
+                  DCArrayKokkos <double> vel, const double &del_t,
+                  double xi[4], double eta[4], size_t num_bdy_patches)
+{
+    for (int i = 0; i < num_active; i++)
+    {
+        size_t contact_id = active_set(i);
+        int surf_lid = node_patch_pairs(contact_id);
+        ViewCArrayKokkos <double> pair(&pair_vars(contact_id,0), 8);
+
+        bool remove = false;
+        remove = should_remove(pair, nodes_in_patch, bdy_patches, contact_forces, contact_surface_map,
+                               corner_force, corners_in_node, mass, coords, num_corners_in_node,
+                               bdy_nodes, vel, del_t, xi, eta, surf_lid);
+
+        if (remove)
+        {
+            remove_pair(contact_id, node_patch_pairs, pair_vars, num_bdy_patches);
+        }
+    }
+}
 
 /// end of functions called in boundary.cpp ************************************************************************
 
@@ -2291,7 +2605,7 @@ void contact_pair_t::frictionless_increment(const double &del_t)
     sol[0] = xi;
     sol[1] = eta;
     sol[2] = fc_inc;
-    
+    //std::cout << "OLD: " << sol[0] << "  " << sol[1] << "  " << sol[2] << std::endl;
     // getting initial guess for initial penetration cases
     // NOTE: THIS ONLY WORKS WITH FIRST ORDER HEX ELEMENTS******************************************
     CArrayKokkos <double> pos_diff(3);
@@ -2315,7 +2629,8 @@ void contact_pair_t::frictionless_increment(const double &del_t)
     if (fc_inc == 0) {
         sol[2] = fc_guess;
     }
-
+    //std::cout << "OLD: " << inv_mass_sum << std::endl;
+    //std::cout << "OLD guess: " << fc_guess << std::endl;
     // *********************************************************************************************
 
     double grad_arr[3];  // J_inv*F term
@@ -2695,215 +3010,37 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
         node_penetrations(i,0) = mesh.bdy_nodes(i);
     });
 
+    // sizing convergence vector
+    f_c_incs = CArrayKokkos <double> (mesh.num_bdy_nodes);
+    f_c_incs.set_values(0);
 
+    // sizing contact force array
+    contact_force = CArrayKokkos <double> (mesh.num_nodes, 3);
+    contact_force.set_values(0);
 
-
-
-    // Set up the patches that will be checked for contact
-    patches_gid = bdy_contact_patches;
-    num_contact_patches = patches_gid.size();
-
-    // Set up array of contact_patch_t
-    contact_patches = CArrayKokkos<contact_patch_t>(num_contact_patches);
-
-    // set up array for penetration patches to check, for each boundary patch considered for contact, must consider
-    // all 6 faces ofthe hex element
-    penetration_patches = CArrayKokkos<contact_patch_t>(num_contact_patches,5);
-
-    CArrayKokkos<size_t> nodes_in_patch(num_contact_patches, mesh.num_nodes_in_patch);
-    FOR_ALL_CLASS(i, 0, num_contact_patches,
-                  j, 0, mesh.num_nodes_in_patch, {
-                      nodes_in_patch(i, j) = mesh.nodes_in_patch(patches_gid(i), j);
-                  });  // end parallel for
-    Kokkos::fence();
-
-    // todo: Kokkos arrays are being accessed and modified but this isn't inside a macro. Should this be inside Run()?
-    for (int i = 0; i < num_contact_patches; i++)
-    {
-        contact_patch_t &contact_patch = contact_patches(i);
-        contact_patch.gid = patches_gid(i);
-        contact_patch.lid = i;
-        
-        // Make contact_patch.nodes_gid equal to the row of nodes_in_patch(i)
-        // This line is what is limiting the parallelism
-        contact_patch.nodes_gid = CArrayKokkos<size_t>(mesh.num_nodes_in_patch);
-        contact_patch.nodes_obj = CArrayKokkos<contact_node_t>(mesh.num_nodes_in_patch);
-        for (size_t j = 0; j < mesh.num_nodes_in_patch; j++)
-        {
-            contact_patch.nodes_gid(j) = nodes_in_patch(i, j);
-        }
-
-        // finding contact patch local id wrt the element (assuming that a boundary patch is only part of one element)
-        size_t patch_lid;
-        for (int j = 0; j < 6; j++) {
-            if (contact_patch.gid == mesh.patches_in_elem(mesh.elems_in_patch(patches_gid(i), 0),j)) {
-                patch_lid = j;
-                break;
-            }
-        }
-
-        // defining which patch should be left out of penetration column definition (isoparametric opposite of boundary patch lid)
-        CArrayKokkos <size_t> patches_for_column(5);
-        switch (patch_lid) {
-            case(0):
-                patches_for_column(0) = 0;
-                patches_for_column(1) = 2;
-                patches_for_column(2) = 3;
-                patches_for_column(3) = 4;
-                patches_for_column(4) = 5;
-                break;
-            case(1):
-                patches_for_column(0) = 1;
-                patches_for_column(1) = 2;
-                patches_for_column(2) = 3;
-                patches_for_column(3) = 4;
-                patches_for_column(4) = 5;
-                break;
-            case(2):
-                patches_for_column(0) = 0;
-                patches_for_column(1) = 1;
-                patches_for_column(2) = 2;
-                patches_for_column(3) = 4;
-                patches_for_column(4) = 5;
-                break;
-            case(3):
-                patches_for_column(0) = 0;
-                patches_for_column(1) = 1;
-                patches_for_column(2) = 3;
-                patches_for_column(3) = 4;
-                patches_for_column(4) = 5;
-                break;
-            case(4):
-                patches_for_column(0) = 0;
-                patches_for_column(1) = 1;
-                patches_for_column(2) = 2;
-                patches_for_column(3) = 3;
-                patches_for_column(4) = 4;
-                break;
-            case(5):
-                patches_for_column(0) = 0;
-                patches_for_column(1) = 1;
-                patches_for_column(2) = 2;
-                patches_for_column(3) = 3;
-                patches_for_column(4) = 5;
-                break;
-        }
-
-        // populating penetration patches for each boundary patch
-        for (int j = 0; j < 5; j++) {
-            contact_patch_t &penetration_patch = penetration_patches(i,j);
-            penetration_patch.gid = mesh.patches_in_elem(mesh.elems_in_patch(patches_gid(i), 0),patches_for_column(j));
-            
-            penetration_patch.nodes_gid = CArrayKokkos<size_t>(mesh.num_nodes_in_patch);
-            penetration_patch.nodes_obj = CArrayKokkos<contact_node_t>(mesh.num_nodes_in_patch);
-
-            // pulling node gids based on element connectivity, following convention from diagram in mesh.h (lines 60-96)
-            switch (patches_for_column(j)) {
-                case 0:
-                    penetration_patch.nodes_gid(0) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),0);
-                    penetration_patch.nodes_gid(1) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),4);
-                    penetration_patch.nodes_gid(2) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),6);
-                    penetration_patch.nodes_gid(3) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),2);
-                    break;
-                case 1:
-                    penetration_patch.nodes_gid(0) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),1);
-                    penetration_patch.nodes_gid(1) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),3);
-                    penetration_patch.nodes_gid(2) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),7);
-                    penetration_patch.nodes_gid(3) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),5);
-                    break;
-                case 2:
-                    penetration_patch.nodes_gid(0) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),0);
-                    penetration_patch.nodes_gid(1) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),1);
-                    penetration_patch.nodes_gid(2) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),5);
-                    penetration_patch.nodes_gid(3) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),4);
-                    break;
-                case 3:
-                    penetration_patch.nodes_gid(0) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),3);
-                    penetration_patch.nodes_gid(1) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),2);
-                    penetration_patch.nodes_gid(2) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),6);
-                    penetration_patch.nodes_gid(3) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),7);
-                    break;
-                case 4:
-                    penetration_patch.nodes_gid(0) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),0);
-                    penetration_patch.nodes_gid(1) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),2);
-                    penetration_patch.nodes_gid(2) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),3);
-                    penetration_patch.nodes_gid(3) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),1);
-                    break;
-                case 5:
-                    penetration_patch.nodes_gid(0) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),4);
-                    penetration_patch.nodes_gid(1) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),5);
-                    penetration_patch.nodes_gid(2) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),7);
-                    penetration_patch.nodes_gid(3) = mesh.nodes_in_elem(mesh.elems_in_patch(patches_gid(i), 0),6);
-                    break;
-            }
-        }
-    }  // end for
-    
-    // todo: This if statement might need a closer look
-    // Setting up the iso-parametric coordinates for all patch objects
-    if (mesh.num_nodes_in_patch == 4)
-    {
-        contact_patch_t::num_nodes_in_patch = 4;
-        double xi_temp[4] = {-1.0, 1.0, 1.0, -1.0};
-        double eta_temp[4] = {-1.0, -1.0, 1.0, 1.0};
-
-        // Allocating memory for the points and vel_points arrays
-        for (int i = 0; i < num_contact_patches; i++)
-        {
-            contact_patch_t &contact_patch = contact_patches(i);
-
-            contact_patch.xi = CArrayKokkos<double>(4);
-            contact_patch.eta = CArrayKokkos<double>(4);
-
-            // todo: We have the Kokkos xi and eta members being modified on host. I think it may be that the xi_temp
-            //       and eta_temp arrays need to be ridden and do a serial Run() for the construction of xi and eta.
-            for (int j = 0; j < 4; j++)
-            {
-                contact_patch.xi(j) = xi_temp[j];
-                contact_patch.eta(j) = eta_temp[j];
-            }
-
-            // populating penetration patches for each boundary patch
-            for (int j = 0; j < 5; j++) {
-                contact_patch_t &penetration_patch = penetration_patches(i,j);
-                penetration_patch.xi = CArrayKokkos<double>(4);
-                penetration_patch.eta = CArrayKokkos<double>(4);
-                for (int k = 0; k < 4; k++) {
-                    penetration_patch.xi(k) = xi_temp[k];
-                    penetration_patch.eta(k) = eta_temp[k];
-                }
-            }
-        }
-
-    } else
-    {
-        std::cerr << "Error: higher order elements are not yet tested for contact" << std::endl;
-        exit(1);
-    }  // end if
-    
-    // Determine the bucket size. This is defined as 1.001*min_node_distance
-    CArrayKokkos<double> node_distances(num_contact_patches, contact_patch_t::num_nodes_in_patch);
-    FOR_ALL_CLASS(i, 0, num_contact_patches,
-                  j, 0, contact_patch_t::num_nodes_in_patch, {
-                      const contact_patch_t &contact_patch = contact_patches(i);
-                      if (j < contact_patch_t::num_nodes_in_patch - 1)
+    // getting bucket_size
+    double local_min_dist = 0;
+    double min_distance = 0;
+    FOR_REDUCE_MIN(i, 0, (int)mesh.num_bdy_patches,
+                   j, 0, 4, local_min_dist, {
+                      double local_distance = 0;
+                      if (j < 3)
                       {
-                          const size_t n1 = contact_patch.nodes_gid(j); // current node
-                          const size_t n2 = contact_patch.nodes_gid(j + 1); // next node
+                          size_t n1 = mesh.nodes_in_patch(mesh.bdy_patches(i),j); // current node
+                          size_t n2 = mesh.nodes_in_patch(mesh.bdy_patches(i),j+1); // next node
 
                           double sum_sq = 0.0;
 
                           for (int k = 0; k < 3; k++)
                           {
-                              sum_sq += pow(State.node.coords(n1, k) - State.node.coords(n2, k), 2);
+                            sum_sq += pow(State.node.coords(n1, k) - State.node.coords(n2, k), 2);
                           }
 
-                          node_distances(i, j) = sqrt(sum_sq);
+                          local_distance = sqrt(sum_sq);
                       } else
                       {
-                          const size_t n1 = contact_patch.nodes_gid(0); // current node
-                          const size_t n2 = contact_patch.nodes_gid(
-                              contact_patch_t::num_nodes_in_patch - 1); // next node
+                          size_t n1 = mesh.nodes_in_patch(mesh.bdy_patches(i,0)); // current node
+                          size_t n2 = mesh.nodes_in_patch(mesh.bdy_patches(i,3)); // next node
 
                           double sum_sq = 0.0;
 
@@ -2912,195 +3049,23 @@ void contact_patches_t::initialize(const Mesh_t &mesh, const CArrayKokkos<size_t
                               sum_sq += pow(State.node.coords(n1, k) - State.node.coords(n2, k), 2);
                           }
 
-                          node_distances(i, j) = sqrt(sum_sq);
+                          local_distance = sqrt(sum_sq);
                       }
-                  });
+                      if (local_min_dist > local_distance)
+                      {
+                          local_min_dist = local_distance;
+                      }
+                  }, min_distance);
     Kokkos::fence();
+    contact_patches_t::bucket_size = 0.999*min_distance;
+
+
+
+
+
+
+
     
-    double result = 0.0;
-    double local_min = 1.0e10;
-    FOR_REDUCE_MIN(i, 0, num_contact_patches,
-               j, 0, contact_patch_t::num_nodes_in_patch, local_min, {
-                   if (local_min > node_distances(i, j))
-                   {
-                       local_min = node_distances(i, j);
-                   }
-               }, result);
-
-    contact_patches_t::bucket_size = 0.999*result;
-    
-    // Find the total number of nodes (this is should always be less than or equal to mesh.num_bdy_nodes)
-    size_t local_max_index = 0;
-    size_t max_index = 0;
-    FOR_REDUCE_MAX(i, 0, num_contact_patches,
-               j, 0, contact_patch_t::num_nodes_in_patch, local_max_index, {
-                   if (local_max_index < contact_patches(i).nodes_gid(j))
-                   {
-                       local_max_index = contact_patches(i).nodes_gid(j);
-                   }
-               }, max_index);
-    Kokkos::fence();
-
-    CArrayKokkos<size_t> node_count(max_index + 1);
-    
-    // zero node_count
-    FOR_ALL(i, 0, max_index + 1, {
-        node_count(i) = 0;
-    });
-    Kokkos::fence();
-    
-    for (int i = 0; i < num_contact_patches; i++)
-    {
-        contact_patch_t &contact_patch = contact_patches(i);
-        for (int j = 0; j < contact_patch_t::num_nodes_in_patch; j++)
-        {
-            size_t node_gid = contact_patch.nodes_gid(j);
-            if (node_count(node_gid) == 0)
-            {
-                node_count(node_gid) = 1;
-                contact_patches_t::num_contact_nodes += 1;
-            }
-        }
-    }
-
-    // Find the total number of nodes in penetration patches
-    size_t local_max_index_pen = 0;
-    size_t max_index_pen = 0;
-    // second loop of 5 is for hex elements
-    FOR_REDUCE_MAX(i, 0, num_contact_patches,
-               j, 0, (size_t) 5,
-               k, 0, contact_patch_t::num_nodes_in_patch, local_max_index_pen, {
-                   if (local_max_index_pen < penetration_patches(i,j).nodes_gid(k))
-                   {
-                       local_max_index_pen = penetration_patches(i,j).nodes_gid(k);
-                   }
-               }, max_index_pen);
-    Kokkos::fence();
-    
-    CArrayKokkos<size_t> pen_node_count(max_index_pen + 1);
-    pen_node_count.set_values(0);
-    
-    // second loop of 5 is for hex elements
-    for (int i = 0; i < num_contact_patches; i++)
-    {
-        for (int j = 0; j < 5; j++) {
-            contact_patch_t &penetration_patch = penetration_patches(i,j);
-            for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++)
-            {
-                size_t node_gid = penetration_patch.nodes_gid(k);
-                if (pen_node_count(node_gid) == 0)
-                {
-                    pen_node_count(node_gid) = 1;
-                    contact_patches_t::num_pen_nodes += 1;
-                }
-            }
-        }
-    }
-    
-    // todo: instead of these arrays being accessed through the node gid directly, they can be made much smaller with a
-    //       size of num_contact_nodes. The nsort member should simply be a sorted array of local indices (see the
-    //       final portion of sort()). Then, use nodes_gid to get the global index to be used for mesh_t, node_t, and
-    //       corner_t objects.
-    // Initialize the contact_nodes and contact_pairs arrays
-    contact_nodes = CArrayKokkos<contact_node_t>(max_index + 1);
-    nodes_contact_forces = CArrayKokkos<double>(max_index + 1);
-    contact_pairs = CArrayKokkos<contact_pair_t>(max_index + 1);
-    contact_pairs_access = DynamicRaggedRightArrayKokkos<size_t>(num_contact_patches,
-                                                                 contact_patch_t::max_contacting_nodes_in_patch);
-    is_patch_node = CArrayKokkos<bool>(max_index + 1);
-    is_pen_node = CArrayKokkos<bool>(max_index + 1);
-    active_pairs = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
-    forces = CArrayKokkos<double>(contact_patches_t::num_contact_nodes);
-
-    // Initialize penetration node objects
-    penetration_nodes = CArrayKokkos<contact_node_t>(max_index_pen + 1);
-
-    // Construct nodes_gid and nodes_obj
-    nodes_gid = CArrayKokkos<size_t>(contact_patches_t::num_contact_nodes);
-    size_t node_lid = 0;
-    for (int i = 0; i < num_contact_patches; i++)
-    {
-        contact_patch_t &contact_patch = contact_patches(i);
-        for (int j = 0; j < contact_patch_t::num_nodes_in_patch; j++)
-        {
-            size_t node_gid = contact_patch.nodes_gid(j);
-            contact_node_t &node_obj = contact_nodes(node_gid);
-            // todo: for some reason, these non-matar types do not update in the contact_patches_t::update_nodes func
-            //       this is only a problem if the node mass is changing
-            node_obj.mass = State.node.mass(node_gid);
-            node_obj.gid = node_gid;
-            node_obj.num_patch_conn += 1;
-            contact_patch.nodes_obj(j) = node_obj;
-            if (node_count(node_gid) == 1)
-            {
-                node_count(node_gid) = 2;
-                nodes_gid(node_lid) = node_gid;
-                node_lid += 1;
-            }
-        }
-    }
-
-    // construct penetration nodes objects
-    pen_nodes_gid = CArrayKokkos<size_t>(contact_patches_t::num_pen_nodes);
-    node_lid = 0;
-    for (int i = 0; i < num_contact_patches; i++) {
-        for (int j = 0; j < 5; j++) {
-            contact_patch_t &penetration_patch = penetration_patches(i,j);
-            for (int k = 0; k < contact_patch_t::num_nodes_in_patch; k++) {
-                size_t node_gid = penetration_patch.nodes_gid(k);
-                contact_node_t &pen_node_obj = penetration_nodes(node_gid);
-                pen_node_obj.mass = State.node.mass(node_gid);
-                pen_node_obj.gid = node_gid;
-                penetration_patch.nodes_obj(k) = pen_node_obj;
-                if (pen_node_count(node_gid) == 1)
-                {
-                    pen_node_count(node_gid) = 2;
-                    pen_nodes_gid(node_lid) = node_gid;
-                    node_lid += 1;
-                }
-            }
-        }
-    }
-
-    // Construct patches_in_node and num_patches_in_node
-    num_patches_in_node = CArrayKokkos<size_t>(max_index + 1);
-    for (int patch_lid = 0; patch_lid < num_contact_patches; patch_lid++)
-    {
-        const contact_patch_t &contact_patch = contact_patches(patch_lid);
-        // for each node in the patch, increment the counter in num_patches_in_node
-        FOR_ALL_CLASS(i, 0, contact_patch_t::num_nodes_in_patch, {
-            const size_t &node_gid = contact_patch.nodes_gid(i);
-            num_patches_in_node(node_gid) += 1;
-        });
-        Kokkos::fence();
-    }
-
-    CArrayKokkos<size_t> stride_index(max_index + 1);
-    patches_in_node = RaggedRightArrayKokkos<size_t>(num_patches_in_node);
-    // Walk through the patches, and for each node in the patch, add the patch to the patches_in_node array
-    for (int patch_lid = 0; patch_lid < num_contact_patches; patch_lid++)
-    {
-        // todo: will the device have access to patch_lid as I have it here?
-        const contact_patch_t &contact_patch = contact_patches(patch_lid);
-        FOR_ALL_CLASS(i, 0, contact_patch_t::num_nodes_in_patch, {
-            const size_t &node_gid = contact_patch.nodes_gid(i);
-            const size_t &stride = stride_index(node_gid);
-            patches_in_node(node_gid, stride) = patch_lid;
-            stride_index(node_gid) += 1;
-        });
-        Kokkos::fence();
-    }
-    
-    // Update the node members
-    update_nodes(mesh, State);
-
-    /* for (int i = 0; i < num_contact_patches; i++) {
-        std::cout << "Contact Patch GID: " << contact_patches(i).gid << " Penetration Patches GID: ";
-        for (int j = 0; j < 5; j++) {
-            std::cout << penetration_patches(i,j).gid << " ";
-        }
-        std::cout << std::endl << std::endl;
-    } */
     
 }  // end initialize
 
@@ -3134,6 +3099,8 @@ void contact_patches_t::update_nodes(const Mesh_t &mesh, State_t& State)
         // resetting normal vector
         contact_node.normal_dir.set_values(0);
     });
+    contact_forces.set_values(0);
+    contact_force.set_values(0);
 
     // updating contact node normals
     // Loop over boundary nodes in a boundary set
@@ -3524,7 +3491,7 @@ void contact_patches_t::penetration_sweep(State_t& State, const Mesh_t &mesh, co
     
     // comparing bucket size and mesh size to define penetration depth maximum (cap) for consideration
     // todo: the multiplication values are currently arbitrary and should be checked for performance
-    double depth_cap = std::min(dim_min/5,3*bucket_size);
+    double depth_cap = std::min(dim_min/3,3*bucket_size);
 
     // allocating array to store surfaces a node is penetrating
     // first columns holds node gid and second through final columns store the surfaces that node is penetrating
@@ -4465,7 +4432,10 @@ void contact_patches_t::force_resolution(const double &del_t)
         // check convergence (the force increments should be zero)
         if (norm(forces_view) <= tol)
         {
-            //std::cout << "HERE" << std::endl;
+            /* for (int j = 0; j < num_active_pairs; j++) {
+                std::cout << forces_view(j) << std::endl;
+            }
+            std::cout << std::endl; */
             break;
         }
 

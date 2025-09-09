@@ -57,7 +57,8 @@ void SGH3D::update_velocity(double rk_alpha,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& node_force,
     const DCArrayKokkos<double>& corner_force,
-    const CArrayKokkos<contact_node_t>& contact_nodes) const
+    const CArrayKokkos<contact_node_t>& contact_nodes,
+    CArrayKokkos <double> contact_force) const
 {
     const size_t num_dims = mesh.num_dims;
 
@@ -69,7 +70,8 @@ void SGH3D::update_velocity(double rk_alpha,
         {
             const contact_node_t &contact_node = contact_nodes(node_gid);
             for (size_t dim = 0; dim < num_dims; dim++) {
-                node_force(node_gid, dim) += contact_node.contact_force(dim);
+                //node_force(node_gid, dim) += contact_node.contact_force(dim);
+                node_force(node_gid, dim) += contact_force(node_gid, dim);
             } // end for dim
             //std::cout << node_gid << "    "  << contact_node.contact_force(0) <<  "    "  << contact_node.contact_force(1) << "    "  << contact_node.contact_force(2) << std::endl;
         }
@@ -93,7 +95,7 @@ void SGH3D::update_velocity(double rk_alpha,
         //std::cout << node_gid << "    vel:"  << node_vel(node_gid,0) <<  "    "  << node_vel(node_gid,1) << "    "  << node_vel(node_gid,2) << std::endl;
     }); // end for parallel for over nodes
     Kokkos::fence();
-
+    //std::cout << std::endl;
     return;
 } // end subroutine update_velocity
 
