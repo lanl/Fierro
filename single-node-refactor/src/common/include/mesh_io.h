@@ -952,6 +952,16 @@ public:
 
 
         // read the mesh
+
+        // ------------------------
+        // Mesh file storage order:
+        //     objectId
+        //     Points
+        //     connectivity
+        //     offsets
+        //     types
+        // ------------------------
+
         // --- Read the number of nodes in the mesh --- //
         size_t global_num_nodes = 0;
         size_t global_num_elems = 0;
@@ -1186,9 +1196,11 @@ public:
         
         std::vector<size_t> element_temp(BUFFER_SIZE * num_nodes_in_elem);
         std::vector<size_t> global_indices_temp(BUFFER_SIZE);
-        size_t buffer_max = BUFFER_SIZE * elem_words_per_line;
+        size_t buffer_max = BUFFER_SIZE * num_nodes_in_elem;
         size_t indices_buffer_max = BUFFER_SIZE;
         int assign_flag;
+        read_index_start = 0;
+        size = 0;
 
         //first find the block with element connectivity data data
         if(myrank==0){
@@ -1242,7 +1254,7 @@ public:
                     if (value == stop) { // Check if the stop word is in the line
                         break;
                     } // end if
-                    elem_read_buffer(i) = std::stod(value);
+                    elem_read_buffer(i) = std::stoll(value);
                     size++;
                 } // end for
             }
@@ -1326,7 +1338,62 @@ public:
             read_index_start += buffer_iteration_size/num_nodes_in_elem;
         }
 
-        connectivity.update_device();
+        if(myrank==0){        
+            if (size!=global_num_elems*num_nodes_in_elem){
+                throw std::runtime_error("ERROR: failed to read all the mesh elements!");
+                //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
+            }
+        }
+
+        //interface with permanent storage of nodes in elem and construct element maps
+        DCArrayKokkos<long long int> All_Element_Global_Indices(num_elems);
+        // copy temporary global indices storage to view storage
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            All_Element_Global_Indices.host(ielem) = global_indices_temp[ielem];
+            if (global_indices_temp[ielem] < 0)
+            {
+                negative_index_found = 1;
+            }
+        }
+
+        MPI_Allreduce(&negative_index_found, &global_negative_index_found, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        if (global_negative_index_found)
+        {
+            if (myrank == 0)
+            {
+                std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
+            MPI_Finalize();
+            exit(0);
+        }
+
+        All_Element_Global_Indices.update_device();
+
+        // construct global map of local and shared elements (since different ranks can own the same elements due to the local node map)
+        DistributedMap element_map = DistributedMap(All_Element_Global_Indices);
+
+        //initialize elem data structures
+        mesh.initialize_elems(num_elems, num_nodes_in_elem, element_map);
+
+        // copy temporary element storage to distributed storage
+        DistributedDCArray<size_t> nodes_in_elem = mesh.nodes_in_elem;
+
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            for (int inode = 0; inode < num_nodes_in_elem; inode++)
+            {   //assign local indices to element-node connectivity (stores global indices until ghost maps are made later)
+                nodes_in_elem.host(ielem, inode) = element_temp[ielem * num_nodes_in_elem + inode];
+            }
+        }
+
+        // delete temporary element connectivity and index storage
+        std::vector<size_t>().swap(element_temp);
+        std::vector<size_t>().swap(global_indices_temp);
+
+        /****read in element types ****/
+        DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
 
         // array dims are the (num_elems) 
         //    8  = pixal i,j,k linear quad format
@@ -1334,14 +1401,104 @@ public:
         //    12 = linear ensight hex ordering
         //    72 = VTK_LAGRANGE_HEXAHEDRON
         // ....
-        found = extract_values_xml(elem_types.host.pointer(),
-                                "\"types\"",
-                                stop,
-                                in,
-                                size);
-        if(found==false){
-            std::cout << "ERROR: element types were not found in the XML file!" << std::endl;
+
+        dof_limit = global_num_elems;
+        buffer_iterations = dof_limit / (BUFFER_SIZE);
+        remainder_size = dof_limit % (BUFFER_SIZE);
+        if (remainder_size != 0)
+        {
+            buffer_iterations++;
         }
+
+        read_index_start = 0;
+        size = 0;
+        elem_read_buffer = CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE);
+
+        //allocate types array
+
+        //first find the block with element connectivity data data
+        if(myrank==0){
+
+            bool found = false;
+
+            std::string line;
+            const std::string word = "\"types\"";
+
+            // Read the file line by line looking for specified word
+            while (std::getline(in, line)) {
+
+                if (line.find(word) != std::string::npos) { // Check if the portion of the word is in the line
+                    found = true;
+                } 
+                if(found) {
+
+                    if(found) break;
+
+                } // end if found
+
+            } // end while
+
+            if(found==false){
+                throw std::runtime_error("ERROR: mesh element types were not found in the XML file!");
+                //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
+            }
+        }
+
+
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+            // pack buffer on rank 0
+            size_t buffer_iteration_size;
+            if(buffer_iteration < buffer_iterations - 1){
+                buffer_iteration_size = BUFFER_SIZE;
+            }
+            else{
+                buffer_iteration_size = remainder_size;
+            }
+            
+            if(myrank==0){
+
+                std::string line;
+
+                // loop over the lines in the file until the buffer limit is reached
+                for(int idata = 0; idata < buffer_iteration_size; idata++){
+
+                    // extract the individual values from the stream
+                    std::string value;
+                    in >> value;
+                    if (value == stop) { // Check if the stop word is in the line
+                        break;
+                    } // end if
+                    elem_read_buffer(i) = std::stoi(value);
+                    size++;
+                } // end for
+            }
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(elem_read_buffer.pointer(), BUFFER_SIZE, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_iteration_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            // debug_print
+            // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+            // for(int iprint=0; iprint < buffer_loop; iprint++)
+            // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+            // return;
+
+            // determine which data to store in the swage mesh members (the local node data)
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_iteration_size; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                elem_gid = read_index_start + scan_loop;
+                //add to the local type array if this elem gid belongs to this rank
+                if (element_map.isProcessGlobalIndex(elem_gid)){
+                    elem_types.host(element_map.getLocalIndex(elem_gid)) = elem_read_buffer(scan_loop);
+                }
+                
+
+            }
+            read_index_start += buffer_iteration_size;
+        }
+
         elem_types.update_device();
 
         // check that the element type is supported by Fierro
@@ -1373,13 +1530,13 @@ public:
             case element_types::linear_quad:
                 // the node order is correct, no changes required
 
-                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                // FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
-                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
-                    }
+                //     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                //         mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
+                //     }
                     
-                }); // end for
+                // }); // end for
 
                 break;
                 // next case
@@ -1387,13 +1544,13 @@ public:
             case element_types::linear_hex_ijk:
 
                 // read the node ids in the element, no maps required
-                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                // FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
-                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
-                    }
+                //     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                //         mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
+                //     }
                     
-                }); // end for
+                // }); // end for
 
                 break;
                 // next case
@@ -1412,10 +1569,10 @@ public:
                 });
 
                 // read the node ids in the element
-                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                FOR_ALL (elem_id, 0, mesh.num_elems, {
                     
                     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_ensight_to_ijk(node_lid));
+                        mesh.nodes_in_elem(elem_id, node_lid) =  mesh.nodes_in_elem(elem_id,convert_ensight_to_ijk(node_lid));
                     }
                     
                 }); // end for
@@ -1449,10 +1606,10 @@ public:
                 Kokkos::fence();
 
                 // read the node ids in the element
-                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                FOR_ALL (elem_id, 0, mesh.num_elems, {
                     
                     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_pn_vtk_to_ijk(node_lid));
+                        mesh.nodes_in_elem(elem_id, node_lid) = mesh.nodes_in_elem(elem_id,convert_pn_vtk_to_ijk(node_lid));
                     }
                     
                 }); // end for
@@ -1467,43 +1624,111 @@ public:
         // initialize corner variables
         size_t num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-
         
         //------------------------------------
         // allocate the elem object id array
         mesh_inps.object_ids = DCArrayKokkos <int> (num_elems, "ObjectIDs");
-
-
-        // ------------------------
-        // Mesh file storage order:
-        //     objectId
-        //     Points
-        //     connectivity
-        //     offsets
-        //     types
-        // ------------------------
-        
-        // temporary arrays
-        DCArrayKokkos<double> node_coords(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
-        DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem, "connectivity_vtu_file");
-        DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
-
+    
         //reset file stream pointer to area where ObjectId is located before node coordinates
-        in.seekg(first_elem_line_streampos);
-        
-        // read the object id in the element
-        // array dims are (num_elems)
-        found = extract_values_xml(mesh_inps.object_ids.host.pointer(),
-                                "\"ObjectId\"",
-                                stop,
-                                in,
-                                size);
-        if(found==false){
-            throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
-            //std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
-        }
-        mesh_inps.object_ids.update_device();
+        in.seekg(objectid_streampos);
 
+        dof_limit = global_num_elems;
+        buffer_iterations = dof_limit / (BUFFER_SIZE);
+        remainder_size = dof_limit % (BUFFER_SIZE);
+        if (remainder_size != 0)
+        {
+            buffer_iterations++;
+        }
+
+        read_index_start = 0;
+        size = 0;
+
+        //allocate types array
+
+        //first find the block with element connectivity data data
+        if(myrank==0){
+
+            bool found = false;
+
+            std::string line;
+            const std::string word = "\"ObjectId\"";
+
+            // Read the file line by line looking for specified word
+            while (std::getline(in, line)) {
+
+                if (line.find(word) != std::string::npos) { // Check if the portion of the word is in the line
+                    found = true;
+                } 
+                if(found) {
+
+                    if(found) break;
+
+                } // end if found
+
+            } // end while
+
+            if(found==false){
+                throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
+                //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
+            }
+        }
+
+
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+            // pack buffer on rank 0
+            size_t buffer_iteration_size;
+            if(buffer_iteration < buffer_iterations - 1){
+                buffer_iteration_size = BUFFER_SIZE;
+            }
+            else{
+                buffer_iteration_size = remainder_size;
+            }
+            
+            if(myrank==0){
+
+                std::string line;
+
+                // loop over the lines in the file until the buffer limit is reached
+                for(int idata = 0; idata < buffer_iteration_size; idata++){
+
+                    // extract the individual values from the stream
+                    std::string value;
+                    in >> value;
+                    if (value == stop) { // Check if the stop word is in the line
+                        break;
+                    } // end if
+                    elem_read_buffer(i) = std::stoi(value);
+                    size++;
+                } // end for
+            }
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(elem_read_buffer.pointer(), BUFFER_SIZE, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_iteration_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            // debug_print
+            // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+            // for(int iprint=0; iprint < buffer_loop; iprint++)
+            // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+            // return;
+
+            // determine which data to store in the swage mesh members (the local node data)
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_iteration_size; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                elem_gid = read_index_start + scan_loop;
+                //add to the local type array if this elem gid belongs to this rank
+                if (element_map.isProcessGlobalIndex(elem_gid)){
+                    mesh_inps.object_ids.host(element_map.getLocalIndex(elem_gid)) = elem_read_buffer(scan_loop);
+                }
+                
+
+            }
+            read_index_start += buffer_iteration_size;
+        }
+        
+        mesh_inps.object_ids.update_device();
 
         in.close();
             
