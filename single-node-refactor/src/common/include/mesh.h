@@ -37,6 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "matar.h"
 #include "state.h"
 #include "ref_elem.h"
+#include "mesh_inputs.h"
 #include <cmath>
 
 #define PI 3.141592653589793
@@ -395,7 +396,7 @@ struct Mesh_t
     /* ----------------------------------------------------------------------
     Initialize Ghost and Non-Overlapping Element Maps
     ------------------------------------------------------------------------- */
-    void init_maps(node_t& node)
+    void init_maps(node_t& node, mesh_input_t& mesh_inps)
     {
         int  local_node_index, current_column_index;
         long long int   node_gid;
@@ -572,6 +573,19 @@ struct Mesh_t
                 {
                     nodes_in_elem.host(ielem, lnode) = nodes_in_elem.host(last_storage_index, lnode);
                     nodes_in_elem.host(last_storage_index, lnode) = Temp_Nodes(lnode);
+                }
+                //resort element data that may have been read in such as vtu types and object ids
+                // if(mesh_inps.input_elem_types){
+                //     int temp;
+                //     temp = elem_types.host(ielem);
+                //     elem_types.host(ielem) = elem_types.host(last_storage_index);
+                //     elem_types.host(last_storage_index) = temp;
+                // }
+                if(mesh_inps.input_elem_objectids){
+                    int temp;
+                    temp = mesh_inps.object_ids.host(ielem);
+                    mesh_inps.object_ids.host(ielem) = mesh_inps.object_ids.host(last_storage_index);
+                    mesh_inps.object_ids.host(last_storage_index) = temp;
                 }
                 last_storage_index--;
 

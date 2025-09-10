@@ -375,7 +375,7 @@ public:
             read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
         }
         else if(extension == "vtu"){ // vtu file format
-            //read_vtu_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            read_vtu_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
         }
         else{
             throw std::runtime_error("**** Mesh file extension not understood ****");
@@ -949,6 +949,8 @@ public:
         int global_negative_index_found = 0;
 
         CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer(BUFFER_SIZE*num_dims);
+        mesh_inps.input_elem_types = true;
+        mesh_inps.input_elem_objectids = true;
 
 
         // read the mesh

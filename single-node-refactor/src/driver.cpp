@@ -107,7 +107,7 @@ void Driver::initialize()
     }
 
     //build relevant partition maps for ghost nodes, elements, etc.
-    mesh.init_maps(State.node);
+    mesh.init_maps(State.node, SimulationParameters.mesh_input);
 
     // Build connectivity
     mesh.build_connectivity();
