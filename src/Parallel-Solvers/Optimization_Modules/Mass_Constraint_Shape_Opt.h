@@ -184,7 +184,7 @@ public:
       last_comm_step = current_step;
     }
     */
-    FEM_->compute_element_masses(design_coords,false,use_initial_coords_);
+    FEM_->compute_element_masses(design_coords,false,false);
     
     //sum per element results across all MPI ranks
     ROL::Elementwise::ReductionSum<real_t> sumreduc;

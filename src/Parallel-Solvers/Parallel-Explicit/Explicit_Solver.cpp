@@ -3705,6 +3705,7 @@ void Explicit_Solver::init_design(){
       }
         //allocate global vector information
       all_design_node_coords_distributed = Teuchos::rcp(new MV(all_node_map, num_dim));
+      all_node_densities_distributed->putScalar(1.0);
 
       //communicate ghost information to the all vector
       //create import object using local node indices map and all indices map
