@@ -338,8 +338,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             if (doing_contact) 
             {
                 //contact_bank.update_nodes(mesh, State);
-                contact_bank.contact_forces.set_values(0);
-                contact_bank.contact_force.set_values(0);
+                Contact_State.contact_forces.set_values(0);
+                Contact_State.contact_force.set_values(0);
                 if (doing_preload) {
                     double preload_time = (time_final-time_value)/2;
                     //preload_time = 1;
@@ -362,8 +362,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             State.node.mass,
                             State.node.force,
                             State.corner.force,
-                            contact_bank.contact_nodes,
-                            contact_bank.contact_force);
+                            Contact_State.contact_force);
 
             // ---- apply velocity boundary conditions to the boundary patches----
             boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value);

@@ -141,7 +141,7 @@ class SGH3D : public Solver
 {
 public:
 
-    contact_patches_t contact_bank;  // keeps track of contact patches
+    contact_state_t Contact_State;  // keeps track of contact patches
     bool doing_contact = false;  // Condition used in SGH::execute
     bool doing_preload = false;  // Condition used in SGH::execute
 
@@ -308,7 +308,6 @@ public:
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& node_force,
         const DCArrayKokkos<double>& corner_force,
-        const CArrayKokkos<contact_node_t>& contact_nodes,
         CArrayKokkos <double> contact_force) const;
 
     void get_velgrad(

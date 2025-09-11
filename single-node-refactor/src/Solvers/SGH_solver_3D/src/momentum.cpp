@@ -57,7 +57,6 @@ void SGH3D::update_velocity(double rk_alpha,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& node_force,
     const DCArrayKokkos<double>& corner_force,
-    const CArrayKokkos<contact_node_t>& contact_nodes,
     CArrayKokkos <double> contact_force) const
 {
     const size_t num_dims = mesh.num_dims;
@@ -68,7 +67,7 @@ void SGH3D::update_velocity(double rk_alpha,
         // adding in contact force
         if (doing_contact)
         {
-            const contact_node_t &contact_node = contact_nodes(node_gid);
+            //const contact_node_t &contact_node = contact_nodes(node_gid);
             for (size_t dim = 0; dim < num_dims; dim++) {
                 //node_force(node_gid, dim) += contact_node.contact_force(dim);
                 node_force(node_gid, dim) += contact_force(node_gid, dim);

@@ -118,14 +118,18 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
             doing_preload = true;
             doing_contact = true;
 
-            contact_bank.initialize(mesh, mesh.bdy_patches, State);
+            Contact_State.initialize(mesh.num_dims, mesh.num_nodes_in_patch, mesh.bdy_patches, mesh.num_bdy_nodes, mesh.num_bdy_patches,
+                                     mesh.patches_in_elem, mesh.elems_in_patch, mesh.nodes_in_elem, mesh.nodes_in_patch,
+                                     mesh.bdy_nodes, mesh.num_patches, mesh.num_nodes, State.node.coords);
             break;
         }
         if (Boundary.allow_contact) {
             std::cout << "Setting up global contact" << std::endl;
             doing_contact = true;
 
-            contact_bank.initialize(mesh, mesh.bdy_patches, State);
+            Contact_State.initialize(mesh.num_dims, mesh.num_nodes_in_patch, mesh.bdy_patches, mesh.num_bdy_nodes, mesh.num_bdy_patches,
+                                     mesh.patches_in_elem, mesh.elems_in_patch, mesh.nodes_in_elem, mesh.nodes_in_patch,
+                                     mesh.bdy_nodes, mesh.num_patches, mesh.num_nodes, State.node.coords);
             // run_contact_tests(contact_bank, mesh, node, corner, sim_param);
             break;
         }
