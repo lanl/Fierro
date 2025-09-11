@@ -27,8 +27,8 @@ else
     )
 fi
 
-if [ "$debug" = "true" ]; then
-    echo "Setting debug to true for CMAKE build type"
+if [ "$debug" = "enabled" ]; then
+    echo "Setting debug to enabled for CMAKE build type"    
     cmake_options+=(
         -DCMAKE_BUILD_TYPE=Debug
     )
