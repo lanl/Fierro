@@ -47,10 +47,10 @@ struct contact_state_t
     /// \param bdy_contact_patches global ids of patches that will be checked for contact
     /// \param State state object
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void initialize(size_t num_dims, size_t num_nodes_in_patch, const CArrayKokkos<size_t> bdy_patches,
-                    size_t num_bdy_nodes, size_t num_bdy_patches, CArrayKokkos <size_t> patches_in_elem,
-                    CArrayKokkos <size_t> elems_in_patch, DCArrayKokkos <size_t> nodes_in_elem,
-                    CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_nodes, size_t num_patches,
+    void initialize(size_t num_dims, size_t num_nodes_in_patch, const CArrayKokkos<size_t> &bdy_patches,
+                    size_t num_bdy_nodes, size_t num_bdy_patches, CArrayKokkos <size_t> &patches_in_elem,
+                    CArrayKokkos <size_t> &elems_in_patch, DCArrayKokkos <size_t> &nodes_in_elem,
+                    CArrayKokkos <size_t> &nodes_in_patch, CArrayKokkos <size_t> &bdy_nodes, size_t num_patches,
                     size_t num_nodes, DCArrayKokkos <double> &coords);
 
     /*

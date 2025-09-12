@@ -2092,10 +2092,10 @@ bool any(const ViewCArrayKokkos<bool> &a, const size_t &size)
 
 
 /// beginning of contact_state_t member functions ////////////////////////////////////////////////////////////////////
-void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, const CArrayKokkos<size_t> bdy_patches,
-                                 size_t num_bdy_nodes, size_t num_bdy_patches, CArrayKokkos <size_t> patches_in_elem,
-                                 CArrayKokkos <size_t> elems_in_patch, DCArrayKokkos <size_t> nodes_in_elem,
-                                 CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_nodes, size_t num_patches,
+void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, const CArrayKokkos<size_t> &bdy_patches,
+                                 size_t num_bdy_nodes, size_t num_bdy_patches, CArrayKokkos <size_t> &patches_in_elem,
+                                 CArrayKokkos <size_t> &elems_in_patch, DCArrayKokkos <size_t> &nodes_in_elem,
+                                 CArrayKokkos <size_t> &nodes_in_patch, CArrayKokkos <size_t> &bdy_nodes, size_t num_patches,
                                  size_t num_nodes, DCArrayKokkos <double> &coords)
 {
     // Contact is only supported in 3D
@@ -2254,6 +2254,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
             }
         }
     });
+    Kokkos::fence();
     
     // finding num_surfs_in_node
     num_surfs_in_node = CArrayKokkos <size_t> (num_bdy_nodes);
