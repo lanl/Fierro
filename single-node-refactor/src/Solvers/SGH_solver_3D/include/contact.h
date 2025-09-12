@@ -462,6 +462,7 @@ void distribute_frictionless_force(ViewCArrayKokkos <double> &pair_vars, size_t 
 ///
 /// \return true if the contact pair should be removed; false otherwise
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
 bool should_remove(ViewCArrayKokkos <double> &pair_vars,
                    CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
                    const CArrayKokkos <double> &contact_forces, const CArrayKokkos <size_t> &contact_surface_map,
@@ -577,7 +578,6 @@ void isoparametric_inverse(const double pos[3], const double elem_pos[3][8], dou
 /// \param elem_pos element nodal coordinates
 /// \param iso_pos isoparametric position (xi,eta,zeta) output
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
 void find_penetrating_nodes(double depth_cap, double bounding_box[], DCArrayKokkos <double> &coords,
                             double num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces,
                             CArrayKokkos <size_t> bdy_patches, double Sx, double Sy, double Sz, double x_min,

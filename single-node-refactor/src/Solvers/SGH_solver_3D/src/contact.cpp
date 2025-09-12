@@ -932,6 +932,7 @@ void distribute_frictionless_force(ViewCArrayKokkos <double> &pair_vars, size_t 
     }
 }  // end distribute_frictionless_force
 
+KOKKOS_FUNCTION
 bool should_remove(ViewCArrayKokkos <double> &pair_vars,
                    CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
                    const CArrayKokkos <double> &contact_forces, const CArrayKokkos <size_t> &contact_surface_map,
@@ -1341,7 +1342,6 @@ void isoparametric_inverse(const double pos[3], const double elem_pos[3][8], dou
 
 } // end isoparametric_inverse
 
-KOKKOS_FUNCTION
 void find_penetrating_nodes(double depth_cap, double bounding_box[], DCArrayKokkos <double> &coords,
                             double num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces,
                             CArrayKokkos <size_t> bdy_patches, double Sx, double Sy, double Sz, double x_min,
@@ -2091,7 +2091,7 @@ bool any(const ViewCArrayKokkos<bool> &a, const size_t &size)
 
 
 
-/// beginning of contact_patches_t member functions ////////////////////////////////////////////////////////////////////
+/// beginning of contact_state_t member functions ////////////////////////////////////////////////////////////////////
 void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, const CArrayKokkos<size_t> bdy_patches,
                                  size_t num_bdy_nodes, size_t num_bdy_patches, CArrayKokkos <size_t> patches_in_elem,
                                  CArrayKokkos <size_t> elems_in_patch, DCArrayKokkos <size_t> nodes_in_elem,
@@ -2130,119 +2130,9 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     contact_forces.set_values(0);
     penetration_surfaces = CArrayKokkos<size_t>(num_bdy_patches,5,4);
 
-    // populating penetration_surfaces and pen_surface_node_gids
-    for (int i = 0; i < num_bdy_patches; i++) {
-        // finding contact surface local id wrt the element (a boundary surface is only part of one element)
-        size_t surf_lid;
-        for (int j = 0; j < 6; j++) {
-            if (bdy_patches(i) == patches_in_elem(elems_in_patch(bdy_patches(i), 0),j)) {
-                surf_lid = j;
-                break;
-            }
-        }
-
-        // defining which patch should be left out of penetration column definition (isoparametric opposite of boundary surf lid)
-        size_t surfs_for_column[5];
-        switch (surf_lid) {
-            case(0):
-                surfs_for_column[0] = 0;
-                surfs_for_column[1] = 2;
-                surfs_for_column[2] = 3;
-                surfs_for_column[3] = 4;
-                surfs_for_column[4] = 5;
-                break;
-            case(1):
-                surfs_for_column[0] = 1;
-                surfs_for_column[1] = 2;
-                surfs_for_column[2] = 3;
-                surfs_for_column[3] = 4;
-                surfs_for_column[4] = 5;
-                break;
-            case(2):
-                surfs_for_column[0] = 0;
-                surfs_for_column[1] = 1;
-                surfs_for_column[2] = 2;
-                surfs_for_column[3] = 4;
-                surfs_for_column[4] = 5;
-                break;
-            case(3):
-                surfs_for_column[0] = 0;
-                surfs_for_column[1] = 1;
-                surfs_for_column[2] = 3;
-                surfs_for_column[3] = 4;
-                surfs_for_column[4] = 5;
-                break;
-            case(4):
-                surfs_for_column[0] = 0;
-                surfs_for_column[1] = 1;
-                surfs_for_column[2] = 2;
-                surfs_for_column[3] = 3;
-                surfs_for_column[4] = 4;
-                break;
-            case(5):
-                surfs_for_column[0] = 0;
-                surfs_for_column[1] = 1;
-                surfs_for_column[2] = 2;
-                surfs_for_column[3] = 3;
-                surfs_for_column[4] = 5;
-                break;
-        }
-
-        // grabbing gids based on surfs_for_column
-        for (int j = 0; j < 5; j++) {
-            switch (surfs_for_column[j]) {
-                case 0:
-                    penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),0);
-                    penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),4);
-                    penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),6);
-                    penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),2);
-                    break;
-                case 1:
-                    penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),1);
-                    penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),3);
-                    penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),7);
-                    penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),5);
-                    break;
-                case 2:
-                    penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),0);
-                    penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),1);
-                    penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),5);
-                    penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),4);
-                    break;
-                case 3:
-                    penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),3);
-                    penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),2);
-                    penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),6);
-                    penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),7);
-                    break;
-                case 4:
-                    penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),0);
-                    penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),2);
-                    penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),3);
-                    penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),1);
-                    break;
-                case 5:
-                    penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),4);
-                    penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),5);
-                    penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),7);
-                    penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),6);
-                    break;
-            }
-        }
-    }
-    
-    // sizing and filling contact_surface_map
+    // sizing contact_surface_map
     contact_surface_map = CArrayKokkos<size_t>(num_bdy_patches,4);
-    for (int i = 0; i < num_bdy_patches; i++) {
-        for (int j = 0; j < 4; j++) {
-            for (int k = 0; k < num_bdy_nodes; k++) {
-                if (nodes_in_patch(bdy_patches(i),j) == bdy_nodes(k)) {
-                    contact_surface_map(i,j) = k;
-                }
-            }
-        }
-    }
-    
+
     // sizing and filling pairing arrays
     node_patch_pairs = CArrayKokkos <size_t> (num_bdy_nodes);
     pair_vars = CArrayKokkos <double> (num_bdy_nodes, 8);
@@ -2251,6 +2141,120 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     active_set = CArrayKokkos <size_t> (num_bdy_nodes);
     num_active = CArrayKokkos <size_t> (1);
 
+    RUN({
+        // populating penetration_surfaces and pen_surface_node_gids
+        for (int i = 0; i < num_bdy_patches; i++) {
+            // finding contact surface local id wrt the element (a boundary surface is only part of one element)
+            size_t surf_lid;
+            for (int j = 0; j < 6; j++) {
+                if (bdy_patches(i) == patches_in_elem(elems_in_patch(bdy_patches(i), 0),j)) {
+                    surf_lid = j;
+                    break;
+                }
+            }
+
+            // defining which patch should be left out of penetration column definition (isoparametric opposite of boundary surf lid)
+            size_t surfs_for_column[5];
+            switch (surf_lid) {
+                case(0):
+                    surfs_for_column[0] = 0;
+                    surfs_for_column[1] = 2;
+                    surfs_for_column[2] = 3;
+                    surfs_for_column[3] = 4;
+                    surfs_for_column[4] = 5;
+                    break;
+                case(1):
+                    surfs_for_column[0] = 1;
+                    surfs_for_column[1] = 2;
+                    surfs_for_column[2] = 3;
+                    surfs_for_column[3] = 4;
+                    surfs_for_column[4] = 5;
+                    break;
+                case(2):
+                    surfs_for_column[0] = 0;
+                    surfs_for_column[1] = 1;
+                    surfs_for_column[2] = 2;
+                    surfs_for_column[3] = 4;
+                    surfs_for_column[4] = 5;
+                    break;
+                case(3):
+                    surfs_for_column[0] = 0;
+                    surfs_for_column[1] = 1;
+                    surfs_for_column[2] = 3;
+                    surfs_for_column[3] = 4;
+                    surfs_for_column[4] = 5;
+                    break;
+                case(4):
+                    surfs_for_column[0] = 0;
+                    surfs_for_column[1] = 1;
+                    surfs_for_column[2] = 2;
+                    surfs_for_column[3] = 3;
+                    surfs_for_column[4] = 4;
+                    break;
+                case(5):
+                    surfs_for_column[0] = 0;
+                    surfs_for_column[1] = 1;
+                    surfs_for_column[2] = 2;
+                    surfs_for_column[3] = 3;
+                    surfs_for_column[4] = 5;
+                    break;
+            }
+
+            // grabbing gids based on surfs_for_column
+            for (int j = 0; j < 5; j++) {
+                switch (surfs_for_column[j]) {
+                    case 0:
+                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),0);
+                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),4);
+                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),6);
+                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),2);
+                        break;
+                    case 1:
+                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),1);
+                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),3);
+                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),7);
+                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),5);
+                        break;
+                    case 2:
+                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),0);
+                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),1);
+                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),5);
+                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),4);
+                        break;
+                    case 3:
+                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),3);
+                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),2);
+                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),6);
+                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),7);
+                        break;
+                    case 4:
+                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),0);
+                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),2);
+                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),3);
+                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),1);
+                        break;
+                    case 5:
+                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),4);
+                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),5);
+                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),7);
+                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),6);
+                        break;
+                }
+            }
+        }
+        
+        // filling contact_surface_map
+        for (int i = 0; i < num_bdy_patches; i++) {
+            for (int j = 0; j < 4; j++) {
+                for (int k = 0; k < num_bdy_nodes; k++) {
+                    if (nodes_in_patch(bdy_patches(i),j) == bdy_nodes(k)) {
+                        contact_surface_map(i,j) = k;
+                    }
+                }
+            }
+        }
+    });
+    
     // finding num_surfs_in_node
     num_surfs_in_node = CArrayKokkos <size_t> (num_bdy_nodes);
     num_surfs_in_node.set_values(0);
