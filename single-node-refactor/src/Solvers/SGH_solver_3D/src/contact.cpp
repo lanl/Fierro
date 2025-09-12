@@ -2141,7 +2141,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     active_set = CArrayKokkos <size_t> (num_bdy_nodes);
     num_active = CArrayKokkos <size_t> (1);
 
-    RUN({
+    RUN_CLASS({
         // populating penetration_surfaces and pen_surface_node_gids
         for (int i = 0; i < num_bdy_patches; i++) {
             // finding contact surface local id wrt the element (a boundary surface is only part of one element)
