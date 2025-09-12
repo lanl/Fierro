@@ -2259,7 +2259,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     // finding num_surfs_in_node
     num_surfs_in_node = CArrayKokkos <size_t> (num_bdy_nodes);
     num_surfs_in_node.set_values(0);
-    FOR_ALL(i, 0, num_bdy_nodes, {
+    FOR_ALL_CLASS(i, 0, num_bdy_nodes, {
         size_t node_gid = bdy_nodes(i);
         for (int j = 0; j < num_bdy_patches; j++) {
             for (int k = 0; k < 4; k++) {
@@ -2273,7 +2273,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     
     // finding surfs_in_node
     surfs_in_node = RaggedRightArrayKokkos <size_t> (num_surfs_in_node);
-    FOR_ALL(i, 0, num_bdy_nodes, {
+    FOR_ALL_CLASS(i, 0, num_bdy_nodes, {
         size_t node_gid = bdy_nodes(i);
         size_t stride_index = 0;
         for (int j = 0; j < num_bdy_patches; j++) {
@@ -2297,7 +2297,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     // todo: this should be a dynamic ragged type
     node_penetrations = CArrayKokkos <size_t> (num_bdy_nodes,19);
     node_penetrations.set_values(num_patches);
-    FOR_ALL(i, 0, num_bdy_nodes, {
+    FOR_ALL_CLASS(i, 0, num_bdy_nodes, {
         node_penetrations(i,0) = bdy_nodes(i);
     });
     Kokkos::fence();
@@ -2313,7 +2313,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     // getting bucket_size
     double local_min_dist = 0;
     double min_distance = 0;
-    FOR_REDUCE_MIN(i, 0, (int)num_bdy_patches,
+    FOR_REDUCE_MIN_CLASS(i, 0, (int)num_bdy_patches,
                    j, 0, 4, local_min_dist, {
                       double local_distance = 0;
                       if (j < 3)
