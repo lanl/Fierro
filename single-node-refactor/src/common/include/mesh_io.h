@@ -224,7 +224,7 @@ inline bool extract_num_points_and_cells_xml(size_t& numberOfPoints,
         
     // Read the file line by line looking for NumberOfPoints
     while (std::getline(in, line)) {
-        
+        //std::cout << line << std::endl;
         std::string word = "NumberOfPoints=";  // A portion of a word
 
         if (line.find(word) != std::string::npos) { // Check if the portion of the word is in the line
@@ -988,8 +988,6 @@ public:
             std::cout<<"Reading VTU file in a multiblock VTK mesh"<<std::endl;
         
             bool found;
-            
-            std::ifstream in;  // FILE *in;
             in.open(mesh_file_);
             
 
@@ -1003,8 +1001,8 @@ public:
                 throw std::runtime_error("ERROR: number of points and/or cells not found in the XML file!");
                 //std::cout << "ERROR: number of points and cells not found in the XML file!" << std::endl;
             }
-            std::cout << "Number of nodes in the mesh file: " << num_nodes << std::endl;
-            std::cout << "Number of elements in the mesh file: " << num_elems << std::endl;
+            std::cout << "Number of nodes in the mesh file: " << global_num_nodes << std::endl;
+            std::cout << "Number of elements in the mesh file: " << global_num_elems << std::endl;
         }
         
         // broadcast number of nodes
@@ -1065,7 +1063,7 @@ public:
 
             // Read the file line by line looking for specified word
             while (std::getline(in, line)) {
-
+                //std::cout << line << std::endl;
                 if (line.find(word) != std::string::npos) { // Check if the portion of the word is in the line
                     found = true;
                 } 
@@ -1502,9 +1500,11 @@ public:
         }
 
         elem_types.update_device();
+        //std::cout << "Type read size " << size << std::endl;
 
         // check that the element type is supported by Fierro
         FOR_ALL (elem_gid, 0, mesh.num_elems, {
+            //std::cout << "Element type is " << elem_types(elem_gid) << std::endl;
             if(elem_types(elem_gid) == element_types::linear_quad || 
                elem_types(elem_gid) == element_types::linear_hex_ijk ||
                elem_types(elem_gid) == element_types::linear_hex ||
