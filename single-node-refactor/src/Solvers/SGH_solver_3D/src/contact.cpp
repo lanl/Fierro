@@ -1342,7 +1342,7 @@ void isoparametric_inverse(const double pos[3], const double elem_pos[3][8], dou
 
 } // end isoparametric_inverse
 
-void find_penetrating_nodes(double depth_cap, double bounding_box[], DCArrayKokkos <double> &coords,
+void find_penetrating_nodes(double depth_cap, DCArrayKokkos <double> &coords,
                             double num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces,
                             CArrayKokkos <size_t> bdy_patches, double Sx, double Sy, double Sz, double x_min,
                             double y_min, double z_min, double bucket_size, CArrayKokkos <size_t> &buckets,
@@ -1353,6 +1353,7 @@ void find_penetrating_nodes(double depth_cap, double bounding_box[], DCArrayKokk
                             double eta[4])
 {
     RUN({
+        double bounding_box[6];
         // running find nodes for each contact surface with capture box size set to depth_cap in all directions
         for (int patch_lid = 0; patch_lid < num_bdy_patches; patch_lid++) {
             size_t nodes_gid[4];
@@ -1687,8 +1688,18 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
         }
     });
     Kokkos::fence();
+
+    /* RUN({
+        for (int i = 0; i < node_penetrations.dims(0); i++) {
+            for (int j = 0; j < node_penetrations.dims(1); j++) {
+                printf("%lu  ", (unsigned long)node_penetrations(i,j));
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }); */
     
-    find_penetrating_nodes(depth_cap, bounding_box, coords, num_bdy_patches, penetration_surfaces,
+    find_penetrating_nodes(depth_cap, coords, num_bdy_patches, penetration_surfaces,
                            bdy_patches, Sx, Sy, Sz, x_min, y_min, z_min, bucket_size, buckets,
                            node_penetrations, npoint, num_patches, nbox, nsort, nodes_in_elem,
                            elems_in_patch, num_bdy_nodes, nodes_in_patch, xi, eta);

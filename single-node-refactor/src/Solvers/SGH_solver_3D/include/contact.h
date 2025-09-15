@@ -578,7 +578,7 @@ void isoparametric_inverse(const double pos[3], const double elem_pos[3][8], dou
 /// \param elem_pos element nodal coordinates
 /// \param iso_pos isoparametric position (xi,eta,zeta) output
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void find_penetrating_nodes(double depth_cap, double bounding_box[], DCArrayKokkos <double> &coords,
+void find_penetrating_nodes(double depth_cap, DCArrayKokkos <double> &coords,
                             double num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces,
                             CArrayKokkos <size_t> bdy_patches, double Sx, double Sy, double Sz, double x_min,
                             double y_min, double z_min, double bucket_size, CArrayKokkos <size_t> &buckets,
