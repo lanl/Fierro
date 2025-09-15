@@ -1887,7 +1887,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
     for (int i = 0; i < max_iter; i++)
     {
         // find force increment for each pair
-        FOR_ALL(j, 0, num_active(0),
+        FOR_ALL(j, 0, num_active.host(0),
         {
             ViewCArrayKokkos<double> incs_view(&f_c_incs(0), num_active(0));
             size_t contact_id = active_set(j);
@@ -1908,7 +1908,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
         std::cout << std::endl; */
 
         // made distribute_frictionless_force use Kokkos::atomic_add to allow this to be parallel
-        FOR_ALL(j, 0, num_active(0),
+        FOR_ALL(j, 0, num_active.host(0),
         {
             size_t contact_id = active_set(j);
             ViewCArrayKokkos <size_t> surface_map(&contact_surface_map(node_patch_pairs(contact_id),0), 4);
@@ -1931,7 +1931,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
         });
         norm_incs.update_host();
         
-        if (norm_incs(0) <= tol)
+        if (norm_incs.host(0) <= tol)
             {
                 /* std::cout << "NEW" << std::endl;
                 for (int j = 0; j < num_active(0); j++) {
