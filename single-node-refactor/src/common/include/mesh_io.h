@@ -610,7 +610,7 @@ public:
                 }
             });
         }
-
+        node.coords.update_device();
         //initialize some mesh data
         mesh.initialize_nodes(global_num_nodes);
         num_local_nodes = node_map.size();
@@ -968,7 +968,6 @@ public:
         size_t global_num_nodes = 0;
         size_t global_num_elems = 0;
         size_t num_elems = 0;
-        int i;           // used for writing information to file
         std::streampos objectid_streampos;
 
         // dimensional scaling of the mesh
@@ -1069,7 +1068,7 @@ public:
                 } 
                 if(found) {
 
-                    if(found) break;
+                    break;
 
                 } // end if found
 
@@ -1105,7 +1104,7 @@ public:
                     if (value == stop) { // Check if the stop word is in the line
                         break;
                     } // end if
-                    read_buffer(i) = std::stod(value);
+                    read_buffer(idata) = std::stod(value);
                     size++;
                 } // end for
             }
@@ -1166,7 +1165,7 @@ public:
                 node.coords(node_id,idim) = node_coords_distributed(node_id,idim);
             }
         });
-
+        node.coords.update_host();
         //initialize some mesh data
         mesh.initialize_nodes(global_num_nodes);
         num_local_nodes = node_map.size();
@@ -1218,7 +1217,7 @@ public:
                 } 
                 if(found) {
 
-                    if(found) break;
+                    break;
 
                 } // end if found
 
@@ -1254,7 +1253,7 @@ public:
                     if (value == stop) { // Check if the stop word is in the line
                         break;
                     } // end if
-                    elem_read_buffer(i) = std::stoll(value);
+                    elem_read_buffer(idata) = std::stoll(value);
                     size++;
                 } // end for
             }
@@ -1387,6 +1386,11 @@ public:
                 nodes_in_elem.host(ielem, inode) = element_temp[ielem * num_nodes_in_elem + inode];
             }
         }
+        nodes_in_elem.update_device();
+
+        //debug print
+        //for (int inode = 0; inode < num_nodes_in_elem; inode++)
+            //std::cout << "Element nodes " << inode << " " << nodes_in_elem(num_elems-1,inode) << std::endl;
 
         // delete temporary element connectivity and index storage
         std::vector<size_t>().swap(element_temp);
@@ -1432,7 +1436,7 @@ public:
                 } 
                 if(found) {
 
-                    if(found) break;
+                    break;
 
                 } // end if found
 
@@ -1468,7 +1472,10 @@ public:
                     if (value == stop) { // Check if the stop word is in the line
                         break;
                     } // end if
-                    elem_read_buffer(i) = std::stoi(value);
+                    elem_read_buffer(idata) = std::stoi(value);
+                    // if(elem_read_buffer(i)!=11){
+                    //     std::cout << "FOUND TYPE ERROR " << std::endl;
+                    // }
                     size++;
                 } // end for
             }
@@ -1491,6 +1498,7 @@ public:
                 elem_gid = read_index_start + scan_loop;
                 //add to the local type array if this elem gid belongs to this rank
                 if (element_map.isProcessGlobalIndex(elem_gid)){
+                    //std::cout << "elocal id " << element_map.getLocalIndex(elem_gid) << " " << elem_read_buffer(scan_loop) << std::endl;
                     elem_types.host(element_map.getLocalIndex(elem_gid)) = elem_read_buffer(scan_loop);
                 }
                 
@@ -1558,7 +1566,7 @@ public:
                 // next case
 
             case element_types::linear_hex:
-
+                std::cout << "Converting mesh element ordering" << std::endl;
                 RUN({
                     convert_ensight_to_ijk(0) = 0;
                     convert_ensight_to_ijk(1) = 1;
@@ -1572,9 +1580,12 @@ public:
 
                 // read the node ids in the element
                 FOR_ALL (elem_id, 0, mesh.num_elems, {
-                    
+                    long long int temp[num_nodes_in_elem];
                     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_id, node_lid) =  mesh.nodes_in_elem(elem_id,convert_ensight_to_ijk(node_lid));
+                        temp[node_lid] =  mesh.nodes_in_elem(elem_id,convert_ensight_to_ijk(node_lid));
+                    }
+                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                        mesh.nodes_in_elem(elem_id, node_lid) = temp[node_lid];
                     }
                     
                 }); // end for
@@ -1663,7 +1674,7 @@ public:
                 } 
                 if(found) {
 
-                    if(found) break;
+                    break;
 
                 } // end if found
 
@@ -1699,7 +1710,7 @@ public:
                     if (value == stop) { // Check if the stop word is in the line
                         break;
                     } // end if
-                    elem_read_buffer(i) = std::stoi(value);
+                    elem_read_buffer(idata) = std::stoi(value);
                     size++;
                 } // end for
             }
