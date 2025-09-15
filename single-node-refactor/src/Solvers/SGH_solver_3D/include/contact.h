@@ -293,7 +293,7 @@ void ref_to_physical(const double ref[2], const double A[3][4], double phys[3], 
 /// \param eta_value eta value
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void d_phi_d_xi(double d_phi_d_xi[4], double &xi_value, double &eta_value, double xi[4], double eta[4]);
+void d_phi_d_xi(double d_phi_d_xi[4], const double &xi_value, const double &eta_value, double xi[4], double eta[4]);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn d_phi_d_eta
@@ -338,7 +338,7 @@ void get_normal(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_
 /// \param normal kokkos view that will be changed in place
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void get_penetration_normal(const DCArrayKokkos <double> &coords, double &xi_val, double &eta_val,
+void get_penetration_normal(const DCArrayKokkos <double> &coords, const double &xi_val, const double &eta_val,
                             double normal[3], double xi[4], double eta[4], size_t node_gids[4]);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

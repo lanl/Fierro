@@ -144,7 +144,7 @@ void ref_to_physical(double ref[2], const double A[3][4], double phys[3], double
 }  // end ref_to_physical
 
 KOKKOS_FUNCTION
-void d_phi_d_xi(double d_phi_d_xi[4], double &xi_value, double &eta_value, double xi[4], double eta[4])
+void d_phi_d_xi(double d_phi_d_xi[4], const double &xi_value, const double &eta_value, double xi[4], double eta[4])
 {
     for (int i = 0; i < 4; i++)
     {
@@ -218,7 +218,7 @@ void get_normal(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_
 }
 
 KOKKOS_FUNCTION
-void get_penetration_normal(const DCArrayKokkos <double> &coords, double &xi_val, double &eta_val,
+void get_penetration_normal(const DCArrayKokkos <double> &coords, const double &xi_val, const double &eta_val,
                             double normal[3], double xi[4], double eta[4], size_t node_gids[4])
 {
     // Get the derivative arrays
