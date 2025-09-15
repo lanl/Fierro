@@ -306,7 +306,7 @@ void d_phi_d_xi(double d_phi_d_xi[4], const double &xi_value, const double &eta_
 /// \param eta_value eta value
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void d_phi_d_eta(double d_phi_d_eta[4], double &xi_value, double &eta_value, double xi[4], double eta[4]);
+void d_phi_d_eta(double d_phi_d_eta[4], const double &xi_value, const double &eta_value, double xi[4], double eta[4]);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn get_normal
