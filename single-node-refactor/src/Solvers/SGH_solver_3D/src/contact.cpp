@@ -1925,7 +1925,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
             ViewCArrayKokkos<double> incs_view(&f_c_incs(0), num_active(0));
             norm_incs(0) = 0;
             for (int j = 0; j < num_active(0); j++) {
-                norm_incs(0) += incs_view(j)*incs_view(j);
+                norm_incs(0) += 0.2*incs_view(j)*0.2*incs_view(j)/pow(mass(bdy_nodes(active_set(j))),2);
             }
             norm_incs(0) = sqrt(norm_incs(0));
         });
