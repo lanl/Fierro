@@ -1,7 +1,7 @@
 # num_dims: 3
 
 dynamic_options:
-  time_final: 1
+  time_final: 5
   dt_min: 1e-6
   dt_max: 0.05
   dt_start: 1e-6
@@ -25,7 +25,7 @@ mesh_options:
 output_options:
   timer_output_level: thorough
   output_file_format: ensight
-  graphics_time_step: 0.01
+  graphics_time_step: 0.05
   # graphics_iteration_step: 10
 
 solver_options:
