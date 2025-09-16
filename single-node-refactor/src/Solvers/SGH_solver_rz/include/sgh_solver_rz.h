@@ -117,6 +117,10 @@ public:
     }
 
     ~SGHRZ() = default;
+    
+    //member variables
+    CommPlan<real_t> node_velocity_comms;
+    CommPlan<real_t> node_mass_comms;
 
     /////////////////////////////////////////////////////////////////////////////
     ///

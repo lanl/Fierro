@@ -61,7 +61,7 @@ void SGHRZ::update_velocity_rz(
     const size_t num_dims = 2;
 
     // walk over the nodes to update the velocity
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+    FOR_ALL(node_gid, 0, mesh.num_local_nodes, {
         double node_force[3];
         for (size_t dim = 0; dim < num_dims; dim++) {
             node_force[dim] = 0.0;

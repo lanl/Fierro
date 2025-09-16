@@ -86,6 +86,8 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParameters,
 {
 
     // add a flag on whether SGHRZ was set up, if(SGHRZ_setup_already==false)
+    //update node velocity on ghosts
+    node_velocity_comms.execute_comms();
     
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
@@ -107,11 +109,8 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParameters,
 
     } // for loop over mat_id
 
-
     // set corner and node masses to zero
     init_corner_node_masses_zero_rz(mesh, State.node.mass, State.corner.mass);
-
-
 
     // 2D RZ
     // calculate the corner massess if 2D
@@ -133,6 +132,9 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParameters,
                       State.node.coords,
                       State.node.mass,
                       State.corner.mass);
+
+    //communicate node masses to ghosts
+    node_mass_comms.execute_comms();
 
 } // end SGHRZ setup
 

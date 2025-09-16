@@ -453,15 +453,12 @@ public:
 double sum_domain_internal_energy(
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-    const MaterialToMeshMap_t& MaterialToMeshMaps,
     const size_t num_mat_points,
-    const size_t mat_id,
-    const size_t num_local_elems);
+    const size_t mat_id);
 
 double sum_domain_kinetic_energy(
     const Mesh_t& mesh,
     const DistributedDCArray<double>& node_vel,
-    const DistributedDCArray<double>& node_coords,
     const DistributedDCArray<double>& node_mass);
 
 double sum_domain_material_mass(

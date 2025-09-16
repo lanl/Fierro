@@ -120,16 +120,13 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
 
         local_IE_t0 += sum_domain_internal_energy(State.MaterialPoints.mass,
                                             State.MaterialPoints.sie,
-                                            State.MaterialToMeshMaps,
                                             State.MaterialPoints.num_material_local_points.host(mat_id),
-                                            mat_id,
-                                            mesh.num_local_elems);
+                                            mat_id);
     } // end loop over mat_id
 
     // extensive KE
     local_KE_t0 = sum_domain_kinetic_energy(mesh,
                                       State.node.vel,
-                                      State.node.coords,
                                       State.node.mass);
 
     //collect KE and TE sums across all processes
@@ -152,7 +149,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
 
     for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
         double global_mass_domain_mat;
-        std::cout << " local element count for mass loop " << State.MaterialPoints.num_material_local_points.host(mat_id) << std::endl;
+        //std::cout << " local element count for mass loop " << State.MaterialPoints.num_material_local_points.host(mat_id) << std::endl;
         double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints.mass,
                                                           State.MaterialPoints.num_material_local_points.host(mat_id),
                                                           mat_id);
@@ -555,16 +552,13 @@ void SGH3D::execute(SimulationParameters_t& SimulationParameters,
 
         local_IE_tend += sum_domain_internal_energy(State.MaterialPoints.mass,
                                               State.MaterialPoints.sie,
-                                              State.MaterialToMeshMaps,
                                               State.MaterialPoints.num_material_local_points.host(mat_id),
-                                              mat_id,
-                                              mesh.num_local_elems);
+                                              mat_id);
     } // end loop over mat_id
 
     // extensive KE
     local_KE_tend = sum_domain_kinetic_energy(mesh,
                                         State.node.vel,
-                                        State.node.coords,
                                         State.node.mass);
     
     MPI_Allreduce(&local_IE_tend, &IE_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -689,10 +683,8 @@ double max_Eigen3D(const ViewCArrayKokkos<double> tensor)
 double sum_domain_internal_energy(
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-    const MaterialToMeshMap_t& MaterialToMeshMaps,
     const size_t num_mat_points,
-    const size_t mat_id,
-    const size_t num_local_elems)
+    const size_t mat_id)
 {
     double IE_sum = 0.0;
     double IE_loc_sum;
@@ -725,7 +717,6 @@ double sum_domain_internal_energy(
 double sum_domain_kinetic_energy(
     const Mesh_t& mesh,
     const DistributedDCArray<double>& node_vel,
-    const DistributedDCArray<double>& node_coords,
     const DistributedDCArray<double>& node_mass)
 {
     // extensive KE
