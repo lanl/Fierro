@@ -495,21 +495,25 @@ public:
                     real_t vol = elem_mass(elem_id)/elem_den(elem_id);
 
                     inner_product = 0;
-                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
-                        double current_node_coords[3];
-                        bool contained = false;
-                        node_id = nodes_in_elem(elem_id, ifill);
-                        current_node_coords[0] = all_initial_node_coords(node_id, 0);
-                        current_node_coords[1] = all_initial_node_coords(node_id, 1);
-                        current_node_coords[2] = all_initial_node_coords(node_id, 2);
-                        for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
-                            if(optimization_objective_regions(ivolume).contains(current_node_coords)){
-                                contained = true;
-                            }
+                    bool contained = false;
+                    double current_elem_coords[3];
+                    current_elem_coords[0] = 0;
+                    current_elem_coords[1] = 0;
+                    current_elem_coords[2] = 0;
+                    for(int inode=0; inode< num_nodes_in_elem; inode++){
+                        node_id = nodes_in_elem(elem_id, inode);
+                        current_elem_coords[0] += all_initial_node_coords(node_id, 0)/num_nodes_in_elem;
+                        current_elem_coords[1] += all_initial_node_coords(node_id, 1)/num_nodes_in_elem;
+                        current_elem_coords[2] += all_initial_node_coords(node_id, 2)/num_nodes_in_elem;
+                    }
+                    for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                        if(optimization_objective_regions(ivolume).contains(current_elem_coords)){
+                            contained = true;
                         }
-                        if(contained){
-                            inner_product += elem_den(elem_id) * vol/vol0 * elem_sie(rk_level, elem_id);
-                        }
+                    }
+                    
+                    if(contained){
+                        inner_product = elem_den(elem_id) * vol/vol0 * elem_sie(rk_level, elem_id);
                     }
 
                     // gradients of the element volume at t=0 w.r.t to initial design coordinates
@@ -550,10 +554,7 @@ public:
                     // gradients of the element volume
                     FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, current_design_node_coords, elem_node_gids, rk_level);
 
-                    inner_product = 0;
-                    for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
-                            inner_product += elem_den(elem_id) * vol/vol0 * elem_sie(rk_level, elem_id);
-                    }
+                    inner_product = elem_den(elem_id) * vol/vol0 * elem_sie(rk_level, elem_id);
 
                     for (int inode = 0; inode < num_nodes_in_elem; inode++) {
                         for(int idim = 0; idim < num_dim; idim++){
