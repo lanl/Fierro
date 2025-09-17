@@ -62,7 +62,7 @@ void SGH3D::update_velocity(double rk_alpha,
     const size_t num_dims = mesh.num_dims;
 
     // walk over the nodes to update the velocity
-    FOR_ALL_CLASS(node_gid, 0, mesh.num_nodes, {
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
 
         // adding in contact force
         if (doing_contact)

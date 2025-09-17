@@ -141,7 +141,6 @@ class SGH3D : public Solver
 {
 public:
 
-    contact_state_t Contact_State;  // keeps track of contact patches
     bool doing_contact = false;  // Condition used in SGH::execute
     bool doing_preload = false;  // Condition used in SGH::execute
 
@@ -236,7 +235,7 @@ public:
         DCArrayKokkos<double>&     node_vel,
         const double time_value) const;
 
-    void boundary_contact_force(State_t& State, const Mesh_t &mesh, const double &del_t);
+    void boundary_contact_force(State_t& State, const Mesh_t &mesh, const double &del_t, contact_state_t &Contact_State);
 
     void boundary_stress(const Mesh_t& mesh,
                     const BoundaryCondition_t& BoundaryConditions,

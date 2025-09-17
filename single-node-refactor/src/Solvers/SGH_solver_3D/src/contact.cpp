@@ -2141,7 +2141,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
 
     // sizing possible nodes and buckets
     possible_nodes = CArrayKokkos<size_t>(num_bdy_nodes);
-    buckets = CArrayKokkos<size_t>(pow(8,3));
+    buckets = CArrayKokkos<size_t>(pow(9,3));
 
     // sizing arrays based on num of bdy patches and bdy nodes
     contact_forces = CArrayKokkos<double>(num_bdy_nodes,3);

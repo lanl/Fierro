@@ -111,7 +111,7 @@ void SGH3D::boundary_contact(const Mesh_t& mesh,
 /// \param The time step size
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D:: boundary_contact_force(State_t& State, const Mesh_t &mesh, const double &del_t)
+void SGH3D:: boundary_contact_force(State_t& State, const Mesh_t &mesh, const double &del_t, contact_state_t &Contact_State)
 {
     
     sort(State.node.coords, mesh.num_bdy_nodes, mesh.bdy_nodes, State.node.vel, mesh.num_corners_in_node,
