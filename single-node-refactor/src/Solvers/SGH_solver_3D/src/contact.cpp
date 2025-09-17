@@ -1771,7 +1771,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
             // pairing step 3) dot product of vector from (2) with normal of each surf being penetrated by the node
             // todo: need to get nodes_pen_surfs as a dynamic ragged type to make this loop more efficient
             // todo: what are the edge cases for pairing step 3?
-            for (int i = 0; i < 6; i++) {
+            for (int i = 0; i < 18; i++) {
                 // todo: replace if statement with known in order to remove loop j entirely
                 for (int j = 0; j < num_bdy_patches; j++) {
                     if (bdy_patches(j) == node_penetrations(node_lid,i+1)) {

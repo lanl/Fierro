@@ -19,7 +19,8 @@ tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
         "Pressure_bc_box","vtu_read","SGTM_cooling_cube", \
         "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
         "slanted_bounce_contact", "slanted_impact_contact", \
-        "sie_expansion_contact", "confined_preload", "unconfined_preload"]
+        "sie_expansion_contact", "confined_preload", "unconfined_preload", \
+        "edge_flat_contact"]
 
 # Extract data from txt file
 def extract_state_data(filename):
