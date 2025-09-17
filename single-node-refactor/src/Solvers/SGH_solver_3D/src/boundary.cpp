@@ -102,7 +102,54 @@ void SGH3D::boundary_contact(const Mesh_t& mesh,
     return;
 } // end boundary_contact function
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn boundary_contact_force
+///
+/// \brief Runs contact detection, contact check, and contact force
+///
+/// \param The time step size
+///
+/////////////////////////////////////////////////////////////////////////////
+void SGH3D:: boundary_contact_force(State_t& State, const Mesh_t &mesh, const double &del_t, contact_state_t &Contact_State)
+{
+    
+    sort(State.node.coords, mesh.num_bdy_nodes, mesh.bdy_nodes, State.node.vel, mesh.num_corners_in_node,
+         mesh.corners_in_node, State.corner.force, Contact_State.contact_forces, State.node.mass, Contact_State.x_max,
+         Contact_State.y_max, Contact_State.z_max, Contact_State.x_min, Contact_State.y_min, Contact_State.z_min,
+         Contact_State.vx_max, Contact_State.vy_max, Contact_State.vz_max, Contact_State.ax_max, Contact_State.ay_max,
+         Contact_State.az_max, Contact_State.Sx, Contact_State.Sy, Contact_State.Sz, Contact_State.bucket_size,
+         Contact_State.nbox, Contact_State.lbox, Contact_State.nsort, Contact_State.npoint);
+    
+    penetration_sweep(Contact_State.x_min, Contact_State.y_min, Contact_State.z_min, Contact_State.bounding_box,
+                      State.node.coords, mesh.num_bdy_patches, Contact_State.penetration_surfaces,
+                      mesh.bdy_patches, Contact_State.Sx, Contact_State.Sy, Contact_State.Sz,
+                      Contact_State.bucket_size, Contact_State.buckets, Contact_State.node_penetrations,
+                      Contact_State.npoint, mesh.num_patches, Contact_State.nbox, Contact_State.nsort,
+                      mesh.nodes_in_elem, mesh.elems_in_patch, mesh.num_bdy_nodes, mesh.nodes_in_patch,
+                      Contact_State.xi, Contact_State.eta, Contact_State.x_max, Contact_State.y_max,
+                      Contact_State.z_max, Contact_State.num_active, mesh.elems_in_node, mesh.num_nodes_in_elem,
+                      mesh.patches_in_elem, Contact_State.node_patch_pairs, Contact_State.pair_vars, del_t,
+                      Contact_State.active_set);
 
+    force_resolution(Contact_State.f_c_incs, Contact_State.num_active, Contact_State.active_set,
+                     Contact_State.node_patch_pairs, Contact_State.pair_vars, Contact_State.contact_surface_map,
+                     State.node.coords, mesh.bdy_nodes, State.node.mass, Contact_State.contact_forces,
+                     State.corner.force, State.node.vel, mesh.corners_in_node, mesh.num_corners_in_node,
+                     Contact_State.xi, Contact_State.eta, del_t, Contact_State.contact_force, mesh.num_bdy_nodes);
+    
+    remove_pairs(Contact_State.num_active, Contact_State.active_set, Contact_State.pair_vars,
+                 Contact_State.node_patch_pairs, mesh.nodes_in_patch, mesh.bdy_patches, Contact_State.contact_forces,
+                 Contact_State.contact_surface_map, State.corner.force, mesh.corners_in_node, State.node.mass,
+                 State.node.coords, mesh.num_corners_in_node, mesh.bdy_nodes, State.node.vel, del_t,
+                 Contact_State.xi, Contact_State.eta, mesh.num_bdy_patches);
+
+    //contact_bank.sort(State, mesh);
+    //contact_bank.penetration_sweep(State, mesh, del_t);
+    //contact_bank.get_contact_pairs(State, mesh, del_t);
+    //contact_bank.force_resolution(del_t);
+    //contact_bank.remove_pairs(del_t);
+} // end boundary_contact_force function
 
 /////////////////////////////////////////////////////////////////////////////
 ///

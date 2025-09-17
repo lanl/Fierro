@@ -37,6 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "solver.h"
 #include "state.h"
+#include "contact.h"
 
 // Forward declare structs
 struct SimulationParameters_t;
@@ -140,6 +141,9 @@ class SGH3D : public Solver
 {
 public:
 
+    bool doing_contact = false;  // Condition used in SGH::execute
+    bool doing_preload = false;  // Condition used in SGH::execute
+
     SGH3D()  : Solver()
     {
     }
@@ -231,6 +235,8 @@ public:
         DCArrayKokkos<double>&     node_vel,
         const double time_value) const;
 
+    void boundary_contact_force(State_t& State, const Mesh_t &mesh, const double &del_t, contact_state_t &Contact_State);
+
     void boundary_stress(const Mesh_t& mesh,
                     const BoundaryCondition_t& BoundaryConditions,
                     DCArrayKokkos<double>& node_bdy_force,
@@ -300,7 +306,9 @@ public:
         DCArrayKokkos<double>& node_vel_n0,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& node_force,
-        const DCArrayKokkos<double>& corner_force) const;
+        const DCArrayKokkos<double>& corner_force,
+        const CArrayKokkos <double>& contact_force,
+        bool doing_contact) const;
 
     void get_velgrad(
         DCArrayKokkos<double>& vel_grad,

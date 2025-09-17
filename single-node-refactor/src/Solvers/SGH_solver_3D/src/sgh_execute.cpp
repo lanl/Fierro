@@ -58,6 +58,13 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     State_t& State)
 {
 
+    contact_state_t Contact_State; // keeps track of contact variables
+    if (doing_contact) {
+        Contact_State.initialize(mesh.num_dims, mesh.num_nodes_in_patch, mesh.bdy_patches, mesh.num_bdy_nodes, mesh.num_bdy_patches,
+                                 mesh.patches_in_elem, mesh.elems_in_patch, mesh.nodes_in_elem, mesh.nodes_in_patch,
+                                 mesh.bdy_nodes, mesh.num_patches, mesh.num_nodes, State.node.coords);
+    }
+
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;  // 1.e-16
     double tiny  = SimulationParamaters.dynamic_options.tiny;  // 1.e-12
     double small = SimulationParamaters.dynamic_options.small; // 1.e-8
@@ -334,6 +341,24 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // call body forces routine
 
+            // apply contact forces to boundary patches
+            if (doing_contact) 
+            {
+                //contact_bank.update_nodes(mesh, State);
+                Contact_State.contact_forces.set_values(0);
+                Contact_State.contact_force.set_values(0);
+                if (doing_preload) {
+                    double preload_time = (time_final-time_value)/2;
+                    //preload_time = 1;
+                    if (time_value < preload_time) {
+                        boundary_contact_force(State, mesh, preload_time, Contact_State);
+                    } else {
+                        boundary_contact_force(State, mesh, 5*dt*rk_alpha, Contact_State);
+                    }
+                } else {
+                    boundary_contact_force(State, mesh, 5*dt*rk_alpha, Contact_State);
+                }
+            }
 
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
@@ -343,7 +368,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             State.node.vel_n0,
                             State.node.mass,
                             State.node.force,
-                            State.corner.force);
+                            State.corner.force,
+                            Contact_State.contact_force,
+                            doing_contact);
 
             // ---- apply velocity boundary conditions to the boundary patches----
             boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value);
