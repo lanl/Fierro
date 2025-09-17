@@ -369,7 +369,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             State.node.mass,
                             State.node.force,
                             State.corner.force,
-                            Contact_State.contact_force);
+                            Contact_State.contact_force,
+                            doing_contact);
 
             // ---- apply velocity boundary conditions to the boundary patches----
             boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value);

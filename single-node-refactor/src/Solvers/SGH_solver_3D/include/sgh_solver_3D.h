@@ -307,7 +307,8 @@ public:
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& node_force,
         const DCArrayKokkos<double>& corner_force,
-        CArrayKokkos <double> contact_force) const;
+        const CArrayKokkos <double>& contact_force,
+        bool doing_contact) const;
 
     void get_velgrad(
         DCArrayKokkos<double>& vel_grad,

@@ -57,7 +57,8 @@ void SGH3D::update_velocity(double rk_alpha,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& node_force,
     const DCArrayKokkos<double>& corner_force,
-    CArrayKokkos <double> contact_force) const
+    const CArrayKokkos <double>& contact_force,
+    bool doing_contact) const
 {
     const size_t num_dims = mesh.num_dims;
 
