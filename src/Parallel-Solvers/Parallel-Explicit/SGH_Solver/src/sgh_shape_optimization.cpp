@@ -607,6 +607,94 @@ void FEA_Module_SGH::compute_shape_optimization_gradient_tally(const Teuchos::RC
             Kokkos::fence();
         } // end view scope
 
+        //compute terms with gradient of force and gradient of specific internal energy w.r.t design density
+        // view scope
+        {
+            const_vec_array current_adjoint_vector = all_adjoint_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            const_vec_array current_psi_adjoint_vector = psi_adjoint_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            
+
+            // derivatives of forces at corners stored in corner_vector_storage buffer by previous routine
+            FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                size_t node_id;
+                size_t corner_id;
+                real_t inner_product[num_nodes_in_elem][num_dim];
+                
+                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
+                    for (int sdim = 0; sdim < num_dim; sdim++) {
+                        inner_product[igradient][sdim] = 0;
+                        for (int ifill = 0; ifill < num_nodes_in_elem; ifill++) {
+                            node_id   = nodes_in_elem(elem_id, ifill);
+                            corner_id = elem_id * num_nodes_in_elem + ifill;
+                            for (int idim = 0; idim < num_dim; idim++) {
+                                    inner_product[igradient][sdim] += corner_gradient_storage(corner_id, idim, igradient,sdim) * current_adjoint_vector(node_id, idim);
+                                
+                            }
+                        }
+                    }
+                }
+
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                    for(int idim = 0; idim < num_dim; idim++){
+                        // compute gradient of local element contribution to v^t*M*v product
+                        corner_id = elem_id * num_nodes_in_elem + inode;
+                        // division by design ratio recovers nominal element mass used in the gradient operator
+                        corner_value_storage(corner_id, idim) = inner_product[inode][idim];
+                    }
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    for(int idim = 0; idim < num_dim; idim++){
+                        corner_id = corners_in_node(node_id, icorner);
+                        design_gradients(node_id, idim) -= 0.5 * weight* global_dt * corner_value_storage(corner_id, idim);
+                    }
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            //term with gradients of power w.r.t design density
+            FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                size_t node_id;
+                size_t corner_id;
+                real_t inner_product[num_nodes_in_elem][num_dim];
+
+                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
+                    for (int sdim = 0; sdim < num_dim; sdim++) {
+                        inner_product[igradient][sdim] = elem_power_dgradients(elem_id, igradient, sdim) * current_psi_adjoint_vector(elem_id, 0);
+                    }
+                }
+
+                for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                    for(int idim = 0; idim < num_dim; idim++){
+                        // compute gradient of local element contribution to v^t*M*v product
+                        corner_id = elem_id * num_nodes_in_elem + inode;
+                        // division by design ratio recovers nominal element mass used in the gradient operator
+                        corner_value_storage(corner_id, idim) = inner_product[inode][idim];
+                    }
+                }
+            }); // end parallel for
+            Kokkos::fence();
+
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    for(int idim = 0; idim < num_dim; idim++){
+                        corner_id = corners_in_node(node_id, icorner);
+                        design_gradients(node_id, idim) -= 0.5 * weight* global_dt * corner_value_storage(corner_id, idim);
+                    }
+                }
+            }); // end parallel for
+            Kokkos::fence();
+        } // end view scope
+
     } // end view scope design gradients
 }
 
@@ -860,6 +948,30 @@ void FEA_Module_SGH::compute_shape_optimization_adjoint_full(Teuchos::RCP<const 
             if(use_simpson){
                 //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
                 //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
+                get_force_shape_gradient_sgh(material,
+                                    *mesh,
+                                    node_coords,
+                                    node_vel,
+                                    elem_den,
+                                    elem_sie,
+                                    elem_pres,
+                                    elem_stress,
+                                    elem_sspd,
+                                    elem_vol,
+                                    elem_div,
+                                    elem_mat_id,
+                                    1.0,
+                                    cycle);
+
+                get_power_shape_gradient_sgh(1.0,
+                                *mesh,
+                                node_vel,
+                                node_coords,
+                                elem_sie,
+                                elem_mass,
+                                corner_force,
+                                elem_power_dgradients);
+
                 compute_topology_optimization_gradient_tally(design_coords_distributed, cached_design_gradients_distributed,
                     previous_adjoint_vector_distributed, previous_phi_adjoint_vector_distributed, previous_psi_adjoint_vector_distributed ,1.0/3.0, global_dt);
             }
@@ -1568,10 +1680,34 @@ void FEA_Module_SGH::compute_shape_optimization_adjoint_full(Teuchos::RCP<const 
             comm_phi_adjoint_vector(cycle);
             if(use_simpson){
                     
-                    //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
-                    //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
-                    compute_topology_optimization_gradient_tally(design_coords_distributed, cached_design_gradients_distributed,
-                        adjoint_vector_distributed, phi_adjoint_vector_distributed, psi_adjoint_vector_distributed ,1.0/3.0, global_dt);
+                //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
+                //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
+                get_force_shape_gradient_sgh(material,
+                                *mesh,
+                                node_coords,
+                                node_vel,
+                                elem_den,
+                                elem_sie,
+                                elem_pres,
+                                elem_stress,
+                                elem_sspd,
+                                elem_vol,
+                                elem_div,
+                                elem_mat_id,
+                                1.0,
+                                cycle);
+
+                get_power_shape_gradient_sgh(1.0,
+                                *mesh,
+                                node_vel,
+                                node_coords,
+                                elem_sie,
+                                elem_mass,
+                                corner_force,
+                                elem_power_dgradients);
+
+                compute_topology_optimization_gradient_tally(design_coords_distributed, cached_design_gradients_distributed,
+                    adjoint_vector_distributed, phi_adjoint_vector_distributed, psi_adjoint_vector_distributed ,1.0/3.0, global_dt);
             }
             // state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
             // state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
@@ -1610,6 +1746,30 @@ void FEA_Module_SGH::compute_shape_optimization_adjoint_full(Teuchos::RCP<const 
                 // set state according to phase data at this timestep
                 
                 update_dependent_variables(node_coords, node_vel, elem_sie, cycle);
+
+                get_force_shape_gradient_sgh(material,
+                                    *mesh,
+                                    node_coords,
+                                    node_vel,
+                                    elem_den,
+                                    elem_sie,
+                                    elem_pres,
+                                    elem_stress,
+                                    elem_sspd,
+                                    elem_vol,
+                                    elem_div,
+                                    elem_mat_id,
+                                    1.0,
+                                    cycle);
+
+                get_power_shape_gradient_sgh(1.0,
+                                *mesh,
+                                node_vel,
+                                node_coords,
+                                elem_sie,
+                                elem_mass,
+                                corner_force,
+                                elem_power_shape_gradients);
                 
                 //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
                 //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;

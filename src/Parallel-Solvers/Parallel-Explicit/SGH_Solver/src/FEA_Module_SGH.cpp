@@ -190,6 +190,13 @@ FEA_Module_SGH::FEA_Module_SGH(
         elem_power_dgradients = DCArrayKokkos<real_t>(rnum_elem);
         element_internal_energy_distributed = Teuchos::rcp(new MV(all_element_map, 1));
     }
+    
+    if (simparam->topology_optimization_on) {
+        elem_power_dgradients = DCArrayKokkos<real_t>(rnum_elem);
+    }
+    else if(simparam->shape_optimization_on){
+        elem_power_dgradients = DCArrayKokkos<real_t>(rnum_elem, max_nodes_per_element, num_dim);
+    }
 
     if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
         forward_solve_velocity_data   = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));

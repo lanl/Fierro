@@ -98,6 +98,7 @@ private:
     real_t previous_objective_accumulation, objective_sign;
 
     bool first_init; //prevents ROL from calling init computation twice at start for the AL algorithm
+    bool first_temp = true;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -280,7 +281,10 @@ public:
             if(Explicit_Solver_Pointer_->myrank == 0){
                 std::cout << "CURRENT TIME INTEGRAL OF INTERNAL ENERGY " << objective_accumulation << std::endl;
             }
+            if(first_temp){
             FEM_SGH_->compute_shape_optimization_adjoint_full(zp);
+            first_temp = false;
+            }
         }
     }
 
