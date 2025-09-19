@@ -55,7 +55,7 @@ struct cohesive_zones_t {
                     const ViewCArrayKokkos<double> &fracture_force_points, const ViewCArrayKokkos<double> &mass_points_);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn elcount
+    /// \fn cohesive_zone_elem_count
     /// \brief Returns the maximum number of elements connected to any node in the cohesive zone pairs
     /// This value is used to size data structures that depend on the maximum connectivity per node
     /// \param overlapping_node_gids 2D array (num_pairs x 2) containing node pairs involved in cohesive zones
@@ -63,7 +63,7 @@ struct cohesive_zones_t {
     /// \param mesh Reference to the mesh containing connectivity information
     /// \return Maximum number of elements connected to any node in any cohesive pair
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    size_t elcount(const CArrayKokkos<size_t>& overlapping_node_gids, const RaggedRightArrayKokkos<size_t>& elems_in_node, const Mesh_t& mesh);
+    size_t cohesive_zone_elem_count(const CArrayKokkos<size_t>& overlapping_node_gids, const RaggedRightArrayKokkos<size_t>& elems_in_node, const Mesh_t& mesh);
 
     /// \brief Computes face geometry vectors and centroid for a given element surface
     ///
@@ -96,6 +96,25 @@ struct cohesive_zones_t {
                                 ViewCArrayKokkos<double> &r,
                                 ViewCArrayKokkos<double> &s,
                                 ViewCArrayKokkos<double> &cenface);
+
+
+    CArrayKokkos<int> build_cohesive_zone_info(
+    const Mesh_t& mesh,
+    const State_t& state,
+    const CArrayKokkos<size_t>& overlapping_node_gids,   
+    const size_t max_elem_in_cohesive_zone,              // from cohesive_zone_elem_count()
+    const double tol                                     // centroid coincidence tolerance
+    );
+
+    CArrayKokkos<int> cohesive_zone_info(
+        const CArrayKokkos<size_t>& overlapping_node_gids,
+        const size_t max_elem_in_cohesive_zone
+    );
+
+    CArrayKokkos<int> cohesive_zone_faces(
+       const CArrayKokkos<size_t>& overlapping_node_gids,
+       const size_t max_elem_in_cohesive_zone
+    );
 };
 
 #endif
