@@ -187,7 +187,6 @@ FEA_Module_SGH::FEA_Module_SGH(
         else{
             max_time_steps = BUFFER_GROW;
         }
-        elem_power_dgradients = DCArrayKokkos<real_t>(rnum_elem);
         element_internal_energy_distributed = Teuchos::rcp(new MV(all_element_map, 1));
     }
     

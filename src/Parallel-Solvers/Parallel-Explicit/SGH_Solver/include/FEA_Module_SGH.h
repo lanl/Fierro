@@ -176,6 +176,21 @@ public:
                                  const double rk_alpha,
                                  const size_t cycle);
 
+    void get_force_shape_gradient_sgh(const DCArrayKokkos<material_t>& material,
+                                 const mesh_t& mesh,
+                                 const DViewCArrayKokkos<double>& node_coords,
+                                 const DViewCArrayKokkos<double>& node_vel,
+                                 const DViewCArrayKokkos<double>& elem_den,
+                                 const DViewCArrayKokkos<double>& elem_sie,
+                                 const DViewCArrayKokkos<double>& elem_pres,
+                                 const DViewCArrayKokkos<double>& elem_stress,
+                                 const DViewCArrayKokkos<double>& elem_sspd,
+                                 const DViewCArrayKokkos<double>& elem_vol,
+                                 const DViewCArrayKokkos<double>& elem_div,
+                                 const DViewCArrayKokkos<size_t>& elem_mat_id,
+                                 const double rk_alpha,
+                                 const size_t cycle);
+
     void force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients);
 
     void get_force_sgh2D(const DCArrayKokkos<material_t>& material,
@@ -361,6 +376,15 @@ public:
     void power_design_gradient_term(const_vec_array design_variables, vec_array design_gradients);
 
     void get_power_dgradient_sgh(double rk_alpha,
+                                 const mesh_t& mesh,
+                                 const DViewCArrayKokkos<double>& node_vel,
+                                 const DViewCArrayKokkos<double>& node_coords,
+                                 const DViewCArrayKokkos<double>& elem_sie,
+                                 const DViewCArrayKokkos<double>& elem_mass,
+                                 const DViewCArrayKokkos<double>& corner_force,
+                                 DCArrayKokkos<real_t> elem_power_dgradients);
+
+    void get_power_shape_gradient_sgh(double rk_alpha,
                                  const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& node_coords,

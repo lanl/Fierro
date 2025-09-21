@@ -2083,7 +2083,7 @@ void FEA_Module_SGH::get_force_shape_gradient_sgh(const DCArrayKokkos<material_t
         real_t gradient_result[num_dims];
         // total Cauchy stress
         double tau_array[9];
-        double tau_gradient_array[9];
+        double tau_gradient_array[9*num_nodes_in_elem*num_dims];
 
         // corner area normals
         double area_normal_array[24];
@@ -2093,15 +2093,15 @@ void FEA_Module_SGH::get_force_shape_gradient_sgh(const DCArrayKokkos<material_t
 
         // the sums in the Riemann solver
         double sum_array[4];
-        double sum_gradient_array[4];
+        double sum_gradient_array[4*num_nodes_in_elem*num_dims];
 
         // corner shock impeadance x |corner area normal dot shock_dir|
         double muc_array[8];
-        double muc_gradient_array[8];
+        double muc_gradient_array[8*num_nodes_in_elem*num_dims];
 
         // Riemann velocity
         double vel_star_array[3];
-        double vel_star_gradient_array[3];
+        double vel_star_gradient_array[3*num_nodes_in_elem*num_dims];
 
         // velocity gradient
         double vel_grad_array[9];
@@ -2109,15 +2109,15 @@ void FEA_Module_SGH::get_force_shape_gradient_sgh(const DCArrayKokkos<material_t
         // --- Create views of arrays to aid the force calculation ---
 
         ViewCArrayKokkos<double> tau(tau_array, num_dims, num_dims);
-        ViewCArrayKokkos<double> tau_gradient(tau_gradient_array, num_dims, num_dims);
+        ViewCArrayKokkos<double> tau_gradient(tau_gradient_array, num_dims, num_dims, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos<double> area_normal(area_normal_array, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos<double> shock_dir(shock_dir_array, num_dims);
         ViewCArrayKokkos<double> sum(sum_array, 4);
-        ViewCArrayKokkos<double> sum_gradient(sum_gradient_array, 4);
+        ViewCArrayKokkos<double> sum_gradient(sum_gradient_array, 4, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos<double> muc(muc_array, num_nodes_in_elem);
-        ViewCArrayKokkos<double> muc_gradient(muc_gradient_array, num_nodes_in_elem);
+        ViewCArrayKokkos<double> muc_gradient(muc_gradient_array, num_nodes_in_elem, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos<double> vel_star(vel_star_array, num_dims);
-        ViewCArrayKokkos<double> vel_star_gradient(vel_star_gradient_array, num_dims);
+        ViewCArrayKokkos<double> vel_star_gradient(vel_star_gradient_array, num_dims, num_nodes_in_elem, num_dims);
         ViewCArrayKokkos<double> vel_grad(vel_grad_array, num_dims, num_dims);
 
         // --- abviatations of variables ---
@@ -2387,16 +2387,20 @@ void FEA_Module_SGH::get_force_shape_gradient_sgh(const DCArrayKokkos<material_t
 
             // Get node gid
             size_t node_gid = nodes_in_elem(elem_gid, node_lid);
-
+            
+            for (size_t snode_lid = 0; snode_lid < num_nodes_in_elem; snode_lid++) {
             // loop over dimension
-            for (int dim = 0; dim < num_dims; dim++) {
-                corner_gradient_storage(corner_gid, dim, snode_lid, jdim) =
-                    area_normal(node_lid, 0) * tau_gradient(0, dim, node_lid, snode_lid, jdim)
-                    + area_normal(node_lid, 1) * tau_gradient(1, dim, snode_lid, jdim)
-                    + area_normal(node_lid, 2) * tau_gradient(2, dim, snode_lid, jdim)
-                    + phi * muc_gradient(node_lid, snode_lid, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim))
-                    + phi * muc(node_lid) * vel_star_gradient(dim, snode_lid, jdim);
-            } // end loop over dimension
+                for (int dim = 0; dim < num_dims; dim++) {
+                    for (int jdim = 0; jdim < num_dims; jdim++) {
+                        corner_gradient_storage(corner_gid, dim, snode_lid, jdim) =
+                            area_normal(node_lid, 0) * tau_gradient(0, dim, snode_lid, jdim)
+                            + area_normal(node_lid, 1) * tau_gradient(1, dim, snode_lid, jdim)
+                            + area_normal(node_lid, 2) * tau_gradient(2, dim, snode_lid, jdim)
+                            + phi * muc_gradient(node_lid, snode_lid, jdim) * (vel_star(dim) - node_vel(rk_level, node_gid, dim))
+                            + phi * muc(node_lid) * vel_star_gradient(dim, snode_lid, jdim);
+                    }
+                } // end loop over dimension
+            }
         } // end for loop over nodes in elem
 
         // --- Update Stress ---

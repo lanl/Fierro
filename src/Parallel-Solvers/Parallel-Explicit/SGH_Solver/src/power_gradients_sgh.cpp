@@ -310,6 +310,74 @@ void FEA_Module_SGH::get_power_dgradient_sgh(double rk_alpha,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
+/// \fn get_power_dgradient_sgh
+///
+/// \brief This function calculates the gradient for element power with
+///        respect to design variable
+///
+/// \param The current Runge Kutta alpha value
+/// \param The simulation mesh
+/// \param A view into the nodal velocity data
+/// \param A view into the nodal position data
+/// \param A view into the element specific internal energy data
+/// \param A view into the element mass data
+/// \param A view into the corner force data
+/// \param Array of design gradients
+///
+/////////////////////////////////////////////////////////////////////////////
+void FEA_Module_SGH::get_power_shape_gradient_sgh(double rk_alpha,
+    const mesh_t& mesh,
+    const DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& elem_sie,
+    const DViewCArrayKokkos<double>& elem_mass,
+    const DViewCArrayKokkos<double>& corner_force,
+    DCArrayKokkos<real_t> elem_power_dgradients)
+{
+    const size_t rk_level = simparam->dynamic_options.rk_num_bins - 1;
+    int num_dims = simparam->num_dims;
+
+    // loop over all the elements in the mesh
+    FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
+        double elem_power = 0.0;
+        elem_power_dgradients(elem_gid) = 0;
+
+        // --- tally the contribution from each corner to the element ---
+
+        // Loop over the nodes in the element
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+            size_t corner_lid = node_lid;
+
+            // Get node global id for the local node id
+            size_t node_gid = nodes_in_elem(elem_gid, node_lid);
+
+            // Get the corner global id for the local corner id
+            size_t corner_gid = corners_in_elem(elem_gid, corner_lid);
+
+            double node_radius = 1;
+            if (num_dims == 2) {
+                node_radius = node_coords(rk_level, node_gid, 1);
+            }
+
+            // calculate the Power=F dot V for this corner
+            for (size_t dim = 0; dim < num_dims; dim++) {
+                const double current_node_vel = node_vel(rk_level, node_gid, dim);
+                for (int igradient = 0; igradient < num_nodes_in_elem; igradient++) {
+                    for (size_t jdim = 0; jdim < num_dims; jdim++) {
+                        elem_power_dgradients(elem_gid, igradient, jdim) -=
+                            corner_gradient_storage(corner_gid, dim, igradient, jdim) * current_node_vel * node_radius;
+                    }
+                    
+                }
+            } // end for dim
+        } // end for node_lid
+    }); // end parallel loop over the elements
+
+    return;
+} // end subroutine
+
+/////////////////////////////////////////////////////////////////////////////
+///
 /// \fn get_power_ugradient_sgh
 ///
 /// \brief This function calculates the gradient for element power with

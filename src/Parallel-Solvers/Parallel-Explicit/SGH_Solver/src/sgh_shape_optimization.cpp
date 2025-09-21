@@ -1769,7 +1769,7 @@ void FEA_Module_SGH::compute_shape_optimization_adjoint_full(Teuchos::RCP<const 
                                 elem_sie,
                                 elem_mass,
                                 corner_force,
-                                elem_power_shape_gradients);
+                                elem_power_dgradients);
                 
                 //state_adjoint_time_end = Explicit_Solver_Pointer_->CPU_Time();
                 //state_adjoint_time += state_adjoint_time_end-state_adjoint_time_start;
