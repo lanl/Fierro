@@ -340,7 +340,11 @@ void FEA_Module_SGH::get_power_shape_gradient_sgh(double rk_alpha,
     // loop over all the elements in the mesh
     FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
         double elem_power = 0.0;
-        elem_power_dgradients(elem_gid) = 0;
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+            for (size_t jdim = 0; jdim < num_dims; jdim++) {
+                elem_power_dgradients(elem_gid, node_lid, jdim) = 0;
+            }
+        }
 
         // --- tally the contribution from each corner to the element ---
 
