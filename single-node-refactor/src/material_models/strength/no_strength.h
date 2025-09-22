@@ -43,11 +43,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace NoStrengthModel {
 
     static void init_strength_state_vars(
-        const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
+        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_elem,
         const size_t num_material_points,
         const size_t mat_id)
     {
@@ -56,13 +56,13 @@ namespace NoStrengthModel {
         FOR_ALL(mat_points_lid, 0, num_material_points, {
             
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_points_lid); // might be used with some models
+            size_t elem_gid = elem_in_elem(mat_id, mat_points_lid); // might be used with some models
 
             // first index is matpt, second index is the number of vars
             size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dims(1); 
             
             for(size_t var=0; var<num_strength_state_vars; var++){
-                MaterialPoints_strength_state_vars(mat_points_lid,var) = 0.0;
+                MaterialPoints_strength_state_vars(mat_id, mat_points_lid,var) = 0.0;
             } // end for
 
         });  // end parallel for
@@ -76,16 +76,16 @@ namespace NoStrengthModel {
         const DCArrayKokkos <double> &node_coords,
         const DCArrayKokkos <double> &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
-        const DCArrayKokkos<double>  &MaterialPoints_pres,
-        const DCArrayKokkos<double>  &MaterialPoints_stress,
-        const DCArrayKokkos<double>  &MaterialPoints_stress_n0,
-        const DCArrayKokkos<double>  &MaterialPoints_sspd,
-        const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
+        const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress_n0,
+        const DRaggedRightArrayKokkos<double>  &MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
-        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
         const double vol,
@@ -112,11 +112,11 @@ namespace NoStrengthModel {
 
     
     static void destroy(
-        const DCArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DCArrayKokkos <double> &MaterialPoints_strength_state_vars,
+        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_elem,
         const size_t num_material_points,
         const size_t mat_ids)
     {

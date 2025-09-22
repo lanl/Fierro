@@ -188,13 +188,13 @@ std::cout << "here getting time step\n";
                          State.node.coords,
                          State.node.vel,
                          State.GaussPoints.vol,
-                         State.MaterialPoints(mat_id).sspd,
-                         State.MaterialPoints(mat_id).conductivity,
-                         State.MaterialPoints(mat_id).den,
-                         State.MaterialPoints(mat_id).specific_heat,
-                         State.MaterialPoints(mat_id).eroded,
-                         State.MaterialToMeshMaps.elem,
-                         State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                         State.MaterialPoints.sspd,
+                         State.MaterialPoints.conductivity,
+                         State.MaterialPoints.den,
+                         State.MaterialPoints.specific_heat,
+                         State.MaterialPoints.eroded,
+                         State.MaterialToMeshMaps.elem_in_mat_elem,
+                         State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                          time_value,
                          graphics_time,
                          time_final,
@@ -235,11 +235,11 @@ std::cout << "checking: rk_init \n";
                     State.node.temp,
                     State.node.temp_n0,
                     State.node.q_transfer,
-                    State.MaterialPoints(mat_id).stress,
+                    State.MaterialPoints.stress,
                     mesh.num_dims,
                     mesh.num_elems,
                     mesh.num_nodes,
-                    State.MaterialPoints(mat_id).num_material_points);
+                    State.MaterialPoints.num_material_points.host(mat_id));
         } // end for mat_id
 
         // ---- Integrate the solution forward to t(n+1) via Runge Kutta (RK) method ---- //
@@ -262,14 +262,14 @@ std::cout << "checking: get_heat_flux \n";
                     State.GaussPoints.vol,
                     State.node.coords,
                     State.node.temp,  // fixed to use current time level
-                    State.MaterialPoints(mat_id).q_flux,
-                    State.MaterialPoints(mat_id).conductivity,
-                    State.MaterialPoints(mat_id).temp_grad,
+                    State.MaterialPoints.q_flux,
+                    State.MaterialPoints.conductivity,
+                    State.MaterialPoints.temp_grad,
                     State.corner.q_transfer,
                     State.corners_in_mat_elem,
-                    State.MaterialPoints(mat_id).eroded,
-                    State.MaterialToMeshMaps.elem,
-                    State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                    State.MaterialPoints.eroded,
+                    State.MaterialToMeshMaps.elem_in_mat_elem,
+                    State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                     mat_id,
                     fuzz,
                     small,
@@ -286,8 +286,8 @@ std::cout << "checking: moving_flux \n";
                     State.corner.q_transfer,
                     sphere_position,
                     State.corners_in_mat_elem,
-                    State.MaterialToMeshMaps.elem,
-                    State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                    State.MaterialToMeshMaps.elem_in_mat_elem,
+                    State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                     mat_id,
                     fuzz,
                     small,
@@ -321,7 +321,7 @@ std::cout << "update temperature \n";
                 State.node.temp_n0,
                 State.node.mass,
                 State.node.q_transfer,
-                State.MaterialPoints(0).specific_heat, // Note: Need to make this a node field, and calculate in the material loop
+                State.MaterialPoints.specific_heat, // Note: Need to make this a node field, and calculate in the material loop
                 rk_alpha,
                 dt);
 

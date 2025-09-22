@@ -37,6 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "solver.h"
 #include "state.h"
+#include "contact.h"
 
 // Forward declare structs
 struct SimulationParameters_t;
@@ -140,6 +141,9 @@ class SGH3D : public Solver
 {
 public:
 
+    bool doing_contact = false;  // Condition used in SGH::execute
+    bool doing_preload = false;  // Condition used in SGH::execute
+
     SGH3D()  : Solver()
     {
     }
@@ -231,6 +235,8 @@ public:
         DCArrayKokkos<double>&     node_vel,
         const double time_value) const;
 
+    void boundary_contact_force(State_t& State, const Mesh_t &mesh, const double &del_t, contact_state_t &Contact_State);
+
     void boundary_stress(const Mesh_t& mesh,
                     const BoundaryCondition_t& BoundaryConditions,
                     DCArrayKokkos<double>& node_bdy_force,
@@ -244,12 +250,12 @@ public:
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_vel_n0,
-        const DCArrayKokkos<double>& MaterialPoints_sie,
-        const DCArrayKokkos<double>& MaterialPoints_sie_n0,
-        const DCArrayKokkos<double>& MaterialPoints_mass,
-        const DCArrayKokkos<double>& MaterialCorners_force,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+        const DRaggedRightArrayKokkos<double>& MaterialCorners_force,
         const corners_in_mat_t corners_in_mat_elem,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id) const;
 
@@ -259,20 +265,20 @@ public:
         const Mesh_t&     mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
-        const DCArrayKokkos<bool>&   GaussPoints_eroded,
+        const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
         const DCArrayKokkos<double>& corner_force,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& MaterialPoints_den,
-        const DCArrayKokkos<double>& MaterialPoints_sie,
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const DCArrayKokkos<double>& MaterialCorners_force,
-        const DCArrayKokkos<double>& MaterialPoints_volfrac,
-        const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<double>& MaterialCorners_force,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_geo_volfrac,
         const corners_in_mat_t,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
         const double fuzz,
@@ -300,7 +306,9 @@ public:
         DCArrayKokkos<double>& node_vel_n0,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& node_force,
-        const DCArrayKokkos<double>& corner_force) const;
+        const DCArrayKokkos<double>& corner_force,
+        const CArrayKokkos <double>& contact_force,
+        bool doing_contact) const;
 
     void get_velgrad(
         DCArrayKokkos<double>& vel_grad,
@@ -329,21 +337,21 @@ public:
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
-        const DCArrayKokkos<double>& MaterialPoints_den,
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const DCArrayKokkos<double>& MaterialPoints_stress_n0,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const DCArrayKokkos<double>& MaterialPoints_sie,
-        const DCArrayKokkos<double>& MaterialPoints_volfrac,
-        const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_geo_volfrac,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& MaterialPoints_mass,
-        const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-        const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
-        const DCArrayKokkos<bool>&   MaterialPoints_eroded,
-        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
+        const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const double time_value,
         const double dt,
         const double rk_alpha,
@@ -358,16 +366,16 @@ public:
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
-        const DCArrayKokkos<double>& MaterialPoints_den,
-        const DCArrayKokkos<double>& MaterialPoints_sie,
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
-        const DCArrayKokkos<double>& MaterialPoints_stress_n0,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
-        const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-        const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
-        const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
         const double fuzz,
@@ -384,23 +392,24 @@ public:
         DCArrayKokkos<double>& node_coords_n0,
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& node_vel_n0,
-        DCArrayKokkos<double>& MaterialPoints_sie,
-        DCArrayKokkos<double>& MaterialPoints_sie_n0,
-        DCArrayKokkos<double>& MaterialPoints_stress,
-        DCArrayKokkos<double>& MaterialPoints_stress_n0,
+        DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+        DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
+        DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+        DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
         const size_t num_dims,
         const size_t num_elems,
         const size_t num_nodes,
-        const size_t num_mat_points) const;
+        const size_t num_mat_points,
+        const size_t mat_id) const;
 
     void get_timestep(
         Mesh_t& mesh,
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
-        DCArrayKokkos<double>& MaterialPoints_sspd,
-        DCArrayKokkos<bool>&   MaterialPoints_eroded,
-        DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+        DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
+        DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         size_t num_mat_elems,
         double time_value,
         const double graphics_time,
@@ -417,23 +426,23 @@ public:
     // NOTE: Pull up into high level
     KOKKOS_FUNCTION
     void user_eos_model(
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
         const size_t elem_gid,
         const size_t mat_id,
-        const DCArrayKokkos<double>& MaterialPoints_state_vars,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_state_vars,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie);
 
     KOKKOS_FUNCTION
     void user_strength_model(
-        const DCArrayKokkos<double>& MaterialPoints_pres,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
         const size_t elem_gid,
         const size_t mat_id,
-        const DCArrayKokkos<double>& MaterialPoints_state_vars,
-        const DCArrayKokkos<double>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_state_vars,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         const double den,
         const double sie,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
@@ -445,17 +454,22 @@ public:
         const double rk_alpha);
 };
 
-double sum_domain_internal_energy(const DCArrayKokkos<double>& MaterialPoints_mass,
-    const DCArrayKokkos<double>& MaterialPoints_sie,
-    const size_t num_mat_points);
+double sum_domain_internal_energy(
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+    const size_t num_mat_points,
+    const size_t mat_id);
 
-double sum_domain_kinetic_energy(const Mesh_t& mesh,
+double sum_domain_kinetic_energy(
+    const Mesh_t& mesh,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_mass);
 
-double sum_domain_material_mass(const DCArrayKokkos<double>& MaterialPoints_mass,
-    const size_t num_mat_points);
+double sum_domain_material_mass(
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+    const size_t num_mat_points,
+    const size_t mat_id);
 
 double sum_domain_node_mass(const Mesh_t& mesh,
     const DCArrayKokkos<double>& node_coords,

@@ -57,8 +57,8 @@ void SGTM3D::rk_init(
     DCArrayKokkos<double>& node_vel_n0,
     DCArrayKokkos<double>& node_temp,
     DCArrayKokkos<double>& node_temp_n0,
-    DCArrayKokkos<double>& MaterialPoints_q_flux,
-    DCArrayKokkos<double>& MaterialPoints_stress,
+    DCArrayKokkos<double>& node_q_flux,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
     const size_t num_dims,
     const size_t num_elems,
     const size_t num_nodes,
@@ -103,12 +103,12 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
                        DCArrayKokkos<double>& node_coords,
                        DCArrayKokkos<double>& node_vel,
                        DCArrayKokkos<double>& GaussPoints_vol,
-                       DCArrayKokkos<double>& MaterialPoints_sspd,
-                       DCArrayKokkos<double>& MaterialPoints_conductivity,
-                       DCArrayKokkos<double>& MaterialPoints_density,
-                       DCArrayKokkos<double>& MaterialPoints_specific_heat,
-                       DCArrayKokkos<bool>&   MaterialPoints_eroded,
-                       DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                       DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                       DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
+                       DRaggedRightArrayKokkos<double>& MaterialPoints_density,
+                       DRaggedRightArrayKokkos<double>& MaterialPoints_specific_heat,
+                       DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
+                       DRaggedRightArrayKokkos<size_t>& elem_mat_elem,
                        size_t num_mat_elems,
                        double time_value,
                        const double graphics_time,
@@ -126,8 +126,8 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
 
     double dt_lcl;
     double min_dt_calc;
-    FOR_REDUCE_MIN(mat_elem_lid, 0, num_mat_elems, dt_lcl, {
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+    FOR_REDUCE_MIN(mat_elem_sid, 0, num_mat_elems, dt_lcl, {
+        size_t elem_gid = elem_mat_elem(mat_id, mat_elem_sid);
 
         double coords0[24];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 8, 3);
@@ -178,13 +178,13 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        double dt_cfl = 1.0; //dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_lid) + fuzz);
+        double dt_cfl = 1.0; //dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_sid) + fuzz);
 
         // dt_cfl = 1.0; // WARNING: Fix once evolving position
 
         // Thermal diffusivity
-        double alpha = MaterialPoints_conductivity(mat_elem_lid) / 
-            (MaterialPoints_density(mat_elem_lid)*MaterialPoints_specific_heat(mat_elem_lid));
+        double alpha = MaterialPoints_conductivity(mat_id, mat_elem_sid) / 
+            (MaterialPoints_density(mat_id, mat_elem_sid)*MaterialPoints_specific_heat(mat_id, mat_elem_sid));
 
         // Local dt calc based on thermal conductivity (VN Stability)
         double h = (dist_min); // maybe half?
@@ -192,7 +192,7 @@ void SGTM3D::get_timestep(Mesh_t& mesh,
 
         dt_vn *= 0.9; // stability factor
  
-        // if (MaterialPoints_eroded(mat_elem_lid) == true) {
+        // if (MaterialPoints_eroded(mat_elem_sid) == true) {
         //     dt_cfl = 1.0e32;  // a huge time step as this element doesn't exist
         // }
 

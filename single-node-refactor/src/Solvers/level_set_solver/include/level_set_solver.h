@@ -52,7 +52,7 @@ using namespace mtr; // matar namespace
 
 namespace LevelSet_State
 {
-    // Node state to be initialized for the SGH solver
+    // Node state to be initialized for the levelset solver
     static const std::vector<node_state> required_node_state = 
     {
         node_state::coords, 
@@ -60,14 +60,14 @@ namespace LevelSet_State
         node_state::velocity
     };
 
-    // Gauss point state to be initialized for the SGH solver
+    // Gauss point state to be initialized for the levelset solver
     static const std::vector<gauss_pt_state> required_gauss_pt_state = 
     { 
         gauss_pt_state::level_set,
         gauss_pt_state::volume
     };
 
-    // Material point state to be initialized for the SGH solver
+    // Material point state to be initialized for the levelset solver
     static const std::vector<material_pt_state> required_material_pt_state =
     {
         material_pt_state::volume_fraction
@@ -75,7 +75,7 @@ namespace LevelSet_State
     // nothing is needed on material pt state index space
 
 
-    // Corner state to be initialized for the SGH solver
+    // Corner state to be initialized for the levelset solver
     static const std::vector<corner_state> required_corner_state = 
     { 
         corner_state::normal,
@@ -127,7 +127,7 @@ public:
     ///
     /// \fn setup
     ///
-    /// \brief Calls setup_sgh_rz, which initializes state and material data
+    /// \brief Calls setup_levelset_rz, which initializes state and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
     void setup(SimulationParameters_t& SimulationParamaters, 
@@ -195,7 +195,7 @@ public:
             const DCArrayKokkos<double>& GaussPoints_level_set_n,
             const DCArrayKokkos<double>& GaussPoints_vol,
             const DCArrayKokkos<double>& Corner_normal,
-            const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+            const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
             const size_t num_mat_elems,
             const size_t mat_id,
             const double fuzz,
@@ -211,7 +211,7 @@ public:
     void rk_init(
         DCArrayKokkos<double>& GaussPoints_level_set,
         DCArrayKokkos<double>& GaussPoints_level_set_n0,
-        DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_dims,
         const size_t num_mat_elems,
         const size_t mat_id) const;
@@ -221,7 +221,7 @@ public:
         const Material_t& Materials,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
         const double time_value,
@@ -239,7 +239,7 @@ public:
         const Material_t& Materials,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
         const double time_value,

@@ -63,29 +63,28 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
 
     // calculate pressure, sound speed, and stress for each material
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-        size_t num_mat_points = State.MaterialPoints(mat_id).num_material_points;
 
         // call the initialization function for state vars
         init_state_vars(Materials,
                         mesh,
-                        State.MaterialPoints(mat_id).eos_state_vars,
-                        State.MaterialPoints(mat_id).strength_state_vars,
-                        State.MaterialToMeshMaps.elem,
-                        num_mat_points,
+                        State.MaterialPoints.eos_state_vars,
+                        State.MaterialPoints.strength_state_vars,
+                        State.MaterialToMeshMaps.elem_in_mat_elem,
+                        State.MaterialPoints.num_material_points.host(mat_id),
                         mat_id);
 
         // call the init function for pressure, sound speed, and stress
         init_press_sspd_stress(Materials,
                                mesh,
-                               State.MaterialPoints(mat_id).den,
-                               State.MaterialPoints(mat_id).pres,
-                               State.MaterialPoints(mat_id).stress,
-                               State.MaterialPoints(mat_id).sspd,
-                               State.MaterialPoints(mat_id).sie,
-                               State.MaterialPoints(mat_id).eos_state_vars,
-                               State.MaterialPoints(mat_id).strength_state_vars,
-                               State.MaterialPoints(mat_id).shear_modulii,
-                               num_mat_points,
+                               State.MaterialPoints.den,
+                               State.MaterialPoints.pres,
+                               State.MaterialPoints.stress,
+                               State.MaterialPoints.sspd,
+                               State.MaterialPoints.sie,
+                               State.MaterialPoints.eos_state_vars,
+                               State.MaterialPoints.strength_state_vars,
+                               State.MaterialPoints.shear_modulii,
+                               State.MaterialPoints.num_material_points.host(mat_id),
                                mat_id);
     } // for loop over mat_id
 
@@ -100,9 +99,9 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                          State.node.coords,
                          State.node.mass,
                          State.corner.mass,
-                         State.MaterialPoints(mat_id).mass,
-                         State.MaterialToMeshMaps.elem,
-                         State.MaterialToMeshMaps.num_material_elems.host(mat_id),
+                         State.MaterialPoints.mass,
+                         State.MaterialToMeshMaps.elem_in_mat_elem,
+                         State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                          mat_id);
     } // end for mat_id
 
@@ -110,6 +109,22 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                    State.node.coords,
                    State.node.mass,
                    State.corner.mass);
+
+    // Setting up contact
+    // todo: should this be handled inside of src/boundary_conditions/stress/global_contact ?
+    for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
+        if (Boundary.allow_preload) {
+            std::cout << "Setting up preload contact" << std::endl;
+            doing_preload = true;
+            doing_contact = true;
+            break;
+        }
+        if (Boundary.allow_contact) {
+            std::cout << "Setting up global contact" << std::endl;
+            doing_contact = true;
+            break;
+        }
+    }
 
     
 } // end SGH setup

@@ -62,8 +62,8 @@ namespace UserDefinedEquilibrationModel
 {
 
     static void equilibrate (
-        const DCArrayKokkos<bool>& MaterialPoints_volfrac,
-        const DCArrayKokkos<double>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<bool>& MaterialPoints_volfrac,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
         const DCArrayKokkos<double>& MaterialPoint_pres,
         const DCArrayKokkos<double>& MaterialPoint_den,
         const DCArrayKokkos<double>& MaterialPoint_sie,
@@ -77,7 +77,7 @@ namespace UserDefinedEquilibrationModel
         const double fuzz,
         const RaggedRightArrayKokkos<double> &equilibration_global_vars,
         const size_t num_vars,
-        const size_t mat_point_lid,
+        const size_t mat_point_sid,
         const size_t mat_id)
     {
         // -----------------------------------------------------------------------------

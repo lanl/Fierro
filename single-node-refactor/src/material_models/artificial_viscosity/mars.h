@@ -47,10 +47,10 @@ namespace MARSDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
-                                  const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                                  const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                                   const DCArrayKokkos<double>& node_vel,
-                                  const DCArrayKokkos<double>& MaterialPoints_den,
-                                  const DCArrayKokkos<double>& MaterialPoints_sspd,
+                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,
                                   const ViewCArrayKokkos<double>& area_normal,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_elem,
@@ -59,7 +59,7 @@ namespace MARSDissipationModel {
                                   const double fuzz,
                                   const double small,
                                   const double elem_gid,
-                                  const size_t mat_point_lid,
+                                  const size_t mat_point_sid,
                                   const size_t mat_id)
     {
 
@@ -173,13 +173,13 @@ namespace MARSDissipationModel {
 
             // cell divergence indicates compression or expansions
             if (div < 0) { // element in compression
-                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                                (q1 * MaterialPoints_sspd(mat_point_lid) + 
+                muc(node_lid) = MaterialPoints_den(mat_id, mat_point_sid) *
+                                (q1 * MaterialPoints_sspd(mat_id, mat_point_sid) + 
                                  q2 * mag_vel);
             }
             else{  // element in expansion
-                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                                (q1ex * MaterialPoints_sspd(mat_point_lid) + 
+                muc(node_lid) = MaterialPoints_den(mat_id, mat_point_sid) *
+                                (q1ex * MaterialPoints_sspd(mat_id, mat_point_sid) + 
                                  q2ex * mag_vel);
             } // end if on divergence sign
 
@@ -257,7 +257,7 @@ namespace MARSDissipationModel {
         double omega    = 20.0; // 20.0;    // weighting factor on Mach number
         double third    = 1.0 / 3.0;
         double c_length = pow(vol, third); // characteristic length
-        double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_point_lid) + fuzz) );
+        double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 
         // use Mach based detector with standard shock detector
 
@@ -363,10 +363,10 @@ namespace DirMARSDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
-                                  const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                                  const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                                   const DCArrayKokkos<double>& node_vel,
-                                  const DCArrayKokkos<double>& MaterialPoints_den,
-                                  const DCArrayKokkos<double>& MaterialPoints_sspd,
+                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,
                                   const ViewCArrayKokkos<double>& area_normal,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_elem,
@@ -375,7 +375,7 @@ namespace DirMARSDissipationModel {
                                   const double fuzz,
                                   const double small,
                                   const double elem_gid,
-                                  const size_t mat_point_lid,
+                                  const size_t mat_point_sid,
                                   const size_t mat_id)
     {
 
@@ -511,13 +511,13 @@ namespace DirMARSDissipationModel {
 
             // cell divergence indicates compression or expansions
             if (div < 0) { // element in compression
-                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                                (q1 * MaterialPoints_sspd(mat_point_lid) + 
+                muc(node_lid) = MaterialPoints_den(mat_id, mat_point_sid) *
+                                (q1 * MaterialPoints_sspd(mat_id, mat_point_sid) + 
                                  q2 * mag_vel);
             }
             else{  // element in expansion
-                muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                                (q1ex * MaterialPoints_sspd(mat_point_lid) + 
+                muc(node_lid) = MaterialPoints_den(mat_id, mat_point_sid) *
+                                (q1ex * MaterialPoints_sspd(mat_id, mat_point_sid) + 
                                  q2ex * mag_vel);
             } // end if on divergence sign
 
@@ -610,7 +610,7 @@ namespace DirMARSDissipationModel {
         double omega    = 20.0; // 20.0;    // weighting factor on Mach number
         double third    = 1.0 / 3.0;
         double c_length = pow(vol, third); // characteristic length
-        double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_point_lid) + fuzz) );
+        double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 
         // use Mach based detector with standard shock detector
 
@@ -658,10 +658,10 @@ namespace MARSRZDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
-                                  const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                                  const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                                   const DCArrayKokkos<double>& node_vel,
-                                  const DCArrayKokkos<double>& MaterialPoints_den,
-                                  const DCArrayKokkos<double>& MaterialPoints_sspd,
+                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,
                                   const ViewCArrayKokkos<double>& area_normal,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_elem,
@@ -670,7 +670,7 @@ namespace MARSRZDissipationModel {
                                   const double fuzz,
                                   const double small,
                                   const double elem_gid,
-                                  const size_t mat_point_lid,
+                                  const size_t mat_point_sid,
                                   const size_t mat_id)
 {
 
@@ -778,13 +778,13 @@ namespace MARSRZDissipationModel {
 
         // cell divergence indicates compression or expansions
         if (div < 0) { // element in compression
-            muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                            (q1 * MaterialPoints_sspd(mat_point_lid) + 
+            muc(node_lid) = MaterialPoints_den(mat_id, mat_point_sid) *
+                            (q1 * MaterialPoints_sspd(mat_id, mat_point_sid) + 
                                 q2 * mag_vel);
         }
         else{  // element in expansion
-            muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                            (q1ex * MaterialPoints_sspd(mat_point_lid) + 
+            muc(node_lid) = MaterialPoints_den(mat_id, mat_point_sid) *
+                            (q1ex * MaterialPoints_sspd(mat_id, mat_point_sid) + 
                                 q2ex * mag_vel);
         } // end if on divergence sign
 
@@ -859,7 +859,7 @@ namespace MARSRZDissipationModel {
     //  Mach number shock detector
     double omega    = 20.0; // 20.0;    // weighting factor on Mach number
     double c_length = sqrt(elem_area); // characteristic length
-    double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_point_lid) + fuzz) );
+    double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 
     // use Mach based detector with standard shock detector
 
@@ -931,10 +931,10 @@ namespace DirMARSRZDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
-                                  const DCArrayKokkos<bool>&   MaterialPoints_eroded,
+                                  const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                                   const DCArrayKokkos<double>& node_vel,
-                                  const DCArrayKokkos<double>& MaterialPoints_den,
-                                  const DCArrayKokkos<double>& MaterialPoints_sspd,
+                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,
                                   const ViewCArrayKokkos<double>& area_normal,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_elem,
@@ -943,7 +943,7 @@ namespace DirMARSRZDissipationModel {
                                   const double fuzz,
                                   const double small,
                                   const double elem_gid,
-                                  const size_t mat_point_lid,
+                                  const size_t mat_point_sid,
                                   const size_t mat_id)
 {
 
@@ -1073,13 +1073,13 @@ namespace DirMARSRZDissipationModel {
 
         // cell divergence indicates compression or expansions
         if (div < 0) { // element in compression
-            muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                            (q1 * MaterialPoints_sspd(mat_point_lid) + 
+            muc(node_lid) = MaterialPoints_den(mat_id, mat_point_sid) *
+                            (q1 * MaterialPoints_sspd(mat_id, mat_point_sid) + 
                                 q2 * mag_vel);
         }
         else{  // element in expansion
-            muc(node_lid) = MaterialPoints_den(mat_point_lid) *
-                            (q1ex * MaterialPoints_sspd(mat_point_lid) + 
+            muc(node_lid) = MaterialPoints_den(mat_id, mat_point_sid) *
+                            (q1ex * MaterialPoints_sspd(mat_id, mat_point_sid) + 
                                 q2ex * mag_vel);
         } // end if on divergence sign
 
@@ -1160,7 +1160,7 @@ namespace DirMARSRZDissipationModel {
     //  Mach number shock detector
     double omega    = 20.0; // 20.0;    // weighting factor on Mach number
     double c_length = sqrt(elem_area); // characteristic length
-    double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_point_lid) + fuzz) );
+    double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 
     // use Mach based detector with standard shock detector
 

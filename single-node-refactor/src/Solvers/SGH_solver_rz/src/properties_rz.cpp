@@ -70,21 +70,21 @@ void SGHRZ::update_state_rz(
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& GuassPoints_vel_grad,
-    const DCArrayKokkos<double>& MaterialPoints_den,
-    const DCArrayKokkos<double>& MaterialPoints_pres,
-    const DCArrayKokkos<double>& MaterialPoints_stress,
-    const DCArrayKokkos<double>& MaterialPoints_stress_n0,
-    const DCArrayKokkos<double>& MaterialPoints_sspd,
-    const DCArrayKokkos<double>& MaterialPoints_sie,
-    const DCArrayKokkos<double>& MaterialPoints_volfrac,
-    const DCArrayKokkos<double>& MaterialPoints_geo_volfrac,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_geo_volfrac,
     const DCArrayKokkos<double>& GaussPoints_vol,
-    const DCArrayKokkos<double>& MaterialPoints_mass,
-    const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-    const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
-    const DCArrayKokkos<bool>&   MaterialPoints_eroded,
-    const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-    const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
+    const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+    const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const double time_value,
     const double dt,
     const double rk_alpha,
@@ -99,23 +99,23 @@ void SGHRZ::update_state_rz(
 
     // --- Density ---
     // loop over all the elements the material lives in
-    FOR_ALL(mat_elem_lid, 0, num_material_elems, {
+    FOR_ALL(mat_elem_sid, 0, num_material_elems, {
 
         // get elem gid
-        size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
 
         // get the material points for this material 
         // Note, with the SGH method, they are equal
-        size_t mat_point_lid = mat_elem_lid;
+        size_t mat_point_sid = mat_elem_sid;
 
         // for this method, gauss point is equal to elem_gid
         size_t gauss_gid = elem_gid;
 
 
         // --- Density ---
-        MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) /
-           (GaussPoints_vol(gauss_gid)*MaterialPoints_volfrac(mat_point_lid)*MaterialPoints_geo_volfrac(mat_point_lid) + 1.0e-20);
+        MaterialPoints_den(mat_id, mat_point_sid) = MaterialPoints_mass(mat_id, mat_point_sid) /
+           (GaussPoints_vol(gauss_gid)*MaterialPoints_volfrac(mat_id, mat_point_sid)*MaterialPoints_geo_volfrac(mat_id, mat_point_sid) + 1.0e-20);
 
     }); // end parallel for over mat elem lid
     Kokkos::fence();
@@ -125,38 +125,38 @@ void SGHRZ::update_state_rz(
     if (Materials.MaterialEnums.host(mat_id).EOSType == model::decoupledEOSType) {
 
         // loop over all the elements the material lives in
-        FOR_ALL(mat_elem_lid, 0, num_material_elems, {
+        FOR_ALL(mat_elem_sid, 0, num_material_elems, {
 
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
 
             // get the material points for this material 
             // Note, with the SGH method, they are equal
-            size_t mat_point_lid = mat_elem_lid;
+            size_t mat_point_sid = mat_elem_sid;
 
             // --- Pressure ---
             Materials.MaterialFunctions(mat_id).calc_pressure(
                                         MaterialPoints_pres,
                                         MaterialPoints_stress,
-                                        mat_point_lid,
+                                        mat_point_sid,
                                         mat_id,
                                         MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
-                                        MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(mat_point_lid), 
+                                        MaterialPoints_den(mat_id, mat_point_sid),
+                                        MaterialPoints_sie(mat_id, mat_point_sid), 
                                         Materials.eos_global_vars); 
 
             // --- Sound Speed ---                               
             Materials.MaterialFunctions(mat_id).calc_sound_speed(
                                         MaterialPoints_pres,
                                         MaterialPoints_stress,
-                                        mat_point_lid,
+                                        mat_point_sid,
                                         mat_id,
                                         MaterialPoints_eos_state_vars,
                                         MaterialPoints_sspd,
-                                        MaterialPoints_den(mat_point_lid),
-                                        MaterialPoints_sie(mat_point_lid), 
+                                        MaterialPoints_den(mat_id, mat_point_sid),
+                                        MaterialPoints_sie(mat_id, mat_point_sid), 
                                         MaterialPoints_shear_modulii,
                                         Materials.eos_global_vars);
 
@@ -172,15 +172,15 @@ void SGHRZ::update_state_rz(
     if (Materials.MaterialEnums.host(mat_id).StrengthType == model::stateBased) {
 
         // loop over all the elements the material lives in
-        FOR_ALL(mat_elem_lid, 0, num_material_elems, {
+        FOR_ALL(mat_elem_sid, 0, num_material_elems, {
 
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
 
             // get the material points for this material 
             // Note, with the SGH method, they are equal
-            size_t mat_point_lid = mat_elem_lid;
+            size_t mat_point_sid = mat_elem_sid;
 
             // for this method, gauss point is equal to elem_gid
             size_t gauss_gid = elem_gid;
@@ -191,7 +191,7 @@ void SGHRZ::update_state_rz(
 
 
             // --- Density ---
-            MaterialPoints_den(mat_point_lid) = MaterialPoints_mass(mat_point_lid) / GaussPoints_vol(gauss_gid);
+            MaterialPoints_den(mat_id, mat_point_sid) = MaterialPoints_mass(mat_id, mat_point_sid) / (GaussPoints_vol(gauss_gid) + 1.0e-20);
 
 
             // --- call strength model ---
@@ -206,10 +206,10 @@ void SGHRZ::update_state_rz(
                                     MaterialPoints_sspd,
                                     MaterialPoints_eos_state_vars,
                                     MaterialPoints_strength_state_vars,
-                                    MaterialPoints_den(mat_point_lid),
-                                    MaterialPoints_sie(mat_point_lid),
+                                    MaterialPoints_den(mat_id, mat_point_sid),
+                                    MaterialPoints_sie(mat_id, mat_point_sid),
                                     MaterialPoints_shear_modulii,
-                                    MaterialToMeshMaps_elem,
+                                    elem_in_mat_elem,
                                     Materials.eos_global_vars,
                                     Materials.strength_global_vars,
                                     GaussPoints_vol(elem_gid),
@@ -217,7 +217,7 @@ void SGHRZ::update_state_rz(
                                     rk_alpha,
                                     time_value,
                                     cycle,
-                                    mat_point_lid,
+                                    mat_point_sid,
                                     mat_id,
                                     gauss_gid,
                                     elem_gid);
@@ -233,35 +233,36 @@ void SGHRZ::update_state_rz(
     if (Materials.MaterialEnums.host(mat_id).ErosionModels != model::noErosion) {
 
         // loop over all the elements the material lives in
-        FOR_ALL(mat_elem_lid, 0, num_material_elems, {
+        FOR_ALL(mat_elem_sid, 0, num_material_elems, {
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid);
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
             // get the material points for this material
             // Note, with the SGH method, they are equal
-            size_t mat_point_lid = mat_elem_lid;
+            size_t mat_point_sid = mat_elem_sid;
 
             // --- Element erosion model ---
             Materials.MaterialFunctions(mat_id).erode(
                                    MaterialPoints_eroded,
                                    MaterialPoints_stress,
-                                   MaterialPoints_pres(mat_point_lid),
-                                   MaterialPoints_den(mat_point_lid),
-                                   MaterialPoints_sie(mat_point_lid),
-                                   MaterialPoints_sspd(mat_point_lid),
+                                   MaterialPoints_pres(mat_id, mat_point_sid),
+                                   MaterialPoints_den(mat_id, mat_point_sid),
+                                   MaterialPoints_sie(mat_id, mat_point_sid),
+                                   MaterialPoints_sspd(mat_id, mat_point_sid),
                                    Materials.MaterialFunctions(mat_id).erode_tension_val,
                                    Materials.MaterialFunctions(mat_id).erode_density_val,
-                                   mat_point_lid);
+                                   mat_point_sid,
+                                   mat_id);
 
             // apply a void eos if mat_point is eroded
-            if (MaterialPoints_eroded(mat_point_lid)) {
-                MaterialPoints_pres(mat_point_lid) = 0.0;
-                MaterialPoints_sspd(mat_point_lid) = 1.0e-32;
-                MaterialPoints_den(mat_point_lid) = 1.0e-32;
+            if (MaterialPoints_eroded(mat_id, mat_point_sid)) {
+                MaterialPoints_pres(mat_id, mat_point_sid) = 0.0;
+                MaterialPoints_sspd(mat_id, mat_point_sid) = 1.0e-32;
+                MaterialPoints_den(mat_id, mat_point_sid) = 1.0e-32;
 
                 for (size_t i = 0; i < 3; i++) {
                     for (size_t j = 0; j < 3; j++) {
-                        MaterialPoints_stress(mat_point_lid, i, j) = 0.0;
+                        MaterialPoints_stress(mat_id, mat_point_sid, i, j) = 0.0;
                     }
                 }  // end for i,j
             } // end if on eroded
@@ -310,16 +311,16 @@ void SGHRZ::update_stress(const Material_t& Materials,
                           const DCArrayKokkos<double>& node_coords,
                           const DCArrayKokkos<double>& node_vel,
                           const DCArrayKokkos<double>& GuassPoints_vel_grad,
-                          const DCArrayKokkos<double>& MaterialPoints_den,
-                          const DCArrayKokkos<double>& MaterialPoints_sie,
-                          const DCArrayKokkos<double>& MaterialPoints_pres,
-                          const DCArrayKokkos<double>& MaterialPoints_stress,
-                          const DCArrayKokkos<double>& MaterialPoints_stress_n0,
-                          const DCArrayKokkos<double>& MaterialPoints_sspd,
-                          const DCArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                          const DCArrayKokkos<double>& MaterialPoints_strength_state_vars,
-                          const DCArrayKokkos<double>& MaterialPoints_shear_modulii,
-                          const DRaggedRightArrayKokkos<size_t>& MaterialToMeshMaps_elem,
+                          const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+                          const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+                          const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+                          const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+                          const DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
+                          const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                          const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                          const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
+                          const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+                          const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                           const size_t num_mat_elems,
                           const size_t mat_id,
                           const double fuzz,
@@ -356,13 +357,13 @@ void SGHRZ::update_stress(const Material_t& Materials,
         // ============================================
 
         // --- calculate the forces acting on the nodes from the element ---
-        FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
+        FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
             // get elem gid
-            size_t elem_gid = MaterialToMeshMaps_elem(mat_id, mat_elem_lid); 
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
             // the material point index = the material elem index for a 1-point element
-            size_t mat_point_lid = mat_elem_lid;
+            size_t mat_point_sid = mat_elem_sid;
 
             // for this method, gauss point is equal to elem_gid
             size_t gauss_gid = elem_gid;
@@ -379,10 +380,10 @@ void SGHRZ::update_stress(const Material_t& Materials,
                                             MaterialPoints_sspd,
                                             MaterialPoints_eos_state_vars,
                                             MaterialPoints_strength_state_vars,
-                                            MaterialPoints_den(mat_point_lid),
-                                            MaterialPoints_sie(mat_point_lid),
+                                            MaterialPoints_den(mat_id, mat_point_sid),
+                                            MaterialPoints_sie(mat_id, mat_point_sid),
                                             MaterialPoints_shear_modulii,
-                                            MaterialToMeshMaps_elem,
+                                            elem_in_mat_elem,
                                             Materials.eos_global_vars,
                                             Materials.strength_global_vars,
                                             GaussPoints_vol(elem_gid),
@@ -390,7 +391,7 @@ void SGHRZ::update_stress(const Material_t& Materials,
                                             rk_alpha,
                                             time_value,
                                             cycle,
-                                            mat_point_lid,
+                                            mat_point_sid,
                                             mat_id,
                                             gauss_gid,
                                             elem_gid);

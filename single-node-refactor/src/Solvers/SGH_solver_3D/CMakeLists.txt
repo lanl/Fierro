@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1.3)
+cmake_minimum_required(VERSION 3.5)
 
 add_definitions(-DHAVE_KOKKOS=1)
 
@@ -19,6 +19,7 @@ message("\n ****** ADDING SGH SOURCE FILES ******** \n ")
 
 set(SGH_3D_SRC_Files 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/boundary.cpp 
+${CMAKE_CURRENT_SOURCE_DIR}/src/contact.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/energy_sgh.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/force_sgh.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/position.cpp
