@@ -1051,6 +1051,8 @@ public:
         {
             buffer_iterations++;
         }
+        
+        read_index_start = 0;
 
         //first find the block with node coords data
         if(myrank==0){
@@ -1511,7 +1513,7 @@ public:
         //std::cout << "Type read size " << size << std::endl;
 
         // check that the element type is supported by Fierro
-        FOR_ALL (elem_gid, 0, mesh.num_elems, {
+        FOR_ALL (elem_gid, 0, num_elems, {
             //std::cout << "Element type is " << elem_types(elem_gid) << std::endl;
             if(elem_types(elem_gid) == element_types::linear_quad || 
                elem_types(elem_gid) == element_types::linear_hex_ijk ||
@@ -1531,7 +1533,7 @@ public:
         CArrayKokkos <size_t> convert_ensight_to_ijk(8, "convert_ensight_to_ijk");
 
         // Convert the arbitrary order hex to a IJK mesh
-        DCArrayKokkos <size_t> convert_pn_vtk_to_ijk(mesh.num_nodes_in_elem, "convert_pn_vtk_to_ijk");
+        DCArrayKokkos <size_t> convert_pn_vtk_to_ijk(num_nodes_in_elem, "convert_pn_vtk_to_ijk");
 
         //build the connectivity for element type 12
         // elem_types.host(0)
@@ -1579,13 +1581,13 @@ public:
                 });
 
                 // read the node ids in the element
-                FOR_ALL (elem_id, 0, mesh.num_elems, {
+                FOR_ALL (elem_id, 0, num_elems, {
                     long long int temp[num_nodes_in_elem];
-                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        temp[node_lid] =  mesh.nodes_in_elem(elem_id,convert_ensight_to_ijk(node_lid));
+                    for (size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
+                        temp[node_lid] =  nodes_in_elem(elem_id,convert_ensight_to_ijk(node_lid));
                     }
-                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_id, node_lid) = temp[node_lid];
+                    for (size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
+                        nodes_in_elem(elem_id, node_lid) = temp[node_lid];
                     }
                     
                 }); // end for
