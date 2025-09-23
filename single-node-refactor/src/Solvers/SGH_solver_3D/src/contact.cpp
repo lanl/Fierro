@@ -1717,229 +1717,237 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
     
     // testing element limited pairing
     CArrayKokkos <size_t> elem_count(num_bdy_nodes);
-    for (int i = 0; i < num_bdy_nodes; i++) {
-        size_t count = 0;
-        size_t temp = num_patches;
-        for (int j = 0; j < 18; j++) {
-            if (node_penetrations(i,j+1) != num_patches) {
-                if (temp != elems_in_patch(node_penetrations(i,j+1),0)){
-                    temp = elems_in_patch(node_penetrations(i,j+1),0);
-                    count += 1;
+    RUN({
+        for (int i = 0; i < num_bdy_nodes; i++) {
+            size_t count = 0;
+            size_t temp = num_patches;
+            for (int j = 0; j < 18; j++) {
+                if (node_penetrations(i,j+1) != num_patches) {
+                    if (temp != elems_in_patch(node_penetrations(i,j+1),0)){
+                        temp = elems_in_patch(node_penetrations(i,j+1),0);
+                        count += 1;
+                    }
                 }
             }
+            elem_count(i) = count;
+            if (count == 0) {
+                elem_count(i) = 1;
+            }
         }
-        elem_count(i) = count;
-        if (count == 0) {
-            elem_count(i) = 1;
-        }
-    }
+    });
     
     RaggedRightArrayKokkos <size_t> elems_penetrated(elem_count);
     elems_penetrated.set_values(num_elems);
-    for (int i = 0; i < num_bdy_nodes; i++) {
-        for (int j = 0; j < 18; j++) {
-            if (node_penetrations(i,j+1) != num_patches) {
-                for (int k = 0; k < elems_penetrated.stride(i); k++) {
-                    if (elems_penetrated(i,k) == num_elems && elems_penetrated(i,0) != elems_in_patch(node_penetrations(i,j+1),0)){
-                        elems_penetrated(i,k) = elems_in_patch(node_penetrations(i,j+1),0);
-                        continue;
+    RUN({
+        for (int i = 0; i < num_bdy_nodes; i++) {
+            for (int j = 0; j < 18; j++) {
+                if (node_penetrations(i,j+1) != num_patches) {
+                    for (int k = 0; k < elems_penetrated.stride(i); k++) {
+                        if (elems_penetrated(i,k) == num_elems && elems_penetrated(i,0) != elems_in_patch(node_penetrations(i,j+1),0)){
+                            elems_penetrated(i,k) = elems_in_patch(node_penetrations(i,j+1),0);
+                            continue;
+                        }
                     }
                 }
             }
         }
-    }
+    });
 
     // allocating pair arrays
     node_patch_pairs = RaggedRightArrayKokkos <size_t> (elem_count);
     node_patch_pairs.set_values(num_patches);
     CArrayKokkos <size_t> pair_vars_stride(num_bdy_nodes);
-    for (int i = 0; i < num_bdy_nodes; i++) {
-        pair_vars_stride(i) = elem_count(i)*8;
-    }
+    RUN({
+        for (int i = 0; i < num_bdy_nodes; i++) {
+            pair_vars_stride(i) = elem_count(i)*8;
+        }
+    });
     pair_vars = RaggedRightArrayKokkos <double> (pair_vars_stride);
     pair_vars.set_values(0);
     
-    num_active(0) = 0;
-    for (int node_lid = 0; node_lid < num_bdy_nodes; node_lid++) {
-        if (elems_penetrated(node_lid,0) != num_elems) {
-            // centroid variable for pairing step 1
-            double centroid[3];
-            centroid[0] = 0;
-            centroid[1] = 0;
-            centroid[2] = 0;
+    RUN({
+        num_active(0) = 0;
+        for (int node_lid = 0; node_lid < num_bdy_nodes; node_lid++) {
+            if (elems_penetrated(node_lid,0) != num_elems) {
+                // centroid variable for pairing step 1
+                double centroid[3];
+                centroid[0] = 0;
+                centroid[1] = 0;
+                centroid[2] = 0;
 
-            // node to centroid vector for pairing step 2
-            double n_to_c[3];
+                // node to centroid vector for pairing step 2
+                double n_to_c[3];
 
-            // normal vector for pairing step 3
-            double surf_normal[3];
+                // normal vector for pairing step 3
+                double surf_normal[3];
 
-            // dot product local and max variables for pairing step 3
-            double dot_prod = 0;
-            double dot_prod_loc = 0;
+                // dot product local and max variables for pairing step 3
+                double dot_prod = 0;
+                double dot_prod_loc = 0;
 
-            // local surface id for referencing nodes_pen_surfs
-            int surf_lid = -1;
+                // local surface id for referencing nodes_pen_surfs
+                int surf_lid = -1;
 
-            // array for global frame point calculated in pairing step 5
-            double P[3];
+                // array for global frame point calculated in pairing step 5
+                double P[3];
 
-            // array for storing node gids of a patch
-            size_t node_gids[4];
+                // array for storing node gids of a patch
+                size_t node_gids[4];
 
-            // reference centroid
-            double ref_cen[2];
-            ref_cen[0] = 0;
-            ref_cen[1] = 0;
+                // reference centroid
+                double ref_cen[2];
+                ref_cen[0] = 0;
+                ref_cen[1] = 0;
 
-            // pairing step 1) find centroid corresponding to penetrating node (centroid of element if 1 element, average of centroids if more than 1 element)
-            for (int i = 0; i < elems_in_node.stride(node_penetrations(node_lid,0)); i++) {
-                // get the centroid of an individual element
-                // todo: generalize this loop for arbitrary element, this version assumes first order hex element
-                for (int j = 0; j < 8; j++) {
-                    centroid[0] += coords(nodes_in_elem(elems_in_node(node_penetrations(node_lid,0),i),j),0)/8;
-                    centroid[1] += coords(nodes_in_elem(elems_in_node(node_penetrations(node_lid,0),i),j),1)/8;
-                    centroid[2] += coords(nodes_in_elem(elems_in_node(node_penetrations(node_lid,0),i),j),2)/8;
-                }
-            }
-            centroid[0] /= elems_in_node.stride(node_penetrations(node_lid,0));
-            centroid[1] /= elems_in_node.stride(node_penetrations(node_lid,0));
-            centroid[2] /= elems_in_node.stride(node_penetrations(node_lid,0));
-
-            // pairing step 2) vector going from penetrating node to centroid or average of centroids
-            n_to_c[0] = centroid[0] - coords(node_penetrations(node_lid,0),0);
-            n_to_c[1] = centroid[1] - coords(node_penetrations(node_lid,0),1);
-            n_to_c[2] = centroid[2] - coords(node_penetrations(node_lid,0),2);
-
-            // for each element, find the most opposing patch normal considering only boundary patches
-            // pairing step 3) dot product of vector from (2) with normal of each surf being penetrated by the node
-            // todo: need to get nodes_penetrations as a dynamic ragged type to make this loop more efficient
-            // todo: what are the edge cases for pairing step 3?
-            for (int el_id = 0; el_id < elems_penetrated.stride(node_lid); el_id++) {
-                dot_prod = -1;
-                for (int j = 0; j < 18; j++) {
-                    if (node_penetrations(node_lid, j+1) != num_patches) {
-                        if (elems_in_patch(node_penetrations(node_lid, j+1), 0) == elems_penetrated(node_lid, el_id)) {
-                            //std::cout << "if check: " << elems_in_patch(node_penetrations(node_lid, j+1), 0) << "   " << elems_penetrated(node_lid, el_id) << std::endl;
-                            for (int k = 0; k < 4; k++){
-                                node_gids[k] = nodes_in_patch(node_penetrations(node_lid, j+1),k);
-                            }
-                            get_penetration_normal(coords, ref_cen[0], ref_cen[1], surf_normal, xi, eta, node_gids);
-                            dot_prod_loc = surf_normal[0]*n_to_c[0] + surf_normal[1]*n_to_c[1] + surf_normal[2]*n_to_c[2];
-                            // pairing step 4) find surf with max value of dot product from (3)
-                            if (dot_prod_loc > dot_prod) {
-                                dot_prod = dot_prod_loc;
-                                surf_lid = j+1;
-                            }
-                        }
+                // pairing step 1) find centroid corresponding to penetrating node (centroid of element if 1 element, average of centroids if more than 1 element)
+                for (int i = 0; i < elems_in_node.stride(node_penetrations(node_lid,0)); i++) {
+                    // get the centroid of an individual element
+                    // todo: generalize this loop for arbitrary element, this version assumes first order hex element
+                    for (int j = 0; j < 8; j++) {
+                        centroid[0] += coords(nodes_in_elem(elems_in_node(node_penetrations(node_lid,0),i),j),0)/8;
+                        centroid[1] += coords(nodes_in_elem(elems_in_node(node_penetrations(node_lid,0),i),j),1)/8;
+                        centroid[2] += coords(nodes_in_elem(elems_in_node(node_penetrations(node_lid,0),i),j),2)/8;
                     }
                 }
-                //std::cout << "NODE: " << node_penetrations(node_lid,0) << " ELEM: " << elems_penetrated(node_lid, el_id) << " PATCH NODES: " << nodes_in_patch(node_penetrations(node_lid, surf_lid),0) << " " << nodes_in_patch(node_penetrations(node_lid, surf_lid),1) << " " << nodes_in_patch(node_penetrations(node_lid, surf_lid),2) << " " << nodes_in_patch(node_penetrations(node_lid, surf_lid),3) << std::endl;
-                
-                // pairing step 5) find closest point on surf in normal direction from node
-                // plane can be defined from any of the 4 nodes by A(x-xn)+B(y-yn)+C(z-zn)=0 where n=<A,B,C>
-                // given coords of penetrating node "p" we find point of contact "P"
-                // P = p + c*norm_vec, solve for c from equation of plane
-                // todo: is it necessary to define these as double or should it just be one line to calculate c? readability would bad if one line
-                // todo: replace if statement with known in order to remove outer loop entirely
-                for (int i = 0; i < num_bdy_patches; i++) {
-                    if (bdy_patches(i) == node_penetrations(node_lid,surf_lid)) {
-                        for (int j = 0; j < 4; j++){
-                            node_gids[j] = nodes_in_patch(bdy_patches(i),j);
-                        }
-                        get_penetration_normal(coords, ref_cen[0], ref_cen[1], surf_normal, xi, eta, node_gids);
-                        double px = coords(node_penetrations(node_lid,0),0);
-                        double py = coords(node_penetrations(node_lid,0),1);
-                        double pz = coords(node_penetrations(node_lid,0),2);
-                        double xn = coords(node_gids[0],0);
-                        double yn = coords(node_gids[0],1);
-                        double zn = coords(node_gids[0],2);
-                        double c = (surf_normal[0]*(px-xn)+surf_normal[1]*(py-yn)+surf_normal[2]*(pz-zn))/(-surf_normal[0]*surf_normal[0] - surf_normal[1]*surf_normal[1] - surf_normal[2]*surf_normal[2]);
-                        P[0] = px + c*surf_normal[0];
-                        P[1] = py + c*surf_normal[1];
-                        P[2] = pz + c*surf_normal[2];
-                        double ptoPmag = sqrt((px-P[0])*(px-P[0])+(py-P[1])*(py-P[1])+(pz-P[2])*(pz-P[2]));
-                        // mapping P to isoparametric coordinates
-                        double elem_pos[3][8];
-                        for (int j = 0; j < 3; j++) {
-                            for (int k = 0; k < 8; k++) {
-                                elem_pos[j][k] = coords(nodes_in_elem(elems_in_patch(node_penetrations(node_lid,surf_lid),0),k),j);
-                            }
-                        }
-                        double iso_P[3];
-                        isoparametric_inverse(P, elem_pos, iso_P);
+                centroid[0] /= elems_in_node.stride(node_penetrations(node_lid,0));
+                centroid[1] /= elems_in_node.stride(node_penetrations(node_lid,0));
+                centroid[2] /= elems_in_node.stride(node_penetrations(node_lid,0));
 
-                        // finding contact surface local id wrt the element
-                        size_t surf_elem_id;
-                        for (int j = 0; j < 6; j++) {
-                            if (node_penetrations(node_lid,surf_lid) == patches_in_elem(elems_in_patch(bdy_patches(i), 0),j)) {
-                                surf_elem_id = j;
-                                break;
-                            }
-                        }
-                        // map (xi,eta,zeta) to patch local (xi,eta)
-                        double xi_val;
-                        double eta_val;
-                        switch (surf_elem_id) {
-                            case 0:
-                                xi_val = iso_P[2];
-                                eta_val = iso_P[1];
-                                break;
-                            case 1:
-                                xi_val = iso_P[1];
-                                eta_val = iso_P[2];
-                                break;
-                            case 2:
-                                xi_val = iso_P[0];
-                                eta_val = iso_P[2];
-                                break;
-                            case 3:
-                                xi_val = -iso_P[0];
-                                eta_val = iso_P[2];
-                                break;
-                            case 4:
-                                xi_val = iso_P[1];
-                                eta_val = iso_P[0];
-                                break;
-                            case 5:
-                                xi_val = iso_P[0];
-                                eta_val = iso_P[1];
-                                break;
-                        }
+                // pairing step 2) vector going from penetrating node to centroid or average of centroids
+                n_to_c[0] = centroid[0] - coords(node_penetrations(node_lid,0),0);
+                n_to_c[1] = centroid[1] - coords(node_penetrations(node_lid,0),1);
+                n_to_c[2] = centroid[2] - coords(node_penetrations(node_lid,0),2);
 
-                        // storing the pair
-                        node_patch_pairs(node_lid, el_id) = i;
-                        pair_vars(node_lid,8*el_id) = xi_val;
-                        pair_vars(node_lid,8*el_id+1) = eta_val;
-                        pair_vars(node_lid,8*el_id+2) = del_t;
-                        pair_vars(node_lid,8*el_id+3) = surf_normal[0];
-                        pair_vars(node_lid,8*el_id+4) = surf_normal[1];
-                        pair_vars(node_lid,8*el_id+5) = surf_normal[2];
-
-                        // updating the active set of nodes, we only want information on active nodes
-                        if (num_active(0) == 0) {
-                            active_set(0) = node_lid;
-                            num_active(0) += 1;
-                        } else {
-                            // checking if its a new node or a repeat
-                            bool new_node = true;
-                            for (int j = 0; j < num_active(0); j++) {
-                                if (active_set(j) == node_lid) {
-                                    new_node = false;
+                // for each element, find the most opposing patch normal considering only boundary patches
+                // pairing step 3) dot product of vector from (2) with normal of each surf being penetrated by the node
+                // todo: need to get nodes_penetrations as a dynamic ragged type to make this loop more efficient
+                // todo: what are the edge cases for pairing step 3?
+                for (int el_id = 0; el_id < elems_penetrated.stride(node_lid); el_id++) {
+                    dot_prod = -1;
+                    for (int j = 0; j < 18; j++) {
+                        if (node_penetrations(node_lid, j+1) != num_patches) {
+                            if (elems_in_patch(node_penetrations(node_lid, j+1), 0) == elems_penetrated(node_lid, el_id)) {
+                                //std::cout << "if check: " << elems_in_patch(node_penetrations(node_lid, j+1), 0) << "   " << elems_penetrated(node_lid, el_id) << std::endl;
+                                for (int k = 0; k < 4; k++){
+                                    node_gids[k] = nodes_in_patch(node_penetrations(node_lid, j+1),k);
+                                }
+                                get_penetration_normal(coords, ref_cen[0], ref_cen[1], surf_normal, xi, eta, node_gids);
+                                dot_prod_loc = surf_normal[0]*n_to_c[0] + surf_normal[1]*n_to_c[1] + surf_normal[2]*n_to_c[2];
+                                // pairing step 4) find surf with max value of dot product from (3)
+                                if (dot_prod_loc > dot_prod) {
+                                    dot_prod = dot_prod_loc;
+                                    surf_lid = j+1;
                                 }
                             }
-                            // if its a new node we add it to the list of active nodes
-                            if (new_node) {
-                                active_set(num_active(0)) = node_lid;
-                                num_active(0) += 1;
-                            }
-                            // else ignore repeats
                         }
                     }
-                } // end i
-            } // end el_id
-        }
-    } // end node_lid
+                    //std::cout << "NODE: " << node_penetrations(node_lid,0) << " ELEM: " << elems_penetrated(node_lid, el_id) << " PATCH NODES: " << nodes_in_patch(node_penetrations(node_lid, surf_lid),0) << " " << nodes_in_patch(node_penetrations(node_lid, surf_lid),1) << " " << nodes_in_patch(node_penetrations(node_lid, surf_lid),2) << " " << nodes_in_patch(node_penetrations(node_lid, surf_lid),3) << std::endl;
+                    
+                    // pairing step 5) find closest point on surf in normal direction from node
+                    // plane can be defined from any of the 4 nodes by A(x-xn)+B(y-yn)+C(z-zn)=0 where n=<A,B,C>
+                    // given coords of penetrating node "p" we find point of contact "P"
+                    // P = p + c*norm_vec, solve for c from equation of plane
+                    // todo: is it necessary to define these as double or should it just be one line to calculate c? readability would bad if one line
+                    // todo: replace if statement with known in order to remove outer loop entirely
+                    for (int i = 0; i < num_bdy_patches; i++) {
+                        if (bdy_patches(i) == node_penetrations(node_lid,surf_lid)) {
+                            for (int j = 0; j < 4; j++){
+                                node_gids[j] = nodes_in_patch(bdy_patches(i),j);
+                            }
+                            get_penetration_normal(coords, ref_cen[0], ref_cen[1], surf_normal, xi, eta, node_gids);
+                            double px = coords(node_penetrations(node_lid,0),0);
+                            double py = coords(node_penetrations(node_lid,0),1);
+                            double pz = coords(node_penetrations(node_lid,0),2);
+                            double xn = coords(node_gids[0],0);
+                            double yn = coords(node_gids[0],1);
+                            double zn = coords(node_gids[0],2);
+                            double c = (surf_normal[0]*(px-xn)+surf_normal[1]*(py-yn)+surf_normal[2]*(pz-zn))/(-surf_normal[0]*surf_normal[0] - surf_normal[1]*surf_normal[1] - surf_normal[2]*surf_normal[2]);
+                            P[0] = px + c*surf_normal[0];
+                            P[1] = py + c*surf_normal[1];
+                            P[2] = pz + c*surf_normal[2];
+                            double ptoPmag = sqrt((px-P[0])*(px-P[0])+(py-P[1])*(py-P[1])+(pz-P[2])*(pz-P[2]));
+                            // mapping P to isoparametric coordinates
+                            double elem_pos[3][8];
+                            for (int j = 0; j < 3; j++) {
+                                for (int k = 0; k < 8; k++) {
+                                    elem_pos[j][k] = coords(nodes_in_elem(elems_in_patch(node_penetrations(node_lid,surf_lid),0),k),j);
+                                }
+                            }
+                            double iso_P[3];
+                            isoparametric_inverse(P, elem_pos, iso_P);
+
+                            // finding contact surface local id wrt the element
+                            size_t surf_elem_id;
+                            for (int j = 0; j < 6; j++) {
+                                if (node_penetrations(node_lid,surf_lid) == patches_in_elem(elems_in_patch(bdy_patches(i), 0),j)) {
+                                    surf_elem_id = j;
+                                    break;
+                                }
+                            }
+                            // map (xi,eta,zeta) to patch local (xi,eta)
+                            double xi_val;
+                            double eta_val;
+                            switch (surf_elem_id) {
+                                case 0:
+                                    xi_val = iso_P[2];
+                                    eta_val = iso_P[1];
+                                    break;
+                                case 1:
+                                    xi_val = iso_P[1];
+                                    eta_val = iso_P[2];
+                                    break;
+                                case 2:
+                                    xi_val = iso_P[0];
+                                    eta_val = iso_P[2];
+                                    break;
+                                case 3:
+                                    xi_val = -iso_P[0];
+                                    eta_val = iso_P[2];
+                                    break;
+                                case 4:
+                                    xi_val = iso_P[1];
+                                    eta_val = iso_P[0];
+                                    break;
+                                case 5:
+                                    xi_val = iso_P[0];
+                                    eta_val = iso_P[1];
+                                    break;
+                            }
+
+                            // storing the pair
+                            node_patch_pairs(node_lid, el_id) = i;
+                            pair_vars(node_lid,8*el_id) = xi_val;
+                            pair_vars(node_lid,8*el_id+1) = eta_val;
+                            pair_vars(node_lid,8*el_id+2) = del_t;
+                            pair_vars(node_lid,8*el_id+3) = surf_normal[0];
+                            pair_vars(node_lid,8*el_id+4) = surf_normal[1];
+                            pair_vars(node_lid,8*el_id+5) = surf_normal[2];
+
+                            // updating the active set of nodes, we only want information on active nodes
+                            if (num_active(0) == 0) {
+                                active_set(0) = node_lid;
+                                num_active(0) += 1;
+                            } else {
+                                // checking if its a new node or a repeat
+                                bool new_node = true;
+                                for (int j = 0; j < num_active(0); j++) {
+                                    if (active_set(j) == node_lid) {
+                                        new_node = false;
+                                    }
+                                }
+                                // if its a new node we add it to the list of active nodes
+                                if (new_node) {
+                                    active_set(num_active(0)) = node_lid;
+                                    num_active(0) += 1;
+                                }
+                                // else ignore repeats
+                            }
+                        }
+                    } // end i
+                } // end el_id
+            }
+        } // end node_lid
+    });
 
     /* RUN({
         for (int i = 0; i < node_penetrations.dims(0); i++) {
