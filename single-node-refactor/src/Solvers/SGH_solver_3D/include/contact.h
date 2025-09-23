@@ -27,8 +27,8 @@ struct contact_state_t
     CArrayKokkos <size_t> possible_nodes; // for carrying node gids as necessary in get_contact_pairs
     CArrayKokkos <size_t> penetration_surfaces; // stores node gids of surface in correct local order for taking normals
     CArrayKokkos <size_t> contact_surface_map; // stores index for each node that corresponds to mesh.bdy_nodes indexing
-    CArrayKokkos <size_t> node_patch_pairs; // stores the patch contact id in the node contact id index when pair is formed
-    CArrayKokkos <double> pair_vars; // stores xi, eta, del_tc, normal_x, normal_y, normal_z, fc_inc, and fc_inc_total in node contact id index
+    RaggedRightArrayKokkos <size_t> node_patch_pairs; // stores the patch contact id in the node contact id index when pair is formed
+    RaggedRightArrayKokkos <double> pair_vars; // stores xi, eta, del_tc, normal_x, normal_y, normal_z, fc_inc, and fc_inc_total in node contact id index
     CArrayKokkos <size_t> num_surfs_in_node; // strides for surfs_in_node
     RaggedRightArrayKokkos <size_t> surfs_in_node; // stores surf ids corresponding to mesh.bdy_patches that a node is part of
     DCArrayKokkos <size_t> num_active; // number of active pairs
@@ -530,7 +530,7 @@ bool get_edge_pair(double normal1[3], double normal2[3], size_t &node_gid, const
 /// \param pair Contact pair object to remove
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void remove_pair(size_t &contact_id, const CArrayKokkos <size_t> &node_patch_pairs, const CArrayKokkos <double> &pair_vars);
+void remove_pair(size_t &contact_id, const RaggedRightArrayKokkos <size_t> &node_patch_pairs, const RaggedRightArrayKokkos <double> &pair_vars, size_t el_id);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn penetration_check
@@ -626,8 +626,8 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                        CArrayKokkos <size_t> elems_in_patch, size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch,
                        const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, double x_max, double y_max, double z_max, DCArrayKokkos <size_t> &num_active,
                        RaggedRightArrayKokkos <size_t> elems_in_node, CArrayKokkos <size_t> num_nodes_in_elem,
-                       CArrayKokkos <size_t> patches_in_elem, CArrayKokkos <size_t> &node_patch_pairs,
-                       CArrayKokkos <double> &pair_vars, const double &del_t, CArrayKokkos <size_t> &active_set);
+                       CArrayKokkos <size_t> patches_in_elem, RaggedRightArrayKokkos <size_t> &node_patch_pairs, size_t num_elems,
+                       RaggedRightArrayKokkos <double> &pair_vars, const double &del_t, CArrayKokkos <size_t> &active_set);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn force_resolution
@@ -639,7 +639,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
 /// \param del_t current time step in the analysis
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> num_active, CArrayKokkos <size_t> &active_set,
-                      CArrayKokkos <size_t> &node_patch_pairs, CArrayKokkos <double> &pair_vars, CArrayKokkos <size_t> &contact_surface_map,
+                      RaggedRightArrayKokkos <size_t> &node_patch_pairs, RaggedRightArrayKokkos <double> &pair_vars, CArrayKokkos <size_t> &contact_surface_map,
                       DCArrayKokkos <double> &coords, CArrayKokkos <size_t> bdy_nodes, DCArrayKokkos <double> &mass,
                       CArrayKokkos <double> &contact_forces, DCArrayKokkos <double> &corner_force, DCArrayKokkos <double> &vel,
                       RaggedRightArrayKokkos <size_t> corners_in_node, CArrayKokkos <size_t> num_corners_in_node,
@@ -655,8 +655,8 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
 ///
 /// \param del_t current time step in the analysis
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void remove_pairs(DCArrayKokkos <size_t> num_active, CArrayKokkos <size_t> &active_set, CArrayKokkos <double> &pair_vars,
-                  CArrayKokkos <size_t> &node_patch_pairs, CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+void remove_pairs(DCArrayKokkos <size_t> num_active, CArrayKokkos <size_t> &active_set, RaggedRightArrayKokkos <double> &pair_vars,
+                  RaggedRightArrayKokkos <size_t> &node_patch_pairs, CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
                   CArrayKokkos <double> &contact_forces, CArrayKokkos <size_t> &contact_surface_map,
                   DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
                   DCArrayKokkos <double> &mass, DCArrayKokkos <double> &coords,

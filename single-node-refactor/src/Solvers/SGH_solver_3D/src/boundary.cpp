@@ -129,8 +129,17 @@ void SGH3D:: boundary_contact_force(State_t& State, const Mesh_t &mesh, const do
                       mesh.nodes_in_elem, mesh.elems_in_patch, mesh.num_bdy_nodes, mesh.nodes_in_patch,
                       Contact_State.xi, Contact_State.eta, Contact_State.x_max, Contact_State.y_max,
                       Contact_State.z_max, Contact_State.num_active, mesh.elems_in_node, mesh.num_nodes_in_elem,
-                      mesh.patches_in_elem, Contact_State.node_patch_pairs, Contact_State.pair_vars, del_t,
+                      mesh.patches_in_elem, Contact_State.node_patch_pairs, mesh.num_elems, Contact_State.pair_vars, del_t,
                       Contact_State.active_set);
+
+    /* for (int i = 0; i < mesh.num_bdy_nodes; i++) {
+        std::cout << mesh.bdy_nodes(i) << "   ";
+        for (int j = 0; j < Contact_State.node_patch_pairs.stride(i); j++) {
+            std::cout << Contact_State.node_patch_pairs(i,j) << "  ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl; */
 
     force_resolution(Contact_State.f_c_incs, Contact_State.num_active, Contact_State.active_set,
                      Contact_State.node_patch_pairs, Contact_State.pair_vars, Contact_State.contact_surface_map,
