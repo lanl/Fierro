@@ -383,7 +383,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 size_t num_saved = BoundaryConditions.num_stress_bdy_sets_in_solver.host(solver_id);
                 BoundaryConditions.stress_bdy_sets_in_solver.host(solver_id, num_saved) = bc_id;
                 BoundaryConditions.num_stress_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
-
+                
                 std::string stress_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 
                 auto map = bc_stress_model_map; 
@@ -420,6 +420,17 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::userDefinedStressBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).stress = &UserDefinedStressBC::stress;
                             });
+                            break;
+
+                        case boundary_conditions::globalContact:
+                            std::cout << "Setting contact bc " << std::endl;
+                            BoundaryConditions.allow_contact = true;
+                            break;
+
+                        case boundary_conditions::preloadContact:
+                            std::cout << "Setting preload contact bc " << std::endl;
+                            BoundaryConditions.allow_preload = true;
+                            BoundaryConditions.allow_contact = true;
                             break;
                       
                         default:

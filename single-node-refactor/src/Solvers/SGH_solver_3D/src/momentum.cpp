@@ -56,12 +56,25 @@ void SGH3D::update_velocity(double rk_alpha,
     DistributedDCArray<double>& node_vel_n0,
     const DistributedDCArray<double>& node_mass,
     const DistributedDCArray<double>& node_force,
-    const DCArrayKokkos<double>& corner_force) const
+    const DCArrayKokkos<double>& corner_force,
+    const CArrayKokkos <double>& contact_force,
+    bool doing_contact) const
 {
     const size_t num_dims = mesh.num_dims;
 
     // walk over the nodes to update the velocity
     FOR_ALL(node_gid, 0, mesh.num_local_nodes, {
+
+        // adding in contact force
+        if (doing_contact)
+        {
+            //const contact_node_t &contact_node = contact_nodes(node_gid);
+            for (size_t dim = 0; dim < num_dims; dim++) {
+                //node_force(node_gid, dim) += contact_node.contact_force(dim);
+                node_force(node_gid, dim) += contact_force(node_gid, dim);
+            } // end for dim
+            //std::cout << node_gid << "    "  << contact_node.contact_force(0) <<  "    "  << contact_node.contact_force(1) << "    "  << contact_node.contact_force(2) << std::endl;
+        }
 
         // loop over all corners around the node and calculate the nodal force
         for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
@@ -79,9 +92,10 @@ void SGH3D::update_velocity(double rk_alpha,
             node_vel(node_gid, dim) = node_vel_n0(node_gid, dim) +
                     rk_alpha * dt * node_force(node_gid,dim) / node_mass(node_gid);
         } // end for dim
+        //std::cout << node_gid << "    vel:"  << node_vel(node_gid,0) <<  "    "  << node_vel(node_gid,1) << "    "  << node_vel(node_gid,2) << std::endl;
     }); // end for parallel for over nodes
     Kokkos::fence();
-
+    //std::cout << std::endl;
     return;
 } // end subroutine update_velocity
 

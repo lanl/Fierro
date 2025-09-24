@@ -1443,6 +1443,8 @@ struct Mesh_t
         Kokkos::fence();
 
         num_patches     = num_values.host(0);
+        // this lines assumes num_surfs ==  num_patches, only valid for 1st order elements
+        num_surfs       = num_values.host(0);
         num_bdy_patches = num_values.host(1);
 
         // size_t mesh_1D = 60;
