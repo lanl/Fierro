@@ -616,6 +616,7 @@ public:
         num_local_nodes = node_map.size();
         mesh.num_local_nodes = num_local_nodes;
         mesh.node_map = node_map;
+        mesh.num_dims = num_dims;
         
         // debug print of nodal data
 
