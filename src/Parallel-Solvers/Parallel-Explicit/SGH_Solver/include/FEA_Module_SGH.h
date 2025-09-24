@@ -90,6 +90,16 @@ public:
 
     void sgh_solve();
 
+    void update_dependent_variables_and_gradients(const DViewCArrayKokkos<double>& node_coords,
+                                                  const DViewCArrayKokkos<double>& node_vel,
+                                                  const DViewCArrayKokkos<double>& elem_sie,
+                                                  const size_t cycle);
+
+    void update_dependent_variables(const DViewCArrayKokkos<double>& node_coords,
+    const DViewCArrayKokkos<double>& node_vel,
+    const DViewCArrayKokkos<double>& elem_sie,
+    const size_t cycle);
+
     void get_force_sgh(const DCArrayKokkos<material_t>& material,
                        const mesh_t& mesh,
                        const DViewCArrayKokkos<double>& node_coords,
@@ -166,6 +176,21 @@ public:
                                  const double rk_alpha,
                                  const size_t cycle);
 
+    void get_force_shape_gradient_sgh(const DCArrayKokkos<material_t>& material,
+                                 const mesh_t& mesh,
+                                 const DViewCArrayKokkos<double>& node_coords,
+                                 const DViewCArrayKokkos<double>& node_vel,
+                                 const DViewCArrayKokkos<double>& elem_den,
+                                 const DViewCArrayKokkos<double>& elem_sie,
+                                 const DViewCArrayKokkos<double>& elem_pres,
+                                 const DViewCArrayKokkos<double>& elem_stress,
+                                 const DViewCArrayKokkos<double>& elem_sspd,
+                                 const DViewCArrayKokkos<double>& elem_vol,
+                                 const DViewCArrayKokkos<double>& elem_div,
+                                 const DViewCArrayKokkos<size_t>& elem_mat_id,
+                                 const double rk_alpha,
+                                 const size_t cycle);
+
     void force_design_gradient_term(const_vec_array design_variables, vec_array design_gradients);
 
     void get_force_sgh2D(const DCArrayKokkos<material_t>& material,
@@ -195,17 +220,17 @@ public:
 
     void init_assembly();
 
-    KOKKOS_INLINE_FUNCTION
-    void get_vol_hex(const DViewCArrayKokkos<double>& elem_vol,
+    KOKKOS_FUNCTION
+    void get_vol_hex(double& elem_vol,
                      const size_t elem_gid,
-                     const DViewCArrayKokkos<double>& node_coords,
+                     const FArray<double>& node_coords,
                      const ViewCArrayKokkos<size_t>&  elem_node_gids,
                      const size_t rk_level) const;
 
     KOKKOS_FUNCTION
     void get_vol_hex_ugradient(const ViewCArrayKokkos<double>& elem_vol_gradients,
                                const size_t elem_gid,
-                               const DViewCArrayKokkos<double>& node_coords,
+                               const FArray<double>& node_coords,
                                const ViewCArrayKokkos<size_t>&  elem_node_gids,
                                const size_t rk_level) const;
 
@@ -354,7 +379,16 @@ public:
                                  const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& node_coords,
-                                 DViewCArrayKokkos<double>& elem_sie,
+                                 const DViewCArrayKokkos<double>& elem_sie,
+                                 const DViewCArrayKokkos<double>& elem_mass,
+                                 const DViewCArrayKokkos<double>& corner_force,
+                                 DCArrayKokkos<real_t> elem_power_dgradients);
+
+    void get_power_shape_gradient_sgh(double rk_alpha,
+                                 const mesh_t& mesh,
+                                 const DViewCArrayKokkos<double>& node_vel,
+                                 const DViewCArrayKokkos<double>& node_coords,
+                                 const DViewCArrayKokkos<double>& elem_sie,
                                  const DViewCArrayKokkos<double>& elem_mass,
                                  const DViewCArrayKokkos<double>& corner_force,
                                  DCArrayKokkos<real_t> elem_power_dgradients);
@@ -363,7 +397,7 @@ public:
                                  const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& node_coords,
-                                 DViewCArrayKokkos<double>& elem_sie,
+                                 const DViewCArrayKokkos<double>& elem_sie,
                                  const DViewCArrayKokkos<double>& elem_mass,
                                  const DViewCArrayKokkos<double>& corner_force);
 
@@ -371,7 +405,7 @@ public:
                                  const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& node_coords,
-                                 DViewCArrayKokkos<double>& elem_sie,
+                                 const DViewCArrayKokkos<double>& elem_sie,
                                  const DViewCArrayKokkos<double>& elem_mass,
                                  const DViewCArrayKokkos<double>& corner_force);
 
@@ -379,7 +413,7 @@ public:
                                  const mesh_t& mesh,
                                  const DViewCArrayKokkos<double>& node_vel,
                                  const DViewCArrayKokkos<double>& node_coords,
-                                 DViewCArrayKokkos<double>& elem_sie,
+                                 const DViewCArrayKokkos<double>& elem_sie,
                                  const DViewCArrayKokkos<double>& elem_mass,
                                  const DViewCArrayKokkos<double>& corner_force);
 
@@ -508,16 +542,16 @@ public:
 
     void compute_topology_optimization_gradient_full(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed);
 
-    void compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed,
-                                                      unsigned long cycle, real_t global_dt);
+    void compute_topology_optimization_gradient_tally(Teuchos::RCP<const MV> design_densities_distributed, const Teuchos::RCP<MV> design_gradients_distributed, const Teuchos::RCP<MV> adjoint_distributed,
+                                                      const Teuchos::RCP<MV> phi_adjoint_distributed, const Teuchos::RCP<MV> psi_adjoint_distributed, const real_t weight, const real_t global_dt);
 
     void compute_topology_optimization_gradient_IVP(Teuchos::RCP<const MV> design_densities_distributed, Teuchos::RCP<MV> design_gradients_distributed,
                                                       unsigned long cycle, real_t global_dt);
 
     void compute_shape_optimization_gradient_full(Teuchos::RCP<const MV> design_coordinates_distributed, Teuchos::RCP<MV> design_gradients_distributed);
 
-    void compute_shape_optimization_gradient_tally(Teuchos::RCP<const MV> design_coordinates_distributed, Teuchos::RCP<MV> design_gradients_distributed,
-                                                      unsigned long cycle, real_t global_dt);
+    void compute_shape_optimization_gradient_tally(Teuchos::RCP<const MV> design_coordinates_distributed, const Teuchos::RCP<MV> design_gradients_distributed, const Teuchos::RCP<MV> adjoint_distributed,
+                                                      const Teuchos::RCP<MV> phi_adjoint_distributed, const Teuchos::RCP<MV> psi_adjoint_distributed, const real_t weight, const real_t global_dt);
 
     void compute_shape_optimization_gradient_IVP(Teuchos::RCP<const MV> design_coordinates_distributed, Teuchos::RCP<MV> design_gradients_distributed,
                                                       unsigned long cycle, real_t global_dt);
@@ -599,6 +633,8 @@ public:
     Teuchos::RCP<MV> previous_node_coords_distributed;
     Teuchos::RCP<MV> initial_node_velocities_distributed;
     Teuchos::RCP<MV> all_node_velocities_distributed;
+    Teuchos::RCP<MV> node_accelerations_distributed;
+    Teuchos::RCP<MV> all_node_accelerations_distributed;
     Teuchos::RCP<MV> all_cached_node_velocities_distributed;
     Teuchos::RCP<MV> node_masses_distributed;
     Teuchos::RCP<MV> cached_design_gradients_distributed;
@@ -606,10 +642,11 @@ public:
     Teuchos::RCP<MV> all_adjoint_vector_distributed, adjoint_vector_distributed;
     Teuchos::RCP<MV> all_phi_adjoint_vector_distributed, phi_adjoint_vector_distributed;
     Teuchos::RCP<MV> all_psi_adjoint_vector_distributed, psi_adjoint_vector_distributed;
-    Teuchos::RCP<MV> previous_adjoint_vector_distributed, midpoint_adjoint_vector_distributed;
-    Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed, midpoint_phi_adjoint_vector_distributed;
-    Teuchos::RCP<MV> previous_psi_adjoint_vector_distributed, midpoint_psi_adjoint_vector_distributed;
+    Teuchos::RCP<MV> previous_adjoint_vector_distributed, midpoint_adjoint_vector_distributed, cached_adjoint_gradient_distributed;
+    Teuchos::RCP<MV> previous_phi_adjoint_vector_distributed, midpoint_phi_adjoint_vector_distributed, cached_phi_adjoint_gradient_distributed;
+    Teuchos::RCP<MV> previous_psi_adjoint_vector_distributed, midpoint_psi_adjoint_vector_distributed, cached_psi_adjoint_gradient_distributed;
     Teuchos::RCP<MV> element_internal_energy_distributed;
+    Teuchos::RCP<MV> element_specific_power_distributed;
     Teuchos::RCP<MV> previous_element_internal_energy_distributed;
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_velocity_data;
     Teuchos::RCP<std::vector<Teuchos::RCP<MV>>> forward_solve_coordinate_data;

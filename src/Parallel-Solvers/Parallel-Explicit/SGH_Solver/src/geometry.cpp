@@ -308,7 +308,15 @@ void FEA_Module_SGH::get_vol()
         FOR_ALL_CLASS(elem_gid, 0, rnum_elem, {
             // cut out the node_gids for this element
             ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_gid, 0), 8);
-            get_vol_hex(elem_vol, elem_gid, node_coords, elem_node_gids, rk_level);
+
+            //set node coords of this element
+            FArray<double> current_node_coords(num_nodes_in_elem, num_dims);
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                current_node_coords(node_lid,0) = node_coords(rk_level, elem_node_gids(node_lid), 0);
+                current_node_coords(node_lid,1) = node_coords(rk_level, elem_node_gids(node_lid), 1);
+                current_node_coords(node_lid,2) = node_coords(rk_level, elem_node_gids(node_lid), 2);
+            } // end for
+            get_vol_hex(elem_vol(elem_gid), elem_gid, current_node_coords, elem_node_gids, rk_level);
         });
         Kokkos::fence();
     } // end if
@@ -328,10 +336,10 @@ void FEA_Module_SGH::get_vol()
 /// \param Runge Kutta time integration level
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_INLINE_FUNCTION
-void FEA_Module_SGH::get_vol_hex(const DViewCArrayKokkos<double>& elem_vol,
+KOKKOS_FUNCTION
+void FEA_Module_SGH::get_vol_hex(double& elem_vol,
     const size_t elem_gid,
-    const DViewCArrayKokkos<double>& node_coords,
+    const FArray<double>& node_coords,
     const ViewCArrayKokkos<size_t>&  elem_node_gids,
     const size_t rk_level) const
 {
@@ -342,21 +350,14 @@ void FEA_Module_SGH::get_vol_hex(const DViewCArrayKokkos<double>& elem_vol,
     double z_array[8];
 
     // x, y, z coordinates of elem vertices
-    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
-    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
-    auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
-
-    // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
-        z(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 2);
-    } // end for
+    auto x = ViewCArrayKokkos<double>(&node_coords(0,0), num_nodes);
+    auto y = ViewCArrayKokkos<double>(&node_coords(0,1), num_nodes);
+    auto z = ViewCArrayKokkos<double>(&node_coords(0,2), num_nodes);
 
     double twelth = 1. / 12.;
 
     // element volume
-    elem_vol(elem_gid) =
+    elem_vol =
         (x(1) * (y(3) * (-z(0) + z(2)) + y(4) * (z(0) - z(5)) + y(0) * (z(2) + z(3) - z(4) - z(5)) + y(6) * (-z(2) + z(5)) + y(5) * (z(0) - z(2) + z(4) - z(6)) + y(2) * (-z(0) - z(3) + z(5) + z(6))) +
          x(7) * (y(0) * (-z(3) + z(4)) + y(6) * (z(2) + z(3) - z(4) - z(5)) + y(2) * (z(3) - z(6)) + y(3) * (z(0) - z(2) + z(4) - z(6)) + y(5) * (-z(4) + z(6)) + y(4) * (-z(0) - z(3) + z(5) + z(6))) +
          x(3) * (y(1) * (z(0) - z(2)) + y(7) * (-z(0) + z(2) - z(4) + z(6)) + y(6) * (z(2) - z(7)) + y(2) * (z(0) + z(1) - z(6) - z(7)) + y(4) * (-z(0) + z(7)) + y(0) * (-z(1) - z(2) + z(4) + z(7))) +
@@ -706,28 +707,28 @@ void FEA_Module_SGH::get_vol_ugradient(const size_t gradient_node_id, const size
 KOKKOS_FUNCTION
 void FEA_Module_SGH::get_vol_hex_ugradient(const ViewCArrayKokkos<double>& elem_vol_gradients,
     const size_t elem_gid,
-    const DViewCArrayKokkos<double>& node_coords,
+    const FArray<double>& node_coords,
     const ViewCArrayKokkos<size_t>&  elem_node_gids,
     const size_t rk_level) const
 {
     const size_t num_nodes = 8;
     const size_t num_dims  = num_dim;
-    double x_array[8];
-    double y_array[8];
-    double z_array[8];
+    //double x_array[8];
+    //double y_array[8];
+    //double z_array[8];
     double gradient_result;
 
     // x, y, z coordinates of elem vertices
-    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
-    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
-    auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
+    auto x = ViewCArrayKokkos<double>(&node_coords(0,0), num_nodes);
+    auto y = ViewCArrayKokkos<double>(&node_coords(0,1), num_nodes);
+    auto z = ViewCArrayKokkos<double>(&node_coords(0,2), num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
-        x(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 0);
-        y(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 1);
-        z(node_lid) = node_coords(rk_level, elem_node_gids(node_lid), 2);
-    } // end for
+    // for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
+    //     x(node_lid) = node_coords(node_lid, 0);
+    //     y(node_lid) = node_coords(node_lid, 1);
+    //     z(node_lid) = node_coords(node_lid, 2);
+    // } // end for
 
     double twelth = 1. / 12.;
 

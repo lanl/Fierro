@@ -128,7 +128,7 @@ void FEA_Module_SGH::setup()
     elem_strength = DCArrayKokkos<strength_t>(num_elems);
 
     // optimization flags
-    if (topology_optimization_on) {
+    if (topology_optimization_on || shape_optimization_on) {
         elem_extensive_initial_energy_condition = DCArrayKokkos<bool>(num_elems);
     }
 
@@ -336,7 +336,10 @@ void FEA_Module_SGH::setup()
                     elem_sie(rk_level, elem_gid) = elem_sie(rk_level, elem_gid) / relative_element_densities(elem_gid);
                     elem_extensive_initial_energy_condition(elem_gid) = true;
                 }
-                else if (topology_optimization_on && !mat_fill(f_id).extensive_energy_setting) {
+                if (shape_optimization_on && mat_fill(f_id).extensive_energy_setting) {
+                    elem_extensive_initial_energy_condition(elem_gid) = true;
+                }
+                else if ((topology_optimization_on || shape_optimization_on) && !mat_fill(f_id).extensive_energy_setting) {
                     elem_extensive_initial_energy_condition(elem_gid) = false;
                 }
 
@@ -581,7 +584,7 @@ void FEA_Module_SGH::setup()
     elem_pres.update_host();
     elem_sspd.update_host();
 
-    if (topology_optimization_on) {
+    if (topology_optimization_on || shape_optimization_on) {
         elem_extensive_initial_energy_condition.update_host();
     }
 
