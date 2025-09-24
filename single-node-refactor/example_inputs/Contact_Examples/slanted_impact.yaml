@@ -3,14 +3,14 @@
 dynamic_options:
   time_final: 3.0
   dt_min: 1e-6
-  dt_max: 0.05
+  dt_max: 0.0125
   dt_start: 1.e-5
   cycle_stop: 300000
 
 
 mesh_options:
   source: file
-  file_path: edge_case2.geo
+  file_path: slanted_impact.vtk
   num_dims: 3
 
 #mesh_options:

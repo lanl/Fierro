@@ -1,7 +1,7 @@
 # num_dims: 3
 
 dynamic_options:
-  time_final: 2.26
+  time_final: 5.0
   dt_min: 1e-6
   dt_max: 0.05
   dt_start: 1.e-5
@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: edge_case1.geo
+  file_path: edge_flat_test.vtk
   num_dims: 3
 
 #mesh_options:
@@ -50,6 +50,30 @@ boundary_conditions:
           - 0
           - 0
           - 1
+
+  # Tag Z plane
+  - boundary_condition:
+      solver_id: 0
+      surface: 
+          type: x_plane
+          plane_position: 0.5
+      velocity_model: reflected
+      velocity_bc_global_vars:
+          - 1
+          - 0
+          - 0
+
+  # Tag Z plane
+  - boundary_condition:
+      solver_id: 0
+      surface: 
+          type: x_plane
+          plane_position: -0.5
+      velocity_model: reflected
+      velocity_bc_global_vars:
+          - 1
+          - 0
+          - 0
 
   # global contact condition (this should be used when it is not clear what the contact surface(s) will be)
   - boundary_condition:
@@ -95,27 +119,27 @@ regions:
             v: 0.0
             w: 0.0
 
-  # top block initial velocity conditions
+    # top block initial velocity conditions
   - region:
       volume:
         type: box
         origin: [0.0, 0.0, 0.0]
-        x1: 0.0
+        x1: -0.5
         x2: 0.5
-        y1: 1.0
-        y2: 2.0
-        z1: 1.8
-        z2: 2.9
+        y1: -1
+        y2: 1
+        z1: 2.5
+        z2: 3.5
       material_id: 0
       solver_id: 0
       density:
         type: uniform
-        value: 1.0
+        value: 1
       specific_internal_energy:
         type: uniform
         value: 1.e-10
       velocity: 
         type: cartesian
         u: 0.0
-        v: -1.5
-        w: 0.0
+        v: 0.0
+        w: -1.0
