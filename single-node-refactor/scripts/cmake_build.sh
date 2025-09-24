@@ -16,7 +16,6 @@ if [ "$trilinos" = "enabled" ]; then
         Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
     fi
     cmake_options+=(
-        -D CMAKE_PREFIX_PATH="${MATAR_INSTALL_DIR}"
         -D Trilinos_DIR="$Trilinos_DIR"
         -D FIERRO_ENABLE_TRILINOS=ON
     )

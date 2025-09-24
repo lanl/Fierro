@@ -115,7 +115,7 @@ public:
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
-                    State_t& State) const override;
+                    State_t& State) override;
 
     void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
         Material_t& Materials, 
@@ -176,9 +176,9 @@ public:
     // **** Functions defined in solver_functions.cpp **** //
     void nodal_gradient(
         const Mesh_t mesh,
-        const DCArrayKokkos<double>& Node_coords,
-        const DCArrayKokkos<double>& node_level_set_vel,
-        const DCArrayKokkos<double>& Node_grad_level_set,
+        const DistributedDCArray<double>& Node_coords,
+        const DistributedDCArray<double>& node_level_set_vel,
+        const DistributedDCArray<double>& Node_grad_level_set,
         const DCArrayKokkos<double>& Corner_normal,
         const DCArrayKokkos<double>& Corner_volume,
         const DCArrayKokkos<double>& GaussPoints_level_set,
@@ -189,8 +189,8 @@ public:
     void update_level_set(
             const Mesh_t& mesh,
             const Material_t& Materials,
-            const DCArrayKokkos<double>& node_level_set_vel,
-            const DCArrayKokkos<double>& Node_grad_level_set,
+            const DistributedDCArray<double>& node_level_set_vel,
+            const DistributedDCArray<double>& Node_grad_level_set,
             const DCArrayKokkos<double>& GaussPoints_level_set,
             const DCArrayKokkos<double>& GaussPoints_level_set_n,
             const DCArrayKokkos<double>& GaussPoints_vol,
@@ -219,7 +219,7 @@ public:
     void get_timestep(
         const Mesh_t& mesh,
         const Material_t& Materials,
-        const DCArrayKokkos<double>& node_coords,
+        const DistributedDCArray<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
@@ -237,7 +237,7 @@ public:
     void get_timestep_2D(
         const Mesh_t& mesh,
         const Material_t& Materials,
-        const DCArrayKokkos<double>& node_coords,
+        const DistributedDCArray<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
@@ -258,7 +258,7 @@ public:
     void boundary_velocity(
         const Mesh_t&  mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        DCArrayKokkos<double>& node_vel,
+        DistributedDCArray<double>& node_level_set_vel,
         const double time_value,
         const double small) const;
 

@@ -59,6 +59,32 @@ enum class fill_gauss_state
     level_set
 };
 
+//distributed vector type in use
+using DistributedMap = TpetraPartitionMap<>;
+using HostDistributedMap = TpetraPartitionMap<Kokkos::HostSpace>;
+template <typename T>
+using DistributedDFArray = TpetraDFArray<T>;
+template <typename T>
+using DistributedDCArray = TpetraDCArray<T>;
+template <typename T>
+using DistributedCArray = TpetraDCArray<T,Kokkos::LayoutRight,Kokkos::HostSpace>;
+template <typename T>
+using DistributedFArray = TpetraDFArray<T,Kokkos::LayoutLeft,Kokkos::HostSpace>;
+template <typename T>
+using CommPlan = TpetraLRCommunicationPlan<T>;
+template <typename T>
+using OutputCommPlan = TpetraCommunicationPlan<T>;
+template <typename T>
+using HostCommPlanLR = TpetraLRCommunicationPlan<T,Kokkos::LayoutRight,Kokkos::HostSpace>;
+template <typename T>
+using HostCommPlan = TpetraCommunicationPlan<T,Kokkos::LayoutLeft,Kokkos::HostSpace>;
+
+
+template <typename T>
+void super_vector_initialization(DistributedDCArray<T> super_vector, DistributedDCArray<T> sub_vector, size_t extent);
+
+template <typename T>
+void super_vector_initialization(DistributedDFArray<T> super_vector, DistributedDFArray<T> sub_vector, size_t extent);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -269,16 +295,16 @@ enum class node_state
 /////////////////////////////////////////////////////////////////////////////
 struct node_t
 {
-    DCArrayKokkos<double> coords;     ///< Nodal coordinates
-    DCArrayKokkos<double> coords_n0;  ///< Nodal coordinates at tn=0 of time integration
-    DCArrayKokkos<double> vel;        ///< Nodal velocity
-    DCArrayKokkos<double> vel_n0;     ///< Nodal velocity at tn=0 of time integration
-    DCArrayKokkos<double> mass;       ///< Nodal mass
-    DCArrayKokkos<double> force;      ///< Nodal force
-    DCArrayKokkos<double> temp;       ///< Nodal temperature
-    DCArrayKokkos<double> temp_n0;    ///< Nodal temperature at tn=0 of time integration
-    DCArrayKokkos<double> q_transfer; ///< Nodal heat flux
-    DCArrayKokkos<double> gradient_level_set;   ///< Nodal gradient of the level set function
+    DistributedDCArray<double> coords, local_coords, ghost_coords;    ///< Nodal coordinates
+    DistributedDCArray<double> coords_n0, local_coords_n0, ghost_coords_n0; ///< Nodal coordinates at tn=0 of time integration
+    DistributedDCArray<double> vel, local_vel, ghost_vel;       ///< Nodal velocity
+    DistributedDCArray<double> vel_n0, local_vel_n0, ghost_vel_n0;    ///< Nodal velocity at tn=0 of time integration
+    DistributedDCArray<double> mass, local_mass, ghost_mass;      ///< Nodal mass
+    DistributedDCArray<double> force, local_force, ghost_force;     ///< Nodal force
+    DistributedDCArray<double> temp, local_temp, ghost_temp;      ///< Nodal temperature
+    DistributedDCArray<double> temp_n0, local_temp_n0, ghost_temp_n0;   ///< Nodal temperature at tn=0 of time integration
+    DistributedDCArray<double> q_transfer, local_q_transfer, ghost_q_transfer; ///< Nodal heat flux
+    DistributedDCArray<double> gradient_level_set, local_gradient_level_set, ghost_gradient_level_set;   ///< Nodal gradient of the level set function
 
     // initialization method (num_nodes, num_dims, state to allocate)
     void initialize(size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
@@ -286,32 +312,226 @@ struct node_t
         for (auto field : node_states){
             switch(field){
                 case node_state::coords:
-                    if (coords.size() == 0) this->coords = DCArrayKokkos<double>(num_nodes, num_dims, "node_coordinates");
-                    if (coords_n0.size() == 0) this->coords_n0 = DCArrayKokkos<double>(num_nodes, num_dims, "node_coordinates_n0");
+                    if (coords.size() == 0) this->coords = DistributedDCArray<double>(num_nodes, num_dims, "node_coordinates");
+                    if (coords_n0.size() == 0) this->coords_n0 = DistributedDCArray<double>(num_nodes, num_dims, "node_coordinates_n0");
                     break;
                 case node_state::velocity:
-                    if (vel.size() == 0) this->vel = DCArrayKokkos<double>(num_nodes, num_dims, "node_velocity");
-                    if (vel_n0.size() == 0) this->vel_n0 = DCArrayKokkos<double>(num_nodes, num_dims, "node_velocity_n0");
+                    if (vel.size() == 0) this->vel = DistributedDCArray<double>(num_nodes, num_dims, "node_velocity");
+                    if (vel_n0.size() == 0) this->vel_n0 = DistributedDCArray<double>(num_nodes, num_dims, "node_velocity_n0");
                     break;
                 case node_state::force:
-                    if (force.size() == 0) this->force = DCArrayKokkos<double>(num_nodes, num_dims, "node_force");
+                    if (force.size() == 0) this->force = DistributedDCArray<double>(num_nodes, num_dims, "node_force");
                     break;
                 case node_state::mass:
-                    if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_nodes, "node_mass");
+                    if (mass.size() == 0) this->mass = DistributedDCArray<double>(num_nodes, "node_mass");
                     break;
                 case node_state::temp:
-                    if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_nodes, "node_temp");
-                    if (temp_n0.size() == 0) this->temp_n0 = DCArrayKokkos<double>(num_nodes, "node_temp_n0");
+                    if (temp.size() == 0) this->temp = DistributedDCArray<double>(num_nodes, "node_temp");
+                    if (temp_n0.size() == 0) this->temp_n0 = DistributedDCArray<double>(num_nodes, "node_temp_n0");
                     break;
                 case node_state::heat_transfer:
-                    if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_nodes, "node_q_transfer");
+                    if (q_transfer.size() == 0) this->q_transfer = DistributedDCArray<double>(num_nodes, "node_q_transfer");
                     break;
                 case node_state::gradient_level_set:
-                    if (gradient_level_set.size() == 0) this->gradient_level_set = DCArrayKokkos<double>(num_nodes, num_dims, "node_grad_levelset");
+                    if (gradient_level_set.size() == 0) this->gradient_level_set = DistributedDCArray<double>(num_nodes, num_dims, "node_grad_levelset");
                     break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
                     throw std::runtime_error("**** Error in State Field Name ****");
+            }
+        }
+    }; // end method
+
+    /*initialize overload with a partitioned map; also has the option of rebuilding the same vector with a larger map to encompass its previous contents
+      last option is used for num_all = num_local + num_ghost contiguous storage */
+    void initialize(DistributedMap partitioned_map, size_t num_dims, std::vector<node_state> node_states, DistributedMap subview_map = DistributedMap(), size_t offset=0)
+    {   
+        if(subview_map.size() == 0){
+            for (auto field : node_states){
+                switch(field){
+                    case node_state::coords:
+                        if (coords.size() == 0) this->coords = DistributedDCArray<double>(partitioned_map, num_dims, "node_coordinates");
+                        if (coords_n0.size() == 0) this->coords_n0 = DistributedDCArray<double>(partitioned_map, num_dims, "node_coordinates_n0");
+                        break;
+                    case node_state::velocity:
+                        if (vel.size() == 0) this->vel = DistributedDCArray<double>(partitioned_map, num_dims, "node_velocity");
+                        if (vel_n0.size() == 0) this->vel_n0 = DistributedDCArray<double>(partitioned_map, num_dims, "node_velocity_n0");
+                        break;
+                    case node_state::force:
+                        if (force.size() == 0) this->force = DistributedDCArray<double>(partitioned_map, num_dims, "node_force");
+                        break;
+                    case node_state::mass:
+                        if (mass.size() == 0) this->mass = DistributedDCArray<double>(partitioned_map, "node_mass");
+                        break;
+                    case node_state::temp:
+                        if (temp.size() == 0) this->temp = DistributedDCArray<double>(partitioned_map, "node_temp");
+                        if (temp_n0.size() == 0) this->temp_n0 = DistributedDCArray<double>(partitioned_map, "node_temp_n0");
+                        break;
+                    case node_state::heat_transfer:
+                        if (q_transfer.size() == 0) this->q_transfer = DistributedDCArray<double>(partitioned_map, "node_q_transfer");
+                        break;
+                    case node_state::gradient_level_set:
+                        if (gradient_level_set.size() == 0) this->gradient_level_set = DistributedDCArray<double>(partitioned_map, num_dims, "node_grad_levelset");
+                        break;
+                    default:
+                        std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
+                        throw std::runtime_error("**** Error in State Field Name ****");
+                }
+            }
+        }
+        else{
+            //first assign already partitioned local array to the local variable (if allocated) since up until now there was no local vs all distinction
+            //then create array storing all = local + ghost array using the corresponding local array as a subview to avoid duplicate storage
+            for (auto field : node_states){
+                switch(field){
+                    case node_state::coords:
+                        //if both local and all vector were already allocated skip
+                        if(this->coords.size()==0||this->local_coords.size()==0){
+                            //store local data with existing managed view made by mesh read for now
+                            if(this->local_coords.size()==0&&this->coords.size()!=0){
+                                this->local_coords = this->coords;
+                            }
+                            if(this->local_coords_n0.size()==0&&this->coords_n0.size()!=0){
+                                this->local_coords_n0 = this->coords_n0;
+                            }
+                            //storage for nlocal+nghost
+                            this->coords = DistributedDCArray<double>(partitioned_map, num_dims, "node_coordinates");
+                            this->coords_n0 = DistributedDCArray<double>(partitioned_map, num_dims, "node_coordinates_n0");
+                            //assign local data to new storage if local data was allocated
+                            if(this->local_coords.size()!=0){
+                                super_vector_initialization(this->coords, this->local_coords, subview_map.size());
+                            }
+                            if(this->local_coords_n0.size()!=0){
+                                super_vector_initialization(this->coords_n0, this->local_coords_n0, subview_map.size());
+                            }
+                            //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                            this->local_coords = DistributedDCArray<double>(this->coords,subview_map);
+                            this->local_coords_n0 = DistributedDCArray<double>(this->coords_n0,subview_map);
+                        }
+                        break;
+                    case node_state::velocity:
+                        //if both local and all vector were already allocated skip
+                        if(this->vel.size()==0||this->local_vel.size()==0){
+                            //store local data with existing managed view made by mesh read for now
+                            if(this->local_vel.size()==0&&this->vel.size()!=0){
+                                this->local_vel = this->vel;
+                            }
+                            if(this->local_vel_n0.size()==0&&this->vel_n0.size()!=0){
+                                this->local_vel_n0 = this->vel_n0;
+                            }
+                            //storage for nlocal+nghost
+                            this->vel = DistributedDCArray<double>(partitioned_map, num_dims, "node_velocity");
+                            this->vel_n0 = DistributedDCArray<double>(partitioned_map, num_dims, "node_velocity_n0");
+                            //assign local data to new storage
+                            if(this->local_vel.size()!=0){
+                                super_vector_initialization(this->vel, this->local_vel, subview_map.size());
+                            }
+                            if(this->local_vel_n0.size()!=0){
+                                super_vector_initialization(this->vel_n0, this->local_vel_n0, subview_map.size());
+                            }
+                            //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                            this->local_vel = DistributedDCArray<double>(this->vel,subview_map);
+                            this->local_vel_n0 = DistributedDCArray<double>(this->vel_n0,subview_map);
+                        }
+                        break;
+                    case node_state::force:
+                        //if both local and all vector were already allocated skip
+                        if(this->force.size()==0||this->local_force.size()==0){
+                            //store local data with existing managed view made by mesh read for now
+                            if(this->local_force.size()==0&&this->force.size()!=0){
+                                this->local_force = this->force;
+                            }
+                            //storage for nlocal+nghost
+                            this->force = DistributedDCArray<double>(partitioned_map, num_dims, "node_force");
+                            //assign local data to new storage
+                            if(this->local_force.size()!=0){
+                                super_vector_initialization(this->force, this->local_force, subview_map.size());
+                            }
+                            //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                            this->local_force = DistributedDCArray<double>(this->force,subview_map);
+                        }
+                        break;
+                    case node_state::mass:
+                        //if both local and all vector were already allocated skip
+                        if(this->mass.size()==0||this->local_mass.size()==0){
+                            //store local data with existing managed view made by mesh read for now
+                            if(this->local_mass.size()==0&&this->mass.size()!=0){
+                                this->local_mass = this->mass;
+                            }
+                            //storage for nlocal+nghost
+                            this->mass = DistributedDCArray<double>(partitioned_map, "node_mass");
+                            //assign local data to new storage
+                            if(this->local_mass.size()!=0){
+                                super_vector_initialization(this->mass, this->local_mass, subview_map.size());
+                            }
+                            //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                            this->local_mass = DistributedDCArray<double>(this->mass,subview_map);
+                        }
+                        break;
+                    case node_state::temp:
+                        //if both local and all vector were already allocated skip
+                        if(this->temp.size()==0||this->local_temp.size()==0){
+                            //store local data with existing managed view made by mesh read for now
+                            if(this->local_temp.size()==0&&this->temp.size()!=0){
+                                this->local_temp = this->temp;
+                            }
+                            if(this->local_temp_n0.size()==0&&this->temp_n0.size()!=0){
+                                this->local_temp_n0 = this->temp_n0;
+                            }
+                            //storage for nlocal+nghost
+                            this->temp = DistributedDCArray<double>(partitioned_map, "node_temp");
+                            this->temp_n0 = DistributedDCArray<double>(partitioned_map, "node_temp_n0");
+                            //assign local data to new storage
+                            if(this->local_temp.size()!=0){
+                                super_vector_initialization(this->temp, this->local_temp, subview_map.size());
+                            }
+                            if(this->local_temp_n0.size()!=0){
+                                super_vector_initialization(this->temp_n0, this->local_temp_n0, subview_map.size());
+                            }
+                            //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                            this->local_temp = DistributedDCArray<double>(this->temp,subview_map);
+                            this->local_temp_n0 = DistributedDCArray<double>(this->temp_n0,subview_map);
+                        }
+                        break;
+                    case node_state::heat_transfer:
+                        //if both local and all vector were already allocated skip
+                        if(this->q_transfer.size()==0||this->local_q_transfer.size()==0){
+                            //store local data with existing managed view made by mesh read for now
+                            if(this->local_q_transfer.size()==0&&this->q_transfer.size()!=0){
+                                this->local_q_transfer = this->q_transfer;
+                            }
+                            //storage for nlocal+nghost
+                            this->q_transfer = DistributedDCArray<double>(partitioned_map, "node_q_transfer");
+                            
+                            //assign local data to new storage
+                            if(this->local_q_transfer.size()!=0){
+                                super_vector_initialization(this->q_transfer, this->local_q_transfer, subview_map.size());
+                            }
+                            //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                            this->local_q_transfer = DistributedDCArray<double>(this->q_transfer,subview_map);
+                        }
+                        break;
+                    case node_state::gradient_level_set:
+                        //if both local and all vector were already allocated skip
+                        if(this->gradient_level_set.size()==0||this->local_gradient_level_set.size()==0){
+                            //store local data with existing managed view made by mesh read for now
+                            if(this->local_gradient_level_set.size()==0&&this->gradient_level_set.size()!=0){
+                                this->local_gradient_level_set = this->gradient_level_set;
+                            }
+                            //storage for nlocal+nghost
+                            this->gradient_level_set = DistributedDCArray<double>(partitioned_map, num_dims, "node_grad_levelset");
+                            //assign local data to new storage
+                            if(this->gradient_level_set.size()!=0){
+                                super_vector_initialization(this->gradient_level_set, this->local_gradient_level_set, subview_map.size());
+                            }
+                            //replace local data storage with subview of nlocal+nghost; previous managed view should self-destruct here
+                            this->local_gradient_level_set = DistributedDCArray<double>(this->gradient_level_set,subview_map);
+                        }
+                        break;
+                    default:
+                        std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
+                        throw std::runtime_error("**** Error in State Field Name ****");
+                }
             }
         }
     }; // end method
@@ -415,6 +635,7 @@ struct MaterialToMeshMap_t
 {
     DCArrayKokkos <size_t> num_mat_elems;        ///< returns the exact number of matpts
     DCArrayKokkos <size_t> num_mat_elems_buffer; ///< returns the number of matpts plus buffer
+    DCArrayKokkos <size_t> num_mat_local_elems;        ///< returns the exact number of matpts
 
     DRaggedRightArrayKokkos<size_t> elem_in_mat_elem;             ///< returns the elem for this material
 
@@ -438,6 +659,12 @@ struct MaterialToMeshMap_t
         if (num_mat_elems_buffer.size() == 0){
             this->num_mat_elems_buffer = DCArrayKokkos <size_t> (num_mats, "num_mat_elems_with_buffer"); 
         }
+
+        // Note: num_mat_elems is allocated in problem setup
+        if (num_mat_local_elems.size() == 0){
+            this->num_mat_local_elems = DCArrayKokkos <size_t> (num_mats, "num_mat_local_elems"); 
+        }
+
 
     }; // end method
 
@@ -473,6 +700,7 @@ enum class material_pt_state
 struct MaterialPoint_t
 {
     DCArrayKokkos <size_t> num_material_points;    ///< the actual number of material points, omitting the buffer
+    DCArrayKokkos <size_t> num_material_local_points;    ///< the actual number of material points, omitting the buffer
     DCArrayKokkos <size_t> num_material_points_buffer; ///< number of material points plus a buffer
 
     DRaggedRightArrayKokkos<double> den;    ///< MaterialPoint density
@@ -518,6 +746,10 @@ struct MaterialPoint_t
         // Note: num_material_points_buffer is allocated in problem setup, the values are set in region_fill.cpp routine
         if (num_material_points_buffer.size() == 0){
             this->num_material_points_buffer = DCArrayKokkos <size_t> (num_mats, "num_material_points_with_buffer"); 
+        }
+
+        if (num_material_local_points.size() == 0){
+            this->num_material_local_points = DCArrayKokkos <size_t> (num_mats, "num_material_local_points"); 
         }
 
     }; // end method
@@ -949,7 +1181,23 @@ struct State_t
     MaterialZone_t MaterialZones;     ///< access as MaterialZones.var(mat_id, mat_zone), only used with arbitrary-order FE
 }; // end state_t
 
+template <typename T>
+void super_vector_initialization(DistributedDCArray<T> super_vector, DistributedDCArray<T> sub_vector, size_t extent){
+    FOR_ALL(i, 0, extent, {
+        for (size_t dim = 0; dim < super_vector.component_length(); dim++) {
+            super_vector(i, dim) = sub_vector(i, dim);
+        }
+    }); // end parallel for corners
+}
 
+template <typename T>
+void super_vector_initialization(DistributedDFArray<T> super_vector, DistributedDFArray<T> sub_vector, size_t extent){
+    FOR_ALL(i, 0, extent, {
+        for (size_t dim = 0; dim < super_vector.component_length(); dim++) {
+            super_vector(i, dim) = sub_vector(i, dim);
+        }
+    }); // end parallel for corners
+}
 
 
 

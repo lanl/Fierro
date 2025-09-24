@@ -59,31 +59,31 @@ public:
     Solver();
     virtual ~Solver();
 
-    virtual void initialize(SimulationParameters_t& SimulationParamaters, 
+    virtual void initialize(SimulationParameters_t& SimulationParameters, 
                             Material_t& Materials, 
                             Mesh_t& mesh, 
                             BoundaryCondition_t& Boundary,
-                            State_t& State) const = 0;
+                            State_t& State) {}
 
-    virtual void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+    virtual void initialize_material_state(SimulationParameters_t& SimulationParameters, 
                 	                      Material_t& Materials, 
                 	                      Mesh_t& mesh, 
                 	                      BoundaryCondition_t& Boundary,
                 	                      State_t& State) const = 0;
 
-    virtual void setup(SimulationParameters_t& SimulationParamaters, 
+    virtual void setup(SimulationParameters_t& SimulationParameters, 
                        Material_t& Materials, 
                        Mesh_t& mesh, 
                        BoundaryCondition_t& Boundary,
                        State_t& State) = 0;
 
-    virtual void execute(SimulationParameters_t& SimulationParamaters, 
+    virtual void execute(SimulationParameters_t& SimulationParameters, 
                          Material_t& Materials, 
                          BoundaryCondition_t& BoundaryConditions, 
                          Mesh_t& mesh, 
                          State_t& State) = 0;
 
-    virtual void finalize(SimulationParameters_t& SimulationParamaters, 
+    virtual void finalize(SimulationParameters_t& SimulationParameters, 
                           Material_t& Materials, 
                           BoundaryCondition_t& Boundary) const = 0;
 

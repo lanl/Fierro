@@ -42,7 +42,7 @@
                         Material_t& Materials, 
                         Mesh_t& mesh, 
                         BoundaryCondition_t& Boundary,
-                        State_t& State) const
+                        State_t& State)
  {
      const size_t num_nodes = mesh.num_nodes;
      const size_t num_gauss_pts = mesh.num_elems;

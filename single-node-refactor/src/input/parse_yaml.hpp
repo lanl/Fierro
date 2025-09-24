@@ -55,7 +55,7 @@ using namespace mtr;
 
 
 // utility function for parsing YAML file
-void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary);
+void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParameters, Material_t& Materials, BoundaryCondition_t& Boundary);
 
 
 #endif // end Header Guard

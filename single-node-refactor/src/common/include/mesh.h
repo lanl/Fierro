@@ -37,6 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "matar.h"
 #include "state.h"
 #include "ref_elem.h"
+#include "mesh_inputs.h"
 #include <cmath>
 
 #define PI 3.141592653589793
@@ -229,7 +230,9 @@ struct Mesh_t
     size_t num_dims = 3; ///< Number of spatial dimension
 
     // ---- Element Data Definitions ---- //
-    size_t num_elems;   ///< Number of elements in the mesh
+    size_t global_num_elems;   ///< Global number of elements in the mesh
+    size_t num_elems;  ///< number of local+shared elements on this process (forces usually employ this)
+    size_t num_local_elems; ///< number of local elements on this process (output and reductions for energy usually employ this)
     size_t num_nodes_in_elem;   ///< Number of nodes in an element
     size_t num_patches_in_elem; ///< Number of patches in an element
     size_t num_surfs_in_elem;   ///< Number of surfaces in an element
@@ -238,7 +241,8 @@ struct Mesh_t
     size_t num_gauss_in_elem; ///< Number of Gauss points in an element
     size_t num_lobatto_in_elem; ///< Number of Gauss Lobatto points in an element
 
-    DCArrayKokkos<size_t> nodes_in_elem; ///< Nodes in an element
+    DistributedDCArray<size_t> nodes_in_elem; ///< Nodes in an element
+    DistributedDCArray<size_t> local_nodes_in_elem; ///< Nodes in uniquely distributed element (subview of above)
     CArrayKokkos<size_t> corners_in_elem; ///< Corners in an element -- this can just be a functor
 
     RaggedRightArrayKokkos<size_t> elems_in_elem; ///< Elements connected to an element
@@ -253,7 +257,21 @@ struct Mesh_t
     gauss_in_elem_t gauss_in_elem; ///< Gauss points in an element
 
     // ---- Node Data Definitions ---- //
-    size_t num_nodes; ///< Number of nodes in the mesh
+    size_t global_num_nodes; ///< Global Number of nodes in the mesh
+    size_t num_nodes; ///<  number of local + ghost nodes on this process
+    size_t num_local_nodes; ///< number of nodes local to this process
+    size_t num_ghost_nodes; ///< number of ghost nodes on this process
+
+    //distributed map definitions
+    DistributedMap node_map; ///< partition of local nodes (stores global node IDs on each process)
+    DistributedMap all_node_map; ///< partition of local + ghost nodes (stores global node IDs on each process)
+    DistributedMap ghost_node_map; ///< partition of local + ghost nodes (stores global node IDs on each process)
+    DistributedMap local_element_map; ///< partition of uniquely owned elements (stores global node IDs on each process)
+    DistributedMap element_map; ///< partition of uniquely owned + shared elements (stores global node IDs on each process)
+    DistributedMap nonoverlap_element_node_map; // map of node indices belonging to unique element map
+
+    //communication plans
+    CommPlan<real_t> node_coords_comms;
 
     RaggedRightArrayKokkos<size_t> corners_in_node; ///< Corners connected to a node
     CArrayKokkos<size_t> num_corners_in_node;       ///< Number of corners connected to a node
@@ -307,22 +325,21 @@ struct Mesh_t
     // initialization methods
     void initialize_nodes(const size_t num_nodes_inp)
     {
-        num_nodes = num_nodes_inp;
+        global_num_nodes = num_nodes_inp;
 
         return;
     }; // end method
 
     // initialization methods
-    void initialize_elems(const size_t num_elems_inp, const size_t num_dims_inp)
+    void initialize_elems(const size_t num_elems_inp, const size_t input_num_nodes_in_elem, const DistributedMap input_element_map)
     {
-        num_dims = num_dims_inp;
-        num_nodes_in_elem = 1;
-        
-        for (int dim = 0; dim < num_dims; dim++) {
-            num_nodes_in_elem *= 2;
-        }
         num_elems       = num_elems_inp;
-        nodes_in_elem   = DCArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.nodes_in_elem");
+        element_map     = input_element_map;
+
+        //number of nodes per element
+        num_nodes_in_elem = input_num_nodes_in_elem;
+
+        nodes_in_elem   = DistributedDCArray<size_t>(element_map, num_nodes_in_elem, "mesh.nodes_in_elem");
         corners_in_elem = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
 
         // 1 Gauss point per element
@@ -343,7 +360,8 @@ struct Mesh_t
         const size_t num_zones_in_elem_inp,
         const size_t num_nodes_in_zone_inp,
         const size_t num_surfs_in_elem_inp,
-        const size_t num_dims_inp)
+        const size_t num_dims_inp,
+        const DistributedMap input_element_map)
     {
         num_dims  = num_dims_inp;
         num_elems = num_elems_inp;
@@ -355,8 +373,9 @@ struct Mesh_t
         num_surfs_in_elem     = num_surfs_in_elem_inp;
 
         num_zones = num_zones_in_elem * num_elems;
+        element_map     = input_element_map;
 
-        nodes_in_elem    = DCArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.nodes_in_elem");
+        nodes_in_elem    = DistributedDCArray<size_t>(element_map, num_nodes_in_elem, "mesh.nodes_in_elem");
         corners_in_elem  = CArrayKokkos<size_t>(num_elems, num_nodes_in_elem, "mesh.corners_in_elem");
         zones_in_elem    = zones_in_elem_t(num_zones_in_elem);
         surfs_in_elem    = CArrayKokkos<size_t>(num_elems, num_surfs_in_elem, "mesh.surfs_in_zone");
@@ -373,6 +392,335 @@ struct Mesh_t
 
         return;
     }; // end method
+
+    /* ----------------------------------------------------------------------
+    Initialize Ghost and Non-Overlapping Element Maps
+    ------------------------------------------------------------------------- */
+    void init_maps(node_t& node, mesh_input_t& mesh_inps)
+    {
+        int  local_node_index, current_column_index;
+        long long int   node_gid;
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+
+        num_ghost_nodes=0;
+        DCArrayKokkos<long long int> ghost_nodes;
+        DCArrayKokkos<int> ghost_node_ranks;
+        if (num_elems >= 1)
+        {
+            // Construct set of ghost nodes; start with a buffer with upper limit
+            std::set<long long int> ghost_node_set;
+
+            for (int cell_rid = 0; cell_rid < num_elems; cell_rid++)
+            {
+                // set nodes per element
+                for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
+                {
+                    node_gid = nodes_in_elem(cell_rid, node_lid); //nodes in elem still stores global indices
+                    if (!node_map.isProcessGlobalIndex(node_gid))
+                    {
+                        ghost_node_set.insert(node_gid);
+                    }
+                }
+            }
+
+            // by now the set contains, with no repeats, all the global node indices that are ghosts for this rank
+            // now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
+
+            num_ghost_nodes = ghost_node_set.size();
+                if(num_ghost_nodes){
+                    int  ighost = 0;
+                    auto it     = ghost_node_set.begin();
+
+                    // create a Map for ghost node indices
+                    ghost_nodes = DCArrayKokkos<long long int>(num_ghost_nodes, "ghost_nodes"); //pass this into map object
+                    while (it != ghost_node_set.end()) {
+                        ghost_nodes.host(ighost++) = *it;
+                        it++;
+                    }
+                    ghost_nodes.update_device();
+
+                    //Use the ranks to break ties in shared element assignment for a unique element map used in elem set reductions later
+                    //this wont be that great at load balancing element counts but its simple and works for now
+                    ghost_node_ranks = DCArrayKokkos<int>(num_ghost_nodes, "ghost_nodes_ranks");
+                }
+                else{
+                    //ensure a size of at least 1 with bogus index to prevent segfault
+                    ghost_nodes = DCArrayKokkos<long long int>(1, "ghost_nodes"); //pass this into map object
+                    ghost_node_ranks = DCArrayKokkos<int>(1, "ghost_nodes_ranks");
+
+                }
+                // debug print of ghost nodes
+                // std::cout << " GHOST NODE SET ON TASK " << myrank << std::endl;
+                // for(int i = 0; i < num_ghost_nodes; i++)
+                // std::cout << "{" << i + 1 << "," << ghost_nodes(i) + 1 << "}" << std::endl;
+
+                // find which mpi rank each ghost node belongs to and store the information in a CArrayKokkos
+                // // allocate Teuchos Views since they are the only input available at the moment in the Tpetra map definitions
+                // Teuchos::ArrayView<const GO> ghost_nodes_pass(ghost_nodes.h_view.data(), num_ghost_nodes);
+
+                // Teuchos::ArrayView<int> ghost_node_ranks_pass(ghost_node_ranks.h_view.data(), num_ghost_nodes);
+                //node_map.print();
+                node_map.getRemoteIndexList(ghost_nodes, ghost_node_ranks);
+                if(num_ghost_nodes){
+                    ghost_node_ranks.update_device();
+                }
+            
+        }
+
+        ghost_node_map = DistributedMap(ghost_nodes);
+
+        // construct array for all indices (ghost + local)
+        num_nodes = num_local_nodes + num_ghost_nodes;
+        DCArrayKokkos<long long int> all_nodes;
+        if(num_nodes){
+            // CArrayKokkos<GO, array_layout, device_type, memory_traits> all_node_indices(num_nodes, "all_node_indices");
+            all_nodes = DCArrayKokkos<long long int>(num_nodes, "num_nodes");
+            for (int i = 0; i < num_nodes; i++)
+            {
+                if (i < num_local_nodes)
+                {
+                    all_nodes.host(i) = node_map.getGlobalIndex(i);
+                }
+                else
+                {
+                    all_nodes.host(i) = ghost_nodes.host(i - num_local_nodes);
+                }
+            }
+            all_nodes.update_device();
+            // debug print of node indices
+            // for(int inode=0; inode < index_counter; inode++)
+            // std::cout << " my_reduced_global_indices " << my_reduced_global_indices(inode) <<std::endl;
+        }
+        // create a Map for all the node indices (ghost + local)
+        all_node_map = DistributedMap(all_nodes);
+
+        // remove elements from the local set so that each rank has a unique set of global ids
+
+        // local elements belonging to the non-overlapping element distribution to each rank with buffer
+        DCArrayKokkos<long long int> Initial_Element_Global_Indices(num_elems, "Initial_Element_Global_Indices");
+
+        size_t nonoverlapping_count = 0;
+        int    my_element_flag;
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            my_element_flag = 1;
+
+            for (int lnode = 0; lnode < num_nodes_in_elem; lnode++)
+            {
+                node_gid = nodes_in_elem(ielem, lnode);
+                if (ghost_node_map.isProcessGlobalIndex(node_gid))
+                {
+                    local_node_index = ghost_node_map.getLocalIndex(node_gid);
+                    if (ghost_node_ranks.host(local_node_index) < myrank)
+                    {
+                        my_element_flag = 0;
+                    }
+                }
+            }
+            if (my_element_flag)
+            {
+                Initial_Element_Global_Indices.host(nonoverlapping_count++) = element_map.getGlobalIndex(ielem);
+            }
+        }
+
+        // copy over from buffer to compressed storage
+        DCArrayKokkos<long long int> Local_Element_Global_Indices(nonoverlapping_count, "Local_Element_Global_Indices");
+        for (int ibuffer = 0; ibuffer < nonoverlapping_count; ibuffer++)
+        {
+            Local_Element_Global_Indices.host(ibuffer) = Initial_Element_Global_Indices.host(ibuffer);
+        }
+        num_local_elems = nonoverlapping_count;
+        Local_Element_Global_Indices.update_device();
+
+        // create nonoverlapping element map
+        local_element_map = DistributedMap(Local_Element_Global_Indices);
+
+        // sort element connectivity so nonoverlaps are sequentially found first
+        // define initial sorting of global indices
+
+        // element_map->describe(*fos,Teuchos::VERB_EXTREME);
+
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            Initial_Element_Global_Indices.host(ielem) = element_map.getGlobalIndex(ielem);
+        }
+        Initial_Element_Global_Indices.update_device();
+
+        // re-sort so local elements in the nonoverlapping map are first in storage
+        CArrayKokkos<long long int, Kokkos::LayoutLeft, HostSpace> Temp_Nodes(num_nodes_in_elem);
+
+        long long int  temp_element_gid, current_element_gid;
+        int last_storage_index = num_elems - 1;
+        
+        //nodes_in_elem.print();
+
+        for (int ielem = 0; ielem < num_local_elems; ielem++)
+        {
+            current_element_gid = Initial_Element_Global_Indices.host(ielem);
+            // if this element is not part of the non overlap list then send it to the end of the storage and swap the element at the end
+            if (!local_element_map.isProcessGlobalIndex(current_element_gid))
+            {
+                temp_element_gid = current_element_gid;
+                for (int lnode = 0; lnode < num_nodes_in_elem; lnode++)
+                {
+                    Temp_Nodes(lnode) = nodes_in_elem.host(ielem, lnode);
+                }
+                Initial_Element_Global_Indices.host(ielem) = Initial_Element_Global_Indices.host(last_storage_index);
+                Initial_Element_Global_Indices.host(last_storage_index) = temp_element_gid;
+                for (int lnode = 0; lnode < num_nodes_in_elem; lnode++)
+                {
+                    nodes_in_elem.host(ielem, lnode) = nodes_in_elem.host(last_storage_index, lnode);
+                    nodes_in_elem.host(last_storage_index, lnode) = Temp_Nodes(lnode);
+                }
+                //resort element data that may have been read in such as vtu types and object ids
+                // if(mesh_inps.input_elem_types){
+                //     int temp;
+                //     temp = elem_types.host(ielem);
+                //     elem_types.host(ielem) = elem_types.host(last_storage_index);
+                //     elem_types.host(last_storage_index) = temp;
+                // }
+                if(mesh_inps.input_elem_objectids){
+                    int temp;
+                    temp = mesh_inps.object_ids.host(ielem);
+                    mesh_inps.object_ids.host(ielem) = mesh_inps.object_ids.host(last_storage_index);
+                    mesh_inps.object_ids.host(last_storage_index) = temp;
+                }
+                last_storage_index--;
+
+                // test if swapped element is also not part of the non overlap map; if so lower loop counter to repeat the above
+                temp_element_gid = Initial_Element_Global_Indices.host(ielem);
+                if (!local_element_map.isProcessGlobalIndex(temp_element_gid))
+                {
+                    ielem--;
+                }
+            }
+        }
+        // reset all element map to its re-sorted version
+        Initial_Element_Global_Indices.update_device();
+        nodes_in_elem.update_device();
+        
+        element_map = DistributedMap(Initial_Element_Global_Indices);
+        //redefine nodes_in_elem so partition map of the distributed array is synchronized with permuted dual view contents
+        DistributedDCArray<size_t> nodes_in_elem_temp(element_map, num_nodes_in_elem);
+        //nodes_in_elem_temp.replace_kokkos_dual_view(nodes_in_elem.get_kokkos_dual_view());
+        //nodes_in_elem.print();
+        std::cout << "NUM ELEMS " << num_elems << " NUM NODES IN ELEM " << num_nodes_in_elem << std::endl;
+        for(int ielem= 0; ielem < num_elems; ielem++) {
+            for(int inode = 0; inode < num_nodes_in_elem; inode++){
+                nodes_in_elem_temp.host(ielem, inode) = nodes_in_elem.host(ielem, inode);
+            }
+        }
+        //nodes_in_elem_temp.update_device();
+        nodes_in_elem = nodes_in_elem_temp;
+        //nodes_in_elem.print();
+
+        //convert global ids stored in nodes_in_elem to local node ids spanning 0:num_nodes on this process
+        for(int ielem= 0; ielem < num_elems; ielem++) {
+            for(int inode = 0; inode < num_nodes_in_elem; inode++){
+                nodes_in_elem.host(ielem, inode) = all_node_map.getLocalIndex(nodes_in_elem.host(ielem, inode));
+            }
+        }
+
+        nodes_in_elem.update_device();
+
+        //local element map may need resorting after above permuting; update the order
+        for (int ielem = 0; ielem < num_local_elems; ielem++)
+        {
+            Local_Element_Global_Indices.host(ielem) = element_map.getGlobalIndex(ielem);
+        }
+        Local_Element_Global_Indices.update_device();
+        local_element_map = DistributedMap(Local_Element_Global_Indices);
+
+        //nodes_in_elem.print();
+
+        /*connectivity data for uniquely assigned elements (used mostly to simplify file output comms)
+          constructed as a subview of nodes_in_elem*/
+        local_nodes_in_elem = DistributedDCArray<size_t>(nodes_in_elem,local_element_map);
+
+        // element_map->describe(*fos,Teuchos::VERB_EXTREME);
+        // element_map->describe(*fos,Teuchos::VERB_EXTREME);
+        // create distributed multivector of the local node data and all (local + ghost) node storage
+        std::vector<node_state> required_node_state = { node_state::coords };
+        //constructs local + ghost coords array with local coords as a subview for first nlocal entrie
+        node.initialize(all_node_map, num_dims, required_node_state, node_map);
+
+        /* create forward comms objects; setup for new map pairs should only be done here, construct using these existing comm plans
+           for any new pair of vectors requiring the same map pairs and comm mode afterwards*/
+        forward_comms_setup(node);
+        node_coords_comms.execute_comms();
+
+        // create reverse comms
+        //reverse_comms_setup(node);
+
+        // construct map of nodes that belong to the non-overlapping element set (contained by ghost + local node set but not all of them)
+        std::set<long long int> nonoverlap_elem_node_set;
+        if (num_local_elems)
+        {
+            for (int cell_rid = 0; cell_rid < num_local_elems; cell_rid++)
+            {
+                // set nodes per element
+                for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
+                {
+                    node_gid = all_node_map.getGlobalIndex(nodes_in_elem.host(cell_rid, node_lid));
+                    nonoverlap_elem_node_set.insert(node_gid);
+                }
+            }
+        }
+
+        // by now the set contains, with no repeats, all the global node indices belonging to the non overlapping element list on this MPI rank
+        // now pass the contents of the set over to a CArrayKokkos, then create a map to find local ghost indices from global ghost indices
+        size_t nnonoverlap_elem_nodes = nonoverlap_elem_node_set.size();
+        DCArrayKokkos<long long int> nonoverlap_elem_nodes(nnonoverlap_elem_nodes, "nonoverlap_elem_nodes");
+        if(nnonoverlap_elem_nodes){
+            int  inonoverlap_elem_node = 0;
+            auto it = nonoverlap_elem_node_set.begin();
+            while (it != nonoverlap_elem_node_set.end()) {
+                nonoverlap_elem_nodes.host(inonoverlap_elem_node++) = *it;
+                it++;
+            }
+            nonoverlap_elem_nodes.update_device();
+        }
+
+        // create a Map for node indices belonging to the non-overlapping set of elements
+        nonoverlap_element_node_map = DistributedMap(nonoverlap_elem_nodes);
+
+        // std::cout << "number of patches = " << mesh->num_patches() << std::endl;
+        if (myrank == 0)
+        {
+            std::cout << "End of map setup " << std::endl;
+        }
+    }
+
+    /* ----------------------------------------------------------------------
+    Setup Tpetra importers for comms
+    ------------------------------------------------------------------------- */
+
+    void forward_comms_setup(node_t& node)
+    {
+        // create import object using local node indices map and ghost indices map
+        node_coords_comms = CommPlan<real_t>(node.coords, node.local_coords);
+
+        // output map and importers
+        //sorted_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_nodes, 0, comm));
+        //node_sorting_importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(map, sorted_map));
+        // sorted element mapping
+        //sorted_element_map = Teuchos::rcp(new Tpetra::Map<LO, GO, node_type>(num_elem, 0, comm));
+        //element_sorting_importer = Teuchos::rcp(new Tpetra::Import<LO, GO>(element_map, sorted_element_map));;
+    }
+
+    /* ----------------------------------------------------------------------
+    Setup Tpetra exporters for reverse comms
+    ------------------------------------------------------------------------- */
+
+    void reverse_comms_setup(node_t& node)
+    {   
+        //currently don't use anything like force tallies from ghost nodes
+        //only use in TO solver was a BC flag
+        // create import object using local node indices map and ghost indices map
+        //exporter = Teuchos::rcp(new Tpetra::Export<LO, GO>(all_node_map, map));
+    }
 
     // build the corner mesh connectivity arrays
     void build_corner_connectivity()

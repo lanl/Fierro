@@ -38,8 +38,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${VECTOR_CXX_FLAGS}")
 
 message("\n ****** ADDING FIERRO EXECUTABLE ******** \n ")
 
-add_definitions(-DHAVE_KOKKOS=1)
-
 if (CUDA)
   add_definitions(-DHAVE_CUDA=1)
 elseif (HIP)
@@ -71,4 +69,4 @@ include_directories(Solvers/level_set_solver/include)
 add_subdirectory(Solvers/level_set_solver)
 
 add_executable(Fierro main.cpp driver.cpp solver.cpp ${COMMON_Files} ${EQUILIBRATION_Files} ${YAML_SRC_Files} ${SGH_3D_SRC_Files} ${SGH_RZ_SRC_Files} ${SGTM_3D_SRC_Files} ${LVLSET_SRC_Files})
-target_link_libraries(Fierro PRIVATE matar Kokkos::kokkos) 
+target_link_libraries(Fierro ${LINKING_LIBRARIES}) 

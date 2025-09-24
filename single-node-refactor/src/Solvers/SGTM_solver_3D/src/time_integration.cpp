@@ -51,13 +51,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::rk_init(
-    DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& node_coords_n0,
-    DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& node_vel_n0,
-    DCArrayKokkos<double>& node_temp,
-    DCArrayKokkos<double>& node_temp_n0,
-    DCArrayKokkos<double>& node_q_flux,
+    DistributedDCArray<double>& node_coords,
+    DistributedDCArray<double>& node_coords_n0,
+    DistributedDCArray<double>& node_vel,
+    DistributedDCArray<double>& node_vel_n0,
+    DistributedDCArray<double>& node_temp,
+    DistributedDCArray<double>& node_temp_n0,
+    DistributedDCArray<double>& node_q_flux,
     DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
     const size_t num_dims,
     const size_t num_elems,
@@ -100,8 +100,8 @@ std::cout << "done with rk_int \n ";
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::get_timestep(Mesh_t& mesh,
-                       DCArrayKokkos<double>& node_coords,
-                       DCArrayKokkos<double>& node_vel,
+                       DistributedDCArray<double>& node_coords,
+                       DistributedDCArray<double>& node_vel,
                        DCArrayKokkos<double>& GaussPoints_vol,
                        DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                        DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
