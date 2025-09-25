@@ -1,16 +1,16 @@
 # num_dims: 3
 
 dynamic_options:
-  time_final: 5
-  dt_min: 1e-6
-  dt_max: 0.05
-  dt_start: 1e-6
+  time_final: 3.0
+  dt_min: 1.e-6
+  dt_max: 0.02
+  dt_start: 1.e-5
   cycle_stop: 300000
 
 
 mesh_options:
   source: file
-  file_path: ./standard_inputs/meshes/preload.vtk
+  file_path: ./standard_inputs/meshes/sie_expansion_test.vtk
   num_dims: 3
 
 #mesh_options:
@@ -25,7 +25,7 @@ mesh_options:
 output_options:
   timer_output_level: thorough
   output_file_format: state
-  graphics_time_step: 5
+  graphics_time_step: 3.0
   # graphics_iteration_step: 10
 
 solver_options:
@@ -51,24 +51,12 @@ boundary_conditions:
           - 0
           - 1
 
-  # Tag Z plane
-  - boundary_condition:
-      solver_id: 0
-      surface: 
-          type: z_plane
-          plane_position: 1.5
-      velocity_model: reflected
-      velocity_bc_global_vars:
-          - 0
-          - 0
-          - 1
-
   # global contact condition (this should be used when it is not clear what the contact surface(s) will be)
   - boundary_condition:
       solver_id: 0
       surface:
           type: global
-      stress_model: preload_contact
+      stress_model: global_contact
 
 materials:
   - material:
@@ -112,11 +100,11 @@ regions:
       volume:
         type: box
         origin: [0.0, 0.0, 0.0]
-        x1: -0.25
-        x2: 0.25
-        y1: -0.25
-        y2: 0.25
-        z1: 1.0
+        x1: -1.0
+        x2: 1.0
+        y1: -1.0
+        y2: 1.0
+        z1: 0.0
         z2: 1.5
       material_id: 0
       solver_id: 0
@@ -125,10 +113,9 @@ regions:
         value: 1.0
       specific_internal_energy:
         type: uniform
-        value: 1.e-10
+        value: 0.5
       velocity: 
         type: cartesian
         u: 0.0
         v: 0.0
         w: 0.0
-
