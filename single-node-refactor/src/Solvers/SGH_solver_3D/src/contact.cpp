@@ -1765,7 +1765,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
     pair_vars = RaggedRightArrayKokkos <double> (pair_vars_stride);
     pair_vars.set_values(0);
     
-    //RUN({
+    RUN({
         num_active(0) = 0;
         for (int node_lid = 0; node_lid < num_bdy_nodes; node_lid++) {
             if (elems_penetrated(node_lid,0) != num_elems) {
@@ -1970,7 +1970,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                 } // end el_id
             }
         } // end node_lid
-    //});
+    });
 
     /* RUN({
         for (int i = 0; i < node_penetrations.dims(0); i++) {
