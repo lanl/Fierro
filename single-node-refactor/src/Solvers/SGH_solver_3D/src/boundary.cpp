@@ -130,7 +130,7 @@ void SGH3D:: boundary_contact_force(State_t& State, const Mesh_t &mesh, const do
                       Contact_State.xi, Contact_State.eta, Contact_State.x_max, Contact_State.y_max,
                       Contact_State.z_max, Contact_State.num_active, mesh.elems_in_node, mesh.num_nodes_in_elem,
                       mesh.patches_in_elem, Contact_State.node_patch_pairs, mesh.num_elems, Contact_State.pair_vars, del_t,
-                      Contact_State.active_set);
+                      Contact_State.active_set, doing_preload);
 
     /* for (int i = 0; i < mesh.num_bdy_nodes; i++) {
         std::cout << mesh.bdy_nodes(i) << "   ";

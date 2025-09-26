@@ -1411,7 +1411,7 @@ void find_penetrating_nodes(double depth_cap, DCArrayKokkos <double> &coords,
                     {
                         for (int j = 0; j < num_bdy_nodes; j++) {
                             if (node_penetrations(j,0) == node_gid) {
-                                for (int k = 0; k < 6; k++) {
+                                for (int k = 0; k < 18; k++) {
                                     if (node_penetrations(j,k+1) == num_patches) {
                                         node_penetrations(j,k+1) = bdy_patches(patch_lid);
                                         break;
@@ -1672,7 +1672,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                        const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, double x_max, double y_max, double z_max, DCArrayKokkos <size_t> &num_active,
                        RaggedRightArrayKokkos <size_t> elems_in_node, CArrayKokkos <size_t> num_nodes_in_elem,
                        CArrayKokkos <size_t> patches_in_elem, RaggedRightArrayKokkos <size_t> &node_patch_pairs, size_t num_elems,
-                       RaggedRightArrayKokkos <double> &pair_vars, const double &del_t, CArrayKokkos <size_t> &active_set)
+                       RaggedRightArrayKokkos <double> &pair_vars, const double &del_t, CArrayKokkos <size_t> &active_set, bool doing_preload)
 {
     // finding penetration depth criterion
     double dim_min = std::min(std::min(x_max-x_min,y_max-y_min),z_max-z_min);
@@ -1765,7 +1765,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
     pair_vars = RaggedRightArrayKokkos <double> (pair_vars_stride);
     pair_vars.set_values(0);
     
-    RUN({
+    //RUN({
         num_active(0) = 0;
         for (int node_lid = 0; node_lid < num_bdy_nodes; node_lid++) {
             if (elems_penetrated(node_lid,0) != num_elems) {
@@ -1782,6 +1782,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                 double surf_normal[3];
 
                 // dot product local and max variables for pairing step 3
+                double ptoPmag = pow(10,16);
                 double dot_prod = 0;
                 double dot_prod_loc = 0;
 
@@ -1817,6 +1818,10 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                 n_to_c[0] = centroid[0] - coords(node_penetrations(node_lid,0),0);
                 n_to_c[1] = centroid[1] - coords(node_penetrations(node_lid,0),1);
                 n_to_c[2] = centroid[2] - coords(node_penetrations(node_lid,0),2);
+                double n_to_c_mag = n_to_c[0]*n_to_c[0] + n_to_c[1]*n_to_c[1] +n_to_c[2]*n_to_c[2];
+                n_to_c[0] /= n_to_c_mag;
+                n_to_c[1] /= n_to_c_mag;
+                n_to_c[2] /= n_to_c_mag;
 
                 // for each element, find the most opposing patch normal considering only boundary patches
                 // pairing step 3) dot product of vector from (2) with normal of each surf being penetrated by the node
@@ -1824,19 +1829,37 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                 // todo: what are the edge cases for pairing step 3?
                 for (int el_id = 0; el_id < elems_penetrated.stride(node_lid); el_id++) {
                     dot_prod = -1;
+                    ptoPmag = pow(10,16);
                     for (int j = 0; j < 18; j++) {
                         if (node_penetrations(node_lid, j+1) != num_patches) {
                             if (elems_in_patch(node_penetrations(node_lid, j+1), 0) == elems_penetrated(node_lid, el_id)) {
-                                //std::cout << "if check: " << elems_in_patch(node_penetrations(node_lid, j+1), 0) << "   " << elems_penetrated(node_lid, el_id) << std::endl;
                                 for (int k = 0; k < 4; k++){
                                     node_gids[k] = nodes_in_patch(node_penetrations(node_lid, j+1),k);
                                 }
                                 get_penetration_normal(coords, ref_cen[0], ref_cen[1], surf_normal, xi, eta, node_gids);
                                 dot_prod_loc = surf_normal[0]*n_to_c[0] + surf_normal[1]*n_to_c[1] + surf_normal[2]*n_to_c[2];
-                                // pairing step 4) find surf with max value of dot product from (3)
-                                if (dot_prod_loc > dot_prod) {
-                                    dot_prod = dot_prod_loc;
-                                    surf_lid = j+1;
+                                if (doing_preload == false) {
+                                    double px = coords(node_penetrations(node_lid,0),0);
+                                    double py = coords(node_penetrations(node_lid,0),1);
+                                    double pz = coords(node_penetrations(node_lid,0),2);
+                                    double xn = coords(node_gids[0],0);
+                                    double yn = coords(node_gids[0],1);
+                                    double zn = coords(node_gids[0],2);
+                                    double c = (surf_normal[0]*(px-xn)+surf_normal[1]*(py-yn)+surf_normal[2]*(pz-zn))/(-surf_normal[0]*surf_normal[0] - surf_normal[1]*surf_normal[1] - surf_normal[2]*surf_normal[2]);
+                                    P[0] = px + c*surf_normal[0];
+                                    P[1] = py + c*surf_normal[1];
+                                    P[2] = pz + c*surf_normal[2];
+                                    double ptoPmagloc = sqrt((px-P[0])*(px-P[0])+(py-P[1])*(py-P[1])+(pz-P[2])*(pz-P[2]));
+                                    // pairing step 4) find surf with max value of dot product from (3)
+                                    if (dot_prod_loc > -pow(10,-2) && ptoPmagloc < ptoPmag) {
+                                        ptoPmag = ptoPmagloc;
+                                        surf_lid = j+1;
+                                    }
+                                } else {
+                                    if (dot_prod_loc > dot_prod) {
+                                        dot_prod = dot_prod_loc;
+                                        surf_lid = j+1;
+                                    }
                                 }
                             }
                         }
@@ -1947,7 +1970,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                 } // end el_id
             }
         } // end node_lid
-    });
+    //});
 
     /* RUN({
         for (int i = 0; i < node_penetrations.dims(0); i++) {
