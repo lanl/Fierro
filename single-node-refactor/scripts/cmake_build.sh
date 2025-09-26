@@ -48,6 +48,6 @@ echo "CMake Options: ${cmake_options[@]}"
 cmake "${cmake_options[@]}" -B "${SGH_BUILD_DIR}" -S "${SGH_BASE_DIR}"
 
 # Build SGH
-make -C "${SGH_BUILD_DIR}" -j${SGH_BUILD_CORES}
+make -C "${SGH_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
 
 cd $basedir
