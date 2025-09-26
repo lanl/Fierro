@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: pen_test.geo
+  file_path: preload.vtk
   num_dims: 3
 
 #mesh_options:
