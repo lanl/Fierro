@@ -168,7 +168,7 @@ cmake "${cmake_options[@]}" -B "${TRILINOS_BUILD_DIR}" -S "${TRILINOS_SOURCE_DIR
 
 # Build Trilinos
 echo "Building Trilinos..."
-make -C "${TRILINOS_BUILD_DIR}" -j${MATAR_BUILD_CORES}
+make -C "${TRILINOS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
 
 # Install Trilinos
 echo "Installing Trilinos..."
