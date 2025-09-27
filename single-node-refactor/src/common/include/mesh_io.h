@@ -610,7 +610,7 @@ public:
                 }
             });
         }
-        node.coords.update_device();
+        node.coords.update_host();
         //initialize some mesh data
         mesh.initialize_nodes(global_num_nodes);
         num_local_nodes = node_map.size();
@@ -1156,6 +1156,7 @@ public:
             }
         }
 
+        node_coords_distributed.update_device();
         // repartition node distribution
         node_coords_distributed.repartition_vector();
         //get map from repartitioned Farray and feed it into distributed CArray type; FArray data will be discared after scope
@@ -1583,11 +1584,11 @@ public:
 
                 // read the node ids in the element
                 FOR_ALL (elem_id, 0, num_elems, {
-                    long long int temp[num_nodes_in_elem];
-                    for (size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
+                    long long int temp[8];
+                    for (size_t node_lid=0; node_lid<8; node_lid++){
                         temp[node_lid] =  nodes_in_elem(elem_id,convert_ensight_to_ijk(node_lid));
                     }
-                    for (size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
+                    for (size_t node_lid=0; node_lid<8; node_lid++){
                         nodes_in_elem(elem_id, node_lid) = temp[node_lid];
                     }
                     
@@ -5159,7 +5160,7 @@ public:
             global_indices_of_local_elements(ielem) = mesh.local_element_map.getGlobalIndex(ielem);
         }
         host_local_element_map = HostDistributedMap(global_indices_of_local_elements);
-        auto elem_fields = DistributedCArray<double>(host_local_element_map, num_scalar_vars);
+        DistributedCArray<double> elem_fields = DistributedCArray<double>(host_local_element_map, num_scalar_vars);
         int  elem_switch = 1;
 
         DCArrayKokkos<double> speed(num_elems, "speed");

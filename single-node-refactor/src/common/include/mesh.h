@@ -417,7 +417,7 @@ struct Mesh_t
                 // set nodes per element
                 for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
                 {
-                    node_gid = nodes_in_elem(cell_rid, node_lid); //nodes in elem still stores global indices
+                    node_gid = nodes_in_elem.host(cell_rid, node_lid); //nodes in elem still stores global indices
                     if (!node_map.isProcessGlobalIndex(node_gid))
                     {
                         ghost_node_set.insert(node_gid);
@@ -509,7 +509,7 @@ struct Mesh_t
 
             for (int lnode = 0; lnode < num_nodes_in_elem; lnode++)
             {
-                node_gid = nodes_in_elem(ielem, lnode);
+                node_gid = nodes_in_elem.host(ielem, lnode);
                 if (ghost_node_map.isProcessGlobalIndex(node_gid))
                 {
                     local_node_index = ghost_node_map.getLocalIndex(node_gid);
