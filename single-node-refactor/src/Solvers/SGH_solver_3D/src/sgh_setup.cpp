@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \brief Allocate state, setup models, and fill mesh regions per the YAML input
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::setup(SimulationParameters_t& SimulationParamaters, 
+void SGH3D::setup(SimulationParameters_t& SimulationParameters, 
                 Material_t& Materials, 
                 Mesh_t& mesh, 
                 BoundaryCondition_t& Boundary,
@@ -59,6 +59,9 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
 {
     // add a flag on whether SGH was set up, if(SGH_setup_already==false)
     
+    //update node velocity on ghosts
+    node_velocity_comms.execute_comms();
+
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
     // calculate pressure, sound speed, and stress for each material
@@ -126,5 +129,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
         }
     }
 
+    //communicate node masses to ghosts
+    node_mass_comms.execute_comms();
     
 } // end SGH setup

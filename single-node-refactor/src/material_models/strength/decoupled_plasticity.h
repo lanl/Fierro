@@ -123,9 +123,9 @@ namespace HypoPlasticityModel {
     KOKKOS_FUNCTION
     static void calc_stress(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
-        const DCArrayKokkos <double> &node_coords,
-        const DCArrayKokkos <double> &node_vel,
-        const DCArrayKokkos<size_t>  &nodes_in_elem,
+        const DistributedDCArray<double> &node_coords,
+        const DistributedDCArray<double> &node_vel,
+        const DistributedDCArray<size_t>  &nodes_in_elem,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress_n0,
@@ -416,9 +416,9 @@ namespace HypoPlasticityRZModel {
     KOKKOS_FUNCTION
     static void calc_stress(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
-        const DCArrayKokkos <double> &node_coords,
-        const DCArrayKokkos <double> &node_vel,
-        const DCArrayKokkos<size_t>  &nodes_in_elem,
+        const DistributedDCArray<double> &node_coords,
+        const DistributedDCArray<double> &node_vel,
+        const DistributedDCArray<size_t>  &nodes_in_elem,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress_n0,

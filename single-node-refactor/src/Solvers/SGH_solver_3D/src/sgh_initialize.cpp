@@ -38,11 +38,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "simulation_parameters.h"
 
 
-void SGH3D::initialize(SimulationParameters_t& SimulationParamaters, 
+void SGH3D::initialize(SimulationParameters_t& SimulationParameters, 
                 	   Material_t& Materials, 
                 	   Mesh_t& mesh, 
                 	   BoundaryCondition_t& Boundary,
-                	   State_t& State) const
+                	   State_t& State)
 {
 	const size_t num_nodes = mesh.num_nodes;
     const size_t num_gauss_pts = mesh.num_elems;
@@ -55,14 +55,18 @@ void SGH3D::initialize(SimulationParameters_t& SimulationParamaters,
     }
 
     // mesh state
-    State.node.initialize(num_nodes, num_dims, SGH3D_State::required_node_state);
+    State.node.initialize(mesh.all_node_map, num_dims, SGH3D_State::required_node_state, mesh.node_map); //allocate shared nlocal+nghost contiguous array
     State.GaussPoints.initialize(num_gauss_pts, num_dims, SGH3D_State::required_gauss_pt_state);
     State.corner.initialize(num_corners, num_dims, SGH3D_State::required_corner_state);
+
+    //comms objects
+    node_velocity_comms = CommPlan<real_t>(State.node.vel, State.node.local_vel, mesh.node_coords_comms); //copies MPI setup from coordinate comms since the node maps are the same
+    node_mass_comms = CommPlan<real_t>(State.node.mass, State.node.local_mass, mesh.node_coords_comms); //copies MPI setup from coordinate comms since the node maps are the same
 
     // check that the fills specify the required nodal fields
     bool filled_nodal_state =
         check_fill_node_states(SGH3D_State::required_fill_node_state,
-                               SimulationParamaters.region_setups.fill_node_states);
+                               SimulationParameters.region_setups.fill_node_states);
     
     if (filled_nodal_state == false){
         std::cout <<" Missing required nodal state in the fill instructions for the dynx_FE solver \n";
@@ -75,7 +79,7 @@ void SGH3D::initialize(SimulationParameters_t& SimulationParamaters,
 
 
 
-void SGH3D::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+void SGH3D::initialize_material_state(SimulationParameters_t& SimulationParameters, 
                 	                  Material_t& Materials, 
                 	                  Mesh_t& mesh, 
                 	                  BoundaryCondition_t& Boundary,
@@ -96,15 +100,15 @@ void SGH3D::initialize_material_state(SimulationParameters_t& SimulationParamate
     // check that the fills specify the required material point state fields
     bool filled_material_state_A =
         check_fill_mat_states(SGH3D_State::required_optA_fill_material_pt_state,
-                              SimulationParamaters.region_setups.fill_gauss_states);
+                              SimulationParameters.region_setups.fill_gauss_states);
     bool filled_material_state_B =
         check_fill_mat_states(SGH3D_State::required_optB_fill_material_pt_state,
-                              SimulationParamaters.region_setups.fill_gauss_states);
+                              SimulationParameters.region_setups.fill_gauss_states);
     
     // --- full stress tensor is not yet supported in region_fill ---
     //bool filled_material_state_C =
     //    check_fill_mat_states(SGH3D_State::required_optC_fill_material_pt_state,
-    //                                 SimulationParamaters.region_setups.fill_gauss_states);
+    //                                 SimulationParameters.region_setups.fill_gauss_states);
 
     if (filled_material_state_A == false &&
         filled_material_state_B == false){

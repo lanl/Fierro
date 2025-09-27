@@ -61,7 +61,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 KOKKOS_FUNCTION
 void geometry::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
-    const DCArrayKokkos<double>&    node_coords,
+    const DistributedDCArray<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 8;
@@ -269,7 +269,7 @@ void geometry::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
 KOKKOS_FUNCTION
 void geometry::get_vol_quad(const DCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
-    const DCArrayKokkos<double>&    node_coords,
+    const DistributedDCArray<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     elem_vol(elem_gid) = 0.0;
@@ -315,7 +315,7 @@ void geometry::get_vol_quad(const DCArrayKokkos<double>& elem_vol,
 KOKKOS_FUNCTION
 void geometry::get_vol_hex(const DCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
-    const DCArrayKokkos<double>&    node_coords,
+    const DistributedDCArray<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 8;
@@ -365,7 +365,7 @@ void geometry::get_vol_hex(const DCArrayKokkos<double>& elem_vol,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void geometry::get_vol(const DCArrayKokkos<double>& elem_vol,
-    const DCArrayKokkos<double>& node_coords,
+    const DistributedDCArray<double>& node_coords,
     const Mesh_t& mesh)
 {
     const size_t num_dims = mesh.num_dims;
@@ -406,7 +406,7 @@ void geometry::get_vol(const DCArrayKokkos<double>& elem_vol,
 KOKKOS_FUNCTION
 void geometry::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
-    const DCArrayKokkos<double>&    node_coords,
+    const DistributedDCArray<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 4;
@@ -481,7 +481,7 @@ void geometry::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 double geometry::get_area_quad(const size_t   elem_gid,
-    const DCArrayKokkos<double>&    node_coords,
+    const DistributedDCArray<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     double elem_area = 0.0;
@@ -567,7 +567,7 @@ double geometry::heron(const double x1,
 KOKKOS_FUNCTION
 void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
     const size_t elem_gid,
-    const DCArrayKokkos<double>&    node_coords,
+    const DistributedDCArray<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 4;
@@ -631,7 +631,7 @@ size_t check_bdy(const size_t patch_gid,
     const double  orig_y,
     const double  orig_z,
     const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords)
+    const DistributedDCArray<double>& node_coords)
 {
     size_t num_dims = mesh.num_dims;
 
@@ -714,7 +714,7 @@ size_t check_bdy(const size_t patch_gid,
 /////////////////////////////////////////////////////////////////////////////
 void tag_bdys(const BoundaryCondition_t& boundary,
     Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords)
+    const DistributedDCArray<double>& node_coords)
 {
 
     // create a temporary storage for the bdy patches in a set

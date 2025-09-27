@@ -150,6 +150,10 @@ public:
 
     ~SGH3D() = default;
 
+    //member variables
+    CommPlan<real_t> node_velocity_comms;
+    CommPlan<real_t> node_mass_comms;
+
     /////////////////////////////////////////////////////////////////////////////
     ///
     /// \fn Initialize
@@ -157,14 +161,14 @@ public:
     /// \brief Initializes data associated with the SGH3D solver
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void initialize(SimulationParameters_t& SimulationParamaters, 
+    void initialize(SimulationParameters_t& SimulationParameters, 
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
-                    State_t& State) const override;
+                    State_t& State) override;
 
 
-    void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+    void initialize_material_state(SimulationParameters_t& SimulationParameters, 
                 	               Material_t& Materials, 
                 	               Mesh_t& mesh, 
                 	               BoundaryCondition_t& Boundary,
@@ -177,7 +181,7 @@ public:
     /// \brief Calls setup_sgh, which initializes state and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void setup(SimulationParameters_t& SimulationParamaters,
+    void setup(SimulationParameters_t& SimulationParameters,
         Material_t& Materials,
         Mesh_t&     mesh,
         BoundaryCondition_t& Boundary,
@@ -191,7 +195,7 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void execute(SimulationParameters_t& SimulationParamaters,
+    void execute(SimulationParameters_t& SimulationParameters,
         Material_t& Materials,
         BoundaryCondition_t& Boundary,
         Mesh_t&  mesh,
@@ -213,7 +217,7 @@ public:
     /// \return <return type and definition description if not void>
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void finalize(SimulationParameters_t& SimulationParamaters,
+    void finalize(SimulationParameters_t& SimulationParameters,
         Material_t& Materials,
         BoundaryCondition_t& Boundary) const override
     {
@@ -226,21 +230,21 @@ public:
     void boundary_velocity(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>&     node_vel,
+        DistributedDCArray<double>&     node_vel,
         const double time_value) const;
 
     void boundary_contact(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>&     node_vel,
+        DistributedDCArray<double>&     node_vel,
         const double time_value) const;
 
     void boundary_contact_force(State_t& State, const Mesh_t &mesh, const double &del_t, contact_state_t &Contact_State);
 
     void boundary_stress(const Mesh_t& mesh,
                     const BoundaryCondition_t& BoundaryConditions,
-                    DCArrayKokkos<double>& node_bdy_force,
-                    DCArrayKokkos<double>& node_coords,
+                    DistributedDCArray<double>& node_bdy_force,
+                    DistributedDCArray<double>& node_coords,
                     const double time_value) const;    
 
     // **** Functions defined in energy_sgh.cpp **** //
@@ -248,8 +252,8 @@ public:
         const double  rk_alpha,
         const double  dt,
         const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_vel_n0,
+        const DistributedDCArray<double>& node_vel,
+        const DistributedDCArray<double>& node_vel_n0,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
@@ -267,8 +271,8 @@ public:
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
         const DCArrayKokkos<double>& corner_force,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_vel,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
@@ -292,20 +296,20 @@ public:
         double dt,
         const size_t num_dims,
         const size_t num_nodes,
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_coords_n0,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_vel_n0) const;
+        DistributedDCArray<double>& node_coords,
+        DistributedDCArray<double>& node_coords_n0,
+        const DistributedDCArray<double>& node_vel,
+        const DistributedDCArray<double>& node_vel_n0) const;
 
     // **** Functions defined in momentum.cpp **** //
     void update_velocity(
         double rk_alpha,
         double dt,
         const Mesh_t& mesh,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_vel_n0,
-        const DCArrayKokkos<double>& node_mass,
-        const DCArrayKokkos<double>& node_force,
+        DistributedDCArray<double>& node_vel,
+        DistributedDCArray<double>& node_vel_n0,
+        const DistributedDCArray<double>& node_mass,
+        const DistributedDCArray<double>& node_force,
         const DCArrayKokkos<double>& corner_force,
         const CArrayKokkos <double>& contact_force,
         bool doing_contact) const;
@@ -313,15 +317,15 @@ public:
     void get_velgrad(
         DCArrayKokkos<double>& vel_grad,
         const Mesh_t mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_vel,
         const DCArrayKokkos<double>& elem_vol) const;
 
     void get_divergence(
         DCArrayKokkos<double>& GaussPoints_div,
         const Mesh_t mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vol) const;
 
     KOKKOS_FUNCTION
@@ -334,8 +338,8 @@ public:
     void update_state(
         const Material_t& Materials,
         const Mesh_t&     mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
@@ -363,8 +367,8 @@ public:
         const Material_t& Materials,
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
@@ -388,10 +392,10 @@ public:
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
     void rk_init(
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_coords_n0,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_vel_n0,
+        DistributedDCArray<double>& node_coords,
+        DistributedDCArray<double>& node_coords_n0,
+        DistributedDCArray<double>& node_vel,
+        DistributedDCArray<double>& node_vel_n0,
         DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
         DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
         DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
@@ -404,8 +408,8 @@ public:
 
     void get_timestep(
         Mesh_t& mesh,
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
+        DistributedDCArray<double>& node_coords,
+        DistributedDCArray<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
         DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
@@ -447,8 +451,8 @@ public:
         const double sie,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
-        const DCArrayKokkos<double>&    node_coords,
-        const DCArrayKokkos<double>&    node_vel,
+        const DistributedDCArray<double>&    node_coords,
+        const DistributedDCArray<double>&    node_vel,
         const double vol,
         const double dt,
         const double rk_alpha);
@@ -462,9 +466,8 @@ double sum_domain_internal_energy(
 
 double sum_domain_kinetic_energy(
     const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass);
+    const DistributedDCArray<double>& node_vel,
+    const DistributedDCArray<double>& node_mass);
 
 double sum_domain_material_mass(
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
@@ -472,8 +475,8 @@ double sum_domain_material_mass(
     const size_t mat_id);
 
 double sum_domain_node_mass(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass);
+    const DistributedDCArray<double>& node_coords,
+    const DistributedDCArray<double>& node_mass);
 
 void set_corner_force_zero(const Mesh_t& mesh,
     const DCArrayKokkos<double>& corner_force);

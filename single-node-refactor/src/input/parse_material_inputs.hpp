@@ -53,7 +53,8 @@ struct MaterialFunctions_t;
 struct MaterialEnums_t;
 
 using namespace mtr;
-
+template <typename T>
+using DistributedDCArray = TpetraDCArray<T>;
 // parse the material text
 void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims);
 

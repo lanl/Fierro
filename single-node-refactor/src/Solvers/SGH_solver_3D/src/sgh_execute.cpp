@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::execute(SimulationParameters_t& SimulationParamaters, 
+void SGH3D::execute(SimulationParameters_t& SimulationParameters, 
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
                     Mesh_t& mesh, 
@@ -65,22 +65,22 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                                  mesh.bdy_nodes, mesh.num_patches, mesh.num_nodes, State.node.coords);
     }
 
-    double fuzz  = SimulationParamaters.dynamic_options.fuzz;  // 1.e-16
-    double tiny  = SimulationParamaters.dynamic_options.tiny;  // 1.e-12
-    double small = SimulationParamaters.dynamic_options.small; // 1.e-8
+    double fuzz  = SimulationParameters.dynamic_options.fuzz;   // 1.e-16
+    double tiny  = SimulationParameters.dynamic_options.tiny;   // 1.e-12
+    double small = SimulationParameters.dynamic_options.small;  // 1.e-8
 
-    double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
-    int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
+    double graphics_dt_ival  = SimulationParameters.output_options.graphics_time_step;
+    int    graphics_cyc_ival = SimulationParameters.output_options.graphics_iteration_step;
 
-    // double time_initial = SimulationParamaters.dynamic_options.time_initial;
-    double time_final   = this->time_end; //SimulationParamaters.dynamic_options.time_final;
-    double dt_min   = SimulationParamaters.dynamic_options.dt_min;
-    double dt_max   = SimulationParamaters.dynamic_options.dt_max;
-    double dt_start = SimulationParamaters.dynamic_options.dt_start;
-    double dt_cfl   = SimulationParamaters.dynamic_options.dt_cfl;
+    // double time_initial = SimulationParameters.dynamic_options.time_initial;
+    double time_final   = this->time_end; //SimulationParameters.dynamic_options.time_final;
+    double dt_min   = SimulationParameters.dynamic_options.dt_min;
+    double dt_max   = SimulationParameters.dynamic_options.dt_max;
+    double dt_start = SimulationParameters.dynamic_options.dt_start;
+    double dt_cfl   = SimulationParameters.dynamic_options.dt_cfl;
 
-    int rk_num_stages = SimulationParamaters.dynamic_options.rk_num_stages;
-    int cycle_stop    = SimulationParamaters.dynamic_options.cycle_stop;
+    int rk_num_stages = SimulationParameters.dynamic_options.rk_num_stages;
+    int cycle_stop    = SimulationParameters.dynamic_options.cycle_stop;
 
     // initialize time, time_step, and cycles
     double time_value = this->time_start;  // was 0.0
@@ -91,6 +91,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> GaussPoint_pres_denominator(mesh.num_elems*mesh.num_gauss_in_elem);
     CArrayKokkos <double> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_gauss_in_elem);
     CArrayKokkos <double> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_gauss_in_elem);
+
+    int myrank, nranks;
+    MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+    MPI_Comm_size(MPI_COMM_WORLD,&nranks);
     
 
     // Create mesh writer
@@ -101,14 +105,17 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     graphics_times(0) = this->time_start; // was zero
     double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
     size_t output_id=0; // the id for the outputs written
-
-    std::cout << "Applying initial boundary conditions" << std::endl;
+    if(myrank==0){
+        std::cout << "Applying initial boundary conditions" << std::endl;
+    }
     boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
 
     // extensive energy tallies over the entire mesh
     double IE_t0 = 0.0;
     double KE_t0 = 0.0;
     double TE_t0 = 0.0;
+    double local_IE_t0 = 0.0;
+    double local_KE_t0 = 0.0;
 
     double cached_pregraphics_dt = fuzz;
 
@@ -118,40 +125,59 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // extensive IE
     for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
 
-        IE_t0 += sum_domain_internal_energy(State.MaterialPoints.mass,
+        local_IE_t0 += sum_domain_internal_energy(State.MaterialPoints.mass,
                                             State.MaterialPoints.sie,
-                                            State.MaterialPoints.num_material_points.host(mat_id),
+                                            State.MaterialPoints.num_material_local_points.host(mat_id),
                                             mat_id);
     } // end loop over mat_id
 
     // extensive KE
-    KE_t0 = sum_domain_kinetic_energy(mesh,
+    local_KE_t0 = sum_domain_kinetic_energy(mesh,
                                       State.node.vel,
-                                      State.node.coords,
                                       State.node.mass);
+
+    //collect KE and TE sums across all processes
+    MPI_Allreduce(&local_IE_t0, &IE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&local_KE_t0, &KE_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
     // extensive TE
     TE_t0 = IE_t0 + KE_t0;
 
     // domain mass for each material (they are at material points)
     double mass_domain_all_mats_t0 = 0.0;
     double mass_domain_nodes_t0    = 0.0;
+    double global_mass_domain_nodes_t0;
+    double global_mass_domain_all_mats_t0;
+
+    //debug print of mass
+    // for(int ielem = 0; ielem < mesh.num_local_elems; ielem++){
+    //     std::cout << State.MaterialPoints.mass(0,ielem) << " " << std::endl;
+    // }
 
     for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
-
+        double global_mass_domain_mat;
+        //std::cout << " local element count for mass loop " << State.MaterialPoints.num_material_local_points.host(mat_id) << std::endl;
         double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints.mass,
-                                                          State.MaterialPoints.num_material_points.host(mat_id),
+                                                          State.MaterialPoints.num_material_local_points.host(mat_id),
                                                           mat_id);
 
         mass_domain_all_mats_t0 += mass_domain_mat;
-        printf("material %zu mass in domain = %f \n", mat_id, mass_domain_mat);
+        
+        MPI_Allreduce(&mass_domain_mat, &global_mass_domain_mat, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        if(myrank==0){
+            printf("material %zu mass in domain = %f \n", mat_id, global_mass_domain_mat);
+        }
     } // end for
 
     // node mass of the domain
     mass_domain_nodes_t0 = sum_domain_node_mass(mesh,
                                                 State.node.coords,
                                                 State.node.mass);
-
-    printf("nodal mass domain = %f \n", mass_domain_nodes_t0);
+    MPI_Allreduce(&mass_domain_nodes_t0, &global_mass_domain_nodes_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&mass_domain_all_mats_t0, &global_mass_domain_all_mats_t0, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if(myrank==0){
+        printf("nodal mass domain = %f \n", global_mass_domain_nodes_t0);
+    }
 
     // a flag to exit the calculation
     size_t stop_calc = 0;
@@ -159,11 +185,13 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     auto time_1 = std::chrono::high_resolution_clock::now();
 
     // Write initial state at t=0
-    printf("Writing outputs to file at %f \n", graphics_time);
+    if(myrank==0){
+        printf("Writing outputs to file at %f \n", graphics_time);
+    }
     mesh_writer.write_mesh(
         mesh, 
         State, 
-        SimulationParamaters,
+        SimulationParameters,
         dt, 
         time_value, 
         graphics_times,
@@ -203,7 +231,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                          State.MaterialPoints.sspd,
                          State.MaterialPoints.eroded,
                          State.MaterialToMeshMaps.elem_in_mat_elem,
-                         State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
+                         State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id),
                          time_value,
                          graphics_time,
                          time_final,
@@ -219,15 +247,17 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             min_dt_calc = fmin(dt_mat, min_dt_calc);
         } // end for loop over all mats
 
-        dt = min_dt_calc;  // save this dt time step
-
-        if (cycle == 0) {
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+        //Find the minimum timestep across all MPI processes
+        MPI_Allreduce(&min_dt_calc, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+        if(myrank==0){
+            if (cycle == 0) {
+                printf("cycle = %lu, time = %.12f, time step = %.12f \n", cycle, time_value, dt);
+            }
+            // print time step every 10 cycles
+            else if (cycle % 20 == 0) {
+                printf("cycle = %lu, time = %.12f, time step = %.12f \n", cycle, time_value, dt);
+            } // end if
         }
-        // print time step every 10 cycles
-        else if (cycle % 20 == 0) {
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
-        } // end if
 
 
         // ---------------------------------------------------------------------
@@ -378,6 +408,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // ---- apply contact boundary conditions to the boundary patches----
             boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);
 
+            //update node velocity on ghosts
+            node_velocity_comms.execute_comms();
+
             // mpi_coms();
 
             for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
@@ -503,10 +536,12 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // write outputs
         if (write == 1) {
-            printf("Writing outputs to file at %f \n", graphics_time);
+            if(myrank==0){
+                printf("Writing outputs to file at %f \n", graphics_time);
+            }
             mesh_writer.write_mesh(mesh,
                                    State,
-                                   SimulationParamaters,
+                                   SimulationParameters,
                                    dt,
                                    time_value,
                                    graphics_times,
@@ -528,56 +563,69 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     auto time_2    = std::chrono::high_resolution_clock::now();
     auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_2 - time_1).count();
-
-    printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
+    if(myrank==0){
+        printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
+    }
 
     // ---- Calculate energy tallies ----
     double IE_tend = 0.0;
     double KE_tend = 0.0;
     double TE_tend = 0.0;
+    double local_IE_tend = 0.0;
+    double local_KE_tend = 0.0;
 
     // extensive IE
     for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-        IE_tend += sum_domain_internal_energy(State.MaterialPoints.mass,
+        local_IE_tend += sum_domain_internal_energy(State.MaterialPoints.mass,
                                               State.MaterialPoints.sie,
-                                              State.MaterialPoints.num_material_points.host(mat_id),
+                                              State.MaterialPoints.num_material_local_points.host(mat_id),
                                               mat_id);
     } // end loop over mat_id
 
     // extensive KE
-    KE_tend = sum_domain_kinetic_energy(mesh,
+    local_KE_tend = sum_domain_kinetic_energy(mesh,
                                         State.node.vel,
-                                        State.node.coords,
                                         State.node.mass);
+    
+    MPI_Allreduce(&local_IE_tend, &IE_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&local_KE_tend, &KE_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
     // extensive TE
     TE_tend = IE_tend + KE_tend;
-
-    printf("Time=0:   KE = %.14f, IE = %.14f, TE = %.14f \n", KE_t0, IE_t0, TE_t0);
-    printf("Time=End: KE = %.14f, IE = %.14f, TE = %.14f \n", KE_tend, IE_tend, TE_tend);
-    printf("total energy change = %.15e \n\n", TE_tend - TE_t0);
+    if(myrank==0){
+        printf("Time=0:   KE = %.14f, IE = %.14f, TE = %.14f \n", KE_t0, IE_t0, TE_t0);
+        printf("Time=End: KE = %.14f, IE = %.14f, TE = %.14f \n", KE_tend, IE_tend, TE_tend);
+        printf("total energy change = %.15e \n\n", TE_tend - TE_t0);
+    }
 
     // domain mass for each material (they are at material points)
     double mass_domain_all_mats_tend = 0.0;
     double mass_domain_nodes_tend    = 0.0;
+    double global_mass_domain_all_mats_tend;
+    double global_mass_domain_nodes_tend;
 
     for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-
         double mass_domain_mat = sum_domain_material_mass(State.MaterialPoints.mass,
-                                                          State.MaterialPoints.num_material_points.host(mat_id),
+                                                          State.MaterialPoints.num_material_local_points.host(mat_id),
                                                           mat_id);
 
         mass_domain_all_mats_tend += mass_domain_mat;
     } // end for
+    MPI_Allreduce(&mass_domain_all_mats_tend, &global_mass_domain_all_mats_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     // node mass of the domain
     mass_domain_nodes_tend = sum_domain_node_mass(mesh,
                                                   State.node.coords,
                                                   State.node.mass);
 
-    printf("material mass conservation error = %f \n", mass_domain_all_mats_tend - mass_domain_all_mats_t0);
-    printf("nodal mass conservation error = %f \n", mass_domain_nodes_tend - mass_domain_nodes_t0);
-    printf("nodal and material mass error = %f \n\n", mass_domain_nodes_tend - mass_domain_all_mats_tend);
+    MPI_Allreduce(&mass_domain_nodes_tend, &global_mass_domain_nodes_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&mass_domain_all_mats_tend, &global_mass_domain_all_mats_tend, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    if(myrank==0){
+        printf("material mass conservation error = %f \n", global_mass_domain_all_mats_tend - global_mass_domain_all_mats_t0);
+        printf("nodal mass conservation error = %f \n", global_mass_domain_nodes_tend - global_mass_domain_nodes_t0);
+        printf("nodal and material mass error = %f \n\n", global_mass_domain_nodes_tend - global_mass_domain_all_mats_tend);
+    }
 } // end of SGH execute
 
 /////////////////////////////////////////////////////////////////////////////
@@ -695,18 +743,19 @@ double sum_domain_internal_energy(
 /////////////////////////////////////////////////////////////////////////////
 double sum_domain_kinetic_energy(
     const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass)
+    const DistributedDCArray<double>& node_vel,
+    const DistributedDCArray<double>& node_mass)
 {
     // extensive KE
     double KE_sum = 0.0;
     double KE_loc_sum;
+    int num_dims = mesh.num_dims;
+    int num_local_nodes = mesh.num_local_nodes;
 
-    FOR_REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
+    FOR_REDUCE_SUM(node_gid, 0, num_local_nodes, KE_loc_sum, {
         double ke = 0;
 
-        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+        for (size_t dim = 0; dim < num_dims; dim++) {
             ke += node_vel(node_gid, dim) * node_vel(node_gid, dim); // 1/2 at end
         } // end for
 
@@ -752,13 +801,13 @@ double sum_domain_material_mass(
 ///
 /////////////////////////////////////////////////////////////////////////////
 double sum_domain_node_mass(const Mesh_t& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass)
+    const DistributedDCArray<double>& node_coords,
+    const DistributedDCArray<double>& node_mass)
 {
     double mass_domain = 0.0;
     double mass_loc_domain;
 
-    FOR_REDUCE_SUM(node_gid, 0, mesh.num_nodes, mass_loc_domain, {
+    FOR_REDUCE_SUM(node_gid, 0, mesh.num_local_nodes, mass_loc_domain, {
         if (mesh.num_dims == 2) {
             mass_loc_domain += node_mass(node_gid) * node_coords(node_gid, 1);
         }

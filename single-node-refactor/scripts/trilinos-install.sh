@@ -13,7 +13,7 @@ echo "Trilinos Kokkos Build Type: $kokkos_build_type"
 if [ ! -d "${TRILINOS_SOURCE_DIR}" ]
 then
   echo "Directory Trilinos does not exist, downloading Trilinos...."
-  git clone --depth 1 https://github.com/trilinos/Trilinos.git ${TRILINOS_SOURCE_DIR}
+  git clone --depth 1 --branch trilinos-release-16-0-branch https://github.com/trilinos/Trilinos.git ${TRILINOS_SOURCE_DIR}
 fi
 
 #check if Trilinos build directory exists, create Trilinos/build if it doesn't
@@ -117,6 +117,7 @@ ${ADDITIONS[@]}
 -D Trilinos_ENABLE_Ifpack2=OFF
 -D Trilinos_ENABLE_Zoltan2=ON 
 -D Trilinos_ENABLE_Anasazi=OFF 
+-D Trilinos_ENABLE_EXPLICIT_INSTANTIATION=OFF 
 -D MueLu_ENABLE_TESTS=OFF 
 -D Trilinos_ENABLE_ALL_PACKAGES=OFF 
 -D Trilinos_ENABLE_ALL_OPTIONAL_PACKAGES=OFF 
@@ -167,7 +168,7 @@ cmake "${cmake_options[@]}" -B "${TRILINOS_BUILD_DIR}" -S "${TRILINOS_SOURCE_DIR
 
 # Build Trilinos
 echo "Building Trilinos..."
-make -C "${TRILINOS_BUILD_DIR}" -j${MATAR_BUILD_CORES}
+make -C "${TRILINOS_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
 
 # Install Trilinos
 echo "Installing Trilinos..."
