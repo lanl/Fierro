@@ -603,7 +603,7 @@ struct Mesh_t
         
         element_map = DistributedMap(Initial_Element_Global_Indices);
         //redefine nodes_in_elem so partition map of the distributed array is synchronized with permuted dual view contents
-        DistributedDCArray<size_t> nodes_in_elem_temp(element_map, num_nodes_in_elem);
+        DistributedDCArray<size_t> nodes_in_elem_temp(element_map, num_nodes_in_elem, "nodes_in_elem");
         //nodes_in_elem_temp.replace_kokkos_dual_view(nodes_in_elem.get_kokkos_dual_view());
         //nodes_in_elem.print();
         std::cout << "NUM ELEMS " << num_elems << " NUM NODES IN ELEM " << num_nodes_in_elem << std::endl;

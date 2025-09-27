@@ -4226,7 +4226,7 @@ public:
         //convert local node ids in nodes in elem so they correspond to nonoverlap map
         for (size_t elem_id = 0; elem_id < num_local_elems; elem_id++) {
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                nonoverlap_nodes_in_elem(elem_id, node_lid) = nonoverlap_elem_node_map.getLocalIndex(all_node_map.getGlobalIndex(mesh.nodes_in_elem(elem_id, node_lid)));
+                nonoverlap_nodes_in_elem.host(elem_id, node_lid) = nonoverlap_elem_node_map.getLocalIndex(all_node_map.getGlobalIndex(mesh.nodes_in_elem.host(elem_id, node_lid)));
             }
         } // end for elem_gid
 
@@ -4318,7 +4318,7 @@ public:
                 //     global_indices_of_local_mat_elems(ielem) = mesh.element_map(State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, ielem));
                 // });
                 for(int ielem = 0; ielem < num_mat_local_elems; ielem++){
-                    global_indices_of_local_mat_elems(ielem) = mesh.element_map.getGlobalIndex(State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, ielem));
+                    global_indices_of_local_mat_elems(ielem) = mesh.element_map.getGlobalIndex(State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, ielem));
                 }
                 global_indices_of_local_mat_elems.update_device();
                 DistributedMap mat_elem_map = DistributedMap(global_indices_of_local_mat_elems);
@@ -4370,7 +4370,7 @@ public:
                 //convert mesh.nodes_in_elem stores local indices and we communicated these in, convert to global
                 for (size_t elem_id = 0; elem_id < num_mat_local_elems; elem_id++) {
                     for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                        mat_nodes_in_mat_elem(elem_id, node_lid) = mesh.all_node_map.getGlobalIndex(mat_nodes_in_mat_elem(elem_id, node_lid));
+                        mat_nodes_in_mat_elem.host(elem_id, node_lid) = mesh.all_node_map.getGlobalIndex(mat_nodes_in_mat_elem.host(elem_id, node_lid));
                     }
                 } // end for elem_gid
 
@@ -4406,7 +4406,7 @@ public:
                 //convert mat_nodes_in_mat_elem so it uses contiguous local node ids for this mat portion of the mesh
                 for (size_t elem_id = 0; elem_id < num_mat_local_elems; elem_id++) {
                     for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                        mat_nodes_in_mat_elem(elem_id, node_lid) = mat_node_map.getLocalIndex(mat_nodes_in_mat_elem(elem_id, node_lid));
+                        mat_nodes_in_mat_elem.host(elem_id, node_lid) = mat_node_map.getLocalIndex(mat_nodes_in_mat_elem.host(elem_id, node_lid));
                     }
                 } // end for elem_gid
                 
@@ -5155,12 +5155,12 @@ public:
         
         //host version of local element map for argument compatibility
         HostDistributedMap host_local_element_map;
-        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_elements(mesh.num_local_elems);
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_elements(mesh.num_local_elems, "global_indices_of_local_elements");
         for(int ielem = 0; ielem < mesh.num_local_elems; ielem++){
             global_indices_of_local_elements(ielem) = mesh.local_element_map.getGlobalIndex(ielem);
         }
         host_local_element_map = HostDistributedMap(global_indices_of_local_elements);
-        DistributedCArray<double> elem_fields = DistributedCArray<double>(host_local_element_map, num_scalar_vars);
+        DistributedCArray<double> elem_fields = DistributedCArray<double>(host_local_element_map, num_scalar_vars, "elem_fields");
         int  elem_switch = 1;
 
         DCArrayKokkos<double> speed(num_elems, "speed");
@@ -5235,17 +5235,17 @@ public:
         collective_elem_map = HostDistributedMap(mesh.global_num_elems, num_collective_elem_indices);
 
         //collective vector and comms to the collective vector for elem fields
-        DistributedCArray<double> collective_elem_fields(collective_elem_map, num_scalar_vars);
+        DistributedCArray<double> collective_elem_fields(collective_elem_map, num_scalar_vars, "collective_elem_fields");
         HostCommPlanLR<double> collective_elem_comms(collective_elem_fields, elem_fields);
         collective_elem_comms.execute_comms();
 
         //host of node in elem for Trilinos template argument compatibility
-        DistributedCArray<size_t> host_local_nodes_in_elem(host_local_element_map, mesh.num_nodes_in_elem);
+        DistributedCArray<size_t> host_local_nodes_in_elem(host_local_element_map, mesh.num_nodes_in_elem, "host_local_nodes_in_elem");
 
         //convert nodes in elem back to global (convert back to local after we've collected global ids in collective vector)
         for (size_t elem_id = 0; elem_id < mesh.num_local_elems; elem_id++) {
             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                host_local_nodes_in_elem(elem_id, node_lid) = mesh.all_node_map.getGlobalIndex(mesh.local_nodes_in_elem(elem_id, node_lid));
+                host_local_nodes_in_elem(elem_id, node_lid) = mesh.all_node_map.getGlobalIndex(mesh.local_nodes_in_elem.host(elem_id, node_lid));
             }
         } // end for elem_gid
 
@@ -5258,14 +5258,14 @@ public:
         //NODE DATA COLLECTION
         //host version of local node map for argument compatibility
         HostDistributedMap host_node_map;
-        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_nodes(mesh.num_local_nodes);
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_nodes(mesh.num_local_nodes, "global_indices_of_local_nodes");
         for(int inode = 0; inode < mesh.num_local_nodes; inode++){
             global_indices_of_local_nodes(inode) = mesh.node_map.getGlobalIndex(inode);
         }
         host_node_map = HostDistributedMap(global_indices_of_local_nodes);
 
         // save the vertex vector fields to an array for exporting to graphics files
-        DistributedCArray<double> vec_fields(host_node_map, num_vec_vars, 3);
+        DistributedCArray<double> vec_fields(host_node_map, num_vec_vars, 3, "vec_fields");
 
         for (size_t node_gid = 0; node_gid < mesh.num_local_nodes; node_gid++) {
             // position, var 0
@@ -5308,7 +5308,7 @@ public:
         collective_node_map = HostDistributedMap(mesh.global_num_nodes, num_collective_node_indices);
 
         //collective vector and comms to the collective vector for node fields
-        DistributedCArray<double> collective_vec_fields(collective_node_map, num_vec_vars, 3);
+        DistributedCArray<double> collective_vec_fields(collective_node_map, num_vec_vars, 3, "collective_vec_fields");
         HostCommPlanLR<double> collective_node_comms(collective_vec_fields, vec_fields);
         collective_node_comms.execute_comms();
 
