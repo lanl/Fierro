@@ -4313,12 +4313,12 @@ public:
 
                 //set global element indices on this rank for this mat
                 DistributedMap element_map = mesh.element_map;
-                DCArrayKokkos<long long int> global_indices_of_local_mat_elems(num_mat_local_elems);
+                DCArrayKokkos<long long int> global_indices_of_local_mat_elems(num_mat_local_elems, " global_indices_of_local_mat_elems");
                 // FOR_ALL(ielem, 0, num_mat_local_elems,{
                 //     global_indices_of_local_mat_elems(ielem) = mesh.element_map(State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, ielem));
                 // });
                 for(int ielem = 0; ielem < num_mat_local_elems; ielem++){
-                    global_indices_of_local_mat_elems(ielem) = mesh.element_map.getGlobalIndex(State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, ielem));
+                    global_indices_of_local_mat_elems.host(ielem) = mesh.element_map.getGlobalIndex(State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, ielem));
                 }
                 global_indices_of_local_mat_elems.update_device();
                 DistributedMap mat_elem_map = DistributedMap(global_indices_of_local_mat_elems);
@@ -7383,7 +7383,7 @@ public:
         // create a Map for ghost node indices
         mat_node_indices = DCArrayKokkos<long long int>(num_mat_nodes, "mat_nodes");
         while (it != mat_node_set.end()) {
-            mat_node_indices(ighost++) = *it;
+            mat_node_indices.host(ighost++) = *it;
             it++;
         }
         mat_node_indices.update_device();
