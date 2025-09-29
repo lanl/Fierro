@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: ./standard_inputs/meshes/preload.geo
+  file_path: ./standard_inputs/meshes/preload.vtk
   num_dims: 3
 
 #mesh_options:

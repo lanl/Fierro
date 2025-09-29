@@ -44,7 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "geometry_new.h"
 
-struct SimulationParamaters_t;
+struct SimulationParameters_t;
 struct Material_t;
 struct Mesh_t;
 struct BoundaryCondition_t;
@@ -58,7 +58,7 @@ using namespace mtr;
 // -----------------------------------------------------------------------------
 // The functions to setup fields on a mesh
 // ------------------------------------------------------------------------------
-void simulation_setup(SimulationParameters_t& SimulationParamaters, 
+void simulation_setup(SimulationParameters_t& SimulationParameters, 
                       Material_t& Materials, 
                       Mesh_t& mesh, 
                       BoundaryCondition_t& Boundary,
@@ -69,9 +69,9 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 void fill_regions(
         const Material_t& Materials,
         const Mesh_t& mesh,
-        const DCArrayKokkos <double>& node_coords,
-        DCArrayKokkos <double>& node_vel,
-        DCArrayKokkos <double>& node_temp,
+        const DistributedDCArray <double>& node_coords,
+        DistributedDCArray <double>& node_vel,
+        DistributedDCArray <double>& node_temp,
         DCArrayKokkos <double>& gauss_den,
         DCArrayKokkos <double>& gauss_sie,
         DCArrayKokkos <bool>& gauss_use_sie,
@@ -99,7 +99,7 @@ void fill_regions(
 // -----------------------------------------------------------------------------
 // A function to populate the material point and material zone state
 // ------------------------------------------------------------------------------
-void material_state_setup(SimulationParameters_t& SimulationParamaters, 
+void material_state_setup(SimulationParameters_t& SimulationParameters, 
                           Material_t& Materials, 
                           Mesh_t& mesh, 
                           BoundaryCondition_t& Boundary,
@@ -250,7 +250,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_scalar(const DCArrayKokkos<double>& field_scalar,
+void paint_scalar(const DistributedDCArray<double>& field_scalar,
                   const ViewCArrayKokkos <double> mesh_coords,
                   const double scalar,
                   const double slope,
@@ -275,7 +275,7 @@ void paint_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_vector(const DCArrayKokkos<double>& vector_field,
+void paint_vector(const DistributedDCArray<double>& vector_field,
                   const ViewCArrayKokkos <double>& mesh_coords,
                   const double u,
                   const double v,
@@ -386,8 +386,8 @@ void init_press_sspd_stress(const Material_t& Materials,
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass(const Material_t& Materials,
                       const Mesh_t& mesh,
-                      const DCArrayKokkos<double>& node_coords,
-                      const DCArrayKokkos<double>& node_mass,
+                      const DistributedDCArray<double>& node_coords,
+                      const DistributedDCArray<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
                       const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
@@ -410,8 +410,8 @@ void calc_corner_mass(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_mass(const Mesh_t& mesh,
-                    const DCArrayKokkos<double>& node_coords,
-                    const DCArrayKokkos<double>& node_mass,
+                    const DistributedDCArray<double>& node_coords,
+                    const DistributedDCArray<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass);
 
 
@@ -419,7 +419,7 @@ void calc_node_mass(const Mesh_t& mesh,
 
 void init_corner_node_masses_zero(
         const Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_mass,
+        const DistributedDCArray<double>& node_mass,
         const DCArrayKokkos<double>& corner_mass);
 
 #endif

@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <Kokkos_Core.hpp>
 #include <sys/stat.h>
+#include <mpi.h>
 
 #include "matar.h"
 #include "driver.h"
@@ -51,21 +52,33 @@
 ///
 /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[])
-{
+{   
+    // initialize MPI
+    MPI_Init(&argc, &argv);
+    int myrank, nranks;
+    MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+    MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+    bool will_run = false;
+
     // check to see of an input file was supplied when running the code
     if (argc == 1) {
-        std::cout << "\n\n**********************************\n\n";
-        std::cout << " ERROR:\n";
-        std::cout << " Please supply a YAML input, \n";
-        std::cout << "   ./Fierro input.yaml \n\n";
-        std::cout << "**********************************\n\n" << std::endl;
+        if(myrank == 0){
+            std::cout << "\n\n**********************************\n\n";
+            std::cout << " ERROR:\n";
+            std::cout << " Please supply a YAML input, \n";
+            std::cout << " mpirun -np n Fierro input.yaml \n\n";
+            std::cout << "**********************************\n\n" << std::endl;
+        }
+        
+        MPI_Finalize();
         return 0;
     } // end if
 
     if (std::string(argv[1]) == "--help"){
-
-        print_inputs();
-
+        if(myrank == 0){
+            print_inputs();
+        }
+        MPI_Finalize();
         return 0;
     }
 
@@ -75,7 +88,6 @@ int main(int argc, char* argv[])
         // Create driver
         Driver* driver = new Driver(argv[1]);
 
-
         // Timing data for each step
         auto time_start = std::chrono::high_resolution_clock::now();
         auto time_init = std::chrono::high_resolution_clock::now();
@@ -84,28 +96,35 @@ int main(int argc, char* argv[])
         
         auto time_now = std::chrono::high_resolution_clock::now();
         auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_init).count();
-        printf("\n**** Total time to initialize driver in seconds  %f ****\n\n", calc_time * 1e-9);
+        if(myrank == 0){
+            printf("\n**** Total time to initialize driver in seconds  %f ****\n\n", calc_time * 1e-9);
+        }
 
         auto time_setup = std::chrono::high_resolution_clock::now();
         driver->setup();
         time_now = std::chrono::high_resolution_clock::now();
         calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_setup).count();
-        printf("\n**** Total time to setup driver in seconds  %f ****\n\n", calc_time * 1e-9);
+        if(myrank == 0){
+            printf("\n**** Total time to setup driver in seconds  %f ****\n\n", calc_time * 1e-9);
+        }
         
 
         auto time_run = std::chrono::high_resolution_clock::now();
         driver->execute();
         time_now = std::chrono::high_resolution_clock::now();
         calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_setup).count();
-        printf("\n**** Total time to execute driver in seconds  %f ****\n\n", calc_time * 1e-9);
+        if(myrank == 0){
+            printf("\n**** Total time to execute driver in seconds  %f ****\n\n", calc_time * 1e-9);
+        }
 
 
         driver->finalize();
 
         time_now = std::chrono::high_resolution_clock::now();
         calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_start).count();
-
-        printf("\n**** Total time to run simulation in seconds  %f ****\n\n", calc_time * 1e-9);
+        if(myrank == 0){
+            printf("\n**** Total time to run simulation in seconds  %f ****\n\n", calc_time * 1e-9);
+        }
 
         // Delete driver
         delete driver;
@@ -113,6 +132,11 @@ int main(int argc, char* argv[])
 
     Kokkos::finalize();
 
-    std::cout << "**** End of main **** " << std::endl;
+    if(myrank == 0){
+        std::cout << "**** End of main **** " << std::endl;
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Finalize();
     return 0;
 }

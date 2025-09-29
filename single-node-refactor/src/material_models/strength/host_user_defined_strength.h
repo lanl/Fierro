@@ -94,8 +94,8 @@ namespace HostUserDefinedStrengthModel {
     // function is accessed on the Host
     static void calc_stress(
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
-        const DCArrayKokkos <double> &node_coords,
-        const DCArrayKokkos <double> &node_vel,
+        const DistributedDCArray <double> &node_coords,
+        const DistributedDCArray <double> &node_vel,
         const ViewCArrayKokkos<size_t>& elem_node_gids,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
@@ -204,7 +204,7 @@ namespace HostNotionalStrengthModel {
         const DCArrayKokkos<double>  &vel_grad,
         const DCArrayKokkos <double> &node_coords,
         const DCArrayKokkos <double> &node_vel,
-        const DCArrayKokkos<size_t>  &nodes_in_elem,
+        const DistributedDCArray<size_t>  &nodes_in_elem,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_sspd,

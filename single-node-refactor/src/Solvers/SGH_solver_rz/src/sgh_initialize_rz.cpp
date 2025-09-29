@@ -37,11 +37,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mesh.h"
 #include "simulation_parameters.h"
 
-void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters, 
+void SGHRZ::initialize(SimulationParameters_t& SimulationParameters, 
                 	   Material_t& Materials, 
                 	   Mesh_t& mesh, 
                 	   BoundaryCondition_t& Boundary,
-                	   State_t& State) const
+                	   State_t& State)
 {
 	size_t num_nodes = mesh.num_nodes;
     size_t num_gauss_pts = mesh.num_elems;
@@ -56,14 +56,18 @@ void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters,
     // save the solver_id, which is a pravate class variable
     //this->solver_id = solver_id_inp;
 
-    State.node.initialize(num_nodes, num_dim, SGHRZ_State::required_node_state);
+    State.node.initialize(mesh.all_node_map, num_dim, SGHRZ_State::required_node_state, mesh.node_map);
     State.GaussPoints.initialize(num_gauss_pts, 3, SGHRZ_State::required_gauss_pt_state);  // note: dims is always 3 
     State.corner.initialize(num_corners, num_dim, SGHRZ_State::required_corner_state);
+
+    //comms objects
+    node_velocity_comms = CommPlan<real_t>(State.node.vel, State.node.local_vel, mesh.node_coords_comms); //copies MPI setup from coordinate comms since the node maps are the same
+    node_mass_comms = CommPlan<real_t>(State.node.mass, State.node.local_mass, mesh.node_coords_comms); //copies MPI setup from coordinate comms since the node maps are the same
     
     // NOTE: Material points and material corners are initialize in sgh_setup after calculating the material->mesh maps
 }
 
-void SGHRZ::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+void SGHRZ::initialize_material_state(SimulationParameters_t& SimulationParameters, 
                 	                  Material_t& Materials, 
                 	                  Mesh_t& mesh, 
                 	                  BoundaryCondition_t& Boundary,

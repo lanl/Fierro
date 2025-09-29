@@ -53,7 +53,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::init_corner_node_masses_zero_rz(const Mesh_t& mesh,
-                                            const DCArrayKokkos<double>& node_mass,
+                                            const DistributedDCArray<double>& node_mass,
                                             const DCArrayKokkos<double>& corner_mass) const
 {
                     
@@ -78,7 +78,7 @@ void SGHRZ::init_corner_node_masses_zero_rz(const Mesh_t& mesh,
 /// \brief Allocate state, setup models, and fill mesh regions per the YAML input
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::setup(SimulationParameters_t& SimulationParamaters, 
+void SGHRZ::setup(SimulationParameters_t& SimulationParameters, 
                 Material_t& Materials, 
                 Mesh_t& mesh, 
                 BoundaryCondition_t& Boundary,
@@ -86,6 +86,8 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
 {
 
     // add a flag on whether SGHRZ was set up, if(SGHRZ_setup_already==false)
+    //update node velocity on ghosts
+    node_velocity_comms.execute_comms();
     
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
@@ -107,11 +109,8 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
 
     } // for loop over mat_id
 
-
     // set corner and node masses to zero
     init_corner_node_masses_zero_rz(mesh, State.node.mass, State.corner.mass);
-
-
 
     // 2D RZ
     // calculate the corner massess if 2D
@@ -134,6 +133,9 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
                       State.node.mass,
                       State.corner.mass);
 
+    //communicate node masses to ghosts
+    node_mass_comms.execute_comms();
+
 } // end SGHRZ setup
 
 
@@ -154,8 +156,8 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass_rz(const Material_t& Materials,
                          const Mesh_t& mesh,
-                         const DCArrayKokkos<double>& node_coords,
-                         const DCArrayKokkos<double>& node_mass,
+                         const DistributedDCArray<double>& node_coords,
+                         const DistributedDCArray<double>& node_mass,
                          const DCArrayKokkos<double>& corner_mass,
                          const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
                          const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
@@ -203,8 +205,8 @@ void calc_corner_mass_rz(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_mass_rz(const Mesh_t& mesh,
-                    const DCArrayKokkos<double>& node_coords,
-                    const DCArrayKokkos<double>& node_mass,
+                    const DistributedDCArray<double>& node_coords,
+                    const DistributedDCArray<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass)
 {
 

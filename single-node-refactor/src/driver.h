@@ -65,7 +65,7 @@ public:
     MeshReader  mesh_reader;
     MeshBuilder mesh_builder;
 
-    SimulationParameters_t SimulationParamaters; ///< the input simulation parameters
+    SimulationParameters_t SimulationParameters; ///< the input simulation parameters
 
     // ---------------------------------------------------------------------
     //    Material and Boundary declarations
@@ -90,6 +90,9 @@ public:
 
     // set of enabled solvers
     std::vector<Solver*> solvers;
+
+    //MPI data
+    int myrank, nranks;
 
     Driver(char* YAML)
     {

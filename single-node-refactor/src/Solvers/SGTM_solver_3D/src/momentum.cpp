@@ -52,8 +52,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGTM3D::update_velocity(double rk_alpha,
     double dt,
     const Mesh_t& mesh,
-    DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_mass,
+    DistributedDCArray<double>& node_vel,
+    const DistributedDCArray<double>& node_mass,
     const DCArrayKokkos<double>& corner_force) const
 {
     // const size_t num_dims = mesh.num_dims;

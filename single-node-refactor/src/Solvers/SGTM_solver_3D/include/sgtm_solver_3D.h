@@ -164,13 +164,13 @@ public:
     /// \brief Initializes data associated with the SGTM solver
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void initialize(SimulationParameters_t& SimulationParamaters, 
+    void initialize(SimulationParameters_t& SimulationParameters, 
                     Material_t& Materials, 
                     Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
-                    State_t& State) const override;
+                    State_t& State) override;
 
-    void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+    void initialize_material_state(SimulationParameters_t& SimulationParameters, 
                 	               Material_t& Materials, 
                 	               Mesh_t& mesh, 
                 	               BoundaryCondition_t& Boundary,
@@ -183,7 +183,7 @@ public:
     /// \brief Calls setup_sgtm, which initializes state and material data
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void setup(SimulationParameters_t& SimulationParamaters,
+    void setup(SimulationParameters_t& SimulationParameters,
         Material_t& Materials,
         Mesh_t&     mesh,
         BoundaryCondition_t& Boundary,
@@ -197,7 +197,7 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void execute(SimulationParameters_t& SimulationParamaters,
+    void execute(SimulationParameters_t& SimulationParameters,
         Material_t& Materials,
         BoundaryCondition_t& Boundary,
         Mesh_t&  mesh,
@@ -219,7 +219,7 @@ public:
     /// \return <return type and definition description if not void>
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void finalize(SimulationParameters_t& SimulationParamaters,
+    void finalize(SimulationParameters_t& SimulationParameters,
         Material_t& Materials,
         BoundaryCondition_t& Boundary) const override
     {
@@ -230,30 +230,30 @@ public:
     void boundary_temperature(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>&     node_temp,
+        DistributedDCArray<double>&     node_temp,
         const double time_value) const;
 
     void boundary_convection(
         const Mesh_t& mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        const DCArrayKokkos<double>& node_temp,
-        const DCArrayKokkos<double>& node_flux,
-        const DCArrayKokkos<double>& node_coords,
+        const DistributedDCArray<double>& node_temp,
+        const DistributedDCArray<double>& node_flux,
+        const DistributedDCArray<double>& node_coords,
         const double time_value) const;
 
 
     void boundary_radiation(
         const Mesh_t& mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        const DCArrayKokkos<double>& node_temp,
-        const DCArrayKokkos<double>& node_flux,
-        const DCArrayKokkos<double>& node_coords,
+        const DistributedDCArray<double>& node_temp,
+        const DistributedDCArray<double>& node_flux,
+        const DistributedDCArray<double>& node_coords,
         const double time_value) const;
 
     void boundary_heat_flux(
         const Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>&     node_temp,
+        DistributedDCArray<double>&     node_temp,
         const double time_value) const;
 
     // **** Functions defined in energy_sgtm.cpp **** //
@@ -277,10 +277,10 @@ public:
     void update_temperature(
             const Mesh_t& mesh,
             const DCArrayKokkos<double>& corner_q_transfer,
-            const DCArrayKokkos<double>& node_temp,
-            const DCArrayKokkos<double>& node_temp_n0,
-            const DCArrayKokkos<double>& node_mass,
-            const DCArrayKokkos<double>& node_q_transfer,
+            const DistributedDCArray<double>& node_temp,
+            const DistributedDCArray<double>& node_temp_n0,
+            const DistributedDCArray<double>& node_mass,
+            const DistributedDCArray<double>& node_q_transfer,
             const DRaggedRightArrayKokkos<double>& mat_pt_specific_heat,
             const double rk_alpha,
             const double dt) const;
@@ -290,8 +290,8 @@ public:
         const Material_t& Materials,
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_temp,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_temp,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_q_flux,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_temp_grad,
@@ -310,7 +310,7 @@ public:
         const Material_t& Materials,
         const Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& node_coords,
+        const DistributedDCArray<double>& node_coords,
         const DCArrayKokkos<double>& corner_q_flux,
         const DCArrayKokkos<double>& sphere_position,
         const corners_in_mat_t corners_in_mat_elem,
@@ -328,10 +328,10 @@ public:
         double dt,
         const size_t num_dims,
         const size_t num_nodes,
-        DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_coords_n0,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_vel_n0) const;
+        DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_coords_n0,
+        const DistributedDCArray<double>& node_vel,
+        const DistributedDCArray<double>& node_vel_n0) const;
 
 
     // **** Functions defined in momentum.cpp **** //
@@ -339,16 +339,16 @@ public:
         double rk_alpha,
         double dt,
         const Mesh_t& mesh,
-        DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_mass,
+        DistributedDCArray<double>& node_vel,
+        const DistributedDCArray<double>& node_mass,
         const DCArrayKokkos<double>& corner_force) const;
 
     // **** Functions defined in properties.cpp **** //
     void update_state(
         const Material_t& Materials,
         const Mesh_t&     mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<double>& node_vel,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
@@ -367,13 +367,13 @@ public:
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
     void rk_init(
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_coords_n0,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_vel_n0,
-        DCArrayKokkos<double>& node_temp,
-        DCArrayKokkos<double>& node_temp_n0,
-        DCArrayKokkos<double>& node_q_flux,
+        DistributedDCArray<double>& node_coords,
+        DistributedDCArray<double>& node_coords_n0,
+        DistributedDCArray<double>& node_vel,
+        DistributedDCArray<double>& node_vel_n0,
+        DistributedDCArray<double>& node_temp,
+        DistributedDCArray<double>& node_temp_n0,
+        DistributedDCArray<double>& node_q_flux,
         DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
         const size_t num_dims,
         const size_t num_elems,
@@ -382,8 +382,8 @@ public:
 
     void get_timestep(
         Mesh_t& mesh,
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
+        DistributedDCArray<double>& node_coords,
+        DistributedDCArray<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
         DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,

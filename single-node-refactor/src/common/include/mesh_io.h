@@ -52,7 +52,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 
-
+#define BUFFER_SIZE 100000
+#define MAX_WORD 30
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -212,8 +213,8 @@ inline bool extract_values_xml(T *values_xml,
 
 
 // find the number of points and number of cells in the mesh
-inline bool extract_num_points_and_cells_xml(int& numberOfPoints,
-                                      int& numberOfCells,
+inline bool extract_num_points_and_cells_xml(size_t& numberOfPoints,
+                                      size_t& numberOfCells,
                                       std::ifstream& in)
 {
     bool found = false;
@@ -223,7 +224,7 @@ inline bool extract_num_points_and_cells_xml(int& numberOfPoints,
         
     // Read the file line by line looking for NumberOfPoints
     while (std::getline(in, line)) {
-        
+        //std::cout << line << std::endl;
         std::string word = "NumberOfPoints=";  // A portion of a word
 
         if (line.find(word) != std::string::npos) { // Check if the portion of the word is in the line
@@ -365,10 +366,10 @@ public:
         std::cout << "File extension is: " << extension << std::endl;
 
         if(extension == "geo"){ // Ensight meshfile extension
-            read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            //read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
         }
         else if(extension == "inp"){ // Abaqus meshfile extension
-            read_Abaqus_mesh(mesh, State, num_dims);
+            //read_Abaqus_mesh(mesh, State, num_dims);
         }
         else if(extension == "vtk"){ // vtk file format
             read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
@@ -381,319 +382,6 @@ public:
         }
 
     }
-
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn read_ensight_mesh
-    ///
-    /// \brief Read .geo mesh file
-    ///
-    /// \param Simulation mesh
-    /// \param Element state struct
-    /// \param Node state struct
-    /// \param Corner state struct
-    /// \param Number of dimensions
-    ///
-    /////////////////////////////////////////////////////////////////////////////
-    void read_ensight_mesh(Mesh_t& mesh,
-                           GaussPoint_t& GaussPoints,
-                           node_t&   node,
-                           corner_t& corner,
-                           mesh_input_t& mesh_inps,
-                           int num_dims)
-    {
-        FILE* in;
-        char  ch;
-
-        size_t num_nodes_in_elem = 1;
-        for (int dim = 0; dim < num_dims; dim++) {
-            num_nodes_in_elem *= 2;
-        }
-
-        // read the mesh    WARNING: assumes a .geo file
-        in = fopen(mesh_file_, "r");
-
-        // skip 8 lines
-        for (int j = 1; j <= 8; j++) {
-            int i = 0;
-            while ((ch = (char)fgetc(in)) != '\n') {
-                i++;
-            }
-        }
-
-        // --- Read in the nodes in the mesh ---
-
-        size_t num_nodes = 0;
-
-        fscanf(in, "%lu", &num_nodes);
-        printf("Number of nodes read in %lu\n", num_nodes);
-
-        
-        mesh.initialize_nodes(num_nodes);
-
-        // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dims, required_node_state);
-
-        // read the initial mesh coordinates
-        // x-coords
-        for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            fscanf(in, "%le", &node.coords.host(node_id, 0));
-            node.coords.host(node_id, 0)*= mesh_inps.scale_x;
-        }
-
-        // y-coords
-        for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            fscanf(in, "%le", &node.coords.host(node_id, 1));
-            node.coords.host(node_id, 1)*= mesh_inps.scale_y;
-        }
-
-        // z-coords
-        for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            if (num_dims == 3) {
-                fscanf(in, "%le", &node.coords.host(node_id, 2));
-                node.coords.host(node_id, 2)*= mesh_inps.scale_z;
-            }
-            else{
-                double dummy;
-                fscanf(in, "%le", &dummy);
-            }
-        } // end for
-
-
-        // Update device nodal positions
-        node.coords.update_device();
-
-        ch = (char)fgetc(in);
-
-        // skip 1 line
-        for (int j = 1; j <= 1; j++) {
-            int i = 0;
-            while ((ch = (char)fgetc(in)) != '\n') {
-                i++;
-            }
-        }
-
-        // --- read in the elements in the mesh ---
-        size_t num_elem = 0;
-
-        fscanf(in, "%lu", &num_elem);
-        printf("Number of elements read in %lu\n", num_elem);
-
-        // initialize elem variables
-        mesh.initialize_elems(num_elem, num_dims);
-        // GaussPoints.initialize(num_elem, 3); // always 3D here, even for 2D
-
-        
-        // for each cell read the list of associated nodes
-        for (int elem_gid = 0; elem_gid < num_elem; elem_gid++) {
-            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-                fscanf(in, "%lu", &mesh.nodes_in_elem.host(elem_gid, node_lid));  // %d vs zu
-
-                // shift to start node index space at 0
-                mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;
-            }
-        }
-
-        // Convert from ensight to IJK mesh
-        int convert_ensight_to_ijk[8];
-        convert_ensight_to_ijk[0] = 0;
-        convert_ensight_to_ijk[1] = 1;
-        convert_ensight_to_ijk[2] = 3;
-        convert_ensight_to_ijk[3] = 2;
-        convert_ensight_to_ijk[4] = 4;
-        convert_ensight_to_ijk[5] = 5;
-        convert_ensight_to_ijk[6] = 7;
-        convert_ensight_to_ijk[7] = 6;
-
-        int tmp_ijk_indx[8];
-
-        for (int elem_gid = 0; elem_gid < num_elem; elem_gid++) {
-            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-                tmp_ijk_indx[node_lid] = mesh.nodes_in_elem.host(elem_gid, convert_ensight_to_ijk[node_lid]);
-            }
-
-            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
-                mesh.nodes_in_elem.host(elem_gid, node_lid) = tmp_ijk_indx[node_lid];
-            }
-        }
-        // update device side
-        mesh.nodes_in_elem.update_device();
-
-        // initialize corner variables
-        int num_corners = num_elem * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dims);
-
-        // Close mesh input file
-        fclose(in);
-
-        // Build connectivity
-        mesh.build_connectivity();
-
-        return;
-    } // end read ensight mesh
-
-    /////////////////////////////////////////////////////////////////////////////
-    ///
-    /// \fn read_Abaqus_mesh
-    ///
-    /// \brief Read .inp mesh file
-    ///
-    /// \param Simulation mesh
-    /// \param Simulation state
-    /// \param Node state struct
-    /// \param Number of dimensions
-    ///
-    /////////////////////////////////////////////////////////////////////////////
-    void read_Abaqus_mesh(Mesh_t& mesh,
-                          State_t& State,
-                          int num_dims)
-    {
-
-        std::cout<<"Reading abaqus input file for mesh"<<std::endl;
-        std::ifstream inputFile(mesh_file_);
-        if (!inputFile.is_open()) {
-            std::cerr << "Failed to open the file." << std::endl;
-
-        }
-
-        std::vector<Node> nodes;
-        std::vector<Element> elements;
-
-        std::string line;
-        bool readingNodes = false;
-        bool readingElements = false;
-
-        while (std::getline(inputFile, line)) {
-            if (line.find("*Node") != std::string::npos) {
-                readingNodes = true;
-                std::cout<<"Found *Node"<<std::endl;
-
-            } 
-            else if (readingNodes && !line.find("*") ) { // End of nodes
-                readingNodes = false;
-            } 
-            else if (readingNodes) {
-                // std::cout<<"Reading Nodes"<<std::endl;
-                std::istringstream iss(line);
-                std::ws(iss); // Skip leading whitespace
-                std::string token;
-                Node node;
-
-                if (!(iss >> node.id && std::getline(iss, token, ',') && iss >> node.x &&
-                    std::getline(iss, token, ',') && iss >> node.y &&
-                    std::getline(iss, token, ',') && iss >> node.z)) {
-                    std::cerr << "Failed to parse line: " << line << std::endl;
-                    continue; // Skip this line if parsing failed
-                }
-                nodes.push_back(node);
-            }
-
-            if (line.find("*Element") != std::string::npos) {
-                readingElements = true;
-                std::cout<<"Found *Element*"<<std::endl;
-            } 
-            else if (readingElements &&  !line.find("*") ) { // End of elements
-                readingElements = false;
-            } 
-            else if (readingElements ) {
-                std::istringstream iss(line);
-                Element element;
-                std::string token;
-
-                if (!(iss >> element.id)){
-                    std::cout << "Failed to parse line: " << line << std::endl;
-                    continue; // Skip this line if parsing failed
-                } 
-
-                while ((std::getline(iss, token, ','))) { 
-                    // Now extract the integer, ignoring any trailing whitespace
-                    int val;
-                    iss >> val;
-                    element.connectivity.push_back(val);
-                }
-
-                // Convert from abaqus to IJK mesh
-                int convert_abq_to_ijk[8];
-                convert_abq_to_ijk[0] = 0;
-                convert_abq_to_ijk[1] = 1;
-                convert_abq_to_ijk[2] = 3;
-                convert_abq_to_ijk[3] = 2;
-                convert_abq_to_ijk[4] = 4;
-                convert_abq_to_ijk[5] = 5;
-                convert_abq_to_ijk[6] = 7;
-                convert_abq_to_ijk[7] = 6;
-
-                int tmp_ijk_indx[8];
-
-                for (int node_lid = 0; node_lid < 8; node_lid++) {
-                    tmp_ijk_indx[node_lid] = element.connectivity[convert_abq_to_ijk[node_lid]];
-                }
-
-                for (int node_lid = 0; node_lid < 8; node_lid++){
-                    element.connectivity[node_lid] = tmp_ijk_indx[node_lid];
-                }
-
-                elements.push_back(element);
-            }
-        }
-
-        inputFile.close();
-
-        size_t num_nodes = nodes.size();
-
-        printf("Number of nodes read in %lu\n", num_nodes);
-
-        // initialize node variables
-        mesh.initialize_nodes(num_nodes);
-
-        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-
-        State.node.initialize(num_nodes, num_dims, required_node_state);
-
-
-        // Copy nodes to mesh
-        for(int node_gid = 0; node_gid < num_nodes; node_gid++){
-            State.node.coords.host(node_gid, 0) = nodes[node_gid].x;
-            State.node.coords.host(node_gid, 1) = nodes[node_gid].y;
-            State.node.coords.host(node_gid, 2) = nodes[node_gid].z;
-        }
-
-        // Update device nodal positions
-        State.node.coords.update_device();
-
-
-        // --- read in the elements in the mesh ---
-        size_t num_elem = elements.size();
-        printf("Number of elements read in %lu\n", num_elem);
-
-        // initialize elem variables
-        mesh.initialize_elems(num_elem, num_dims);
-
-
-        // for each cell read the list of associated nodes
-        for (int elem_gid = 0; elem_gid < num_elem; elem_gid++) {
-            for (int node_lid = 0; node_lid < 8; node_lid++) {
-                mesh.nodes_in_elem.host(elem_gid, node_lid) = elements[elem_gid].connectivity[node_lid];
-
-                // shift to start node index space at 0
-                mesh.nodes_in_elem.host(elem_gid, node_lid) -= 1;
-            }
-        }
-
-        // update device side
-        mesh.nodes_in_elem.update_device();
-
-        // initialize corner variables
-        int num_corners = num_elem * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // State.corner.initialize(num_corners, num_dims);
-
-        // Build connectivity
-        mesh.build_connectivity();
-    } // end read abaqus mesh
 
 
     /////////////////////////////////////////////////////////////////////////////
@@ -708,221 +396,522 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
+
     void read_vtk_mesh(Mesh_t& mesh,
-                    GaussPoint_t& GaussPoints,
-                    node_t&   node,
-                    corner_t& corner,
-                    mesh_input_t& mesh_inps,
-                    int num_dims)
+                            GaussPoint_t& GaussPoints,
+                            node_t&   node,
+                            corner_t& corner,
+                            mesh_input_t& mesh_inps,
+                            int num_dims)
     {
+        char ch;
+        std::string skip_line, read_line, substring;
+        std::stringstream line_parse;
+        std::ifstream in;  // FILE *in;
 
         std::cout<<"Reading VTK mesh"<<std::endl;
     
-        int i;           // used for writing information to file
-        int node_gid;    // the global id for the point
-        int elem_gid;     // the global id for the elem
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+
+        int local_node_index, current_column_index;
+        int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
+        int negative_index_found = 0;
+        int global_negative_index_found = 0;
+
+        size_t read_index_start, node_rid, elem_gid;
+        long long int node_gid;
+        bool zero_index_base = true;
+        real_t dof_value;
+        real_t unit_scaling = 1;
+
+        CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer;
+
+
+        // read the mesh
+        // --- Read the number of nodes in the mesh --- //
+        size_t global_num_nodes = 0;
+        if (myrank == 0)
+        {
+            std::cout << " NUM DIM is " << num_dims << std::endl;
+            in.open(mesh_file_);
+            bool found = false;
+
+            while (found == false&&in.good()) {
+                std::getline(in, read_line);
+                line_parse.str("");
+                line_parse.clear();
+                line_parse << read_line;
+                line_parse >> substring;
+
+                // looking for the following text:
+                //      POINTS %d float
+                if (substring == "POINTS")
+                {
+                    line_parse >> global_num_nodes;
+                    std::cout << "declared node count: " << global_num_nodes << std::endl;
+                    if (global_num_nodes <= 0)
+                    {
+                        throw std::runtime_error("ERROR, NO NODES IN MESH");
+                    }
+                    found = true;
+                } // end if
+            } // end while
+
+            if (!found){
+                throw std::runtime_error("ERROR: Failed to find POINTS");
+            } // end if
+
+        } // end if(myrank==0)
+
+        // broadcast number of nodes
+        MPI_Bcast(&global_num_nodes, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+
+        // host_vec_array node_coords = dual_node_coords.view_host();
+        // notify that the host view is going to be modified in the file readin
+        // dual_node_coords.modify_host();
+
+        // old swage method
+        // mesh->init_nodes(local_nrows); // add 1 for index starting at 1
+
+        //std::cout << "Num nodes assigned to task " << myrank << " = " << num_local_nodes << std::endl;
+
+        // read the initial mesh coordinates
+        // x-coords
+        /*only task 0 reads in nodes and elements from the input file
+        stores node data in a buffer and communicates once the buffer cap is reached
+        or the data ends*/
 
         size_t num_nodes_in_elem = 1;
         for (int dim = 0; dim < num_dims; dim++) {
             num_nodes_in_elem *= 2;
         }
-        
 
-        std::string token;
-        
-        bool found = false;
-        
-        std::ifstream in;  // FILE *in;
-        in.open(mesh_file_);
-        
+        int words_per_line = num_dims;
+        int elem_words_per_line = num_nodes_in_elem;
 
-        // look for POINTS
-        i = 0;
-        while (found==false) {
-            std::string str;
-            std::string delimiter = " ";
-            std::getline(in, str);
-            std::vector<std::string> v = split (str, delimiter);
-            
-            // looking for the following text:
-            //      POINTS %d float
-            if(v[0] == "POINTS"){
-                size_t num_nodes = std::stoi(v[1]);
-                printf("Number of nodes read in %zu\n", num_nodes);
-                mesh.initialize_nodes(num_nodes);
+        // allocate read buffer
+        read_buffer = CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE, words_per_line, MAX_WORD);
 
-                std::vector<node_state> required_node_state = { node_state::coords };
-                node.initialize(num_nodes, num_dims, required_node_state);
-                
-                found=true;
-            } // end if
-            
-            
-            if (i>1000){
-                std::cerr << "ERROR: Failed to find POINTS in file" << std::endl;
-                break;
-            } // end if
-            
-            i++;
-        } // end while
-        
-        // read the node coordinates
-        for (node_gid=0; node_gid<mesh.num_nodes; node_gid++){
-            
-            std::string str;
-            std::getline(in, str);
-            
-            std::string delimiter = " ";
-            std::vector<std::string> v = split (str, delimiter);
-            
-            // save the nodal coordinates
-            node.coords.host(node_gid, 0) = mesh_inps.scale_x*std::stod(v[0]); // double
-            node.coords.host(node_gid, 1) = mesh_inps.scale_y*std::stod(v[1]); // double
-            if(num_dims==3){
-                node.coords.host(node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
+        dof_limit = global_num_nodes;
+        buffer_iterations = dof_limit / BUFFER_SIZE;
+        if (dof_limit % BUFFER_SIZE != 0)
+        {
+            buffer_iterations++;
+        }
+
+        // read coords
+        read_index_start = 0;
+        size_t num_local_nodes;
+        DistributedMap node_map;
+        { //scoped so temp FArray data is auto deleted to save memory
+            //allocate pre-partition node coords using contiguous decomposition
+            //FArray type used since CArray type still doesnt support zoltan2 decomposition
+            DistributedDFArray<real_t> node_coords_distributed(global_num_nodes, num_dims);
+
+            // construct contiguous parallel row map now that we know the number of nodes
+            node_map = node_coords_distributed.pmap;
+            // map->describe(*fos,Teuchos::VERB_EXTREME);
+
+            // set the vertices in the mesh read in
+            num_local_nodes = node_map.size();
+            for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+            {
+                // pack buffer on rank 0
+                if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+                {
+                    for (buffer_loop = 0; buffer_loop < BUFFER_SIZE; buffer_loop++)
+                    {
+                        getline(in, read_line);
+                        line_parse.clear();
+                        line_parse.str(read_line);
+
+                        for (int iword = 0; iword < words_per_line; iword++)
+                        {
+                            // read portions of the line into the substring variable
+                            line_parse >> substring;
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                        }
+                    }
+                }
+                else if (myrank == 0)
+                {
+                    buffer_loop = 0;
+                    while (buffer_iteration * BUFFER_SIZE + buffer_loop < global_num_nodes) {
+                        getline(in, read_line);
+                        line_parse.clear();
+                        line_parse.str(read_line);
+                        for (int iword = 0; iword < words_per_line; iword++)
+                        {
+                            // read portions of the line into the substring variable
+                            line_parse >> substring;
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                        }
+                        buffer_loop++;
+                    }
+                }
+
+                // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+                MPI_Bcast(read_buffer.pointer(), BUFFER_SIZE * words_per_line * MAX_WORD, MPI_CHAR, 0, MPI_COMM_WORLD);
+                // broadcast how many nodes were read into this buffer iteration
+                MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+                // debug_print
+                // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+                // for(int iprint=0; iprint < buffer_loop; iprint++)
+                // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+                // return;
+
+                // determine which data to store in the swage mesh members (the local node data)
+                // loop through read buffer
+                for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+                {
+                    // set global node id (ensight specific order)
+                    node_gid = read_index_start + scan_loop;
+                    // let map decide if this node id belongs locally; if yes store data
+                    if (node_map.isProcessGlobalIndex(node_gid))
+                    {
+                        // set local node index in this mpi rank
+                        node_rid = node_map.getLocalIndex(node_gid);
+                        // extract nodal position from the read buffer
+                        // for tecplot format this is the three coords in the same line
+                        dof_value = atof(&read_buffer(scan_loop, 0, 0));
+                        node_coords_distributed.host(node_rid, 0) = dof_value * unit_scaling;
+                        dof_value = atof(&read_buffer(scan_loop, 1, 0));
+                        node_coords_distributed.host(node_rid, 1) = dof_value * unit_scaling;
+                        if (num_dims == 3)
+                        {
+                            dof_value = atof(&read_buffer(scan_loop, 2, 0));
+                            node_coords_distributed.host(node_rid, 2) = dof_value * unit_scaling;
+                        }
+                    }
+                }
+                read_index_start += BUFFER_SIZE;
             }
-            
-        } // end for nodes
-
-
-        // Update device nodal positions
-        node.coords.update_device();
+            // end of coordinate readin
+            node_coords_distributed.update_device();
+            // repartition node distribution
+            node_coords_distributed.repartition_vector();
+            //get map from repartitioned Farray and feed it into distributed CArray type; FArray data will be discared after scope
+            std::vector<node_state> required_node_state = { node_state::coords };
+            node_map = node_coords_distributed.pmap;
+            node.initialize(node_map, num_dims, required_node_state);
+            //copy coordinate data from repartitioned FArray into CArray
+            FOR_ALL(node_id, 0, node_map.size(), {
+                for(int idim = 0; idim < num_dims; idim++){
+                    node.coords(node_id,idim) = node_coords_distributed(node_id,idim);
+                }
+            });
+        }
+        node.coords.update_host();
+        //initialize some mesh data
+        mesh.initialize_nodes(global_num_nodes);
+        num_local_nodes = node_map.size();
+        mesh.num_local_nodes = num_local_nodes;
+        mesh.node_map = node_map;
+        mesh.num_dims = num_dims;
         
+        // debug print of nodal data
 
-        found=false;
+        // debug print nodal positions and indices
+        /*
+        std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
+        for (int inode = 0; inode < local_nrows; inode++){
+            std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
+        for (int istride = 0; istride < num_dims; istride++){
+            std::cout << node_coords(inode,istride) << " , ";
+        }
+        std::cout << " }"<< std::endl;
+        }
+        */
 
-        // look for CELLS
-        i = 0;
-        size_t num_elem = 0;
-        while (found==false) {
-            std::string str;
-            std::getline(in, str);
-            
-            std::string delimiter = " ";
-            std::vector<std::string> v = split (str, delimiter);
-            std::cout << v[0] << std::endl; // printing
-            
-            // looking for the following text:
-            //      CELLS num_elem size
-            if(v[0] == "CELLS"){
-                num_elem = std::stoi(v[1]);
-                printf("Number of elements read in %zu\n", num_elem);
+        // check that local assignments match global total
 
-                // initialize elem variables
-                mesh.initialize_elems(num_elem, num_dims);
-                
-                found=true;
+        // read in element info (ensight file format is organized in element type sections)
+        // loop over this later for several element type sections
+
+        size_t global_num_elems  = 0;
+        size_t num_elems = 0;
+        CArrayKokkos<int, Kokkos::LayoutRight, Kokkos::HostSpace> node_store(elem_words_per_line);
+
+        // --- read the number of cells in the mesh ---
+        // --- Read the number of vertices in the mesh --- //
+        if (myrank == 0)
+        {
+            bool found = false;
+            while (found == false&&in.good()) {
+                std::getline(in, read_line);
+                line_parse.str("");
+                line_parse.clear();
+                line_parse << read_line;
+                line_parse >> substring;
+
+                // looking for the following text:
+                //      CELLS num_cells size
+                if (substring == "CELLS")
+                {
+                    line_parse >> global_num_elems;
+                    std::cout << "declared element count: " << global_num_elems << std::endl;
+                    if (global_num_elems <= 0)
+                    {
+                        throw std::runtime_error("ERROR, NO ELEMENTS IN MESH");
+                    }
+                    found = true;
+                } // end if
+            } // end while
+
+            if (!found){
+                throw std::runtime_error("ERROR: Failed to find CELLS");
             } // end if
-            
-            
-            if (i>1000){
-                printf("ERROR: Failed to find CELLS \n");
-                break;
-            } // end if
-            
-            i++;
-        } // end while
-        
-        
-        // read the node ids in the element
-        for (elem_gid=0; elem_gid<num_elem; elem_gid++) {
-            
-            std::string str;
-            std::getline(in, str);
-            
-            std::string delimiter = " ";
-            std::vector<std::string> v = split (str, delimiter);
-            num_nodes_in_elem = std::stoi(v[0]);
-            
-            for (size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
-                mesh.nodes_in_elem.host(elem_gid, node_lid) = std::stod(v[node_lid+1]);
-                //printf(" %zu ", elem_point_list(elem_gid,node_lid) ); // printing
+        } // end if(myrank==0)
+
+        // broadcast number of elements
+        MPI_Bcast(&global_num_elems, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+
+        //initialize num elem in mesh struct
+
+        if (myrank == 0)
+        {
+            std::cout << "before mesh initialization" << std::endl;
+        }
+
+        // read in element connectivity
+        // we're gonna reallocate for the words per line expected for the element connectivity
+        read_buffer = CArrayKokkos<char, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE, elem_words_per_line, MAX_WORD);
+
+        // calculate buffer iterations to read number of lines
+        buffer_iterations = global_num_elems / BUFFER_SIZE;
+        int assign_flag;
+
+        // dynamic buffer used to store elements before we know how many this rank needs
+        std::vector<size_t> element_temp(BUFFER_SIZE * elem_words_per_line);
+        std::vector<size_t> global_indices_temp(BUFFER_SIZE);
+        size_t buffer_max = BUFFER_SIZE * elem_words_per_line;
+        size_t indices_buffer_max = BUFFER_SIZE;
+
+        if (global_num_elems % BUFFER_SIZE != 0)
+        {
+            buffer_iterations++;
+        }
+        read_index_start = 0;
+        // std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+        {
+            // pack buffer on rank 0
+            if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+            {
+                for (buffer_loop = 0; buffer_loop < BUFFER_SIZE; buffer_loop++)
+                {
+                    getline(in, read_line);
+                    line_parse.clear();
+                    line_parse.str(read_line);
+                    // disregard node count line since we're using one element type per mesh
+                    line_parse >> substring;
+                    for (int iword = 0; iword < elem_words_per_line; iword++)
+                    {
+                        // read portions of the line into the substring variable
+                        line_parse >> substring;
+                        // debug print
+                        // std::cout<<" "<< substring;
+                        // assign the substring variable as a word of the read buffer
+                        strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                    }
+                    // std::cout <<std::endl;
+                }
             }
-            //printf("\n"); // printing
-            
-        } // end for
-
-        // Convert from ensight to IJK mesh
-        size_t convert_ensight_to_ijk[8];
-        convert_ensight_to_ijk[0] = 0;
-        convert_ensight_to_ijk[1] = 1;
-        convert_ensight_to_ijk[2] = 3;
-        convert_ensight_to_ijk[3] = 2;
-        convert_ensight_to_ijk[4] = 4;
-        convert_ensight_to_ijk[5] = 5;
-        convert_ensight_to_ijk[6] = 7;
-        convert_ensight_to_ijk[7] = 6;
-
-        size_t tmp_ijk_indx[8];
-
-        for (size_t elem_gid = 0; elem_gid < num_elem; elem_gid++) {
-            for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-                tmp_ijk_indx[node_lid] = mesh.nodes_in_elem.host(elem_gid, convert_ensight_to_ijk[node_lid]);
+            else if (myrank == 0)
+            {
+                buffer_loop = 0;
+                while (buffer_iteration * BUFFER_SIZE + buffer_loop < global_num_elems) {
+                    getline(in, read_line);
+                    line_parse.clear();
+                    line_parse.str(read_line);
+                    line_parse >> substring;
+                    for (int iword = 0; iword < elem_words_per_line; iword++)
+                    {
+                        // read portions of the line into the substring variable
+                        line_parse >> substring;
+                        // debug print
+                        // std::cout<<" "<< substring;
+                        // assign the substring variable as a word of the read buffer
+                        strcpy(&read_buffer(buffer_loop, iword, 0), substring.c_str());
+                    }
+                    // std::cout <<std::endl;
+                    buffer_loop++;
+                    // std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
+                }
             }
 
-            for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
-                mesh.nodes_in_elem.host(elem_gid, node_lid) = tmp_ijk_indx[node_lid];
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(read_buffer.pointer(), BUFFER_SIZE * elem_words_per_line * MAX_WORD, MPI_CHAR, 0, MPI_COMM_WORLD);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            // store element connectivity that belongs to this rank
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                elem_gid = read_index_start + scan_loop;
+                // add this element to the local list if any of its nodes belong to this rank according to the map
+                // get list of nodes for each element line and check if they belong to the map
+                assign_flag = 0;
+                for (int inode = 0; inode < elem_words_per_line; inode++)
+                {
+                    // as we loop through the nodes belonging to this element we store them
+                    // if any of these nodes belongs to this rank this list is used to store the element locally
+                    node_gid = atoi(&read_buffer(scan_loop, inode, 0));
+                    if (zero_index_base)
+                    {
+                        node_store(inode) = node_gid; // subtract 1 since file index start is 1 but code expects 0
+                    }
+                    else
+                    {
+                        node_store(inode) = node_gid - 1; // subtract 1 since file index start is 1 but code expects 0
+                    }
+                    if (node_store(inode) < 0)
+                    {
+                        negative_index_found = 1;
+                    }
+                    // first we add the elements to a dynamically allocated list
+                    if (zero_index_base)
+                    {
+                        if (node_map.isProcessGlobalIndex(node_gid) && !assign_flag)
+                        {
+                            assign_flag = 1;
+                            num_elems++;
+                        }
+                    }
+                    else
+                    {
+                        if (node_map.isProcessGlobalIndex(node_gid - 1) && !assign_flag)
+                        {
+                            assign_flag = 1;
+                            num_elems++;
+                        }
+                    }
+                }
+
+                if (assign_flag)
+                {
+                    for (int inode = 0; inode < elem_words_per_line; inode++)
+                    {
+                        if ((num_elems - 1) * elem_words_per_line + inode >= buffer_max)
+                        {
+                            element_temp.resize((num_elems - 1) * elem_words_per_line + inode + BUFFER_SIZE * elem_words_per_line);
+                            buffer_max = (num_elems - 1) * elem_words_per_line + inode + BUFFER_SIZE * elem_words_per_line;
+                        }
+                        element_temp[(num_elems - 1) * elem_words_per_line + inode] = node_store(inode);
+                        // std::cout << "VECTOR STORAGE FOR ELEM " << num_elems << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
+                    }
+                    // assign global element id to temporary list
+                    if (num_elems - 1 >= indices_buffer_max)
+                    {
+                        global_indices_temp.resize(num_elems - 1 + BUFFER_SIZE);
+                        indices_buffer_max = num_elems - 1 + BUFFER_SIZE;
+                    }
+                    global_indices_temp[num_elems - 1] = elem_gid;
+                }
+            }
+            read_index_start += BUFFER_SIZE;
+        }
+
+        //set global and local shared element counts
+        mesh.global_num_elems = global_num_elems;
+
+        // construct partition mapping for shared elements on each process
+        DCArrayKokkos<long long int> All_Element_Global_Indices(num_elems);
+        // copy temporary global indices storage to view storage
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            All_Element_Global_Indices.host(ielem) = global_indices_temp[ielem];
+            if (global_indices_temp[ielem] < 0)
+            {
+                negative_index_found = 1;
             }
         }
-        // update device side
-        mesh.nodes_in_elem.update_device();
 
+        MPI_Allreduce(&negative_index_found, &global_negative_index_found, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        if (global_negative_index_found)
+        {
+            if (myrank == 0)
+            {
+                std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
+            MPI_Finalize();
+            exit(0);
+        }
+
+        All_Element_Global_Indices.update_device();
+
+        // construct global map of local and shared elements (since different ranks can own the same elements due to the local node map)
+        DistributedMap element_map = DistributedMap(All_Element_Global_Indices);
+
+        //initialize elem data structures
+        mesh.initialize_elems(num_elems, num_nodes_in_elem, element_map);
+
+        // copy temporary element storage to distributed storage
+        DistributedDCArray<size_t> nodes_in_elem = mesh.nodes_in_elem;
+
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            for (int inode = 0; inode < num_nodes_in_elem; inode++)
+            {   //assign local indices to element-node connectivity (stores global indices until ghost maps are made later)
+                nodes_in_elem.host(ielem, inode) = element_temp[ielem * num_nodes_in_elem + inode];
+            }
+        }
+
+        // delete temporary element connectivity and index storage
+        std::vector<size_t>().swap(element_temp);
+        std::vector<size_t>().swap(global_indices_temp);
+
+        // Convert ensight index system to the ijk finite element numbering convention
+        // for vertices in cell
+        CArrayKokkos<size_t, Kokkos::LayoutRight, Kokkos::HostSpace> convert_ensight_to_ijk(num_nodes_in_elem);
+        CArrayKokkos<size_t, Kokkos::LayoutRight, Kokkos::HostSpace> tmp_ijk_indx(num_nodes_in_elem);
+        convert_ensight_to_ijk(0) = 0;
+        convert_ensight_to_ijk(1) = 1;
+        convert_ensight_to_ijk(2) = 3;
+        convert_ensight_to_ijk(3) = 2;
+        convert_ensight_to_ijk(4) = 4;
+        convert_ensight_to_ijk(5) = 5;
+        convert_ensight_to_ijk(6) = 7;
+        convert_ensight_to_ijk(7) = 6;
+
+        for (int cell_rid = 0; cell_rid < num_elems; cell_rid++)
+        {
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
+            {
+                tmp_ijk_indx(node_lid) = nodes_in_elem.host(cell_rid, convert_ensight_to_ijk(node_lid));
+            }
+
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
+            {
+                nodes_in_elem.host(cell_rid, node_lid) = tmp_ijk_indx(node_lid);
+            }
+        }
+        
+
+        nodes_in_elem.update_device();
 
         // initialize corner variables
-        size_t num_corners = num_elem * num_nodes_in_elem;
+        size_t num_corners = num_elems * num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
 
-
-        // Build connectivity
-        mesh.build_connectivity();
-
-
-        found=false;
-
-        printf("\n");
-        
-        
-        // look for CELL_TYPE
-        i = 0;
-        size_t elem_type = 0;
-        while (found==false) {
-            std::string str;
-            std::string delimiter = " ";
-            std::getline(in, str);
-            std::vector<std::string> v = split (str, delimiter);
-            
-            // looking for the following text:
-            //      CELLS num_elem size
-            if(v[0] == "CELL_TYPES"){
-
-                std::getline(in, str);
-                elem_type = std::stoi(str);
-                
-                found=true;
-            } // end if
-            
-            
-            if (i>1000){
-                printf("ERROR: Failed to find elem_TYPE \n");
-                break;
-            } // end if
-            
-            i++;
-        } // end while
-        printf("Element type = %zu \n", elem_type);
-        // elem types:
-        // linear hex = 12, linear quad = 9
-        found=false;
-        
-        
-        if(num_nodes_in_elem==8 & elem_type != 12) {
-            printf("Wrong element type of %zu \n", elem_type);
-            std::cerr << "ERROR: incorrect element type in VTK file" << std::endl;
+        // Close mesh input file
+        if (myrank == 0)
+        {
+            in.close();
         }
-        
-        in.close();
-        
-    } // end of VTKread function
+    } // end read_mesh
 
 
     /////////////////////////////////////////////////////////////////////////////
@@ -944,54 +933,28 @@ public:
                     mesh_input_t& mesh_inps,
                     int num_dims)
     {
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
 
-        std::cout<<"Reading VTU file in a multiblock VTK mesh"<<std::endl;
-    
-        int i;           // used for writing information to file
-        int node_gid;    // the global id for the point
-        int elem_gid;    // the global id for the elem
-
-
-        //
-        int Pn_order = mesh_inps.p_order;
-        size_t num_nodes_in_elem = 1;
-        for (int dim = 0; dim < num_dims; dim++) {
-            num_nodes_in_elem *= (Pn_order + 1);
-        }
-        
-        bool found;
-        
         std::ifstream in;  // FILE *in;
-        in.open(mesh_file_);
-        
+        int local_node_index, current_column_index;
+        int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
 
-        // --- extract the number of points and cells from the XML file ---
-        int num_nodes;
-        int num_elems;
-        found = extract_num_points_and_cells_xml(num_nodes,
-                                                 num_elems,
-                                                 in);
-        if(found==false){
-            throw std::runtime_error("ERROR: number of points and/or cells not found in the XML file!");
-            //std::cout << "ERROR: number of points and cells not found in the XML file!" << std::endl;
-        }
-        std::cout << "Number of nodes in the mesh file: " << num_nodes << std::endl;
-        std::cout << "Number of elements in the mesh file: " << num_elems << std::endl;
-        
-        //------------------------------------
-        // allocate mesh class nodes and elems
-        mesh.initialize_nodes(num_nodes);
-        mesh.initialize_elems(num_elems, num_dims);
+        size_t read_index_start, node_rid, elem_gid;
+        long long int node_gid;
+        real_t dof_value;
+        real_t unit_scaling = 1;
+        bool zero_index_base = true;
+        int negative_index_found = 0;
+        int global_negative_index_found = 0;
 
-        //------------------------------------
-        // allocate node coordinate state
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dims, required_node_state);
+        CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer(BUFFER_SIZE*num_dims);
+        mesh_inps.input_elem_types = true;
+        mesh_inps.input_elem_objectids = true;
 
-        //------------------------------------
-        // allocate the elem object id array
-        mesh_inps.object_ids = DCArrayKokkos <int> (num_elems, "ObjectIDs");
 
+        // read the mesh
 
         // ------------------------
         // Mesh file storage order:
@@ -1001,36 +964,79 @@ public:
         //     offsets
         //     types
         // ------------------------
+
+        // --- Read the number of nodes in the mesh --- //
+        size_t global_num_nodes = 0;
+        size_t global_num_elems = 0;
+        size_t num_elems = 0;
+        std::streampos objectid_streampos;
+
+        // dimensional scaling of the mesh
+        const double scl_x = mesh_inps.scale_x;
+        const double scl_y = mesh_inps.scale_y;
+        const double scl_z = mesh_inps.scale_z;
+
+
+        //
+        int Pn_order = mesh_inps.p_order;
+        size_t num_nodes_in_elem = 1;
+        for (int dim = 0; dim < num_dims; dim++) {
+            num_nodes_in_elem *= (Pn_order + 1);
+        }
+
+        if(myrank==0){
+            std::cout<<"Reading VTU file in a multiblock VTK mesh"<<std::endl;
         
-        // temporary arrays
-        DCArrayKokkos<double> node_coords(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
-        DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem, "connectivity_vtu_file");
-        DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
+            bool found;
+            in.open(mesh_file_);
+            
+
+            // --- extract the number of points and cells from the XML file ---
+            int num_nodes;
+            int num_elems;
+            found = extract_num_points_and_cells_xml(global_num_nodes,
+                                                    global_num_elems,
+                                                    in);
+            if(found==false){
+                throw std::runtime_error("ERROR: number of points and/or cells not found in the XML file!");
+                //std::cout << "ERROR: number of points and cells not found in the XML file!" << std::endl;
+            }
+            std::cout << "Number of nodes in the mesh file: " << global_num_nodes << std::endl;
+            std::cout << "Number of elements in the mesh file: " << global_num_elems << std::endl;
+        }
+        
+        // broadcast number of nodes
+        MPI_Bcast(&global_num_nodes, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+        
+        //------------------------------------
+        // allocate mesh class nodes and elems
+        mesh.global_num_nodes = global_num_nodes;
+
+        //allocate initial contiguously partitioned node coordinate vector and get map of node indices
+        DistributedDFArray<real_t> node_coords_distributed(global_num_nodes, num_dims);
+
+        // construct contiguous parallel row map now that we know the number of nodes
+        DistributedMap node_map = node_coords_distributed.pmap;
+        // map->describe(*fos,Teuchos::VERB_EXTREME);
+
+        // set the vertices in the mesh read in
+        size_t num_local_nodes = node_map.size();
 
 
         // for all fields, we stop recording when we get to "<"
         std::string stop = "<";
 
         // the size of 1D storage from reading the mesh file
-        size_t size;
+        size_t size = 0;
 
         // ---
         //  Object ids
         // ---
 
-        // the object id in the element
-        // array dims are (num_elems)
-        found = extract_values_xml(mesh_inps.object_ids.host.pointer(),
-                                "\"ObjectId\"",
-                                stop,
-                                in,
-                                size);
-        if(found==false){
-            throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
-            //std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
+        //save fstream pointer for object ids for later after element map is decided (prevents more comms if object ids is always first)
+        if(myrank==0){
+            objectid_streampos = in.tellg();
         }
-        mesh_inps.object_ids.update_device();
-
 
         // ---
         //  Nodal coordinates of mesh
@@ -1039,55 +1045,363 @@ public:
         // coordinates of the node
         // array dims are (num_nodes,dims)
         // must use the quotes around Points to read the point values
-        found = extract_values_xml(node_coords.host.pointer(),
-                                "\"Points\"",
-                                stop,
-                                in,
-                                size);
-        if(found==false){
-            throw std::runtime_error("**** ERROR: mesh nodes were not found in the XML file! ****");
-            //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
+        dof_limit = global_num_nodes*num_dims;
+        buffer_iterations = dof_limit / (BUFFER_SIZE*num_dims);
+        size_t remainder_size = dof_limit % (BUFFER_SIZE*num_dims);
+        if (remainder_size != 0)
+        {
+            buffer_iterations++;
         }
-        if (size!=num_nodes*3){
-            throw std::runtime_error("ERROR: failed to read all the mesh nodes!");
-            //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
-        }
-        node_coords.update_device();
+        
+        read_index_start = 0;
 
-        // dimensional scaling of the mesh
-        const double scl_x = mesh_inps.scale_x;
-        const double scl_y = mesh_inps.scale_y;
-        const double scl_z = mesh_inps.scale_z;
+        //first find the block with node coords data
+        if(myrank==0){
 
-        // save the node coordinates to the state array
-        FOR_ALL(node_gid, 0, mesh.num_nodes, {
-            
-            // save the nodal coordinates
-            node.coords(node_gid, 0) = scl_x*node_coords(node_gid, 0); // double
-            node.coords(node_gid, 1) = scl_y*node_coords(node_gid, 1); // double
-            if(num_dims==3){
-                node.coords(node_gid, 2) = scl_z*node_coords(node_gid, 2); // double
+            bool found = false;
+
+            std::string line;
+            const std::string word = "\"Points\"";
+
+            // Read the file line by line looking for specified word
+            while (std::getline(in, line)) {
+                //std::cout << line << std::endl;
+                if (line.find(word) != std::string::npos) { // Check if the portion of the word is in the line
+                    found = true;
+                } 
+                if(found) {
+
+                    break;
+
+                } // end if found
+
+            } // end while
+
+            if(found==false){
+                throw std::runtime_error("**** ERROR: mesh nodes were not found in the XML file! ****");
+                //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
             }
+        }
 
-        }); // end for parallel nodes
+
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+            // pack buffer on rank 0
+            size_t buffer_iteration_size;
+            if(buffer_iteration < buffer_iterations - 1){
+                buffer_iteration_size = BUFFER_SIZE*num_dims;
+            }
+            else{
+                buffer_iteration_size = remainder_size;
+            }
+            
+            if(myrank==0){
+
+                std::string line;
+
+                // loop over the lines in the file until the buffer limit is reached
+                for(int idata = 0; idata < buffer_iteration_size; idata++){
+
+                    // extract the individual values from the stream
+                    std::string value;
+                    in >> value;
+                    if (value == stop) { // Check if the stop word is in the line
+                        break;
+                    } // end if
+                    read_buffer(idata) = std::stod(value);
+                    size++;
+                } // end for
+            }
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(read_buffer.pointer(), BUFFER_SIZE*num_dims, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_iteration_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            // debug_print
+            // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+            // for(int iprint=0; iprint < buffer_loop; iprint++)
+            // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+            // return;
+
+            // determine which data to store in the swage mesh members (the local node data)
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_iteration_size/num_dims; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                node_gid = read_index_start + scan_loop;
+                // let map decide if this node id belongs locally; if yes store data
+                if (node_map.isProcessGlobalIndex(node_gid))
+                {
+                    // set local node index in this mpi rank
+                    node_rid = node_map.getLocalIndex(node_gid);
+                    // extract nodal position from the read buffer
+                    // for tecplot format this is the three coords in the same line
+                    dof_value = read_buffer(scan_loop*num_dims);
+                    node_coords_distributed.host(node_rid, 0) = dof_value * scl_x;
+                    dof_value = read_buffer(scan_loop*num_dims + 1);
+                    node_coords_distributed.host(node_rid, 1) = dof_value * scl_y;
+                    if (num_dims == 3)
+                    {
+                        dof_value = read_buffer(scan_loop*num_dims + 2);
+                        node_coords_distributed.host(node_rid, 2) = dof_value * scl_z;
+                    }
+                }
+            }
+            read_index_start += buffer_iteration_size/num_dims;
+        }
+
+        if(myrank==0){        
+            if (size!=global_num_nodes*num_dims){
+                throw std::runtime_error("ERROR: failed to read all the mesh nodes!");
+                //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
+            }
+        }
+
+        node_coords_distributed.update_device();
+        // repartition node distribution
+        node_coords_distributed.repartition_vector();
+        //get map from repartitioned Farray and feed it into distributed CArray type; FArray data will be discared after scope
+        std::vector<node_state> required_node_state = { node_state::coords };
+        node_map = node_coords_distributed.pmap;
+        node.initialize(node_map, num_dims, required_node_state);
+        //copy coordinate data from repartitioned FArray into CArray
+        FOR_ALL(node_id, 0, node_map.size(), {
+            for(int idim = 0; idim < num_dims; idim++){
+                node.coords(node_id,idim) = node_coords_distributed(node_id,idim);
+            }
+        });
         node.coords.update_host();
+        //initialize some mesh data
+        mesh.initialize_nodes(global_num_nodes);
+        num_local_nodes = node_map.size();
+        mesh.num_local_nodes = num_local_nodes;
+        mesh.node_map = node_map;
 
+        /***Element data***/
+
+        // broadcast number of elems
+        MPI_Bcast(&global_num_elems, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
 
         // ---
         //  Nodes in the element 
         // ---
 
-        // fill temporary nodes in the element array
-        // array dims are (num_elems,num_nodes_in_elem)
-        found = extract_values_xml(connectivity.host.pointer(),
-                                "\"connectivity\"",
-                                stop,
-                                in,
-                                size);
-        if(found==false){
-            std::cout << "ERROR: mesh connectivity was not found in the XML file!" << std::endl;
+        dof_limit = global_num_elems*num_nodes_in_elem;
+        buffer_iterations = dof_limit / (BUFFER_SIZE*num_nodes_in_elem);
+        remainder_size = dof_limit % (BUFFER_SIZE*num_nodes_in_elem);
+        if (remainder_size != 0)
+        {
+            buffer_iterations++;
         }
-        connectivity.update_device();
+
+        
+        CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace> elem_read_buffer(BUFFER_SIZE*num_nodes_in_elem);
+        CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace> node_store(num_nodes_in_elem);
+        
+        std::vector<size_t> element_temp(BUFFER_SIZE * num_nodes_in_elem);
+        std::vector<size_t> global_indices_temp(BUFFER_SIZE);
+        size_t buffer_max = BUFFER_SIZE * num_nodes_in_elem;
+        size_t indices_buffer_max = BUFFER_SIZE;
+        int assign_flag;
+        read_index_start = 0;
+        size = 0;
+
+        //first find the block with element connectivity data data
+        if(myrank==0){
+
+            bool found = false;
+
+            std::string line;
+            const std::string word = "\"connectivity\"";
+
+            // Read the file line by line looking for specified word
+            while (std::getline(in, line)) {
+
+                if (line.find(word) != std::string::npos) { // Check if the portion of the word is in the line
+                    found = true;
+                } 
+                if(found) {
+
+                    break;
+
+                } // end if found
+
+            } // end while
+
+            if(found==false){
+                throw std::runtime_error("ERROR: mesh connectivity was not found in the XML file!");
+                //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
+            }
+        }
+
+
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+            // pack buffer on rank 0
+            size_t buffer_iteration_size;
+            if(buffer_iteration < buffer_iterations - 1){
+                buffer_iteration_size = BUFFER_SIZE*num_nodes_in_elem;
+            }
+            else{
+                buffer_iteration_size = remainder_size;
+            }
+            
+            if(myrank==0){
+
+                std::string line;
+
+                // loop over the lines in the file until the buffer limit is reached
+                for(int idata = 0; idata < buffer_iteration_size; idata++){
+
+                    // extract the individual values from the stream
+                    std::string value;
+                    in >> value;
+                    if (value == stop) { // Check if the stop word is in the line
+                        break;
+                    } // end if
+                    elem_read_buffer(idata) = std::stoll(value);
+                    size++;
+                } // end for
+            }
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(elem_read_buffer.pointer(), BUFFER_SIZE*num_nodes_in_elem, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_iteration_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            // debug_print
+            // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+            // for(int iprint=0; iprint < buffer_loop; iprint++)
+            // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+            // return;
+
+            // determine which data to store in the swage mesh members (the local node data)
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_iteration_size/num_nodes_in_elem; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                elem_gid = read_index_start + scan_loop;
+                // add this element to the local list if any of its nodes belong to this rank according to the map
+                // get list of nodes for each element line and check if they belong to the map
+                assign_flag = 0;
+                for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                {
+                    // as we loop through the nodes belonging to this element we store them
+                    // if any of these nodes belongs to this rank this list is used to store the element locally
+                    node_gid = elem_read_buffer(scan_loop*num_nodes_in_elem + inode);
+                    if (zero_index_base)
+                    {
+                        node_store(inode) = node_gid; // subtract 1 since file index start is 1 but code expects 0
+                    }
+                    else
+                    {
+                        node_store(inode) = node_gid - 1; // subtract 1 since file index start is 1 but code expects 0
+                    }
+                    if (node_store(inode) < 0)
+                    {
+                        negative_index_found = 1;
+                    }
+                    // first we add the elements to a dynamically allocated list
+                    if (zero_index_base)
+                    {
+                        if (node_map.isProcessGlobalIndex(node_gid) && !assign_flag)
+                        {
+                            assign_flag = 1;
+                            num_elems++;
+                        }
+                    }
+                    else
+                    {
+                        if (node_map.isProcessGlobalIndex(node_gid - 1) && !assign_flag)
+                        {
+                            assign_flag = 1;
+                            num_elems++;
+                        }
+                    }
+                }
+
+                if (assign_flag)
+                {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                    {
+                        if ((num_elems - 1) * num_nodes_in_elem + inode >= buffer_max)
+                        {
+                            element_temp.resize((num_elems - 1) * num_nodes_in_elem + inode + BUFFER_SIZE * num_nodes_in_elem);
+                            buffer_max = (num_elems - 1) * num_nodes_in_elem + inode + BUFFER_SIZE * num_nodes_in_elem;
+                        }
+                        element_temp[(num_elems - 1) * num_nodes_in_elem + inode] = node_store(inode);
+                        // std::cout << "VECTOR STORAGE FOR ELEM " << num_elems << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
+                    }
+                    // assign global element id to temporary list
+                    if (num_elems - 1 >= indices_buffer_max)
+                    {
+                        global_indices_temp.resize(num_elems - 1 + BUFFER_SIZE);
+                        indices_buffer_max = num_elems - 1 + BUFFER_SIZE;
+                    }
+                    global_indices_temp[num_elems - 1] = elem_gid;
+                }
+            }
+            read_index_start += buffer_iteration_size/num_nodes_in_elem;
+        }
+
+        if(myrank==0){        
+            if (size!=global_num_elems*num_nodes_in_elem){
+                throw std::runtime_error("ERROR: failed to read all the mesh elements!");
+                //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
+            }
+        }
+
+        //interface with permanent storage of nodes in elem and construct element maps
+        DCArrayKokkos<long long int> All_Element_Global_Indices(num_elems);
+        // copy temporary global indices storage to view storage
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            All_Element_Global_Indices.host(ielem) = global_indices_temp[ielem];
+            if (global_indices_temp[ielem] < 0)
+            {
+                negative_index_found = 1;
+            }
+        }
+
+        MPI_Allreduce(&negative_index_found, &global_negative_index_found, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+        if (global_negative_index_found)
+        {
+            if (myrank == 0)
+            {
+                std::cout << "Node index less than or equal to zero detected; set \"zero_index_base: true\" under \"input_options\" in your yaml file if indices start at 0" << std::endl;
+            }
+            MPI_Barrier(MPI_COMM_WORLD);
+            MPI_Finalize();
+            exit(0);
+        }
+
+        All_Element_Global_Indices.update_device();
+
+        // construct global map of local and shared elements (since different ranks can own the same elements due to the local node map)
+        DistributedMap element_map = DistributedMap(All_Element_Global_Indices);
+
+        //initialize elem data structures
+        mesh.initialize_elems(num_elems, num_nodes_in_elem, element_map);
+
+        // copy temporary element storage to distributed storage
+        DistributedDCArray<size_t> nodes_in_elem = mesh.nodes_in_elem;
+
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            for (int inode = 0; inode < num_nodes_in_elem; inode++)
+            {   //assign local indices to element-node connectivity (stores global indices until ghost maps are made later)
+                nodes_in_elem.host(ielem, inode) = element_temp[ielem * num_nodes_in_elem + inode];
+            }
+        }
+        nodes_in_elem.update_device();
+
+        //debug print
+        //for (int inode = 0; inode < num_nodes_in_elem; inode++)
+            //std::cout << "Element nodes " << inode << " " << nodes_in_elem(num_elems-1,inode) << std::endl;
+
+        // delete temporary element connectivity and index storage
+        std::vector<size_t>().swap(element_temp);
+        std::vector<size_t>().swap(global_indices_temp);
+
+        /****read in element types ****/
+        DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
 
         // array dims are the (num_elems) 
         //    8  = pixal i,j,k linear quad format
@@ -1095,18 +1409,114 @@ public:
         //    12 = linear ensight hex ordering
         //    72 = VTK_LAGRANGE_HEXAHEDRON
         // ....
-        found = extract_values_xml(elem_types.host.pointer(),
-                                "\"types\"",
-                                stop,
-                                in,
-                                size);
-        if(found==false){
-            std::cout << "ERROR: element types were not found in the XML file!" << std::endl;
+
+        dof_limit = global_num_elems;
+        buffer_iterations = dof_limit / (BUFFER_SIZE);
+        remainder_size = dof_limit % (BUFFER_SIZE);
+        if (remainder_size != 0)
+        {
+            buffer_iterations++;
         }
+
+        read_index_start = 0;
+        size = 0;
+        elem_read_buffer = CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE);
+
+        //allocate types array
+
+        //first find the block with element connectivity data data
+        if(myrank==0){
+
+            bool found = false;
+
+            std::string line;
+            const std::string word = "\"types\"";
+
+            // Read the file line by line looking for specified word
+            while (std::getline(in, line)) {
+
+                if (line.find(word) != std::string::npos) { // Check if the portion of the word is in the line
+                    found = true;
+                } 
+                if(found) {
+
+                    break;
+
+                } // end if found
+
+            } // end while
+
+            if(found==false){
+                throw std::runtime_error("ERROR: mesh element types were not found in the XML file!");
+                //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
+            }
+        }
+
+
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+            // pack buffer on rank 0
+            size_t buffer_iteration_size;
+            if(buffer_iteration < buffer_iterations - 1){
+                buffer_iteration_size = BUFFER_SIZE;
+            }
+            else{
+                buffer_iteration_size = remainder_size;
+            }
+            
+            if(myrank==0){
+
+                std::string line;
+
+                // loop over the lines in the file until the buffer limit is reached
+                for(int idata = 0; idata < buffer_iteration_size; idata++){
+
+                    // extract the individual values from the stream
+                    std::string value;
+                    in >> value;
+                    if (value == stop) { // Check if the stop word is in the line
+                        break;
+                    } // end if
+                    elem_read_buffer(idata) = std::stoi(value);
+                    // if(elem_read_buffer(i)!=11){
+                    //     std::cout << "FOUND TYPE ERROR " << std::endl;
+                    // }
+                    size++;
+                } // end for
+            }
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(elem_read_buffer.pointer(), BUFFER_SIZE, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_iteration_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            // debug_print
+            // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+            // for(int iprint=0; iprint < buffer_loop; iprint++)
+            // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+            // return;
+
+            // determine which data to store in the swage mesh members (the local node data)
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_iteration_size; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                elem_gid = read_index_start + scan_loop;
+                //add to the local type array if this elem gid belongs to this rank
+                if (element_map.isProcessGlobalIndex(elem_gid)){
+                    //std::cout << "elocal id " << element_map.getLocalIndex(elem_gid) << " " << elem_read_buffer(scan_loop) << std::endl;
+                    elem_types.host(element_map.getLocalIndex(elem_gid)) = elem_read_buffer(scan_loop);
+                }
+                
+
+            }
+            read_index_start += buffer_iteration_size;
+        }
+
         elem_types.update_device();
+        //std::cout << "Type read size " << size << std::endl;
 
         // check that the element type is supported by Fierro
-        FOR_ALL (elem_gid, 0, mesh.num_elems, {
+        FOR_ALL (elem_gid, 0, num_elems, {
+            //std::cout << "Element type is " << elem_types(elem_gid) << std::endl;
             if(elem_types(elem_gid) == element_types::linear_quad || 
                elem_types(elem_gid) == element_types::linear_hex_ijk ||
                elem_types(elem_gid) == element_types::linear_hex ||
@@ -1125,7 +1535,7 @@ public:
         CArrayKokkos <size_t> convert_ensight_to_ijk(8, "convert_ensight_to_ijk");
 
         // Convert the arbitrary order hex to a IJK mesh
-        DCArrayKokkos <size_t> convert_pn_vtk_to_ijk(mesh.num_nodes_in_elem, "convert_pn_vtk_to_ijk");
+        DCArrayKokkos <size_t> convert_pn_vtk_to_ijk(num_nodes_in_elem, "convert_pn_vtk_to_ijk");
 
         //build the connectivity for element type 12
         // elem_types.host(0)
@@ -1134,13 +1544,13 @@ public:
             case element_types::linear_quad:
                 // the node order is correct, no changes required
 
-                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                // FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
-                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
-                    }
+                //     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                //         mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
+                //     }
                     
-                }); // end for
+                // }); // end for
 
                 break;
                 // next case
@@ -1148,19 +1558,19 @@ public:
             case element_types::linear_hex_ijk:
 
                 // read the node ids in the element, no maps required
-                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                // FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
-                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
-                    }
+                //     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
+                //         mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,node_lid);
+                //     }
                     
-                }); // end for
+                // }); // end for
 
                 break;
                 // next case
 
             case element_types::linear_hex:
-
+                std::cout << "Converting mesh element ordering" << std::endl;
                 RUN({
                     convert_ensight_to_ijk(0) = 0;
                     convert_ensight_to_ijk(1) = 1;
@@ -1173,10 +1583,13 @@ public:
                 });
 
                 // read the node ids in the element
-                FOR_ALL (elem_gid, 0, mesh.num_elems, {
-                    
-                    for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_ensight_to_ijk(node_lid));
+                FOR_ALL (elem_id, 0, num_elems, {
+                    long long int temp[8];
+                    for (size_t node_lid=0; node_lid<8; node_lid++){
+                        temp[node_lid] =  nodes_in_elem(elem_id,convert_ensight_to_ijk(node_lid));
+                    }
+                    for (size_t node_lid=0; node_lid<8; node_lid++){
+                        nodes_in_elem(elem_id, node_lid) = temp[node_lid];
                     }
                     
                 }); // end for
@@ -1210,10 +1623,10 @@ public:
                 Kokkos::fence();
 
                 // read the node ids in the element
-                FOR_ALL (elem_gid, 0, mesh.num_elems, {
+                FOR_ALL (elem_id, 0, mesh.num_elems, {
                     
                     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_pn_vtk_to_ijk(node_lid));
+                        mesh.nodes_in_elem(elem_id, node_lid) = mesh.nodes_in_elem(elem_id,convert_pn_vtk_to_ijk(node_lid));
                     }
                     
                 }); // end for
@@ -1228,11 +1641,111 @@ public:
         // initialize corner variables
         size_t num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
+        
+        //------------------------------------
+        // allocate the elem object id array
+        mesh_inps.object_ids = DCArrayKokkos <int> (num_elems, "ObjectIDs");
+    
+        //reset file stream pointer to area where ObjectId is located before node coordinates
+        in.seekg(objectid_streampos);
+
+        dof_limit = global_num_elems;
+        buffer_iterations = dof_limit / (BUFFER_SIZE);
+        remainder_size = dof_limit % (BUFFER_SIZE);
+        if (remainder_size != 0)
+        {
+            buffer_iterations++;
+        }
+
+        read_index_start = 0;
+        size = 0;
+
+        //allocate types array
+
+        //first find the block with element connectivity data data
+        if(myrank==0){
+
+            bool found = false;
+
+            std::string line;
+            const std::string word = "\"ObjectId\"";
+
+            // Read the file line by line looking for specified word
+            while (std::getline(in, line)) {
+
+                if (line.find(word) != std::string::npos) { // Check if the portion of the word is in the line
+                    found = true;
+                } 
+                if(found) {
+
+                    break;
+
+                } // end if found
+
+            } // end while
+
+            if(found==false){
+                throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
+                //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
+            }
+        }
 
 
-        // Build connectivity
-        mesh.build_connectivity();
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++){
+            // pack buffer on rank 0
+            size_t buffer_iteration_size;
+            if(buffer_iteration < buffer_iterations - 1){
+                buffer_iteration_size = BUFFER_SIZE;
+            }
+            else{
+                buffer_iteration_size = remainder_size;
+            }
+            
+            if(myrank==0){
 
+                std::string line;
+
+                // loop over the lines in the file until the buffer limit is reached
+                for(int idata = 0; idata < buffer_iteration_size; idata++){
+
+                    // extract the individual values from the stream
+                    std::string value;
+                    in >> value;
+                    if (value == stop) { // Check if the stop word is in the line
+                        break;
+                    } // end if
+                    elem_read_buffer(idata) = std::stoi(value);
+                    size++;
+                } // end for
+            }
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(elem_read_buffer.pointer(), BUFFER_SIZE, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_iteration_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            // debug_print
+            // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+            // for(int iprint=0; iprint < buffer_loop; iprint++)
+            // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+            // return;
+
+            // determine which data to store in the swage mesh members (the local node data)
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_iteration_size; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                elem_gid = read_index_start + scan_loop;
+                //add to the local type array if this elem gid belongs to this rank
+                if (element_map.isProcessGlobalIndex(elem_gid)){
+                    mesh_inps.object_ids.host(element_map.getLocalIndex(elem_gid)) = elem_read_buffer(scan_loop);
+                }
+                
+
+            }
+            read_index_start += buffer_iteration_size;
+        }
+        
+        mesh_inps.object_ids.update_device();
 
         in.close();
             
@@ -1279,14 +1792,14 @@ public:
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
-        SimulationParameters_t& SimulationParamaters)
+        SimulationParameters_t& SimulationParameters)
     {
-        if (SimulationParamaters.mesh_input.num_dims == 2) {
-            if (SimulationParamaters.mesh_input.type == mesh_input::Polar) {
-                build_2d_polar(mesh, GaussPoints, node, corner, SimulationParamaters);
+        if (SimulationParameters.mesh_input.num_dims == 2) {
+            if (SimulationParameters.mesh_input.type == mesh_input::Polar) {
+                build_2d_polar(mesh, GaussPoints, node, corner, SimulationParameters);
             }
-            else if (SimulationParamaters.mesh_input.type == mesh_input::Box) {
-                build_2d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+            else if (SimulationParameters.mesh_input.type == mesh_input::Box) {
+                build_2d_box(mesh, GaussPoints, node, corner, SimulationParameters);
             }
             else{
                 std::cout << "**** 2D MESH TYPE NOT SUPPORTED **** " << std::endl;
@@ -1298,8 +1811,8 @@ public:
                 throw std::runtime_error("**** 2D MESH TYPE NOT SUPPORTED ****");
             }
         }
-        else if (SimulationParamaters.mesh_input.num_dims == 3) {
-            build_3d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+        else if (SimulationParameters.mesh_input.num_dims == 3) {
+            build_3d_box(mesh, GaussPoints, node, corner, SimulationParameters);
         }
         else{
             throw std::runtime_error("**** ONLY 2D RZ OR 3D MESHES ARE SUPPORTED ****");
@@ -1319,117 +1832,418 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
+
     void build_2d_box(Mesh_t& mesh,
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+        SimulationParameters_t& SimulationParameters) const
     {
-        printf("Creating a 2D box mesh \n");
-
-        const int num_dim = 2;
-
-        const double lx = SimulationParamaters.mesh_input.length[0];
-        const double ly = SimulationParamaters.mesh_input.length[1];
-
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
-
-        const int num_points_i = num_elems_i + 1; // num points in x
-        const int num_points_j = num_elems_j + 1; // num points in y
-
-        const int num_nodes = num_points_i * num_points_j;
-
-        const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
-        const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
-
-        const int num_elems = num_elems_i * num_elems_j;
-
-        std::vector<double> origin(num_dim);
-        // SimulationParamaters.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
-
-        // --- 2D parameters ---
-        // const int num_faces_in_elem  = 4;  // number of faces in elem
-        // const int num_points_in_elem = 4;  // number of points in elem
-        // const int num_points_in_face = 2;  // number of points in a face
-        // const int num_edges_in_elem  = 4;  // number of edges in a elem
-
-        // --- mesh node ordering ---
-        // Convert ijk index system to the finite element numbering convention
-        // for vertices in elem
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+        /*currently we just build the global mesh data on rank 0 and then broadcast relevant data to each rank
+          before the global mesh data on rank 0 falls out of scope*/
+        int global_num_nodes, global_num_elems;
+        CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer;
+        CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer_edof;
+        CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace> global_coords;
+        CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace> global_nodes_in_elem;
         auto convert_point_number_in_quad = CArray<int>(4);
         convert_point_number_in_quad(0) = 0;
         convert_point_number_in_quad(1) = 1;
         convert_point_number_in_quad(2) = 3;
         convert_point_number_in_quad(3) = 2;
 
-        // intialize node variables
-        mesh.initialize_nodes(num_nodes);
+        int local_node_index, current_column_index;
+        int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
+        int negative_index_found = 0;
+        int global_negative_index_found = 0;
 
-        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dim, required_node_state);
+        size_t read_index_start, node_rid, elem_gid;
+        long long int node_gid;
+        real_t dof_value;
+        real_t unit_scaling = 1;
 
-        // --- Build nodes ---
+        const int num_dims = 2;
+        size_t num_nodes_in_elem = 1;
+        for (int dim = 0; dim < num_dims; dim++) {
+            num_nodes_in_elem *= 2;
+        }
+        if(myrank==0){
+            printf("Creating a 2D box mesh \n");
+        }
 
-        // populate the point data structures
-        for (int j = 0; j < num_points_j; j++) {
-            for (int i = 0; i < num_points_i; i++) {
-                // global id for the point
-                int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
+        // SimulationParameters.mesh_input.length.update_host();
+        const double lx = SimulationParameters.mesh_input.length[0];
+        const double ly = SimulationParameters.mesh_input.length[1];
 
-                // store the point coordinates
-                node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-            } // end for i
-        } // end for j
+        // SimulationParameters.mesh_input.num_elems.update_host();
+        const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
+        const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
+
+        const int num_points_i = num_elems_i + 1; // num points in x
+        const int num_points_j = num_elems_j + 1; // num points in y
+
+        global_num_nodes = num_points_i * num_points_j;
+
+        const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
+        const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
+
+        global_num_elems = num_elems_i * num_elems_j;
+            
+        if(myrank==0){
+            std::vector<double> origin(num_dims);
+            // SimulationParameters.mesh_input.origin.update_host();
+            for (int i = 0; i < num_dims; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
+
+            // --- 3D parameters ---
+            // const int num_faces_in_elem  = 6;  // number of faces in elem
+            // const int num_points_in_elem = 8;  // number of points in elem
+            // const int num_points_in_face = 4;  // number of points in a face
+            // const int num_edges_in_elem  = 12; // number of edges in a elem
+            
+            // node coords data on rank 0 for all global nodes
+            global_coords = CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace>(global_num_nodes, num_dims, "global_mesh_build_node_coordinates");
+
+            // --- Build nodes ---
+
+            // populate the point data structures
+            for (int j = 0; j < num_points_j; j++) {
+                for (int i = 0; i < num_points_i; i++) {
+                    // global id for the point
+                    int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
+
+                    // store the point coordinates
+                    global_coords(node_gid, 0) = origin[0] + (double)i * dx;
+                    global_coords(node_gid, 1) = origin[1] + (double)j * dy;
+                } // end for i
+            } // end for j
 
 
-        node.coords.update_device();
+            // initialize elem variables
+            global_nodes_in_elem = CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace>(global_num_elems, num_nodes_in_elem, "global_mesh_build_nodes_in_elem");
 
-        // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+            // --- Build elems  ---
 
-        // populate the elem center data structures
-        for (int j = 0; j < num_elems_j; j++) {
-            for (int i = 0; i < num_elems_i; i++) {
-                // global id for the elem
-                int elem_gid = get_id(i, j, 0, num_elems_i, num_elems_j);
+            // populate the elem center data structures
+            for (int j = 0; j < num_elems_j; j++) {
+                for (int i = 0; i < num_elems_i; i++) {
+                    // global id for the elem
+                    int elem_gid = get_id(i, j, 0, num_elems_i, num_elems_j);
 
-                // store the point IDs for this elem where the range is
-                // (i:i+1, j:j+1 for a linear quad
-                int this_point = 0;
+                    // store the point IDs for this elem where the range is
+                    // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
+                    int this_point = 0;
+                    for (int jcount = j; jcount <= j + 1; jcount++) {
+                        for (int icount = i; icount <= i + 1; icount++) {
+                            // global id for the points
+                            int node_gid = get_id(icount, jcount, 0,
+                                            num_points_i, num_points_j);
 
-                for (int jcount = j; jcount <= j + 1; jcount++) {
-                    for (int icount = i; icount <= i + 1; icount++) {
-                        // global id for the points
-                        int node_gid = get_id(icount, jcount, 0, num_points_i, num_points_j);
+                            // convert this_point index to the FE index convention
+                            int this_index = convert_point_number_in_quad(this_point);
 
-                        // convert this_point index to the FE index convention
-                        int this_index = convert_point_number_in_quad(this_point);
+                            // store the points in this elem according the the finite
+                            // element numbering convention
+                            global_nodes_in_elem(elem_gid, this_index) = node_gid;
 
-                        // store the points in this elem according the the finite
-                        // element numbering convention
-                        mesh.nodes_in_elem.host(elem_gid, this_index) = node_gid;
+                            // increment the point counting index
+                            this_point = this_point + 1;
+                        } // end for icount
+                    } // end for jcount
+                } // end for i
+            } // end for j
+        }
 
-                        // increment the point counting index
-                        this_point = this_point + 1;
-                    } // end for icount
-                } // end for jcount
-            } // end for i
-        } // end for j
+        //distribute partitioned data from the global mesh build data on rank 0
+        size_t num_local_nodes;
+        DistributedMap node_map;
+        // read coords
+        read_index_start = 0;
+        
+        buffer_iterations = global_num_nodes / BUFFER_SIZE;
+        if (global_num_nodes % BUFFER_SIZE != 0)
+        {
+            buffer_iterations++;
+        }
 
-        // update device side
-        mesh.nodes_in_elem.update_device();
+        read_buffer = CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE, num_dims);
 
-        // intialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
+        { //scoped so temp FArray data is auto deleted to save memory
+            //allocate pre-partition node coords using contiguous decomposition
+            //FArray type used since CArray type still doesnt support zoltan2 decomposition
+            DistributedDFArray<real_t> node_coords_distributed(global_num_nodes, num_dims);
+
+            // construct contiguous parallel row map now that we know the number of nodes
+            node_map = node_coords_distributed.pmap;
+            // map->describe(*fos,Teuchos::VERB_EXTREME);
+
+            // set the vertices in the mesh read in
+            num_local_nodes = node_map.size();
+            for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+            {
+                // pack buffer on rank 0
+                if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+                {
+                    for (buffer_loop = 0; buffer_loop < BUFFER_SIZE; buffer_loop++)
+                    {
+
+                        for (int idim = 0; idim < num_dims; idim++)
+                        {
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            read_buffer(buffer_loop, idim) = global_coords(buffer_iteration * BUFFER_SIZE + buffer_loop, idim);
+                        }
+                    }
+                }
+                else if (myrank == 0)
+                {
+                    buffer_loop = 0;
+                    while (buffer_iteration * BUFFER_SIZE + buffer_loop < global_num_nodes) {
+                        for (int idim = 0; idim < num_dims; idim++)
+                        {
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            read_buffer(buffer_loop, idim) = global_coords(buffer_iteration * BUFFER_SIZE + buffer_loop, idim);
+                        }
+                        buffer_loop++;
+                    }
+                }
+
+                // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+                MPI_Bcast(read_buffer.pointer(), BUFFER_SIZE * num_dims, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                // broadcast how many nodes were read into this buffer iteration
+                MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+                // debug_print
+                // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+                // for(int iprint=0; iprint < buffer_loop; iprint++)
+                // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+                // return;
+
+                // determine which data to store in the swage mesh members (the local node data)
+                // loop through read buffer
+                for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+                {
+                    // set global node id (ensight specific order)
+                    node_gid = read_index_start + scan_loop;
+                    // let map decide if this node id belongs locally; if yes store data
+                    if (node_map.isProcessGlobalIndex(node_gid))
+                    {
+                        // set local node index in this mpi rank
+                        node_rid = node_map.getLocalIndex(node_gid);
+                        // extract nodal position from the read buffer
+                        // for tecplot format this is the three coords in the same line
+                        dof_value = read_buffer(scan_loop,0);
+                        node_coords_distributed.host(node_rid, 0) = dof_value * unit_scaling;
+                        dof_value = read_buffer(scan_loop,1);
+                        node_coords_distributed.host(node_rid, 1) = dof_value * unit_scaling;
+                        if (num_dims == 3)
+                        {
+                            dof_value = read_buffer(scan_loop,2);
+                            node_coords_distributed.host(node_rid, 2) = dof_value * unit_scaling;
+                        }
+                    }
+                }
+                read_index_start += BUFFER_SIZE;
+            }
+            // end of coordinate readin
+            node_coords_distributed.update_device();
+            // repartition node distribution
+            node_coords_distributed.repartition_vector();
+            //get map from repartitioned Farray and feed it into distributed CArray type; FArray data will be discared after scope
+            std::vector<node_state> required_node_state = { node_state::coords };
+            node_map = node_coords_distributed.pmap;
+            node.initialize(node_map, num_dims, required_node_state);
+            //copy coordinate data from repartitioned FArray into CArray
+            FOR_ALL(node_id, 0, node_map.size(), {
+                for(int idim = 0; idim < num_dims; idim++){
+                    node.coords(node_id,idim) = node_coords_distributed(node_id,idim);
+                }
+            });
+        }
+
+        //initialize some mesh data
+        mesh.initialize_nodes(global_num_nodes);
+        num_local_nodes = node_map.size();
+        mesh.num_local_nodes = num_local_nodes;
+        mesh.node_map = node_map;
+        mesh.num_dims = num_dims;
+        //node.coords.print();
+        
+        // debug print of nodal data
+
+        // debug print nodal positions and indices
+        /*
+        std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
+        for (int inode = 0; inode < local_nrows; inode++){
+            std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
+        for (int istride = 0; istride < num_dims; istride++){
+            std::cout << node_coords(inode,istride) << " , ";
+        }
+        std::cout << " }"<< std::endl;
+        }
+        */
+
+        // check that local assignments match global total
+
+        // read in element info (ensight file format is organized in element type sections)
+        // loop over this later for several element type sections
+        CArrayKokkos<int, Kokkos::LayoutRight, Kokkos::HostSpace> node_store(num_nodes_in_elem);
+
+        // broadcast number of elements
+        MPI_Bcast(&global_num_elems, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+
+        //initialize num elem in mesh struct
+
+        if (myrank == 0)
+        {
+            std::cout << "before mesh initialization" << std::endl;
+        }
+
+        // read in element connectivity
+        // we're gonna reallocate for the words per line expected for the element connectivity
+        read_buffer_edof = CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE, num_nodes_in_elem);
+
+        // calculate buffer iterations to read number of lines
+        buffer_iterations = global_num_elems / BUFFER_SIZE;
+        int assign_flag;
+
+        // dynamic buffer used to store elements before we know how many this rank needs
+        std::vector<size_t> element_temp(BUFFER_SIZE * num_nodes_in_elem);
+        std::vector<size_t> global_indices_temp(BUFFER_SIZE);
+        size_t buffer_max = BUFFER_SIZE * num_nodes_in_elem;
+        size_t indices_buffer_max = BUFFER_SIZE;
+        size_t num_elems = 0;
+
+        if (global_num_elems % BUFFER_SIZE != 0)
+        {
+            buffer_iterations++;
+        }
+        read_index_start = 0;
+        // std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+        {
+            // pack buffer on rank 0
+            if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+            {
+                for (buffer_loop = 0; buffer_loop < BUFFER_SIZE; buffer_loop++)
+                {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                    {
+                        read_buffer_edof(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_SIZE + buffer_loop, inode);
+                    }
+                    // std::cout <<std::endl;
+                }
+            }
+            else if (myrank == 0)
+            {
+                buffer_loop = 0;
+                while (buffer_iteration * BUFFER_SIZE + buffer_loop < global_num_elems) {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                    {
+                        read_buffer_edof(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_SIZE + buffer_loop, inode);
+                    }
+                    // std::cout <<std::endl;
+                    buffer_loop++;
+                    // std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
+                }
+            }
+
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(read_buffer_edof.pointer(), BUFFER_SIZE * num_nodes_in_elem, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            // store element connectivity that belongs to this rank
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                elem_gid = read_index_start + scan_loop;
+                // add this element to the local list if any of its nodes belong to this rank according to the map
+                // get list of nodes for each element line and check if they belong to the map
+                assign_flag = 0;
+                for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                {
+                    // as we loop through the nodes belonging to this element we store them
+                    // if any of these nodes belongs to this rank this list is used to store the element locally
+                    node_gid = read_buffer_edof(scan_loop, inode);
+                    node_store(inode) = node_gid;
+                    // first we add the elements to a dynamically allocated list
+                    if (node_map.isProcessGlobalIndex(node_gid) && !assign_flag)
+                    {
+                        assign_flag = 1;
+                        num_elems++;
+                    }
+                }
+
+                if (assign_flag)
+                {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                    {
+                        if ((num_elems - 1) * num_nodes_in_elem + inode >= buffer_max)
+                        {
+                            element_temp.resize((num_elems - 1) * num_nodes_in_elem + inode + BUFFER_SIZE * num_nodes_in_elem);
+                            buffer_max = (num_elems - 1) * num_nodes_in_elem + inode + BUFFER_SIZE * num_nodes_in_elem;
+                        }
+                        element_temp[(num_elems - 1) * num_nodes_in_elem + inode] = node_store(inode);
+                        // std::cout << "VECTOR STORAGE FOR ELEM " << num_elems << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
+                    }
+                    // assign global element id to temporary list
+                    if (num_elems - 1 >= indices_buffer_max)
+                    {
+                        global_indices_temp.resize(num_elems - 1 + BUFFER_SIZE);
+                        indices_buffer_max = num_elems - 1 + BUFFER_SIZE;
+                    }
+                    global_indices_temp[num_elems - 1] = elem_gid;
+                }
+            }
+            read_index_start += BUFFER_SIZE;
+        }
+        //set global and local shared element counts
+        mesh.global_num_elems = global_num_elems;
+
+        // construct partition mapping for shared elements on each process
+        DCArrayKokkos<long long int> All_Element_Global_Indices(num_elems);
+        // copy temporary global indices storage to view storage
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            All_Element_Global_Indices.host(ielem) = global_indices_temp[ielem];
+        }
+
+        All_Element_Global_Indices.update_device();
+
+        // construct global map of local and shared elements (since different ranks can own the same elements due to the local node map)
+        DistributedMap element_map = DistributedMap(All_Element_Global_Indices);
+
+        //initialize elem data structures
+        mesh.initialize_elems(num_elems, num_nodes_in_elem, element_map);
+
+        // copy temporary element storage to distributed storage
+        DistributedDCArray<size_t> nodes_in_elem = mesh.nodes_in_elem;
+
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            for (int inode = 0; inode < num_nodes_in_elem; inode++)
+            {   //assign local indices to element-node connectivity (stores global indices until ghost maps are made later)
+                nodes_in_elem.host(ielem, inode) = element_temp[ielem * num_nodes_in_elem + inode];
+            }
+        }
+
+        nodes_in_elem.update_device();
+        
+        // delete temporary element connectivity and index storage
+        //std::vector<size_t>().swap(element_temp);
+        //std::vector<size_t>().swap(global_indices_temp);
+
+        // initialize corner variables
+        size_t num_corners = num_elems * num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
 
-        // Build connectivity
-        mesh.build_connectivity();
     } // end build_2d_box
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1445,127 +2259,428 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
+
     void build_2d_polar(Mesh_t& mesh,
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+        SimulationParameters_t& SimulationParameters) const
     {
-        printf("Creating a 2D polar mesh \n");
-
-        int num_dim     = 2;
-
-        const double inner_radius = SimulationParamaters.mesh_input.inner_radius;
-        const double outer_radius = SimulationParamaters.mesh_input.outer_radius;
-
-        const double start_angle = PI / 180.0 * SimulationParamaters.mesh_input.starting_angle;
-        const double end_angle   = PI / 180.0 * SimulationParamaters.mesh_input.ending_angle;
-
-        const int num_elems_i = SimulationParamaters.mesh_input.num_radial_elems;
-        const int num_elems_j = SimulationParamaters.mesh_input.num_angular_elems;
-
-        const int num_points_i = num_elems_i + 1; // num points in x
-        const int num_points_j = num_elems_j + 1; // num points in y
-
-        const int num_nodes = num_points_i * num_points_j;
-
-        const double dx = (outer_radius - inner_radius) / ((double)num_elems_i);  // len/(elems)
-        const double dy = (end_angle - start_angle) / ((double)num_elems_j);  // len/(elems)
-
-        const int num_elems = num_elems_i * num_elems_j;
-
-        std::vector<double> origin(num_dim);
-
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
-
-        // --- 2D parameters ---
-        // const int num_faces_in_elem  = 4;  // number of faces in elem
-        // const int num_points_in_elem = 4;  // number of points in elem
-        // const int num_points_in_face = 2;  // number of points in a face
-        // const int num_edges_in_elem  = 4;  // number of edges in a elem
-
-        // --- mesh node ordering ---
-        // Convert ijk index system to the finite element numbering convention
-        // for vertices in elem
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+        /*currently we just build the global mesh data on rank 0 and then broadcast relevant data to each rank
+          before the global mesh data on rank 0 falls out of scope*/
+        int global_num_nodes, global_num_elems;
+        CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer;
+        CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer_edof;
+        CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace> global_coords;
+        CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace> global_nodes_in_elem;
         auto convert_point_number_in_quad = CArray<int>(4);
         convert_point_number_in_quad(0) = 0;
         convert_point_number_in_quad(1) = 1;
         convert_point_number_in_quad(2) = 3;
         convert_point_number_in_quad(3) = 2;
 
-        // intialize node variables
-        mesh.initialize_nodes(num_nodes);
+        int local_node_index, current_column_index;
+        int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
+        int negative_index_found = 0;
+        int global_negative_index_found = 0;
 
-        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dim, required_node_state);
+        size_t read_index_start, node_rid, elem_gid;
+        long long int node_gid;
+        real_t dof_value;
+        real_t unit_scaling = 1;
 
-        // populate the point data structures
-        for (int j = 0; j < num_points_j; j++) {
-            for (int i = 0; i < num_points_i; i++) {
-                // global id for the point
-                int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
+        const int num_dims = 2;
+        size_t num_nodes_in_elem = 1;
+        for (int dim = 0; dim < num_dims; dim++) {
+            num_nodes_in_elem *= 2;
+        }
+        if(myrank==0){
+            printf("Creating a 2D box mesh \n");
+        }
 
-                double r_i     = inner_radius + (double)i * dx;
-                double theta_j = start_angle + (double)j * dy;
+        // SimulationParameters.mesh_input.length.update_host();
+        const double inner_radius = SimulationParameters.mesh_input.inner_radius;
+        const double outer_radius = SimulationParameters.mesh_input.outer_radius;
 
-                // store the point coordinates
-                node.coords.host(node_gid, 0) = origin[0] + r_i * cos(theta_j);
-                node.coords.host(node_gid, 1) = origin[1] + r_i * sin(theta_j);
+        const double start_angle = PI / 180.0 * SimulationParameters.mesh_input.starting_angle;
+        const double end_angle   = PI / 180.0 * SimulationParameters.mesh_input.ending_angle;
 
-                if(node.coords.host(node_gid, 0) < 0.0){
-                    throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
+        const int num_elems_i = SimulationParameters.mesh_input.num_radial_elems;
+        const int num_elems_j = SimulationParameters.mesh_input.num_angular_elems;
+
+        const int num_points_i = num_elems_i + 1; // num points in x
+        const int num_points_j = num_elems_j + 1; // num points in y
+
+        const double dx = (outer_radius - inner_radius) / ((double)num_elems_i);  // len/(elems)
+        const double dy = (end_angle - start_angle) / ((double)num_elems_j);  // len/(elems)
+
+        global_num_elems = num_elems_i * num_elems_j;
+
+        global_num_nodes = num_points_i * num_points_j;
+            
+        if(myrank==0){
+            std::vector<double> origin(num_dims);
+            // SimulationParameters.mesh_input.origin.update_host();
+            for (int i = 0; i < num_dims; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
+
+            // --- 3D parameters ---
+            // const int num_faces_in_elem  = 6;  // number of faces in elem
+            // const int num_points_in_elem = 8;  // number of points in elem
+            // const int num_points_in_face = 4;  // number of points in a face
+            // const int num_edges_in_elem  = 12; // number of edges in a elem
+            
+            // node coords data on rank 0 for all global nodes
+            global_coords = CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace>(global_num_nodes, num_dims, "global_mesh_build_node_coordinates");
+
+            // --- Build nodes ---
+
+            // populate the point data structures
+            for (int j = 0; j < num_points_j; j++) {
+                for (int i = 0; i < num_points_i; i++) {
+                    // global id for the point
+                    int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
+
+                    double r_i     = inner_radius + (double)i * dx;
+                    double theta_j = start_angle + (double)j * dy;
+
+                    // store the point coordinates
+                    global_coords(node_gid, 0) = origin[0] + r_i * cos(theta_j);
+                    global_coords(node_gid, 1) = origin[1] + r_i * sin(theta_j);
+
+                    if(global_coords(node_gid, 0) < 0.0){
+                        throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
+                    }
+                } // end for i
+            } // end for j
+
+
+            // initialize elem variables
+            global_nodes_in_elem = CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace>(global_num_elems, num_nodes_in_elem, "global_mesh_build_nodes_in_elem");
+
+            // --- Build elems  ---
+
+            // populate the elem center data structures
+            for (int j = 0; j < num_elems_j; j++) {
+                for (int i = 0; i < num_elems_i; i++) {
+                    // global id for the elem
+                    int elem_gid = get_id(i, j, 0, num_elems_i, num_elems_j);
+
+                    // store the point IDs for this elem where the range is
+                    // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
+                    int this_point = 0;
+                    for (int jcount = j; jcount <= j + 1; jcount++) {
+                        for (int icount = i; icount <= i + 1; icount++) {
+                            // global id for the points
+                            int node_gid = get_id(icount, jcount, 0,
+                                            num_points_i, num_points_j);
+
+                            // convert this_point index to the FE index convention
+                            int this_index = convert_point_number_in_quad(this_point);
+
+                            // store the points in this elem according the the finite
+                            // element numbering convention
+                            global_nodes_in_elem(elem_gid, this_index) = node_gid;
+
+                            // increment the point counting index
+                            this_point = this_point + 1;
+                        } // end for icount
+                    } // end for jcount
+                } // end for i
+            } // end for j
+        }
+
+        //distribute partitioned data from the global mesh build data on rank 0
+        size_t num_local_nodes;
+        DistributedMap node_map;
+        // read coords
+        read_index_start = 0;
+        
+        buffer_iterations = global_num_nodes / BUFFER_SIZE;
+        if (global_num_nodes % BUFFER_SIZE != 0)
+        {
+            buffer_iterations++;
+        }
+
+        read_buffer = CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE, num_dims);
+
+        { //scoped so temp FArray data is auto deleted to save memory
+            //allocate pre-partition node coords using contiguous decomposition
+            //FArray type used since CArray type still doesnt support zoltan2 decomposition
+            DistributedDFArray<real_t> node_coords_distributed(global_num_nodes, num_dims);
+
+            // construct contiguous parallel row map now that we know the number of nodes
+            node_map = node_coords_distributed.pmap;
+            // map->describe(*fos,Teuchos::VERB_EXTREME);
+
+            // set the vertices in the mesh read in
+            num_local_nodes = node_map.size();
+            for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+            {
+                // pack buffer on rank 0
+                if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+                {
+                    for (buffer_loop = 0; buffer_loop < BUFFER_SIZE; buffer_loop++)
+                    {
+
+                        for (int idim = 0; idim < num_dims; idim++)
+                        {
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            read_buffer(buffer_loop, idim) = global_coords(buffer_iteration * BUFFER_SIZE + buffer_loop, idim);
+                        }
+                    }
+                }
+                else if (myrank == 0)
+                {
+                    buffer_loop = 0;
+                    while (buffer_iteration * BUFFER_SIZE + buffer_loop < global_num_nodes) {
+                        for (int idim = 0; idim < num_dims; idim++)
+                        {
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            read_buffer(buffer_loop, idim) = global_coords(buffer_iteration * BUFFER_SIZE + buffer_loop, idim);
+                        }
+                        buffer_loop++;
+                    }
                 }
 
-            } // end for i
-        } // end for j
+                // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+                MPI_Bcast(read_buffer.pointer(), BUFFER_SIZE * num_dims, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                // broadcast how many nodes were read into this buffer iteration
+                MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
+                // debug_print
+                // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+                // for(int iprint=0; iprint < buffer_loop; iprint++)
+                // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+                // return;
 
-        node.coords.update_device();
+                // determine which data to store in the swage mesh members (the local node data)
+                // loop through read buffer
+                for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+                {
+                    // set global node id (ensight specific order)
+                    node_gid = read_index_start + scan_loop;
+                    // let map decide if this node id belongs locally; if yes store data
+                    if (node_map.isProcessGlobalIndex(node_gid))
+                    {
+                        // set local node index in this mpi rank
+                        node_rid = node_map.getLocalIndex(node_gid);
+                        // extract nodal position from the read buffer
+                        // for tecplot format this is the three coords in the same line
+                        dof_value = read_buffer(scan_loop,0);
+                        node_coords_distributed.host(node_rid, 0) = dof_value * unit_scaling;
+                        dof_value = read_buffer(scan_loop,1);
+                        node_coords_distributed.host(node_rid, 1) = dof_value * unit_scaling;
+                        if (num_dims == 3)
+                        {
+                            dof_value = read_buffer(scan_loop,2);
+                            node_coords_distributed.host(node_rid, 2) = dof_value * unit_scaling;
+                        }
+                    }
+                }
+                read_index_start += BUFFER_SIZE;
+            }
+            // end of coordinate readin
+            node_coords_distributed.update_device();
+            // repartition node distribution
+            node_coords_distributed.repartition_vector();
+            //get map from repartitioned Farray and feed it into distributed CArray type; FArray data will be discared after scope
+            std::vector<node_state> required_node_state = { node_state::coords };
+            node_map = node_coords_distributed.pmap;
+            node.initialize(node_map, num_dims, required_node_state);
+            //copy coordinate data from repartitioned FArray into CArray
+            FOR_ALL(node_id, 0, node_map.size(), {
+                for(int idim = 0; idim < num_dims; idim++){
+                    node.coords(node_id,idim) = node_coords_distributed(node_id,idim);
+                }
+            });
+        }
 
-        // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+        //initialize some mesh data
+        mesh.initialize_nodes(global_num_nodes);
+        num_local_nodes = node_map.size();
+        mesh.num_local_nodes = num_local_nodes;
+        mesh.node_map = node_map;
+        mesh.num_dims = num_dims;
+        //node.coords.print();
+        
+        // debug print of nodal data
 
-        // populate the elem center data structures
-        for (int j = 0; j < num_elems_j; j++) {
-            for (int i = 0; i < num_elems_i; i++) {
-                // global id for the elem
-                int elem_gid = get_id(i, j, 0, num_elems_i, num_elems_j);
+        // debug print nodal positions and indices
+        /*
+        std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
+        for (int inode = 0; inode < local_nrows; inode++){
+            std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
+        for (int istride = 0; istride < num_dims; istride++){
+            std::cout << node_coords(inode,istride) << " , ";
+        }
+        std::cout << " }"<< std::endl;
+        }
+        */
 
-                // store the point IDs for this elem where the range is
-                // (i:i+1, j:j+1 for a linear quad
-                int this_point = 0;
+        // check that local assignments match global total
 
-                for (int jcount = j; jcount <= j + 1; jcount++) {
-                    for (int icount = i; icount <= i + 1; icount++) {
-                        // global id for the points
-                        int node_gid = get_id(icount, jcount, 0, num_points_i, num_points_j);
+        // read in element info (ensight file format is organized in element type sections)
+        // loop over this later for several element type sections
+        CArrayKokkos<int, Kokkos::LayoutRight, Kokkos::HostSpace> node_store(num_nodes_in_elem);
 
-                        // convert this_point index to the FE index convention
-                        int this_index = convert_point_number_in_quad(this_point);
+        // broadcast number of elements
+        MPI_Bcast(&global_num_elems, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
 
-                        // store the points in this elem according the the finite
-                        // element numbering convention
-                        mesh.nodes_in_elem.host(elem_gid, this_index) = node_gid;
+        //initialize num elem in mesh struct
 
-                        // increment the point counting index
-                        this_point = this_point + 1;
-                    } // end for icount
-                } // end for jcount
-            } // end for i
-        } // end for j
+        if (myrank == 0)
+        {
+            std::cout << "before mesh initialization" << std::endl;
+        }
 
-        // update device side
-        mesh.nodes_in_elem.update_device();
+        // read in element connectivity
+        // we're gonna reallocate for the words per line expected for the element connectivity
+        read_buffer_edof = CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE, num_nodes_in_elem);
 
-        // intialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
+        // calculate buffer iterations to read number of lines
+        buffer_iterations = global_num_elems / BUFFER_SIZE;
+        int assign_flag;
+
+        // dynamic buffer used to store elements before we know how many this rank needs
+        std::vector<size_t> element_temp(BUFFER_SIZE * num_nodes_in_elem);
+        std::vector<size_t> global_indices_temp(BUFFER_SIZE);
+        size_t buffer_max = BUFFER_SIZE * num_nodes_in_elem;
+        size_t indices_buffer_max = BUFFER_SIZE;
+        size_t num_elems = 0;
+
+        if (global_num_elems % BUFFER_SIZE != 0)
+        {
+            buffer_iterations++;
+        }
+        read_index_start = 0;
+        // std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+        {
+            // pack buffer on rank 0
+            if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+            {
+                for (buffer_loop = 0; buffer_loop < BUFFER_SIZE; buffer_loop++)
+                {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                    {
+                        read_buffer_edof(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_SIZE + buffer_loop, inode);
+                    }
+                    // std::cout <<std::endl;
+                }
+            }
+            else if (myrank == 0)
+            {
+                buffer_loop = 0;
+                while (buffer_iteration * BUFFER_SIZE + buffer_loop < global_num_elems) {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                    {
+                        read_buffer_edof(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_SIZE + buffer_loop, inode);
+                    }
+                    // std::cout <<std::endl;
+                    buffer_loop++;
+                    // std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
+                }
+            }
+
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(read_buffer_edof.pointer(), BUFFER_SIZE * num_nodes_in_elem, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            // store element connectivity that belongs to this rank
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                elem_gid = read_index_start + scan_loop;
+                // add this element to the local list if any of its nodes belong to this rank according to the map
+                // get list of nodes for each element line and check if they belong to the map
+                assign_flag = 0;
+                for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                {
+                    // as we loop through the nodes belonging to this element we store them
+                    // if any of these nodes belongs to this rank this list is used to store the element locally
+                    node_gid = read_buffer_edof(scan_loop, inode);
+                    node_store(inode) = node_gid;
+                    // first we add the elements to a dynamically allocated list
+                    if (node_map.isProcessGlobalIndex(node_gid) && !assign_flag)
+                    {
+                        assign_flag = 1;
+                        num_elems++;
+                    }
+                }
+
+                if (assign_flag)
+                {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                    {
+                        if ((num_elems - 1) * num_nodes_in_elem + inode >= buffer_max)
+                        {
+                            element_temp.resize((num_elems - 1) * num_nodes_in_elem + inode + BUFFER_SIZE * num_nodes_in_elem);
+                            buffer_max = (num_elems - 1) * num_nodes_in_elem + inode + BUFFER_SIZE * num_nodes_in_elem;
+                        }
+                        element_temp[(num_elems - 1) * num_nodes_in_elem + inode] = node_store(inode);
+                        // std::cout << "VECTOR STORAGE FOR ELEM " << num_elems << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
+                    }
+                    // assign global element id to temporary list
+                    if (num_elems - 1 >= indices_buffer_max)
+                    {
+                        global_indices_temp.resize(num_elems - 1 + BUFFER_SIZE);
+                        indices_buffer_max = num_elems - 1 + BUFFER_SIZE;
+                    }
+                    global_indices_temp[num_elems - 1] = elem_gid;
+                }
+            }
+            read_index_start += BUFFER_SIZE;
+        }
+        //set global and local shared element counts
+        mesh.global_num_elems = global_num_elems;
+
+        // construct partition mapping for shared elements on each process
+        DCArrayKokkos<long long int> All_Element_Global_Indices(num_elems);
+        // copy temporary global indices storage to view storage
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            All_Element_Global_Indices.host(ielem) = global_indices_temp[ielem];
+        }
+
+        All_Element_Global_Indices.update_device();
+
+        // construct global map of local and shared elements (since different ranks can own the same elements due to the local node map)
+        DistributedMap element_map = DistributedMap(All_Element_Global_Indices);
+
+        //initialize elem data structures
+        mesh.initialize_elems(num_elems, num_nodes_in_elem, element_map);
+
+        // copy temporary element storage to distributed storage
+        DistributedDCArray<size_t> nodes_in_elem = mesh.nodes_in_elem;
+
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            for (int inode = 0; inode < num_nodes_in_elem; inode++)
+            {   //assign local indices to element-node connectivity (stores global indices until ghost maps are made later)
+                nodes_in_elem.host(ielem, inode) = element_temp[ielem * num_nodes_in_elem + inode];
+            }
+        }
+
+        nodes_in_elem.update_device();
+        
+        // delete temporary element connectivity and index storage
+        //std::vector<size_t>().swap(element_temp);
+        //std::vector<size_t>().swap(global_indices_temp);
+
+        // initialize corner variables
+        size_t num_corners = num_elems * num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
 
-        // Build connectivity
-        mesh.build_connectivity();
-    } // end build_2d_box
+    } // end build_2d_polar
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -1584,120 +2699,417 @@ public:
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
-    {
-        printf("Creating a 3D box mesh \n");
+        SimulationParameters_t& SimulationParameters) const
+    {   
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+        /*currently we just build the global mesh data on rank 0 and then broadcast relevant data to each rank
+          before the global mesh data on rank 0 falls out of scope*/
+        int global_num_nodes, global_num_elems;
+        CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer;
+        CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace> read_buffer_edof;
+        CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace> global_coords;
+        CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace> global_nodes_in_elem;
 
-        const int num_dim = 3;
+        int local_node_index, current_column_index;
+        int buffer_loop, buffer_iteration, buffer_iterations, dof_limit, scan_loop;
+        int negative_index_found = 0;
+        int global_negative_index_found = 0;
 
-        // SimulationParamaters.mesh_input.length.update_host();
-        const double lx = SimulationParamaters.mesh_input.length[0];
-        const double ly = SimulationParamaters.mesh_input.length[1];
-        const double lz = SimulationParamaters.mesh_input.length[2];
+        size_t read_index_start, node_rid, elem_gid;
+        long long int node_gid;
+        real_t dof_value;
+        real_t unit_scaling = 1;
 
-        // SimulationParamaters.mesh_input.num_elems.update_host();
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
-        const int num_elems_k = SimulationParamaters.mesh_input.num_elems[2];
+        const int num_dims = 3;
+        size_t num_nodes_in_elem = 1;
+        for (int dim = 0; dim < num_dims; dim++) {
+            num_nodes_in_elem *= 2;
+        }
+        if(myrank==0){
+            printf("Creating a 3D box mesh \n");
+        }
+
+        // SimulationParameters.mesh_input.length.update_host();
+        const double lx = SimulationParameters.mesh_input.length[0];
+        const double ly = SimulationParameters.mesh_input.length[1];
+        const double lz = SimulationParameters.mesh_input.length[2];
+
+        // SimulationParameters.mesh_input.num_elems.update_host();
+        const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
+        const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
+        const int num_elems_k = SimulationParameters.mesh_input.num_elems[2];
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
         const int num_points_k = num_elems_k + 1; // num points in y
 
-        const int num_nodes = num_points_i * num_points_j * num_points_k;
+        global_num_nodes = num_points_i * num_points_j * num_points_k;
 
         const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
         const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
         const double dz = lz / ((double)num_elems_k);  // len/(num_elems_k)
 
-        const int num_elems = num_elems_i * num_elems_j * num_elems_k;
+        global_num_elems = num_elems_i * num_elems_j * num_elems_k;
+            
+        if(myrank==0){
+            std::vector<double> origin(num_dims);
+            // SimulationParameters.mesh_input.origin.update_host();
+            for (int i = 0; i < num_dims; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
 
-        std::vector<double> origin(num_dim);
-        // SimulationParamaters.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+            // --- 3D parameters ---
+            // const int num_faces_in_elem  = 6;  // number of faces in elem
+            // const int num_points_in_elem = 8;  // number of points in elem
+            // const int num_points_in_face = 4;  // number of points in a face
+            // const int num_edges_in_elem  = 12; // number of edges in a elem
+            
+            // node coords data on rank 0 for all global nodes
+            global_coords = CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace>(global_num_nodes, num_dims, "global_mesh_build_node_coordinates");
 
-        // --- 3D parameters ---
-        // const int num_faces_in_elem  = 6;  // number of faces in elem
-        // const int num_points_in_elem = 8;  // number of points in elem
-        // const int num_points_in_face = 4;  // number of points in a face
-        // const int num_edges_in_elem  = 12; // number of edges in a elem
+            // --- Build nodes ---
 
+            // populate the point data structures
+            for (int k = 0; k < num_points_k; k++) {
+                for (int j = 0; j < num_points_j; j++) {
+                    for (int i = 0; i < num_points_i; i++) {
+                        // global id for the point
+                        int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
-        // initialize mesh node variables
-        mesh.initialize_nodes(num_nodes);
-
-         // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dim, required_node_state);
-
-        // --- Build nodes ---
-
-        // populate the point data structures
-        for (int k = 0; k < num_points_k; k++) {
-            for (int j = 0; j < num_points_j; j++) {
-                for (int i = 0; i < num_points_i; i++) {
-                    // global id for the point
-                    int node_gid = get_id(i, j, k, num_points_i, num_points_j);
-
-                    // store the point coordinates
-                    node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
-                } // end for i
-            } // end for j
-        } // end for k
+                        // store the point coordinates
+                        global_coords(node_gid, 0) = origin[0] + (double)i * dx;
+                        global_coords(node_gid, 1) = origin[1] + (double)j * dy;
+                        global_coords(node_gid, 2) = origin[2] + (double)k * dz;
+                    } // end for i
+                } // end for j
+            } // end for k
 
 
-        node.coords.update_device();
+            // initialize elem variables
+            global_nodes_in_elem = CArrayKokkos<double, Kokkos::LayoutLeft, Kokkos::HostSpace>(global_num_elems, num_nodes_in_elem, "global_mesh_build_nodes_in_elem");
 
-        // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+            // --- Build elems  ---
 
-        // --- Build elems  ---
+            // populate the elem center data structures
+            for (int k = 0; k < num_elems_k; k++) {
+                for (int j = 0; j < num_elems_j; j++) {
+                    for (int i = 0; i < num_elems_i; i++) {
+                        // global id for the elem
+                        int elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
 
-        // populate the elem center data structures
-        for (int k = 0; k < num_elems_k; k++) {
-            for (int j = 0; j < num_elems_j; j++) {
-                for (int i = 0; i < num_elems_i; i++) {
-                    // global id for the elem
-                    int elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
+                        // store the point IDs for this elem where the range is
+                        // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
+                        int this_point = 0;
+                        for (int kcount = k; kcount <= k + 1; kcount++) {
+                            for (int jcount = j; jcount <= j + 1; jcount++) {
+                                for (int icount = i; icount <= i + 1; icount++) {
+                                    // global id for the points
+                                    int node_gid = get_id(icount, jcount, kcount,
+                                                    num_points_i, num_points_j);
 
-                    // store the point IDs for this elem where the range is
-                    // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
-                    int this_point = 0;
-                    for (int kcount = k; kcount <= k + 1; kcount++) {
-                        for (int jcount = j; jcount <= j + 1; jcount++) {
-                            for (int icount = i; icount <= i + 1; icount++) {
-                                // global id for the points
-                                int node_gid = get_id(icount, jcount, kcount,
-                                                  num_points_i, num_points_j);
+                                    // convert this_point index to the FE index convention
+                                    int this_index = this_point; //convert_point_number_in_Hex(this_point);
 
-                                // convert this_point index to the FE index convention
-                                int this_index = this_point; //convert_point_number_in_Hex(this_point);
+                                    // store the points in this elem according the the finite
+                                    // element numbering convention
+                                    global_nodes_in_elem(elem_gid, this_index) = node_gid;
 
-                                // store the points in this elem according the the finite
-                                // element numbering convention
-                                mesh.nodes_in_elem.host(elem_gid, this_index) = node_gid;
+                                    // increment the point counting index
+                                    this_point = this_point + 1;
+                                } // end for icount
+                            } // end for jcount
+                        }  // end for kcount
+                    } // end for i
+                } // end for j
+            } // end for k
+        }
 
-                                // increment the point counting index
-                                this_point = this_point + 1;
-                            } // end for icount
-                        } // end for jcount
-                    }  // end for kcount
-                } // end for i
-            } // end for j
-        } // end for k
+        //distribute partitioned data from the global mesh build data on rank 0
+        size_t num_local_nodes;
+        DistributedMap node_map;
+        // read coords
+        read_index_start = 0;
+        
+        buffer_iterations = global_num_nodes / BUFFER_SIZE;
+        if (global_num_nodes % BUFFER_SIZE != 0)
+        {
+            buffer_iterations++;
+        }
 
-        // update device side
-        mesh.nodes_in_elem.update_device();
+        read_buffer = CArrayKokkos<real_t, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE, num_dims);
+
+        { //scoped so temp FArray data is auto deleted to save memory
+            //allocate pre-partition node coords using contiguous decomposition
+            //FArray type used since CArray type still doesnt support zoltan2 decomposition
+            DistributedDFArray<real_t> node_coords_distributed(global_num_nodes, num_dims);
+
+            // construct contiguous parallel row map now that we know the number of nodes
+            node_map = node_coords_distributed.pmap;
+            // map->describe(*fos,Teuchos::VERB_EXTREME);
+
+            // set the vertices in the mesh read in
+            num_local_nodes = node_map.size();
+            for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+            {
+                // pack buffer on rank 0
+                if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+                {
+                    for (buffer_loop = 0; buffer_loop < BUFFER_SIZE; buffer_loop++)
+                    {
+
+                        for (int idim = 0; idim < num_dims; idim++)
+                        {
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            read_buffer(buffer_loop, idim) = global_coords(buffer_iteration * BUFFER_SIZE + buffer_loop, idim);
+                        }
+                    }
+                }
+                else if (myrank == 0)
+                {
+                    buffer_loop = 0;
+                    while (buffer_iteration * BUFFER_SIZE + buffer_loop < global_num_nodes) {
+                        for (int idim = 0; idim < num_dims; idim++)
+                        {
+                            // debug print
+                            // std::cout<<" "<< substring <<std::endl;
+                            // assign the substring variable as a word of the read buffer
+                            read_buffer(buffer_loop, idim) = global_coords(buffer_iteration * BUFFER_SIZE + buffer_loop, idim);
+                        }
+                        buffer_loop++;
+                    }
+                }
+
+                // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+                MPI_Bcast(read_buffer.pointer(), BUFFER_SIZE * num_dims, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+                // broadcast how many nodes were read into this buffer iteration
+                MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+                // debug_print
+                // std::cout << "NODE BUFFER LOOP IS: " << buffer_loop << std::endl;
+                // for(int iprint=0; iprint < buffer_loop; iprint++)
+                // std::cout<<"buffer packing: " << std::string(&read_buffer(iprint,0,0)) << std::endl;
+                // return;
+
+                // determine which data to store in the swage mesh members (the local node data)
+                // loop through read buffer
+                for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+                {
+                    // set global node id (ensight specific order)
+                    node_gid = read_index_start + scan_loop;
+                    // let map decide if this node id belongs locally; if yes store data
+                    if (node_map.isProcessGlobalIndex(node_gid))
+                    {
+                        // set local node index in this mpi rank
+                        node_rid = node_map.getLocalIndex(node_gid);
+                        // extract nodal position from the read buffer
+                        // for tecplot format this is the three coords in the same line
+                        dof_value = read_buffer(scan_loop,0);
+                        node_coords_distributed.host(node_rid, 0) = dof_value * unit_scaling;
+                        dof_value = read_buffer(scan_loop,1);
+                        node_coords_distributed.host(node_rid, 1) = dof_value * unit_scaling;
+                        if (num_dims == 3)
+                        {
+                            dof_value = read_buffer(scan_loop,2);
+                            node_coords_distributed.host(node_rid, 2) = dof_value * unit_scaling;
+                        }
+                    }
+                }
+                read_index_start += BUFFER_SIZE;
+            }
+            // end of coordinate readin
+            node_coords_distributed.update_device();
+            // repartition node distribution
+            node_coords_distributed.repartition_vector();
+            //get map from repartitioned Farray and feed it into distributed CArray type; FArray data will be discared after scope
+            std::vector<node_state> required_node_state = { node_state::coords };
+            node_map = node_coords_distributed.pmap;
+            node.initialize(node_map, num_dims, required_node_state);
+            //copy coordinate data from repartitioned FArray into CArray
+            FOR_ALL(node_id, 0, node_map.size(), {
+                for(int idim = 0; idim < num_dims; idim++){
+                    node.coords(node_id,idim) = node_coords_distributed(node_id,idim);
+                }
+            });
+        }
+
+        //initialize some mesh data
+        mesh.initialize_nodes(global_num_nodes);
+        num_local_nodes = node_map.size();
+        mesh.num_local_nodes = num_local_nodes;
+        mesh.node_map = node_map;
+        //node.coords.print();
+        
+        // debug print of nodal data
+
+        // debug print nodal positions and indices
+        /*
+        std::cout << " ------------NODAL POSITIONS ON TASK " << myrank << " --------------"<<std::endl;
+        for (int inode = 0; inode < local_nrows; inode++){
+            std::cout << "node: " << map->getGlobalElement(inode) + 1 << " { ";
+        for (int istride = 0; istride < num_dims; istride++){
+            std::cout << node_coords(inode,istride) << " , ";
+        }
+        std::cout << " }"<< std::endl;
+        }
+        */
+
+        // check that local assignments match global total
+
+        // read in element info (ensight file format is organized in element type sections)
+        // loop over this later for several element type sections
+        CArrayKokkos<int, Kokkos::LayoutRight, Kokkos::HostSpace> node_store(num_nodes_in_elem);
+
+        // broadcast number of elements
+        MPI_Bcast(&global_num_elems, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+
+        //initialize num elem in mesh struct
+
+        if (myrank == 0)
+        {
+            std::cout << "before mesh initialization" << std::endl;
+        }
+
+        // read in element connectivity
+        // we're gonna reallocate for the words per line expected for the element connectivity
+        read_buffer_edof = CArrayKokkos<long long int, Kokkos::LayoutRight, Kokkos::HostSpace>(BUFFER_SIZE, num_nodes_in_elem);
+
+        // calculate buffer iterations to read number of lines
+        buffer_iterations = global_num_elems / BUFFER_SIZE;
+        int assign_flag;
+
+        // dynamic buffer used to store elements before we know how many this rank needs
+        std::vector<size_t> element_temp(BUFFER_SIZE * num_nodes_in_elem);
+        std::vector<size_t> global_indices_temp(BUFFER_SIZE);
+        size_t buffer_max = BUFFER_SIZE * num_nodes_in_elem;
+        size_t indices_buffer_max = BUFFER_SIZE;
+        size_t num_elems = 0;
+
+        if (global_num_elems % BUFFER_SIZE != 0)
+        {
+            buffer_iterations++;
+        }
+        read_index_start = 0;
+        // std::cout << "ELEMENT BUFFER ITERATIONS: " << buffer_iterations << std::endl;
+        for (buffer_iteration = 0; buffer_iteration < buffer_iterations; buffer_iteration++)
+        {
+            // pack buffer on rank 0
+            if (myrank == 0 && buffer_iteration < buffer_iterations - 1)
+            {
+                for (buffer_loop = 0; buffer_loop < BUFFER_SIZE; buffer_loop++)
+                {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                    {
+                        read_buffer_edof(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_SIZE + buffer_loop, inode);
+                    }
+                    // std::cout <<std::endl;
+                }
+            }
+            else if (myrank == 0)
+            {
+                buffer_loop = 0;
+                while (buffer_iteration * BUFFER_SIZE + buffer_loop < global_num_elems) {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                    {
+                        read_buffer_edof(buffer_loop,inode) = global_nodes_in_elem(buffer_iteration * BUFFER_SIZE + buffer_loop, inode);
+                    }
+                    // std::cout <<std::endl;
+                    buffer_loop++;
+                    // std::cout<<" "<< node_coords(node_gid, 0)<<std::endl;
+                }
+            }
+
+            // broadcast buffer to all ranks; each rank will determine which nodes in the buffer belong
+            MPI_Bcast(read_buffer_edof.pointer(), BUFFER_SIZE * num_nodes_in_elem, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+            // broadcast how many nodes were read into this buffer iteration
+            MPI_Bcast(&buffer_loop, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+            // store element connectivity that belongs to this rank
+            // loop through read buffer
+            for (scan_loop = 0; scan_loop < buffer_loop; scan_loop++)
+            {
+                // set global node id (ensight specific order)
+                elem_gid = read_index_start + scan_loop;
+                // add this element to the local list if any of its nodes belong to this rank according to the map
+                // get list of nodes for each element line and check if they belong to the map
+                assign_flag = 0;
+                for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                {
+                    // as we loop through the nodes belonging to this element we store them
+                    // if any of these nodes belongs to this rank this list is used to store the element locally
+                    node_gid = read_buffer_edof(scan_loop, inode);
+                    node_store(inode) = node_gid;
+                    // first we add the elements to a dynamically allocated list
+                    if (node_map.isProcessGlobalIndex(node_gid) && !assign_flag)
+                    {
+                        assign_flag = 1;
+                        num_elems++;
+                    }
+                }
+
+                if (assign_flag)
+                {
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++)
+                    {
+                        if ((num_elems - 1) * num_nodes_in_elem + inode >= buffer_max)
+                        {
+                            element_temp.resize((num_elems - 1) * num_nodes_in_elem + inode + BUFFER_SIZE * num_nodes_in_elem);
+                            buffer_max = (num_elems - 1) * num_nodes_in_elem + inode + BUFFER_SIZE * num_nodes_in_elem;
+                        }
+                        element_temp[(num_elems - 1) * num_nodes_in_elem + inode] = node_store(inode);
+                        // std::cout << "VECTOR STORAGE FOR ELEM " << num_elems << " ON TASK " << myrank << " NODE " << inode+1 << " IS " << node_store(inode) + 1 << std::endl;
+                    }
+                    // assign global element id to temporary list
+                    if (num_elems - 1 >= indices_buffer_max)
+                    {
+                        global_indices_temp.resize(num_elems - 1 + BUFFER_SIZE);
+                        indices_buffer_max = num_elems - 1 + BUFFER_SIZE;
+                    }
+                    global_indices_temp[num_elems - 1] = elem_gid;
+                }
+            }
+            read_index_start += BUFFER_SIZE;
+        }
+        //set global and local shared element counts
+        mesh.global_num_elems = global_num_elems;
+
+        // construct partition mapping for shared elements on each process
+        DCArrayKokkos<long long int> All_Element_Global_Indices(num_elems);
+        // copy temporary global indices storage to view storage
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            All_Element_Global_Indices.host(ielem) = global_indices_temp[ielem];
+        }
+
+        All_Element_Global_Indices.update_device();
+
+        // construct global map of local and shared elements (since different ranks can own the same elements due to the local node map)
+        DistributedMap element_map = DistributedMap(All_Element_Global_Indices);
+
+        //initialize elem data structures
+        mesh.initialize_elems(num_elems, num_nodes_in_elem, element_map);
+
+        // copy temporary element storage to distributed storage
+        DistributedDCArray<size_t> nodes_in_elem = mesh.nodes_in_elem;
+
+        for (int ielem = 0; ielem < num_elems; ielem++)
+        {
+            for (int inode = 0; inode < num_nodes_in_elem; inode++)
+            {   //assign local indices to element-node connectivity (stores global indices until ghost maps are made later)
+                nodes_in_elem.host(ielem, inode) = element_temp[ielem * num_nodes_in_elem + inode];
+            }
+        }
+
+        nodes_in_elem.update_device();
+        
+        // delete temporary element connectivity and index storage
+        //std::vector<size_t>().swap(element_temp);
+        //std::vector<size_t>().swap(global_indices_temp);
 
         // initialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
+        size_t num_corners = num_elems * num_nodes_in_elem;
         mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
-
-        // Build connectivity
-        mesh.build_connectivity();
     } // end build_3d_box
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1713,164 +3125,161 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_HexN_box(Mesh_t& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
-    {
-        printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
-        const int num_dim = 3;
+    // void build_3d_HexN_box(Mesh_t& mesh,
+    //     GaussPoint_t& GaussPoints,
+    //     node_t&   node,
+    //     corner_t& corner,
+    //     SimulationParameters_t& SimulationParameters) const
+    // {
+    //     printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
+    //     const int num_dim = 3;
 
-        // SimulationParamaters.mesh_input.length.update_host();
-        const double lx = SimulationParamaters.mesh_input.length[0];
-        const double ly = SimulationParamaters.mesh_input.length[1];
-        const double lz = SimulationParamaters.mesh_input.length[2];
+    //     // SimulationParameters.mesh_input.length.update_host();
+    //     const double lx = SimulationParameters.mesh_input.length[0];
+    //     const double ly = SimulationParameters.mesh_input.length[1];
+    //     const double lz = SimulationParameters.mesh_input.length[2];
 
-        // SimulationParamaters.mesh_input.num_elems.update_host();
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
-        const int num_elems_k = SimulationParamaters.mesh_input.num_elems[2];
+    //     // SimulationParameters.mesh_input.num_elems.update_host();
+    //     const int num_elems_i = SimulationParameters.mesh_input.num_elems[0];
+    //     const int num_elems_j = SimulationParameters.mesh_input.num_elems[1];
+    //     const int num_elems_k = SimulationParameters.mesh_input.num_elems[2];
 
-        // creating zones for the Pn order
-        const int Pn_order = SimulationParamaters.mesh_input.p_order;
+    //     // creating zones for the Pn order
+    //     const int Pn_order = SimulationParameters.mesh_input.p_order;
         
-        if (Pn_order > 19) {
-            printf("Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
-            return;
-        }
+    //     if (Pn_order > 19) {
+    //         printf("Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
+    //         return;
+    //     }
 
-        const int num_zones_i = Pn_order*num_elems_i;
-        const int num_zones_j = Pn_order*num_elems_j;
-        const int num_zones_k = Pn_order*num_elems_k;
+    //     const int num_zones_i = Pn_order*num_elems_i;
+    //     const int num_zones_j = Pn_order*num_elems_j;
+    //     const int num_zones_k = Pn_order*num_elems_k;
         
-        const int num_points_i = num_zones_i+1; // num points in x accounting for Pn
-        const int num_points_j = num_zones_j+1; // num points in y accounting for Pn
-        const int num_points_k = num_zones_k+1; // num points in y accounting for Pn
+    //     const int num_points_i = num_zones_i+1; // num points in x accounting for Pn
+    //     const int num_points_j = num_zones_j+1; // num points in y accounting for Pn
+    //     const int num_points_k = num_zones_k+1; // num points in y accounting for Pn
         
         
-        const double dx = lx/((double)num_zones_i);  // len/(num_zones_i)
-        const double dy = ly/((double)num_zones_j);  // len/(num_zones_j)
-        const double dz = lz/((double)num_zones_k);  // len/(num_zones_k)
+    //     const double dx = lx/((double)num_zones_i);  // len/(num_zones_i)
+    //     const double dy = ly/((double)num_zones_j);  // len/(num_zones_j)
+    //     const double dz = lz/((double)num_zones_k);  // len/(num_zones_k)
         
-        const int num_elems = num_elems_i*num_elems_j*num_elems_k;
-        // const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
+    //     const int num_elems = num_elems_i*num_elems_j*num_elems_k;
+    //     // const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
 
-        std::vector<double> origin(num_dim);
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+    //     std::vector<double> origin(num_dim);
+    //     for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParameters.mesh_input.origin[i]; }
 
-        // --- 3D parameters ---
-        // const int num_faces_in_zone = 6;   // number of faces in zone
-        // const int num_points_in_zone = 8;  // number of points in zone
-        // const int num_points_in_face = 4;  // number of points in a face
+    //     // --- 3D parameters ---
+    //     // const int num_faces_in_zone = 6;   // number of faces in zone
+    //     // const int num_points_in_zone = 8;  // number of points in zone
+    //     // const int num_points_in_face = 4;  // number of points in a face
         
-        // p_order   = 1, 2, 3, 4, 5
-        // num_nodes = 2, 3, 4, 5, 6
-        const int num_1D_points = Pn_order+1;
-        const int num_points_in_elem = num_1D_points*num_1D_points*num_1D_points;
+    //     // p_order   = 1, 2, 3, 4, 5
+    //     // num_nodes = 2, 3, 4, 5, 6
+    //     const int num_1D_points = Pn_order+1;
+    //     const int num_points_in_elem = num_1D_points*num_1D_points*num_1D_points;
            
         
-        // --- elem ---
-        auto elem_coords = CArray <double> (num_elems, num_dim);
-        auto elem_point_list = CArray <int> (num_elems, num_points_in_elem);
+    //     // --- elem ---
+    //     auto elem_coords = CArray <double> (num_elems, num_dim);
+    //     auto elem_point_list = CArray <int> (num_elems, num_points_in_elem);
         
         
-        // --- point ---
-        int num_points = num_points_i * num_points_j * num_points_k;
-        auto pt_coords = CArray <double> (num_points, num_dim);
+    //     // --- point ---
+    //     int num_points = num_points_i * num_points_j * num_points_k;
+    //     auto pt_coords = CArray <double> (num_points, num_dim);
 
 
-        // --- Build nodes ---
+    //     // --- Build nodes ---
         
-        // initialize node variables
-        mesh.initialize_nodes(num_points);
+    //     // initialize node variables
+    //     mesh.initialize_nodes(num_points);
 
-        // 
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_points, num_dim, required_node_state);
-        // populate the point data structures
-        for (int k = 0; k < num_points_k; k++){
-            for (int j = 0; j < num_points_j; j++){
-                for (int i = 0; i < num_points_i; i++){
+    //     // 
+    //     std::vector<node_state> required_node_state = { node_state::coords };
+    //     node.initialize(num_points, num_dim, required_node_state);
+    //     // populate the point data structures
+    //     for (int k = 0; k < num_points_k; k++){
+    //         for (int j = 0; j < num_points_j; j++){
+    //             for (int i = 0; i < num_points_i; i++){
 
                 
-                    // global id for the point
-                    int node_gid = get_id(i, j, k, num_points_i, num_points_j);
+    //                 // global id for the point
+    //                 int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
-                    // store the point coordinates
-                    node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
+    //                 // store the point coordinates
+    //                 node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+    //                 node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+    //                 node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
                     
-                } // end for k
-            } // end for i
-        } // end for j
+    //             } // end for k
+    //         } // end for i
+    //     } // end for j
 
 
-        node.coords.update_device();
+    //     node.coords.update_device();
 
 
-        // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+    //     // initialize elem variables
+    //     mesh.initialize_elems(num_elems, num_dim);
 
-        // --- Build elems  ---
+    //     // --- Build elems  ---
         
-        // populate the elem center data structures accounting for Pn
-        for (int k=0; k<num_elems_k; k++){
-            for (int j=0; j<num_elems_j; j++){
-                for (int i=0; i<num_elems_i; i++){
+    //     // populate the elem center data structures accounting for Pn
+    //     for (int k=0; k<num_elems_k; k++){
+    //         for (int j=0; j<num_elems_j; j++){
+    //             for (int i=0; i<num_elems_i; i++){
                   
-                    // global id for the elem
-                    size_t elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
+    //                 // global id for the elem
+    //                 size_t elem_gid = get_id(i, j, k, num_elems_i, num_elems_j);
                     
-                    // store the point IDs for this elem where the range is
-                    // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
-                    // (i:(i+1)*Pn_order, j:(j+1)*Pn_order, k:(k+1)*Pn_order) for a Pn hexahedron
-                    int node_lid = 0;
+    //                 // store the point IDs for this elem where the range is
+    //                 // (i:i+1, j:j+1, k:k+1) for a linear hexahedron
+    //                 // (i:(i+1)*Pn_order, j:(j+1)*Pn_order, k:(k+1)*Pn_order) for a Pn hexahedron
+    //                 int node_lid = 0;
                     
-                    int k_local = 0;
-                    for (int kcount=k*Pn_order; kcount<=(k+1)*Pn_order; kcount++){
+    //                 int k_local = 0;
+    //                 for (int kcount=k*Pn_order; kcount<=(k+1)*Pn_order; kcount++){
                         
-                        int j_local = 0;
-                        for (int jcount=j*Pn_order; jcount<=(j+1)*Pn_order; jcount++){
+    //                     int j_local = 0;
+    //                     for (int jcount=j*Pn_order; jcount<=(j+1)*Pn_order; jcount++){
                             
-                            int i_local = 0;
-                            for (int icount=i*Pn_order; icount<=(i+1)*Pn_order; icount++){
+    //                         int i_local = 0;
+    //                         for (int icount=i*Pn_order; icount<=(i+1)*Pn_order; icount++){
                                 
-                                // global id for the points
-                                size_t node_gid = get_id(icount, jcount, kcount,
-                                                  num_points_i, num_points_j);
+    //                             // global id for the points
+    //                             size_t node_gid = get_id(icount, jcount, kcount,
+    //                                               num_points_i, num_points_j);
 
-                                // Saved using i,j,k indexing
-                                mesh.nodes_in_elem.host(elem_gid, node_lid) = node_gid;
+    //                             // Saved using i,j,k indexing
+    //                             mesh.nodes_in_elem.host(elem_gid, node_lid) = node_gid;
                                 
-                                // increment the point counting index
-                                node_lid = node_lid + 1;
+    //                             // increment the point counting index
+    //                             node_lid = node_lid + 1;
                                 
-                                i_local++;
-                            } // end for icount
+    //                             i_local++;
+    //                         } // end for icount
                             
-                            j_local++;
-                        } // end for jcount
+    //                         j_local++;
+    //                     } // end for jcount
                         
-                        k_local ++;
-                    }  // end for kcount
-                } // end for i
-            } // end for j
-        } // end for k
+    //                     k_local ++;
+    //                 }  // end for kcount
+    //             } // end for i
+    //         } // end for j
+    //     } // end for k
 
-        // update device side
-        mesh.nodes_in_elem.update_device();
+    //     // update device side
+    //     mesh.nodes_in_elem.update_device();
 
-        // initialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
+    //     // initialize corner variables
+    //     int num_corners = num_elems * mesh.num_nodes_in_elem;
+    //     mesh.initialize_corners(num_corners);
+    //     // corner.initialize(num_corners, num_dim);
 
-        // Build connectivity
-        mesh.build_connectivity();
-
-    }
+    // }
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1909,7 +3318,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void write_mesh(Mesh_t& mesh,
         State_t& State,
-        SimulationParameters_t& SimulationParamaters,
+        SimulationParameters_t& SimulationParameters,
         double dt,
         double time_value,
         CArray<double> graphics_times,
@@ -1918,7 +3327,6 @@ public:
         std::vector<material_pt_state> material_pt_states,
         const size_t solver_id)
     {
-
 
         // node_state is an enum for possible fields (e.g., coords, velocity, etc.), see state.h
         // gauss_pt_state is an enum for possible fields (e.g., vol, divergence, etc.)
@@ -2054,7 +3462,7 @@ public:
         size_t num_mat_pt_tensor_vars = 0;
             
         // count the number of material point state vars to write out
-        for (auto field : SimulationParamaters.output_options.output_mat_pt_state){
+        for (auto field : SimulationParameters.output_options.output_mat_pt_state){
             switch(field){
                 // scalar vars to write out
                 case material_pt_state::density:
@@ -2116,7 +3524,7 @@ public:
         size_t num_elem_tensor_vars = 0;
 
         // count the number of element average fields to write out
-        for (auto field : SimulationParamaters.output_options.output_elem_state){
+        for (auto field : SimulationParameters.output_options.output_elem_state){
             switch(field){
                 // scalar vars to write out
                 case material_pt_state::density:
@@ -2173,7 +3581,7 @@ public:
         size_t num_gauss_pt_tensor_vars = 0;
 
         // gauss point values to ouptput
-        for (auto field : SimulationParamaters.output_options.output_gauss_pt_state){
+        for (auto field : SimulationParameters.output_options.output_gauss_pt_state){
             switch(field){
                 // scalar vars to write out
                 case gauss_pt_state::volume:
@@ -2230,7 +3638,7 @@ public:
         size_t tensor_var = 0;
 
         // material point state to output
-        for (auto field : SimulationParamaters.output_options.output_mat_pt_state){
+        for (auto field : SimulationParameters.output_options.output_mat_pt_state){
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
@@ -2328,7 +3736,7 @@ public:
         tensor_var = 0;
 
         // element state to output
-        for (auto field : SimulationParamaters.output_options.output_elem_state){
+        for (auto field : SimulationParameters.output_options.output_elem_state){
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
@@ -2401,7 +3809,7 @@ public:
         int vel_grad_id = -1;
         
 
-        for (auto field : SimulationParamaters.output_options.output_gauss_pt_state){
+        for (auto field : SimulationParameters.output_options.output_gauss_pt_state){
             switch(field){
                 // scalars
                 case gauss_pt_state::volume:
@@ -2438,7 +3846,7 @@ public:
         size_t num_node_scalar_vars = 0;
         size_t num_node_vector_vars = 0;
 
-        for (auto field : SimulationParamaters.output_options.output_node_state){
+        for (auto field : SimulationParameters.output_options.output_node_state){
             switch(field){
                 // --- scalars
                 case node_state::mass:
@@ -2485,7 +3893,7 @@ public:
         vector_var = 0;
         tensor_var = 0;
 
-        for (auto field : SimulationParamaters.output_options.output_node_state){
+        for (auto field : SimulationParameters.output_options.output_node_state){
             switch(field){
                 // scalars
                 case node_state::mass:
@@ -2536,7 +3944,165 @@ public:
             } // end switch
         } // end for over 
 
+        // ********************************
+        //  Write the collective nodal and elem fields 
+        // ********************************
 
+        if (SimulationParameters.output_options.format == output_options::viz ||
+            SimulationParameters.output_options.format == output_options::viz_and_state) {
+
+            write_parallel_viz(mesh,
+                                State,
+                                SimulationParameters,
+                                dt,
+                                time_value,
+                                graphics_times,
+                                solver_id,
+                                node_states,
+                                gauss_pt_states,
+                                material_pt_states,
+                                num_elem_scalar_vars,
+                                num_elem_tensor_vars,
+                                num_node_scalar_vars,
+                                num_node_vector_vars,
+                                num_mat_pt_scalar_vars,
+                                num_mat_pt_tensor_vars,
+                                elem_scalar_var_names,
+                                elem_tensor_var_names,
+                                mat_elem_scalar_var_names,
+                                mat_elem_tensor_var_names,
+                                node_scalar_var_names,
+                                node_vector_var_names,
+                                den_id,
+                                pres_id,
+                                sie_id,
+                                sspd_id,
+                                mass_id,
+                                stress_id,
+                                vol_id,
+                                div_id,
+                                level_set_id,
+                                vel_grad_id,
+                                conductivity_id,
+                                specific_heat_id,
+                                node_mass_id,
+                                node_vel_id,
+                                node_accel_id,
+                                node_coord_id,
+                                node_grad_level_set_id,
+                                node_temp_id,
+                                mat_den_id,
+                                mat_pres_id,
+                                mat_sie_id,
+                                mat_sspd_id,
+                                mat_mass_id,
+                                mat_volfrac_id,
+                                mat_geo_volfrac_id,  
+                                mat_eroded_id,
+                                mat_stress_id,
+                                mat_conductivity_id,
+                                mat_specific_heat_id);
+        } // end if viz paraview output is to be written
+
+
+        // STATE
+        if (SimulationParameters.output_options.format == output_options::state ||
+            SimulationParameters.output_options.format == output_options::viz_and_state) {
+
+            write_material_point_state(mesh,
+                                      State,
+                                      SimulationParameters,
+                                      time_value,
+                                      graphics_times,
+                                      node_states,
+                                      gauss_pt_states,
+                                      material_pt_states);
+
+        } // end if state is to be written
+
+
+        // will drop ensight outputs in the near future
+        if (SimulationParameters.output_options.format == output_options::ensight){
+           write_ensight(mesh,
+                         State,
+                         SimulationParameters,
+                         dt,
+                         time_value,
+                         graphics_times,
+                         node_states,
+                         gauss_pt_states,
+                         material_pt_states);
+        }
+
+        return;
+
+    } // end write_mesh
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn write_collective vtm
+    ///
+    /// \brief Writes an ensight output file
+    ///
+    /// \param Simulation mesh
+    /// \param State data
+    /// \param Simulation parameters
+    /// \param current time value
+    /// \param Vector of all graphics output times
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void write_parallel_viz(Mesh_t& mesh,
+        State_t& State,
+        SimulationParameters_t& SimulationParameters,
+        double dt,
+        double time_value,
+        CArray<double> graphics_times,
+        const size_t solver_id,
+        std::vector<node_state> node_states,
+        std::vector<gauss_pt_state> gauss_pt_states,
+        std::vector<material_pt_state> material_pt_states,
+        size_t num_elem_scalar_vars,
+        size_t num_elem_tensor_vars,
+        size_t num_node_scalar_vars,
+        size_t num_node_vector_vars,
+        size_t num_mat_pt_scalar_vars,
+        size_t num_mat_pt_tensor_vars,
+        std::vector<std::string> elem_scalar_var_names,
+        std::vector<std::string> elem_tensor_var_names,
+        std::vector<std::string> mat_elem_scalar_var_names,
+        std::vector<std::string> mat_elem_tensor_var_names,
+        std::vector<std::string> node_scalar_var_names,
+        std::vector<std::string> node_vector_var_names,
+        const int den_id,
+        const int pres_id,
+        const int sie_id,
+        const int sspd_id,
+        const int mass_id,
+        const int stress_id,
+        const int vol_id,
+        const int div_id,
+        const int level_set_id,
+        const int vel_grad_id,
+        const int conductivity_id,
+        const int specific_heat_id,
+        const int node_mass_id,
+        const int node_vel_id,
+        const int node_accel_id,
+        const int node_coord_id,
+        const int node_grad_level_set_id,
+        const int node_temp_id,
+        const int mat_den_id,
+        const int mat_pres_id,
+        const int mat_sie_id,
+        const int mat_sspd_id,
+        const int mat_mass_id,
+        const int mat_volfrac_id,  
+        const int mat_geo_volfrac_id,  
+        const int mat_eroded_id,
+        const int mat_stress_id,
+        const int mat_conductivity_id,
+        const int mat_specific_heat_id)
+    {
         // **************************************
         //  build and save element average fields
         // **************************************
@@ -2546,14 +4112,28 @@ public:
         const size_t num_elems = mesh.num_elems;
         const size_t num_dims  = mesh.num_dims;
         const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
+        const size_t num_local_elems = mesh.num_local_elems;
+        const size_t num_local_nodes = mesh.num_local_nodes;
+        DistributedMap local_element_map = mesh.local_element_map;
+        DistributedMap node_map = mesh.node_map;
+        DistributedMap all_node_map = mesh.all_node_map;
+        DistributedMap nonoverlap_elem_node_map = mesh.nonoverlap_element_node_map;
         const int Pn_order = mesh.Pn;
 
-        // save the elem state to an array for exporting to graphics files
-        DCArrayKokkos<double> elem_scalar_fields(num_elem_scalar_vars, num_elems, "elem_scalars");
-        DCArrayKokkos<double> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3, "elem_tensors");
+        const size_t num_mats = State.MaterialPoints.num_material_points.size();
+        
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+
+        /* save the elem state to an array for exporting to graphics files*/
+
+        //host version of local element map for argument compatibility
+        DistributedDFArray<double> elem_scalar_fields(local_element_map, num_elem_scalar_vars, "elem_scalars");
+        DistributedDFArray<double> elem_tensor_fields(local_element_map, num_elem_tensor_vars, 3, 3, "elem_tensors");
+        DistributedDCArray<size_t> nonoverlap_nodes_in_elem(local_element_map, num_nodes_in_elem, "nonoverlap_nodes_in_elem");
         elem_scalar_fields.set_values(0.0);
         elem_tensor_fields.set_values(0.0);
-
 
         // -----------------------------------------------------------------------
         // save the output fields to a single element average array for all state
@@ -2566,11 +4146,11 @@ public:
                                     elem_scalar_fields,
                                     elem_tensor_fields,
                                     State.MaterialToMeshMaps.elem_in_mat_elem,
-                                    SimulationParamaters.output_options.output_elem_state,
-                                    SimulationParamaters.output_options.output_gauss_pt_state,
-                                    State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
+                                    SimulationParameters.output_options.output_elem_state,
+                                    SimulationParameters.output_options.output_gauss_pt_state,
+                                    State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id),
                                     mat_id,
-                                    num_elems,
+                                    num_local_elems,
                                     den_id,
                                     pres_id,
                                     sie_id,
@@ -2587,9 +4167,9 @@ public:
 
         // make specific fields for the element average
         if (sie_id>=0){
-            FOR_ALL(elem_gid, 0, num_elems, {
+            FOR_ALL(elem_gid, 0, num_local_elems, {
                 // get sie by dividing by the mass
-                elem_scalar_fields(sie_id, elem_gid) /= (elem_scalar_fields(mass_id, elem_gid)+1.e-20); 
+                elem_scalar_fields(elem_gid, sie_id) /= (elem_scalar_fields(elem_gid, mass_id)+1.e-20); 
             });
         } // end if
 
@@ -2603,36 +4183,56 @@ public:
         // ************************
 
         // save the nodal fields to an array for exporting to graphics files
-        DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
-        DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
-      
+        DistributedDFArray<double> node_scalar_fields(node_map, num_node_scalar_vars, "node_scalars");
+        DistributedDFArray<double> node_vector_fields(node_map, num_node_vector_vars,  3, "node_tenors");
+        DistributedDFArray<double> nonoverlap_node_scalar_fields(nonoverlap_elem_node_map, num_node_scalar_vars, "node_scalars");
+        DistributedDFArray<double> nonoverlap_node_vector_fields(nonoverlap_elem_node_map, num_node_vector_vars,  3, "node_tenors");
+    
         concatenate_nodal_fields(State.node,
-                                 node_scalar_fields,
-                                 node_vector_fields,
-                                 SimulationParamaters.output_options.output_node_state,
-                                 dt,
-                                 num_nodes,
-                                 num_dims,
-                                 node_mass_id,
-                                 node_vel_id,
-                                 node_accel_id,
-                                 node_coord_id,
-                                 node_grad_level_set_id,
-                                 node_temp_id);
-                                 
+                                node_scalar_fields,
+                                node_vector_fields,
+                                SimulationParameters.output_options.output_node_state,
+                                dt,
+                                num_local_nodes,
+                                num_dims,
+                                node_mass_id,
+                                node_vel_id,
+                                node_accel_id,
+                                node_coord_id,
+                                node_grad_level_set_id,
+                                node_temp_id);
+                                
 
         Kokkos::fence();
         node_scalar_fields.update_host();
         node_vector_fields.update_host();
 
+        // ***************************************************************************
+        //  Communications for node data from node map to nodes on unique element map
+        // ***************************************************************************
 
-        // ********************************
-        //  Write the nodal and elem fields 
-        // ********************************
+        //node data comms
+        OutputCommPlan<double> node_scalars_comms(nonoverlap_node_scalar_fields, node_scalar_fields);
+        OutputCommPlan<double> node_vectors_comms(nonoverlap_node_vector_fields, node_vector_fields, node_scalars_comms);
+        node_scalars_comms.execute_comms();
+        node_vectors_comms.execute_comms();
 
-        if (SimulationParamaters.output_options.format == output_options::viz ||
-            SimulationParamaters.output_options.format == output_options::viz_and_state) {
+        //nodal coordinates comms
+        //convert nodes in elem back to global (convert back to local after we've collected global ids in collective vector)
+        DistributedDCArray<double> nonoverlap_node_coords(nonoverlap_elem_node_map, mesh.num_dims);
+        CommPlan<double> node_coords_comms(nonoverlap_node_coords, State.node.coords);
+        node_coords_comms.execute_comms();
 
+        //convert local node ids in nodes in elem so they correspond to nonoverlap map
+        for (size_t elem_id = 0; elem_id < num_local_elems; elem_id++) {
+            for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                nonoverlap_nodes_in_elem.host(elem_id, node_lid) = nonoverlap_elem_node_map.getLocalIndex(all_node_map.getGlobalIndex(mesh.nodes_in_elem.host(elem_id, node_lid)));
+            }
+        } // end for elem_gid
+
+        //nonoverlap_nodes_in_elem.print();
+
+        if(myrank==0){
             // create the folder structure if it does not exist
             struct stat st;
 
@@ -2668,222 +4268,814 @@ public:
                     }
                 }
             }
-            
-            // call the .vtu writer for element fields
-            std::string elem_fields_name = "fields";
-
-            // make a view of node coords for passing into functions
-            ViewCArray <double> node_coords_host(&State.node.coords.host(0,0), num_nodes, num_dims);
-            ViewCArray <size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0,0), num_elems, num_nodes_in_elem);
-
-
-            write_vtu(node_coords_host,
-                      nodes_in_elem_host,
-                      elem_scalar_fields,
-                      elem_tensor_fields,
-                      node_scalar_fields,
-                      node_vector_fields,
-                      elem_scalar_var_names,
-                      elem_tensor_var_names,
-                      node_scalar_var_names,
-                      node_vector_var_names,
-                      elem_fields_name,
-                      graphics_id,
-                      num_nodes,
-                      num_elems,
-                      num_nodes_in_elem,
-                      Pn_order,
-                      num_dims,
-                      solver_id);
-
-
-            // ********************************
-            //  Build and write the mat fields 
-            // ********************************
-
-
-            // note: the file path and folder was created in the elem and node outputs
-            size_t num_mat_files_written = 0;
-            if(num_mat_pt_scalar_vars > 0 || num_mat_pt_tensor_vars >0){
-
-                for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-
-                    const size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
-
-                    // only save material data if the mat lives on the mesh, ie. has state allocated
-                    if (num_mat_elems>0){
-
-                        // set the nodal vars to zero size, we don't write these fields again
-                        node_scalar_var_names.clear();
-                        node_vector_var_names.clear();
-
-                        // the arrays storing all the material field data
-                        DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
-                        DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
-
-
-                        // concatenate material fields into a single array
-                        concatenate_mat_fields(State.MaterialPoints,
-                                               mat_elem_scalar_fields,
-                                               mat_elem_tensor_fields,
-                                               State.MaterialToMeshMaps.elem_in_mat_elem,
-                                               SimulationParamaters.output_options.output_mat_pt_state,
-                                               num_mat_elems,
-                                               mat_id,
-                                               mat_den_id,
-                                               mat_pres_id,
-                                               mat_sie_id,
-                                               mat_sspd_id,
-                                               mat_mass_id,
-                                               mat_volfrac_id,
-                                               mat_geo_volfrac_id,  
-                                               mat_eroded_id,
-                                               mat_stress_id,
-                                               mat_conductivity_id,
-                                               mat_specific_heat_id);
-                        Kokkos::fence();
-                        mat_elem_scalar_fields.update_host();
-                        mat_elem_tensor_fields.update_host();
-
-
-                        std::string str_mat_val = std::to_string(mat_id);                       
-                        std::string mat_fields_name = "mat";
-                        mat_fields_name += str_mat_val;  // add the mat number
-
-                        // save the nodes belonging to this part (i.e., the material)
-                        DCArrayKokkos <double> mat_node_coords(num_nodes,num_dims, "mat_node_coords");
-                        DCArrayKokkos <size_t> mat_nodes_in_mat_elem(num_mat_elems, num_nodes_in_elem, "mat_nodes_in_mat_elem");
-
-                        // the number of actual nodes belonging to the part (i.e., the material)
-                        size_t num_mat_nodes = 0;
-
-                        // build a unique mesh (element and nodes) for the material (i.e., the part)
-                        build_material_elem_node_lists(mesh,
-                                                       State.node.coords,
-                                                       mat_node_coords,
-                                                       mat_nodes_in_mat_elem,
-                                                       State.MaterialToMeshMaps.elem_in_mat_elem,
-                                                       mat_id,
-                                                       num_mat_nodes,
-                                                       num_mat_elems,
-                                                       num_nodes_in_elem,
-                                                       num_dims);
-
-                        ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
-                        ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
-                        
-                        // write out a vtu file this 
-                        write_vtu(mat_node_coords_host,
-                                  mat_nodes_in_elem_host,
-                                  mat_elem_scalar_fields,
-                                  mat_elem_tensor_fields,
-                                  node_scalar_fields,
-                                  node_vector_fields,
-                                  mat_elem_scalar_var_names,
-                                  mat_elem_tensor_var_names,
-                                  node_scalar_var_names,
-                                  node_vector_var_names,
-                                  mat_fields_name,
-                                  graphics_id,
-                                  num_mat_nodes,
-                                  num_mat_elems,
-                                  num_nodes_in_elem,
-                                  Pn_order,
-                                  num_dims,
-                                  solver_id);
-
-
-                        num_mat_files_written++;
-
-                    } // end for mat_id
-
-                } // end if material is on the mesh
-
-            } // end if mat variables are to be written
-
-
-            // *************************************************
-            //  write Paraview files to open the graphics files
-            // *************************************************
-
-            // save the graphics time
-            graphics_times(graphics_id) = time_value;
-
-            // check to see if an mesh state was written 
-            bool write_mesh_state = false;
-            if( num_elem_scalar_vars > 0 ||
-                num_elem_tensor_vars > 0 ||
-                num_node_scalar_vars > 0 ||
-                num_node_vector_vars > 0)
-            {
-                write_mesh_state = true;
-            }
-
-            // check to see if a mat state was written
-            bool write_mat_pt_state = false;
-            if( num_mat_pt_scalar_vars > 0 ||
-                num_mat_pt_tensor_vars > 0)
-            {
-                 write_mat_pt_state = true;
-            }
-
-            // call the vtm file writer
-            std::string mat_fields_name = "mat";
-            write_vtm(graphics_times,
-                      elem_fields_name,
-                      mat_fields_name,
-                      time_value,
-                      graphics_id,
-                      num_mat_files_written,
-                      write_mesh_state,
-                      write_mat_pt_state,
-                      solver_id);
-
-            // call the pvd file writer
-            write_pvd(graphics_times,
-                      time_value,
-                      graphics_id,
-                      solver_id);
-
-
-            // increment graphics id counter
-            graphics_id++; // this is private variable in the class
-
-        } // end if viz paraview output is to be written
-
-
-        // STATE
-        if (SimulationParamaters.output_options.format == output_options::state ||
-            SimulationParamaters.output_options.format == output_options::viz_and_state) {
-
-            write_material_point_state(mesh,
-                                       State,
-                                       SimulationParamaters,
-                                       time_value,
-                                       graphics_times,
-                                       node_states,
-                                       gauss_pt_states,
-                                       material_pt_states);
-
-        } // end if state is to be written
-
-
-        // will drop ensight outputs in the near future
-        if (SimulationParamaters.output_options.format == output_options::ensight){
-           write_ensight(mesh,
-                         State,
-                         SimulationParamaters,
-                         dt,
-                         time_value,
-                         graphics_times,
-                         node_states,
-                         gauss_pt_states,
-                         material_pt_states);
         }
 
-        return;
+        MPI_Barrier(MPI_COMM_WORLD);
+        // call the .vtu writer for element fields
+        std::string elem_fields_name = "fields";
 
-    } // end write_mesh
+        write_vtu(nonoverlap_node_coords,
+                nonoverlap_nodes_in_elem,
+                elem_scalar_fields,
+                elem_tensor_fields,
+                nonoverlap_node_scalar_fields,
+                nonoverlap_node_vector_fields,
+                elem_scalar_var_names,
+                elem_tensor_var_names,
+                node_scalar_var_names,
+                node_vector_var_names,
+                elem_fields_name,
+                graphics_id,
+                nonoverlap_elem_node_map.size(),
+                mesh.num_local_elems,
+                num_nodes_in_elem,
+                Pn_order,
+                num_dims,
+                solver_id);
+
+        // ********************************
+        //  Build and write the mat fields 
+        // ********************************
+
+
+        // note: the file path and folder was created in the elem and node outputs
+        size_t num_mat_files_written = 0;
+        CArray<int> local_mats_in_rank(num_mats);
+        int local_num_mats = 0;
+        if(num_mat_pt_scalar_vars > 0 || num_mat_pt_tensor_vars >0){
+            for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+                const size_t num_mat_local_elems = State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id);
+                if(num_mat_local_elems){
+                    local_mats_in_rank(local_num_mats) = mat_id;
+                    local_num_mats++;
+                }
+
+                //set global element indices on this rank for this mat
+                DistributedMap element_map = mesh.element_map;
+                DCArrayKokkos<long long int> global_indices_of_local_mat_elems(num_mat_local_elems, " global_indices_of_local_mat_elems");
+                // FOR_ALL(ielem, 0, num_mat_local_elems,{
+                //     global_indices_of_local_mat_elems(ielem) = mesh.element_map(State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, ielem));
+                // });
+                for(int ielem = 0; ielem < num_mat_local_elems; ielem++){
+                    global_indices_of_local_mat_elems.host(ielem) = mesh.element_map.getGlobalIndex(State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, ielem));
+                }
+                global_indices_of_local_mat_elems.update_device();
+                DistributedMap mat_elem_map = DistributedMap(global_indices_of_local_mat_elems);
+                //mat_elem_map.print();
+
+                //allocate arrays for distributed mat elem data
+                DistributedDFArray<double> mat_elem_scalar_fields(mat_elem_map, num_mat_pt_scalar_vars, "mat_elem_scalars");
+                DistributedDFArray<double> mat_elem_tensor_fields(mat_elem_map, num_mat_pt_tensor_vars, 3, 3, "mat_elem_tensors");
+
+                // set the nodal vars to zero size, we don't write these fields again
+                node_scalar_var_names.clear();
+                node_vector_var_names.clear();
+
+                // concatenate material fields into a single array
+                concatenate_mat_fields(State.MaterialPoints,
+                                        mat_elem_scalar_fields,
+                                        mat_elem_tensor_fields,
+                                        State.MaterialToMeshMaps.elem_in_mat_elem,
+                                        SimulationParameters.output_options.output_mat_pt_state,
+                                        num_mat_local_elems,
+                                        mat_id,
+                                        mat_den_id,
+                                        mat_pres_id,
+                                        mat_sie_id,
+                                        mat_sspd_id,
+                                        mat_mass_id,
+                                        mat_volfrac_id,
+                                        mat_geo_volfrac_id,  
+                                        mat_eroded_id,
+                                        mat_stress_id,
+                                        mat_conductivity_id,
+                                        mat_specific_heat_id);
+
+
+                std::string str_mat_val = std::to_string(mat_id);                       
+                std::string mat_fields_name = "mat";
+                mat_fields_name += str_mat_val;  // add the mat number
+
+                // the number of actual nodes belonging to the part (i.e., the material)
+                size_t num_mat_nodes = 0;
+
+                //communicate scalars, tensors, and nodes in elem to collective mat arrays on rank 0
+                
+                //collect nodes in elem for this material on rank 0
+                DistributedDCArray<size_t> mat_nodes_in_mat_elem(mat_elem_map, num_nodes_in_elem, "mat_nodes_in_mat_elem");
+                CommPlan<size_t> mat_nodes_in_elem_comms(mat_nodes_in_mat_elem,mesh.nodes_in_elem); //shouldnt do comms since subview of map on this rank
+                mat_nodes_in_elem_comms.execute_comms();
+
+                //convert mesh.nodes_in_elem stores local indices and we communicated these in, convert to global
+                for (size_t elem_id = 0; elem_id < num_mat_local_elems; elem_id++) {
+                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                        mat_nodes_in_mat_elem.host(elem_id, node_lid) = mesh.all_node_map.getGlobalIndex(mat_nodes_in_mat_elem.host(elem_id, node_lid));
+                    }
+                } // end for elem_gid
+
+                //define set of nodes for this mat, collect on rank 0, comms on coords, scalars, and vectors for nodes for this mat
+                
+                // build a unique mesh (element and nodes) for the material (i.e., the part)
+                DCArrayKokkos<long long int> mat_node_indices;
+                build_material_node_list(mesh,
+                                        mat_node_indices,
+                                        mat_nodes_in_mat_elem,
+                                        State.MaterialToMeshMaps.elem_in_mat_elem,
+                                        mat_id,
+                                        num_mat_nodes,
+                                        num_mat_local_elems,
+                                        num_nodes_in_elem,
+                                        num_dims);
+                
+                //map object for mat node indices
+                DistributedMap mat_node_map = DistributedMap(mat_node_indices);
+
+                DistributedDCArray<double> mat_node_coords(mat_node_map, num_dims, "mat_node_coords");
+                CommPlan<double> mat_node_coords_comms(mat_node_coords,State.node.coords); //shouldnt do comms since subview of map on this rank
+                mat_node_coords_comms.execute_comms();
+
+                DistributedDFArray<double> mat_node_scalar_fields(mat_node_map, num_node_scalar_vars, "mat_node_scalars");
+                OutputCommPlan<double> mat_node_scalars_comms(mat_node_scalar_fields,node_scalar_fields); //shouldnt do comms since subview of map on this rank
+                mat_node_scalars_comms.execute_comms();
+
+                DistributedDFArray<double> mat_node_vector_fields(mat_node_map, num_node_vector_vars, 3, "mat_node_vectors");
+                OutputCommPlan<double> mat_node_vectors_comms(mat_node_vector_fields,node_vector_fields); //shouldnt do comms since subview of map on this rank
+                mat_node_vectors_comms.execute_comms();
+
+                //convert mat_nodes_in_mat_elem so it uses contiguous local node ids for this mat portion of the mesh
+                for (size_t elem_id = 0; elem_id < num_mat_local_elems; elem_id++) {
+                    for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                        mat_nodes_in_mat_elem.host(elem_id, node_lid) = mat_node_map.getLocalIndex(mat_nodes_in_mat_elem.host(elem_id, node_lid));
+                    }
+                } // end for elem_gid
+                
+                // only write material data if the mat lives on the mesh, ie. has state allocated
+                if (num_mat_local_elems>0){
+                    // write out a vtu file this 
+                    write_vtu(mat_node_coords,
+                                mat_nodes_in_mat_elem,
+                                mat_elem_scalar_fields,
+                                mat_elem_tensor_fields,
+                                mat_node_scalar_fields,
+                                mat_node_vector_fields,
+                                mat_elem_scalar_var_names,
+                                mat_elem_tensor_var_names,
+                                node_scalar_var_names,
+                                node_vector_var_names,
+                                mat_fields_name,
+                                graphics_id,
+                                num_mat_nodes,
+                                num_mat_local_elems,
+                                num_nodes_in_elem,
+                                Pn_order,
+                                num_dims,
+                                solver_id);
+
+
+                    num_mat_files_written++;
+
+                } // end for mat_id
+
+            } // end if material is on the mesh
+
+        } // end if mat variables are to be written
+
+
+        // *************************************************
+        //  write Paraview files to open the graphics files
+        // *************************************************
+
+        // save the graphics time
+        graphics_times(graphics_id) = time_value;
+
+        // check to see if an mesh state was written 
+        bool write_mesh_state = false;
+        if( num_elem_scalar_vars > 0 ||
+            num_elem_tensor_vars > 0 ||
+            num_node_scalar_vars > 0 ||
+            num_node_vector_vars > 0)
+        {
+            write_mesh_state = true;
+        }
+        // check to see if a mat state was written
+        bool write_mat_pt_state = false;
+        if( num_mat_pt_scalar_vars > 0 ||
+            num_mat_pt_tensor_vars > 0)
+        {
+                write_mat_pt_state = true;
+        }
+
+        // call the vtm file writer
+        std::string mat_fields_name = "mat";
+        //gather MPI ranks that are writing mat blocks
+        write_vtm(graphics_times,
+                elem_fields_name,
+                mat_fields_name,
+                time_value,
+                graphics_id,
+                num_mats,
+                local_num_mats,
+                local_mats_in_rank,
+                nranks,
+                myrank,
+                write_mesh_state,
+                write_mat_pt_state,
+                solver_id);
+        
+        if(myrank==0){
+            // call the pvd file writer
+            write_pvd(graphics_times,
+                    time_value,
+                    graphics_id,
+                    solver_id);
+        }
+
+        // increment graphics id counter
+        graphics_id++; // this is private variable in the class
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn write_collective vtm
+    ///
+    /// \brief Writes an ensight output file
+    ///
+    /// \param Simulation mesh
+    /// \param State data
+    /// \param Simulation parameters
+    /// \param current time value
+    /// \param Vector of all graphics output times
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void write_collective_viz(Mesh_t& mesh,
+        State_t& State,
+        SimulationParameters_t& SimulationParameters,
+        double dt,
+        double time_value,
+        CArray<double> graphics_times,
+        const size_t solver_id,
+        std::vector<node_state> node_states,
+        std::vector<gauss_pt_state> gauss_pt_states,
+        std::vector<material_pt_state> material_pt_states,
+        size_t num_elem_scalar_vars,
+        size_t num_elem_tensor_vars,
+        size_t num_node_scalar_vars,
+        size_t num_node_vector_vars,
+        size_t num_mat_pt_scalar_vars,
+        size_t num_mat_pt_tensor_vars,
+        std::vector<std::string> elem_scalar_var_names,
+        std::vector<std::string> elem_tensor_var_names,
+        std::vector<std::string> mat_elem_scalar_var_names,
+        std::vector<std::string> mat_elem_tensor_var_names,
+        std::vector<std::string> node_scalar_var_names,
+        std::vector<std::string> node_vector_var_names,
+        const int den_id,
+        const int pres_id,
+        const int sie_id,
+        const int sspd_id,
+        const int mass_id,
+        const int stress_id,
+        const int vol_id,
+        const int div_id,
+        const int level_set_id,
+        const int vel_grad_id,
+        const int conductivity_id,
+        const int specific_heat_id,
+        const int node_mass_id,
+        const int node_vel_id,
+        const int node_accel_id,
+        const int node_coord_id,
+        const int node_grad_level_set_id,
+        const int node_temp_id,
+        const int mat_den_id,
+        const int mat_pres_id,
+        const int mat_sie_id,
+        const int mat_sspd_id,
+        const int mat_mass_id,
+        const int mat_volfrac_id,  
+        const int mat_geo_volfrac_id,  
+        const int mat_eroded_id,
+        const int mat_stress_id,
+        const int mat_conductivity_id,
+        const int mat_specific_heat_id)
+    {
+        // // **************************************
+        // //  build and save element average fields
+        // // **************************************
+
+        // // short hand
+        // const size_t num_nodes = mesh.num_nodes;
+        // const size_t num_elems = mesh.num_elems;
+        // const size_t num_dims  = mesh.num_dims;
+        // const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
+        // const size_t num_local_elems = mesh.num_local_elems;
+        // const size_t num_local_nodes = mesh.num_local_nodes;
+        // DistributedMap local_element_map = mesh.local_element_map;
+        // DistributedMap node_map = mesh.node_map;
+        // const int Pn_order = mesh.Pn;
+
+        // const size_t num_mats = State.MaterialPoints.num_material_points.size();
+        
+        // int myrank, nranks;
+        // MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        // MPI_Comm_size(MPI_COMM_WORLD,&nranks);
+
+        // /* save the elem state to an array for exporting to graphics files*/
+
+        // //host version of local element map for argument compatibility
+        // HostDistributedMap host_local_element_map;
+        // DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_elements(num_local_elems);
+        // for(int ielem = 0; ielem < num_local_elems; ielem++){
+        //     global_indices_of_local_elements(ielem) = local_element_map.getGlobalIndex(ielem);
+        // }
+        // host_local_element_map = HostDistributedMap(global_indices_of_local_elements);
+        // DistributedDFArray<double> elem_scalar_fields(local_element_map, num_elem_scalar_vars, "elem_scalars");
+        // DistributedDFArray<double> elem_tensor_fields(local_element_map, num_elem_tensor_vars, 3, 3, "elem_tensors");
+        // elem_scalar_fields.set_values(0.0);
+        // elem_tensor_fields.set_values(0.0);
+        // //duplicate for now to allow compatibility with comm plan object when using Tpetra (src and dst device type must be equal)
+        // //We dont want to make a dual view of the rank 0 collector since that will blow device memory constraints sooner than this duplicate
+        // //one other option is to just do the concatenation ops on the host
+        // DistributedFArray<double> host_elem_scalar_fields(host_local_element_map, num_elem_scalar_vars, "elem_scalars");
+        // DistributedFArray<double> host_elem_tensor_fields(host_local_element_map, num_elem_tensor_vars, 3, 3, "elem_tensors");
+
+
+        // // -----------------------------------------------------------------------
+        // // save the output fields to a single element average array for all state
+        // // -----------------------------------------------------------------------
+        // for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+        //     // material point and guass point state are concatenated together
+        //     concatenate_elem_fields(State.MaterialPoints,
+        //                             State.GaussPoints,
+        //                             elem_scalar_fields,
+        //                             elem_tensor_fields,
+        //                             State.MaterialToMeshMaps.elem_in_mat_elem,
+        //                             SimulationParameters.output_options.output_elem_state,
+        //                             SimulationParameters.output_options.output_gauss_pt_state,
+        //                             State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id),
+        //                             mat_id,
+        //                             num_local_elems,
+        //                             den_id,
+        //                             pres_id,
+        //                             sie_id,
+        //                             sspd_id,
+        //                             mass_id,
+        //                             stress_id,
+        //                             vol_id,
+        //                             div_id,
+        //                             level_set_id,
+        //                             vel_grad_id,
+        //                             conductivity_id,
+        //                             specific_heat_id);
+        // } // end for mats
+
+        // // make specific fields for the element average
+        // if (sie_id>=0){
+        //     FOR_ALL(elem_gid, 0, num_local_elems, {
+        //         // get sie by dividing by the mass
+        //         elem_scalar_fields(elem_gid, sie_id) /= (elem_scalar_fields(elem_gid, mass_id)+1.e-20); 
+        //     });
+        // } // end if
+
+        // Kokkos::fence();
+        // elem_scalar_fields.update_host();
+        // elem_tensor_fields.update_host();
+
+        // // -----------------------------------------------------------------------
+        // // copy the output fields to host side array compatible with Tpetra Comms
+        // // -----------------------------------------------------------------------
+
+        // for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+            
+        //     // material point and guass point state are concatenated together
+        //     copy_elem_fields(elem_scalar_fields,
+        //                     elem_tensor_fields,
+        //                     host_elem_scalar_fields,
+        //                     host_elem_tensor_fields,
+        //                     State.MaterialToMeshMaps.elem_in_mat_elem,
+        //                     SimulationParameters.output_options.output_elem_state,
+        //                     SimulationParameters.output_options.output_gauss_pt_state,
+        //                     State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id),
+        //                     mat_id,
+        //                     num_local_elems,
+        //                     den_id,
+        //                     pres_id,
+        //                     sie_id,
+        //                     sspd_id,
+        //                     mass_id,
+        //                     stress_id,
+        //                     vol_id,
+        //                     div_id,
+        //                     level_set_id,
+        //                     vel_grad_id,
+        //                     conductivity_id,
+        //                     specific_heat_id);
+        // } // end for mats
+        
+
+        // // ************************
+        // //  Build the nodal fields 
+        // // ************************
+
+        // //host version of local node map for argument compatibility
+        // HostDistributedMap host_node_map;
+        // DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_nodes(mesh.num_local_nodes);
+        // for(int inode = 0; inode < mesh.num_local_nodes; inode++){
+        //     global_indices_of_local_nodes(inode) = mesh.node_map.getGlobalIndex(inode);
+        // }
+        // host_node_map = HostDistributedMap(global_indices_of_local_nodes);
+
+        // // save the nodal fields to an array for exporting to graphics files
+        // DistributedDFArray<double> node_scalar_fields(node_map, num_node_scalar_vars, "node_scalars");
+        // DistributedDFArray<double> node_vector_fields(node_map, num_node_vector_vars,  3, "node_tenors");
+        // DistributedFArray<double> host_node_scalar_fields(host_node_map, num_node_scalar_vars, "node_scalars");
+        // DistributedFArray<double> host_node_vector_fields(host_node_map, num_node_vector_vars, 3, "node_tenors");
+    
+        // concatenate_nodal_fields(State.node,
+        //                         node_scalar_fields,
+        //                         node_vector_fields,
+        //                         SimulationParameters.output_options.output_node_state,
+        //                         dt,
+        //                         num_local_nodes,
+        //                         num_dims,
+        //                         node_mass_id,
+        //                         node_vel_id,
+        //                         node_accel_id,
+        //                         node_coord_id,
+        //                         node_grad_level_set_id,
+        //                         node_temp_id);
+                                
+
+        // Kokkos::fence();
+        // node_scalar_fields.update_host();
+        // node_vector_fields.update_host();
+
+        // copy_nodal_fields(host_node_scalar_fields,
+        //                 host_node_vector_fields,
+        //                 node_scalar_fields,
+        //                 node_vector_fields,
+        //                 SimulationParameters.output_options.output_node_state,
+        //                 dt,
+        //                 num_local_nodes,
+        //                 num_dims,
+        //                 node_mass_id,
+        //                 node_vel_id,
+        //                 node_accel_id,
+        //                 node_coord_id,
+        //                 node_grad_level_set_id,
+        //                 node_temp_id);
+
+        // // **************************************************
+        // //  Collective communications for node and elem data 
+        // // **************************************************
+
+        // //elem data collective comms
+        // //collective map has all indices on rank 0 and non on other ranks
+        // HostDistributedMap collective_elem_map;
+        // long long int num_collective_elem_indices = 0;
+        // if(myrank==0) num_collective_elem_indices = mesh.global_num_elems;
+        // collective_elem_map = HostDistributedMap(mesh.global_num_elems, num_collective_elem_indices);
+
+        // //collective vector and comms to the collective vector for elem fields
+        // DistributedFArray<double> collective_elem_scalar_fields(collective_elem_map, num_elem_scalar_vars, "elem_scalars_collective");
+        // DistributedFArray<double> collective_elem_tensor_fields(collective_elem_map, num_elem_tensor_vars, 3, 3, "elem_tensors_collective");
+        // HostCommPlan<double> collective_elem_scalars_comms(collective_elem_scalar_fields, host_elem_scalar_fields);
+        // HostCommPlan<double> collective_elem_tensors_comms(collective_elem_tensor_fields, host_elem_tensor_fields, collective_elem_scalars_comms);
+        // collective_elem_scalars_comms.execute_comms();
+        // collective_elem_tensors_comms.execute_comms();
+
+        // //host of node in elem for Trilinos template argument compatibility
+        // DistributedFArray<size_t> host_local_nodes_in_elem(host_local_element_map, mesh.num_nodes_in_elem);
+
+        // //convert nodes in elem back to global (convert back to local after we've collected global ids in collective vector)
+        // for (size_t elem_id = 0; elem_id < num_local_elems; elem_id++) {
+        //     for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+        //         host_local_nodes_in_elem(elem_id, node_lid) = mesh.all_node_map.getGlobalIndex(mesh.local_nodes_in_elem(elem_id, node_lid));
+        //     }
+        // } // end for elem_gid
+
+        // //collect nodes in elem with a conversion back to global node ids
+        // DistributedFArray<size_t> collective_nodes_in_elem(collective_elem_map, mesh.num_nodes_in_elem);
+        // HostCommPlan<size_t> nodes_in_elem_comms(collective_nodes_in_elem, host_local_nodes_in_elem);
+
+        // nodes_in_elem_comms.execute_comms();
+
+        // //node data collective comms
+        // //collective map has all indices on rank 0 and non on other ranks
+        // HostDistributedMap collective_node_map;
+        // long long int num_collective_node_indices = 0;
+        // if(myrank==0) num_collective_node_indices = mesh.global_num_nodes;
+        // collective_node_map = HostDistributedMap(mesh.global_num_nodes, num_collective_node_indices);
+
+        // //collective vector and comms to the collective vector for node fields
+        // DistributedFArray<double> collective_node_scalar_fields(collective_node_map, num_node_scalar_vars);
+        // DistributedFArray<double> collective_node_vector_fields(collective_node_map, num_node_vector_vars, 3);
+        // HostCommPlan<double> collective_node_scalars_comms(collective_node_scalar_fields, host_node_scalar_fields);
+        // HostCommPlan<double> collective_node_vectors_comms(collective_node_vector_fields, host_node_vector_fields, collective_node_scalars_comms);
+        // collective_node_scalars_comms.execute_comms();
+        // collective_node_vectors_comms.execute_comms();
+
+        // //collect nodal coordinates
+        // //convert nodes in elem back to global (convert back to local after we've collected global ids in collective vector)
+        // DistributedFArray<double> host_node_coords(host_node_map, mesh.num_dims);
+        // for (size_t node_id = 0; node_id < num_local_nodes; node_id++) {
+        //     for (int idim = 0; idim < mesh.num_dims; idim++) {
+        //         host_node_coords(node_id, idim) = State.node.coords.host(node_id, idim);
+        //     }
+        // } // end for elem_gid
+        // DistributedFArray<double> collective_node_coords(collective_node_map, mesh.num_dims);
+        // HostCommPlan<double> collective_node_coords_comms(collective_node_coords, host_node_coords, collective_node_scalars_comms);
+        // collective_node_coords_comms.execute_comms();
+
+        // if(myrank==0){
+        //     // create the folder structure if it does not exist
+        //     struct stat st;
+
+        //     if (stat("vtk", &st) != 0) {
+        //         int returnCode = system("mkdir vtk");
+
+        //         if (returnCode == 1) {
+        //             std::cout << "Unable to make vtk directory" << std::endl;
+        //         }
+        //     }
+        //     else{
+        //         if(solver_id==0 && graphics_id==0){
+        //             // delete the existing files inside
+        //             int returnCode = system("rm vtk/Fierro*");
+        //             if (returnCode == 1) {
+        //                 std::cout << "Unable to clear vtk/Fierro directory" << std::endl;
+        //             }
+        //         }
+        //     }
+
+        //     if (stat("vtk/data", &st) != 0) {
+        //         int returnCode = system("mkdir vtk/data");
+        //         if (returnCode == 1) {
+        //             std::cout << "Unable to make vtk/data directory" << std::endl;
+        //         }
+        //     }
+        //     else{
+        //         if(solver_id==0 && graphics_id==0){
+        //             // delete the existing files inside the folder
+        //             int returnCode = system("rm vtk/data/Fierro*");
+        //             if (returnCode == 1) {
+        //                 std::cout << "Unable to clear vtk/data directory" << std::endl;
+        //             }
+        //         }
+        //     }
+        // }
+        // // call the .vtu writer for element fields
+        // std::string elem_fields_name = "fields";
+
+        // if(myrank==0){
+        //     write_vtu(collective_node_coords,
+        //             collective_nodes_in_elem,
+        //             collective_elem_scalar_fields,
+        //             collective_elem_tensor_fields,
+        //             collective_node_scalar_fields,
+        //             collective_node_vector_fields,
+        //             elem_scalar_var_names,
+        //             elem_tensor_var_names,
+        //             node_scalar_var_names,
+        //             node_vector_var_names,
+        //             elem_fields_name,
+        //             graphics_id,
+        //             mesh.global_num_nodes,
+        //             mesh.global_num_elems,
+        //             num_nodes_in_elem,
+        //             Pn_order,
+        //             num_dims,
+        //             solver_id);
+        // }
+
+        // // ********************************
+        // //  Build and write the mat fields 
+        // // ********************************
+
+
+        // // note: the file path and folder was created in the elem and node outputs
+        // size_t num_mat_files_written = 0;
+        // if(num_mat_pt_scalar_vars > 0 || num_mat_pt_tensor_vars >0){
+
+        //     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+        //         const size_t num_mat_local_elems = State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id);
+        //         //array storing number of local elems for this material on each process
+        //         CArray<int> processes_num_local_mat_elems, gatherv_displacements;
+        //         if(myrank==0){
+        //             processes_num_local_mat_elems = CArray<int>(nranks);
+        //             gatherv_displacements = CArray<int>(nranks);
+        //         }
+        //         MPI_Gather(&num_mat_local_elems,1,MPI_INT,processes_num_local_mat_elems.pointer(),1,
+        //                     MPI_INT, 0, MPI_COMM_WORLD);
+
+        //         //set global element indices on this rank
+        //         HostDistributedMap host_mat_elem_map;
+        //         DistributedMap element_map = mesh.element_map;
+        //         DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_mat_elems(num_mat_local_elems);
+        //         for(int ielem = 0; ielem < num_mat_local_elems; ielem++){
+        //             global_indices_of_local_mat_elems(ielem) = element_map.getGlobalIndex(State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, ielem));
+        //         }
+        //         host_mat_elem_map = HostDistributedMap(global_indices_of_local_mat_elems);
+
+        //         //allocate arrays for distributed mat elem data
+        //         DistributedFArray<double> host_mat_elem_scalar_fields(host_mat_elem_map, num_mat_pt_scalar_vars, "mat_elem_scalars");
+        //         DistributedFArray<double> host_mat_elem_tensor_fields(host_mat_elem_map, num_mat_pt_tensor_vars, 3, 3, "mat_elem_tensors");
+
+        //         //collect global element indices on rank 0 for this mat
+        //         //tally total number of mat elems for rank 0
+        //         DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_collective_mat_elems;
+        //         long long int num_mat_collective_elems = 0;
+        //         if(myrank==0){
+        //             for(int irank=0; irank < nranks; irank++){
+        //                 gatherv_displacements(irank) = num_mat_collective_elems;
+        //                 num_mat_collective_elems += processes_num_local_mat_elems(irank);
+        //             }
+        //             global_indices_of_collective_mat_elems = DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace>(num_mat_collective_elems);
+        //         }
+        //         // if(myrank==0){
+        //         //     for(int irank=0; irank < nranks; irank++){
+        //         //         std::cout << "NUM local mat elem on rank " << irank << " is " << processes_num_local_mat_elems(irank) << std::endl;
+        //         //         std::cout << "gatherv displacement on rank " << irank << " is " << gatherv_displacements(irank) << std::endl;
+        //         //     }
+        //         // }
+        //         MPI_Gatherv(global_indices_of_local_mat_elems.device_pointer(), num_mat_local_elems, MPI_LONG_LONG_INT,
+        //                     global_indices_of_collective_mat_elems.device_pointer(), processes_num_local_mat_elems.pointer(),
+        //                     gatherv_displacements.pointer(), MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+
+        //         //use indices on rank 0 to construct rank 0 collective map for this mat
+        //         HostDistributedMap collective_mat_elem_map;
+        //         collective_mat_elem_map = HostDistributedMap(global_indices_of_collective_mat_elems);
+        //         //collective_mat_elem_map.print();
+
+        //         //collective storage for scalars and tensors using collective elem mat map
+        //         DistributedFArray<double> collective_mat_elem_scalar_fields(collective_mat_elem_map, num_mat_pt_scalar_vars, "mat_elem_scalars_collective");
+        //         DistributedFArray<double> collective_mat_elem_tensor_fields(collective_mat_elem_map, num_mat_pt_tensor_vars, 3, 3, "mat_elem_tensors_collective");
+
+        //         // set the nodal vars to zero size, we don't write these fields again
+        //         node_scalar_var_names.clear();
+        //         node_vector_var_names.clear();
+
+        //         // concatenate material fields into a single array
+        //         concatenate_mat_fields(State.MaterialPoints,
+        //                                 host_mat_elem_scalar_fields,
+        //                                 host_mat_elem_tensor_fields,
+        //                                 State.MaterialToMeshMaps.elem_in_mat_elem,
+        //                                 SimulationParameters.output_options.output_mat_pt_state,
+        //                                 num_mat_local_elems,
+        //                                 mat_id,
+        //                                 mat_den_id,
+        //                                 mat_pres_id,
+        //                                 mat_sie_id,
+        //                                 mat_sspd_id,
+        //                                 mat_mass_id,
+        //                                 mat_volfrac_id,
+        //                                 mat_geo_volfrac_id,  
+        //                                 mat_eroded_id,
+        //                                 mat_stress_id,
+        //                                 mat_conductivity_id,
+        //                                 mat_specific_heat_id);
+
+
+        //         std::string str_mat_val = std::to_string(mat_id);                       
+        //         std::string mat_fields_name = "mat";
+        //         mat_fields_name += str_mat_val;  // add the mat number
+
+        //         // the number of actual nodes belonging to the part (i.e., the material)
+        //         size_t num_mat_nodes = 0;
+
+        //         //communicate scalars, tensors, and nodes in elem to collective mat arrays on rank 0
+                
+        //         //collect nodes in elem for this material on rank 0
+        //         DistributedFArray<size_t> collective_mat_nodes_in_mat_elem(collective_mat_elem_map, num_nodes_in_elem, "collective_mat_nodes_in_mat_elem");
+        //         HostCommPlan<size_t> mat_nodes_in_elem_comms(collective_mat_nodes_in_mat_elem,collective_nodes_in_elem); //doesnt really do comms since all on rank 0
+        //         mat_nodes_in_elem_comms.execute_comms();
+
+        //         HostCommPlan<double> mat_elem_scalars_comms(collective_mat_elem_scalar_fields,host_mat_elem_scalar_fields);
+        //         mat_elem_scalars_comms.execute_comms();
+
+        //         HostCommPlan<double> mat_elem_tensors_comms(collective_mat_elem_tensor_fields,host_mat_elem_tensor_fields);
+        //         mat_elem_tensors_comms.execute_comms();
+
+        //         //define set of nodes for this mat, collect on rank 0, comms on coords, scalars, and vectors for nodes for this mat
+                
+        //         // build a unique mesh (element and nodes) for the material (i.e., the part)
+        //         DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> collective_mat_node_indices;
+        //         if(myrank==0){
+        //         build_material_node_list(mesh,
+        //                                 collective_mat_node_indices,
+        //                                 collective_mat_nodes_in_mat_elem,
+        //                                 State.MaterialToMeshMaps.elem_in_mat_elem,
+        //                                 mat_id,
+        //                                 num_mat_nodes,
+        //                                 num_mat_collective_elems,
+        //                                 num_nodes_in_elem,
+        //                                 num_dims);
+        //         }
+                
+        //         //map object for mat node indices
+        //         HostDistributedMap collective_mat_node_map = HostDistributedMap(collective_mat_node_indices);
+
+        //         DistributedFArray<double> collective_mat_node_coords(collective_mat_node_map, num_dims, "collective_mat_node_coords");
+        //         HostCommPlan<double> mat_node_coords_comms(collective_mat_node_coords,collective_node_coords); //doesnt really do comms since all on rank 0
+        //         mat_node_coords_comms.execute_comms();
+
+        //         DistributedFArray<double> collective_mat_node_scalar_fields(collective_mat_node_map, num_node_scalar_vars, "collective_mat_node_scalars");
+        //         HostCommPlan<double> mat_node_scalars_comms(collective_mat_node_scalar_fields,collective_node_scalar_fields); //doesnt really do comms since all on rank 0
+        //         mat_node_scalars_comms.execute_comms();
+
+        //         DistributedFArray<double> collective_mat_node_vector_fields(collective_mat_node_map, num_node_vector_vars, 3, "collective_mat_node_vectors");
+        //         HostCommPlan<double> mat_node_vectors_comms(collective_mat_node_vector_fields,collective_node_vector_fields); //doesnt really do comms since all on rank 0
+        //         mat_node_vectors_comms.execute_comms();
+
+        //         //convert collective mat_nodes_in_mat_elem so it uses contiguous node ids for this mat portion of the mesh
+        //         for (size_t elem_id = 0; elem_id < num_mat_collective_elems; elem_id++) {
+        //             for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+        //                 collective_mat_nodes_in_mat_elem(elem_id, node_lid) = collective_mat_node_map.getLocalIndex(collective_mat_nodes_in_mat_elem(elem_id, node_lid));
+        //             }
+        //         } // end for elem_gid
+                
+        //         // only write material data if the mat lives on the mesh, ie. has state allocated
+        //         if (num_mat_collective_elems>0&&myrank==0){
+        //             // write out a vtu file this 
+        //             write_vtu(collective_mat_node_coords,
+        //                         collective_mat_nodes_in_mat_elem,
+        //                         collective_mat_elem_scalar_fields,
+        //                         collective_mat_elem_tensor_fields,
+        //                         collective_mat_node_scalar_fields,
+        //                         collective_mat_node_vector_fields,
+        //                         mat_elem_scalar_var_names,
+        //                         mat_elem_tensor_var_names,
+        //                         node_scalar_var_names,
+        //                         node_vector_var_names,
+        //                         mat_fields_name,
+        //                         graphics_id,
+        //                         num_mat_nodes,
+        //                         num_mat_collective_elems,
+        //                         num_nodes_in_elem,
+        //                         Pn_order,
+        //                         num_dims,
+        //                         solver_id);
+
+
+        //             num_mat_files_written++;
+
+        //         } // end for mat_id
+
+        //     } // end if material is on the mesh
+
+        // } // end if mat variables are to be written
+
+
+        // // *************************************************
+        // //  write Paraview files to open the graphics files
+        // // *************************************************
+
+        // // save the graphics time
+        // graphics_times(graphics_id) = time_value;
+
+        // // check to see if an mesh state was written 
+        // bool write_mesh_state = false;
+        // if( num_elem_scalar_vars > 0 ||
+        //     num_elem_tensor_vars > 0 ||
+        //     num_node_scalar_vars > 0 ||
+        //     num_node_vector_vars > 0)
+        // {
+        //     write_mesh_state = true;
+        // }
+        // // check to see if a mat state was written
+        // bool write_mat_pt_state = false;
+        // if( num_mat_pt_scalar_vars > 0 ||
+        //     num_mat_pt_tensor_vars > 0)
+        // {
+        //         write_mat_pt_state = true;
+        // }
+
+        // // call the vtm file writer
+        // std::string mat_fields_name = "mat";
+        // if(myrank==0){
+        //     write_vtm(graphics_times,
+        //             elem_fields_name,
+        //             mat_fields_name,
+        //             time_value,
+        //             graphics_id,
+        //             num_mat_files_written,
+        //             write_mesh_state,
+        //             write_mat_pt_state,
+        //             solver_id);
+
+        //     // call the pvd file writer
+        //     write_pvd(graphics_times,
+        //             time_value,
+        //             graphics_id,
+        //             solver_id);
+        // }
+
+        // // increment graphics id counter
+        // graphics_id++; // this is private variable in the class
+    }
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -2900,7 +5092,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void write_ensight(Mesh_t& mesh,
         State_t& State,
-        SimulationParameters_t& SimulationParamaters,
+        SimulationParameters_t& SimulationParameters,
         double dt,
         double time_value,
         CArray<double> graphics_times,
@@ -2909,7 +5101,10 @@ public:
         std::vector<material_pt_state> material_pt_states)
     {
         size_t num_mats = State.MaterialPoints.num_material_points.size();
-
+        
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
         // ---- Update host data ----
 
         // material point values
@@ -2957,12 +5152,19 @@ public:
         const size_t num_dims  = mesh.num_dims;
 
         // save the cell state to an array for exporting to graphics files
-        auto elem_fields = CArray<double>(num_elems, num_scalar_vars);
+        
+        //host version of local element map for argument compatibility
+        HostDistributedMap host_local_element_map;
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_elements(mesh.num_local_elems, "global_indices_of_local_elements");
+        for(int ielem = 0; ielem < mesh.num_local_elems; ielem++){
+            global_indices_of_local_elements(ielem) = mesh.local_element_map.getGlobalIndex(ielem);
+        }
+        host_local_element_map = HostDistributedMap(global_indices_of_local_elements);
+        DistributedCArray<double> elem_fields = DistributedCArray<double>(host_local_element_map, num_scalar_vars, "elem_fields");
         int  elem_switch = 1;
 
-
         DCArrayKokkos<double> speed(num_elems, "speed");
-        FOR_ALL(elem_gid, 0, num_elems, {
+        FOR_ALL(elem_gid, 0, mesh.num_local_elems, {
             double elem_vel[3]; // note:initialization with a list won't work
             elem_vel[0] = 0.0;
             elem_vel[1] = 0.0;
@@ -2995,7 +5197,7 @@ public:
 
         // export material centeric data to the elements
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id);
 
             for (size_t mat_elem_sid = 0; mat_elem_sid < num_mat_elems; mat_elem_sid++) {
                 // 1 material per element
@@ -3019,17 +5221,53 @@ public:
 
         // export element centric data
         double e_switch = 1;
-        for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+        for (size_t elem_gid = 0; elem_gid < mesh.num_local_elems; elem_gid++) {
             elem_fields(elem_gid, 3) = State.GaussPoints.vol.host(elem_gid);
             elem_fields(elem_gid, 6) = speed.host(elem_gid);
             elem_fields(elem_gid, 8) = e_switch;
             elem_switch *= -1;
         } // end for elem_gid
 
-        // save the vertex vector fields to an array for exporting to graphics files
-        CArray<double> vec_fields(num_nodes, num_vec_vars, 3);
+        //collective map has all indices on rank 0 and non on other ranks
+        HostDistributedMap collective_elem_map;
+        long long int num_collective_elem_indices = 0;
+        if(myrank==0) num_collective_elem_indices = mesh.global_num_elems;
+        collective_elem_map = HostDistributedMap(mesh.global_num_elems, num_collective_elem_indices);
 
-        for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
+        //collective vector and comms to the collective vector for elem fields
+        DistributedCArray<double> collective_elem_fields(collective_elem_map, num_scalar_vars, "collective_elem_fields");
+        HostCommPlanLR<double> collective_elem_comms(collective_elem_fields, elem_fields);
+        collective_elem_comms.execute_comms();
+
+        //host of node in elem for Trilinos template argument compatibility
+        DistributedCArray<size_t> host_local_nodes_in_elem(host_local_element_map, mesh.num_nodes_in_elem, "host_local_nodes_in_elem");
+
+        //convert nodes in elem back to global (convert back to local after we've collected global ids in collective vector)
+        for (size_t elem_id = 0; elem_id < mesh.num_local_elems; elem_id++) {
+            for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                host_local_nodes_in_elem(elem_id, node_lid) = mesh.all_node_map.getGlobalIndex(mesh.local_nodes_in_elem.host(elem_id, node_lid));
+            }
+        } // end for elem_gid
+
+        //collect nodes in elem with a conversion back to global node ids
+        DistributedCArray<size_t> collective_nodes_in_elem(collective_elem_map, mesh.num_nodes_in_elem);
+        HostCommPlanLR<size_t> nodes_in_elem_comms(collective_nodes_in_elem, host_local_nodes_in_elem);
+
+        nodes_in_elem_comms.execute_comms();
+        
+        //NODE DATA COLLECTION
+        //host version of local node map for argument compatibility
+        HostDistributedMap host_node_map;
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_nodes(mesh.num_local_nodes, "global_indices_of_local_nodes");
+        for(int inode = 0; inode < mesh.num_local_nodes; inode++){
+            global_indices_of_local_nodes(inode) = mesh.node_map.getGlobalIndex(inode);
+        }
+        host_node_map = HostDistributedMap(global_indices_of_local_nodes);
+
+        // save the vertex vector fields to an array for exporting to graphics files
+        DistributedCArray<double> vec_fields(host_node_map, num_vec_vars, 3, "vec_fields");
+
+        for (size_t node_gid = 0; node_gid < mesh.num_local_nodes; node_gid++) {
             // position, var 0
             vec_fields(node_gid, 0, 0) = State.node.coords.host(node_gid, 0);
             vec_fields(node_gid, 0, 1) = State.node.coords.host(node_gid, 1);
@@ -3063,227 +5301,238 @@ public:
 
         } // end for loop over vertices
 
+        //collective map has all indices on rank 0 and non on other ranks
+        HostDistributedMap collective_node_map;
+        long long int num_collective_node_indices = 0;
+        if(myrank==0) num_collective_node_indices = mesh.global_num_nodes;
+        collective_node_map = HostDistributedMap(mesh.global_num_nodes, num_collective_node_indices);
 
-        //  ---------------------------------------------------------------------------
-        //  Setup of file and directoring for exporting
-        //  ---------------------------------------------------------------------------
-        FILE* out[20];   // the output files that are written to
-        char  filename[128];
-        int   max_len = sizeof filename;
-        int   str_output_len;
+        //collective vector and comms to the collective vector for node fields
+        DistributedCArray<double> collective_vec_fields(collective_node_map, num_vec_vars, 3, "collective_vec_fields");
+        HostCommPlanLR<double> collective_node_comms(collective_vec_fields, vec_fields);
+        collective_node_comms.execute_comms();
 
-        struct stat st;
+        if(myrank==0){
+            //  ---------------------------------------------------------------------------
+            //  Setup of file and directoring for exporting
+            //  ---------------------------------------------------------------------------
+            FILE* out[20];   // the output files that are written to
+            char  filename[128];
+            int   max_len = sizeof filename;
+            int   str_output_len;
 
-        if (stat("ensight", &st) != 0) {
-            system("mkdir ensight");
-        }
+            struct stat st;
 
-        if (stat("ensight/data", &st) != 0) {
-            system("mkdir ensight/data");
-        }
-
-        //  ---------------------------------------------------------------------------
-        //  Write the Geometry file
-        //  ---------------------------------------------------------------------------
-        // sprintf(filename, "ensight/data/%s.%05d.geo", name, graphics_id);
-        str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.geo", name, graphics_id);
-        // filename has the full string
-        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-
-        out[0] = fopen(filename, "w");
-
-        fprintf(out[0], "A graphics dump by Fierro \n");
-
-        fprintf(out[0], "%s", "EnSight Gold geometry\n");
-        fprintf(out[0], "%s", "node id assign\n");
-        fprintf(out[0], "%s", "element id assign\n");
-
-        fprintf(out[0], "part\n");
-        fprintf(out[0], "%10d\n", 1);
-        fprintf(out[0], "Mesh\n");
-
-        // --- vertices ---
-        fprintf(out[0], "coordinates\n");
-        fprintf(out[0], "%10lu\n", num_nodes);
-
-        // write all components of the point coordinates
-        for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-            fprintf(out[0], "%12.5e\n", State.node.coords.host(node_gid, 0));
-        }
-
-        for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-            fprintf(out[0], "%12.5e\n", State.node.coords.host(node_gid, 1));
-        }
-
-        for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-            if (num_dims == 3) {
-                fprintf(out[0], "%12.5e\n", State.node.coords.host(node_gid, 2));
+            if (stat("ensight", &st) != 0) {
+                system("mkdir ensight");
             }
-            else{
-                fprintf(out[0], "%12.5e\n", 0.0);
+
+            if (stat("ensight/data", &st) != 0) {
+                system("mkdir ensight/data");
             }
-        }
 
-        // --- elements ---
-        if (num_dims == 3) {
-            fprintf(out[0], "hexa8\n");
-        }
-        else{
-            fprintf(out[0], "quad4\n");
-        }
-        fprintf(out[0], "%10lu\n", num_elems);
-
-
-        int convert_ijk_to_ensight[8];
-        if(mesh.num_dims==3){
-            convert_ijk_to_ensight[0] = 0;
-            convert_ijk_to_ensight[1] = 1;
-            convert_ijk_to_ensight[2] = 3;
-            convert_ijk_to_ensight[3] = 2;
-            convert_ijk_to_ensight[4] = 4;
-            convert_ijk_to_ensight[5] = 5;
-            convert_ijk_to_ensight[6] = 7;
-            convert_ijk_to_ensight[7] = 6;
-        }
-        else{
-        
-            convert_ijk_to_ensight[0] = 0;
-            convert_ijk_to_ensight[1] = 1;
-            convert_ijk_to_ensight[2] = 2;
-            convert_ijk_to_ensight[3] = 3;
-            convert_ijk_to_ensight[4] = 4;
-            convert_ijk_to_ensight[5] = 5;
-            convert_ijk_to_ensight[6] = 6;
-            convert_ijk_to_ensight[7] = 7;
-        } // end if
-
-
-        // write all global point numbers for this cell
-        for (int elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-            for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                fprintf(out[0], "%10lu\t", mesh.nodes_in_elem.host(elem_gid, convert_ijk_to_ensight[node_lid]) + 1); // note: node_gid starts at 1
-            }
-            fprintf(out[0], "\n");
-        }
-
-        fclose(out[0]);
-
-        // ---------------------------------------------------------------------------
-        // Write the Scalar variable files
-        // ---------------------------------------------------------------------------
-
-        // ensight_vars = (den, pres,...)
-        for (int var = 0; var < num_scalar_vars; var++) {
-            // write a scalar value
-            // sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
-            str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+            //  ---------------------------------------------------------------------------
+            //  Write the Geometry file
+            //  ---------------------------------------------------------------------------
+            // sprintf(filename, "ensight/data/%s.%05d.geo", name, graphics_id);
+            str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.geo", name, graphics_id);
+            // filename has the full string
             if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
 
             out[0] = fopen(filename, "w");
 
-            fprintf(out[0], "Per_elem scalar values\n");
+            fprintf(out[0], "A graphics dump by Fierro \n");
+
+            fprintf(out[0], "%s", "EnSight Gold geometry\n");
+            fprintf(out[0], "%s", "node id assign\n");
+            fprintf(out[0], "%s", "element id assign\n");
+
             fprintf(out[0], "part\n");
             fprintf(out[0], "%10d\n", 1);
+            fprintf(out[0], "Mesh\n");
+
+            // --- vertices ---
+            fprintf(out[0], "coordinates\n");
+            fprintf(out[0], "%10lu\n", mesh.global_num_nodes);
+
+            // write all components of the point coordinates
+            for (int node_gid = 0; node_gid < mesh.global_num_nodes; node_gid++) {
+                fprintf(out[0], "%12.5e\n", collective_vec_fields(node_gid, 0, 0));
+            }
+
+            for (int node_gid = 0; node_gid < mesh.global_num_nodes; node_gid++) {
+                fprintf(out[0], "%12.5e\n", collective_vec_fields(node_gid, 0, 1));
+            }
+
+            for (int node_gid = 0; node_gid < mesh.global_num_nodes; node_gid++) {
+                if (num_dims == 3) {
+                    fprintf(out[0], "%12.5e\n", collective_vec_fields(node_gid, 0, 2));
+                }
+                else{
+                    fprintf(out[0], "%12.5e\n", 0.0);
+                }
+            }
+
+            // --- elements ---
             if (num_dims == 3) {
                 fprintf(out[0], "hexa8\n");
             }
             else{
                 fprintf(out[0], "quad4\n");
             }
+            fprintf(out[0], "%10lu\n", mesh.global_num_elems);
 
-            for (int elem_id = 0; elem_id < num_elems; elem_id++) {
-                fprintf(out[0], "%12.5e\n", elem_fields(elem_id, var));
+
+            int convert_ijk_to_ensight[8];
+            if(mesh.num_dims==3){
+                convert_ijk_to_ensight[0] = 0;
+                convert_ijk_to_ensight[1] = 1;
+                convert_ijk_to_ensight[2] = 3;
+                convert_ijk_to_ensight[3] = 2;
+                convert_ijk_to_ensight[4] = 4;
+                convert_ijk_to_ensight[5] = 5;
+                convert_ijk_to_ensight[6] = 7;
+                convert_ijk_to_ensight[7] = 6;
+            }
+            else{
+            
+                convert_ijk_to_ensight[0] = 0;
+                convert_ijk_to_ensight[1] = 1;
+                convert_ijk_to_ensight[2] = 2;
+                convert_ijk_to_ensight[3] = 3;
+                convert_ijk_to_ensight[4] = 4;
+                convert_ijk_to_ensight[5] = 5;
+                convert_ijk_to_ensight[6] = 6;
+                convert_ijk_to_ensight[7] = 7;
+            } // end if
+
+
+            // write all global point numbers for this cell
+            for (int elem_gid = 0; elem_gid < mesh.global_num_elems; elem_gid++) {
+                for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                    fprintf(out[0], "%10lu\t", collective_nodes_in_elem(elem_gid, convert_ijk_to_ensight[node_lid]) + 1); // note: node_gid starts at 1
+                }
+                fprintf(out[0], "\n");
             }
 
             fclose(out[0]);
-        } // end for var
 
-        //  ---------------------------------------------------------------------------
-        //  Write the Vector variable files
-        //  ---------------------------------------------------------------------------
+            // ---------------------------------------------------------------------------
+            // Write the Scalar variable files
+            // ---------------------------------------------------------------------------
 
-        // ensight vector vars = (position, velocity, force)
-        for (int var = 0; var < num_vec_vars; var++) {
-            // sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
-            str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+            // ensight_vars = (den, pres,...)
+            for (int var = 0; var < num_scalar_vars; var++) {
+                // write a scalar value
+                // sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+                str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, scalar_var_names[var]);
+                if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+
+                out[0] = fopen(filename, "w");
+
+                fprintf(out[0], "Per_elem scalar values\n");
+                fprintf(out[0], "part\n");
+                fprintf(out[0], "%10d\n", 1);
+                if (num_dims == 3) {
+                    fprintf(out[0], "hexa8\n");
+                }
+                else{
+                    fprintf(out[0], "quad4\n");
+                }
+
+                for (int elem_id = 0; elem_id < mesh.global_num_elems; elem_id++) {
+                    fprintf(out[0], "%12.5e\n", collective_elem_fields(elem_id, var));
+                }
+
+                fclose(out[0]);
+            } // end for var
+
+            //  ---------------------------------------------------------------------------
+            //  Write the Vector variable files
+            //  ---------------------------------------------------------------------------
+
+            // ensight vector vars = (position, velocity, force)
+            for (int var = 0; var < num_vec_vars; var++) {
+                // sprintf(filename, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+                str_output_len = snprintf(filename, max_len, "ensight/data/%s.%05d.%s", name, graphics_id, vec_var_names[var]);
+                if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+
+                out[0] = fopen(filename, "w");
+                // fprintf(out[0],"Per_node vector values\n");
+                // fprintf(out[0],"part\n");
+                // fprintf(out[0],"%10d \n",1);
+                // fprintf(out[0],"hexa8\n"); // WARNING, maybe bug here?
+
+                fprintf(out[0], "Per_node vector values\n");
+                fprintf(out[0], "part\n");
+                fprintf(out[0], "%10d\n", 1);
+                fprintf(out[0], "block\n");
+
+                for (int node_gid = 0; node_gid < mesh.global_num_nodes; node_gid++) {
+                    fprintf(out[0], "%12.5e\n", collective_vec_fields(node_gid, var, 0));
+                }
+
+                for (int node_gid = 0; node_gid < mesh.global_num_nodes; node_gid++) {
+                    fprintf(out[0], "%12.5e\n", collective_vec_fields(node_gid, var, 1));
+                }
+
+                for (int node_gid = 0; node_gid < mesh.global_num_nodes; node_gid++) {
+                    fprintf(out[0], "%12.5e\n", collective_vec_fields(node_gid, var, 2));
+                }
+
+                fclose(out[0]);
+            } // end for var
+
+            // ---------------------------------------------------------------------------
+            // Write the case file
+            // ---------------------------------------------------------------------------
+
+            // sprintf(filename, "ensight/%s.case", name);
+            str_output_len = snprintf(filename, max_len, "ensight/%s.case", name);
             if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
 
             out[0] = fopen(filename, "w");
-            // fprintf(out[0],"Per_node vector values\n");
-            // fprintf(out[0],"part\n");
-            // fprintf(out[0],"%10d \n",1);
-            // fprintf(out[0],"hexa8\n"); // WARNING, maybe bug here?
 
-            fprintf(out[0], "Per_node vector values\n");
-            fprintf(out[0], "part\n");
-            fprintf(out[0], "%10d\n", 1);
-            fprintf(out[0], "block\n");
+            fprintf(out[0], "FORMAT\n");
+            fprintf(out[0], "type: ensight gold\n");
+            fprintf(out[0], "GEOMETRY\n");
 
-            for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-                fprintf(out[0], "%12.5e\n", vec_fields(node_gid, var, 0));
+            // sprintf(filename, "model: data/%s.*****.geo\n", name);
+            str_output_len = snprintf(filename, max_len, "model: data/%s.*****.geo\n", name);
+            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+
+            fprintf(out[0], "%s", filename);
+            fprintf(out[0], "VARIABLE\n");
+
+            for (int var = 0; var < num_scalar_vars; var++) {
+                // sprintf(filename, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
+                str_output_len = snprintf(filename, max_len, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
+                if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+
+                fprintf(out[0], "%s", filename);
             }
 
-            for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-                fprintf(out[0], "%12.5e\n", vec_fields(node_gid, var, 1));
+            for (int var = 0; var < num_vec_vars; var++) {
+                // sprintf(filename, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
+                str_output_len = snprintf(filename, max_len, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
+                if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+                fprintf(out[0], "%s", filename);
             }
 
-            for (int node_gid = 0; node_gid < num_nodes; node_gid++) {
-                fprintf(out[0], "%12.5e\n", vec_fields(node_gid, var, 2));
-            }
+            fprintf(out[0], "TIME\n");
+            fprintf(out[0], "time set: 1\n");
+            fprintf(out[0], "number of steps: %4d\n", graphics_id + 1);
+            fprintf(out[0], "filename start number: 0\n");
+            fprintf(out[0], "filename increment: 1\n");
+            fprintf(out[0], "time values: \n");
 
+            graphics_times(graphics_id) = time_value;
+
+            for (int i = 0; i <= graphics_id; i++) {
+                fprintf(out[0], "%12.5e\n", graphics_times(i));
+            }
             fclose(out[0]);
-        } // end for var
-
-        // ---------------------------------------------------------------------------
-        // Write the case file
-        // ---------------------------------------------------------------------------
-
-        // sprintf(filename, "ensight/%s.case", name);
-        str_output_len = snprintf(filename, max_len, "ensight/%s.case", name);
-        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-
-        out[0] = fopen(filename, "w");
-
-        fprintf(out[0], "FORMAT\n");
-        fprintf(out[0], "type: ensight gold\n");
-        fprintf(out[0], "GEOMETRY\n");
-
-        // sprintf(filename, "model: data/%s.*****.geo\n", name);
-        str_output_len = snprintf(filename, max_len, "model: data/%s.*****.geo\n", name);
-        if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-
-        fprintf(out[0], "%s", filename);
-        fprintf(out[0], "VARIABLE\n");
-
-        for (int var = 0; var < num_scalar_vars; var++) {
-            // sprintf(filename, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
-            str_output_len = snprintf(filename, max_len, "scalar per element: %s data/%s.*****.%s\n", scalar_var_names[var], name, scalar_var_names[var]);
-            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-
-            fprintf(out[0], "%s", filename);
         }
-
-        for (int var = 0; var < num_vec_vars; var++) {
-            // sprintf(filename, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
-            str_output_len = snprintf(filename, max_len, "vector per node: %s data/%s.*****.%s\n", vec_var_names[var], name, vec_var_names[var]);
-            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-            fprintf(out[0], "%s", filename);
-        }
-
-        fprintf(out[0], "TIME\n");
-        fprintf(out[0], "time set: 1\n");
-        fprintf(out[0], "number of steps: %4d\n", graphics_id + 1);
-        fprintf(out[0], "filename start number: 0\n");
-        fprintf(out[0], "filename increment: 1\n");
-        fprintf(out[0], "time values: \n");
-
-        graphics_times(graphics_id) = time_value;
-
-        for (int i = 0; i <= graphics_id; i++) {
-            fprintf(out[0], "%12.5e\n", graphics_times(i));
-        }
-        fclose(out[0]);
-
         // ---------------------------------------------------------------------------
         // Done writing the graphics dump
         // ---------------------------------------------------------------------------
@@ -3292,7 +5541,7 @@ public:
         graphics_id++;
 
         delete[] name;
-
+        
 
         return;
     }
@@ -3312,7 +5561,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void write_vtk_old(Mesh_t& mesh,
         State_t& State,
-        SimulationParameters_t& SimulationParamaters,
+        SimulationParameters_t& SimulationParameters,
         double dt,
         double time_value,
         CArray<double> graphics_times,
@@ -3320,7 +5569,10 @@ public:
         std::vector<gauss_pt_state> gauss_pt_states,
         std::vector<material_pt_state> material_pt_states)
     {
-
+        
+        int myrank, nranks;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        MPI_Comm_size(MPI_COMM_WORLD,&nranks);
         size_t num_mats = State.MaterialPoints.num_material_points.size();
 
         // ---- Update host data ----
@@ -3379,8 +5631,16 @@ public:
         const size_t num_elems = mesh.num_elems;
         const size_t num_dims  = mesh.num_dims;
 
+        //host version of local element map for argument compatibility
+        HostDistributedMap host_local_element_map;
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_elements;
+        for(int ielem = 0; ielem < mesh.num_local_elems; ielem++){
+            global_indices_of_local_elements(ielem) = mesh.local_element_map.getGlobalIndex(ielem);
+        }
+        host_local_element_map = HostDistributedMap(global_indices_of_local_elements);
+
         // save the cell state to an array for exporting to graphics files
-        auto elem_fields = CArray<double>(num_elems, num_cell_scalar_vars);
+        auto elem_fields = DistributedCArray<double>(host_local_element_map, num_cell_scalar_vars);
         int  elem_switch = 1;
 
         DCArrayKokkos<double> speed(num_elems, "speed");
@@ -3418,7 +5678,7 @@ public:
 
         // export material centeric data to the elements
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id);
 
             for (size_t mat_elem_sid = 0; mat_elem_sid < num_mat_elems; mat_elem_sid++) {
                 // 1 material per element
@@ -3445,16 +5705,30 @@ public:
 
         // export element centric data
         double e_switch = 1;
-        for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+        for (size_t elem_gid = 0; elem_gid < mesh.num_local_elems; elem_gid++) {
             elem_fields(elem_gid, 3) = State.GaussPoints.vol.host(elem_gid);
             elem_fields(elem_gid, 6) = speed.host(elem_gid);
             elem_fields(elem_gid, 8) = State.GaussPoints.div.host(elem_gid);
             elem_switch *= -1;
         } // end for elem_gid
 
+        //collective map has all indices on rank 0 and non on other ranks
+        HostDistributedMap collective_elem_map;
+        long long int num_collective_elem_indices = 0;
+        if(myrank==0) num_collective_elem_indices = mesh.global_num_elems;
+        collective_elem_map = HostDistributedMap(mesh.global_num_elems, num_collective_elem_indices);
+
+        //host version of local element map for argument compatibility
+        HostDistributedMap host_node_map;
+        DCArrayKokkos<long long int, Kokkos::LayoutLeft , Kokkos::HostSpace> global_indices_of_local_nodes;
+        for(int inode = 0; inode < mesh.num_local_nodes; inode++){
+            global_indices_of_local_nodes(inode) = mesh.node_map.getGlobalIndex(inode);
+        }
+        host_node_map = HostDistributedMap(global_indices_of_local_nodes);
+
         // save the vertex vector fields to an array for exporting to graphics files
-        CArray<double> vec_fields(num_nodes, num_point_vec_vars, 3);
-        CArray<double> point_scalar_fields(num_nodes, num_point_scalar_vars);
+        DistributedCArray<double> vec_fields(host_node_map, num_point_vec_vars, 3);
+        DistributedCArray<double> point_scalar_fields(host_node_map, num_point_scalar_vars);
 
         for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
             // position, var 0
@@ -3658,8 +5932,8 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void concatenate_elem_fields(const MaterialPoint_t& MaterialPoints,
                                  const GaussPoint_t& GaussPoints,
-                                 DCArrayKokkos<double>& elem_scalar_fields,
-                                 DCArrayKokkos<double>& elem_tensor_fields,
+                                 DistributedDFArray<double>& elem_scalar_fields,
+                                 DistributedDFArray<double>& elem_tensor_fields,
                                  const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                                  const std::vector<material_pt_state>& output_elem_state,
                                  const std::vector<gauss_pt_state>& output_gauss_pt_states,
@@ -3686,71 +5960,71 @@ public:
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
-                        elem_scalar_fields(den_id, elem_gid) += MaterialPoints.den(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
+                        elem_scalar_fields(elem_gid, den_id) += MaterialPoints.den(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.volfrac(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::pressure:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
-                        elem_scalar_fields(pres_id, elem_gid) += MaterialPoints.pres(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
+                        elem_scalar_fields(elem_gid, pres_id) += MaterialPoints.pres(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.volfrac(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::specific_internal_energy:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         // extensive ie here, but after this function, it will become specific ie
-                        elem_scalar_fields(sie_id, elem_gid) += MaterialPoints.mass(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.sie(mat_id, mat_elem_sid);
+                        elem_scalar_fields(elem_gid, sie_id) += MaterialPoints.mass(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.sie(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::sound_speed:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
-                        elem_scalar_fields(sspd_id, elem_gid) += MaterialPoints.sspd(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
+                        elem_scalar_fields(elem_gid, sspd_id) += MaterialPoints.sspd(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.volfrac(mat_id, mat_elem_lid)*
+                                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::mass:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
-                        elem_scalar_fields(mass_id, elem_gid) += MaterialPoints.mass(mat_id, mat_elem_sid);
+                        elem_scalar_fields(elem_gid, mass_id) += MaterialPoints.mass(mat_id, mat_elem_lid);
                     });
                     break;
                 // ---------------    
                 // tensor vars
                 // ---------------
                 case material_pt_state::stress:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
                         // average tensor fields, it is always 3D
@@ -3759,10 +6033,10 @@ public:
                             for(size_t j=0; j<3; j++){
 
                                 // stress tensor 
-                                elem_tensor_fields(stress_id, elem_gid, i, j) +=
-                                                MaterialPoints.stress(mat_id, mat_elem_sid,i,j) *
-                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
-                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
+                                elem_tensor_fields(elem_gid, stress_id, i, j) +=
+                                                MaterialPoints.stress(mat_id, mat_elem_lid,i,j) *
+                                                MaterialPoints.volfrac(mat_id, mat_elem_lid)*
+                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                             } // end for
                         } // end for
                     });
@@ -3770,28 +6044,28 @@ public:
 
                 // thermal solver vars
                 case material_pt_state::thermal_conductivity:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
-                        elem_scalar_fields(conductivity_id, elem_gid) += MaterialPoints.conductivity(mat_id, mat_elem_sid)*
-                                                                             MaterialPoints.volfrac(mat_id, mat_elem_sid)*
-                                                                             MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
+                        elem_scalar_fields(elem_gid, conductivity_id) += MaterialPoints.conductivity(mat_id, mat_elem_lid)*
+                                                                             MaterialPoints.volfrac(mat_id, mat_elem_lid)*
+                                                                             MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                     });
                     break;
 
                 case material_pt_state::specific_heat:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
-                        elem_scalar_fields(specific_heat_id, elem_gid) += MaterialPoints.specific_heat(mat_id, mat_elem_sid)*
-                                                                              MaterialPoints.volfrac(mat_id, mat_elem_sid)*
-                                                                              MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
+                        elem_scalar_fields(elem_gid, specific_heat_id) += MaterialPoints.specific_heat(mat_id, mat_elem_lid)*
+                                                                              MaterialPoints.volfrac(mat_id, mat_elem_lid)*
+                                                                              MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                     });
                     break;
 
@@ -3824,14 +6098,14 @@ public:
                 case gauss_pt_state::volume:
 
                     FOR_ALL(elem_gid, 0, num_elems, {
-                        elem_scalar_fields(vol_id, elem_gid) = GaussPoints.vol(elem_gid);
+                        elem_scalar_fields(elem_gid, vol_id) = GaussPoints.vol(elem_gid);
                     });
 
                     break;
                 case gauss_pt_state::divergence_velocity:
 
                     FOR_ALL(elem_gid, 0, num_elems, {
-                        elem_scalar_fields(div_id, elem_gid) = GaussPoints.div(elem_gid);
+                        elem_scalar_fields(elem_gid, div_id) = GaussPoints.div(elem_gid);
                     });
 
                     break;
@@ -3839,7 +6113,7 @@ public:
                 case gauss_pt_state::level_set:
 
                     FOR_ALL(elem_gid, 0, num_elems, {
-                        elem_scalar_fields(level_set_id, elem_gid) = GaussPoints.level_set(elem_gid);
+                        elem_scalar_fields(elem_gid, level_set_id) = GaussPoints.level_set(elem_gid);
                     });
 
                     break;
@@ -3850,11 +6124,201 @@ public:
                     FOR_ALL(elem_gid, 0, num_elems, {
                         for (size_t i=0; i<3; i++){
                             for(size_t j=0; j<3; j++){
-                                elem_tensor_fields(vel_grad_id, elem_gid, i, j) = 
+                                elem_tensor_fields(elem_gid, vel_grad_id, i, j) = 
                                                     GaussPoints.vel_grad(elem_gid, i, j);
                             }
                         } // end for
                     });
+
+                    break;
+
+                // add other gauss variables here
+
+            } // end switch
+        } // end loop over gauss_pt_states
+
+
+        // --- add end gauss point loop --
+
+    } // end of function
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn copy_elem_fields
+    ///
+    /// \brief A function to assign dual values to host only array for tpetra compatibility
+    ///
+    ///
+    /// \param MaterialPoints a struct containing the material point state arrays
+    /// \param elem_scalar_fields the scalar fields
+    /// \param elem_tensor_fields the tensor fields
+    /// \param elem_in_mat_elem a listing of the element ids the material resides in
+    /// \param output_elem_state a std::vector of enums specifying the elem avg outputs
+    /// \param num_mat_elems the number of elements the material resides in
+    /// \param mat_id the index for the material
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void copy_elem_fields(DistributedDFArray<double>& elem_scalar_fields,
+                          DistributedDFArray<double>& elem_tensor_fields,
+                          DistributedFArray<double>& host_elem_scalar_fields,
+                          DistributedFArray<double>& host_elem_tensor_fields,
+                          const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
+                          const std::vector<material_pt_state>& output_elem_state,
+                          const std::vector<gauss_pt_state>& output_gauss_pt_states,
+                          const size_t num_mat_elems,
+                          const size_t mat_id,
+                          const size_t num_elems,
+                          const int den_id,
+                          const int pres_id,
+                          const int sie_id,
+                          const int sspd_id,
+                          const int mass_id,
+                          const int stress_id,
+                          const int vol_id,
+                          const int div_id,
+                          const int level_set_id,
+                          const int vel_grad_id,
+                          const int conductivity_id,
+                          const int specific_heat_id)
+    {
+
+        // --- loop over the material point states
+
+        for (auto field : output_elem_state){
+            switch(field){
+                // scalar vars
+                case material_pt_state::density:
+                    for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+
+                        // field
+                        host_elem_scalar_fields(elem_gid, den_id) = elem_scalar_fields.host(elem_gid, den_id);
+                    }
+                    break;
+                case material_pt_state::pressure:
+                    for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+
+                        // field
+                        host_elem_scalar_fields(elem_gid, pres_id) = elem_scalar_fields.host(elem_gid, pres_id);
+                    }
+                    break;
+                case material_pt_state::specific_internal_energy:
+                    for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+
+                        // field
+                        // extensive ie here, but after this function, it will become specific ie
+                        host_elem_scalar_fields(elem_gid, sie_id) = elem_scalar_fields.host(elem_gid, sie_id);
+                    }
+                    break;
+                case material_pt_state::sound_speed:
+                    for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+
+                        // field
+                        host_elem_scalar_fields(elem_gid, sspd_id) = elem_scalar_fields.host(elem_gid, sspd_id);
+                    }
+                    break;
+                case material_pt_state::mass:
+                    for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+
+                        // field
+                        host_elem_scalar_fields(elem_gid, mass_id) = elem_scalar_fields.host(elem_gid, mass_id);
+                    }
+                    break;
+                // ---------------    
+                // tensor vars
+                // ---------------
+                case material_pt_state::stress:
+                    for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+
+                        // field
+                        // average tensor fields, it is always 3D
+                        // note: paraview is row-major, CArray convention
+                        for (size_t i=0; i<3; i++){
+                            for(size_t j=0; j<3; j++){
+
+                                // stress tensor 
+                                host_elem_tensor_fields(elem_gid, stress_id, i, j) = elem_tensor_fields.host(elem_gid, stress_id, i, j);
+                            } // end for
+                        } // end for
+                    }
+                    break;
+
+                // thermal solver vars
+                case material_pt_state::thermal_conductivity:
+                    for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+
+                        // field
+                        host_elem_scalar_fields(elem_gid, conductivity_id) = elem_scalar_fields.host(elem_gid, conductivity_id);
+                    }
+                    break;
+
+                case material_pt_state::specific_heat:
+                    for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+
+                        // field
+                        host_elem_scalar_fields(elem_gid, specific_heat_id) = elem_scalar_fields.host(elem_gid, specific_heat_id);
+                    }
+                    break;
+
+
+                // add other variables here
+
+                // not used variables
+                case material_pt_state::volume_fraction:
+                    break;
+                case material_pt_state::eroded_flag:
+                    break;
+                case material_pt_state::elastic_modulii:
+                    break;
+                case material_pt_state::shear_modulii:
+                    break;
+                case material_pt_state::poisson_ratios:
+                    break;
+                case material_pt_state::heat_flux:
+                    break;
+            } // end switch
+        }// end for over mat point state
+
+        
+        // --- add loop over gauss points ---
+
+        // export element centric data
+        for (auto field : output_gauss_pt_states){
+            switch(field){
+                // scalars
+                case gauss_pt_state::volume:
+
+                    for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+                        host_elem_scalar_fields(elem_gid, vol_id) = elem_scalar_fields.host(elem_gid, vol_id);
+                    }
+
+                    break;
+                case gauss_pt_state::divergence_velocity:
+
+                    for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+                        host_elem_scalar_fields(elem_gid, div_id) = elem_scalar_fields.host(elem_gid, div_id);
+                    }
+
+                    break;
+
+                case gauss_pt_state::level_set:
+
+                    for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+                        host_elem_scalar_fields(elem_gid, level_set_id) = elem_scalar_fields.host(elem_gid, level_set_id);
+                    }
+
+                    break;
+
+                // tensors
+                case gauss_pt_state::gradient_velocity:
+                    // note: paraview is row-major, CArray convention
+                    for(int elem_gid = 0; elem_gid < num_elems; elem_gid++){
+                        for (size_t i=0; i<3; i++){
+                            for(size_t j=0; j<3; j++){
+                                host_elem_tensor_fields(elem_gid, vel_grad_id, i, j) = 
+                                                    elem_tensor_fields.host(elem_gid, vel_grad_id, i, j);
+                            }
+                        } // end for
+                    }
 
                     break;
 
@@ -3885,8 +6349,8 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void concatenate_mat_fields(const MaterialPoint_t& MaterialPoints,
-                                DCArrayKokkos<double>& mat_elem_scalar_fields,
-                                DCArrayKokkos<double>& mat_elem_tensor_fields,
+                                DistributedDFArray<double>& mat_elem_scalar_fields,
+                                DistributedDFArray<double>& mat_elem_tensor_fields,
                                 const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                                 const std::vector<material_pt_state>& output_material_pt_states,
                                 const size_t num_mat_elems,
@@ -3904,76 +6368,74 @@ public:
                                 const int mat_specific_heat_id)
     {
       
-        // --- loop over the material point states
-
         for (auto field : output_material_pt_states){
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(mat_den_id, mat_elem_sid) = MaterialPoints.den(mat_id, mat_elem_sid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_den_id) = MaterialPoints.den(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::pressure:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(mat_pres_id, mat_elem_sid) = MaterialPoints.pres(mat_id, mat_elem_sid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_pres_id) = MaterialPoints.pres(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::specific_internal_energy:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
                         // extensive ie here, but after this function, it will become specific ie
-                        mat_elem_scalar_fields(mat_sie_id, mat_elem_sid) = MaterialPoints.sie(mat_id, mat_elem_sid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_sie_id) = MaterialPoints.sie(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::sound_speed:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(mat_sspd_id, mat_elem_sid) = MaterialPoints.sspd(mat_id, mat_elem_sid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_sspd_id) = MaterialPoints.sspd(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::mass:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(mat_mass_id, mat_elem_sid) = MaterialPoints.mass(mat_id, mat_elem_sid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_mass_id) = MaterialPoints.mass(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::volume_fraction:
                     // material volume fraction
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
                         // this is the volume fraction of a material within a part
-                        mat_elem_scalar_fields(mat_volfrac_id, mat_elem_sid) = MaterialPoints.volfrac(mat_id, mat_elem_sid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_volfrac_id) = MaterialPoints.volfrac(mat_id, mat_elem_lid);
                     });
 
                     // geometric volume fraction
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
                         // this is the geometric volume fraction (interface reconstruction)
-                        mat_elem_scalar_fields(mat_geo_volfrac_id, mat_elem_sid) = MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_geo_volfrac_id) = MaterialPoints.geo_volfrac(mat_id, mat_elem_lid);
                     });
                     break;
                 case material_pt_state::eroded_flag:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
-                        mat_elem_scalar_fields(mat_eroded_id, mat_elem_sid) = (double)MaterialPoints.eroded(mat_id, mat_elem_sid);
+                        mat_elem_scalar_fields(mat_elem_lid, mat_eroded_id) = (double)MaterialPoints.eroded(mat_id, mat_elem_lid);
                     });
                     break;
                 // ---------------    
                 // tensor vars
                 // ---------------
                 case material_pt_state::stress:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // field
                         // average tensor fields, it is always 3D
@@ -3982,8 +6444,8 @@ public:
                             for(size_t j=0; j<3; j++){
 
                                 // stress tensor 
-                                mat_elem_tensor_fields(mat_stress_id, mat_elem_sid, i, j) =
-                                                MaterialPoints.stress(mat_id, mat_elem_sid,i,j);
+                                mat_elem_tensor_fields(mat_elem_lid, mat_stress_id, i, j) =
+                                                MaterialPoints.stress(mat_id, mat_elem_lid,i,j);
                             } // end for
                         } // end for
                     });
@@ -3991,24 +6453,24 @@ public:
 
                 // thermal solver vars
                 case material_pt_state::thermal_conductivity:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
-                        mat_elem_scalar_fields(mat_conductivity_id, elem_gid) += MaterialPoints.conductivity(mat_id, mat_elem_sid);
+                        mat_elem_scalar_fields(elem_gid, mat_conductivity_id) += MaterialPoints.conductivity(mat_id, mat_elem_lid);
                     });
                     break;
 
                 case material_pt_state::specific_heat:
-                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                    FOR_ALL(mat_elem_lid, 0, num_mat_elems, {
 
                         // get elem gid
-                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_lid);
 
                         // field
-                        mat_elem_scalar_fields(mat_specific_heat_id, elem_gid) += MaterialPoints.specific_heat(mat_id, mat_elem_sid);
+                        mat_elem_scalar_fields(elem_gid, mat_specific_heat_id) += MaterialPoints.specific_heat(mat_id, mat_elem_lid);
                     });
                     break;
 
@@ -4025,6 +6487,7 @@ public:
                     break;
             } // end switch
         }// end for over mat point state
+            
 
 
     } // end of function
@@ -4033,7 +6496,7 @@ public:
     ///
     /// \fn concatenate_nodal_fields
     ///
-    /// \brief A function to calculate the average of elem fields
+    /// \brief A function to calculate the average of nodal fields
     ///
     ///
     /// \param Node a struct containing the material point state arrays
@@ -4046,8 +6509,8 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void concatenate_nodal_fields(const node_t& Node,
-                                  DCArrayKokkos<double>& node_scalar_fields,
-                                  DCArrayKokkos<double>& node_vector_fields,
+                                  DistributedDFArray<double>& node_scalar_fields,
+                                  DistributedDFArray<double>& node_vector_fields,
                                   std::vector<node_state>& output_node_states,
                                   double dt,
                                   const size_t num_nodes,
@@ -4065,13 +6528,13 @@ public:
                 case node_state::mass:
 
                     FOR_ALL(node_gid, 0, num_nodes, {
-                        node_scalar_fields(node_mass_id, node_gid) = Node.mass(node_gid);
+                        node_scalar_fields(node_gid, node_mass_id) = Node.mass(node_gid);
                     });
 
                     break;
                 case node_state::temp:
                     FOR_ALL(node_gid, 0, num_nodes, {
-                        node_scalar_fields(node_temp_id, node_gid) = Node.temp(node_gid);
+                        node_scalar_fields(node_gid, node_temp_id) = Node.temp(node_gid);
                     });
 
                     break;
@@ -4082,13 +6545,13 @@ public:
 
                     FOR_ALL(node_gid, 0, num_nodes, {
 
-                        node_vector_fields(node_coord_id, node_gid, 0) = Node.coords(node_gid, 0);
-                        node_vector_fields(node_coord_id, node_gid, 1) = Node.coords(node_gid, 1);
+                        node_vector_fields(node_gid, node_coord_id, 0) = Node.coords(node_gid, 0);
+                        node_vector_fields(node_gid, node_coord_id, 1) = Node.coords(node_gid, 1);
                         if (num_dims == 2) {
-                            node_vector_fields(node_coord_id, node_gid, 2) = 0.0;
+                            node_vector_fields(node_gid, node_coord_id, 2) = 0.0;
                         }
                         else{
-                            node_vector_fields(node_coord_id, node_coord_id, 2) = Node.coords(node_gid, 2);
+                            node_vector_fields(node_gid, node_coord_id, 2) = Node.coords(node_gid, 2);
                         } // end if
 
                     }); // end parallel for
@@ -4099,23 +6562,23 @@ public:
                     FOR_ALL(node_gid, 0, num_nodes, {
 
                         // velocity, var is node_vel_id 
-                        node_vector_fields(node_vel_id, node_gid, 0) = Node.vel(node_gid, 0);
-                        node_vector_fields(node_vel_id, node_gid, 1) = Node.vel(node_gid, 1);
+                        node_vector_fields(node_gid, node_vel_id, 0) = Node.vel(node_gid, 0);
+                        node_vector_fields(node_gid, node_vel_id, 1) = Node.vel(node_gid, 1);
                         if (num_dims == 2) {
-                            node_vector_fields(node_vel_id, node_gid, 2) = 0.0;
+                            node_vector_fields(node_gid, node_vel_id, 2) = 0.0;
                         }
                         else{
-                            node_vector_fields(node_vel_id, node_gid, 2) = Node.vel(node_gid, 2);
+                            node_vector_fields(node_gid, node_vel_id, 2) = Node.vel(node_gid, 2);
                         } // end if
 
                         // accellerate, var is node_accel_id            
-                        node_vector_fields(node_accel_id, node_gid, 0) = (Node.vel(node_gid, 0) - Node.vel_n0(node_gid, 0))/dt;
-                        node_vector_fields(node_accel_id, node_gid, 1) = (Node.vel(node_gid, 1) - Node.vel_n0(node_gid, 1))/dt;
+                        node_vector_fields(node_gid, node_accel_id, 0) = (Node.vel(node_gid, 0) - Node.vel_n0(node_gid, 0))/dt;
+                        node_vector_fields(node_gid, node_accel_id, 1) = (Node.vel(node_gid, 1) - Node.vel_n0(node_gid, 1))/dt;
                         if (num_dims == 2) {
-                            node_vector_fields(node_accel_id, node_gid, 2) = 0.0;
+                            node_vector_fields(node_gid, node_accel_id, 2) = 0.0;
                         }
                         else{
-                            node_vector_fields(node_accel_id, node_gid, 2) = (Node.vel(node_gid, 2) - Node.vel_n0(node_gid, 2))/dt;
+                            node_vector_fields(node_gid, node_accel_id, 2) = (Node.vel(node_gid, 2) - Node.vel_n0(node_gid, 2))/dt;
                         } // end if
 
                     }); // end parallel for
@@ -4128,16 +6591,144 @@ public:
                     FOR_ALL(node_gid, 0, num_nodes, {
 
                         // velocity, var is node_vel_id 
-                        node_vector_fields(node_grad_level_set_id, node_gid, 0) = Node.gradient_level_set(node_gid, 0);
-                        node_vector_fields(node_grad_level_set_id, node_gid, 1) = Node.gradient_level_set(node_gid, 1);
+                        node_vector_fields(node_gid, node_grad_level_set_id, 0) = Node.gradient_level_set(node_gid, 0);
+                        node_vector_fields(node_gid, node_grad_level_set_id, 1) = Node.gradient_level_set(node_gid, 1);
                         if (num_dims == 2) {
-                            node_vector_fields(node_grad_level_set_id, node_gid, 2) = 0.0;
+                            node_vector_fields(node_gid, node_grad_level_set_id, 2) = 0.0;
                         }
                         else{
-                            node_vector_fields(node_grad_level_set_id, node_gid, 2) = Node.gradient_level_set(node_gid, 2);
+                            node_vector_fields(node_gid, node_grad_level_set_id, 2) = Node.gradient_level_set(node_gid, 2);
                         } // end if
 
                     }); // end parallel for
+
+                    break;                
+                
+                // -- not used vars
+                case node_state::force:
+                    break;
+
+                // heat transer vars
+                case node_state::heat_transfer:
+                    break;
+                // tensors
+            } // end switch
+        } // end for over
+
+        
+
+    } // end function
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn copy_nodal_fields
+    ///
+    /// \brief A function to calculate the average of nodal fields
+    ///
+    ///
+    /// \param Node a struct containing the material point state arrays
+    /// \param elem_scalar_fields the scalar fields
+    /// \param elem_tensor_fields the tensor fields
+    /// \param elem_in_mat_elem a listing of the element ids the material resides in
+    /// \param output_node_states a std::vector of enums specifying the model
+    /// \param num_mat_elems the number of elements the material resides in
+    /// \param mat_id the index for the material
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void copy_nodal_fields(DistributedFArray<double>& host_node_scalar_fields,
+                            DistributedFArray<double>& host_node_vector_fields,
+                            DistributedDFArray<double>& node_scalar_fields,
+                            DistributedDFArray<double>& node_vector_fields,
+                            std::vector<node_state>& output_node_states,
+                            double dt,
+                            const size_t num_nodes,
+                            const size_t num_dims,
+                            const int node_mass_id,
+                            const int node_vel_id,
+                            const int node_accel_id,
+                            const int node_coord_id,
+                            const int node_grad_level_set_id,
+                            const int node_temp_id)
+    {
+        for (auto field : output_node_states){
+            switch(field){
+                // scalars
+                case node_state::mass:
+
+                    for(long long int node_gid = 0; node_gid < num_nodes; node_gid++) {
+                        host_node_scalar_fields(node_gid, node_mass_id) = node_scalar_fields.host(node_gid, node_mass_id);
+                    }
+
+                    break;
+                case node_state::temp:
+                    for(long long int node_gid = 0; node_gid < num_nodes; node_gid++) {
+                        host_node_scalar_fields(node_gid, node_temp_id) = node_scalar_fields.host(node_gid, node_temp_id);
+                    }
+
+                    break;
+
+                // vector fields
+
+                case node_state::coords:
+
+                    for(long long int node_gid = 0; node_gid < num_nodes; node_gid++) {
+
+                        host_node_vector_fields(node_gid, node_coord_id, 0) = node_vector_fields.host(node_gid, node_coord_id, 0);
+                        host_node_vector_fields(node_gid, node_coord_id, 1) = node_vector_fields.host(node_gid, node_coord_id, 1);
+                        if (num_dims == 2) {
+                            host_node_vector_fields(node_gid, node_coord_id, 2) = 0.0;
+                        }
+                        else{
+                            host_node_vector_fields(node_gid, node_coord_id, 2) = node_vector_fields.host(node_gid, node_coord_id, 2);
+                        } // end if
+
+                    } // end parallel for
+
+                    break;
+                case node_state::velocity:
+
+                    for(long long int node_gid = 0; node_gid < num_nodes; node_gid++) {
+
+                        // velocity, var is node_vel_id 
+                        host_node_vector_fields(node_gid, node_vel_id, 0) = node_vector_fields.host(node_gid, node_vel_id, 0);
+                        host_node_vector_fields(node_gid, node_vel_id, 1) = node_vector_fields.host(node_gid, node_vel_id, 1);
+                        if (num_dims == 2) {
+                            host_node_vector_fields(node_gid, node_vel_id, 2) = 0.0;
+                        }
+                        else{
+                            host_node_vector_fields(node_gid, node_vel_id, 2) = node_vector_fields.host(node_gid, node_vel_id, 2);
+                        } // end if
+
+                        // accellerate, var is node_accel_id            
+                        host_node_vector_fields(node_gid, node_accel_id, 0) = node_vector_fields.host(node_gid, node_accel_id, 0);
+                        host_node_vector_fields(node_gid, node_accel_id, 1) = node_vector_fields.host(node_gid, node_accel_id, 1);
+                        if (num_dims == 2) {
+                            host_node_vector_fields(node_gid, node_accel_id, 2) = 0.0;
+                        }
+                        else{
+                            host_node_vector_fields(node_gid, node_accel_id, 2) = node_vector_fields.host(node_gid, node_accel_id, 2);
+                        } // end if
+
+                    } // end parallel for
+
+                    break;
+                    
+                    
+                case node_state::gradient_level_set:
+
+                    for(long long int node_gid = 0; node_gid < num_nodes; node_gid++) {
+
+                        // velocity, var is node_vel_id 
+                        host_node_vector_fields(node_gid, node_grad_level_set_id, 0) = node_vector_fields.host(node_gid, node_grad_level_set_id, 0);
+                        host_node_vector_fields(node_gid, node_grad_level_set_id, 1) = node_vector_fields.host(node_gid, node_grad_level_set_id, 1);
+                        if (num_dims == 2) {
+                            host_node_vector_fields(node_gid, node_grad_level_set_id, 2) = 0.0;
+                        }
+                        else{
+                            host_node_vector_fields(node_gid, node_grad_level_set_id, 2) = node_vector_fields.host(node_gid, node_grad_level_set_id, 2);
+                        } // end if
+
+                    } // end parallel for
 
                     break;                
                 
@@ -4170,12 +6761,12 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_vtu(
-        const ViewCArray<double>& node_coords_host,
-        const ViewCArray<size_t>& nodes_in_elem_host,
-        const DCArrayKokkos<double>& elem_scalar_fields,
-        const DCArrayKokkos<double>& elem_tensor_fields,
-        const DCArrayKokkos<double>& node_scalar_fields,
-        const DCArrayKokkos<double>& node_vector_fields,
+        const DistributedDCArray<double>& node_coords,
+        const DistributedDCArray<size_t>& nodes_in_elem,
+        const DistributedDFArray<double>& elem_scalar_fields,
+        const DistributedDFArray<double>& elem_tensor_fields,
+        const DistributedDFArray<double>& node_scalar_fields,
+        const DistributedDFArray<double>& node_vector_fields,
         const std::vector<std::string>& elem_scalar_var_names,
         const std::vector<std::string>& elem_tensor_var_names,
         const std::vector<std::string>& node_scalar_var_names,
@@ -4189,11 +6780,17 @@ public:
         const size_t num_dims,
         const size_t solver_id
         )
-    {
+    {   
+        
         FILE* out[20];   // the output files that are written to
         char  filename[100]; // char string
         int   max_len = sizeof filename;
         int   str_output_len;
+        int myrank;
+        MPI_Comm_rank(MPI_COMM_WORLD,&myrank);
+        std::string str_rank_val = std::to_string(myrank);                       
+        std::string rank_fields_name = "rank";
+        rank_fields_name += str_rank_val;  // add the mat number
 
         const size_t num_elem_scalar_vars = elem_scalar_var_names.size();
         const size_t num_elem_tensor_vars = elem_tensor_var_names.size();
@@ -4203,8 +6800,8 @@ public:
 
 
         // create filename
-        str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%s.%05d.vtu", 
-                                                                 solver_id, partname.c_str(), graphics_id);
+        str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%s_%s.%05d.vtu", 
+                                                                 solver_id, partname.c_str(), rank_fields_name.c_str(), graphics_id);
 
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
         // mesh file
@@ -4230,12 +6827,12 @@ public:
         for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
             double coord_z = 0.0;
             if(num_dims==3){
-                coord_z = node_coords_host(node_gid, 2);
+                coord_z = node_coords.host(node_gid, 2);
             } 
             fprintf(out[0],
                     "          %f %f %f\n",
-                    node_coords_host(node_gid, 0),
-                    node_coords_host(node_gid, 1),
+                    node_coords.host(node_gid, 0),
+                    node_coords.host(node_gid, 1),
                     coord_z);
         } // end for
         fprintf(out[0], "        </DataArray>\n");
@@ -4268,7 +6865,7 @@ public:
                     for (int j = 0; j <= Pn_order; j++) {
                         for (int i = 0; i <= Pn_order; i++) {
                             size_t node_lid = PointIndexFromIJK(i, j, k, order);
-                            fprintf(out[0], "%lu ", nodes_in_elem_host(elem_gid, node_lid));
+                            fprintf(out[0], "%lu ", nodes_in_elem.host(elem_gid, node_lid));
                         }
                     }
                 } // end for
@@ -4276,13 +6873,13 @@ public:
             else if (num_dims == 3 && Pn_order == 1){
                // 3D linear hexahedral elements
                 for (int node_lid = 0; node_lid < 8; node_lid++) {
-                    fprintf(out[0], "%lu ", nodes_in_elem_host(elem_gid, node_lid));
+                    fprintf(out[0], "%lu ", nodes_in_elem.host(elem_gid, node_lid));
                 } // end for
             }
             else if (num_dims == 2){
                 // 2D linear is the only supported option
                 for (int node_lid = 0; node_lid < 4; node_lid++) {
-                    fprintf(out[0], "%lu ", nodes_in_elem_host(elem_gid, node_lid));
+                    fprintf(out[0], "%lu ", nodes_in_elem.host(elem_gid, node_lid));
                 } // end for
             }
             else {
@@ -4352,9 +6949,9 @@ public:
                
                 for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
                     fprintf(out[0], "          %f %f %f\n",
-                            node_vector_fields.host(a_var, node_gid, 0),
-                            node_vector_fields.host(a_var, node_gid, 1),
-                            node_vector_fields.host(a_var, node_gid, 2));
+                            node_vector_fields.host(node_gid, a_var, 0),
+                            node_vector_fields.host(node_gid, a_var, 1),
+                            node_vector_fields.host(node_gid, a_var, 2));
                 } // end for nodes
                 fprintf(out[0], "        </DataArray>\n");
 
@@ -4365,7 +6962,7 @@ public:
             for (int a_var = 0; a_var < num_node_scalar_vars; a_var++) {
                 fprintf(out[0], "        <DataArray type=\"Float32\" Name=\"%s\" format=\"ascii\">\n", node_scalar_var_names[a_var].c_str());
                 for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
-                    fprintf(out[0], "          %f\n", node_scalar_fields.host(a_var, node_gid));
+                    fprintf(out[0], "          %f\n", node_scalar_fields.host(node_gid, a_var));
                 } // end for nodes
                 fprintf(out[0], "        </DataArray>\n");
             } // end for vec_vars
@@ -4390,7 +6987,7 @@ public:
                 fprintf(out[0], "        <DataArray type=\"Float32\" Name=\"%s\" format=\"ascii\">\n", elem_scalar_var_names[a_var].c_str()); // the 1 is number of scalar components [1:4]
 
                 for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-                    fprintf(out[0], "          %f\n", elem_scalar_fields.host(a_var, elem_gid));
+                    fprintf(out[0], "          %f\n", elem_scalar_fields.host(elem_gid, a_var));
                 } // end for elem
                 fprintf(out[0], "        </DataArray>\n");
             } // end for elem scalar_vars
@@ -4405,7 +7002,7 @@ public:
                     // Txx  Txy  Txz  Tyx  Tyy  Tyz  Tzx  Tzy  Tzz
                     for (size_t i=0; i<3; i++){
                         for(size_t j=0; j<3; j++){
-                            fprintf(out[0], "          %f ", elem_tensor_fields.host(a_var, elem_gid, i, j));
+                            fprintf(out[0], "          %f ", elem_tensor_fields.host(elem_gid, a_var, i, j));
                         } // end j
                     } // end i
                 } // end for elem
@@ -4496,72 +7093,139 @@ public:
                    double time_value,
                    int graphics_id,
                    int num_mats,
+                   int local_num_mats,
+                   CArray<int> local_mats_in_rank,
+                   int nranks,
+                   int myrank,
                    bool write_mesh_state,
                    bool write_mat_pt_state,
                    const size_t solver_id)
-    {
-        // loop over all the files that were written 
-        for(int file_id=0; file_id<=graphics_id; file_id++){
+    {   
+        //gather number of mats on each rank
+        //array storing number of local elems for this material on each process
+        CArray<int> num_mats_in_rank, gatherv_displacements;
+        CArray<size_t> interface_mats_in_rank;
+        if(myrank==0){
+            num_mats_in_rank = CArray<int>(nranks);
+            interface_mats_in_rank = CArray<size_t>(nranks);
+            gatherv_displacements = CArray<int>(nranks);
+        }
+        MPI_Gather(&local_num_mats,1,MPI_INT,num_mats_in_rank.pointer(),1,
+                    MPI_INT, 0, MPI_COMM_WORLD);
 
-            FILE* out[20];   // the output files that are written to
-            char  filename[100]; // char string
-            int   max_len = sizeof filename;
-            int   str_output_len;
+        //gather which mats are present on each rank
+        long long int length_mats_in_rank = 0;
+        RaggedRightArray<int> mats_in_rank;
+        if(myrank==0){
+            for(int irank=0; irank < nranks; irank++){
+                gatherv_displacements(irank) = length_mats_in_rank;
+                interface_mats_in_rank(irank) = num_mats_in_rank(irank);
+                length_mats_in_rank += num_mats_in_rank(irank);
+            }
+            mats_in_rank = RaggedRightArray<int>(interface_mats_in_rank);
+        }
+        // if(myrank==0){
+        //     for(int irank=0; irank < nranks; irank++){
+        //         std::cout << "NUM local mat elem on rank " << irank << " is " << num_mats_in_rank(irank) << std::endl;
+        //         std::cout << "gatherv displacement on rank " << irank << " is " << gatherv_displacements(irank) << std::endl;
+        //     }
+        // }
+        MPI_Gatherv(local_mats_in_rank.pointer(), local_num_mats, MPI_INT,
+                    mats_in_rank.pointer(), num_mats_in_rank.pointer(),
+                    gatherv_displacements.pointer(), MPI_INT, 0, MPI_COMM_WORLD);
 
 
-            // Write time series metadata to the data file
-            str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%05d.vtm", solver_id, file_id); 
+        if(myrank==0){
 
-            if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-            // mesh file
+            //invert map of rank to mat so its mat to rank
+            CArray<size_t> num_ranks_in_mat(num_mats);
+            num_ranks_in_mat.set_values(0);
 
-            out[0] = fopen(filename, "w");
-    
-            fprintf(out[0], "<?xml version=\"1.0\"?>\n");
-            fprintf(out[0], "<VTKFile type=\"vtkMultiBlockDataSet\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
-            fprintf(out[0], "  <vtkMultiBlockDataSet>\n");
-
-            
-            // Average mesh fields -- node and elem state written
-            size_t block_id = 0;  // this will need to be incremented based on the number of mesh fields written
-            if (write_mesh_state){
-                fprintf(out[0], "    <Block index=\"%zu\" name=\"Mesh\">\n", block_id);
-                {
-                    block_id++;  // increment block id for material outputs that follow the element avg block
-
-                    // elem and nodal fields are in this file
-                    fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
-                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s.%05d.vtu\" time= \"%12.5e\" />\n", 
-                                                              file_id, solver_id, elem_part_name.c_str(), file_id, graphics_times(file_id) );
-                    fprintf(out[0], "      </Piece>\n");
-
-                    // add other Mesh average output Pieces here
+            //count how many ranks each material is in
+            for(int irank = 0; irank < nranks; irank++){
+                for(int imat = 0; imat < num_mats_in_rank(irank); imat++){
+                    num_ranks_in_mat(mats_in_rank(irank,imat))++;
                 }
-                fprintf(out[0], "    </Block>\n");
-            } // end if write elem and node state is true
+            }
 
-            // note: the block_id was incremented if an element average field output was made
-            if (write_mat_pt_state){
-                fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
-                for (size_t mat_id=0; mat_id<num_mats; mat_id++){
-                    
-                    // output the material specific fields
-                    fprintf(out[0], "      <Piece index=\"%zu\" name=\"Mat%zu\">\n", mat_id, mat_id);
-                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n", 
-                                                               file_id, solver_id, mat_part_name.c_str(), mat_id, file_id, graphics_times(file_id) );
-                    fprintf(out[0], "      </Piece>\n");
+            //allocate ragged storage and assign ranks to each mat
+            RaggedRightArray<int> ranks_in_mat(num_ranks_in_mat);
+            num_ranks_in_mat.set_values(0);
 
-                } // end for loop mat_id
-                fprintf(out[0], "    </Block>\n");
-            } // end if write mat satte is true
+            for(int irank = 0; irank < nranks; irank++){
+                for(int imat = 0; imat < num_mats_in_rank(irank); imat++){
+                    ranks_in_mat(mats_in_rank(irank,imat),num_ranks_in_mat(mats_in_rank(irank,imat))) = irank;
+                    num_ranks_in_mat(mats_in_rank(irank,imat))++;
+                }
+            }
+            
+            // loop over all the files that need to be written 
+            for(int file_id=0; file_id<=graphics_id; file_id++){
 
-            // done writing the files to be read by the vtm file
-            fprintf(out[0], "  </vtkMultiBlockDataSet>\n");
-            fprintf(out[0], "</VTKFile>"); 
+                FILE* out[20];   // the output files that are written to
+                char  filename[100]; // char string
+                int   max_len = sizeof filename;
+                int   str_output_len;
 
-            fclose(out[0]);
 
-        } // end for file_id
+                // Write time series metadata to the data file
+                str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%05d.vtm", solver_id, file_id); 
+
+                if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
+                // mesh file
+
+                out[0] = fopen(filename, "w");
+        
+                fprintf(out[0], "<?xml version=\"1.0\"?>\n");
+                fprintf(out[0], "<VTKFile type=\"vtkMultiBlockDataSet\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
+                fprintf(out[0], "  <vtkMultiBlockDataSet>\n");
+
+                
+                // Average mesh fields -- node and elem state written
+                size_t block_id = 0;  // this will need to be incremented based on the number of mesh fields written
+                if (write_mesh_state){
+                    fprintf(out[0], "    <Block index=\"%zu\" name=\"Mesh\">\n", block_id);
+                    {
+                        block_id++;  // increment block id for material outputs that follow the element avg block
+
+                        // elem and nodal fields are in this file
+                        fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
+                        for(int irank = 0; irank < nranks; irank++){
+                            fprintf(out[0], "        <DataSet index=\"%d\" file=\"Fierro.solver%zu.%s_rank%d.%05d.vtu\" />\n", 
+                                                                    irank, solver_id, elem_part_name.c_str(), irank, file_id );
+                        }
+                        fprintf(out[0], "      </Piece>\n");
+
+                        // add other Mesh average output Pieces here
+                    }
+                    fprintf(out[0], "    </Block>\n");
+                } // end if write elem and node state is true
+
+                // note: the block_id was incremented if an element average field output was made
+                if (write_mat_pt_state){
+                    fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
+                    for (size_t mat_id=0; mat_id<num_mats; mat_id++){
+                        
+                        // output the material specific fields
+                        fprintf(out[0], "      <Piece index=\"%zu\" name=\"Mat%zu\">\n", mat_id, mat_id);
+                        for(int irank = 0; irank < num_ranks_in_mat(mat_id); irank++){
+                            fprintf(out[0], "        <DataSet index=\"%d\" file=\"Fierro.solver%zu.%s%zu_rank%d.%05d.vtu\" />\n", 
+                                                                    irank, solver_id, mat_part_name.c_str(), mat_id, ranks_in_mat(mat_id, irank), file_id );
+                        }
+                        fprintf(out[0], "      </Piece>\n");
+
+                    } // end for loop mat_id
+                    fprintf(out[0], "    </Block>\n");
+                } // end if write mat satte is true
+
+                // done writing the files to be read by the vtm file
+                fprintf(out[0], "  </vtkMultiBlockDataSet>\n");
+                fprintf(out[0], "</VTKFile>"); 
+
+                fclose(out[0]);
+
+            } // end for file_id
+        }
 
     } // end vtm
 
@@ -4585,7 +7249,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void build_material_elem_node_lists(
         const Mesh_t& mesh,
-        const DCArrayKokkos<double>& state_node_coords,
+        const DistributedDCArray<double>& state_node_coords,
         DCArrayKokkos<double>& mat_node_coords,
         DCArrayKokkos <size_t>& mat_nodes_in_mat_elem,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
@@ -4666,7 +7330,65 @@ public:
 
     } // end build part (i.e., material elem and point lists) function
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn build_material_elem_node_lists
+    ///
+    /// \brief Creates elems and nodes for a unique mesh of a material (i.e, a part)
+    ///
+    /// \param Simulation mesh
+    /// \param State node data
+    /// \param Material node coordinates
+    /// \param Material nodes in the material element
+    /// \param Material to mesh map for elements
+    /// \param number of material nodes
+    /// \param number of material elements
+    /// \param number of nodes in the element
+    /// \param number of dimensions 
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void build_material_node_list(
+        const Mesh_t& mesh,
+        DCArrayKokkos<long long int>& mat_node_indices,
+        DistributedDCArray<size_t>& mat_nodes_in_mat_elem,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
+        const size_t mat_id,
+        size_t& num_mat_nodes,
+        const size_t num_mat_elems,
+        const size_t num_nodes_in_elem,
+        const size_t num_dims)
+    {
 
+        
+        std::set<long long int> mat_node_set;
+        long long int node_gid;
+        for (int elem_mat_id = 0; elem_mat_id < num_mat_elems; elem_mat_id++)
+        {
+            // set nodes per element
+            for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++)
+            {
+                node_gid = mat_nodes_in_mat_elem.host(elem_mat_id, node_lid); //nodes in elem still stores global indices
+                mat_node_set.insert(node_gid);
+            }
+        }
+
+        // save the number of nodes defining the material region, i.e., the part
+        num_mat_nodes = mat_node_set.size();
+
+        //copy set to matar view
+        int  inode = 0;
+        int ighost = 0;
+        auto it     = mat_node_set.begin();
+
+        // create a Map for ghost node indices
+        mat_node_indices = DCArrayKokkos<long long int>(num_mat_nodes, "mat_nodes");
+        while (it != mat_node_set.end()) {
+            mat_node_indices.host(ighost++) = *it;
+            it++;
+        }
+        mat_node_indices.update_device();
+
+    } // end build part (i.e., material elem and point lists) function
 
 
 
@@ -4685,7 +7407,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void write_material_point_state(Mesh_t& mesh,
         State_t& State,
-        SimulationParameters_t& SimulationParamaters,
+        SimulationParameters_t& SimulationParameters,
         double time_value,
         CArray<double> graphics_times,
         std::vector<node_state> node_states,

@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
-                                 DCArrayKokkos<double>& node_vel,
+                                 DistributedDCArray<double>& node_vel,
                                  const double time_value) const
 {
 
@@ -102,7 +102,7 @@ void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::boundary_contact_rz(const Mesh_t& mesh,
                                 const BoundaryCondition_t& BoundaryConditions,
-                                DCArrayKokkos<double>& node_vel,
+                                DistributedDCArray<double>& node_vel,
                                 const double time_value) const
 {
     return;

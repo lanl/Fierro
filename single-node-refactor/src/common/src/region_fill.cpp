@@ -47,7 +47,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-void simulation_setup(SimulationParameters_t& SimulationParamaters, 
+void simulation_setup(SimulationParameters_t& SimulationParameters, 
                       Material_t& Materials, 
                       Mesh_t& mesh, 
                       BoundaryCondition_t& Boundary,
@@ -59,11 +59,12 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     // the number of elems and nodes in the mesh
     const size_t num_dims  = mesh.num_dims;
     const size_t num_elems = mesh.num_elems;
+    const size_t num_local_elems = mesh.num_local_elems;
     const size_t num_nodes = mesh.num_nodes;
     const size_t num_gauss_points = mesh.num_gauss_in_elem*mesh.num_elems;  
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
-
+    
     // Calculate element volume
     geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
@@ -78,7 +79,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     fillGaussState.initialize(num_gauss_points, 
                               max_num_mats_per_elem, 
                               3,
-                              SimulationParamaters.region_setups.fill_gauss_states);
+                              SimulationParameters.region_setups.fill_gauss_states);
 
     // the elem state is always used, thus always initialized
     fillElemState.initialize(num_elems,
@@ -118,11 +119,11 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  State.MeshtoMaterialMaps.mats_in_elem,
                  State.MeshtoMaterialMaps.num_mats_in_elem,
                  voxel_elem_mat_id,
-                 SimulationParamaters.mesh_input.object_ids,
-                 SimulationParamaters.region_setups.region_fills,
-                 SimulationParamaters.region_setups.region_fills_host,
-                 SimulationParamaters.region_setups.fill_gauss_states,
-                 SimulationParamaters.region_setups.fill_node_states,
+                 SimulationParameters.mesh_input.object_ids,
+                 SimulationParameters.region_setups.region_fills,
+                 SimulationParameters.region_setups.region_fills_host,
+                 SimulationParameters.region_setups.fill_gauss_states,
+                 SimulationParameters.region_setups.fill_node_states,
                  max_num_mats_per_elem);
 
 
@@ -136,6 +137,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
     // a counter for the Material index spaces
     DCArrayKokkos<size_t> num_elems_saved_for_mat(num_mats, "num_elems_saved_for_mat");
+    DCArrayKokkos<size_t> num_local_elems_saved_for_mat(num_mats, "num_local_elems_saved_for_mat");
 
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
         size_t sum_local;
@@ -159,7 +161,30 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
         num_elems_saved_for_mat.host(mat_id) = sum_total;
     } // end for
 
+    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+        size_t sum_local;
+        size_t sum_total;
+
+        FOR_REDUCE_SUM(elem_gid, 0, num_local_elems, sum_local, {
+
+            // loop over the materials in the element
+            for (size_t a_mat_in_elem=0; a_mat_in_elem < State.MeshtoMaterialMaps.num_mats_in_elem(elem_gid); a_mat_in_elem++){
+
+                // check to see if it is mat_id
+                if (State.MeshtoMaterialMaps.mats_in_elem(elem_gid, a_mat_in_elem) == mat_id) {
+                    // increment the number of elements the materials live in
+                    sum_local++;
+                } // end if a_mat is equal to mat_id
+
+            } // end loop over materials in elem
+        }, sum_total);
+
+        // material index space size
+        num_local_elems_saved_for_mat.host(mat_id) = sum_total;
+    } // end for
+
     num_elems_saved_for_mat.update_device();
+    num_local_elems_saved_for_mat.update_device();
     Kokkos::fence();
 
 
@@ -186,6 +211,8 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
         // The exact size plus a buffer is for e.g., remap.  The buffers are shortly below here.
         State.MaterialToMeshMaps.num_mat_elems.host(mat_id) = num_elems_saved_for_mat.host(mat_id);
         State.MaterialPoints.num_material_points.host(mat_id)   = num_elems_saved_for_mat.host(mat_id) * num_mat_pts_in_elem;
+        State.MaterialToMeshMaps.num_mat_local_elems.host(mat_id) = num_local_elems_saved_for_mat.host(mat_id);
+        State.MaterialPoints.num_material_local_points.host(mat_id)   = num_local_elems_saved_for_mat.host(mat_id) * num_mat_pts_in_elem;
         State.MaterialCorners.num_material_corners.host(mat_id) = num_elems_saved_for_mat.host(mat_id) * mesh.num_nodes_in_elem;
         State.MaterialZones.num_material_zones.host(mat_id)     = num_elems_saved_for_mat.host(mat_id) * mesh.num_zones_in_elem;
 
@@ -202,6 +229,8 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     // copy to device the actual sizes
     State.MaterialToMeshMaps.num_mat_elems.update_device();
     State.MaterialPoints.num_material_points.update_device();
+    State.MaterialToMeshMaps.num_mat_local_elems.update_device();
+    State.MaterialPoints.num_material_local_points.update_device();
     State.MaterialCorners.num_material_corners.update_device();
     State.MaterialZones.num_material_zones.update_device();
 
@@ -249,9 +278,9 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 void fill_regions(
         const Material_t& Materials,
         const Mesh_t& mesh,
-        const DCArrayKokkos <double>& node_coords,
-        DCArrayKokkos <double>& node_vel,
-        DCArrayKokkos <double>& node_temp,
+        const DistributedDCArray <double>& node_coords,
+        DistributedDCArray <double>& node_vel,
+        DistributedDCArray <double>& node_temp,
         DCArrayKokkos <double>& gauss_den,
         DCArrayKokkos <double>& gauss_sie,
         DCArrayKokkos <bool>&   gauss_use_sie,
@@ -670,7 +699,7 @@ void fill_regions(
 ///
 /// \brief a function to setup the material point and zone state 
 ///
-/// \param SimulationParamaters holds the simulation parameters
+/// \param SimulationParameters holds the simulation parameters
 /// \param Materials is the material object
 /// \param mesh is the mesh object
 /// \param Boundary is the boundary condition object
@@ -679,7 +708,7 @@ void fill_regions(
 /// \param fillElemState is a vector of enums telling what elem state to set
 ///
 /////////////////////////////////////////////////////////////////////////////
-void material_state_setup(SimulationParameters_t& SimulationParamaters, 
+void material_state_setup(SimulationParameters_t& SimulationParameters, 
                           Material_t& Materials, 
                           Mesh_t& mesh, 
                           BoundaryCondition_t& Boundary,
@@ -772,6 +801,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
 
                     State.MaterialPoints.mass.host(mat_id,mat_point_sid) = 
                             fillGaussState.den.host(gauss_gid,a_mat_in_elem) * mat_vol;
+                    
                 }
 
                 // --- set eroded flag to false ---
@@ -1706,7 +1736,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_scalar(const DCArrayKokkos<double>& field_scalar,
+void paint_scalar(const DistributedDCArray<double>& field_scalar,
                   const ViewCArrayKokkos <double> mesh_coords,
                   const double scalar,
                   const double slope,
@@ -1836,7 +1866,7 @@ void paint_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_vector(const DCArrayKokkos<double>& vector_field,
+void paint_vector(const DistributedDCArray<double>& vector_field,
                   const ViewCArrayKokkos <double>& mesh_coords,
                   const double u,
                   const double v,
@@ -2262,8 +2292,8 @@ void init_press_sspd_stress(const Material_t& Materials,
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass(const Material_t& Materials,
                       const Mesh_t& mesh,
-                      const DCArrayKokkos<double>& node_coords,
-                      const DCArrayKokkos<double>& node_mass,
+                      const DistributedDCArray<double>& node_coords,
+                      const DistributedDCArray<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
                       const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
@@ -2308,8 +2338,8 @@ void calc_corner_mass(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_mass(const Mesh_t& mesh,
-                    const DCArrayKokkos<double>& node_coords,
-                    const DCArrayKokkos<double>& node_mass,
+                    const DistributedDCArray<double>& node_coords,
+                    const DistributedDCArray<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass)
 {
 
@@ -2338,7 +2368,7 @@ void calc_node_mass(const Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void init_corner_node_masses_zero(const Mesh_t& mesh,
-                                  const DCArrayKokkos<double>& node_mass,
+                                  const DistributedDCArray<double>& node_mass,
                                   const DCArrayKokkos<double>& corner_mass)
 {
     // calculate the nodal mass
