@@ -832,7 +832,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     //for (size_t i = 0; i < mesh.num_bdy_sets; ++i) {
     //    std::cout << "Boundary nodes in set " << i << ": " << mesh.num_bdy_nodes_in_set(i) << std::endl;
     
-    const double tol = 0.000001; //0.000001; //e-3; // adjust as needed; added just in case coordinate pairs are close but not exactly equa
+    const double tol = 1e-8; //0.000001; //e-3; // adjust as needed; added just in case coordinate pairs are close but not exactly equa
     size_t overlap_index = 0; // counts unique overlapping nodes (2 unique overlapping nodes = 1 overlapping node pair)
     size_t pair_count = 0; // counts how many overlapping node pairs exist
     
@@ -925,40 +925,92 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     } else {
         printf("======================== face-by-face cross-check ========================\n");
 
+        // print the nodes in each element
         for (size_t elem = 0; elem < mesh.num_elems; ++elem) {
-            // (optional) print element connectivity
             printf("Element %zu nodes: ", elem);
             for (size_t ln = 0; ln < mesh.num_nodes_in_elem; ++ln) {
                 printf("%zu ", mesh.nodes_in_elem(elem, ln));
             }
             printf("\n");
         
-        // loop faces
-        for (size_t surf = 0; surf < 6; ++surf) {
-    
+        // // loop faces
+        // // for each surf, look up the patch_id
+        // // patch_id = mesh.patches_in_elem(elem, surf)
+        // // then fetch four node IDs: g[a] = mesh.nodes_in_patch(patch_id, a)
+        // // so node order is whatever nodes_in_patch says for that patch_id
+         for (size_t surf = 0; surf < 6; ++surf) {
+
+
         // mesh patch mapping (Fierro nodal indexing convention)
         const size_t patch_id = mesh.patches_in_elem(elem, surf);
-        const size_t num_nodes_in_patch = mesh.num_nodes_in_patch; // 4 for HEX8
-        size_t g[4];
-        for (size_t a = 0; a < num_nodes_in_patch; ++a){
-            g[a] = mesh.nodes_in_patch(patch_id, a);
+        size_t face_gid[4];
+        for (size_t a = 0; a < 4; a++){
+            face_gid[a] = mesh.nodes_in_patch(patch_id, a);
         } 
-    
+            // for (size_t surf = 0; surf < 6; ++surf) {
+            //     const size_t pid = mesh.patches_in_elem(elem, surf);
+            //     size_t p0 = mesh.nodes_in_patch(pid,0),
+            //            p1 = mesh.nodes_in_patch(pid,1),
+            //            p2 = mesh.nodes_in_patch(pid,2), 
+            //            p3 = mesh.nodes_in_patch(pid,3);
+            //     printf("  Face %zu (patch order): %zu %zu %zu %zu\n", surf, p0,p1,p2,p3);
+                // 1:1 mapping from compute_face_geometry()
+                // size_t face_gid[4];
+                // switch (surf) {
+                //     case 0: // [0,4,6,2]  x-
+                //         face_gid[0] = mesh.nodes_in_elem(elem, 0);
+                //         face_gid[1] = mesh.nodes_in_elem(elem, 4);
+                //         face_gid[2] = mesh.nodes_in_elem(elem, 6);
+                //         face_gid[3] = mesh.nodes_in_elem(elem, 2);
+                //         break;
+                //     case 1: // [1,3,7,5]  x+
+                //         face_gid[0] = mesh.nodes_in_elem(elem, 1);
+                //         face_gid[1] = mesh.nodes_in_elem(elem, 3);
+                //         face_gid[2] = mesh.nodes_in_elem(elem, 7);
+                //         face_gid[3] = mesh.nodes_in_elem(elem, 5);
+                //         break;
+                //     case 2: // [0,1,5,4]  y-
+                //         face_gid[0] = mesh.nodes_in_elem(elem, 0);
+                //         face_gid[1] = mesh.nodes_in_elem(elem, 1);
+                //         face_gid[2] = mesh.nodes_in_elem(elem, 5);
+                //         face_gid[3] = mesh.nodes_in_elem(elem, 4);
+                //         break;
+                //     case 3: // [3,2,6,7]  y+
+                //         face_gid[0] = mesh.nodes_in_elem(elem, 3);
+                //         face_gid[1] = mesh.nodes_in_elem(elem, 2);
+                //         face_gid[2] = mesh.nodes_in_elem(elem, 6);
+                //         face_gid[3] = mesh.nodes_in_elem(elem, 7);
+                //         break;
+                //     case 4: // [0,2,3,1]  z-
+                //         face_gid[0] = mesh.nodes_in_elem(elem, 0);
+                //         face_gid[1] = mesh.nodes_in_elem(elem, 2);
+                //         face_gid[2] = mesh.nodes_in_elem(elem, 3);
+                //         face_gid[3] = mesh.nodes_in_elem(elem, 1);
+                //         break;
+                //     case 5: // [4,5,7,6]  z+
+                //         face_gid[0] = mesh.nodes_in_elem(elem, 4);
+                //         face_gid[1] = mesh.nodes_in_elem(elem, 5);
+                //         face_gid[2] = mesh.nodes_in_elem(elem, 7);
+                //         face_gid[3] = mesh.nodes_in_elem(elem, 6);
+                //         break;
+                //     default:
+                //         continue; // should not happen
+                // }     
                 // print the IDs and coordinates
                 printf("  Face %zu node IDs: %zu %zu %zu %zu\n",
-                        surf, g[0], g[1], g[2], g[3]);
+                        surf, face_gid[0], face_gid[1], face_gid[2], face_gid[3]);
 
                 DCArrayKokkos<double> &X = State.node.coords; // (num_nodes x 3)
 
-                printf("    coords[gid0]: %g %g %g\n", X(g[0],0), X(g[0],1), X(g[0],2));
-                printf("    coords[gid1]: %g %g %g\n", X(g[1],0), X(g[1],1), X(g[1],2));
-                printf("    coords[gid2]: %g %g %g\n", X(g[2],0), X(g[2],1), X(g[2],2));
-                printf("    coords[gid3]: %g %g %g\n", X(g[3],0), X(g[3],1), X(g[3],2));
+                printf("    coords[gid0]: %g %g %g\n", X(face_gid[0],0), X(face_gid[0],1), X(face_gid[0],2));
+                printf("    coords[gid1]: %g %g %g\n", X(face_gid[1],0), X(face_gid[1],1), X(face_gid[1],2));
+                printf("    coords[gid2]: %g %g %g\n", X(face_gid[2],0), X(face_gid[2],1), X(face_gid[2],2));
+                printf("    coords[gid3]: %g %g %g\n", X(face_gid[3],0), X(face_gid[3],1), X(face_gid[3],2));
 
                 // simple centroid check: average of 4 face nodes
-                double cx_simple = 0.25 * (X(g[0],0) + X(g[1],0) + X(g[2],0) + X(g[3],0));
-                double cy_simple = 0.25 * (X(g[0],1) + X(g[1],1) + X(g[2],1) + X(g[3],1));
-                double cz_simple = 0.25 * (X(g[0],2) + X(g[1],2) + X(g[2],2) + X(g[3],2));
+                double cx_simple = 0.25 * (X(face_gid[0],0) + X(face_gid[1],0) + X(face_gid[2],0) + X(face_gid[3],0));
+                double cy_simple = 0.25 * (X(face_gid[0],1) + X(face_gid[1],1) + X(face_gid[2],1) + X(face_gid[3],1));
+                double cz_simple = 0.25 * (X(face_gid[0],2) + X(face_gid[1],2) + X(face_gid[2],2) + X(face_gid[3],2));
 
                 
                 // stack buffers + ViewCArrayKokkos wrappers 
@@ -995,10 +1047,9 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
         printf("==========================================================================\n");
     }
 }
+//    ======================== END face-by-face cross-check debug (compute_face_geometry) ========================
 
-    // ======================== END face-by-face cross-check debug (compute_face_geometry) ========================
-
-    // ======================== cohesive_zone_info debug ========================
+//    ======================== cohesive_zone_info debug ========================
 
     CArrayKokkos<int> cz = build_cohesive_zone_info(
         mesh,
@@ -1010,14 +1061,16 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
 
 {
     printf("\n================== cohesive_zone_info debug ==================\n");
-    printf("num_pairs=%zu  max_elem_in_cohesive_zone=%zu\n",
+    printf("num_overlapping_node_pairs=%zu  max_elem_in_cohesive_zone=%zu\n",
            overlapping_node_gids.dims(0), max_elem_in_cohesive_zone);
+
+    
 
     for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
         const size_t nodeA = overlapping_node_gids(i,0);
         const size_t nodeB = overlapping_node_gids(i,1);
 
-        printf("\n-- Pair %zu  (A=%zu, B=%zu) --\n", i, nodeA, nodeB);
+        printf("\n-- Pair %zu  (A (node gid) = %zu, B (node gid) = %zu) --\n", i, nodeA, nodeB);
 
         // print A-side elems
         printf("  A elems (IDs): ", mesh.elems_in_node.stride(nodeA));
@@ -1050,69 +1103,190 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
         }
         printf("\n");
 
-        // show first matched face pair (if any)
-        int fA_first = -1, fB_first = -1;
-        size_t idx_first = (size_t)-1;
-        for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
-            const int fA = cz(i, 2*max_elem_in_cohesive_zone + j);
-            const int fB = cz(i, 3*max_elem_in_cohesive_zone + j);
-            if (fA >= 0 && fB >= 0) { fA_first = fA; fB_first = fB; idx_first = j; break; }
+        // print everything thats in cohesive_zone_info: check what was stored (-1 means empty slot)
+        printf(" checking everything thats in cohesive_zone_info: ");
+        for (size_t j = 0; j < 6*max_elem_in_cohesive_zone; ++j){
+            printf("%d ", cz(i, j));
+        }
+        printf("\n");
+
+        
+        // ---------- re-run the *same* candidate-face search (ABS distance) and print the true first match ----------
+        // small stack buffers + views
+        double nA_buf[3], rA_buf[3], sA_buf[3], cA_buf[3];
+        double nB_buf[3], rB_buf[3], sB_buf[3], cB_buf[3];
+        ViewCArrayKokkos<double> nA(&nA_buf[0],3), rA(&rA_buf[0],3), sA(&sA_buf[0],3), cA(&cA_buf[0],3);
+        ViewCArrayKokkos<double> nB(&nB_buf[0],3), rB(&rB_buf[0],3), sB(&sB_buf[0],3), cB(&cB_buf[0],3);
+
+        auto push_three_faces = [](int k, int (&out)[3]) {
+            // three faces incident to each local corner k  (matching the mapping used in build_cohesive_zone_info)
+            switch (k) {
+                case 0: out[0]=0; out[1]=2; out[2]=4; break;
+                case 1: out[0]=1; out[1]=2; out[2]=4; break;
+                case 2: out[0]=0; out[1]=3; out[2]=4; break;
+                case 3: out[0]=1; out[1]=3; out[2]=4; break;
+                case 4: out[0]=0; out[1]=2; out[2]=5; break;
+                case 5: out[0]=1; out[1]=2; out[2]=5; break;
+                case 6: out[0]=0; out[1]=3; out[2]=5; break;
+                case 7: out[0]=1; out[1]=3; out[2]=5; break;
+                default: out[0]=out[1]=out[2]=-1; break;
+            }
+        };
+
+        // find the local corner index k of a given global node in element e (or -1)
+        auto find_k = [&](int e, size_t gid)->int {
+            if (e < 0) return -1;
+            for (int k = 0; k < 8; ++k) {
+                if (mesh.nodes_in_elem(static_cast<size_t>(e), static_cast<size_t>(k)) == gid) return k;
+            }
+            return -1;
+        };
+
+        const double epsn = 1.0e-8;
+        bool found = false;
+        int eA_hit=-1, fA_hit=-1, eB_hit=-1, fB_hit=-1;
+        double dist_hit = 0.0, dot_hit = 0.0;
+
+        // build and test candidates exactly as in the face matcher
+        for (size_t slotA = 0; slotA < max_elem_in_cohesive_zone && !found; ++slotA) {
+            const int eA = cz(i, 0*max_elem_in_cohesive_zone + slotA);
+            if (eA < 0) continue;
+
+            const int kA = find_k(eA, nodeA);
+            if (kA < 0) continue;
+
+            int fA_cand[3]; push_three_faces(kA, fA_cand);
+
+            for (int tA = 0; tA < 3 && !found; ++tA) {
+                const int fA = fA_cand[tA];
+                if (fA < 0) continue;
+
+                // geometry for A face
+                compute_face_geometry(State.node.coords, mesh,
+                                      State.node.coords, mesh.nodes_in_elem,
+                                      static_cast<size_t>(fA), static_cast<size_t>(eA),
+                                      nA, rA, sA, cA);
+
+                for (size_t slotB = 0; slotB < max_elem_in_cohesive_zone && !found; ++slotB) {
+                    const int eB = cz(i, 1*max_elem_in_cohesive_zone + slotB);
+                    if (eB < 0) continue;
+
+                    const int kB = find_k(eB, nodeB);
+                    if (kB < 0) continue;
+
+                    int fB_cand[3]; push_three_faces(kB, fB_cand);
+
+                    for (int tB = 0; tB < 3 && !found; ++tB) {
+                        const int fB = fB_cand[tB];
+                        if (fB < 0) continue;
+
+                        // geometry for B face
+                        compute_face_geometry(State.node.coords, mesh,
+                                              State.node.coords, mesh.nodes_in_elem,
+                                              static_cast<size_t>(fB), static_cast<size_t>(eB),
+                                              nB, rB, sB, cB);
+
+                        // ABS centroid distance + opposite normals
+                        const double dx = cA(0) - cB(0);
+                        const double dy = cA(1) - cB(1);
+                        const double dz = cA(2) - cB(2);
+                        const double dist = std::sqrt(dx*dx + dy*dy + dz*dz);
+                        const double dot  = nA(0)*nB(0) + nA(1)*nB(1) + nA(2)*nB(2);
+
+                        if (dist <= tol && dot <= -1.0 + epsn) {
+                            found = true;
+                            eA_hit = eA; fA_hit = fA;
+                            eB_hit = eB; fB_hit = fB;
+                            dist_hit = dist; dot_hit = dot;
+                        }
+                    }
+                }
+            }
         }
 
-        if (fA_first < 0 || fB_first < 0) {
+        if (!found) {
             printf("  No matched faces found.\n");
         } else {
-            printf("  Matched faces (first): A.face=%d  B.face=%d  (slot=%zu)\n",
-                   fA_first, fB_first, idx_first);
-
-            // grab first valid element on each side
-            int eA = -1, eB = -1;
-            for (size_t j = 0; j < max_elem_in_cohesive_zone && eA < 0; ++j){
-                const int tmp = cz(i, 0*max_elem_in_cohesive_zone + j);
-                if (tmp >= 0) eA = tmp;
-            }
-
-            for (size_t j = 0; j < max_elem_in_cohesive_zone && eB < 0; ++j){
-            const int tmp = cz(i, 1*max_elem_in_cohesive_zone + j);
-            if (tmp >= 0) eB = tmp;
-            } 
-
-            if (eA < 0 || eB < 0) {
-                printf("  Could not find valid elements for geometry check.\n");
-                continue;
-            }
-            
-            
-            double nA_buf[3], rA_buf[3], sA_buf[3], cA_buf[3];
-            double nB_buf[3], rB_buf[3], sB_buf[3], cB_buf[3];
-            ViewCArrayKokkos<double> nA(&nA_buf[0],3), rA(&rA_buf[0],3), sA(&sA_buf[0],3), cA(&cA_buf[0],3);
-            ViewCArrayKokkos<double> nB(&nB_buf[0],3), rB(&rB_buf[0],3), sB(&sB_buf[0],3), cB(&cB_buf[0],3);
-
-            compute_face_geometry(State.node.coords, mesh,
-                                  State.node.coords, mesh.nodes_in_elem,
-                                  static_cast<size_t>(fA_first), static_cast<size_t>(eA),
-                                  nA, rA, sA, cA);
-            compute_face_geometry(State.node.coords, mesh,
-                                  State.node.coords, mesh.nodes_in_elem,
-                                  static_cast<size_t>(fB_first), static_cast<size_t>(eB),
-                                  nB, rB, sB, cB);
-
-                const double dx = cA(0)-cB(0), dy = cA(1)-cB(1), dz = cA(2)-cB(2);
-                const double d2 = dx*dx + dy*dy + dz*dz;
-                const double dot = nA(0)*nB(0) + nA(1)*nB(1) + nA(2)*nB(2);
-
-                printf("  A(elem=%d, face=%d): cen=(%.6g, %.6g, %.6g) n=(%.6g, %.6g, %.6g)\n",
-                       eA, fA_first, cA(0), cA(1), cA(2), nA(0), nA(1), nA(2));
-                printf("  B(elem=%d, face=%d): cen=(%.6g, %.6g, %.6g) n=(%.6g, %.6g, %.6g)\n",
-                       eB, fB_first, cB(0), cB(1), cB(2), nB(0), nB(1), nB(2));
-                printf("  checks: |dcentroid|^2=%.6g   dot(nA,nB)=%.6g\n", d2, dot);
-            
+            printf("  Matched faces (first/true): A(elem=%d, face=%d)  B(elem=%d, face=%d)\n",
+                   eA_hit, fA_hit, eB_hit, fB_hit);
+            printf("    centroid(A)=(%.6g, %.6g, %.6g)  nA=(%.6g, %.6g, %.6g)\n",
+                   cA(0), cA(1), cA(2), nA(0), nA(1), nA(2));
+            printf("    centroid(B)=(%.6g, %.6g, %.6g)  nB=(%.6g, %.6g, %.6g)\n",
+                   cB(0), cB(1), cB(2), nB(0), nB(1), nB(2));
+            printf("    checks: |dcentroid|=%.6g  (tol=%.6g)   dot(nA,nB)=%.6g\n",
+                   dist_hit, tol, dot_hit);
         }
     }
+
     printf("\n==============================================================\n");
-}
-    // ======================== END cohesive_zone_info debug ========================
+} // end cohesive_zone_info debug
+// ======================== END cohesive_zone_info debug ========================
+
+
+    //     // show first matched face pair (if any)
+    //     int fA_first = -1, fB_first = -1;
+    //     size_t idx_first = (size_t)-1;
+    //     for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
+    //         const int fA = cz(i, 2*max_elem_in_cohesive_zone + j);
+    //         const int fB = cz(i, 3*max_elem_in_cohesive_zone + j);
+    //         if (fA >= 0 && fB >= 0) { fA_first = fA; fB_first = fB; idx_first = j; break; }
+    //     }
+
+    //     if (fA_first < 0 || fB_first < 0) {
+    //         printf("  No matched faces found.\n");
+    //     } else {
+    //         printf("  Matched faces (first): A.face=%d  B.face=%d  (slot=%zu)\n",
+    //                fA_first, fB_first, idx_first);
+
+    //         // grab first valid element on each side
+    //         int eA = -1, eB = -1;
+    //         for (size_t j = 0; j < max_elem_in_cohesive_zone && eA < 0; ++j){
+    //             const int tmp = cz(i, 0*max_elem_in_cohesive_zone + j);
+    //             if (tmp >= 0) eA = tmp;
+    //         }
+
+    //         for (size_t j = 0; j < max_elem_in_cohesive_zone && eB < 0; ++j){
+    //         const int tmp = cz(i, 1*max_elem_in_cohesive_zone + j);
+    //         if (tmp >= 0) eB = tmp;
+    //         } 
+
+    //         if (eA < 0 || eB < 0) {
+    //             printf("  Could not find valid elements for geometry check.\n");
+    //             continue;
+    //         }
+            
+            
+    //         double nA_buf[3], rA_buf[3], sA_buf[3], cA_buf[3];
+    //         double nB_buf[3], rB_buf[3], sB_buf[3], cB_buf[3];
+    //         ViewCArrayKokkos<double> nA(&nA_buf[0],3), rA(&rA_buf[0],3), sA(&sA_buf[0],3), cA(&cA_buf[0],3);
+    //         ViewCArrayKokkos<double> nB(&nB_buf[0],3), rB(&rB_buf[0],3), sB(&sB_buf[0],3), cB(&cB_buf[0],3);
+
+    //         compute_face_geometry(State.node.coords, mesh,
+    //                               State.node.coords, mesh.nodes_in_elem,
+    //                               static_cast<size_t>(fA_first), static_cast<size_t>(eA),
+    //                               nA, rA, sA, cA);
+    //         compute_face_geometry(State.node.coords, mesh,
+    //                               State.node.coords, mesh.nodes_in_elem,
+    //                               static_cast<size_t>(fB_first), static_cast<size_t>(eB),
+    //                               nB, rB, sB, cB);
+
+    //             const double dx = cA(0)-cB(0), dy = cA(1)-cB(1), dz = cA(2)-cB(2);
+    //             const double d2 = dx*dx + dy*dy + dz*dz;
+    //             const double dot = nA(0)*nB(0) + nA(1)*nB(1) + nA(2)*nB(2);
+
+    //             printf("  A(elem=%d, face=%d): cen=(%.6g, %.6g, %.6g) n=(%.6g, %.6g, %.6g)\n",
+    //                    eA, fA_first, cA(0), cA(1), cA(2), nA(0), nA(1), nA(2));
+    //             printf("  B(elem=%d, face=%d): cen=(%.6g, %.6g, %.6g) n=(%.6g, %.6g, %.6g)\n",
+    //                    eB, fB_first, cB(0), cB(1), cB(2), nB(0), nB(1), nB(2));
+    //             printf("  checks: |dcentroid|^2=%.6g   dot(nA,nB)=%.6g\n", d2, dot);
+            
+    //     }
+    // }
+    // printf("\n==============================================================\n");
 } // end cohesive_zones_t::initialize
+//    ======================== END cohesive_zone_info debug ========================
+
+
 
 // START OF FUNCTIONS TO CONVERT FROM GAVIN'S CODE
 
@@ -1362,10 +1536,10 @@ size_t cohesive_zones_t::cohesive_zone_elem_count(const CArrayKokkos<size_t>& ov
 /// \note This function assumes first-order hexahedral elements (nodes_in_elem = 8)
 ///
 KOKKOS_FUNCTION
-void cohesive_zones_t::compute_face_geometry(const DCArrayKokkos<double> &nodes,
+void cohesive_zones_t::compute_face_geometry(const DCArrayKokkos<double> &nodes, // unused
                             const Mesh_t &mesh,
                             const DCArrayKokkos<double> &node_coords,
-                            const DCArrayKokkos<size_t> &conn,
+                            const DCArrayKokkos<size_t> &conn, // unused
                             const size_t surf,
                             const size_t elem,
                             ViewCArrayKokkos<double> &n,
@@ -1492,6 +1666,7 @@ void cohesive_zones_t::compute_face_geometry(const DCArrayKokkos<double> &nodes,
     zap0(s(0)); zap0(s(1)); zap0(s(2));
     zap0(n(0)); zap0(n(1)); zap0(n(2));
 }
+
 // **************************************************************** Fierro Conversion **************************************************************** 
 
 // next function
@@ -1683,7 +1858,7 @@ void cohesive_zones_t::compute_face_geometry(const DCArrayKokkos<double> &nodes,
 CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
     const Mesh_t& mesh,
     const State_t& state,
-    const CArrayKokkos<size_t>& overlapping_node_gids,   // (num_pairs x 2)
+    const CArrayKokkos<size_t>& overlapping_node_gids,   // (overlapping_node_gids.dims(0) [number of overlapping node pairs] x 2)
     const size_t max_elem_in_cohesive_zone,              // from cohesive_zone_elem_count()
     const double tol                                      // centroid coincidence tolerance
 ) {
@@ -1754,45 +1929,46 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 
                             // store up to 3 face candidates for this element slot (3*j,3*j+1,3*j+2)
                             switch (k) {
+                                // three faces incident to each local corner k
                                 case 0:
                                     cohesive_zone_faces(i, 3 * j)     = 0;
                                     cohesive_zone_faces(i, 3 * j + 1) = 2;
                                     cohesive_zone_faces(i, 3 * j + 2) = 4;
                                     break;
                                 case 1:
-                                    cohesive_zone_faces(i, 3 * j)     = 0;
-                                    cohesive_zone_faces(i, 3 * j + 1) = 2;
-                                    cohesive_zone_faces(i, 3 * j + 2) = 5;
-                                    break;
-                                case 2:
                                     cohesive_zone_faces(i, 3 * j)     = 1;
                                     cohesive_zone_faces(i, 3 * j + 1) = 2;
-                                    cohesive_zone_faces(i, 3 * j + 2) = 5;
+                                    cohesive_zone_faces(i, 3 * j + 2) = 4;
+                                    break;
+                                case 2:
+                                    cohesive_zone_faces(i, 3 * j)     = 0;
+                                    cohesive_zone_faces(i, 3 * j + 1) = 3;
+                                    cohesive_zone_faces(i, 3 * j + 2) = 4;
                                     break;
                                 case 3:
                                     cohesive_zone_faces(i, 3 * j)     = 1;
-                                    cohesive_zone_faces(i, 3 * j + 1) = 2;
+                                    cohesive_zone_faces(i, 3 * j + 1) = 3;
                                     cohesive_zone_faces(i, 3 * j + 2) = 4;
                                     break;
                                 case 4:
                                     cohesive_zone_faces(i, 3 * j)     = 0;
-                                    cohesive_zone_faces(i, 3 * j + 1) = 3;
-                                    cohesive_zone_faces(i, 3 * j + 2) = 4;
+                                    cohesive_zone_faces(i, 3 * j + 1) = 2;
+                                    cohesive_zone_faces(i, 3 * j + 2) = 5;
                                     break;
                                 case 5:
-                                    cohesive_zone_faces(i, 3 * j)     = 0;
-                                    cohesive_zone_faces(i, 3 * j + 1) = 3;
+                                    cohesive_zone_faces(i, 3 * j)     = 1;
+                                    cohesive_zone_faces(i, 3 * j + 1) = 2;
                                     cohesive_zone_faces(i, 3 * j + 2) = 5;
                                     break;
                                 case 6:
-                                    cohesive_zone_faces(i, 3 * j)     = 1;
+                                    cohesive_zone_faces(i, 3 * j)     = 0;
                                     cohesive_zone_faces(i, 3 * j + 1) = 3;
                                     cohesive_zone_faces(i, 3 * j + 2) = 5;
                                     break;
                                 case 7:
                                     cohesive_zone_faces(i, 3 * j)     = 1;
                                     cohesive_zone_faces(i, 3 * j + 1) = 3;
-                                    cohesive_zone_faces(i, 3 * j + 2) = 4;
+                                    cohesive_zone_faces(i, 3 * j + 2) = 5;
                                     break;
                             }
                         }
@@ -1814,45 +1990,46 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
                             // B-side face candidates get stored in the upper half (offset 3*max)
                             const size_t base = 3 * max_elem_in_cohesive_zone + 3 * j;
                             switch (k) {
+                                // three faces incident to each local corner k
                                 case 0:
                                     cohesive_zone_faces(i, base + 0) = 0;
                                     cohesive_zone_faces(i, base + 1) = 2;
                                     cohesive_zone_faces(i, base + 2) = 4;
                                     break;
                                 case 1:
-                                    cohesive_zone_faces(i, base + 0) = 0;
-                                    cohesive_zone_faces(i, base + 1) = 2;
-                                    cohesive_zone_faces(i, base + 2) = 5;
-                                    break;
-                                case 2:
                                     cohesive_zone_faces(i, base + 0) = 1;
                                     cohesive_zone_faces(i, base + 1) = 2;
-                                    cohesive_zone_faces(i, base + 2) = 5;
+                                    cohesive_zone_faces(i, base + 2) = 4;
+                                    break;
+                                case 2:
+                                    cohesive_zone_faces(i, base + 0) = 0;
+                                    cohesive_zone_faces(i, base + 1) = 3;
+                                    cohesive_zone_faces(i, base + 2) = 4;
                                     break;
                                 case 3:
                                     cohesive_zone_faces(i, base + 0) = 1;
-                                    cohesive_zone_faces(i, base + 1) = 2;
+                                    cohesive_zone_faces(i, base + 1) = 3;
                                     cohesive_zone_faces(i, base + 2) = 4;
                                     break;
                                 case 4:
                                     cohesive_zone_faces(i, base + 0) = 0;
-                                    cohesive_zone_faces(i, base + 1) = 3;
-                                    cohesive_zone_faces(i, base + 2) = 4;
+                                    cohesive_zone_faces(i, base + 1) = 2;
+                                    cohesive_zone_faces(i, base + 2) = 5;
                                     break;
                                 case 5:
-                                    cohesive_zone_faces(i, base + 0) = 0;
-                                    cohesive_zone_faces(i, base + 1) = 3;
+                                    cohesive_zone_faces(i, base + 0) = 1;
+                                    cohesive_zone_faces(i, base + 1) = 2;
                                     cohesive_zone_faces(i, base + 2) = 5;
                                     break;
                                 case 6:
-                                    cohesive_zone_faces(i, base + 0) = 1;
+                                    cohesive_zone_faces(i, base + 0) = 0;
                                     cohesive_zone_faces(i, base + 1) = 3;
                                     cohesive_zone_faces(i, base + 2) = 5;
                                     break;
                                 case 7:
                                     cohesive_zone_faces(i, base + 0) = 1;
                                     cohesive_zone_faces(i, base + 1) = 3;
-                                    cohesive_zone_faces(i, base + 2) = 4;
+                                    cohesive_zone_faces(i, base + 2) = 5;
                                     break;
                             }
                         }
@@ -1867,9 +2044,14 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
     // for each pair, find the first opposing/coincident face match
     // uses compute_face_geometry to get (n, r, s, cenface)
     for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
-        int count = 0;
+        //int count = 0;
+
+        // bool for first face match found (only take the first match)
+        bool found = false;
+
 
         // small stack buffers + Views, reused
+        // view = pointer to array (same memory)
         double nj_buf[3], rj_buf[3], sj_buf[3], cfj_buf[3];
         double nk_buf[3], rk_buf[3], sk_buf[3], cfk_buf[3];
         ViewCArrayKokkos<double> nj(&nj_buf[0], 3);
@@ -1890,6 +2072,7 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
             if (fA < 0 || eA < 0) continue;
 
             // geometry of A face
+            // views helpful to pass into function
             compute_face_geometry(
                 state.node.coords, mesh,
                 state.node.coords, mesh.nodes_in_elem,
@@ -1902,6 +2085,7 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
                 const int fB = cohesive_zone_faces(i, k + 3*max_elem_in_cohesive_zone);
                 const int eB = cohesive_zone_info(i, static_cast<size_t>(floor(k / 3.0) + max_elem_in_cohesive_zone));
 
+                // if fB less than 0 or if eB less than 0 (or both)
                 if (fB < 0 || eB < 0) continue;
 
                 // geometry of B face
@@ -1916,28 +2100,31 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
                 const double dx = cfj(0) - cfk(0);
                 const double dy = cfj(1) - cfk(1);
                 const double dz = cfj(2) - cfk(2);
-                const double d2 = dx*dx + dy*dy + dz*dz;
+                const double dist = std::sqrt(dx*dx + dy*dy + dz*dz);
 
                 // normals opposite (both unit): dot = -1
+                // check this dot product. should be exactly -1
                 const double dot = nj(0)*nk(0) + nj(1)*nk(1) + nj(2)*nk(2);
-
-                if (d2 <= tol*tol && (dot <= -1.0 + 1.0e-8)) {
-                    cohesive_zone_info(i, 2*max_elem_in_cohesive_zone + count) = fA; // A face id
-                    cohesive_zone_info(i, 3*max_elem_in_cohesive_zone + count) = fB; // B face id
-                    count += 1;
+                
+                // need to make tol abs value of 1e-8, not squared
+                if (dist <= tol && (dot <= -1.0 + 1.0e-8)) {
+                    cohesive_zone_info(i, 2*max_elem_in_cohesive_zone + 0) = fA; // A face id
+                    cohesive_zone_info(i, 3*max_elem_in_cohesive_zone + 0) = fB; // B face id
+                    found = true;
                     break; // first match wins for this j (same as original)
                 }
             }
 
-            // break out after we wrote one match to block #2/#3
-            if (cohesive_zone_info(i, 2*max_elem_in_cohesive_zone + (count-1)) != -1) {
-                break;
-            }
+            // break out after write one match to block #2/#3
+            //if (cohesive_zone_info(i, 2*max_elem_in_cohesive_zone + (count-1)) != -1) {
+            //    break;
+            //}
         }
     }
 
     return cohesive_zone_info;
 }
+
 // **************************************************************** Fierro Conversion **************************************************************** 
 
 // **************************************************************** FROM GAVIN'S CODE **************************************************************** 
