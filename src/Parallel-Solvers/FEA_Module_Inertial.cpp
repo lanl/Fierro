@@ -2658,6 +2658,8 @@ void FEA_Module_Inertial::compute_element_volumes()
 ---------------------------------------------------------------------------------------------- */
 
 void FEA_Module_Inertial::comm_variables(Teuchos::RCP<const MV> zp)
-{
-    comm_densities(zp);
+{   
+    if(simparam->topology_optimization_on){
+        comm_densities(zp);
+    }
 }

@@ -111,8 +111,13 @@ FEA_Module_SGH::FEA_Module_SGH(
     all_node_velocities_distributed = Explicit_Solver_Pointer_->all_node_velocities_distributed;
 
     // Switch for optimization solver
-    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
+    if(simparam->topology_optimization_on){
         cached_design_gradients_distributed    = Teuchos::rcp(new MV(map, 1));
+    }
+    if(simparam->shape_optimization_on){
+        cached_design_gradients_distributed    = Teuchos::rcp(new MV(map, simparam->num_dims));
+    }
+    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
         all_cached_node_velocities_distributed = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         force_gradient_velocity                = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
         force_gradient_position                = Teuchos::rcp(new MV(all_node_map, simparam->num_dims));
@@ -126,6 +131,9 @@ FEA_Module_SGH::FEA_Module_SGH(
         all_phi_adjoint_vector_distributed     = Teuchos::rcp(new MV(all_node_map, num_dim));
         phi_adjoint_vector_distributed         = Teuchos::rcp(new MV(*all_phi_adjoint_vector_distributed, map));
         psi_adjoint_vector_distributed         = Teuchos::rcp(new MV(all_element_map, 1));
+        all_node_accelerations_distributed     = Teuchos::rcp(new MV(all_node_map, num_dim));
+        node_accelerations_distributed         = Teuchos::rcp(new MV(*all_node_accelerations_distributed, map));
+        element_specific_power_distributed     = Teuchos::rcp(new MV(all_element_map, 1));
     }
 
     if (simparam->topology_optimization_on || simparam->shape_optimization_on || simparam->num_dims == 2) {
@@ -157,7 +165,7 @@ FEA_Module_SGH::FEA_Module_SGH(
     graphics_id    = simparam->output_options.graphics_id;
     rk_num_bins    = simparam->dynamic_options.rk_num_bins;
 
-    if (simparam->topology_optimization_on) {
+    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
         if(simparam->optimization_options.use_solve_checkpoints){
             max_time_steps                               = simparam->optimization_options.num_solve_checkpoints;
             dynamic_checkpoint_set                       = Teuchos::rcp(new std::set<Dynamic_Checkpoint>());
@@ -171,15 +179,25 @@ FEA_Module_SGH::FEA_Module_SGH(
             midpoint_adjoint_vector_distributed          = Teuchos::rcp(new MV(all_node_map, num_dim));
             midpoint_phi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_node_map, num_dim));
             midpoint_psi_adjoint_vector_distributed      = Teuchos::rcp(new MV(all_element_map, 1));
+            cached_adjoint_gradient_distributed          = Teuchos::rcp(new MV(map, num_dim));
+            cached_phi_adjoint_gradient_distributed      = Teuchos::rcp(new MV(map, num_dim));
+            cached_psi_adjoint_gradient_distributed      = Teuchos::rcp(new MV(all_element_map, 1));
+            
         }
         else{
             max_time_steps = BUFFER_GROW;
         }
-        elem_power_dgradients = DCArrayKokkos<real_t>(rnum_elem);
         element_internal_energy_distributed = Teuchos::rcp(new MV(all_element_map, 1));
     }
-
+    
     if (simparam->topology_optimization_on) {
+        elem_power_dgradients = DCArrayKokkos<real_t>(rnum_elem);
+    }
+    else if(simparam->shape_optimization_on){
+        elem_power_dgradients = DCArrayKokkos<real_t>(rnum_elem, max_nodes_per_element, num_dim);
+    }
+
+    if (simparam->topology_optimization_on || simparam->shape_optimization_on) {
         forward_solve_velocity_data   = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         forward_solve_coordinate_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
         forward_solve_internal_energy_data = Teuchos::rcp(new std::vector<Teuchos::RCP<MV>>(max_time_steps + 1));
@@ -1750,7 +1768,7 @@ void FEA_Module_SGH::sgh_solve()
     // }
 
     // simple setup to just calculate KE minimize objective for now
-    if (topology_optimization_on) {
+    if (topology_optimization_on || shape_optimization_on) {
         objective_function->global_reduction();
     }
 

@@ -101,6 +101,7 @@ private:
 
     bool useLC_; // Use linear form of energy.  Otherwise use quadratic form.
     bool first_init; //prevents ROL from calling init computation twice at start for the AL algorithm
+    bool first_temp = true;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -149,7 +150,7 @@ public:
         : useLC_(true)
     {
         Explicit_Solver_Pointer_ = Explicit_Solver_Pointer;
-        first_init = false;
+        first_init = true;
         valid_fea_modules.push_back(FEA_MODULE_TYPE::SGH);
         valid_fea_modules.push_back(FEA_MODULE_TYPE::Dynamic_Elasticity);
         nvalid_modules = valid_fea_modules.size();
@@ -311,7 +312,7 @@ public:
                 // decide to output current optimization state
                 // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
             }
-            first_init = true;
+            first_init = false;
         }
         else if (type == ROL::UpdateType::Accept) {
             if (Explicit_Solver_Pointer_->myrank == 0) {
@@ -370,7 +371,9 @@ public:
             if(Explicit_Solver_Pointer_->myrank == 0){
                 std::cout << "CURRENT TIME INTEGRAL OF KINETIC ENERGY " << objective_accumulation << std::endl;
             }
+            if(first_temp)
             FEM_SGH_->compute_topology_optimization_adjoint_full(zp);
+            first_temp = false;
         }
     }
 
@@ -413,9 +416,11 @@ public:
                 }
                 if(contained){
                     for (size_t dim = 0; dim < num_dim; dim++) {
-                        // midpoint integration approximation
-                        ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
-                                (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4; // 1/2 at end
+                        // 3 point lobatto integration approximation
+                        ke += 1.0/3.0*previous_node_velocities_interface(node_gid, dim) * previous_node_velocities_interface(node_gid, dim) +
+                              4.0/3.0*(node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
+                              (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4.0 +
+                              1.0/3.0*node_velocities_interface(node_gid, dim) * node_velocities_interface(node_gid, dim); // 1/2 at end
                     } // end for
                 }
 
@@ -431,9 +436,11 @@ public:
             FOR_REDUCE_SUM_CLASS(node_gid, 0, nlocal_nodes, KE_loc_sum, {
                 double ke = 0;
                 for (size_t dim = 0; dim < num_dim; dim++) {
-                    // midpoint integration approximation
-                    ke += (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
-                        (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4; // 1/2 at end
+                    // 3 point lobatto integration approximation
+                    ke += 1.0/3*previous_node_velocities_interface(node_gid, dim) * previous_node_velocities_interface(node_gid, dim) +
+                              4.0/3*(node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) * 
+                              (node_velocities_interface(node_gid, dim) + previous_node_velocities_interface(node_gid, dim)) / 4 +
+                              1.0/3*node_velocities_interface(node_gid, dim) * node_velocities_interface(node_gid, dim); // 1/2 at end
                 } // end for
 
                 if (num_dim == 2) {
@@ -446,7 +453,7 @@ public:
         }
         Kokkos::fence();
         KE_sum = 0.5 * KE_sum;
-        objective_accumulation += KE_sum * dt;
+        objective_accumulation += KE_sum * dt*0.5; //another half for effective lobatto weight after transforming from -1:1 to t:t+dt
     }
 
   /* --------------------------------------------------------------------------------------
@@ -571,7 +578,7 @@ public:
     void density_gradient_term(vec_array& gradient_vector, const DViewCArrayKokkos<double>& node_mass,
                                const DViewCArrayKokkos<double>& elem_mass, const DViewCArrayKokkos<double>& node_vel,
                                const DViewCArrayKokkos<double>& node_coords, const DViewCArrayKokkos<double>& elem_sie,
-                               const size_t& rk_level, const real_t& global_dt = 0){
+                               const size_t& rk_level, const real_t& weight, const real_t& global_dt = 0){
         size_t current_data_index, next_data_index;
         CArrayKokkos<real_t, array_layout, device_type, memory_traits> current_element_velocities = CArrayKokkos<real_t, array_layout, device_type, memory_traits>(num_nodes_in_elem, num_dim);
         auto optimization_objective_regions = FEM_SGH_->simparam->optimization_options.optimization_objective_regions;
@@ -626,7 +633,7 @@ public:
                         // compute gradient of local element contribution to v^t*M*v product
                         corner_id = elem_id * num_nodes_in_elem + inode;
                         // division by design ratio recovers nominal element mass used in the gradient operator
-                        corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
+                        corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
                     }
                 }); // end parallel for
                 Kokkos::fence();
@@ -659,7 +666,7 @@ public:
                         // compute gradient of local element contribution to v^t*M*v product
                         corner_id = elem_id * num_nodes_in_elem + inode;
                         // division by design ratio recovers nominal element mass used in the gradient operator
-                        corner_value_storage(corner_id) = inner_product * global_dt / relative_element_densities(elem_id);
+                        corner_value_storage(corner_id) = inner_product / relative_element_densities(elem_id);
                     }
                 }); // end parallel for
                 Kokkos::fence();
@@ -670,7 +677,7 @@ public:
                 size_t corner_id;
                 for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
                     corner_id = corners_in_node(node_id, icorner);
-                    gradient_vector(node_id, 0) += 0.5 * corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
+                    gradient_vector(node_id, 0) += 0.25 * weight *global_dt *corner_value_storage(corner_id) / (double)num_nodes_in_elem / (double)num_nodes_in_elem;
                 }
             }); // end parallel for
             Kokkos::fence();

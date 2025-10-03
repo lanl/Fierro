@@ -98,6 +98,7 @@ private:
     real_t previous_objective_accumulation, objective_sign;
 
     bool first_init; //prevents ROL from calling init computation twice at start for the AL algorithm
+    bool first_temp = true;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -144,7 +145,7 @@ public:
     InternalEnergyMinimize_ShapeOpt(Explicit_Solver* Explicit_Solver_Pointer)
     {
         Explicit_Solver_Pointer_ = Explicit_Solver_Pointer;
-        first_init = false;
+        first_init = true;
         valid_fea_modules.push_back(FEA_MODULE_TYPE::SGH);
         nvalid_modules = valid_fea_modules.size();
         objective_sign = 1;
@@ -221,7 +222,7 @@ public:
                 // decide to output current optimization state
                 // FEM_SGH_->Explicit_Solver_Pointer_->write_outputs();
             }
-            first_init = true;
+            first_init = false;
         }
         else if (type == ROL::UpdateType::Accept) {
             if (Explicit_Solver_Pointer_->myrank == 0) {
@@ -280,7 +281,10 @@ public:
             if(Explicit_Solver_Pointer_->myrank == 0){
                 std::cout << "CURRENT TIME INTEGRAL OF INTERNAL ENERGY " << objective_accumulation << std::endl;
             }
+            if(first_temp){
             FEM_SGH_->compute_shape_optimization_adjoint_full(zp);
+            first_temp = false;
+            }
         }
     }
 
@@ -457,12 +461,130 @@ public:
     void design_coordinate_gradient_term(vec_array& gradient_vector, const DViewCArrayKokkos<double>& node_mass,
                                const DViewCArrayKokkos<double>& elem_mass, const DViewCArrayKokkos<double>& node_vel,
                                const DViewCArrayKokkos<double>& node_coords, const DViewCArrayKokkos<double>& elem_sie,
-                               const size_t& rk_level, const real_t& global_dt = 0){
+                               const size_t& rk_level, const real_t& lobatto_weight, const real_t& global_dt = 0){
         auto optimization_objective_regions = FEM_SGH_->simparam->optimization_options.optimization_objective_regions;
         auto nodes_in_elem = FEM_SGH_->nodes_in_elem;
         auto corner_value_storage = FEM_SGH_->corner_value_storage;
         auto corners_in_node = FEM_SGH_->corners_in_node;
         auto num_corners_in_node = FEM_SGH_->num_corners_in_node;
+        auto relative_element_densities = FEM_SGH_->relative_element_densities;
+        int max_nodes_per_element = FEM_SGH_->max_nodes_per_element;
+        auto all_design_node_coords_distributed = FEM_SGH_->all_design_node_coords_distributed;
+        double volume_gradients_array[max_nodes_per_element * num_dim];
+        auto elem_den = FEM_SGH_->elem_den;
+        ViewCArrayKokkos<double> volume_gradients(volume_gradients_array, max_nodes_per_element, num_dim);
+        // view scope
+        {
+            const_vec_array all_design_node_coords = all_design_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+            if(optimization_objective_regions.size()){
+                int nobj_volumes = optimization_objective_regions.size();
+                const_vec_array all_initial_node_coords = FEM_SGH_->all_initial_node_coords_distributed->getLocalView<device_type>(Tpetra::Access::ReadOnly);
+                FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                    size_t node_id;
+                    size_t corner_id;
+                    real_t inner_product;
+
+                    // cut out the node_gids for this element
+                    ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_id, 0), max_nodes_per_element);
+
+                    //we need elem_den at t=0; multiply by elem_vol ratio
+                    FArray<double> current_design_node_coords(num_nodes_in_elem, num_dim);
+                    for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                        current_design_node_coords(node_lid,0) = all_design_node_coords(elem_node_gids(node_lid), 0);
+                        current_design_node_coords(node_lid,1) = all_design_node_coords(elem_node_gids(node_lid), 1);
+                        current_design_node_coords(node_lid,2) = all_design_node_coords(elem_node_gids(node_lid), 2);
+                    } // end for
+                    real_t vol0;
+                    FEM_SGH_->get_vol_hex(vol0, elem_id, current_design_node_coords, elem_node_gids, rk_level);
+                    real_t vol = elem_mass(elem_id)/elem_den(elem_id);
+
+                    inner_product = 0;
+                    bool contained = false;
+                    double current_elem_coords[3];
+                    current_elem_coords[0] = 0;
+                    current_elem_coords[1] = 0;
+                    current_elem_coords[2] = 0;
+                    for(int inode=0; inode< num_nodes_in_elem; inode++){
+                        node_id = nodes_in_elem(elem_id, inode);
+                        current_elem_coords[0] += all_initial_node_coords(node_id, 0)/num_nodes_in_elem;
+                        current_elem_coords[1] += all_initial_node_coords(node_id, 1)/num_nodes_in_elem;
+                        current_elem_coords[2] += all_initial_node_coords(node_id, 2)/num_nodes_in_elem;
+                    }
+                    for(int ivolume = 0; ivolume < nobj_volumes; ivolume++){
+                        if(optimization_objective_regions(ivolume).contains(current_elem_coords)){
+                            contained = true;
+                        }
+                    }
+                    
+                    if(contained){
+                        inner_product = elem_den(elem_id) * vol/vol0 * elem_sie(rk_level, elem_id);
+                    }
+
+                    // gradients of the element volume at t=0 w.r.t to initial design coordinates
+                    FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, current_design_node_coords, elem_node_gids, rk_level);
+
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                        for(int idim = 0; idim < num_dim; idim++){
+                            // compute gradient of local element contribution to v^t*M*v product
+                            corner_id = elem_id * num_nodes_in_elem + inode;
+                            // division by design ratio recovers nominal element mass used in the gradient operator
+                            corner_value_storage(corner_id, idim) = inner_product * volume_gradients(inode, idim) ;
+                        }
+                    }
+                }); // end parallel for
+                Kokkos::fence();
+            }
+            else{
+                FOR_ALL_CLASS(elem_id, 0, rnum_elem, {
+                    size_t node_id;
+                    size_t corner_id;
+                    real_t inner_product;
+                    // std::cout << elem_mass(elem_id) <<std::endl;
+
+                    // cut out the node_gids for this element
+                    ViewCArrayKokkos<size_t> elem_node_gids(&nodes_in_elem(elem_id, 0), max_nodes_per_element);
+
+                    //we need elem_den at t=0; multiply by elem_vol ratio
+                    FArray<double> current_design_node_coords(num_nodes_in_elem, num_dim);
+                    for (int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                        current_design_node_coords(node_lid,0) = all_design_node_coords(elem_node_gids(node_lid), 0);
+                        current_design_node_coords(node_lid,1) = all_design_node_coords(elem_node_gids(node_lid), 1);
+                        current_design_node_coords(node_lid,2) = all_design_node_coords(elem_node_gids(node_lid), 2);
+                    } // end for
+                    real_t vol0;
+                    FEM_SGH_->get_vol_hex(vol0, elem_id, current_design_node_coords, elem_node_gids, rk_level);
+                    real_t vol = elem_mass(elem_id)/elem_den(elem_id);
+
+                    // gradients of the element volume
+                    FEM_SGH_->get_vol_hex_ugradient(volume_gradients, elem_id, current_design_node_coords, elem_node_gids, rk_level);
+
+                    inner_product = elem_den(elem_id) * vol/vol0 * elem_sie(rk_level, elem_id);
+
+                    for (int inode = 0; inode < num_nodes_in_elem; inode++) {
+                        for(int idim = 0; idim < num_dim; idim++){
+                            // compute gradient of local element contribution to v^t*M*v product
+                            corner_id = elem_id * num_nodes_in_elem + inode;
+                            // division by design ratio recovers nominal element mass used in the gradient operator
+                            corner_value_storage(corner_id, idim) = inner_product * volume_gradients(inode, idim);
+                        }
+                    }
+                }); // end parallel for
+                Kokkos::fence();
+            }
+            // accumulate node values from corner storage
+            // multiply
+            FOR_ALL_CLASS(node_id, 0, nlocal_nodes, {
+                size_t corner_id;
+                for (int icorner = 0; icorner < num_corners_in_node(node_id); icorner++) {
+                    for(int idim = 0; idim < num_dim; idim++){
+                        corner_id = corners_in_node(node_id, icorner);
+                        gradient_vector(node_id, idim) += 0.5 * lobatto_weight * corner_value_storage(corner_id, idim) * global_dt;
+                    }
+                }
+            }); // end parallel for
+            Kokkos::fence();
+        }
+        
     }
 
 };
