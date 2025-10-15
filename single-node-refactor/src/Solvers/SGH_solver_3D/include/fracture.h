@@ -95,7 +95,8 @@ struct cohesive_zones_t {
                                 ViewCArrayKokkos<double> &n,
                                 ViewCArrayKokkos<double> &r,
                                 ViewCArrayKokkos<double> &s,
-                                ViewCArrayKokkos<double> &cenface);
+                                ViewCArrayKokkos<double> &cenface
+                            ) const;
 
 
     CArrayKokkos<int> build_cohesive_zone_info(
@@ -115,6 +116,19 @@ struct cohesive_zones_t {
        const CArrayKokkos<size_t>& overlapping_node_gids,
        const size_t max_elem_in_cohesive_zone
     );
+
+
+    KOKKOS_FUNCTION
+    void oriented(
+        const Mesh_t& mesh,
+        const DCArrayKokkos<double>& X_t,      // reference  coords (num_nodes x 3)
+        const DCArrayKokkos<double>& X_tdt,    // updated ("t+dt") coords (num_nodes x 3) – can equal X_t if not available
+        const CArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
+        const CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
+        const size_t max_elem_in_cohesive_zone,
+        const double tol,                 // centroid coincidence tolerance (ABS distance)
+        CArrayKokkos<double>& vcz_orient       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
+    ); 
 };
 
 #endif
