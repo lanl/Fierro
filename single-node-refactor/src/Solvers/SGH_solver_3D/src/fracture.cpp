@@ -12,804 +12,6 @@
 #include "fracture.h"
 
 using namespace mtr; // matar namespace
-/* 
-// This code runs a 3D Total Lagrangian Method Linear Elastic Finite Element Analysis with Viscoelastic Cohezive Zones between elements for modeling fracturebased upon a user provided input file
-// The analysis as of Oct 21st, 2024 will consider an isotropic homogenous linear elastic bulk material and neglects body forces
-// Interpolation functions are that of the Lagrange Family for an 8-node 1st order brick element
-// Written by Gavin Whetstone
-
-// This function reads the intialization lines of the input file based upon input filename and stores
-// the necessary values to then read the rest of the input file
-// NNODE: number of nodes
-// NEL: number of elements
-// NDBC: number of dirichlet boundary conditions
-// NPL: number of points loads
-// NTL: number of traction loads
-// BCFLAG: decides type of BC application
-// NLS: number of load steps
-// E: Young's Modulus
-// nu: Poisson's Ratio
-// t: thickness
-// tol: convergence tolerance
-// NUP: number of unique node pairs with cohesive zones between them
-// a1: alpha1 parameter in damage evolution law
-// n: n parameter in damage evolution law
-// Einf: constant term in the prony series
-// delt: delta_t value
-// NPT: number of prony series terms after Einf
-// uns: u_n^* is the characteristic length for the lambda calculation for the VCZ local normal direction
-// urt: u_t^* is the characteristic length for the lambda calculation for the VCZ local tangent direction
-void readFirstLines(const std::string& filename, int& NNODE, int& NEL, int& NDBC, int& NPL, int& NTL, int& BCFLAG, int& NLS, double& E, double& nu, double& t, double& tol, int& NUP, double& a1, double& n, double& Einf, double& delt, int& NPT, double& uns, double& uts) {
-    // Create an input file stream
-    std::ifstream inputFile(filename);
-
-    std::string line;
-
-    // Read the first line
-    std::getline(inputFile, line);
-
-    // Extract the values from the line into the initialized integers
-    std::istringstream iss(line);
-    iss >> NNODE >> NEL >> NDBC >> NPL >> NTL >> BCFLAG;
-
-    // Read and extract from second line
-    std::getline(inputFile, line);
-    iss.clear();
-    iss.str(line);
-    iss >> NLS >> E >> nu >> t >> tol;
-
-    // Reand extract from third line
-    std::getline(inputFile, line);
-    iss.clear();
-    iss.str(line);
-    iss >> NUP >> a1 >> n >> Einf >> delt >> NPT >> uns >> uts;
-
-    inputFile.close();
-
-}
-// This function reads the rest of the input file and stores the prony series parameters, nodal coordinates, element connectivity, cohesive zobe unique node pair connectivity, and boundary condition values
-// Outputs are stored in Eandrhom, NODES, CONN, DBCS, PLS, UPs, and TLS
-void readTheRest(const std::string& filename, int NUP, int NPT, int NNODE, int NEL, int NDBC, int NPL, int NTL, int BCFLAG, int NLS, CArray <double> NODES, CArray <int> CONN, CArray <double> DBCS, CArray <double> PLS, CArray <double> TLS, CArray <double> Eandrhom, CArray <int> UPs) {
-    // Create an input file stream
-    std::ifstream inputFile(filename);
-
-    // Skip the first second, and third line
-    std::string firstLines;
-    std::getline(inputFile, firstLines);
-    std::getline(inputFile, firstLines);
-    std::getline(inputFile, firstLines);
-
-    // Read and process the remaining lines
-    std::string line;
-    for (int i = 0; i < NPT; i++) {
-        std::getline(inputFile, line);
-        std::istringstream iss(line);
-        iss >> Eandrhom(i,0) >> Eandrhom(i,1);
-    }
-    for (int i = 0; i < NNODE; i++) {
-        std::getline(inputFile, line);
-        std::istringstream iss(line);
-        iss >> NODES(i,0) >> NODES(i,1) >> NODES(i,2);
-    }
-    for (int i = 0; i < NEL; i++) {
-        std::getline(inputFile, line);
-        std::istringstream iss(line);
-        iss >> CONN(i,0) >> CONN(i,1) >> CONN(i,2) >> CONN(i,3) >> CONN(i,4) >> CONN(i,5) >> CONN(i,6) >> CONN(i,7);
-    }
-    for (int i = 0; i < NUP; i++) {
-        std::getline(inputFile, line);
-        std::istringstream iss(line);
-        iss >> UPs(i,0) >> UPs(i,1);
-    }
-    if (BCFLAG == 0) {
-        for (int i = 0; i < NDBC; i++) {
-            std::getline(inputFile, line);
-            std::istringstream iss(line);
-            iss >> DBCS(i,0) >> DBCS(i,1) >> DBCS(i,2);
-        }
-        for (int i = 0; i < NPL; i++) {
-            std::getline(inputFile, line);
-            std::istringstream iss(line);
-            iss >> PLS(i,0) >> PLS(i,1) >> PLS(i,2);
-        }
-        for (int i = 0; i < NTL; i++) {
-            std::getline(inputFile, line);
-            std::istringstream iss(line);
-            iss >> TLS(i,0) >> TLS(i,1) >> TLS(i,2) >> TLS(i,3) >> TLS(i,4);
-        }
-    }
-    else {
-        for (int i = 0; i < NDBC; i++) {
-            std::getline(inputFile, line);
-            std::istringstream iss(line);
-            for (int j = 0; j < 2 + NLS; j++) {
-                iss >> DBCS(i,j);
-            }
-        }
-        for (int i = 0; i < NPL; i++) {
-            std::getline(inputFile, line);
-            std::istringstream iss(line);
-            for (int j = 0; j < 2 + NLS; j++) {
-                iss >> PLS(i,j);
-            }
-        }
-        for (int i = 0; i < NTL; i++) {
-            std::getline(inputFile, line);
-            std::istringstream iss(line);
-            iss >> TLS(i,0) >> TLS(i,1);
-            for (int j = 0; j < NLS; j++) {
-                for (int k = 0; k < 3; k++) {
-                    iss >> TLS(i,2 + 3 * j + k);
-                }
-            }
-        }
-    }
-
-}
-
-// This function calculates shape function values and their derivatives at point (xi1, xi2, xi3)
-// Values are stored in the input array psi
-void MasterShapes(FArray <double> psi, double xi1, double xi2, double xi3) {
-    // psi
-    psi(0,0) = 0.125*(1-xi1)*(1-xi2)*(1-xi3);
-    psi(1,0) = 0.125*(1-xi1)*(1-xi2)*(1+xi3);
-    psi(2,0) = 0.125*(1+xi1)*(1-xi2)*(1+xi3);
-    psi(3,0) = 0.125*(1+xi1)*(1-xi2)*(1-xi3);
-    psi(4,0) = 0.125*(1-xi1)*(1+xi2)*(1-xi3);
-    psi(5,0) = 0.125*(1-xi1)*(1+xi2)*(1+xi3);
-    psi(6,0) = 0.125*(1+xi1)*(1+xi2)*(1+xi3);
-    psi(7,0) = 0.125*(1+xi1)*(1+xi2)*(1-xi3);
-    // dpsidxi1
-    psi(0,1) = -0.125*(1-xi2)*(1-xi3);
-    psi(1,1) = -0.125*(1-xi2)*(1+xi3);
-    psi(2,1) = 0.125*(1-xi2)*(1+xi3);
-    psi(3,1) = 0.125*(1-xi2)*(1-xi3);
-    psi(4,1) = -0.125*(1+xi2)*(1-xi3);
-    psi(5,1) = -0.125*(1+xi2)*(1+xi3);
-    psi(6,1) = 0.125*(1+xi2)*(1+xi3);
-    psi(7,1) = 0.125*(1+xi2)*(1-xi3);
-    // dpsidxi2
-    psi(0,2) = -0.125*(1-xi1)*(1-xi3);
-    psi(1,2) = -0.125*(1-xi1)*(1+xi3);
-    psi(2,2) = -0.125*(1+xi1)*(1+xi3);
-    psi(3,2) = -0.125*(1+xi1)*(1-xi3);
-    psi(4,2) = 0.125*(1-xi1)*(1-xi3);
-    psi(5,2) = 0.125*(1-xi1)*(1+xi3);
-    psi(6,2) = 0.125*(1+xi1)*(1+xi3);
-    psi(7,2) = 0.125*(1+xi1)*(1-xi3);
-    // dpsidxi3
-    psi(0,3) = -0.125*(1-xi1)*(1-xi2);
-    psi(1,3) = 0.125*(1-xi1)*(1-xi2);
-    psi(2,3) = 0.125*(1+xi1)*(1-xi2);
-    psi(3,3) = -0.125*(1+xi1)*(1-xi2);
-    psi(4,3) = -0.125*(1-xi1)*(1+xi2);
-    psi(5,3) = 0.125*(1-xi1)*(1+xi2);
-    psi(6,3) = 0.125*(1+xi1)*(1+xi2);
-    psi(7,3) = -0.125*(1+xi1)*(1+xi2);
-}
-
-// This function calcules the material matrix for isotropic linear elasticity based upon E and nu
-// Output is C Matrix for isotropic linear elastic solid strain formulation
-CArray <double> CMaterial(double E, double nu) {
-    auto Cmat = CArray <double> (6,6);
-    Cmat.set_values(0);
-    int coef = E/((1+nu)*(1-2*nu));
-    Cmat(0,0) = coef*(1-nu);
-    Cmat(0,1) = coef*nu;
-    Cmat(0,2) = coef*nu;
-    Cmat(1,0) = coef*nu;
-    Cmat(1,1) = coef*(1-nu);
-    Cmat(1,2) = coef*nu;
-    Cmat(2,0) = coef*nu;
-    Cmat(2,1) = coef*nu;
-    Cmat(2,2) = coef*(1-nu);
-    Cmat(3,3) = coef*(1-2*nu)/2;
-    Cmat(4,4) = coef*(1-2*nu)/2;
-    Cmat(5,5) = coef*(1-2*nu)/2;
-    return Cmat;
-}
-
-// This function pulls the current displacements and nodal coordinates based upon
-// inputs of element number, nodal coordinate matrix, total displacement vector, and connectivity
-// The current location of the nodes for the element are calculated
-// Outputs elcoords with cols [x1, x2, x3] and uel with cols [u1, u2, u3]
-void ElemCoords(CArray <double> elcoords, CArray <double> uel, int elnum, CArray <double> NODES, CArray <int> CONN, CArray <double> ut, CArray <double> us) {
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 3; j++) {
-            elcoords(i,j) = NODES(CONN(elnum,i),j);
-            uel(i,j) = ut(3 * CONN(elnum,i) + j) + us(3 * CONN(elnum,i) + j);
-        }
-    }
-}
-
-// This function calculates the jacobian, its determinant, its inverse, displacement gradient, global derivatives, and second PK stress
-// for element calculations at a point based on inputs of master shape function derivative values, element displacement vector,
-// material matrix, and global nodal coordinates
-// Outputs are stored in dpsig, gradu, and Jdet (Jinv is only used for calculating global derivatives and are therefore
-// unnecessary to return from this function)
-void Gradients(CArray <double> dpsig, CArray <double> gradu, double& detJ, FArray <double> dpsiloc, CArray <double> elcoords, CArray <double> uel, CArray <double> S01, CArray <double> E01, CArray <double> C) {
-    // creating and initializing Jacobian array, inverse Jacobian, adjoint matrix (transpose of cofactor matrix), green-lagrange strain matrix, lambda and mu conversion
-    auto J = CArray <double> (3,3);
-    J.set_values(0);
-    auto Jinv = CArray <double> (3,3);
-    auto adj = CArray <double> (3,3);
-    
-    // 1) elcoords and dpsiloc -> J with indices of [ [dx1dxi1 dx2dxi1 dx3dxi1] [dx1dxi2 dx2dxi2 dx3dxi2] [dx1dxi3 dx2dxi3 dx3dxi3] ]
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            for (int k = 0; k < 8; k++) {
-                J(i,j) += elcoords(k,j) * dpsiloc(k,i+1);
-            }
-        }
-    }
-    
-    // 2) J -> detJ and Jinv
-    detJ = J(0,0)*(J(1,1)*J(2,2) - J(2,1)*J(1,2)) - J(0,1)*(J(1,0)*J(2,2) - J(2,0)*J(1,2)) + J(0,2)*(J(1,0)*J(2,1) - J(2,0)*J(1,1));
-    adj(0,0) = J(1,1)*J(2,2) - J(2,1)*J(1,2);
-    adj(0,1) = -(J(0,1)*J(2,2) - J(2,1)*J(0,2));
-    adj(0,2) = J(0,1)*J(1,2) - J(1,1)*J(0,2);
-    adj(1,0) = -(J(1,0)*J(2,2) - J(2,0)*J(1,2));
-    adj(1,1) = J(0,0)*J(2,2) - J(2,0)*J(0,2);
-    adj(1,2) = -(J(0,0)*J(1,2) - J(1,0)*J(0,2));
-    adj(2,0) = J(1,0)*J(2,1) - J(2,0)*J(1,1);
-    adj(2,1) = -(J(0,0)*J(2,1) - J(2,0)*J(0,1));
-    adj(2,2) = J(0,0)*J(1,1) - J(1,0)*J(0,1);
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            Jinv(i,j) = adj(i,j) / detJ;
-        }
-    }
-
-    // 3) Jinv and dpsiloc -> dpsig with cols [dpsidx1 dpsidx2 dpsidx3]
-    for (int i = 0; i < 8; i++) {
-        dpsig(i,0) = Jinv(0,0)*dpsiloc(i,1) + Jinv(0,1)*dpsiloc(i,2) + Jinv(0,2)*dpsiloc(i,3);
-        dpsig(i,1) = Jinv(1,0)*dpsiloc(i,1) + Jinv(1,1)*dpsiloc(i,2) + Jinv(1,2)*dpsiloc(i,3);
-        dpsig(i,2) = Jinv(2,0)*dpsiloc(i,1) + Jinv(2,1)*dpsiloc(i,2) + Jinv(2,2)*dpsiloc(i,3);
-    }
-
-    // 4) dpsig and uel -> gradu [ [dudx dvdx dwdx] [dudy dvdy dwdy] [dudz dvdz dwdz] ]
-    gradu.set_values(0);
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            for (int k = 0; k < 8; k++) {
-                gradu(i,j) += uel(k,j) * dpsig(k,i);
-            }
-        }
-    }
-
-    // 5) gradu -> S01 (in Voigt notation [S11 S22 S33 S23 S31 S12])
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            for (int k = 0; k < 3; k++) {
-                E01(i,j) = 0.5*(gradu(i,j) + gradu(j,i) + gradu(k,i)*gradu(k,j));
-            }
-        }
-    }
-
-    S01(0) = C(0,0) * E01(0,0) + C(0,1) * E01(1,1) + C(0,2) * E01(2,2);
-    S01(1) = C(1,0) * E01(0,0) + C(1,1) * E01(1,1) + C(1,2) * E01(2,2);
-    S01(2) = C(2,0) * E01(0,0) + C(2,1) * E01(1,1) + C(2,2) * E01(2,2);
-    S01(3) = C(3,3) * 2 * E01(1,2);
-    S01(4) = C(4,4) * 2 * E01(2,0);
-    S01(5) = C(5,5) * 2 * E01(0,1);
-}
-
-// This function calculates the element matrices at a single gauss point based upon inputs for Gradients() and volume gauss point
-// Outputs are stored in Kel and F01el
-void ElemMats(CArray <double> Kel, CArray <double> F01el, CArray <double> dpsig, CArray <double> gradu, double& detJ, CArray <double> elcoords, CArray <double> uel, CArray <double> S01, CArray <double> C) {
-    // Define intermediate arrays
-    auto B1 = CArray <double> (6,24);
-    auto B2 = CArray <double> (9,24);
-    auto K1 = CArray <double> (24,24);
-    auto K2 = CArray <double> (24,24);
-    B1.set_values(0);
-    B2.set_values(0);
-    K1.set_values(0);
-    K2.set_values(0);
-    
-    // Definine a few variables just for ease of writing equations
-    double ux = gradu(0,0);
-    double uy = gradu(1,0);
-    double uz = gradu(2,0);
-    double vx = gradu(0,1);
-    double vy = gradu(1,1);
-    double vz = gradu(2,1);
-    double wx = gradu(0,2);
-    double wy = gradu(1,2);
-    double wz = gradu(2,2);
-
-    // Calculating B1 and B2
-    for (int i = 0; i < 8; i++) {
-        B1(0,3*i) = dpsig(i,0)*(1+ux);
-        B1(1,3*i) = dpsig(i,1)*uy;
-        B1(2,3*i) = dpsig(i,2)*uz;
-        B1(3,3*i) = dpsig(i,1)*uz+dpsig(i,2)*uy;
-        B1(4,3*i) = dpsig(i,2)*(1+ux) + dpsig(i,0)*uz;
-        B1(5,3*i) = dpsig(i,1)*(1+ux) + dpsig(i,0)*uy;
-
-        B1(0,3*i+1) = dpsig(i,0)*vx;
-        B1(1,3*i+1) = dpsig(i,1)*(1+vy);
-        B1(2,3*i+1) = dpsig(i,2)*vz;
-        B1(3,3*i+1) = dpsig(i,1)*vz + dpsig(i,2)*(1+vy);
-        B1(4,3*i+1) = dpsig(i,0)*vz + dpsig(i,2)*vx;
-        B1(5,3*i+1) = dpsig(i,0)*(1+vy) + dpsig(i,1)*vx;
-
-        B1(0,3*i+2) = dpsig(i,0)*wx;
-        B1(1,3*i+2) = dpsig(i,1)*wy;
-        B1(2,3*i+2) = dpsig(i,2)*(1+wz);
-        B1(3,3*i+2) = dpsig(i,1)*(1+wz) + dpsig(i,2)*wy;
-        B1(4,3*i+2) = dpsig(i,0)*(1+wz) + dpsig(i,2)*wx;
-        B1(5,3*i+2) = dpsig(i,0)*wy + dpsig(i,1)*wx;
-
-        B2(0,3*i) = dpsig(i,0);
-        B2(1,3*i) = dpsig(i,1);
-        B2(2,3*i) = dpsig(i,2);
-        
-        B2(3,3*i+1) = dpsig(i,0);
-        B2(4,3*i+1) = dpsig(i,1);
-        B2(5,3*i+1) = dpsig(i,2);
-
-        B2(6,3*i+2) = dpsig(i,0);
-        B2(7,3*i+2) = dpsig(i,1);
-        B2(8,3*i+2) = dpsig(i,2);
-    }
-    
-    // Calculate K1 = B1^T * C * B1
-    // i = rows(K1) = 24   j = rows(K1) = 24   k = rows(C) = 6   m = cols(C) = 6
-    for (int i = 0; i < 24; i++) {
-        for (int j = 0; j < 24; j++) {
-            for (int k = 0; k < 6; k++) {
-                for (int m = 0; m < 6; m++) {
-                    K1(i,j) += B1(k,i) * C(k,m) * B1(m,j);
-                }
-            }
-        }
-    }
-    
-    // Calculate K2 = B2^T * S * B2
-    // i = rows(K2) = 24   j = rows(K2) = 24   k = rows(S) = 9   m = cols(S) = 9
-    // See equation 9.4.7 in Reddy nonlinear fem book for why S is 9x9 repeating its 3x3
-    // ***********************************************************************************
-    // ORDERING OF SHEAR COMPONENTS UNCLEAR TO ME IN 3D SO CHECK HERE IF THINGS BREAK
-    // ***********************************************************************************
-    auto Smat = CArray <double> (9,9);
-    Smat.set_values(0);
-    Smat(0,0) = S01(0);
-    Smat(0,1) = S01(5);
-    Smat(0,2) = S01(4);
-    Smat(1,0) = S01(5);
-    Smat(1,1) = S01(1);
-    Smat(1,2) = S01(3);
-    Smat(2,0) = S01(4);
-    Smat(2,1) = S01(3);
-    Smat(2,2) = S01(2);
-
-    Smat(3,3) = S01(0);
-    Smat(3,4) = S01(5);
-    Smat(3,5) = S01(4);
-    Smat(4,3) = S01(5);
-    Smat(4,4) = S01(1);
-    Smat(4,5) = S01(3);
-    Smat(5,3) = S01(4);
-    Smat(5,4) = S01(3);
-    Smat(5,5) = S01(2);
-
-    Smat(6,6) = S01(0);
-    Smat(6,7) = S01(5);
-    Smat(6,8) = S01(4);
-    Smat(7,6) = S01(5);
-    Smat(7,7) = S01(1);
-    Smat(7,8) = S01(3);
-    Smat(8,6) = S01(4);
-    Smat(8,7) = S01(3);
-    Smat(8,8) = S01(2);
-
-    for (int i = 0; i < 24; i++) {
-        for (int j = 0; j < 24; j++) {
-            for (int k = 0; k < 9; k++) {
-                for (int m = 0; m < 9; m++) {
-                    K2(i,j) += B2(k,i) * Smat(k,m) * B2(m,j);
-                }
-            }
-        }
-    }
-
-    // Calculate Kel
-    for (int i = 0; i < 24; i++) {
-        for (int j = 0; j < 24; j++) {
-            Kel(i,j) += detJ*(K1(i,j) + K2(i,j));
-        }
-    }
-
-    // calculate F01el
-    // ***********************************************************************************
-    // ORDERING OF SHEAR COMPONENTS UNCLEAR TO ME IN 3D SO CHECK HERE IF THINGS BREAK
-    // ***********************************************************************************
-    for (int i = 0; i < 24; i++) {
-        for (int j = 0; j < 6; j++) {
-            F01el(i) += detJ*B1(j,i)*S01(j);
-        }
-    }
-}
-
-// Applies Dirichlet boundary conditions to the global stiffness matrix and force vector
-void Dirichlet(CArray <double> Kg, CArray <double> Fg, CArray <double> DBCS, int NDBC, int NNODE) {
-    // Adding pseudo force vector to global force vector
-    for (int i = 0; i < NDBC; i++) {
-        for (int j = 0; j < 3 * NNODE; j++) {
-            Fg(j) += -Kg(j,3 * static_cast<int>(DBCS(i,0)) + static_cast<int>(DBCS(i,1))) * DBCS(i,2);
-        }
-    }
-    // Adjusting stiffness matrix and global force vector to reflect the input value
-    for (int i = 0; i < NDBC; i++) {
-        for (int j = 0; j < 3 * NNODE; j++) {
-            Kg(j,3 * static_cast<int>(DBCS(i,0)) + static_cast<int>(DBCS(i,1))) = 0;
-            Kg(3 * static_cast<int>(DBCS(i,0)) + static_cast<int>(DBCS(i,1)),j) = 0;
-        }
-        Kg(3 * static_cast<int>(DBCS(i,0)) + static_cast<int>(DBCS(i,1)),3 * static_cast<int>(DBCS(i,0)) + static_cast<int>(DBCS(i,1))) = 1;
-        Fg(3 * static_cast<int>(DBCS(i,0)) + static_cast<int>(DBCS(i,1))) = DBCS(i,2);
-    }
-}
-
-// Applies point loads to the global force vector
-// Only input ONE SINGLE point load for each degree of freedom
-void PointLoad(CArray <double> Fg, CArray <double> PLS, int NPL) {
-    for (int i = 0; i < NPL; i++) {
-        Fg(3 * static_cast<int>(PLS(i,0)) + static_cast<int>(PLS(i,1))) += PLS(i,2);
-    }
-}
-
-// Applies traction boundary conditions to the global force vector (only includes uniform tractions as of 10/29/2024)
-void Traction(CArray <double> Fg, int elem, int patch, CArray <int> CONN, CArray <double> elcoords, double tx1, double tx2, double tx3, FArray <double> gp0, FArray <double> gp1, FArray <double> gp2, FArray <double> gp3) {
-    // initializing jacobian arrays for area calculations and area
-    auto J0 = CArray <double> (3,3);
-    auto J1 = CArray <double> (3,3);
-    auto J2 = CArray <double> (3,3);
-    auto J3 = CArray <double> (3,3);
-    J0.set_values(0);
-    J1.set_values(0);
-    J2.set_values(0);
-    J3.set_values(0);
-    auto Jsur = CArray <double> (4);
-
-    // calculating jacobian matrix for each gauss point
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            for (int k = 0; k < 8; k++) {
-                J0(i,j) += elcoords(k,j) * gp0(k,i+1);
-                J1(i,j) += elcoords(k,j) * gp1(k,i+1);
-                J2(i,j) += elcoords(k,j) * gp2(k,i+1);
-                J3(i,j) += elcoords(k,j) * gp3(k,i+1);
-            }
-        }
-    }
-
-    // calculating surface jacobian magnitude
-    int i;
-    int j;
-    switch(patch) {
-        case 0:
-            i = 1;
-            j = 2;
-            Jsur(0) = sqrt(pow((J0(i,1)*J0(j,2) - J0(j,1)*J0(i,2)),2) + pow((J0(i,0)*J0(j,2) - J0(j,0)*J0(i,2)),2) + pow((J0(i,0)*J0(j,1) - J0(j,0)*J0(i,1)),2));
-            Jsur(1) = sqrt(pow((J1(i,1)*J1(j,2) - J1(j,1)*J1(i,2)),2) + pow((J1(i,0)*J1(j,2) - J1(j,0)*J1(i,2)),2) + pow((J1(i,0)*J1(j,1) - J1(j,0)*J1(i,1)),2));
-            Jsur(2) = sqrt(pow((J2(i,1)*J2(j,2) - J2(j,1)*J2(i,2)),2) + pow((J2(i,0)*J2(j,2) - J2(j,0)*J2(i,2)),2) + pow((J2(i,0)*J2(j,1) - J2(j,0)*J2(i,1)),2));
-            Jsur(3) = sqrt(pow((J3(i,1)*J3(j,2) - J3(j,1)*J3(i,2)),2) + pow((J3(i,0)*J3(j,2) - J3(j,0)*J3(i,2)),2) + pow((J3(i,0)*J3(j,1) - J3(j,0)*J3(i,1)),2));
-            break;
-        case 1:
-            i = 1;
-            j = 2;
-            Jsur(0) = sqrt(pow((J0(i,1)*J0(j,2) - J0(j,1)*J0(i,2)),2) + pow((J0(i,0)*J0(j,2) - J0(j,0)*J0(i,2)),2) + pow((J0(i,0)*J0(j,1) - J0(j,0)*J0(i,1)),2));
-            Jsur(1) = sqrt(pow((J1(i,1)*J1(j,2) - J1(j,1)*J1(i,2)),2) + pow((J1(i,0)*J1(j,2) - J1(j,0)*J1(i,2)),2) + pow((J1(i,0)*J1(j,1) - J1(j,0)*J1(i,1)),2));
-            Jsur(2) = sqrt(pow((J2(i,1)*J2(j,2) - J2(j,1)*J2(i,2)),2) + pow((J2(i,0)*J2(j,2) - J2(j,0)*J2(i,2)),2) + pow((J2(i,0)*J2(j,1) - J2(j,0)*J2(i,1)),2));
-            Jsur(3) = sqrt(pow((J3(i,1)*J3(j,2) - J3(j,1)*J3(i,2)),2) + pow((J3(i,0)*J3(j,2) - J3(j,0)*J3(i,2)),2) + pow((J3(i,0)*J3(j,1) - J3(j,0)*J3(i,1)),2));
-            break;
-        case 2:
-            i = 0;
-            j = 2;
-            Jsur(0) = sqrt(pow((J0(i,1)*J0(j,2) - J0(j,1)*J0(i,2)),2) + pow((J0(i,0)*J0(j,2) - J0(j,0)*J0(i,2)),2) + pow((J0(i,0)*J0(j,1) - J0(j,0)*J0(i,1)),2));
-            Jsur(1) = sqrt(pow((J1(i,1)*J1(j,2) - J1(j,1)*J1(i,2)),2) + pow((J1(i,0)*J1(j,2) - J1(j,0)*J1(i,2)),2) + pow((J1(i,0)*J1(j,1) - J1(j,0)*J1(i,1)),2));
-            Jsur(2) = sqrt(pow((J2(i,1)*J2(j,2) - J2(j,1)*J2(i,2)),2) + pow((J2(i,0)*J2(j,2) - J2(j,0)*J2(i,2)),2) + pow((J2(i,0)*J2(j,1) - J2(j,0)*J2(i,1)),2));
-            Jsur(3) = sqrt(pow((J3(i,1)*J3(j,2) - J3(j,1)*J3(i,2)),2) + pow((J3(i,0)*J3(j,2) - J3(j,0)*J3(i,2)),2) + pow((J3(i,0)*J3(j,1) - J3(j,0)*J3(i,1)),2));
-            break;
-        case 3:
-            i = 0;
-            j = 2;
-            Jsur(0) = sqrt(pow((J0(i,1)*J0(j,2) - J0(j,1)*J0(i,2)),2) + pow((J0(i,0)*J0(j,2) - J0(j,0)*J0(i,2)),2) + pow((J0(i,0)*J0(j,1) - J0(j,0)*J0(i,1)),2));
-            Jsur(1) = sqrt(pow((J1(i,1)*J1(j,2) - J1(j,1)*J1(i,2)),2) + pow((J1(i,0)*J1(j,2) - J1(j,0)*J1(i,2)),2) + pow((J1(i,0)*J1(j,1) - J1(j,0)*J1(i,1)),2));
-            Jsur(2) = sqrt(pow((J2(i,1)*J2(j,2) - J2(j,1)*J2(i,2)),2) + pow((J2(i,0)*J2(j,2) - J2(j,0)*J2(i,2)),2) + pow((J2(i,0)*J2(j,1) - J2(j,0)*J2(i,1)),2));
-            Jsur(3) = sqrt(pow((J3(i,1)*J3(j,2) - J3(j,1)*J3(i,2)),2) + pow((J3(i,0)*J3(j,2) - J3(j,0)*J3(i,2)),2) + pow((J3(i,0)*J3(j,1) - J3(j,0)*J3(i,1)),2));
-            break;
-        case 4:
-            i = 0;
-            j = 1;
-            Jsur(0) = sqrt(pow((J0(i,1)*J0(j,2) - J0(j,1)*J0(i,2)),2) + pow((J0(i,0)*J0(j,2) - J0(j,0)*J0(i,2)),2) + pow((J0(i,0)*J0(j,1) - J0(j,0)*J0(i,1)),2));
-            Jsur(1) = sqrt(pow((J1(i,1)*J1(j,2) - J1(j,1)*J1(i,2)),2) + pow((J1(i,0)*J1(j,2) - J1(j,0)*J1(i,2)),2) + pow((J1(i,0)*J1(j,1) - J1(j,0)*J1(i,1)),2));
-            Jsur(2) = sqrt(pow((J2(i,1)*J2(j,2) - J2(j,1)*J2(i,2)),2) + pow((J2(i,0)*J2(j,2) - J2(j,0)*J2(i,2)),2) + pow((J2(i,0)*J2(j,1) - J2(j,0)*J2(i,1)),2));
-            Jsur(3) = sqrt(pow((J3(i,1)*J3(j,2) - J3(j,1)*J3(i,2)),2) + pow((J3(i,0)*J3(j,2) - J3(j,0)*J3(i,2)),2) + pow((J3(i,0)*J3(j,1) - J3(j,0)*J3(i,1)),2));
-            break;
-        case 5:
-            i = 0;
-            j = 1;
-            Jsur(0) = sqrt(pow((J0(i,1)*J0(j,2) - J0(j,1)*J0(i,2)),2) + pow((J0(i,0)*J0(j,2) - J0(j,0)*J0(i,2)),2) + pow((J0(i,0)*J0(j,1) - J0(j,0)*J0(i,1)),2));
-            Jsur(1) = sqrt(pow((J1(i,1)*J1(j,2) - J1(j,1)*J1(i,2)),2) + pow((J1(i,0)*J1(j,2) - J1(j,0)*J1(i,2)),2) + pow((J1(i,0)*J1(j,1) - J1(j,0)*J1(i,1)),2));
-            Jsur(2) = sqrt(pow((J2(i,1)*J2(j,2) - J2(j,1)*J2(i,2)),2) + pow((J2(i,0)*J2(j,2) - J2(j,0)*J2(i,2)),2) + pow((J2(i,0)*J2(j,1) - J2(j,0)*J2(i,1)),2));
-            Jsur(3) = sqrt(pow((J3(i,1)*J3(j,2) - J3(j,1)*J3(i,2)),2) + pow((J3(i,0)*J3(j,2) - J3(j,0)*J3(i,2)),2) + pow((J3(i,0)*J3(j,1) - J3(j,0)*J3(i,1)),2));
-            break;
-    }
-
-    // calculating area
-    double Area = Jsur(0) + Jsur(1) + Jsur(2) + Jsur(3);
-    
-    // adding force contribution based on patch number and element number
-    switch(patch) {
-        case 0:
-            // patch: xi=-1
-            Fg(3 * CONN(elem,0)) += tx1*Area/4;
-            Fg(3 * CONN(elem,1)) += tx1*Area/4;
-            Fg(3 * CONN(elem,4)) += tx1*Area/4;
-            Fg(3 * CONN(elem,5)) += tx1*Area/4;
-            Fg(3 * CONN(elem,0) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,1) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,4) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,5) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,0) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,1) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,4) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,5) + 2) += tx3*Area/4;
-            break;
-        case 1:
-            // patch: xi=+1
-            Fg(3 * CONN(elem,2)) += tx1*Area/4;
-            Fg(3 * CONN(elem,3)) += tx1*Area/4;
-            Fg(3 * CONN(elem,6)) += tx1*Area/4;
-            Fg(3 * CONN(elem,7)) += tx1*Area/4;
-            Fg(3 * CONN(elem,2) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,3) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,6) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,7) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,2) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,3) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,6) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,7) + 2) += tx3*Area/4;
-            break;
-        case 2:
-            // patch: eta=-1
-            Fg(3 * CONN(elem,0)) += tx1*Area/4;
-            Fg(3 * CONN(elem,1)) += tx1*Area/4;
-            Fg(3 * CONN(elem,2)) += tx1*Area/4;
-            Fg(3 * CONN(elem,3)) += tx1*Area/4;
-            Fg(3 * CONN(elem,0) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,1) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,2) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,3) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,0) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,1) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,2) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,3) + 2) += tx3*Area/4;
-            break;
-        case 3:
-            // patch: eta=+1
-            Fg(3 * CONN(elem,6)) += tx1*Area/4;
-            Fg(3 * CONN(elem,7)) += tx1*Area/4;
-            Fg(3 * CONN(elem,4)) += tx1*Area/4;
-            Fg(3 * CONN(elem,5)) += tx1*Area/4;
-            Fg(3 * CONN(elem,6) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,7) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,4) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,5) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,6) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,7) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,4) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,5) + 2) += tx3*Area/4;
-            break;
-        case 4:
-            // patch: zeta=-1
-            Fg(3 * CONN(elem,0)) += tx1*Area/4;
-            Fg(3 * CONN(elem,3)) += tx1*Area/4;
-            Fg(3 * CONN(elem,4)) += tx1*Area/4;
-            Fg(3 * CONN(elem,7)) += tx1*Area/4;
-            Fg(3 * CONN(elem,0) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,3) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,4) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,7) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,0) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,3) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,4) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,7) + 2) += tx3*Area/4;
-            break;
-        case 5:
-            // patch: zeta=+1
-            Fg(3 * CONN(elem,2)) += tx1*Area/4;
-            Fg(3 * CONN(elem,1)) += tx1*Area/4;
-            Fg(3 * CONN(elem,6)) += tx1*Area/4;
-            Fg(3 * CONN(elem,5)) += tx1*Area/4;
-            Fg(3 * CONN(elem,2) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,1) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,6) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,5) + 1) += tx2*Area/4;
-            Fg(3 * CONN(elem,2) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,1) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,6) + 2) += tx3*Area/4;
-            Fg(3 * CONN(elem,5) + 2) += tx3*Area/4;
-            break;
-    }
-    //prarr(Fg);
-}
-
-// Perform Gaussian Elimination on the augmented matrix [A|b], original b remains unchanged
-void GaussElim(CArray <double> A, CArray <double> b, CArray <double> x) {
-    int n = b.size();
-    
-    // Forward elimination
-    for (int k = 0; k < n - 1; k++) {
-        for (int i = k + 1; i < n; i++) {
-            double factor = A(i,k) / A(k,k);
-            for (int j = k; j < n; j++) {
-                A(i,j) -= factor * A(k,j);
-            }
-            b(i) -= factor * b(k);
-        }
-    }
-    
-    // Backward substitution
-    for (int i = n - 1; i >= 0; i--) {
-        double sum = 0.0;
-        for (int j = i + 1; j < n; j++) {
-            sum += A(i,j) * x(j);
-        }
-        x(i) = (b(i) - sum) / A(i,i);
-    }
-}
-
-// This function calculates the stress at a gauss point
-void postprocess(CArray <double> elcoords, CArray <double> uel, int k, CArray <double> NODES, CArray <int> CONN, CArray <double> ut, CArray <double> us, CArray <double> dpsig, CArray <double> gradu, double detJ, FArray <double> gp, CArray <double> S01, CArray <double> E01, CArray <double> C) {
-    // Running necessary functions to get values to calculate strain and stress in a given element at a point
-    ElemCoords(elcoords, uel, k, NODES, CONN, ut, us);
-    Gradients(dpsig, gradu, detJ, gp, elcoords, uel, S01, E01, C);
-    
-}
-
-// This function calculates the global location of gauss points in each element
-CArray <double> gpglob(int NEL, double gp, CArray <double> elcoords, CArray <double> uel, CArray <double> NODES, CArray <int> CONN, CArray <double> ut, CArray <double> us, FArray <double> gp0, FArray <double> gp1, FArray <double> gp2, FArray <double> gp3, FArray <double> gp4, FArray <double> gp5, FArray <double> gp6, FArray <double> gp7) {
-    // initializing output array
-    auto gpcoords = CArray <double> (NEL,24);
-    
-    // initializing intermediate variables for calculating jacobian
-    auto psi = FArray <double> (8,4);
-    auto J0 = CArray <double> (3,3);
-    auto J1 = CArray <double> (3,3);
-    auto J2 = CArray <double> (3,3);
-    auto J3 = CArray <double> (3,3);
-    auto J4 = CArray <double> (3,3);
-    auto J5 = CArray <double> (3,3);
-    auto J6 = CArray <double> (3,3);
-    auto J7 = CArray <double> (3,3);
-    auto dxi = CArray <double> (3);
-    auto dx = CArray <double> (3);
-
-    // looping over each element
-    for (int i = 0; i < NEL; i++) {
-        J0.set_values(0);
-        J1.set_values(0);
-        J2.set_values(0);
-        J3.set_values(0);
-        J4.set_values(0);
-        J5.set_values(0);
-        J6.set_values(0);
-        J7.set_values(0);
-        ElemCoords(elcoords,uel,i,NODES,CONN,ut,us);
-        // calculating jacobians
-        for (int j = 0; j < 3; j++) {
-            for (int k = 0; k < 3; k++) {
-                for (int m = 0; m < 8; m++) {
-                    J0(j,k) += elcoords(m,k) * gp0(m,j+1);
-                    J1(j,k) += elcoords(m,k) * gp1(m,j+1);
-                    J2(j,k) += elcoords(m,k) * gp2(m,j+1);
-                    J3(j,k) += elcoords(m,k) * gp3(m,j+1);
-                    J4(j,k) += elcoords(m,k) * gp4(m,j+1);
-                    J5(j,k) += elcoords(m,k) * gp5(m,j+1);
-                    J6(j,k) += elcoords(m,k) * gp6(m,j+1);
-                    J7(j,k) += elcoords(m,k) * gp7(m,j+1);
-                }
-            }
-        }
-        for (int j = 0; j < 8; j++) {
-            dx.set_values(0);
-            // calculating dxi1, dxi2, dxi3 based upon which gauss point in the element wrt [xi1,xi2,xi3] = [1,1,1]
-            // then calculating dx1, dx2, dx3 with matrix multiplication dx = [J]{dxi}
-            switch(j) {
-                case 0:
-                    dxi(0) = 1+gp;
-                    dxi(1) = 1+gp;
-                    dxi(2) = 1+gp;
-                    for (int k = 0; k < 3; k++) {
-                        for (int m = 0; m < 3; m++) {
-                            dx(k) += J0(k,m)*dxi(m);
-                        }
-                    }
-                    break;
-                case 1:
-                    dxi(0) = 1+gp;
-                    dxi(1) = 1+gp;
-                    dxi(2) = 1-gp;
-                    for (int k = 0; k < 3; k++) {
-                        for (int m = 0; m < 3; m++) {
-                            dx(k) += J1(k,m)*dxi(m);
-                        }
-                    }
-                    break;
-                case 2:
-                    dxi(0) = 1-gp;
-                    dxi(1) = 1+gp;
-                    dxi(2) = 1-gp;
-                    for (int k = 0; k < 3; k++) {
-                        for (int m = 0; m < 3; m++) {
-                            dx(k) += J2(k,m)*dxi(m);
-                        }
-                    }
-                    break;
-                case 3:
-                    dxi(0) = 1-gp;
-                    dxi(1) = 1+gp;
-                    dxi(2) = 1+gp;
-                    for (int k = 0; k < 3; k++) {
-                        for (int m = 0; m < 3; m++) {
-                            dx(k) += J3(k,m)*dxi(m);
-                        }
-                    }
-                    break;
-                case 4:
-                    dxi(0) = 1+gp;
-                    dxi(1) = 1-gp;
-                    dxi(2) = 1+gp;
-                    for (int k = 0; k < 3; k++) {
-                        for (int m = 0; m < 3; m++) {
-                            dx(k) += J4(k,m)*dxi(m);
-                        }
-                    }
-                    break;
-                case 5:
-                    dxi(0) = 1+gp;
-                    dxi(1) = 1-gp;
-                    dxi(2) = 1-gp;
-                    for (int k = 0; k < 3; k++) {
-                        for (int m = 0; m < 3; m++) {
-                            dx(k) += J5(k,m)*dxi(m);
-                        }
-                    }
-                    break;
-                case 6:
-                    dxi(0) = 1-gp;
-                    dxi(1) = 1-gp;
-                    dxi(2) = 1-gp;
-                    for (int k = 0; k < 3; k++) {
-                        for (int m = 0; m < 3; m++) {
-                            dx(k) += J6(k,m)*dxi(m);
-                        }
-                    }
-                    break;
-                case 7:
-                    dxi(0) = 1-gp;
-                    dxi(1) = 1-gp;
-                    dxi(2) = 1+gp;
-                    for (int k = 0; k < 3; k++) {
-                        for (int m = 0; m < 3; m++) {
-                            dx(k) += J7(k,m)*dxi(m);
-                        }
-                    }
-                    break;    
-            }
-            //printf("%.5f  %.5f  %.5f\n", dx(0),dx(1),dx(2));
-            for (int k = 0; k < 3; k++) {
-                gpcoords(i,3*j+k) = elcoords(6,k) - dx(k);
-            }
-        }
-    }
-    return gpcoords;
-}
- */
-// START OF VISCOELASTIC COHESIVE ZONE FUNCTIONS
 
 cohesive_zones_t::cohesive_zones_t() {
 // constructor for cohesive zones
@@ -859,8 +61,9 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
 
     
     // allocate only the size of overlapping nodes 
-    CArrayKokkos<size_t> overlapping_node_gids(pair_count, 2, "overlapping_node_gids");
-    
+    //CArrayKokkos<size_t> overlapping_node_gids(pair_count, 2, "overlapping_node_gids");
+    overlapping_node_gids = CArrayKokkos<size_t> (pair_count, 2, "overlapping_node_gids");
+
     // second pass: store actual overlapping node pairs
     size_t pair_index = 0; // fills the rows (pairs) that are added to 2D overlapping_node_gids array 
     
@@ -912,7 +115,8 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     }
 
     // ======================== test for function for cohesive_zone_elem_count in fracture.cpp: which finds the max number of elements that any cohesive zone node is part of ========================
-    size_t max_elem_in_cohesive_zone = cohesive_zone_elem_count(overlapping_node_gids, mesh.elems_in_node, mesh);
+    //size_t max_elem_in_cohesive_zone = cohesive_zone_elem_count(overlapping_node_gids, mesh.elems_in_node, mesh);
+    max_elem_in_cohesive_zone = cohesive_zone_elem_count(overlapping_node_gids, mesh.elems_in_node, mesh);
     printf("Max elements connected to any cohesive zone node: %zu\n", max_elem_in_cohesive_zone);
     // ======================== END test for function in cohesive_zone_elem_count fracture.cpp: which finds the max number of elements that any cohesive zone node is part of ========================
  
@@ -947,56 +151,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
         for (size_t a = 0; a < 4; a++){
             face_gid[a] = mesh.nodes_in_patch(patch_id, a);
         } 
-            // for (size_t surf = 0; surf < 6; ++surf) {
-            //     const size_t pid = mesh.patches_in_elem(elem, surf);
-            //     size_t p0 = mesh.nodes_in_patch(pid,0),
-            //            p1 = mesh.nodes_in_patch(pid,1),
-            //            p2 = mesh.nodes_in_patch(pid,2), 
-            //            p3 = mesh.nodes_in_patch(pid,3);
-            //     printf("  Face %zu (patch order): %zu %zu %zu %zu\n", surf, p0,p1,p2,p3);
-                // 1:1 mapping from compute_face_geometry()
-                // size_t face_gid[4];
-                // switch (surf) {
-                //     case 0: // [0,4,6,2]  x-
-                //         face_gid[0] = mesh.nodes_in_elem(elem, 0);
-                //         face_gid[1] = mesh.nodes_in_elem(elem, 4);
-                //         face_gid[2] = mesh.nodes_in_elem(elem, 6);
-                //         face_gid[3] = mesh.nodes_in_elem(elem, 2);
-                //         break;
-                //     case 1: // [1,3,7,5]  x+
-                //         face_gid[0] = mesh.nodes_in_elem(elem, 1);
-                //         face_gid[1] = mesh.nodes_in_elem(elem, 3);
-                //         face_gid[2] = mesh.nodes_in_elem(elem, 7);
-                //         face_gid[3] = mesh.nodes_in_elem(elem, 5);
-                //         break;
-                //     case 2: // [0,1,5,4]  y-
-                //         face_gid[0] = mesh.nodes_in_elem(elem, 0);
-                //         face_gid[1] = mesh.nodes_in_elem(elem, 1);
-                //         face_gid[2] = mesh.nodes_in_elem(elem, 5);
-                //         face_gid[3] = mesh.nodes_in_elem(elem, 4);
-                //         break;
-                //     case 3: // [3,2,6,7]  y+
-                //         face_gid[0] = mesh.nodes_in_elem(elem, 3);
-                //         face_gid[1] = mesh.nodes_in_elem(elem, 2);
-                //         face_gid[2] = mesh.nodes_in_elem(elem, 6);
-                //         face_gid[3] = mesh.nodes_in_elem(elem, 7);
-                //         break;
-                //     case 4: // [0,2,3,1]  z-
-                //         face_gid[0] = mesh.nodes_in_elem(elem, 0);
-                //         face_gid[1] = mesh.nodes_in_elem(elem, 2);
-                //         face_gid[2] = mesh.nodes_in_elem(elem, 3);
-                //         face_gid[3] = mesh.nodes_in_elem(elem, 1);
-                //         break;
-                //     case 5: // [4,5,7,6]  z+
-                //         face_gid[0] = mesh.nodes_in_elem(elem, 4);
-                //         face_gid[1] = mesh.nodes_in_elem(elem, 5);
-                //         face_gid[2] = mesh.nodes_in_elem(elem, 7);
-                //         face_gid[3] = mesh.nodes_in_elem(elem, 6);
-                //         break;
-                //     default:
-                //         continue; // should not happen
-                // }     
-                // print the IDs and coordinates
+                // print face node IDs
                 printf("  Face %zu node IDs: %zu %zu %zu %zu\n",
                         surf, face_gid[0], face_gid[1], face_gid[2], face_gid[3]);
 
@@ -1051,7 +206,14 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
 
 //    ======================== cohesive_zone_info debug ========================
 
-    CArrayKokkos<int> cz = build_cohesive_zone_info(
+//    CArrayKokkos<int> cz_info = build_cohesive_zone_info(
+//        mesh,
+//        State,
+//       overlapping_node_gids,
+//        max_elem_in_cohesive_zone,
+//        tol
+//    );
+    cz_info = build_cohesive_zone_info(
         mesh,
         State,
         overlapping_node_gids,
@@ -1077,7 +239,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
         // unused argument: mesh.elems_in_node.stride(nodeA)
         printf("  A elems (IDs): ");
         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
-            const int eA = cz(i, 0*max_elem_in_cohesive_zone + j);
+            const int eA = cz_info(i, 0*max_elem_in_cohesive_zone + j);
             if (eA >= 0) printf("%d ", eA);
         }
         printf("\n");
@@ -1087,7 +249,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
         // unused argument: mesh.elems_in_node.stride(nodeB)
         printf("  B elems (IDs): ");
         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
-            const int eB = cz(i, 1*max_elem_in_cohesive_zone + j);
+            const int eB = cz_info(i, 1*max_elem_in_cohesive_zone + j);
             if (eB >= 0) printf("%d ", eB);
         }
         printf("\n");
@@ -1095,14 +257,14 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
         // print stored local corners
         printf("  kA (local corner index): ");
         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
-            const int kA = cz(i, 4*max_elem_in_cohesive_zone + j);
+            const int kA = cz_info(i, 4*max_elem_in_cohesive_zone + j);
             if (kA >= 0) printf("%d ", kA);
         }
         printf("\n");
 
         printf("  kB (local corner index): ");
         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
-            const int kB = cz(i, 5*max_elem_in_cohesive_zone + j);
+            const int kB = cz_info(i, 5*max_elem_in_cohesive_zone + j);
             if (kB >= 0) printf("%d ", kB);
         }
         printf("\n");
@@ -1110,7 +272,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
         // print everything thats in cohesive_zone_info: check what was stored (-1 means empty slot)
         printf(" checking everything thats in cohesive_zone_info: ");
         for (size_t j = 0; j < 6*max_elem_in_cohesive_zone; ++j){
-            printf("%d ", cz(i, j));
+            printf("%d ", cz_info(i, j));
         }
         printf("\n");
 
@@ -1152,7 +314,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
 
         // build and test candidates exactly as in the face matcher
         for (size_t slotA = 0; slotA < max_elem_in_cohesive_zone && !found; ++slotA) {
-            const int eA = cz(i, 0*max_elem_in_cohesive_zone + slotA);
+            const int eA = cz_info(i, 0*max_elem_in_cohesive_zone + slotA);
             if (eA < 0) continue;
 
             const int kA = find_k(eA, nodeA);
@@ -1171,7 +333,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
                                       nA, rA, sA, cA);
 
                 for (size_t slotB = 0; slotB < max_elem_in_cohesive_zone && !found; ++slotB) {
-                    const int eB = cz(i, 1*max_elem_in_cohesive_zone + slotB);
+                    const int eB = cz_info(i, 1*max_elem_in_cohesive_zone + slotB);
                     if (eB < 0) continue;
 
                     const int kB = find_k(eB, nodeB);
@@ -1221,51 +383,93 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
         }
     }
 
+    // oriented debug
+    printf("[CZ::init] this=%p  pairs=%zu  maxcz=%zu  info_rows=%zu\n",
+           (void*)this,
+            overlapping_node_gids.dims(0),
+            max_elem_in_cohesive_zone,
+            cz_info.dims(0));
+    // end oriented debug
+
     printf("\n==============================================================\n");
 } // end cohesive_zone_info debug
     // ======================== END cohesive_zone_info debug ========================
+} // end cohesive_zones_t::initialize()
 
+    // debug oriented
+    //printf("Call CZ bank=%p overlapping_node_gids.dims(0)=%zu max_elem_in_cohesive_zone=%zu cz_info.dims(0)=%zu\n",
+    //        (void*)&cohesive_zones_bank,
+    //        cohesive_zones_bank.overlapping_node_gids.dims(0),
+    //        cohesive_zones_bank.max_elem_in_cohesive_zone,
+    //        cohesive_zones_bank.cz_info.dims(0));
+    //end of debug oriented
+
+// start cohesive_zones_t::execute() function: debug for dynamic orientation of cohesive zones
+// function computes normals at t and t+dt for each cohesive zone node pair
+//void cohesive_zones_t::execute(const Mesh_t& mesh, 
+//                               const State_t& State,
+//                               //CArrayKokkos<size_t>& overlapping_node_gids,
+//                               //CArrayKokkos<int>& cz_info,
+//                               //size_t max_elem_in_cohesive_zone,
+//                               double tol){ 
+
+void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
+                                      State_t& State,
+                                      CArrayKokkos<size_t>& overlap,
+                                      CArrayKokkos<int>& info,
+                                      size_t maxcz,
+                                      double tol) {
     //    ======================== vcz_orient debug ========================
 
+    // debug oriented
+    printf("[CZ::debug] this=%p  pairs(in)=%zu  maxcz(in)=%zu  info_rows(in)=%zu\n",
+          (void*)this, overlap.dims(0), maxcz, info.dims(0));
+    // end debug oriented
+
+
     // call oriented() to compute cohesive zone normals at t and t+dt 
-    CArrayKokkos<double> vcz_orient(overlapping_node_gids.dims(0), 6, "vcz_orient");
+    CArrayKokkos<double> vcz_orient(overlap.dims(0), 6, "vcz_orient");
 
     // initialize to zero
-    vcz_orient.set_values(0.0);
+    //vcz_orient.set_values(0.0);
+    //overlapping_node_gids = CArrayKokkos<size_t> (overlapping_node_gids.dims(0), 2, "overlapping_node_gids");
+    //cz_info = CArrayKokkos<int> cz_info;
+    //tol = double tol;
 
 {
     printf("\n================== vcz_orient debug ==================\n");
 
-    // 
-    const DCArrayKokkos<double> &X_t   = State.node.coords_n0; // nodes + ut
-    const DCArrayKokkos<double> &X_tdt = State.node.coords; // nodes + ut + us
+    // checking execute() to make sure inputs are correct
+    //printf("execute() check: num_overlapping_node_pairs=%zu overlapping_node_gids=(%zu x %zu) max_elem_in_cohesive_zone=%zu\n", 
+    //       overlapping_node_gids.dims(0), overlapping_node_gids.dims(1),
+    //       max_elem_in_cohesive_zone, cz_info.dims(0));
 
-    for( int i = 0; i < mesh.num_nodes; i++) {
-        for (int j = 0; j < 3; j++) {
-            printf("%f  State.node.coords\n", State.node.coords_n0(i,j));
-        }
-        printf("\n");
-    }   
+    // exiting loop if overlapping node pairs = 0
+    //if (overlapping_node_gids.dims(0) == 0){
+    //    printf("execute() check: no overlapping node pairs found, skipping vcz_orient debug\n");
+    //    printf("\n======================================================\n");
+    //    return;
+    //}
+
+    // assigning X_t to State.node.coords_n0 (from Gavin's code: nodes + ut) and X_tdt to State.node.coords (from Gavin's code: nodes + us + ut)
+    DCArrayKokkos<double> &X_t   = State.node.coords_n0; // nodes + ut
+    DCArrayKokkos<double> &X_tdt = State.node.coords; // nodes + ut + us
+
+    // debug: checking State.node.coords_n0 for each cycle
+    //for( int i = 0; i < mesh.num_nodes; i++) {
+    //    for (int j = 0; j < 3; j++) {
+    //        printf("%f  State.node.coords_n0 for each cycle\n", State.node.coords_n0(i,j));
+    //    }
+    //    printf("\n");
+    //}   
 
     // call oriented()
-    oriented(mesh, X_t, X_tdt, overlapping_node_gids, cz, max_elem_in_cohesive_zone, tol, vcz_orient);
+    oriented(mesh, X_t, X_tdt, overlap, info, maxcz, tol, vcz_orient);
 
     // loop over overlapping node pairs
-    for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
-        const size_t nodeA = overlapping_node_gids(i,0);
-        const size_t nodeB = overlapping_node_gids(i,1);
-
-        // find first filled slot on A and B sides (blocks [2] and [3])
-        //int jA = -1, jB = -1;
-        //int fA = -1, fB = -1;
-        //for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
-        //    const int f_try = cz(i, 2*max_elem_in_cohesive_zone + j);
-        //    if (f_try >= 0) { jA = static_cast<int>(j); fA = f_try; break; }
-        //}
-        //for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
-        //    const int f_try = cz(i, 3*max_elem_in_cohesive_zone + j);
-        //    if (f_try >= 0) { jB = static_cast<int>(j); fB = f_try; break; }
-        //}
+    for (size_t i = 0; i < overlap.dims(0); ++i) {
+        const size_t nodeA = overlap(i,0);
+        const size_t nodeB = overlap(i,1);
 
         printf("\n-- Pair %zu  (A gid=%zu, B gid=%zu) --\n", i, nodeA, nodeB);
 
@@ -1282,32 +486,14 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
         ViewCArrayKokkos<double> nB_t (&nB_t_buf[0], 3),  rB_t (&rB_t_buf[0], 3),  sB_t (&sB_t_buf[0], 3),  cB_t (&cB_t_buf[0], 3);
         ViewCArrayKokkos<double> nA_dt(&nA_dt_buf[0], 3), rA_dt(&rA_dt_buf[0], 3), sA_dt(&sA_dt_buf[0], 3), cA_dt(&cA_dt_buf[0], 3);
 
-        //if (jA < 0 || jB < 0) {
-        //    printf("  No matched faces recorded in cz_info blocks [2]/[3].\n");
-        //    continue;
-        //}
-
-        // elements A side and B side from blocks [0] and [1]
-        //const int eA = cz(i, 0*max_elem_in_cohesive_zone + static_cast<size_t>(jA));
-        //const int eB = cz(i, 1*max_elem_in_cohesive_zone + static_cast<size_t>(jB));
-        //if (eA < 0 || eB < 0) {
-        //    printf("  Faces found but elements missing (blocks [0]/[1]). eA=%d eB=%d\n", eA, eB);
-        //    continue;
-        //}
-
-        // local corner ids from blocks [4] and [5]
-        //const int kA = cz(i, 4*max_elem_in_cohesive_zone + static_cast<size_t>(jA));
-        //const int kB = cz(i, 5*max_elem_in_cohesive_zone + static_cast<size_t>(jB));
-        //printf("  slots: jA=%d kA=%d | jB=%d kB=%d\n", jA, kA, jB, kB);
-
         // contributors header
         printf("  contributors (A-side matched faces over all slots):\n");  
         
         // walk over all slot-keyed A-side matches and accumulate (blocks [0] elems, [2] faces)
         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
-            const int eA = cz(i, 0*max_elem_in_cohesive_zone + j); // A elem at slot j
-            const int fA = cz(i, 2*max_elem_in_cohesive_zone + j); // A face at slot j
-            const int kA = cz(i, 4*max_elem_in_cohesive_zone + j); // A local corner slot j
+            const int eA = info(i, 0*max_elem_in_cohesive_zone + j); // A elem at slot j
+            const int fA = info(i, 2*max_elem_in_cohesive_zone + j); // A face at slot j
+            const int kA = info(i, 4*max_elem_in_cohesive_zone + j); // A local corner slot j
             if (eA < 0 || fA < 0) continue; // skip if -1        
 
         // geometry: A at t, A at t+dt, B at t (oriented uses A for orientation; B is sanity check)
@@ -1320,40 +506,6 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
         //compute_face_geometry(X_t,   mesh, X_t,   mesh.nodes_in_elem,
         //                      static_cast<size_t>(fB), static_cast<size_t>(eB),
         //                      nB_t, rB_t, sB_t, cB_t);
-
-        // checks at t
-        //const double dx = cA_t(0)-cB_t(0), dy = cA_t(1)-cB_t(1), dz = cA_t(2)-cB_t(2);
-        //const double dist = sqrt(dx*dx + dy*dy + dz*dz);
-        //const double dotAB_t = nA_t(0)*nB_t(0) + nA_t(1)*nB_t(1) + nA_t(2)*nB_t(2);
-
-        //printf("  A: elem=%d face=%d  cen_t=(%.6g, %.6g, %.6g)  n_t=(%.6g, %.6g, %.6g)\n",
-        //       eA, fA, cA_t(0), cA_t(1), cA_t(2), nA_t(0), nA_t(1), nA_t(2));
-        //printf("     cen_tdt=(%.6g, %.6g, %.6g)  n_tdt=(%.6g, %.6g, %.6g)\n",
-        //       cA_dt(0), cA_dt(1), cA_dt(2), nA_dt(0), nA_dt(1), nA_dt(2));
-        //printf("  B: elem=%d face=%d  cen_t=(%.6g, %.6g, %.6g)  n_t=(%.6g, %.6g, %.6g)\n",
-        //       eB, fB, cB_t(0), cB_t(1), cB_t(2), nB_t(0), nB_t(1), nB_t(2));
-        //printf("  checks: |dcentroid|=%.6g  (tol=%.6g)   dot(nA_t,nB_t)=%.6g\n",
-        //       dist, tol, dotAB_t);
-
-        // flip + normalize exactly like oriented()
-        //double n_ref[3] = { nA_t(0),  nA_t(1),  nA_t(2)  };
-        //double n_cur[3] = { nA_dt(0), nA_dt(1), nA_dt(2) };
-
-        //const double dot_align = n_ref[0]*n_cur[0] + n_ref[1]*n_cur[1] + n_ref[2]*n_cur[2];
-        //if (dot_align < 0.0) { n_cur[0]*=-1.0; n_cur[1]*=-1.0; n_cur[2]*=-1.0; }
-
-        //double m_ref = sqrt(n_ref[0]*n_ref[0] + n_ref[1]*n_ref[1] + n_ref[2]*n_ref[2]);
-        //double m_cur = sqrt(n_cur[0]*n_cur[0] + n_cur[1]*n_cur[1] + n_cur[2]*n_cur[2]);
-       // if (m_ref > 0.0) { n_ref[0]/=m_ref; n_ref[1]/=m_ref; n_ref[2]/=m_ref; }
-        //if (m_cur > 0.0) { n_cur[0]/=m_cur; n_cur[1]/=m_cur; n_cur[2]/=m_cur; }
-
-        //printf("  align: dot(nA_t, nA_tdt)=%.6g  ->  VCZ n_ref=(%.6g, %.6g, %.6g)  n_cur=(%.6g, %.6g, %.6g)\n",
-        //       dot_align, n_ref[0], n_ref[1], n_ref[2], n_cur[0], n_cur[1], n_cur[2]);
-
-        // compare to stored vcz_orient 
-        //printf("  stored vcz_orient: t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
-         //       vcz_orient(i,0), vcz_orient(i,1), vcz_orient(i,2),
-        //        vcz_orient(i,3), vcz_orient(i,4), vcz_orient(i,5));
 
             // accumulate like oriented()
             sum_t [0] += nA_t (0); sum_t [1] += nA_t (1); sum_t [2] += nA_t (2);
@@ -1399,15 +551,6 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
         if (mag_t  > 0.0) { n_ref[0] = sum_t [0]/mag_t;  n_ref[1] = sum_t [1]/mag_t;  n_ref[2] = sum_t [2]/mag_t; }
         if (mag_dt > 0.0) { n_cur[0] = sum_dt[0]/mag_dt; n_cur[1] = sum_dt[1]/mag_dt; n_cur[2] = sum_dt[2]/mag_dt; }
 
-        //printf("  cnt=%d  dot_align=%.6g\n", cnt, dot_align);
-        //printf("  avg result (normalized): n_ref=(%.6g, %.6g, %.6g)  n_cur=(%.6g, %.6g, %.6g)\n",
-        //       n_ref[0], n_ref[1], n_ref[2], n_cur[0], n_cur[1], n_cur[2]);
-
-        // compare with the stored result from oriented()
-        //printf("  stored vcz_orient:        t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
-        //       vcz_orient(i,0), vcz_orient(i,1), vcz_orient(i,2),
-        //       vcz_orient(i,3), vcz_orient(i,4), vcz_orient(i,5));
-
         printf("  averaged (pre-norm)  t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)  cnt=%d\n",
                sum_t[0], sum_t[1], sum_t[2], sum_dt[0], sum_dt[1], sum_dt[2], cnt);
         printf("  align: dot(sum_t, sum_tdt)=%.6g\n", dot_align);
@@ -1427,50 +570,9 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     
     printf("\n======================================================\n");
     }
-
     
     // ======================== END vcz_orient debug ========================
-} // end cohesive_zones_t::initialize
-
-
-// START OF FUNCTIONS TO CONVERT FROM GAVIN'S CODE
-
-
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
-// this function returns max number of elements any VCZ node is part of connectivity for in order to define VCZ array sizes properly
-// (finds the max number of elements that any cohesive zone node is part of)
-// int elcount(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int> vczconn) {
-//     // initializing variables for intermediate calculations:
-//     int count0 = 0;
-//     int count1 = 0;f
-//     int maxel = 0;
-//     // looping over all VCZ elements
-//     for (int i = 0; i < nvcz; i++) {
-//         count0 = 0;
-//         count1 = 0;
-//         // find how many elements the nodes are part of the connectivity for
-//         for (int j = 0; j < ne; j++) {
-//             for (int k = 0; k < 8; k++) {
-//                 if (vczconn(i,0) == conn(j,k)) {
-//                     count0 += 1;
-//                 }
-//                 if (vczconn(i,1) == conn(j,k)) {
-//                     count1 += 1;
-//                 }
-//             }
-//         }
-
-//         // updating maxel
-//         if (count0 > maxel) {
-//             maxel = count0;
-//         }
-//         if (count1 > maxel) {
-//             maxel = count1;
-//         }
-//     }
-//     return maxel;
-// }
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
+} // end cohesive_zones_t::execute()
 
 // **************************************************************** Fierro Conversion **************************************************************** 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1496,168 +598,6 @@ size_t cohesive_zones_t::cohesive_zone_elem_count(const CArrayKokkos<size_t>& ov
     return max_elem_in_cohesive_zone;
 }
 // **************************************************************** Fierro Conversion **************************************************************** 
-
-// next function
-
-// it was decided that the following function is redundant, thus, it will not be converted to Fierro style since Fierro mesh already accounts for the following
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
-// // inputs: nodes, conn, ne, nvcz, vczconn
-// // outputs: vczelem
-// CArray<int> elems(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int> vczconn, int maxel) {
-//     // initializing output array
-//     auto vczelem = CArray <int> (nvcz,2*maxel);
-//     for (int i = 0; i < nvcz; i++) {
-//         for (int j = 0; j < 2*maxel; j++) {
-//             vczelem(i,j) = -1;
-//         }
-//     }
-
-//     // initialize intermediate variables 
-//     int count0 = 0;
-//     int count1 = 0;
-    
-//     // looping over all VCZ elements
-//     for (int i = 0; i < nvcz; i++) {
-//         // find how many elements the nodes are part of the connectivity for
-//         count0 = 0;
-//         count1 = 0;
-//         for (int j = 0; j < ne; j++) {
-//             for (int k = 0; k < 8; k++) {
-//                 if (vczconn(i,0) == conn(j,k)) {
-//                     vczelem(i,count0) = j;
-//                     count0 += 1;
-//                 }
-//                 if (vczconn(i,1) == conn(j,k)) {
-//                     vczelem(i,count1 + maxel) = j;
-//                     count1 += 1;
-//                 }
-//             }
-//         }
-//     }
-//     return vczelem;
-// }
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
-
-// next function
-
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
-// // inputs: NODES, conn, interpvals, patch number, element number
-// // output: n vector, r vector, s vector, and center of face in physical coordinates
-// void paravecs(CArray<double> nodes, CArray<int> conn, FArray<double> interpvals, int pn, int en, CArray<double> n, CArray<double> r, CArray<double> s, CArray<double> cenface) {
-//     // reset cenface, r, and s vectors
-//     for (int i = 0; i < 3; i++) {
-//         r(i,0) = 0;
-//         s(i,0) = 0;
-//         cenface(i,0) = 0;
-//     }
-    
-//     // populate interpvals based on patch number, note patch has constant normal vector so any point on the patch is fine
-//     // pull node numbers for the patch
-//     auto pnodes = CArray <int> (4,1);
-//     // pull which master dof are tangent
-//     auto mastan = CArray <int> (2,1);
-//     switch (pn) {
-//     case -1:
-//         break;
-//     case 0:
-//         MasterShapes(interpvals,-1, 0, 0);
-//         pnodes(0,0) = 0;
-//         pnodes(1,0) = 1;
-//         pnodes(2,0) = 4;
-//         pnodes(3,0) = 5;
-//         mastan(0,0) = 1;
-//         mastan(1,0) = 2;
-//         break;
-//     case 1:
-//         MasterShapes(interpvals,1, 0, 0);
-//         pnodes(0,0) = 2;
-//         pnodes(1,0) = 3;
-//         pnodes(2,0) = 6;
-//         pnodes(3,0) = 7;
-//         mastan(0,0) = 1;
-//         mastan(1,0) = 2;
-//         break;
-//     case 2:
-//         MasterShapes(interpvals,0, -1, 0);
-//         pnodes(0,0) = 0;
-//         pnodes(1,0) = 1;
-//         pnodes(2,0) = 2;
-//         pnodes(3,0) = 3;
-//         mastan(0,0) = 0;
-//         mastan(1,0) = 2;
-//         break;
-//     case 3:
-//         MasterShapes(interpvals,0, 1, 0);
-//         pnodes(0,0) = 4;
-//         pnodes(1,0) = 5;
-//         pnodes(2,0) = 6;
-//         pnodes(3,0) = 7;
-//         mastan(0,0) = 0;
-//         mastan(1,0) = 2;
-//         break;
-//     case 4:
-//         MasterShapes(interpvals,0, 0, -1);
-//         pnodes(0,0) = 0;
-//         pnodes(1,0) = 3;
-//         pnodes(2,0) = 4;
-//         pnodes(3,0) = 7;
-//         mastan(0,0) = 0;
-//         mastan(1,0) = 1;
-//         break;
-//     case 5:
-//         MasterShapes(interpvals,0, 0, 1);
-//         pnodes(0,0) = 1;
-//         pnodes(1,0) = 2;
-//         pnodes(2,0) = 5;
-//         pnodes(3,0) = 6;
-//         mastan(0,0) = 0;
-//         mastan(1,0) = 1;
-//         break;
-//     }
-    
-//     // calculating tangent vectors and cenface values
-//     if (pn != -1) {
-//         for (int i = 0; i < 4; i++) {
-//             cenface(0,0) += nodes(conn(en,pnodes(i,0)),0) * interpvals(pnodes(i,0),0);
-//             cenface(1,0) += nodes(conn(en,pnodes(i,0)),1) * interpvals(pnodes(i,0),0);
-//             cenface(2,0) += nodes(conn(en,pnodes(i,0)),2) * interpvals(pnodes(i,0),0);
-
-//             r(0,0) += nodes(conn(en,pnodes(i,0)),0) * interpvals(pnodes(i,0),mastan(0,0) + 1);
-//             r(1,0) += nodes(conn(en,pnodes(i,0)),1) * interpvals(pnodes(i,0),mastan(0,0) + 1);
-//             r(2,0) += nodes(conn(en,pnodes(i,0)),2) * interpvals(pnodes(i,0),mastan(0,0) + 1);
-
-//             s(0,0) += nodes(conn(en,pnodes(i,0)),0) * interpvals(pnodes(i,0),mastan(1,0) + 1);
-//             s(1,0) += nodes(conn(en,pnodes(i,0)),1) * interpvals(pnodes(i,0),mastan(1,0) + 1);
-//             s(2,0) += nodes(conn(en,pnodes(i,0)),2) * interpvals(pnodes(i,0),mastan(1,0) + 1);
-//         }
-//     }
-
-//     // cross product for normal vector
-//     if (pn == 1 || pn == 2 || pn == 5) {
-//         // s cross r
-//         n(0,0) = s(1,0) * r(2,0) - r(1,0) * s(2,0);
-//         n(1,0) = s(0,0) * r(2,0) - r(0,0) * s(2,0);
-//         n(2,0) = s(0,0) * r(1,0) - r(0,0) * s(1,0);
-//     }
-//     else {
-//         n(0,0) = r(1,0) * s(2,0) - s(1,0) * r(2,0);
-//         n(1,0) = r(0,0) * s(2,0) - s(0,0) * r(2,0);
-//         n(2,0) = r(0,0) * s(1,0) - s(0,0) * r(1,0);
-//     }
-
-//     // normalizing to direction vectors
-//     double lenr = sqrt(r(0,0) * r(0,0) + r(1,0) * r(1,0) + r(2,0) * r(2,0));
-//     double lens = sqrt(s(0,0) * s(0,0) + s(1,0) * s(1,0) + s(2,0) * s(2,0));
-//     double lenn = sqrt(n(0,0) * n(0,0) + n(1,0) * n(1,0) + n(2,0) * n(2,0));
-
-//     for (int i = 0; i < 3; i++) {
-//         n(i,0) /= lenn;
-//         r(i,0) /= lenr;
-//         s(i,0) /= lens;
-//     }
-
-// }
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 
 // **************************************************************** Fierro Conversion **************************************************************** 
 /// \brief Computes face geometry vectors and centroid for a given element surface
@@ -1815,188 +755,6 @@ void cohesive_zones_t::compute_face_geometry(const DCArrayKokkos<double> &nodes,
 
 // **************************************************************** Fierro Conversion **************************************************************** 
 
-// next function
-
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
-// // inputs: NODES, conn, NE, NVCZ, VCZconn, VCZelem, interpvals
-// // outputs: VCZinfo
-// CArray<int> faces(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int> vczconn, CArray<int> vczelem, FArray<double> interpvals, int maxel) {
-//     // initializing output array
-//     auto vczinfo = CArray <int> (nvcz,6*maxel);
-//     for (int i = 0; i < nvcz; i++) {
-//         for (int j = 0; j < 2 * maxel; j++) {
-//             vczinfo(i,j) = vczelem(i,j);
-//             vczinfo(i,j + 2 * maxel) = -1;
-//             vczinfo(i,j + 4 * maxel) = -1;
-//         }
-//     }
-    
-//     // initializing intermediate array
-//     auto vczfaces = CArray <int> (nvcz,6*maxel);
-//     for (int i = 0; i < nvcz; i++) {
-//         for (int j = 0; j < 6 * maxel; j++) {
-//             vczfaces(i,j) = -1;
-//         }
-//     }
-    
-//     // intermediate value
-//     int cnt;
-    
-//     // looping over all VCZ elements to populate VCZfaces based upon VCZelem and connectivities
-//     for (int i = 0; i < nvcz; i++) {
-//         cnt = 0;
-//         for (int j = 0; j < maxel; j++) {
-//             if (vczelem(i,j) != -1) {
-//                 for (int k = 0; k < 8; k++) {
-//                     if (conn(vczelem(i,j),k) == vczconn(i,0)) {
-//                         vczinfo(i,4*maxel+cnt) = k;
-//                         switch (k) {
-//                         case 0:
-//                             vczfaces(i,3 * j) = 0;
-//                             vczfaces(i,3 * j + 1) = 2;
-//                             vczfaces(i,3 * j + 2) = 4;
-//                             break;
-//                         case 1:
-//                             vczfaces(i,3 * j) = 0;
-//                             vczfaces(i,3 * j + 1) = 2;
-//                             vczfaces(i,3 * j + 2) = 5;
-//                             break;
-//                         case 2:
-//                             vczfaces(i,3 * j) = 1;
-//                             vczfaces(i,3 * j + 1) = 2;
-//                             vczfaces(i,3 * j + 2) = 5;
-//                             break;
-//                         case 3:
-//                             vczfaces(i,3 * j) = 1;
-//                             vczfaces(i,3 * j + 1) = 2;
-//                             vczfaces(i,3 * j + 2) = 4;
-//                             break;
-//                         case 4:
-//                             vczfaces(i,3 * j) = 0;
-//                             vczfaces(i,3 * j + 1) = 3;
-//                             vczfaces(i,3 * j + 2) = 4;
-//                             break;
-//                         case 5:
-//                             vczfaces(i,3 * j) = 0;
-//                             vczfaces(i,3 * j + 1) = 3;
-//                             vczfaces(i,3 * j + 2) = 5;
-//                             break;
-//                         case 6:
-//                             vczfaces(i,3 * j) = 1;
-//                             vczfaces(i,3 * j + 1) = 3;
-//                             vczfaces(i,3 * j + 2) = 5;
-//                             break;
-//                         case 7:
-//                             vczfaces(i,3 * j) = 1;
-//                             vczfaces(i,3 * j + 1) = 3;
-//                             vczfaces(i,3 * j + 2) = 4;
-//                             break;
-//                         }
-//                     }
-//                 }
-//             }
-//             if (vczelem(i,j+maxel) != -1) {
-//                 for (int k = 0; k < 8; k++) {
-//                     if (conn(vczelem(i,j+maxel),k) == vczconn(i,1)) {
-//                         vczinfo(i,5*maxel+cnt) = k;
-//                         switch (k) {
-//                         case 0:
-//                             vczfaces(i,3 * maxel + 3 * j) = 0;
-//                             vczfaces(i,3 * maxel + 3 * j + 1) = 2;
-//                             vczfaces(i,3 * maxel + 3 * j + 2) = 4;
-//                             break;
-//                         case 1:
-//                             vczfaces(i,3 * maxel + 3 * j) = 0;
-//                             vczfaces(i,3 * maxel + 3 * j + 1) = 2;
-//                             vczfaces(i,3 * maxel + 3 * j + 2) = 5;
-//                             break;
-//                         case 2:
-//                             vczfaces(i,3 * maxel + 3 * j) = 1;
-//                             vczfaces(i,3 * maxel + 3 * j + 1) = 2;
-//                             vczfaces(i,3 * maxel + 3 * j + 2) = 5;
-//                             break;
-//                         case 3:
-//                             vczfaces(i,3 * maxel + 3 * j) = 1;
-//                             vczfaces(i,3 * maxel + 3 * j + 1) = 2;
-//                             vczfaces(i,3 * maxel + 3 * j + 2) = 4;
-//                             break;
-//                         case 4:
-//                             vczfaces(i,3 * maxel + 3 * j) = 0;
-//                             vczfaces(i,3 * maxel + 3 * j + 1) = 3;
-//                             vczfaces(i,3 * maxel + 3 * j + 2) = 4;
-//                             break;
-//                         case 5:
-//                             vczfaces(i,3 * maxel + 3 * j) = 0;
-//                             vczfaces(i,3 * maxel + 3 * j + 1) = 3;
-//                             vczfaces(i,3 * maxel + 3 * j + 2) = 5;
-//                             break;
-//                         case 6:
-//                             vczfaces(i,3 * maxel + 3 * j) = 1;
-//                             vczfaces(i,3 * maxel + 3 * j + 1) = 3;
-//                             vczfaces(i,3 * maxel + 3 * j + 2) = 5;
-//                             break;
-//                         case 7:
-//                             vczfaces(i,3 * maxel + 3 * j) = 1;
-//                             vczfaces(i,3 * maxel + 3 * j + 1) = 3;
-//                             vczfaces(i,3 * maxel + 3 * j + 2) = 4;
-//                             break;
-//                         }
-//                     }
-//                 }
-//             }
-//             cnt += 1;
-//         }
-//     }
-    
-//     // initialize intermediate variables
-//     auto nj = CArray <double> (3,1);
-//     auto rj = CArray <double> (3,1);
-//     auto sj = CArray <double> (3,1);
-//     auto nk = CArray <double> (3,1);
-//     auto rk = CArray <double> (3,1);
-//     auto sk = CArray <double> (3,1);
-//     auto cenfacej = CArray <double> (3,1);
-//     auto cenfacek = CArray <double> (3,1);
-//     for (int i = 0; i < 3; i++) {
-//         nj(i,0) = 0;
-//         rj(i,0) = 0;
-//         sj(i,0) = 0;
-//         nk(i,0) = 0;
-//         rk(i,0) = 0;
-//         sk(i,0) = 0;
-//         cenfacej(i,0) = 0;
-//         cenfacek(i,0) = 0;
-//     }
-//     int count = 0;
-    
-//     // looping over all VCZ elements to populate VCZinfo based upon VCZelem, VCZfaces, and connectivities
-//     for (int i = 0; i < nvcz; i++) {
-//         count = 0;
-//         for (int j = 0; j < 3 * maxel; j++) {
-//             // calculating normal vector for j face
-//             paravecs(nodes, conn, interpvals, vczfaces(i,j), vczelem(i,static_cast<int>(floor(j / 3))), nj, rj, sj, cenfacej);
-//             for (int k = 0; k < 3 * maxel; k++) {
-//                 // calculating normal vector for k face
-//                 paravecs(nodes, conn, interpvals, vczfaces(i,k + 3 * maxel), vczelem(i,static_cast<int>(floor(k / 3) + maxel)), nk, rk, sk, cenfacek);
-//                 // checking that normal vectors are opposing and that the faces are in contact with eachother (center of face overlaps)
-//                 if (nj(0,0) == -nk(0,0) && nj(1,0) == -nk(1,0) && nj(2,0) == -nk(2,0) && cenfacej(0,0) == cenfacek(0,0) && cenfacej(1,0) == cenfacek(1,0) && cenfacej(2,0) == cenfacek(2,0)) {
-//                     vczinfo(i,count + 2 * maxel) = vczfaces(i,j);
-//                     vczinfo(i,3 * maxel + count) = vczfaces(i,k + 3 * maxel);
-//                     count += 1;
-//                     break;
-//                 }
-//             }
-//             if (vczinfo(i,count + 2 * maxel) != -1) {
-//                 break;
-//             }
-//         }
-//     }
-    
-//     return vczinfo;
-
-// }
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
-
 // **************************************************************** Fierro Conversion **************************************************************** 
 // this array stores the releveant elements and surfaces for each cohesive zone
 // essentially, it makes a map to grab mesh info
@@ -2053,233 +811,12 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
         }
     }
 
-//     // build cohesive_zone_faces (A- and B-side) and store local corner indices (blocks 4 and 5) exactly like the original switch(k)
-
-//     for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
-//         int cnt = 0;
-
-//         // walk over potential element slots for this pair
-//         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
-            
-//             // A-side
-//             {
-//                 const int elemA = cohesive_zone_info(i, 0 + j);
-//                 if (elemA != -1) {
-//                     // find local corner k of nodeA in elemA (0..7)
-//                     for (int k = 0; k < 8; ++k) {
-//                         if (mesh.nodes_in_elem(static_cast<size_t>(elemA), static_cast<size_t>(k))
-//                             == overlapping_node_gids(i, 0)) {
-
-//                             // store k in block #4 at offset cnt (same as original)
-//                             cohesive_zone_info(i, 4*max_elem_in_cohesive_zone + cnt) = k;
-
-//                             // store up to 3 face candidates for this element slot (3*j,3*j+1,3*j+2)
-//                             switch (k) {
-//                                 // three faces incident to each local corner k
-//                                 case 0:
-//                                     cohesive_zone_faces(i, 3 * j)     = 0;
-//                                     cohesive_zone_faces(i, 3 * j + 1) = 2;
-//                                     cohesive_zone_faces(i, 3 * j + 2) = 4;
-//                                     break;
-//                                 case 1:
-//                                     cohesive_zone_faces(i, 3 * j)     = 1;
-//                                     cohesive_zone_faces(i, 3 * j + 1) = 2;
-//                                     cohesive_zone_faces(i, 3 * j + 2) = 4;
-//                                     break;
-//                                 case 2:
-//                                     cohesive_zone_faces(i, 3 * j)     = 0;
-//                                     cohesive_zone_faces(i, 3 * j + 1) = 3;
-//                                     cohesive_zone_faces(i, 3 * j + 2) = 4;
-//                                     break;
-//                                 case 3:
-//                                     cohesive_zone_faces(i, 3 * j)     = 1;
-//                                     cohesive_zone_faces(i, 3 * j + 1) = 3;
-//                                     cohesive_zone_faces(i, 3 * j + 2) = 4;
-//                                     break;
-//                                 case 4:
-//                                     cohesive_zone_faces(i, 3 * j)     = 0;
-//                                     cohesive_zone_faces(i, 3 * j + 1) = 2;
-//                                     cohesive_zone_faces(i, 3 * j + 2) = 5;
-//                                     break;
-//                                 case 5:
-//                                     cohesive_zone_faces(i, 3 * j)     = 1;
-//                                     cohesive_zone_faces(i, 3 * j + 1) = 2;
-//                                     cohesive_zone_faces(i, 3 * j + 2) = 5;
-//                                     break;
-//                                 case 6:
-//                                     cohesive_zone_faces(i, 3 * j)     = 0;
-//                                     cohesive_zone_faces(i, 3 * j + 1) = 3;
-//                                     cohesive_zone_faces(i, 3 * j + 2) = 5;
-//                                     break;
-//                                 case 7:
-//                                     cohesive_zone_faces(i, 3 * j)     = 1;
-//                                     cohesive_zone_faces(i, 3 * j + 1) = 3;
-//                                     cohesive_zone_faces(i, 3 * j + 2) = 5;
-//                                     break;
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-
-//             // B-side
-//             {
-//                 const int elemB = cohesive_zone_info(i, max_elem_in_cohesive_zone + j);
-//                 if (elemB != -1) {
-//                     for (int k = 0; k < 8; ++k) {
-//                         if (mesh.nodes_in_elem(static_cast<size_t>(elemB), static_cast<size_t>(k))
-//                             == overlapping_node_gids(i, 1)) {
-
-//                             // store k in block #5 at offset cnt
-//                             cohesive_zone_info(i, 5*max_elem_in_cohesive_zone + cnt) = k;
-
-//                             // B-side face candidates get stored in the upper half (offset 3*max)
-//                             const size_t base = 3 * max_elem_in_cohesive_zone + 3 * j;
-//                             switch (k) {
-//                                 // three faces incident to each local corner k
-//                                 case 0:
-//                                     cohesive_zone_faces(i, base + 0) = 0;
-//                                     cohesive_zone_faces(i, base + 1) = 2;
-//                                     cohesive_zone_faces(i, base + 2) = 4;
-//                                     break;
-//                                 case 1:
-//                                     cohesive_zone_faces(i, base + 0) = 1;
-//                                     cohesive_zone_faces(i, base + 1) = 2;
-//                                     cohesive_zone_faces(i, base + 2) = 4;
-//                                     break;
-//                                 case 2:
-//                                     cohesive_zone_faces(i, base + 0) = 0;
-//                                     cohesive_zone_faces(i, base + 1) = 3;
-//                                     cohesive_zone_faces(i, base + 2) = 4;
-//                                     break;
-//                                 case 3:
-//                                     cohesive_zone_faces(i, base + 0) = 1;
-//                                     cohesive_zone_faces(i, base + 1) = 3;
-//                                     cohesive_zone_faces(i, base + 2) = 4;
-//                                     break;
-//                                 case 4:
-//                                     cohesive_zone_faces(i, base + 0) = 0;
-//                                     cohesive_zone_faces(i, base + 1) = 2;
-//                                     cohesive_zone_faces(i, base + 2) = 5;
-//                                     break;
-//                                 case 5:
-//                                     cohesive_zone_faces(i, base + 0) = 1;
-//                                     cohesive_zone_faces(i, base + 1) = 2;
-//                                     cohesive_zone_faces(i, base + 2) = 5;
-//                                     break;
-//                                 case 6:
-//                                     cohesive_zone_faces(i, base + 0) = 0;
-//                                     cohesive_zone_faces(i, base + 1) = 3;
-//                                     cohesive_zone_faces(i, base + 2) = 5;
-//                                     break;
-//                                 case 7:
-//                                     cohesive_zone_faces(i, base + 0) = 1;
-//                                     cohesive_zone_faces(i, base + 1) = 3;
-//                                     cohesive_zone_faces(i, base + 2) = 5;
-//                                     break;
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-
-//             cnt += 1;  
-//         }
-//     }
-
-//     // for each pair, find the first opposing/coincident face match
-//     // uses compute_face_geometry to get (n, r, s, cenface)
-//     for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
-//         //int count = 0;
-
-//         // bool for first face match found (only take the first match)
-//         bool found = false;
-
-
-//         // small stack buffers + Views, reused
-//         // view = pointer to array (same memory)
-//         double nj_buf[3], rj_buf[3], sj_buf[3], cfj_buf[3];
-//         double nk_buf[3], rk_buf[3], sk_buf[3], cfk_buf[3];
-//         ViewCArrayKokkos<double> nj(&nj_buf[0], 3);
-//         ViewCArrayKokkos<double> rj(&rj_buf[0], 3);
-//         ViewCArrayKokkos<double> sj(&sj_buf[0], 3);
-//         ViewCArrayKokkos<double> cfj(&cfj_buf[0], 3);
-
-//         ViewCArrayKokkos<double> nk(&nk_buf[0], 3);
-//         ViewCArrayKokkos<double> rk(&rk_buf[0], 3);
-//         ViewCArrayKokkos<double> sk(&sk_buf[0], 3);
-//         ViewCArrayKokkos<double> cfk(&cfk_buf[0], 3);
-
-//         // A-side: j runs over 3 faces per A element
-//         for (int j = 0; j < static_cast<int>(3 * max_elem_in_cohesive_zone); ++j) {
-//             const int fA = cohesive_zone_faces(i, j);
-//             const int eA = cohesive_zone_info(i, static_cast<size_t>(floor(j / 3.0)));
-
-//             if (fA < 0 || eA < 0) continue;
-
-//             // geometry of A face
-//             // views helpful to pass into function
-//             compute_face_geometry(
-//                 state.node.coords, mesh,
-//                 state.node.coords, mesh.nodes_in_elem,
-//                 static_cast<size_t>(fA), static_cast<size_t>(eA),
-//                 nj, rj, sj, cfj
-//             );
-
-//             // B-side: k runs over 3 faces per B element
-//             for (int k = 0; k < static_cast<int>(3 * max_elem_in_cohesive_zone); ++k) {
-//                 const int fB = cohesive_zone_faces(i, k + 3*max_elem_in_cohesive_zone);
-//                 const int eB = cohesive_zone_info(i, static_cast<size_t>(floor(k / 3.0) + max_elem_in_cohesive_zone));
-
-//                 // if fB less than 0 or if eB less than 0 (or both)
-//                 if (fB < 0 || eB < 0) continue;
-
-//                 // geometry of B face
-//                 compute_face_geometry(
-//                     state.node.coords, mesh,
-//                     state.node.coords, mesh.nodes_in_elem,
-//                     static_cast<size_t>(fB), static_cast<size_t>(eB),
-//                     nk, rk, sk, cfk
-//                 );
-
-//                 // centroid coincidence (within tol)
-//                 const double dx = cfj(0) - cfk(0);
-//                 const double dy = cfj(1) - cfk(1);
-//                 const double dz = cfj(2) - cfk(2);
-//                 const double dist = sqrt(dx*dx + dy*dy + dz*dz);
-
-//                 // normals opposite (both unit): dot = -1
-//                 // check this dot product. should be exactly -1
-//                 const double dot = nj(0)*nk(0) + nj(1)*nk(1) + nj(2)*nk(2);
-                
-//                 // need to make tol abs value of 1e-8, not squared
-//                 if (dist <= tol && (dot <= -1.0 + 1.0e-8)) {
-//                     cohesive_zone_info(i, 2*max_elem_in_cohesive_zone + 0) = fA; // A face id
-//                     cohesive_zone_info(i, 3*max_elem_in_cohesive_zone + 0) = fB; // B face id
-//                     found = true;
-//                     break; // first match wins for this j (same as original)
-//                 }
-//             }
-
-//             // break out after write one match to block #2/#3
-//             //if (cohesive_zone_info(i, 2*max_elem_in_cohesive_zone + (count-1)) != -1) {
-//             //    break;
-//             //}
-//         }
-//     }
-
-//     return cohesive_zone_info;
-// }
-
-// previous working version above commented out
-// following is a test for version of build_cohesive_zone_info that makes it so vcz_orient can read the first non -1 entries, instead of needing a face table in vcz_info
-
-    // ---------------------- Build candidate faces + store local corner k slot-keyed ----------------------
+    // build candidate faces + store local corner k slot-keyed
     for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
         // Walk element slots for this pair
         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
 
-            // ---------- A-side ----------
+            // A-side
             {
                 const int elemA = cohesive_zone_info(i, 0 + j);
                 if (elemA != -1) {
@@ -2333,7 +870,7 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
                 }
             }
 
-            // ---------- B-side ----------
+            // B-side
             {
                 const int elemB = cohesive_zone_info(i, max_elem_in_cohesive_zone + j);
                 if (elemB != -1) {
@@ -2447,34 +984,6 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 
     return cohesive_zone_info;
 }
-
-
-
-
-
-
-
-
-
-// **************************************************************** Fierro Conversion **************************************************************** 
-
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
-// // sequentially calling preprocessing functions
-// CArray<int> VCZmeshpreprocess(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<int> vczconn, FArray<double> interpvals) {
-//     int maxel = elcount(nodes, conn, ne, nvcz, vczconn);
-//     CArray<int> vczelem = elems(nodes, conn, ne, nvcz, vczconn, maxel);
-//     CArray<int> vczinfo = faces(nodes, conn, ne, nvcz, vczconn, vczelem, interpvals, maxel);
-//     /* vczinfo columns are each by number of maxel for total size of [nvcz by 6*maxel]
-//     [elems first glob node     elems second glob node     patch first glob node     patch second glob node
-//     local conn index first glob node     local conn index second glob node] */
-//     return vczinfo;
-    
-// }
-// **************************************************************** FROM GAVIN'S CODE ****************************************************************
-
-// **************************************************************** Fierro Conversion **************************************************************** 
-
-// VCZ mesh preprocess function work already done inside void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State)
 
 // **************************************************************** Fierro Conversion **************************************************************** 
 
@@ -2692,13 +1201,13 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 //... for the faces on the current config, sum normals, normalize, store. (same as Gavin's average and normalize but using compute_face_geometry()
 KOKKOS_FUNCTION
 void cohesive_zones_t::oriented(
-    const Mesh_t& mesh,
-    const DCArrayKokkos<double>& X_t,      // reference  coords (num_nodes x 3)
-    const DCArrayKokkos<double>& X_tdt,    // current ("t+dt") coords (num_nodes x 3) 
-    const CArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
-    const CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
-    const size_t max_elem_in_cohesive_zone,
-    const double tol,                 // centroid coincidence tolerance (ABS distance)
+    Mesh_t& mesh,
+    DCArrayKokkos<double>& X_t,      // reference  coords (num_nodes x 3)
+    DCArrayKokkos<double>& X_tdt,    // current ("t+dt") coords (num_nodes x 3) 
+    CArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
+    CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
+    size_t max_elem_in_cohesive_zone,
+    double tol,                 // centroid coincidence tolerance (ABS distance)
     CArrayKokkos<double>& vcz_orient       // (overlapping_node_gids.dims(0) x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
 ) 
 {
@@ -2730,11 +1239,6 @@ void cohesive_zones_t::oriented(
         double sum_dt [3] = {0.0, 0.0, 0.0};
         int cnt = 0;
 
-        // find first filled slot on A and B sides
-        //int jA = -1, jB = -1;
-        //int eA = -1, eB = -1;
-        //int fA = -1, fB = -1;
-
         // find first matched face on A side (block[2]) and B side (block[3]) that is greater than or equal to zero
         // A side
         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
@@ -2746,28 +1250,6 @@ void cohesive_zones_t::oriented(
                 continue; // no contributing face in this slot
             }            
         
-        // B side
-        //for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
-        //    const int f_try = cz_info(i, 3*max_elem_in_cohesive_zone + j);
-        //    if (f_try >= 0) { jB = static_cast<int>(j); fB = f_try; break; }
-        //}
-
-        // no matches, leave zeros
-        //if (jA < 0 || jB < 0) {
-        //    // no matched faces recorded; leave zeros so its obvious in debugs
-        //    continue;
-        //}
-
-        // grabbing incident elements for slots 
-        //eA = cz_info(i, 0*max_elem_in_cohesive_zone + static_cast<size_t>(jA));
-        //eB = cz_info(i, 1*max_elem_in_cohesive_zone + static_cast<size_t>(jB));
-
-        // skip if -1
-        //if (eA < 0 || eB < 0) {
-            // corrupted row (faces set but elements missing) — skip
-            // debug: print that there are matched faces but elements are missing (blocks [0] and [1])
-        //    continue;
-        //}
         
         // compute A-side normal at t (reference) and t+dt (current)
         compute_face_geometry(X_t,   mesh, X_t,   mesh.nodes_in_elem,
@@ -2778,16 +1260,11 @@ void cohesive_zones_t::oriented(
                               nA_dt, rA_dt, sA_dt, cA_dt);
 
         // optional: compute B at t for a quick sanity check (opposing normals)            
-        // (Optional) sanity: B-side at t
         //compute_face_geometry(X_t,   mesh, X_t,   mesh.nodes_in_elem,
         //                      static_cast<size_t>(fB), static_cast<size_t>(eB),
         //                      nB_t, rB_t, sB_t, cB_t);
 
-        // use A-side normal as the cohesive zone +n direction for consistent orientation
-        // reference normal = nA_t (reference)
-        // current normal = nA_dt (current)
-        //double n_ref[3] = { nA_t(0),  nA_t(1),  nA_t(2)  };
-        //double n_cur[3] = { nA_dt(0), nA_dt(1), nA_dt(2) };
+
 
         // accumulate normals
         // reference normal = nA_t (reference)
@@ -2802,32 +1279,6 @@ void cohesive_zones_t::oriented(
             continue;
         }        
 
-        // make sure current normal points the same way as reference (flip if needed)
-        //const double dot_align = n_ref[0]*n_cur[0] + n_ref[1]*n_cur[1] + n_ref[2]*n_cur[2];
-        //if (dot_align < 0.0) { n_cur[0]*=-1.0; n_cur[1]*=-1.0; n_cur[2]*=-1.0; }
-
-        // normalize n_ref
-        //double normal_n_ref = sqrt(n_ref[0]*n_ref[0] + n_ref[1]*n_ref[1] + n_ref[2]*n_ref[2]);
-        //if (normal_n_ref > 0.0) { n_ref[0]/=normal_n_ref; n_ref[1]/=normal_n_ref; n_ref[2]/=normal_n_ref; }
-
-        // normalize n_cur
-        //double normal_n_cur = sqrt(n_cur[0]*n_cur[0] + n_cur[1]*n_cur[1] + n_cur[2]*n_cur[2]);
-        //if (normal_n_cur > 0.0) { n_cur[0]/=normal_n_cur; n_cur[1]/=normal_n_cur; n_cur[2]/=normal_n_cur; }
- 
-        // store
-        //vcz_orient(i,0) = n_ref[0]; // nx_t == ut (reference)
-        //vcz_orient(i,1) = n_ref[1]; // ny_t == ut (reference)
-        //vcz_orient(i,2) = n_ref[2]; // nz_t == ut (reference)
-        //vcz_orient(i,3) = n_cur[0]; // nx_tdt == utdt (ut + us) (current)
-        //vcz_orient(i,4) = n_cur[1]; // ny_tdt == utdt (ut + us) (current)
-        //vcz_orient(i,5) = n_cur[2]; // nz_tdt == utdt (ut + us) (current)
-
-        // normalize summed normals at t
-        //double mag_t = sqrt(sum_t[0]*sum_t[0] + sum_t[1]*sum_t[1] + sum_t[2]*sum_t[2]);
-        //if (mag_t > 0.0) {
-        //    sum_t[0] /= mag_t; sum_t[1] /= mag_t; sum_t[2] /= mag_t;
-        //}
-
         // align t+dt sum to t sum (keep a consistent sign across time)
         double dot_align = sum_t[0]*sum_dt[0] + sum_t[1]*sum_dt[1] + sum_t[2]*sum_dt[2];
         if (dot_align < 0.0) {
@@ -2835,12 +1286,6 @@ void cohesive_zones_t::oriented(
             sum_dt[1] = -sum_dt[1];
             sum_dt[2] = -sum_dt[2];
         }
-
-        // normalize summed normals at t+dt
-        //double mag_dt = sqrt(sum_dt[0]*sum_dt[0] + sum_dt[1]*sum_dt[1] + sum_dt[2]*sum_dt[2]);
-        //if (mag_dt > 0.0) {
-        //    sum_dt[0] /= mag_dt; sum_dt[1] /= mag_dt; sum_dt[2] /= mag_dt;
-        //}
 
         // normalize
         const double mag_t  = sqrt(sum_t [0]*sum_t [0] + sum_t [1]*sum_t [1] + sum_t [2]*sum_t [2]);
@@ -2851,15 +1296,6 @@ void cohesive_zones_t::oriented(
         if (mag_t  > 0.0) { n_ref[0] = sum_t [0]/mag_t;  n_ref[1] = sum_t [1]/mag_t;  n_ref[2] = sum_t [2]/mag_t; }
         if (mag_dt > 0.0) { n_cur[0] = sum_dt[0]/mag_dt; n_cur[1] = sum_dt[1]/mag_dt; n_cur[2] = sum_dt[2]/mag_dt; }
 
-
-        // store
-        //vcz_orient(i,0) = sum_t [0]; // average over faces of nx_t == ut (reference)
-        //vcz_orient(i,1) = sum_t [1]; // average over faces of ny_t == ut (reference)
-        //vcz_orient(i,2) = sum_t [2]; // average over faces of nz_t == ut (reference)
-        //vcz_orient(i,3) = sum_dt[0]; // average over faces of nx_tdt == utdt (ut + us) (current)
-        //vcz_orient(i,4) = sum_dt[1]; // average over faces of ny_tdt == utdt (ut + us) (current)
-        //vcz_orient(i,5) = sum_dt[2]; // average over faces of nz_tdt == utdt (ut + us) (current)
-
         // store
         vcz_orient(i,0) = n_ref[0]; // nx_t == ut (reference)
         vcz_orient(i,1) = n_ref[1]; // ny_t == ut (reference)
@@ -2867,8 +1303,6 @@ void cohesive_zones_t::oriented(
         vcz_orient(i,3) = n_cur[0]; // nx_tdt == utdt (ut + us) (current)
         vcz_orient(i,4) = n_cur[1]; // ny_tdt == utdt (ut + us) (current)
         vcz_orient(i,5) = n_cur[2]; // nz_tdt == utdt (ut + us) (current)
-
-        
     }
 } // end oriented()
 

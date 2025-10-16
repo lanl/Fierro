@@ -25,12 +25,17 @@ struct fracture_nodes_t {
 
 struct cohesive_zones_t {
     // member functions defined in this header file and sized inside of the source file
+    
     size_t gid; // global node id
     size_t lid; // local node id
     size_t nvcz; // number of actual cohesive zone pairs
     CArrayKokkos <size_t> nodes_gid; // global ids of the nodes in the cohesive zone
     CArrayKokkos <size_t> overlapping_node_gids; // node pairs with overlapping coordinates ; // will need to size this inside of a function in the source file 
     CArrayKokkos <size_t> vczconn; // 2D [num_pairs][2] definition for function finds the max number of elements that any cohesive zone node is part of
+    //CArrayKokkos<size_t> cohesive_zone_info;
+    CArrayKokkos<int> cz_info;
+    size_t max_elem_in_cohesive_zone;
+
     
 
     // Iso-parametric coordinates of the patch nodes (1D array of size mesh.num_nodes_in_surf)
@@ -47,6 +52,22 @@ struct cohesive_zones_t {
     // would look something like void node_pairs_t::initialize(const Mesh_t &mesh, ...)
     // this is where the algorithim to find the unique node pairs (boundary nodes) will go
     // only thing that should be in sgh_setup.cpp is calling this function
+
+    //void execute(Mesh_t& mesh, 
+    //             State_t& State,
+    //             CArrayKokkos<size_t>& overlapping_node_gids,
+    //             CArrayKokkos<int>& cz_info,
+    //             size_t max_elem_in_cohesive_zone,
+    //             double tol);
+
+    //void execute(const Mesh_t& mesh, const State_t& State, double tol);
+
+    void debug_oriented(Mesh_t& mesh,
+                        State_t& State,
+                        CArrayKokkos<size_t>& overlap,
+                        CArrayKokkos<int>& info,
+                        size_t maxcz,
+                        double tol);
 
     cohesive_zones_t(); 
 
@@ -107,10 +128,10 @@ struct cohesive_zones_t {
     const double tol                                     // centroid coincidence tolerance
     );
 
-    CArrayKokkos<int> cohesive_zone_info(
-        const CArrayKokkos<size_t>& overlapping_node_gids,
-        const size_t max_elem_in_cohesive_zone
-    );
+//    CArrayKokkos<int> cohesive_zone_info(
+//        const CArrayKokkos<size_t>& overlapping_node_gids,
+//        const size_t max_elem_in_cohesive_zone
+//    );
 
     CArrayKokkos<int> cohesive_zone_faces(
        const CArrayKokkos<size_t>& overlapping_node_gids,
@@ -120,13 +141,13 @@ struct cohesive_zones_t {
 
     KOKKOS_FUNCTION
     void oriented(
-        const Mesh_t& mesh,
-        const DCArrayKokkos<double>& X_t,      // reference  coords (num_nodes x 3)
-        const DCArrayKokkos<double>& X_tdt,    // updated ("t+dt") coords (num_nodes x 3) – can equal X_t if not available
-        const CArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
-        const CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
-        const size_t max_elem_in_cohesive_zone,
-        const double tol,                 // centroid coincidence tolerance (ABS distance)
+        Mesh_t& mesh,
+        DCArrayKokkos<double>& X_t,      // reference  coords (num_nodes x 3)
+        DCArrayKokkos<double>& X_tdt,    // updated ("t+dt") coords (num_nodes x 3) – can equal X_t if not available
+        CArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
+        CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
+        size_t max_elem_in_cohesive_zone,
+        double tol,                 // centroid coincidence tolerance (ABS distance)
         CArrayKokkos<double>& vcz_orient       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
     ); 
 };

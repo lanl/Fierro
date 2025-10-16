@@ -467,6 +467,30 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         } // end of RK loop
 
+        // cohesive zones oriented() update call
+        // print every 20 cycles
+        // if (doing_fracture && (cycle == 0 || cycle % 20 == 0)){
+        // print every cycle
+        if (doing_fracture){
+            const double tol = 1e-8;
+
+            // checking the data is recorded properly:
+              printf("[Driver::execute] &cz_bank=%p  pairs=%zu maxcz=%zu info_rows=%zu\n",
+                    (void*)&this->cohesive_zones_bank,
+                    this->cohesive_zones_bank.overlapping_node_gids.dims(0),
+                    this->cohesive_zones_bank.max_elem_in_cohesive_zone,
+                    this->cohesive_zones_bank.cz_info.dims(0));
+
+            cohesive_zones_bank.debug_oriented(
+                mesh,
+                State,
+                cohesive_zones_bank.overlapping_node_gids,
+                cohesive_zones_bank.cz_info,
+                cohesive_zones_bank.max_elem_in_cohesive_zone,
+                tol
+            );
+        }
+
         // increment the time
         time_value += dt;
 

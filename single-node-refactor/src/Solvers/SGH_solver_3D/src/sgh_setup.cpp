@@ -122,8 +122,16 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
         
         // test to see if function is being entered
         printf("Calling initialize()...\n");
-        cohesive_zones_t cohesive_zones_bank;
-        cohesive_zones_bank.initialize(mesh, State);
+        //cohesive_zones_t cohesive_zones_bank;
+        this->cohesive_zones_bank.initialize(mesh, State);
+
+        // debug oriented
+        printf("[Driver::setup] &cz_bank=%p  pairs=%zu maxcz=%zu info_rows=%zu\n",
+               (void*)&this->cohesive_zones_bank,
+               this->cohesive_zones_bank.overlapping_node_gids.dims(0),
+               this->cohesive_zones_bank.max_elem_in_cohesive_zone,
+               this->cohesive_zones_bank.cz_info.dims(0));
+
         // to see if function is being entered
         printf("Done calling initialize()...\n");
 
