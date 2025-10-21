@@ -467,13 +467,16 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         } // end of RK loop
 
+        // COMMENT OUT HERE TO STOP FUNCTION DEBUGGING PRINTS PER TIME STEP
         // cohesive zones oriented() update call
         // print every 20 cycles
         // if (doing_fracture && (cycle == 0 || cycle % 20 == 0)){
         // print every cycle
         if (doing_fracture){
+            // tolerance for face matching/orientation
             const double tol = 1e-8;
 
+            // COMMENT OUT HERE TO STOP ORIENTED DEBUG PRINTS
             // checking the data is recorded properly:
               printf("[Driver::execute] &cz_bank=%p  pairs=%zu maxcz=%zu info_rows=%zu\n",
                     (void*)&this->cohesive_zones_bank,
@@ -489,7 +492,52 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 cohesive_zones_bank.max_elem_in_cohesive_zone,
                 tol
             );
+            // COMMENT OUT HERE TO STOP ORIENTED DEBUG PRINTS
+
+            // COMMENT OUT HERE TO STOP UCMAP DEBUG PRINTS
+
+            // building local vcz_orient array by calling oriented()
+            CArrayKokkos<double> vcz_orient_local(cohesive_zones_bank.overlapping_node_gids.dims(0), 6, "vcz_orient_local");
+
+            cohesive_zones_bank.oriented(
+                mesh,
+                State.node.coords_n0,
+                State.node.coords,
+                cohesive_zones_bank.overlapping_node_gids,
+                cohesive_zones_bank.cz_info,
+                cohesive_zones_bank.max_elem_in_cohesive_zone,
+                tol,
+                vcz_orient_local
+            );
+
+            // allocate local ulocvcz array
+            //if (cohesive_zones_bank.ulocvcz.dims(0) != cohesive_zones_bank.overlapping_node_gids.dims(0)) {
+            //    cohesive_zones_bank.ulocvcz = CArrayKokkos<double>(cohesive_zones_bank.overlapping_node_gids.dims(0), 4, "ulocvcz");
+            //    cohesive_zones_bank.ulocvcz.set_values(0.0);
+            //}
+            CArrayKokkos<double> ulocvcz_local(cohesive_zones_bank.overlapping_node_gids.dims(0), 4, "ulocvcz_local");
+            ulocvcz_local.set_values(0.0);
+
+            // update (fill) ulocvcz by computing the local n/tan displacements at cohesive zone node pairs
+            cohesive_zones_bank.ucmap(
+                State.node.coords_n0,
+                State.node.coords,
+                vcz_orient_local,
+                cohesive_zones_bank.overlapping_node_gids,
+                ulocvcz_local
+            );
+
+            // print the 1:1 debug section
+            cohesive_zones_bank.debug_ucmap(
+                State.node.coords_n0,
+                State.node.coords,
+                vcz_orient_local,
+                cohesive_zones_bank.overlapping_node_gids,
+                ulocvcz_local
+            );
+            // COMMENT OUT HERE TO STOP UCMAP DEBUG PRINTS
         }
+        // COMMENT OUT HERE TO STOP FUNCTION DEBUGGING PRINTS PER TIME STEP
 
         // increment the time
         time_value += dt;

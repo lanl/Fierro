@@ -53,21 +53,20 @@ struct cohesive_zones_t {
     // this is where the algorithim to find the unique node pairs (boundary nodes) will go
     // only thing that should be in sgh_setup.cpp is calling this function
 
-    //void execute(Mesh_t& mesh, 
-    //             State_t& State,
-    //             CArrayKokkos<size_t>& overlapping_node_gids,
-    //             CArrayKokkos<int>& cz_info,
-    //             size_t max_elem_in_cohesive_zone,
-    //             double tol);
-
-    //void execute(const Mesh_t& mesh, const State_t& State, double tol);
-
     void debug_oriented(Mesh_t& mesh,
                         State_t& State,
                         CArrayKokkos<size_t>& overlap,
                         CArrayKokkos<int>& info,
                         size_t maxcz,
                         double tol);
+    
+    void debug_ucmap(
+        const DCArrayKokkos<double>& X_t,
+        const DCArrayKokkos<double>& X_tdt,
+        const CArrayKokkos<double>& vcz_orient,
+        const CArrayKokkos<size_t>& overlapping_node_gids,
+        const CArrayKokkos<double>& ulocvcz
+    );
 
     cohesive_zones_t(); 
 
@@ -75,37 +74,9 @@ struct cohesive_zones_t {
                     const ViewCArrayKokkos<double> &internal_force_points,
                     const ViewCArrayKokkos<double> &fracture_force_points, const ViewCArrayKokkos<double> &mass_points_);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn cohesive_zone_elem_count
-    /// \brief Returns the maximum number of elements connected to any node in the cohesive zone pairs
-    /// This value is used to size data structures that depend on the maximum connectivity per node
-    /// \param overlapping_node_gids 2D array (num_pairs x 2) containing node pairs involved in cohesive zones
-    /// \param elems_in_node RaggedRightArray mapping each node to the elements it belongs to   
-    /// \param mesh Reference to the mesh containing connectivity information
-    /// \return Maximum number of elements connected to any node in any cohesive pair
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     size_t cohesive_zone_elem_count(const CArrayKokkos<size_t>& overlapping_node_gids, const RaggedRightArrayKokkos<size_t>& elems_in_node, const Mesh_t& mesh);
 
-    /// \brief Computes face geometry vectors and centroid for a given element surface
-    ///
-    /// This function computes the geometric properties of a specified surface (face) — 
-    /// also referred to as a "patch" per the nodal indexing convention in mesh.h — 
-    /// for a first-order hexahedral element.
-    /// Specifically, it calculates the orthonormal in-plane basis vectors r and s, 
-    /// the outward unit normal vector n, and the centroid cenface of the face in physical space
-    ///
-    /// \param nodes Global nodal coordinates array (num_nodes x 3) from the mesh
-    /// \param conn Element-to-node connectivity array (num_elems x nodes_in_elem) from the mesh
-    /// \param surf Local surface (patch) ID [0–5] corresponding to a face of a hex element 
-    ///             (per the face-node ordering in mesh.h)
-    /// \param elem Index of the element from which the surface is extracted
-    /// \param n Output normal vector to the face (length 3, unit magnitude)
-    /// \param r Output in-plane direction vector r (length 3, unit magnitude)
-    /// \param s Output in-plane direction vector s (length 3, unit magnitude)
-    /// \param cenface Output centroid of the face in physical space (length 3)
-    ///
-    /// \note This function assumes first-order hexahedral elements (nodes_in_elem = 8)
-    ///
     KOKKOS_FUNCTION
     void compute_face_geometry(const DCArrayKokkos<double> &nodes,
                                 const Mesh_t &mesh,
@@ -128,11 +99,6 @@ struct cohesive_zones_t {
     const double tol                                     // centroid coincidence tolerance
     );
 
-//    CArrayKokkos<int> cohesive_zone_info(
-//        const CArrayKokkos<size_t>& overlapping_node_gids,
-//        const size_t max_elem_in_cohesive_zone
-//    );
-
     CArrayKokkos<int> cohesive_zone_faces(
        const CArrayKokkos<size_t>& overlapping_node_gids,
        const size_t max_elem_in_cohesive_zone
@@ -150,6 +116,15 @@ struct cohesive_zones_t {
         double tol,                 // centroid coincidence tolerance (ABS distance)
         CArrayKokkos<double>& vcz_orient       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
     ); 
+
+    KOKKOS_FUNCTION
+    void ucmap(
+    const DCArrayKokkos<double>& X_t, 
+    const DCArrayKokkos<double>& X_tdt,
+    const CArrayKokkos<double>& vcz_orient,
+    const CArrayKokkos<size_t>& overlapping_node_gids,
+    CArrayKokkos<double>& ulocvcz    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
+    );
 };
 
 #endif
