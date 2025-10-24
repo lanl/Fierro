@@ -16,7 +16,6 @@ if [ "$trilinos" = "enabled" ]; then
         Trilinos_DIR=${TRILINOS_INSTALL_DIR}/lib/cmake/Trilinos
     fi
     cmake_options+=(
-        -D CMAKE_PREFIX_PATH="${MATAR_INSTALL_DIR}"
         -D Trilinos_DIR="$Trilinos_DIR"
         -D FIERRO_ENABLE_TRILINOS=ON
     )
@@ -49,6 +48,6 @@ echo "CMake Options: ${cmake_options[@]}"
 cmake "${cmake_options[@]}" -B "${SGH_BUILD_DIR}" -S "${SGH_BASE_DIR}"
 
 # Build SGH
-make -C "${SGH_BUILD_DIR}" -j${SGH_BUILD_CORES}
+make -C "${SGH_BUILD_DIR}" -j${FIERRO_BUILD_CORES}
 
 cd $basedir
