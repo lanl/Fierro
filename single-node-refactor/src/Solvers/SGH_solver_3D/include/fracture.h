@@ -62,7 +62,9 @@ struct cohesive_zones_t {
     
     void debug_ucmap(
         const DCArrayKokkos<double>& X_t,
-        const DCArrayKokkos<double>& X_tdt,
+        //const DCArrayKokkos<double>& X_tdt,
+        const DCArrayKokkos<double>& V_t,                 
+        double dt,
         const CArrayKokkos<double>& vcz_orient,
         const CArrayKokkos<size_t>& overlapping_node_gids,
         const CArrayKokkos<double>& ulocvcz
@@ -119,10 +121,11 @@ struct cohesive_zones_t {
 
     KOKKOS_FUNCTION
     void ucmap(
-    const DCArrayKokkos<double>& X_t, 
-    const DCArrayKokkos<double>& X_tdt,
+    const DCArrayKokkos<double>& X_t,
+    const DCArrayKokkos<double>& V_t,
     const CArrayKokkos<double>& vcz_orient,
     const CArrayKokkos<size_t>& overlapping_node_gids,
+    const double dt, // timestep driver from sgh_execute.cpp
     CArrayKokkos<double>& ulocvcz    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
     );
 };

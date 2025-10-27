@@ -518,19 +518,21 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             CArrayKokkos<double> ulocvcz_local(cohesive_zones_bank.overlapping_node_gids.dims(0), 4, "ulocvcz_local");
             ulocvcz_local.set_values(0.0);
 
-            // update (fill) ulocvcz by computing the local n/tan displacements at cohesive zone node pairs
+            // update (fill) ulocvcz by computing the local normal and tangential displacements at cohesive zone node pairs
             cohesive_zones_bank.ucmap(
-                State.node.coords_n0,
-                State.node.coords,
+                State.node.coords_n0, // == X_t (nodal positions at t)
+                State.node.vel_n0, // == V_t (nodal velocities at t)
                 vcz_orient_local,
                 cohesive_zones_bank.overlapping_node_gids,
+                dt,
                 ulocvcz_local
             );
 
             // print the 1:1 debug section
             cohesive_zones_bank.debug_ucmap(
-                State.node.coords_n0,
-                State.node.coords,
+                State.node.coords_n0, // == X_t (nodal positions at t)
+                State.node.vel_n0, // == V_t (nodal velocities at t)
+                dt,
                 vcz_orient_local,
                 cohesive_zones_bank.overlapping_node_gids,
                 ulocvcz_local

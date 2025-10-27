@@ -631,82 +631,98 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
     // ======================== ucmap debug ========================
 // COMMENT OUT HERE TO STOP FUNCTION DEBUGGING PRINTS
 void cohesive_zones_t::debug_ucmap(
-    const DCArrayKokkos<double>& X_t,                  // nodes + ut
-    const DCArrayKokkos<double>& X_tdt,                // nodes + ut + us
-    const CArrayKokkos<double>&  vcz_orient,           // (num_pairs x 6)
-    const CArrayKokkos<size_t>&  overlapping_node_gids,// (num_pairs x 2)
-    const CArrayKokkos<double>&  ulocvcz               // (num_pairs x 4) already filled by ucmap()
-)
-{
-    printf("\n================== ucmap debug ==================\n");
+    const DCArrayKokkos<double>& X_t,                 // coords_n0 (positions at t)
+    const DCArrayKokkos<double>& V_t,                 // vel_n0    (velocities at t)
+    double dt,                                        // same dt passed to ucmap()
+    const CArrayKokkos<double>&  vcz_orient,          // [nx_t, ny_t, nz_t, nx_tdt, ...] (we'll only use the first 3)
+    const CArrayKokkos<size_t>&  overlapping_node_gids,
+    const CArrayKokkos<double>&  ulocvcz              // what ucmap() already wrote
+){
+    printf("\n==================== ucmap debug ====================\n");
 
     for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
-        const size_t nodeA = overlapping_node_gids(i,0);
-        const size_t nodeB = overlapping_node_gids(i,1);
+        const size_t A = overlapping_node_gids(i,0);
+        const size_t B = overlapping_node_gids(i,1);
 
-        // coordinates at t and t+dt
-        const double Ax_t  = X_t  (nodeA,0), Ay_t  = X_t  (nodeA,1), Az_t  = X_t  (nodeA,2);
-        const double Bx_t  = X_t  (nodeB,0), By_t  = X_t  (nodeB,1), Bz_t  = X_t  (nodeB,2);
-        const double Ax_tdt = X_tdt(nodeA,0), Ay_tdt = X_tdt(nodeA,1), Az_tdt = X_tdt(nodeA,2);
-        const double Bx_tdt = X_tdt(nodeB,0), By_tdt = X_tdt(nodeB,1), Bz_tdt = X_tdt(nodeB,2);
+        // calculate displacement between overlapping node pairs in global frame at time t
+        const double ux = X_t(B,0) - X_t(A,0);
+        const double uy = X_t(B,1) - X_t(A,1);
+        const double uz = X_t(B,2) - X_t(A,2);
 
-        // relative displacements (global) at t and t+dt
-        const double ux_t   = Bx_t  - Ax_t;
-        const double uy_t   = By_t  - Ay_t;
-        const double uz_t   = Bz_t  - Az_t;
+        // calculate velocity difference between overlapping node pairs in global frame at time t
+        const double vx = V_t(B,0) - V_t(A,0);
+        const double vy = V_t(B,1) - V_t(A,1);
+        const double vz = V_t(B,2) - V_t(A,2);
 
-        const double ux_tdt = Bx_tdt - Ax_tdt;
-        const double uy_tdt = By_tdt - Ay_tdt;
-        const double uz_tdt = Bz_tdt - Az_tdt;
+        // calculate displacement at t+dt  (forward euler predicted)
+        const double ux_tdt_FE = ux + dt*vx;
+        const double uy_tdt_FE = uy + dt*vy;
+        const double uz_tdt_FE = uz + dt*vz;
 
-        // normals (unit) from oriented(): [n_ref | n_cur]
-        const double nx_t   = vcz_orient(i,0);
-        const double ny_t   = vcz_orient(i,1);
-        const double nz_t   = vcz_orient(i,2);
-        const double nx_tdt  = vcz_orient(i,3);
-        const double ny_tdt  = vcz_orient(i,4);
-        const double nz_tdt  = vcz_orient(i,5);
+        // normal at time t from oriented() (already unitized)
+        const double nx = vcz_orient(i,0);
+        const double ny = vcz_orient(i,1);
+        const double nz = vcz_orient(i,2);
 
-        // normal components
-        const double un_t   = ux_t*nx_t   + uy_t*ny_t   + uz_t*nz_t;
-        const double un_tdt = ux_tdt*nx_tdt + uy_tdt*ny_tdt + uz_tdt*nz_tdt;
+        // replicating ucmap() exactly
 
-        // magnitude of global u vectors at t and t+dt
-        const double umag_t = sqrt(ux_t*ux_t + uy_t*uy_t + uz_t*uz_t);
-        const double umag_tdt = sqrt(ux_tdt*ux_tdt + uy_tdt*uy_tdt + uz_tdt*uz_tdt);
+        // dotting with the normal vector to get the normal component of displacement at time t
+        const double un_t = ux*nx + uy*ny + uz*nz;     
 
-        // calculating tangent compnent of displacement assuming that us* == ur*
-        const double utan_t = sqrt(fabs(umag_t*umag_t - un_t*un_t));
-        const double utan_tdt = sqrt(fabs(umag_tdt*umag_tdt - un_tdt*un_tdt));
+        // tangential components at time t
+        const double tx_t = ux - un_t*nx;
+        const double ty_t = uy - un_t*ny;
+        const double tz_t = uz - un_t*nz;
 
-        // stored values (from ucmap)
-        const double stored_un_t    = ulocvcz(i,0);
-        const double stored_utan_t  = ulocvcz(i,1);
-        const double stored_un_tdt  = ulocvcz(i,2);
-        const double stored_utan_tdt= ulocvcz(i,3);
+        // tangential magnitude at time t assuiming that us* == ur*
+        const double utan_t = sqrt(tx_t*tx_t + ty_t*ty_t + tz_t*tz_t); 
 
-        printf("\n-- Pair %zu  (A gid=%zu, B gid=%zu) --\n", i, nodeA, nodeB);
-        printf("  A@t    =(%.6g, %.6g, %.6g)   B@t    =(%.6g, %.6g, %.6g)\n", Ax_t, Ay_t, Az_t, Bx_t, By_t, Bz_t);
-        printf("  A@t+dt =(%.6g, %.6g, %.6g)   B@t+dt =(%.6g, %.6g, %.6g)\n", Ax_tdt, Ay_tdt, Az_tdt, Bx_tdt, By_tdt, Bz_tdt);
+        // v components dotted with normal vector to get normal compoennt of velocity at time t
+        const double dun_dt = vx*nx + vy*ny + vz*nz;    
 
-        printf("  u_t    =(%.6g, %.6g, %.6g)   u_tdt  =(%.6g, %.6g, %.6g)\n", ux_t, uy_t, uz_t, ux_tdt, uy_tdt, uz_tdt);
-        printf("  n_ref  =(%.6g, %.6g, %.6g)   n_cur  =(%.6g, %.6g, %.6g)\n", nx_t, ny_t, nz_t, nx_tdt, ny_tdt, nz_tdt);
+        // tangential components of velocity at time t
+        const double dv_tx  = vx - dun_dt*nx;           
+        const double dv_ty  = vy - dun_dt*ny;
+        const double dv_tz  = vz - dun_dt*nz;
 
-        printf("  un_t=%.6g  un_tdt=%.6g   |  ||un_t||=%.6g  ||un_tdt||=%.6g\n", un_t, un_tdt, umag_t, umag_tdt);
-        printf("  utan_t=%.6g  utan_tdt=%.6g      |  (from sqrt(max(0, ||u||^2 - un^2)))\n", utan_t, utan_tdt);
+        // Forward Euler update
+        // normal: un_tdt = un_t + dt*dun_dt
+        // tangential: utan_tdt = utan_t + dt*dv_tan
 
-        printf("  stored ulocvcz: [un_t=%.6g, utan_t=%.6g, un_tdt=%.6g, utan_tdt=%.6g]\n",
-               stored_un_t, stored_utan_t, stored_un_tdt, stored_utan_tdt);
+        const double un_tdt_FE = un_t + dt*dun_dt;
+        const double tx_tdt_FE = tx_t + dt*dv_tx;
+        const double ty_tdt_FE = ty_t + dt*dv_ty;
+        const double tz_tdt_FE = tz_t + dt*dv_tz;
+        const double utan_tdt_FE = sqrt(tx_tdt_FE*tx_tdt_FE + ty_tdt_FE*ty_tdt_FE + tz_tdt_FE*tz_tdt_FE);
 
-        printf("  diff vs stored: [d_un_t=%.3e, d_utan_t=%.3e, d_un_tdt=%.3e, d_utan_tdt=%.3e]\n",
-               un_t - stored_un_t,
-               utan_t - stored_utan_t,
-               un_tdt - stored_un_tdt,
-               utan_tdt - stored_utan_tdt);
+        // prints
+        printf("\n-- Pair %zu (A gid=%zu, B gid=%zu) --\n", i, A, B);
+        printf("  n_ref (at t)=(%.6g, %.6g, %.6g), ||n_ref||=%.6g\n",
+               nx, ny, nz, sqrt(nx*nx + ny*ny + nz*nz));
+        printf("  Nodal Displacement at t: u_t=(%.6g, %.6g, %.6g)\n", ux, uy, uz);
+        printf("  Nodal Velocities at t: v_t=(%.6g, %.6g, %.6g)\n", vx, vy, vz);
+        printf("  dt=%.6g\n", dt);
+        printf("  Forward Euler Method:\n");
+        printf("  Predicted Nodal Displacement at t+dt: u_tdt=(%.6g, %.6g, %.6g)\n",
+               ux_tdt_FE, uy_tdt_FE, uz_tdt_FE);
+        printf("    Normal Crack Opening Magnitude at t: un_t=%.9g\n", un_t);
+        printf("    Tangential Crack Opening Magnitude at t: utan_t=%.9g\n", utan_t);
+        printf("    -> Forward Euler Predicted Normal Crack Opening at t+dt: un_tdt=%.9g\n", un_tdt_FE);
+        printf("    -> Forward Euler Predicted Tangential Crack Opening Magnitude at t+dt: utan_tdt=%.9g\n", utan_tdt_FE);
+        printf("  stored ulocvcz: [un_t=%.9g, utan_t=%.9g, un_tdt=%.9g, utan_tdt=%.9g]\n",
+               ulocvcz(i,0), ulocvcz(i,1), ulocvcz(i,2), ulocvcz(i,3));
+
+        printf("  diff vs stored: "
+               "d_un_t=%.3e d_utan_t=%.3e d_un_tdt=%.3e d_utan_tdt=%.3e\n",
+               un_t - ulocvcz(i,0),
+               utan_t - ulocvcz(i,1),
+               un_tdt_FE - ulocvcz(i,2),
+               utan_tdt_FE - ulocvcz(i,3));
     }
 
     printf("\n==============================================================\n");
 }
+
 // ======================== END ucmap debug ========================    
 
 // **************************************************************** Fierro Conversion **************************************************************** 
@@ -911,7 +927,7 @@ void cohesive_zones_t::compute_face_geometry(const DCArrayKokkos<double> &nodes,
 ///                                  (typically from cohesive_zone_elem_count); sizes all per-pair “slot” columns.
 /// \param tol Centroid-coincidence tolerance used when declaring two faces to be a match; normals must also be opposite
 ///            within a dot-product check (dot <= -1 + tol).
-/// \return CArrayKokkos<int> table with shape (num_pairs, 6 * max_elem_in_cohesive_zone).
+/// \return CArrayKokkos<int> cohesive_zone_info table with shape (num_pairs, 6 * max_elem_in_cohesive_zone).
 ///
 /// \details
 /// The returned table is organized in 6 contiguous column blocks, each of length max_elem_in_cohesive_zone:
@@ -1262,195 +1278,6 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 
 // **************************************************************** Fierro Conversion **************************************************************** 
 
-// **************************************************************** FROM GAVIN'S CODE ****************************************************************
-// // This function takes reference configuration and total displacements then returns a set of local direction vectors for the VCZ
-// // based upon the average orientation of the elements the VCZ nodes are part of
-// // inputs: nodes, conn, ne, ut, us, vczconn, vczinfo, nvcz, interpvals
-// // outputs: vczorient (updated orientation of VCZs based on current configuration)
-// void oriented(CArray<double> nodes, CArray<int> conn, int ne, int nvcz, CArray<double> ut, CArray<double> us, CArray<int> vczinfo, FArray<double> interpvals, CArray<double> vczorient) {
-//     // resetting output array
-//     vczorient.set_values(0);
-    
-//     // initializing intermediate variables
-//     int ln0;
-//     int ln1;
-//     int lp0;
-//     int lp1;
-//     int el0;
-//     int el1;
-//     int cnt;
-//     double n0magt;
-//     double n0magtdt;
-//     auto currel0t = CArray <double> (8,3);
-//     auto currel1t = CArray <double> (8,3);
-//     auto currel0tdt = CArray <double> (8,3);
-//     auto currel1tdt = CArray <double> (8,3);
-//     auto pnodes = CArray <int> (4,1);
-//     auto mastan = CArray <int> (2,1);
-//     auto r0t = CArray <double> (3);
-//     auto s0t = CArray <double> (3);
-//     auto r0tdt = CArray <double> (3);
-//     auto s0tdt = CArray <double> (3);
-//     auto r1t = CArray <double> (3);
-//     auto s1t = CArray <double> (3);
-//     auto r1tdt = CArray <double> (3);
-//     auto s1tdt = CArray <double> (3);
-//     auto n0t = CArray <double> (3);
-//     auto n0tdt = CArray <double> (3);
-//     auto n1t = CArray <double> (3);
-//     auto n1tdt = CArray <double> (3);
-//     n0t.set_values(0);
-
-//     // looping through each vcz
-//     for (int i = 0; i < nvcz; i++) {
-//         cnt = 0;
-//         // looping over possible number of elements to average the orientation of
-//         for (int j = 0; j < vczinfo.dims(1)/6; j++) {
-//             // resetting tangent vectors
-//             r0t.set_values(0);
-//             s0t.set_values(0);
-//             r0tdt.set_values(0);
-//             s0tdt.set_values(0);
-
-//             // checking that the index is populated with an element reference
-//             if (vczinfo(i,j+2*vczinfo.dims(1)/6) != -1) {
-//                 // storing element reference information, local node on the elements, and the patch of the element
-//                 // only using 0 index for average normal direction of first global node as of 12/20/2024
-//                 el0 = vczinfo(i,j);
-//                 el1 = vczinfo(i,j+vczinfo.dims(1)/6);
-//                 lp0 = vczinfo(i,j+2*vczinfo.dims(1)/6);
-//                 lp1 = vczinfo(i,j+3*vczinfo.dims(1)/6);
-//                 ln0 = vczinfo(i,j+4*vczinfo.dims(1)/6);
-//                 ln1 = vczinfo(i,j+5*vczinfo.dims(1)/6);
-
-//                 // finding current configuration of the elements
-//                 for (int k = 0; k < 8; k++) {
-//                     for (int m = 0; m < 3; m++) {
-//                         currel0t(k,m) = nodes(conn(el0,k),m) + ut(3*conn(el0,k)+m);
-//                         currel1t(k,m) = nodes(conn(el1,k),m) + ut(3*conn(el0,k)+m);
-//                         currel0tdt(k,m) = nodes(conn(el0,k),m) + ut(3*conn(el0,k)+m) + us(3*conn(el0,k)+m);
-//                         currel1tdt(k,m) = nodes(conn(el1,k),m) + ut(3*conn(el0,k)+m) + us(3*conn(el0,k)+m);
-//                     }
-//                 }
-
-//                 // finding tangent vectors
-//                 switch (lp0) {
-//                 case 0:
-//                     MasterShapes(interpvals,-1,0,0);
-//                     pnodes(0,0) = 0;
-//                     pnodes(1,0) = 1;
-//                     pnodes(2,0) = 4;
-//                     pnodes(3,0) = 5;
-//                     mastan(0,0) = 1;
-//                     mastan(1,0) = 2;
-//                     break;
-//                 case 1:
-//                     MasterShapes(interpvals,1,0,0);
-//                     pnodes(0,0) = 2;
-//                     pnodes(1,0) = 3;
-//                     pnodes(2,0) = 6;
-//                     pnodes(3,0) = 7;
-//                     mastan(0,0) = 1;
-//                     mastan(1,0) = 2;
-//                     break;
-//                 case 2:
-//                     MasterShapes(interpvals,0,-1,0);
-//                     pnodes(0,0) = 0;
-//                     pnodes(1,0) = 1;
-//                     pnodes(2,0) = 2;
-//                     pnodes(3,0) = 3;
-//                     mastan(0,0) = 0;
-//                     mastan(1,0) = 2;
-//                     break;
-//                 case 3:
-//                     MasterShapes(interpvals,0,1,0);
-//                     pnodes(0,0) = 4;
-//                     pnodes(1,0) = 5;
-//                     pnodes(2,0) = 6;
-//                     pnodes(3,0) = 7;
-//                     mastan(0,0) = 0;
-//                     mastan(1,0) = 2;
-//                     break;
-//                 case 4:
-//                     MasterShapes(interpvals,0,0,-1);
-//                     pnodes(0,0) = 0;
-//                     pnodes(1,0) = 3;
-//                     pnodes(2,0) = 4;
-//                     pnodes(3,0) = 7;
-//                     mastan(0,0) = 0;
-//                     mastan(1,0) = 1;
-//                     break;
-//                 case 5:
-//                     MasterShapes(interpvals,0,0,1);
-//                     pnodes(0,0) = 1;
-//                     pnodes(1,0) = 2;
-//                     pnodes(2,0) = 5;
-//                     pnodes(3,0) = 6;
-//                     mastan(0,0) = 0;
-//                     mastan(1,0) = 1;
-//                     break;
-//                 }
-                
-//                 for (int k = 0; k < 4; k++) {
-//                     // r vector
-//                     r0t(0) += currel0t(pnodes(k,0),0) * interpvals(pnodes(k,0),mastan(0,0) + 1);
-//                     r0t(1) += currel0t(pnodes(k,0),1) * interpvals(pnodes(k,0),mastan(0,0) + 1);
-//                     r0t(2) += currel0t(pnodes(k,0),2) * interpvals(pnodes(k,0),mastan(0,0) + 1);
-//                     r0tdt(0) += currel0tdt(pnodes(k,0),0) * interpvals(pnodes(k,0),mastan(0,0) + 1);
-//                     r0tdt(1) += currel0tdt(pnodes(k,0),1) * interpvals(pnodes(k,0),mastan(0,0) + 1);
-//                     r0tdt(2) += currel0tdt(pnodes(k,0),2) * interpvals(pnodes(k,0),mastan(0,0) + 1);
-//                     // s vector
-//                     s0t(0) += currel0t(pnodes(k,0),0) * interpvals(pnodes(k,0),mastan(1,0) + 1);
-//                     s0t(1) += currel0t(pnodes(k,0),1) * interpvals(pnodes(k,0),mastan(1,0) + 1);
-//                     s0t(2) += currel0t(pnodes(k,0),2) * interpvals(pnodes(k,0),mastan(1,0) + 1);
-//                     s0tdt(0) += currel0tdt(pnodes(k,0),0) * interpvals(pnodes(k,0),mastan(1,0) + 1);
-//                     s0tdt(1) += currel0tdt(pnodes(k,0),1) * interpvals(pnodes(k,0),mastan(1,0) + 1);
-//                     s0tdt(2) += currel0tdt(pnodes(k,0),2) * interpvals(pnodes(k,0),mastan(1,0) + 1);
-//                 }
-
-//                 // cross product for normal vector
-//                 if (lp0 == 0 || lp0 == 3 || lp0 == 4) {
-//                     // s cross r
-//                     n0t(0) += s0t(1) * r0t(2) - r0t(1) * s0t(2);
-//                     n0t(1) += -(s0t(0) * r0t(2) - r0t(0) * s0t(2));
-//                     n0t(2) += s0t(0) * r0t(1) - r0t(0) * s0t(1);
-//                     n0tdt(0) += s0tdt(1) * r0tdt(2) - r0tdt(1) * s0tdt(2);
-//                     n0tdt(1) += -(s0tdt(0) * r0tdt(2) - r0tdt(0) * s0tdt(2));
-//                     n0tdt(2) += s0tdt(0) * r0tdt(1) - r0tdt(0) * s0tdt(1);
-//                 }
-//                 else {
-//                     // r cross s
-//                     n0t(0) += r0t(1) * s0t(2) - s0t(1) * r0t(2);
-//                     n0t(1) += -(r0t(0) * s0t(2) - s0t(0) * r0t(2));
-//                     n0t(2) += r0t(0) * s0t(1) - s0t(0) * r0t(1);
-//                     n0tdt(0) += r0tdt(1) * s0tdt(2) - s0tdt(1) * r0tdt(2);
-//                     n0tdt(1) += -(r0tdt(0) * s0tdt(2) - s0tdt(0) * r0tdt(2));
-//                     n0tdt(2) += r0tdt(0) * s0tdt(1) - s0tdt(0) * r0tdt(1);
-//                 }
-//                 cnt += 1;
-//             }
-//         }
-
-//         // averaging
-//         n0t(0) /= cnt;
-//         n0t(1) /= cnt;
-//         n0t(2) /= cnt;
-//         n0tdt(0) /= cnt;
-//         n0tdt(1) /= cnt;
-//         n0tdt(2) /= cnt;
-
-//         // normalizing
-//         n0magt = sqrt(n0t(0)*n0t(0) + n0t(1)*n0t(1) + n0t(2)*n0t(2));
-//         n0magtdt = sqrt(n0tdt(0)*n0tdt(0) + n0tdt(1)*n0tdt(1) + n0tdt(2)*n0tdt(2));
-//         //n0magtdt = sqrt(n0tdt(i,0)*n0tdt(i,0) + n0tdt(i,1)*n0tdt(i,1) + n0tdt(i,2)*n0tdt(i,2));
-//         for (int j = 0; j < 3; j++) {
-//             vczorient(i,j) = n0t(j) / n0magt;
-//             vczorient(i,j+3) = n0tdt(j) / n0magtdt;
-//         }
-//     }
-// }
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
-
 // **************************************************************** Fierro Conversion **************************************************************** 
 // averaging all the normals of each individual cohesive zone
 // averages based on the faces that are contributing to the cohesive zone
@@ -1479,7 +1306,7 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 /// \fn cohesive_zones_t::oriented
 /// \brief Average and orient cohesive-zone face normals for each overlapping_node_gids.dims(0) overlapping node pair (reference and current configs).
 ///
-/// For every cohesive pair (A,B), this routine scans the per-pair “slots” produced by build_cohesive_zone_info(),
+/// For every cohesive zone node pair (A,B), this routine scans the per-pair “slots” produced by build_cohesive_zone_info(),
 /// gathers all *matched* A-side faces (block [2]) together with their parent A-elements (block [0]), computes the
 /// unit face normals at time t (X_t) and at time t+dt (X_tdt), sums them, enforces a consistent sign over time by
 /// aligning the t+dt sum to the t sum, normalizes both sums, and writes the result to vcz_orient:
@@ -1500,7 +1327,7 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 ///                 [4] kA local corner per A-slot, [5] kB local corner per B-slot.
 /// \param max_elem_in_cohesive_zone Slot count per pair (same value used to size the cz_info blocks).
 /// \param tol Centroid-coincidence tolerance used during matching.
-/// \param vcz_orient Output (num_pairs x 6): per-pair unit normals at t and t+dt:
+/// \return vcz_orient Output (num_pairs x 6): per-pair unit normals at t and t+dt:
 ///                   columns 0..2 → n_ref (from X_t), columns 3..5 → n_cur (from X_tdt).
 ///
 /// \details
@@ -1517,7 +1344,7 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 ///   6) Store into vcz_orient(i,0..5).
 ///
 /// Notes:
-///  -This averages *all* matched A-side CZ faces recorded for the pair (not just one), so if there are multiple CZ faces
+///  -This averages *all* matched A-side Cohesive Zone faces recorded for the pair (not just one), so if there are multiple CZ faces
 ///    between the same A/B regions, both contribute to the average.
 ///  -The B-side matches are not needed here once the A-side matches have been established; orientation uses A-faces.
 ///  -compute_face_geometry() is assumed to return outward unit normals consistent with the element’s local face ordering.
@@ -1682,106 +1509,90 @@ void cohesive_zones_t::oriented(
 // vczconn --> overlapping_node_gids
 // nvcz --> overlapping_node_gids.dims(0)
 
-// high level: calculates the opening of the crack in global coordinates and then maps it to the local coordinates using the normal vectors in the vcz_orient array
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \fn cohesive_zones_t::ucmap
-/// \brief Map relative displacement between each overlapping_node_gids.dims(0) cohesive node pair from global components to local
-///        (normal / tangential) using the per-pair orientation stored in vcz_orient.
 ///
-/// For each overlapping_node_gids.dims(0) cohesive zone node pair (A,B), form the global relative displacement at time t and at time t+dt:
-///     ux_t   = X_t(nodeB,:)   - X_t(nodeA,:)
-///     ux_tdt = X_tdt(nodeB,:) - X_tdt(nodeA,:)
-/// Project onto the unit normals provided by oriented():
-///    un_t   = dot( ux_t,   n_ref )
-///    un_tdt = dot( ux_tdt, n_cur )
-/// Compute the magnitudes of the global relative displacements at t and t+dt:
-///    umag_t   = || ux_t   ||
-///    umag_tdt = || ux_tdt ||
-/// Assuming that the shear displacements are unchanged by the current step (us* == ur*), compute the tangential
-/// components at t and t+dt as:
-///    utan_t   = sqrt( umag_t^2   - un_t^2 )
-///    utan_tdt = sqrt( umag_tdt^2 - un_tdt^2 )
-/// Results are written per pair i into ulocvcz(i,0..3) as:
-///   [ un_t,  utan_t,  un_tdt,  utan_tdt ].
+/// \brief Map Cohesive Zone node pair displacement/velocity from global to local (normal and tangential directions) and
+///        advance one step with the Forward Euler Method in the old frame.
 ///
-/// \param X_t        Node coordinates at time t            (num_nodes x 3)  == nodes + ut
-/// \param X_tdt      Node coordinates at time t+dt         (num_nodes x 3)  == nodes + ut + us
-/// \param vcz_orient (num_pairs x 6): per-pair unit normals from oriented():
-///                    cols 0..2 -> n_ref (at t), cols 3..5 -> n_cur (at t+dt)
-/// \param overlapping_node_gids (num_pairs x 2): global node IDs per cohesive pair [A_gid, B_gid]
-/// \param ulocvcz   Output (num_pairs x 4): [u_n^t, u_tan_mag^t, u_n^{t+dt}, u_tan_mag^{t+dt}]
+/// \param X_t    Nodal coordinates at t  (State.node.coords_n0)   [num_nodes x 3].
+/// \param V_t    Nodal velocities  at t  (State.node.vel_n0)      [num_nodes x 3].
+/// \param vcz_orient  (overlapping_node_gids.dims(0) x 6): [nx_t, ny_t, nz_t, nx_tdt, ny_tdt, nz_tdt].
+///                     (this routine uses only nx_t,ny_t,nz_t).
+/// \param overlapping_node_gids Cohesive Zone node pairs [A, B] as global node ids; overlapping_node_gids.dims(0) = number of Cohesive Zone node pairs.
+/// \param dt     Time step size from sgh_execute.cpp timstep driver.
+/// \return ulocvcz  (overlapping_node_gids.dims(0) x 4) 
+///                  outputs: [un_t,                    // normal crack opening magnitude at time t
+///                            utan_t,                  // tangential crack opening magnitude at time t
+///                            un_tdt_FE,               // forward euler predicted normal crack opening magnitude at time t+dt
+///                            utan_tdt_FE]             // forward euler predicted tangential crack opening magnitude at time t+dt
 ///
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void cohesive_zones_t::ucmap(
-    const DCArrayKokkos<double>& X_t, 
-    const DCArrayKokkos<double>& X_tdt,
+    const DCArrayKokkos<double>& X_t, // State.node.coords_n0
+    const DCArrayKokkos<double>& V_t, // State.node.vel_n0
     const CArrayKokkos<double>& vcz_orient,
     const CArrayKokkos<size_t>& overlapping_node_gids,
+    const double dt, // from sgh_execute.cpp timestep driver
     CArrayKokkos<double>& ulocvcz    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
 )
 {
-    // zero/initialize output array
-    // ulocvcz.set_values(0,0);
+    for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
+        const size_t NodeA = overlapping_node_gids(i,0);
+        const size_t NodeB = overlapping_node_gids(i,1);
 
-    for (size_t i = 0; i < overlapping_node_gids.dims(0); i++){
-        const size_t nodeA = overlapping_node_gids(i, 0);
-        const size_t nodeB = overlapping_node_gids(i, 1);
+        // calulate displacement between overlapping node pairs in global frame at time t
+        const double ux = X_t(NodeB,0) - X_t(NodeA,0);
+        const double uy = X_t(NodeB,1) - X_t(NodeA,1);
+        const double uz = X_t(NodeB,2) - X_t(NodeA,2);
+
+        // calculate velocity difference between overlapping node pairs in global frame at time t
+        const double vx = V_t(NodeB,0) - V_t(NodeA,0);
+        const double vy = V_t(NodeB,1) - V_t(NodeA,1);
+        const double vz = V_t(NodeB,2) - V_t(NodeA,2);
+
+        // normal at time t from oriented() (already unitized)
+        const double nx = vcz_orient(i,0); // normal at time t
+        const double ny = vcz_orient(i,1); // normal at time t
+        const double nz = vcz_orient(i,2); // normal at time t
+
+        // dotting with the normal vector to get the normal component of displacement at time t
+        const double un_t = ux*nx + uy*ny + uz*nz;
+
+        // tangential components at time t
+        const double tx_t = ux - un_t*nx;
+        const double ty_t = uy - un_t*ny;
+        const double tz_t = uz - un_t*nz;
+
+        // tangential magnitude at time t assuming that us* == ur*
+        const double utan_t = sqrt(tx_t*tx_t + ty_t*ty_t + tz_t*tz_t);
+
+        // relative velocity (velocity difference) V_t components projected onto normal/tangent directions
+
+        // v components dotted with normal vector to get normal component of velocity
+        const double dun_dt = vx*nx + vy*ny + vz*nz;
+
+        // tangential components of velocity
+        const double dv_tx  = vx - dun_dt*nx;
+        const double dv_ty  = vy - dun_dt*ny;
+        const double dv_tz  = vz - dun_dt*nz;
+
+        // Forward-Euler update 
+        // normal: un_tdt = un_t + dt*dun_dt
+        // tangential: utan_tdt = utan_t + dt*dv_tan
+        const double un_tdt_FE   = un_t + dt*dun_dt;
+        const double tx_tdt_FE   = tx_t + dt*dv_tx;
+        const double ty_tdt_FE   = ty_t + dt*dv_ty;
+        const double tz_tdt_FE   = tz_t + dt*dv_tz;
+        const double utan_tdt_FE = sqrt(tx_tdt_FE*tx_tdt_FE + ty_tdt_FE*ty_tdt_FE + tz_tdt_FE*tz_tdt_FE);
         
-        // displacements between overlapping node pairs in the global frame at t and t+dt
-        const double ux_t = X_t(nodeB, 0) - X_t(nodeA, 0);
-        const double uy_t = X_t(nodeB, 1) - X_t(nodeA, 1);
-        const double uz_t = X_t(nodeB, 2) - X_t(nodeA, 2);
-
-        const double ux_tdt = X_tdt(nodeB, 0) - X_tdt(nodeA, 0);
-        const double uy_tdt = X_tdt(nodeB, 1) - X_tdt(nodeA, 1);
-        const double uz_tdt = X_tdt(nodeB, 2) - X_tdt(nodeA, 2);
-
-        // normals at t and t+dt (already unit length) from oriented()
-        const double nx_t = vcz_orient(i, 0);
-        const double ny_t = vcz_orient(i, 1);
-        const double nz_t = vcz_orient(i, 2);
-
-        const double nx_tdt = vcz_orient(i, 3);
-        const double ny_tdt = vcz_orient(i, 4);
-        const double nz_tdt = vcz_orient(i, 5);       
-        
-        // dotting with normal vector to get normal component of displacement at t and t+dt
-        const double un_t = ux_t*nx_t + uy_t*ny_t + uz_t*nz_t;
-        const double un_tdt = ux_tdt*nx_tdt + uy_tdt*ny_tdt + uz_tdt*nz_tdt;
-
-        // calculating magnitude of global u vectors at t and t+dt
-        const double umag_t = sqrt(ux_t*ux_t + uy_t*uy_t + uz_t*uz_t);
-        const double umag_tdt = sqrt(ux_tdt*ux_tdt + uy_tdt*uy_tdt + uz_tdt*uz_tdt);
-
-        // calculating tangent compoenet of displacement assuming that us* == ur*; fabs == absolute value of float
-        const double utan_t = sqrt(fabs(umag_t*umag_t - un_t*un_t));
-        const double utan_tdt = sqrt(fabs(umag_tdt*umag_tdt - un_tdt*un_tdt));
-
-        // store in output array ulocvcz
-        ulocvcz(i,0) = un_t; // normal magnitude at t
-        ulocvcz(i,1) = utan_t; // tangential magnitude at t 
-        ulocvcz(i,2) = un_tdt; // normal magnitude at t+dt
-        ulocvcz(i,3) = utan_tdt; // tangential magnitude at t+dt
-    } // end for loop over overlapping_node_gids.dims(0)
-} // end ucmap()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        // store
+        ulocvcz(i,0) = un_t; // normal crack opening magnitude at time t
+        ulocvcz(i,1) = utan_t; // tangential crack opening magnitude at time t
+        ulocvcz(i,2) = un_tdt_FE; // forward eueler predicted normal crack opening magnitude at time t+dt
+        ulocvcz(i,3) = utan_tdt_FE; // forward euler predicted tangential crack opening magnitude at time t+dt
+    }
+}
 
 // **************************************************************** Fierro Conversion **************************************************************** 
 
