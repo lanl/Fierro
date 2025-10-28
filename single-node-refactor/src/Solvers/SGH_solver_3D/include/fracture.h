@@ -61,11 +61,11 @@ struct cohesive_zones_t {
                         double tol);
     
     void debug_ucmap(
-        const DCArrayKokkos<double>& X_t,
-        //const DCArrayKokkos<double>& X_tdt,
-        const DCArrayKokkos<double>& V_t,                 
+        const DCArrayKokkos<double>& pos,
+        //const DCArrayKokkos<double>& pos,
+        const DCArrayKokkos<double>& vel,                 
         double dt,
-        const CArrayKokkos<double>& vcz_orient,
+        const CArrayKokkos<double>& cohesive_zone_orientation,
         const CArrayKokkos<size_t>& overlapping_node_gids,
         const CArrayKokkos<double>& ulocvcz
     );
@@ -110,20 +110,20 @@ struct cohesive_zones_t {
     KOKKOS_FUNCTION
     void oriented(
         Mesh_t& mesh,
-        DCArrayKokkos<double>& X_t,      // reference  coords (num_nodes x 3)
-        DCArrayKokkos<double>& X_tdt,    // updated ("t+dt") coords (num_nodes x 3) – can equal X_t if not available
+        DCArrayKokkos<double>& pos,      // reference  coords (num_nodes x 3)
+        //DCArrayKokkos<double>& pos,    // updated ("t+dt") coords (num_nodes x 3) – can equal pos if not available
         CArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
         CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
         size_t max_elem_in_cohesive_zone,
         double tol,                 // centroid coincidence tolerance (ABS distance)
-        CArrayKokkos<double>& vcz_orient       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
+        CArrayKokkos<double>& cohesive_zone_orientation       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
     ); 
 
     KOKKOS_FUNCTION
     void ucmap(
-    const DCArrayKokkos<double>& X_t,
-    const DCArrayKokkos<double>& V_t,
-    const CArrayKokkos<double>& vcz_orient,
+    const DCArrayKokkos<double>& pos,
+    const DCArrayKokkos<double>& vel,
+    const CArrayKokkos<double>& cohesive_zone_orientation,
     const CArrayKokkos<size_t>& overlapping_node_gids,
     const double dt, // timestep driver from sgh_execute.cpp
     CArrayKokkos<double>& ulocvcz    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]

@@ -464,7 +464,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     // ======================== END cohesive_zone_info debug ========================
 } // end cohesive_zones_t::initialize()
 
-    // ======================== vcz_orient debug ========================
+    // ======================== cohesive_zone_orientation debug ========================
 // COMMENT OUT HERE TO STOP FUNCTION DEBUGGING PRINTS
 void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
                                       State_t& State,
@@ -472,7 +472,7 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
                                       CArrayKokkos<int>& info,
                                       size_t maxcz,
                                       double tol) {
-    //    ======================== vcz_orient debug ========================
+    //    ======================== cohesive_zone_orientation debug ========================
 
     // debug oriented
     printf("[CZ::debug] this=%p  pairs(in)=%zu  maxcz(in)=%zu  info_rows(in)=%zu\n",
@@ -481,16 +481,16 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
 
 
     // call oriented() to compute cohesive zone normals at t and t+dt 
-    CArrayKokkos<double> vcz_orient(overlap.dims(0), 6, "vcz_orient");
+    CArrayKokkos<double> cohesive_zone_orientation(overlap.dims(0), 6, "cohesive_zone_orientation");
 
     // initialize to zero
-    //vcz_orient.set_values(0.0);
+    //cohesive_zone_orientation.set_values(0.0);
     //overlapping_node_gids = CArrayKokkos<size_t> (overlapping_node_gids.dims(0), 2, "overlapping_node_gids");
     //cz_info = CArrayKokkos<int> cz_info;
     //tol = double tol;
 
 {
-    printf("\n================== vcz_orient debug ==================\n");
+    printf("\n================== cohesive_zone_orientation debug ==================\n");
 
     // checking execute() to make sure inputs are correct
     //printf("execute() check: num_overlapping_node_pairs=%zu overlapping_node_gids=(%zu x %zu) max_elem_in_cohesive_zone=%zu\n", 
@@ -499,14 +499,14 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
 
     // exiting loop if overlapping node pairs = 0
     //if (overlapping_node_gids.dims(0) == 0){
-    //    printf("execute() check: no overlapping node pairs found, skipping vcz_orient debug\n");
+    //    printf("execute() check: no overlapping node pairs found, skipping cohesive_zone_orientation debug\n");
     //    printf("\n======================================================\n");
     //    return;
     //}
 
-    // assigning X_t to State.node.coords_n0 (from Gavin's code: nodes + ut) and X_tdt to State.node.coords (from Gavin's code: nodes + us + ut)
-    DCArrayKokkos<double> &X_t   = State.node.coords_n0; // nodes + ut
-    DCArrayKokkos<double> &X_tdt = State.node.coords; // nodes + ut + us
+    // assigning pos to State.node.coords
+    DCArrayKokkos<double> &pos   = State.node.coords;//State.node.coords_n0; // nodes + ut
+    //DCArrayKokkos<double> &pos = State.node.coords; // nodes + ut + us
 
     // debug: checking State.node.coords_n0 for each cycle
     //for( int i = 0; i < mesh.num_nodes; i++) {
@@ -517,7 +517,9 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
     //}   
 
     // call oriented()
-    oriented(mesh, X_t, X_tdt, overlap, info, maxcz, tol, vcz_orient);
+    //oriented(mesh, pos, pos, overlap, info, maxcz, tol, cohesive_zone_orientation);
+    oriented(mesh, pos, overlap, info, maxcz, tol, cohesive_zone_orientation);
+
 
     // loop over overlapping node pairs
     for (size_t i = 0; i < overlap.dims(0); ++i) {
@@ -550,13 +552,13 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
             if (eA < 0 || fA < 0) continue; // skip if -1        
 
         // geometry: A at t, A at t+dt, B at t (oriented uses A for orientation; B is sanity check)
-        compute_face_geometry(X_t,   mesh, X_t,   mesh.nodes_in_elem,
+        compute_face_geometry(pos,   mesh, pos,   mesh.nodes_in_elem,
                               static_cast<size_t>(fA), static_cast<size_t>(eA),
                               nA_t, rA_t, sA_t, cA_t);
-        compute_face_geometry(X_tdt, mesh, X_tdt, mesh.nodes_in_elem,
+        compute_face_geometry(pos, mesh, pos, mesh.nodes_in_elem,
                               static_cast<size_t>(fA), static_cast<size_t>(eA),
                               nA_dt, rA_dt, sA_dt, cA_dt);
-        //compute_face_geometry(X_t,   mesh, X_t,   mesh.nodes_in_elem,
+        //compute_face_geometry(pos,   mesh, pos,   mesh.nodes_in_elem,
         //                      static_cast<size_t>(fB), static_cast<size_t>(eB),
         //                      nB_t, rB_t, sB_t, cB_t);
 
@@ -581,9 +583,9 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
 
         if (cnt == 0) {
             printf("  (no contributing A-side faces found in block [2])\n");
-            printf("  stored vcz_orient: t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
-                   vcz_orient(i,0), vcz_orient(i,1), vcz_orient(i,2),
-                   vcz_orient(i,3), vcz_orient(i,4), vcz_orient(i,5));
+            printf("  stored cohesive_zone_orientation: t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
+                   cohesive_zone_orientation(i,0), cohesive_zone_orientation(i,1), cohesive_zone_orientation(i,2),
+                   cohesive_zone_orientation(i,3), cohesive_zone_orientation(i,4), cohesive_zone_orientation(i,5));
             continue;
         }
 
@@ -599,25 +601,25 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
         double mag_t  = sqrt(sum_t[0]*sum_t[0] + sum_t[1]*sum_t[1] + sum_t[2]*sum_t[2]);
         double mag_dt = sqrt(sum_dt[0]*sum_dt[0] + sum_dt[1]*sum_dt[1] + sum_dt[2]*sum_dt[2]);
 
-        double n_ref[3] = {0.0,0.0,0.0};
-        double n_cur[3] = {0.0,0.0,0.0};
-        if (mag_t  > 0.0) { n_ref[0] = sum_t [0]/mag_t;  n_ref[1] = sum_t [1]/mag_t;  n_ref[2] = sum_t [2]/mag_t; }
-        if (mag_dt > 0.0) { n_cur[0] = sum_dt[0]/mag_dt; n_cur[1] = sum_dt[1]/mag_dt; n_cur[2] = sum_dt[2]/mag_dt; }
+        double current_norm[3] = {0.0,0.0,0.0};
+        double next_norm[3] = {0.0,0.0,0.0};
+        if (mag_t  > 0.0) { current_norm[0] = sum_t [0]/mag_t;  current_norm[1] = sum_t [1]/mag_t;  current_norm[2] = sum_t [2]/mag_t; }
+        if (mag_dt > 0.0) { next_norm[0] = sum_dt[0]/mag_dt; next_norm[1] = sum_dt[1]/mag_dt; next_norm[2] = sum_dt[2]/mag_dt; }
 
         printf("  averaged (pre-norm)  t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)  cnt=%d\n",
                sum_t[0], sum_t[1], sum_t[2], sum_dt[0], sum_dt[1], sum_dt[2], cnt);
         printf("  align: dot(sum_t, sum_tdt)=%.6g\n", dot_align);
         printf("  averaged (unit)      t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
-               n_ref[0], n_ref[1], n_ref[2], n_cur[0], n_cur[1], n_cur[2]);
+               current_norm[0], current_norm[1], current_norm[2], next_norm[0], next_norm[1], next_norm[2]);
 
         // compare to oriented() output
-        printf("  stored vcz_orient:   t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
-               vcz_orient(i,0), vcz_orient(i,1), vcz_orient(i,2),
-               vcz_orient(i,3), vcz_orient(i,4), vcz_orient(i,5));
+        printf("  stored cohesive_zone_orientation:   t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
+               cohesive_zone_orientation(i,0), cohesive_zone_orientation(i,1), cohesive_zone_orientation(i,2),
+               cohesive_zone_orientation(i,3), cohesive_zone_orientation(i,4), cohesive_zone_orientation(i,5));
 
         printf("  diff vs stored:      t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
-               n_ref[0]-vcz_orient(i,0), n_ref[1]-vcz_orient(i,1), n_ref[2]-vcz_orient(i,2),
-               n_cur[0]-vcz_orient(i,3), n_cur[1]-vcz_orient(i,4), n_cur[2]-vcz_orient(i,5));        
+               current_norm[0]-cohesive_zone_orientation(i,0), current_norm[1]-cohesive_zone_orientation(i,1), current_norm[2]-cohesive_zone_orientation(i,2),
+               next_norm[0]-cohesive_zone_orientation(i,3), next_norm[1]-cohesive_zone_orientation(i,4), next_norm[2]-cohesive_zone_orientation(i,5));        
 
     }
     
@@ -626,15 +628,15 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
     
 } // end cohesive_zones_t::debug_orient()
 // COMMENT OUT HERE TO STOP FUNCTION DEBUGGING PRINTS
-    // ======================== END vcz_orient debug ========================
+    // ======================== END cohesive_zone_orientation debug ========================
 
     // ======================== ucmap debug ========================
 // COMMENT OUT HERE TO STOP FUNCTION DEBUGGING PRINTS
 void cohesive_zones_t::debug_ucmap(
-    const DCArrayKokkos<double>& X_t,                 // coords_n0 (positions at t)
-    const DCArrayKokkos<double>& V_t,                 // vel_n0    (velocities at t)
+    const DCArrayKokkos<double>& pos,                 // coords (positions at t)
+    const DCArrayKokkos<double>& vel,                 // vel   (velocities at t)
     double dt,                                        // same dt passed to ucmap()
-    const CArrayKokkos<double>&  vcz_orient,          // [nx_t, ny_t, nz_t, nx_tdt, ...] (we'll only use the first 3)
+    const CArrayKokkos<double>&  cohesive_zone_orientation,          // [nx_t, ny_t, nz_t, nx_tdt, ...] (we'll only use the first 3)
     const CArrayKokkos<size_t>&  overlapping_node_gids,
     const CArrayKokkos<double>&  ulocvcz              // what ucmap() already wrote
 ){
@@ -645,79 +647,81 @@ void cohesive_zones_t::debug_ucmap(
         const size_t B = overlapping_node_gids(i,1);
 
         // calculate displacement between overlapping node pairs in global frame at time t
-        const double ux = X_t(B,0) - X_t(A,0);
-        const double uy = X_t(B,1) - X_t(A,1);
-        const double uz = X_t(B,2) - X_t(A,2);
+        const double u_rel_x_t = pos(B,0) - pos(A,0);
+        const double u_rel_y_t = pos(B,1) - pos(A,1);
+        const double u_rel_z_t = pos(B,2) - pos(A,2);
 
         // calculate velocity difference between overlapping node pairs in global frame at time t
-        const double vx = V_t(B,0) - V_t(A,0);
-        const double vy = V_t(B,1) - V_t(A,1);
-        const double vz = V_t(B,2) - V_t(A,2);
+        const double v_rel_x_t = vel(B,0) - vel(A,0);
+        const double v_rel_y_t = vel(B,1) - vel(A,1);
+        const double v_rel_z_t = vel(B,2) - vel(A,2);
 
         // calculate displacement at t+dt  (forward euler predicted)
-        const double ux_tdt_FE = ux + dt*vx;
-        const double uy_tdt_FE = uy + dt*vy;
-        const double uz_tdt_FE = uz + dt*vz;
+        const double u_x_tdt = u_rel_x_t + dt*v_rel_x_t;
+        const double u_y_tdt = u_rel_y_t + dt*v_rel_y_t;
+        const double u_z_tdt = u_rel_z_t + dt*v_rel_z_t;
 
         // normal at time t from oriented() (already unitized)
-        const double nx = vcz_orient(i,0);
-        const double ny = vcz_orient(i,1);
-        const double nz = vcz_orient(i,2);
+        const double current_norm_x = cohesive_zone_orientation(i,0);
+        const double current_norm_y = cohesive_zone_orientation(i,1);
+        const double current_norm_z = cohesive_zone_orientation(i,2);
 
         // replicating ucmap() exactly
 
-        // dotting with the normal vector to get the normal component of displacement at time t
-        const double un_t = ux*nx + uy*ny + uz*nz;     
+        // dotting with the normal vector to get the normal component of displacement magnitude at time t
+        const double u_norm_mag_t = u_rel_x_t*current_norm_x + u_rel_y_t*current_norm_y + u_rel_z_t*current_norm_z;     
 
         // tangential components at time t
-        const double tx_t = ux - un_t*nx;
-        const double ty_t = uy - un_t*ny;
-        const double tz_t = uz - un_t*nz;
+        const double u_tan_x_t = u_rel_x_t - u_norm_mag_t*current_norm_x;
+        const double u_tan_y_t = u_rel_y_t - u_norm_mag_t*current_norm_y;
+        const double u_tan_z_t = u_rel_z_t - u_norm_mag_t*current_norm_z;
 
         // tangential magnitude at time t assuiming that us* == ur*
-        const double utan_t = sqrt(tx_t*tx_t + ty_t*ty_t + tz_t*tz_t); 
+        const double u_tan_mag_t = sqrt(u_tan_x_t*u_tan_x_t + u_tan_y_t*u_tan_y_t + u_tan_z_t*u_tan_z_t); 
 
-        // v components dotted with normal vector to get normal compoennt of velocity at time t
-        const double dun_dt = vx*nx + vy*ny + vz*nz;    
+        // velocity components dotted with normal vector to get normal rate of velocity
+        const double v_norm_t = v_rel_x_t*current_norm_x + v_rel_y_t*current_norm_y + v_rel_z_t*current_norm_z;    
 
-        // tangential components of velocity at time t
-        const double dv_tx  = vx - dun_dt*nx;           
-        const double dv_ty  = vy - dun_dt*ny;
-        const double dv_tz  = vz - dun_dt*nz;
+        // tangential rates of velocity
+        const double v_tan_x_t  = v_rel_x_t - v_norm_t*current_norm_x;           
+        const double v_tan_y_t  = v_rel_y_t - v_norm_t*current_norm_y;
+        const double v_tan_z_t  = v_rel_z_t - v_norm_t*current_norm_z;
 
         // Forward Euler update
-        // normal: un_tdt = un_t + dt*dun_dt
-        // tangential: utan_tdt = utan_t + dt*dv_tan
+        // normal mangitude at time t+dt
+        const double u_norm_mag_tdt = u_norm_mag_t + dt*v_norm_t;
 
-        const double un_tdt_FE = un_t + dt*dun_dt;
-        const double tx_tdt_FE = tx_t + dt*dv_tx;
-        const double ty_tdt_FE = ty_t + dt*dv_ty;
-        const double tz_tdt_FE = tz_t + dt*dv_tz;
-        const double utan_tdt_FE = sqrt(tx_tdt_FE*tx_tdt_FE + ty_tdt_FE*ty_tdt_FE + tz_tdt_FE*tz_tdt_FE);
+        // tangential components of displacement at time t+dt
+        const double u_tan_x_tdt = u_tan_x_t + dt*v_tan_x_t;
+        const double u_tan_y_tdt = u_tan_y_t + dt*v_tan_y_t;
+        const double u_tan_z_tdt = u_tan_z_t + dt*v_tan_z_t;
+
+        // tangential magnitude of displacement at time t+dt
+        const double u_tan_mag_tdt = sqrt(u_tan_x_tdt*u_tan_x_tdt + u_tan_y_tdt*u_tan_y_tdt + u_tan_z_tdt*u_tan_z_tdt);
 
         // prints
         printf("\n-- Pair %zu (A gid=%zu, B gid=%zu) --\n", i, A, B);
-        printf("  n_ref (at t)=(%.6g, %.6g, %.6g), ||n_ref||=%.6g\n",
-               nx, ny, nz, sqrt(nx*nx + ny*ny + nz*nz));
-        printf("  Nodal Displacement at t: u_t=(%.6g, %.6g, %.6g)\n", ux, uy, uz);
-        printf("  Nodal Velocities at t: v_t=(%.6g, %.6g, %.6g)\n", vx, vy, vz);
+        printf("  current_norm (at t)=(%.6g, %.6g, %.6g), ||current_norm||=%.6g\n",
+               current_norm_x, current_norm_y, current_norm_z, sqrt(current_norm_x*current_norm_x + current_norm_y*current_norm_y + current_norm_z*current_norm_z));
+        printf("  Nodal Displacement at t: u_t=(%.6g, %.6g, %.6g)\n", u_rel_x_t, u_rel_y_t, u_rel_z_t);
+        printf("  Nodal Velocities at t: v_t=(%.6g, %.6g, %.6g)\n", v_rel_x_t, v_rel_y_t, v_rel_z_t);
         printf("  dt=%.6g\n", dt);
         printf("  Forward Euler Method:\n");
         printf("  Predicted Nodal Displacement at t+dt: u_tdt=(%.6g, %.6g, %.6g)\n",
-               ux_tdt_FE, uy_tdt_FE, uz_tdt_FE);
-        printf("    Normal Crack Opening Magnitude at t: un_t=%.9g\n", un_t);
-        printf("    Tangential Crack Opening Magnitude at t: utan_t=%.9g\n", utan_t);
-        printf("    -> Forward Euler Predicted Normal Crack Opening at t+dt: un_tdt=%.9g\n", un_tdt_FE);
-        printf("    -> Forward Euler Predicted Tangential Crack Opening Magnitude at t+dt: utan_tdt=%.9g\n", utan_tdt_FE);
-        printf("  stored ulocvcz: [un_t=%.9g, utan_t=%.9g, un_tdt=%.9g, utan_tdt=%.9g]\n",
+               u_x_tdt, u_y_tdt, u_z_tdt);
+        printf("    Normal Crack Opening Magnitude at t: u_norm_mag_t=%.9g\n", u_norm_mag_t);
+        printf("    Tangential Crack Opening Magnitude at t: u_tan_mag_t=%.9g\n", u_tan_mag_t);
+        printf("    -> Forward Euler Predicted Normal Crack Opening at t+dt: un_tdt=%.9g\n", u_norm_mag_tdt);
+        printf("    -> Forward Euler Predicted Tangential Crack Opening Magnitude at t+dt: utan_tdt=%.9g\n", u_tan_mag_tdt);
+        printf("  stored ulocvcz: [u_norm_mag_t=%.9g, u_tan_mag_t=%.9g, un_tdt=%.9g, utan_tdt=%.9g]\n",
                ulocvcz(i,0), ulocvcz(i,1), ulocvcz(i,2), ulocvcz(i,3));
 
         printf("  diff vs stored: "
                "d_un_t=%.3e d_utan_t=%.3e d_un_tdt=%.3e d_utan_tdt=%.3e\n",
-               un_t - ulocvcz(i,0),
-               utan_t - ulocvcz(i,1),
-               un_tdt_FE - ulocvcz(i,2),
-               utan_tdt_FE - ulocvcz(i,3));
+               u_norm_mag_t - ulocvcz(i,0),
+               u_tan_mag_t - ulocvcz(i,1),
+               u_norm_mag_tdt - ulocvcz(i,2),
+               u_tan_mag_tdt - ulocvcz(i,3));
     }
 
     printf("\n==============================================================\n");
@@ -1285,8 +1289,8 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 // variable map:
 // Gavin --> Fierro:
 // nodes --> State.node.coords
-// nodes + ut --> X_t (reference + total displacemetn up to time t)
-// nodes + ut + us --> X_tdt (reference + total displacement up to time t + this step)
+// nodes + ut --> pos (reference + total displacemetn up to time t)
+// nodes + ut + us --> pos (reference + total displacement up to time t + this step)
 // conn --> mesh.nodes_in_elem
 // nvcz --> overlapping_node_gids.dims(0)
 // vczconn --> overlapping_node_gids
@@ -1308,18 +1312,18 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 ///
 /// For every cohesive zone node pair (A,B), this routine scans the per-pair “slots” produced by build_cohesive_zone_info(),
 /// gathers all *matched* A-side faces (block [2]) together with their parent A-elements (block [0]), computes the
-/// unit face normals at time t (X_t) and at time t+dt (X_tdt), sums them, enforces a consistent sign over time by
-/// aligning the t+dt sum to the t sum, normalizes both sums, and writes the result to vcz_orient:
-///     vcz_orient(i,:) = [ n_ref_x, n_ref_y, n_ref_z,  n_cur_x, n_cur_y, n_cur_z ].
+/// unit face normals at time t (pos) and at time t+dt (pos), sums them, enforces a consistent sign over time by
+/// aligning the t+dt sum to the t sum, normalizes both sums, and writes the result to cohesive_zone_orientation:
+///     cohesive_zone_orientation(i,:) = [ n_ref_x, n_ref_y, n_ref_z,  n_cur_x, n_cur_y, n_cur_z ].
 /// If a pair has no contributing matched A-faces, the stored orientation remains zero.
 ///
 /// Inputs are assumed to be in the *current mesh connectivity* (hexes with face IDs {0..5}) and with cz_info already
 /// populated by build_cohesive_zone_info(). Face geometry (centroid, in-plane directions, and outward unit normal)
-/// is computed on the fly via compute_face_geometry() using X_t and X_tdt.
+/// is computed on the fly via compute_face_geometry() using pos and pos.
 ///
 /// \param mesh  Mesh object (provides nodes_in_elem and element/face topology used by compute_face_geometry).
-/// \param X_t   Node coordinates at reference time t            (num_nodes x 3).
-/// \param X_tdt Node coordinates at current time t + dt         (num_nodes x 3).
+/// \param pos   Node coordinates at reference time t            (num_nodes x 3).
+/// \param pos Node coordinates at current time t + dt         (num_nodes x 3).
 /// \param overlapping_node_gids 2D array of cohesive pairs      (num_pairs x 2) with global node IDs [A_gid, B_gid].
 /// \param cz_info Integer table from build_cohesive_zone_info()  (num_pairs x 6*max); blocks are:
 ///                 [0] A-elements per slot, [1] B-elements per slot,
@@ -1327,21 +1331,21 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 ///                 [4] kA local corner per A-slot, [5] kB local corner per B-slot.
 /// \param max_elem_in_cohesive_zone Slot count per pair (same value used to size the cz_info blocks).
 /// \param tol Centroid-coincidence tolerance used during matching.
-/// \return vcz_orient Output (num_pairs x 6): per-pair unit normals at t and t+dt:
-///                   columns 0..2 → n_ref (from X_t), columns 3..5 → n_cur (from X_tdt).
+/// \return cohesive_zone_orientation Output (num_pairs x 6): per-pair unit normals at t and t+dt:
+///                   columns 0..2 → current_norm (from pos), columns 3..5 → next_norm (from pos).
 ///
 /// \details
 /// Algorithm per pair i:
 ///   1) Initialize sums sum_t = 0, sum_dt = 0, cnt = 0.
 ///   2) For each A-slot j = 0..max-1:
 ///        -Read eA = cz_info(i, [0] + j) and fA = cz_info(i, [2] + j).
-///        -If both are valid (>= 0), call compute_face_geometry(X_t,   eA, fA) → nA_t, and
-///                                     compute_face_geometry(X_tdt, eA, fA) → nA_dt.
+///        -If both are valid (>= 0), call compute_face_geometry(pos,   eA, fA) → nA_t, and
+///                                     compute_face_geometry(pos, eA, fA) → nA_dt.
 ///        -Accumulate: sum_t  += nA_t;  sum_dt += nA_dt;  ++cnt.
 ///   3) If cnt == 0 -> leave zeros for this pair and continue.
 ///   4) Temporal sign consistency: if dot(sum_t, sum_dt) < 0, flip sum_dt = -sum_dt.
-///   5) Normalize: n_ref = sum_t / ||sum_t||,  n_cur = sum_dt / ||sum_dt|| (guarded against zero magnitude).
-///   6) Store into vcz_orient(i,0..5).
+///   5) Normalize: current_norm = sum_t / ||sum_t||,  next_norm = sum_dt / ||sum_dt|| (guarded against zero magnitude).
+///   6) Store into cohesive_zone_orientation(i,0..5).
 ///
 /// Notes:
 ///  -This averages *all* matched A-side Cohesive Zone faces recorded for the pair (not just one), so if there are multiple CZ faces
@@ -1355,17 +1359,17 @@ CArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 KOKKOS_FUNCTION
 void cohesive_zones_t::oriented(
     Mesh_t& mesh,
-    DCArrayKokkos<double>& X_t,      // reference  coords (num_nodes x 3)
-    DCArrayKokkos<double>& X_tdt,    // current ("t+dt") coords (num_nodes x 3) 
+    DCArrayKokkos<double>& pos,      // current  coords (num_nodes x 3)
+    //DCArrayKokkos<double>& pos,    // current ("t+dt") coords (num_nodes x 3) 
     CArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
     CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
     size_t max_elem_in_cohesive_zone,
     double tol,                 // centroid coincidence tolerance (ABS distance)
-    CArrayKokkos<double>& vcz_orient       // (overlapping_node_gids.dims(0) x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
+    CArrayKokkos<double>& cohesive_zone_orientation       // (overlapping_node_gids.dims(0) x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
 ) 
 {
     // zero out output array
-    vcz_orient.set_values(0.0);
+    cohesive_zone_orientation.set_values(0.0);
 
     // temp views for compute_face_geometry
     double nA_t_buf[3], rA_t_buf[3], sA_t_buf[3], cA_t_buf[3];
@@ -1405,15 +1409,15 @@ void cohesive_zones_t::oriented(
         
         
         // compute A-side normal at t (reference) and t+dt (current)
-        compute_face_geometry(X_t,   mesh, X_t,   mesh.nodes_in_elem,
+        compute_face_geometry(pos,   mesh, pos,   mesh.nodes_in_elem,
                               static_cast<size_t>(fA), static_cast<size_t>(eA),
                               nA_t, rA_t, sA_t, cA_t);
-        compute_face_geometry(X_tdt, mesh, X_tdt, mesh.nodes_in_elem,
+        compute_face_geometry(pos, mesh, pos, mesh.nodes_in_elem,
                               static_cast<size_t>(fA), static_cast<size_t>(eA),
                               nA_dt, rA_dt, sA_dt, cA_dt);
 
         // optional: compute B at t for a quick sanity check (opposing normals)            
-        //compute_face_geometry(X_t,   mesh, X_t,   mesh.nodes_in_elem,
+        //compute_face_geometry(pos,   mesh, pos,   mesh.nodes_in_elem,
         //                      static_cast<size_t>(fB), static_cast<size_t>(eB),
         //                      nB_t, rB_t, sB_t, cB_t);
 
@@ -1444,18 +1448,18 @@ void cohesive_zones_t::oriented(
         const double mag_t  = sqrt(sum_t [0]*sum_t [0] + sum_t [1]*sum_t [1] + sum_t [2]*sum_t [2]);
         const double mag_dt = sqrt(sum_dt[0]*sum_dt[0] + sum_dt[1]*sum_dt[1] + sum_dt[2]*sum_dt[2]);
 
-        double n_ref[3] = {0.0,0.0,0.0};
-        double n_cur[3] = {0.0,0.0,0.0};
-        if (mag_t  > 0.0) { n_ref[0] = sum_t [0]/mag_t;  n_ref[1] = sum_t [1]/mag_t;  n_ref[2] = sum_t [2]/mag_t; }
-        if (mag_dt > 0.0) { n_cur[0] = sum_dt[0]/mag_dt; n_cur[1] = sum_dt[1]/mag_dt; n_cur[2] = sum_dt[2]/mag_dt; }
+        double current_norm[3] = {0.0,0.0,0.0};
+        double next_norm[3] = {0.0,0.0,0.0};
+        if (mag_t  > 0.0) { current_norm[0] = sum_t [0]/mag_t;  current_norm[1] = sum_t [1]/mag_t;  current_norm[2] = sum_t [2]/mag_t; }
+        if (mag_dt > 0.0) { next_norm[0] = sum_dt[0]/mag_dt; next_norm[1] = sum_dt[1]/mag_dt; next_norm[2] = sum_dt[2]/mag_dt; }
 
         // store
-        vcz_orient(i,0) = n_ref[0]; // nx_t == ut (reference)
-        vcz_orient(i,1) = n_ref[1]; // ny_t == ut (reference)
-        vcz_orient(i,2) = n_ref[2]; // nz_t == ut (reference)
-        vcz_orient(i,3) = n_cur[0]; // nx_tdt == utdt (ut + us) (current)
-        vcz_orient(i,4) = n_cur[1]; // ny_tdt == utdt (ut + us) (current)
-        vcz_orient(i,5) = n_cur[2]; // nz_tdt == utdt (ut + us) (current)
+        cohesive_zone_orientation(i,0) = current_norm[0]; // nx_t (current)
+        cohesive_zone_orientation(i,1) = current_norm[1]; // ny_t (current)
+        cohesive_zone_orientation(i,2) = current_norm[2]; // nz_t (current)
+        cohesive_zone_orientation(i,3) = next_norm[0]; // nx_tdt (next)
+        cohesive_zone_orientation(i,4) = next_norm[1]; // ny_tdt (next)
+        cohesive_zone_orientation(i,5) = next_norm[2]; // nz_tdt (next)
     }
 } // end oriented()
 
@@ -1503,35 +1507,22 @@ void cohesive_zones_t::oriented(
 // variable map:
 // Gavin --> Fierro:
 // nodes --> State.node.coords
-// nodes + ut --> X_t (reference + total displacemetn up to time t)
-// nodes + ut + us --> X_tdt (reference + total displacement up to time t + this step)
-// vczorient --> vcz_orient
+// nodes + ut --> pos (reference + total displacemetn up to time t)
+// nodes + ut + us --> pos (reference + total displacement up to time t + this step)
+// vczorient --> cohesive_zone_orientation
 // vczconn --> overlapping_node_gids
 // nvcz --> overlapping_node_gids.dims(0)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
-/// \brief Map Cohesive Zone node pair displacement/velocity from global to local (normal and tangential directions) and
-///        advance one step with the Forward Euler Method in the old frame.
-///
-/// \param X_t    Nodal coordinates at t  (State.node.coords_n0)   [num_nodes x 3].
-/// \param V_t    Nodal velocities  at t  (State.node.vel_n0)      [num_nodes x 3].
-/// \param vcz_orient  (overlapping_node_gids.dims(0) x 6): [nx_t, ny_t, nz_t, nx_tdt, ny_tdt, nz_tdt].
-///                     (this routine uses only nx_t,ny_t,nz_t).
-/// \param overlapping_node_gids Cohesive Zone node pairs [A, B] as global node ids; overlapping_node_gids.dims(0) = number of Cohesive Zone node pairs.
-/// \param dt     Time step size from sgh_execute.cpp timstep driver.
-/// \return ulocvcz  (overlapping_node_gids.dims(0) x 4) 
-///                  outputs: [un_t,                    // normal crack opening magnitude at time t
-///                            utan_t,                  // tangential crack opening magnitude at time t
-///                            un_tdt_FE,               // forward euler predicted normal crack opening magnitude at time t+dt
-///                            utan_tdt_FE]             // forward euler predicted tangential crack opening magnitude at time t+dt
+/// NEED TO REWRITE THIS FUNCTION HEADER
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void cohesive_zones_t::ucmap(
-    const DCArrayKokkos<double>& X_t, // State.node.coords_n0
-    const DCArrayKokkos<double>& V_t, // State.node.vel_n0
-    const CArrayKokkos<double>& vcz_orient,
+    const DCArrayKokkos<double>& pos, // State.node.coords // rename as pos
+    const DCArrayKokkos<double>& vel, // State.node.vel //rename as vel
+    const CArrayKokkos<double>& cohesive_zone_orientation,
     const CArrayKokkos<size_t>& overlapping_node_gids,
     const double dt, // from sgh_execute.cpp timestep driver
     CArrayKokkos<double>& ulocvcz    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
@@ -1542,55 +1533,59 @@ void cohesive_zones_t::ucmap(
         const size_t NodeB = overlapping_node_gids(i,1);
 
         // calulate displacement between overlapping node pairs in global frame at time t
-        const double ux = X_t(NodeB,0) - X_t(NodeA,0);
-        const double uy = X_t(NodeB,1) - X_t(NodeA,1);
-        const double uz = X_t(NodeB,2) - X_t(NodeA,2);
+        const double u_rel_x_t = pos(NodeB,0) - pos(NodeA,0);
+        const double u_rel_y_t = pos(NodeB,1) - pos(NodeA,1);
+        const double u_rel_z_t = pos(NodeB,2) - pos(NodeA,2);
 
         // calculate velocity difference between overlapping node pairs in global frame at time t
-        const double vx = V_t(NodeB,0) - V_t(NodeA,0);
-        const double vy = V_t(NodeB,1) - V_t(NodeA,1);
-        const double vz = V_t(NodeB,2) - V_t(NodeA,2);
+        const double v_rel_x_t = vel(NodeB,0) - vel(NodeA,0);
+        const double v_rel_y_t = vel(NodeB,1) - vel(NodeA,1);
+        const double v_rel_z_t = vel(NodeB,2) - vel(NodeA,2);
 
         // normal at time t from oriented() (already unitized)
-        const double nx = vcz_orient(i,0); // normal at time t
-        const double ny = vcz_orient(i,1); // normal at time t
-        const double nz = vcz_orient(i,2); // normal at time t
+        const double current_norm_x = cohesive_zone_orientation(i,0); // current normal at time t x direx
+        const double current_norm_y = cohesive_zone_orientation(i,1); // current normal at time t y direc
+        const double current_norm_z = cohesive_zone_orientation(i,2); // current normal at time t z direc
 
         // dotting with the normal vector to get the normal component of displacement at time t
-        const double un_t = ux*nx + uy*ny + uz*nz;
+        const double u_norm_mag_t = u_rel_x_t*current_norm_x + u_rel_y_t*current_norm_y + u_rel_z_t*current_norm_z;
 
-        // tangential components at time t
-        const double tx_t = ux - un_t*nx;
-        const double ty_t = uy - un_t*ny;
-        const double tz_t = uz - un_t*nz;
+        // tangential components of dispacement at time t
+        const double u_tan_x_t = u_rel_x_t - u_norm_mag_t*current_norm_x;
+        const double u_tan_y_t = u_rel_y_t - u_norm_mag_t*current_norm_y;
+        const double u_tan_z_t = u_rel_z_t - u_norm_mag_t*current_norm_z;
 
-        // tangential magnitude at time t assuming that us* == ur*
-        const double utan_t = sqrt(tx_t*tx_t + ty_t*ty_t + tz_t*tz_t);
+        // tangential magnitude of displacement at time t assuming that us* == ur*
+        const double u_tan_mag_t = sqrt(u_tan_x_t*u_tan_x_t + u_tan_y_t*u_tan_y_t + u_tan_z_t*u_tan_z_t);
 
-        // relative velocity (velocity difference) V_t components projected onto normal/tangent directions
+        // relative velocity (velocity difference) vel components projected onto normal/tangent directions
 
-        // v components dotted with normal vector to get normal component of velocity
-        const double dun_dt = vx*nx + vy*ny + vz*nz;
+        // velocity components dotted with normal vector to get normal rate of velocity
+        const double v_norm_t = v_rel_x_t*current_norm_x + v_rel_y_t*current_norm_y + v_rel_z_t*current_norm_z;
 
-        // tangential components of velocity
-        const double dv_tx  = vx - dun_dt*nx;
-        const double dv_ty  = vy - dun_dt*ny;
-        const double dv_tz  = vz - dun_dt*nz;
+        // tangential rates of velocity
+        const double v_tan_x_t  = v_rel_x_t - v_norm_t*current_norm_x;
+        const double v_tan_y_t  = v_rel_y_t - v_norm_t*current_norm_y;
+        const double v_tan_z_t  = v_rel_z_t - v_norm_t*current_norm_z;
 
         // Forward-Euler update 
-        // normal: un_tdt = un_t + dt*dun_dt
-        // tangential: utan_tdt = utan_t + dt*dv_tan
-        const double un_tdt_FE   = un_t + dt*dun_dt;
-        const double tx_tdt_FE   = tx_t + dt*dv_tx;
-        const double ty_tdt_FE   = ty_t + dt*dv_ty;
-        const double tz_tdt_FE   = tz_t + dt*dv_tz;
-        const double utan_tdt_FE = sqrt(tx_tdt_FE*tx_tdt_FE + ty_tdt_FE*ty_tdt_FE + tz_tdt_FE*tz_tdt_FE);
+
+        // normal: u_norm_mag_tdt = u_norm_mag_t + dt*v_norm_t
+        const double u_norm_mag_tdt   = u_norm_mag_t + dt*v_norm_t;
+
+        // tangential: 
+        const double u_tan_x_tdt   = u_tan_x_t + dt*v_tan_x_t;
+        const double u_tan_y_tdt   = u_tan_y_t + dt*v_tan_y_t;
+        const double u_tan_z_tdt   = u_tan_z_t + dt*v_tan_z_t;
+
+        // tangential magnitude at time t+dt
+        const double u_tan_mag_tdt = sqrt(u_tan_x_tdt*u_tan_x_tdt + u_tan_y_tdt*u_tan_y_tdt + u_tan_z_tdt*u_tan_z_tdt);
         
         // store
-        ulocvcz(i,0) = un_t; // normal crack opening magnitude at time t
-        ulocvcz(i,1) = utan_t; // tangential crack opening magnitude at time t
-        ulocvcz(i,2) = un_tdt_FE; // forward eueler predicted normal crack opening magnitude at time t+dt
-        ulocvcz(i,3) = utan_tdt_FE; // forward euler predicted tangential crack opening magnitude at time t+dt
+        ulocvcz(i,0) = u_norm_mag_t; // normal crack opening magnitude at time t
+        ulocvcz(i,1) = u_tan_mag_t; // tangential crack opening magnitude at time t
+        ulocvcz(i,2) = u_norm_mag_tdt; // forward eueler predicted normal crack opening magnitude at time t+dt
+        ulocvcz(i,3) = u_tan_mag_tdt; // forward euler predicted tangential crack opening magnitude at time t+dt
     }
 }
 

@@ -496,18 +496,19 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // COMMENT OUT HERE TO STOP UCMAP DEBUG PRINTS
 
-            // building local vcz_orient array by calling oriented()
-            CArrayKokkos<double> vcz_orient_local(cohesive_zones_bank.overlapping_node_gids.dims(0), 6, "vcz_orient_local");
+            // building local cohesive_zone_orientation array by calling oriented()
+            CArrayKokkos<double> cohesive_zone_orientation_local(cohesive_zones_bank.overlapping_node_gids.dims(0), 6, "cohesive_zone_orientation_local");
 
             cohesive_zones_bank.oriented(
                 mesh,
-                State.node.coords_n0,
+                //State.node.coords_n0,
+                //State.node.coords,
                 State.node.coords,
                 cohesive_zones_bank.overlapping_node_gids,
                 cohesive_zones_bank.cz_info,
                 cohesive_zones_bank.max_elem_in_cohesive_zone,
                 tol,
-                vcz_orient_local
+                cohesive_zone_orientation_local
             );
 
             // allocate local ulocvcz array
@@ -520,9 +521,11 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // update (fill) ulocvcz by computing the local normal and tangential displacements at cohesive zone node pairs
             cohesive_zones_bank.ucmap(
-                State.node.coords_n0, // == X_t (nodal positions at t)
-                State.node.vel_n0, // == V_t (nodal velocities at t)
-                vcz_orient_local,
+                //State.node.coords_n0, // == X_t (nodal positions at t)
+                State.node.coords,
+                //State.node.vel_n0, // == V_t (nodal velocities at t)
+                State.node.vel,
+                cohesive_zone_orientation_local,
                 cohesive_zones_bank.overlapping_node_gids,
                 dt,
                 ulocvcz_local
@@ -530,10 +533,12 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // print the 1:1 debug section
             cohesive_zones_bank.debug_ucmap(
-                State.node.coords_n0, // == X_t (nodal positions at t)
-                State.node.vel_n0, // == V_t (nodal velocities at t)
+                //State.node.coords_n0, // == X_t (nodal positions at t)
+                State.node.coords,
+                //State.node.vel_n0, // == V_t (nodal velocities at t)
+                State.node.vel,
                 dt,
-                vcz_orient_local,
+                cohesive_zone_orientation_local,
                 cohesive_zones_bank.overlapping_node_gids,
                 ulocvcz_local
             );
