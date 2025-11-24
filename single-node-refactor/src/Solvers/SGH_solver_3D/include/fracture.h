@@ -67,8 +67,19 @@ struct cohesive_zones_t {
         double dt,
         const CArrayKokkos<double>& cohesive_zone_orientation,
         const CArrayKokkos<size_t>& overlapping_node_gids,
-        const CArrayKokkos<double>& ulocvcz
+        const CArrayKokkos<double>& local_opening
     );
+
+    KOKKOS_FUNCTION
+    void debug_cohesive_zone_var_update(
+        const CArrayKokkos<double>& local_opening,
+        const double dt,
+        const CArrayKokkos<size_t>& overlapping_node_gids,
+        const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
+        const int bdy_set,
+        const ViewCArrayKokkos<double>& internal_vars,      // (overlapping_node_gids.dims(0), 4 + num_prony_terms)
+        const ViewCArrayKokkos<double>& delta_internal_vars // (overlapping_node_gids.dims(0), 4 + num_prony_terms)
+    );   
 
     cohesive_zones_t(); 
 
@@ -121,13 +132,28 @@ struct cohesive_zones_t {
 
     KOKKOS_FUNCTION
     void ucmap(
-    const DCArrayKokkos<double>& pos,
-    const DCArrayKokkos<double>& vel,
-    const CArrayKokkos<double>& cohesive_zone_orientation,
-    const CArrayKokkos<size_t>& overlapping_node_gids,
-    const double dt, // timestep driver from sgh_execute.cpp
-    CArrayKokkos<double>& ulocvcz    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
+        const DCArrayKokkos<double>& pos,
+        const DCArrayKokkos<double>& vel,
+        const CArrayKokkos<double>& cohesive_zone_orientation,
+        const CArrayKokkos<size_t>& overlapping_node_gids,
+        const double dt, // timestep driver from sgh_execute.cpp
+        CArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
     );
+
+    KOKKOS_FUNCTION
+    void cohesive_zone_var_update(
+        const CArrayKokkos<double>& local_opening,
+        const double dt,
+        const CArrayKokkos<size_t>& overlapping_node_gids,
+        const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
+        const int bdy_set,
+        const ViewCArrayKokkos<double>& internal_vars,      // (overlapping_node_gids.dims(0), 4 + num_prony_terms)
+        const ViewCArrayKokkos<double>& delta_internal_vars // (overlapping_node_gids.dims(0), 4 + num_prony_terms)
+    );
+
+    CArrayKokkos<double> internal_vars;
+    CArrayKokkos<double> delta_internal_vars;
+
 };
 
 #endif

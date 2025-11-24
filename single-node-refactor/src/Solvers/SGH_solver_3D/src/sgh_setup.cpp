@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::setup(SimulationParameters_t& SimulationParamaters, 
-                Material_t& Materials, 
+                Material_t& Materials,
                 Mesh_t& mesh, 
                 BoundaryCondition_t& Boundary,
                 State_t& State)

@@ -42,6 +42,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "geometry_new.h"
 #include "mesh_io.h"
 #include "tipton_equilibration.hpp"
+#include "fracture_stress_bc.h"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -511,15 +512,15 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 cohesive_zone_orientation_local
             );
 
-            // allocate local ulocvcz array
-            //if (cohesive_zones_bank.ulocvcz.dims(0) != cohesive_zones_bank.overlapping_node_gids.dims(0)) {
-            //    cohesive_zones_bank.ulocvcz = CArrayKokkos<double>(cohesive_zones_bank.overlapping_node_gids.dims(0), 4, "ulocvcz");
-            //    cohesive_zones_bank.ulocvcz.set_values(0.0);
+            // allocate local local_opening array
+            //if (cohesive_zones_bank.local_opening.dims(0) != cohesive_zones_bank.overlapping_node_gids.dims(0)) {
+            //    cohesive_zones_bank.local_opening = CArrayKokkos<double>(cohesive_zones_bank.overlapping_node_gids.dims(0), 4, "local_opening");
+            //    cohesive_zones_bank.local_opening.set_values(0.0);
             //}
-            CArrayKokkos<double> ulocvcz_local(cohesive_zones_bank.overlapping_node_gids.dims(0), 4, "ulocvcz_local");
-            ulocvcz_local.set_values(0.0);
+            CArrayKokkos<double> local_opening_local(cohesive_zones_bank.overlapping_node_gids.dims(0), 4, "local_opening_local");
+            local_opening_local.set_values(0.0);
 
-            // update (fill) ulocvcz by computing the local normal and tangential displacements at cohesive zone node pairs
+            // update (fill) local_opening by computing the local normal and tangential displacements at cohesive zone node pairs
             cohesive_zones_bank.ucmap(
                 //State.node.coords_n0, // == X_t (nodal positions at t)
                 State.node.coords,
@@ -528,7 +529,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 cohesive_zone_orientation_local,
                 cohesive_zones_bank.overlapping_node_gids,
                 dt,
-                ulocvcz_local
+                local_opening_local
             );
 
             // print the 1:1 debug section
@@ -540,9 +541,98 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 dt,
                 cohesive_zone_orientation_local,
                 cohesive_zones_bank.overlapping_node_gids,
-                ulocvcz_local
+                local_opening_local
             );
             // COMMENT OUT HERE TO STOP UCMAP DEBUG PRINTS
+
+            // COMMENT OUT HERE TO STOP cohesive_zone_var_update DEBUG PRINTS
+            // locate the fracture stress boundary set (the row in stress_bc_global_vars)
+            const int fracture_bdy_set = BoundaryConditions.fracture_bc_id;
+            if (fracture_bdy_set < 0){
+                printf("[cohesive_zone_var_update] WARNING: no fracture stress BC set.\n");
+            } else {
+
+            
+                // derive num_prony_terms (Prony term count) from the fracture BC row
+                const auto& BC = BoundaryConditions; // reuse alias
+                const int num_prony_terms = static_cast<int>(BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::num_prony_terms) + 0.5);
+                // allocate storage for internal vars and delta internal vars
+                const size_t npairs = cohesive_zones_bank.overlapping_node_gids.dims(0);
+                const int    width  = 4 + num_prony_terms;
+
+                if (npairs == 0) {
+                    printf("[cohesive_zone_var_update] npairs=0; skipping.\n");
+                } else {
+                    // ensure storage is allocated
+                    if (cohesive_zones_bank.internal_vars.dims(0) != npairs ||
+                        cohesive_zones_bank.internal_vars.dims(1) != width) {
+                        cohesive_zones_bank.internal_vars =
+                            CArrayKokkos<double>(npairs, width, "cz_internal_vars");
+                        cohesive_zones_bank.internal_vars.set_values(0.0);
+                    }
+                    if (cohesive_zones_bank.delta_internal_vars.dims(0) != npairs ||
+                        cohesive_zones_bank.delta_internal_vars.dims(1) != width) {
+                        cohesive_zones_bank.delta_internal_vars =
+                            CArrayKokkos<double>(npairs, width, "cz_delta_internal_vars");
+                        cohesive_zones_bank.delta_internal_vars.set_values(0.0);
+                    }
+
+                    // now form 2D views over valid storage
+                    ViewCArrayKokkos<double> cz_internal_vars_view(
+                        &cohesive_zones_bank.internal_vars(0,0), npairs, width);
+                    ViewCArrayKokkos<double> cz_delta_internal_vars_view(
+                        &cohesive_zones_bank.delta_internal_vars(0,0), npairs, width);
+
+                    // compute and print
+                    cohesive_zones_bank.cohesive_zone_var_update(
+                        local_opening_local,
+                        dt,
+                        cohesive_zones_bank.overlapping_node_gids,
+                        BC.stress_bc_global_vars,
+                        fracture_bdy_set,
+                        cz_internal_vars_view,         // in
+                        cz_delta_internal_vars_view    // out
+                    );
+
+                    cohesive_zones_bank.debug_cohesive_zone_var_update(
+                        local_opening_local,
+                        dt,
+                        cohesive_zones_bank.overlapping_node_gids,
+                        BC.stress_bc_global_vars,
+                        fracture_bdy_set,
+                        cz_internal_vars_view,
+                        cz_delta_internal_vars_view
+                    );
+                    
+                    // updating state for next timestep
+                    {
+
+                        const size_t npairs = cohesive_zones_bank.overlapping_node_gids.dims(0);
+                        const int    width  = 4 + num_prony_terms;
+
+                        for (size_t i = 0; i < npairs; ++i) {
+                            // 0: lambda_dot_t 
+                            cz_internal_vars_view(i, 0) = cz_delta_internal_vars_view(i, 0);
+
+                            // 1: alpha 
+                            cz_internal_vars_view(i, 1) += cz_delta_internal_vars_view(i, 1);
+
+                            // 2, 3: traction components, normal and tangential
+                            cz_internal_vars_view(i, 2) = cz_delta_internal_vars_view(i, 2);
+                            cz_internal_vars_view(i, 3) = cz_delta_internal_vars_view(i, 3);
+                            
+                            // 4..4+num_prony_terms-1: prony stresses
+                            for (int j = 0; j < num_prony_terms; ++j) {
+                                const int col = 4 + j;
+                                // Right now delta_internal_vars(i,col) is prony at t+dt,
+                                    // so we overwrite old prony stress with new prony stress
+                                cz_internal_vars_view(i, col) = cz_delta_internal_vars_view(i, col);
+                            }
+                        }
+                    }
+                }
+            }
+            // COMMENT OUT HERE TO STOP cohesive_zone_var_update DEBUG PRINTS
         }
         // COMMENT OUT HERE TO STOP FUNCTION DEBUGGING PRINTS PER TIME STEP
 

@@ -10,6 +10,7 @@
 #include "mesh.h"
 #include "state.h"
 #include "fracture.h"
+#include "fracture_stress_bc.h"
 
 using namespace mtr; // matar namespace
 
@@ -636,9 +637,9 @@ void cohesive_zones_t::debug_ucmap(
     const DCArrayKokkos<double>& pos,                 // coords (positions at t)
     const DCArrayKokkos<double>& vel,                 // vel   (velocities at t)
     double dt,                                        // same dt passed to ucmap()
-    const CArrayKokkos<double>&  cohesive_zone_orientation,          // [nx_t, ny_t, nz_t, nx_tdt, ...] (we'll only use the first 3)
+    const CArrayKokkos<double>&  cohesive_zone_orientation,          //
     const CArrayKokkos<size_t>&  overlapping_node_gids,
-    const CArrayKokkos<double>&  ulocvcz              // what ucmap() already wrote
+    const CArrayKokkos<double>&  local_opening              // what ucmap() already wrote
 ){
     printf("\n==================== ucmap debug ====================\n");
 
@@ -669,7 +670,7 @@ void cohesive_zones_t::debug_ucmap(
         // replicating ucmap() exactly
 
         // dotting with the normal vector to get the normal component of displacement magnitude at time t
-        const double u_norm_mag_t = u_rel_x_t*current_norm_x + u_rel_y_t*current_norm_y + u_rel_z_t*current_norm_z;     
+        const double u_norm_mag_t = (u_rel_x_t*current_norm_x + u_rel_y_t*current_norm_y + u_rel_z_t*current_norm_z);     
 
         // tangential components at time t
         const double u_tan_x_t = u_rel_x_t - u_norm_mag_t*current_norm_x;
@@ -706,28 +707,182 @@ void cohesive_zones_t::debug_ucmap(
         printf("  Nodal Displacement at t: u_t=(%.6g, %.6g, %.6g)\n", u_rel_x_t, u_rel_y_t, u_rel_z_t);
         printf("  Nodal Velocities at t: v_t=(%.6g, %.6g, %.6g)\n", v_rel_x_t, v_rel_y_t, v_rel_z_t);
         printf("  dt=%.6g\n", dt);
-        printf("  Forward Euler Method:\n");
+        //printf("  Forward Euler Method:\n");
         printf("  Predicted Nodal Displacement at t+dt: u_tdt=(%.6g, %.6g, %.6g)\n",
                u_x_tdt, u_y_tdt, u_z_tdt);
         printf("    Normal Crack Opening Magnitude at t: u_norm_mag_t=%.9g\n", u_norm_mag_t);
         printf("    Tangential Crack Opening Magnitude at t: u_tan_mag_t=%.9g\n", u_tan_mag_t);
-        printf("    -> Forward Euler Predicted Normal Crack Opening at t+dt: un_tdt=%.9g\n", u_norm_mag_tdt);
-        printf("    -> Forward Euler Predicted Tangential Crack Opening Magnitude at t+dt: utan_tdt=%.9g\n", u_tan_mag_tdt);
-        printf("  stored ulocvcz: [u_norm_mag_t=%.9g, u_tan_mag_t=%.9g, un_tdt=%.9g, utan_tdt=%.9g]\n",
-               ulocvcz(i,0), ulocvcz(i,1), ulocvcz(i,2), ulocvcz(i,3));
+        printf("    -> Forward Euler Predicted Normal Crack Opening at t+dt: u_norm_mag_tdt=%.9g\n", u_norm_mag_tdt);
+        printf("    -> Forward Euler Predicted Tangential Crack Opening Magnitude at t+dt: u_tan_mag_tdt=%.9g\n", u_tan_mag_tdt);
+        printf("  stored local_opening: [u_norm_mag_t=%.9g, u_tan_mag_t=%.9g, u_norm_mag_tdt=%.9g, u_tan_mag_tdt=%.9g]\n",
+               local_opening(i,0), local_opening(i,1), local_opening(i,2), local_opening(i,3));
 
         printf("  diff vs stored: "
                "d_un_t=%.3e d_utan_t=%.3e d_un_tdt=%.3e d_utan_tdt=%.3e\n",
-               u_norm_mag_t - ulocvcz(i,0),
-               u_tan_mag_t - ulocvcz(i,1),
-               u_norm_mag_tdt - ulocvcz(i,2),
-               u_tan_mag_tdt - ulocvcz(i,3));
+               u_norm_mag_t - local_opening(i,0),
+               u_tan_mag_t - local_opening(i,1),
+               u_norm_mag_tdt - local_opening(i,2),
+               u_tan_mag_tdt - local_opening(i,3));
     }
 
     printf("\n==============================================================\n");
 }
 
 // ======================== END ucmap debug ========================    
+
+// ======================== cohesive_zone_var_update debug ========================
+// ======================== cohesive_zone_var_update DEBUG ========================
+
+KOKKOS_FUNCTION
+void cohesive_zones_t::debug_cohesive_zone_var_update(
+    const CArrayKokkos<double>& local_opening,
+    const double dt,
+    const CArrayKokkos<size_t>& overlapping_node_gids,
+    const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
+    const int bdy_set,
+    const ViewCArrayKokkos<double>& internal_vars,       
+    const ViewCArrayKokkos<double>& delta_internal_vars  
+) {
+
+    // read cohesive zone input parameters
+    const double E_inf   = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::E_inf);
+    const double a1      = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::a1);
+    const double n_exp   = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::n_exp);
+    const double u_n_star= stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::u_n_star);
+    const double u_t_star= stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::u_t_star);
+    const int    num_prony_terms     = (int)(stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::num_prony_terms) + 0.5);
+
+    // E_dt
+    double E_dt = E_inf;
+    for (int j = 0; j < num_prony_terms; ++j) {
+        const int    base = fractureStressBC::BCVars::prony_base + 2*j;
+        const double Ej   = stress_bc_global_vars(bdy_set, base);
+        const double tauj = stress_bc_global_vars(bdy_set, base + 1);
+        const double tau_eff = (tauj > 0.0) ? tauj : std::numeric_limits<double>::min();
+        const double one_minus_exp = 1.0 - exp(-dt / tau_eff);
+        E_dt += Ej * tau_eff * (one_minus_exp / dt);
+    }
+
+    printf("================== cohesive_zone_var_update debug ==================\n");
+    printf("cohesive zone input parameters (bdy_set=%d) --\n", bdy_set);
+    printf("  E_inf=%.9g  a1=%.9g  n_exp=%.9g  u_n*=%.9g  u_t*=%.9g  num_prony_terms=%d  dt=%.9g\n",
+           E_inf, a1, n_exp, u_n_star, u_t_star, num_prony_terms, dt);
+    printf("  E_dt=%.9g\n", E_dt);
+
+    // loop over each cohesive zone node pair
+    for (size_t i = 0; i < overlapping_node_gids.dims(0); i++){
+
+        const size_t gidA = overlapping_node_gids(i,0);
+        const size_t gidB = overlapping_node_gids(i,1);
+        printf("\n-- Pair %zu (A gid=%zu, B gid=%zu) --\n", i, gidA, gidB);
+
+        // inputs
+        const double u_norm_mag_t   = local_opening(i,0);
+        const double u_tan_mag_t   = local_opening(i,1);
+        const double u_norm_mag_tdt = local_opening(i,2);
+        const double u_tan_mag_tdt = local_opening(i,3);
+
+        // recompute lambdas for reporting (mirrors update)
+        double lambda_t   = sqrt((u_norm_mag_t   / u_n_star)*(u_norm_mag_t   / u_n_star) + (u_tan_mag_t   / u_t_star)*(u_tan_mag_t   / u_t_star));
+        double lambda_tdt = sqrt((u_norm_mag_tdt / u_n_star)*(u_norm_mag_tdt / u_n_star) + (u_tan_mag_tdt / u_t_star)*(u_tan_mag_tdt / u_t_star));
+        const double lam_dot = (lambda_tdt - lambda_t) / dt;
+
+        // damage values (before/after clamp) as stored
+        const double d_alpha = delta_internal_vars(i,1);
+        const double alpha_t = internal_vars(i,1);
+        const double alpha_tdt = alpha_t + d_alpha;
+
+        // prony new stresses are stored directly at [4 + j]
+        double sigma_sum = 0.0, sigma_sum_exp = 0.0;
+
+        printf("  local_opening(t):     u_norm_mag_t=%.9g  u_tan_mag_t=%.9g\n", u_norm_mag_t,   u_tan_mag_t);
+        printf("  local_opening(tdt):  u_norm_mag_tdt=%.9g  u_tan_mag_tdt=%.9g\n", u_norm_mag_tdt, u_tan_mag_tdt);
+        printf("  lambda_t=%.9g  lambda_tdt=%.9g  lambda_dot_t=%.9g  (stored lambda_dot_t=%.9g)\n",
+                lambda_t, lambda_tdt, lam_dot, delta_internal_vars(i,0));
+
+        // show damage
+        double dadt_report;
+        if (lam_dot > 0.0) {
+            const double lam_mid = 0.5*(lambda_t + lambda_tdt);
+            dadt_report = a1 * pow(lam_mid, n_exp);
+        } else {
+            dadt_report = 0.0;
+          }
+        //printf("  alpha(t)=%.9g  d_alpha(dt)=%.9g  (expected dadt*dt=%.9g)  alpha(t+dt)=%.9g\n",
+                //alpha_t, d_alpha, dadt_report*dt, alpha_tdt);
+        printf("  alpha(t)=%.9g  d_alpha(dt)=%.9g  alpha(t+dt)=%.9g\n",
+                alpha_t, d_alpha, alpha_tdt);                
+
+        // per Prony term details and sums
+        for (int j = 0; j < num_prony_terms; ++j) {
+            const int    base   = fractureStressBC::BCVars::prony_base + 2*j;
+            const double Ej     = stress_bc_global_vars(bdy_set, base);
+            const double tauj   = stress_bc_global_vars(bdy_set, base + 1);
+            const double tau_eff= (tauj > 0.0) ? tauj : std::numeric_limits<double>::min();
+            const double aexp   = exp(-dt / tau_eff);
+            const double sigma_current = internal_vars(i, 4 + j);          
+            const double sigma_next = delta_internal_vars(i, 4 + j);    
+            printf("  Prony[%d]: E=%.9g  tau=%.9g  a=exp(-dt/tau)=%.9g  sigma_current=%.9g  sigma_next=%.9g\n",
+                    j, Ej, tauj, aexp, sigma_current, sigma_next);
+            sigma_sum   += sigma_next;
+            sigma_sum_exp += (1.0 - exp(-dt / tau_eff)) * sigma_next;
+        }
+        printf("  sigma_sum=%.9g  sigma_sum_exp=%.9g\n", sigma_sum, sigma_sum_exp);
+
+        // scalar pieces in traction increment formula
+        const double deltaE_term  = E_dt * lam_dot * dt;
+        const double elastic_term = E_inf * lambda_t + sigma_sum;   
+        const double damp_term    = -sigma_sum_exp;
+
+        // inverses (guarded)
+        const double inv_uns_tdt = 1.0 / (u_n_star * ((lambda_tdt > 0.0) ? lambda_tdt : std::numeric_limits<double>::min()));
+        const double inv_uns_t   = 1.0 / (u_n_star * ((lambda_t   > 0.0) ? lambda_t   : std::numeric_limits<double>::min()));
+        const double inv_uts_tdt = 1.0 / (u_t_star * ((lambda_tdt > 0.0) ? lambda_tdt : std::numeric_limits<double>::min()));
+        const double inv_uts_t   = 1.0 / (u_t_star * ((lambda_t   > 0.0) ? lambda_t   : std::numeric_limits<double>::min()));
+        printf("  terms: deltaE_term=%.9g  elastic_term=%.9g  damp_term=%.9g\n", deltaE_term, elastic_term, damp_term);
+
+        // traction increment terms breakdown
+        const double one_m_a_tdt = (1.0 - alpha_tdt);
+        const double one_m_a_t   = (1.0 - alpha_t);
+        const double termN1 = u_norm_mag_tdt * inv_uns_tdt * one_m_a_tdt * deltaE_term; // normal traction viscous term t+dt
+        const double termN2 = u_norm_mag_tdt * inv_uns_tdt * one_m_a_tdt * elastic_term; // normal traction elastic term t+dt
+        const double termN3 = -u_norm_mag_t   * inv_uns_t   * one_m_a_t   * elastic_term; // normal traction elastic term t
+        const double termN4 = u_norm_mag_tdt * inv_uns_tdt * one_m_a_tdt * damp_term; // normal traction damping term t+dt
+        const double termT1 = u_tan_mag_tdt * inv_uts_tdt * one_m_a_tdt * deltaE_term; // tangential traction viscous term t+dt
+        const double termT2 = u_tan_mag_tdt * inv_uts_tdt * one_m_a_tdt * elastic_term; // tangential traction elastic term t+dt
+        const double termT3 = -u_tan_mag_t   * inv_uts_t   * one_m_a_t   * elastic_term; // tangential traction elastic term t
+        const double termT4 = u_tan_mag_tdt * inv_uts_tdt * one_m_a_tdt * damp_term; // tangential traction damping term t+dt
+        printf("  traction_norm terms: [%.9g, %.9g, %.9g, %.9g]\n", termN1, termN2, termN3, termN4);
+        printf("  traction_tan terms: [%.9g, %.9g, %.9g, %.9g]\n", termT1, termT2, termT3, termT4);
+        printf("  Tn(t) (normal traction at time t) = %.9g\n", fabs(termN3));
+        //printf(" normal traction at time t: Tn_t=%.9g\n", termN3);
+        //printf(" normal traction at time t+dt: Tn_tdt=%.9g\n", termN2);
+        
+
+    
+        //printf("  STORED: lambda_dot_t=%.9g, delta_a=%.9g, traction_norm(normal traction increment)=%.9g, traction_tan(tangential traction increment)=%.9g\n",
+                //delta_internal_vars(i,0), delta_internal_vars(i,1),
+                //delta_internal_vars(i,2), delta_internal_vars(i,3));
+
+        printf("  STORED: lambda_dot_t=%.9g\n", delta_internal_vars(i,0));
+        printf("  STORED: delta_a=%.9g\n", delta_internal_vars(i,1));
+        printf("  STORED: traction_norm(normal traction increment)=%.9g\n", delta_internal_vars(i,2));
+        printf("  STORED: traction_tan(tangential traction increment)=%.9g\n", delta_internal_vars(i,3));
+
+        //if (num_prony_terms > 0) {
+//
+         //   printf("  STORED : ");
+         //   for (int j = 0; j < num_prony_terms; ++j) {
+        //        printf("%s%.9g", (j==0?"[":", "), delta_internal_vars(i, 4 + j));
+        //    }
+        //    printf("]\n");
+
+       // }
+
+    }
+    printf("\n================ end cohesive_zone_var_update debug ================\n");
+}    
+// ======================== END cohesive_zone_var_update debug ======================== 
 
 // **************************************************************** Fierro Conversion **************************************************************** 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1525,7 +1680,7 @@ void cohesive_zones_t::ucmap(
     const CArrayKokkos<double>& cohesive_zone_orientation,
     const CArrayKokkos<size_t>& overlapping_node_gids,
     const double dt, // from sgh_execute.cpp timestep driver
-    CArrayKokkos<double>& ulocvcz    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
+    CArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
 )
 {
     for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
@@ -1548,7 +1703,7 @@ void cohesive_zones_t::ucmap(
         const double current_norm_z = cohesive_zone_orientation(i,2); // current normal at time t z direc
 
         // dotting with the normal vector to get the normal component of displacement at time t
-        const double u_norm_mag_t = u_rel_x_t*current_norm_x + u_rel_y_t*current_norm_y + u_rel_z_t*current_norm_z;
+        const double u_norm_mag_t = (u_rel_x_t*current_norm_x + u_rel_y_t*current_norm_y + u_rel_z_t*current_norm_z);
 
         // tangential components of dispacement at time t
         const double u_tan_x_t = u_rel_x_t - u_norm_mag_t*current_norm_x;
@@ -1582,10 +1737,10 @@ void cohesive_zones_t::ucmap(
         const double u_tan_mag_tdt = sqrt(u_tan_x_tdt*u_tan_x_tdt + u_tan_y_tdt*u_tan_y_tdt + u_tan_z_tdt*u_tan_z_tdt);
         
         // store
-        ulocvcz(i,0) = u_norm_mag_t; // normal crack opening magnitude at time t
-        ulocvcz(i,1) = u_tan_mag_t; // tangential crack opening magnitude at time t
-        ulocvcz(i,2) = u_norm_mag_tdt; // forward eueler predicted normal crack opening magnitude at time t+dt
-        ulocvcz(i,3) = u_tan_mag_tdt; // forward euler predicted tangential crack opening magnitude at time t+dt
+        local_opening(i,0) = u_norm_mag_t; // normal crack opening magnitude at time t
+        local_opening(i,1) = u_tan_mag_t; // tangential crack opening magnitude at time t
+        local_opening(i,2) = u_norm_mag_tdt; // forward eueler predicted normal crack opening magnitude at time t+dt
+        local_opening(i,3) = u_tan_mag_tdt; // forward euler predicted tangential crack opening magnitude at time t+dt
     }
 }
 
@@ -1674,7 +1829,135 @@ void cohesive_zones_t::ucmap(
 // }
 // **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 
+// **************************************************************** Fierro Conversion **************************************************************** 
+KOKKOS_FUNCTION
+void cohesive_zones_t::cohesive_zone_var_update(
+    const CArrayKokkos<double>& local_opening,
+    const double dt,
+    const CArrayKokkos<size_t>& overlapping_node_gids,
+    const RaggedRightArrayKokkos<double>& stress_bc_global_vars, // BC parameters per boundary set for fractureStressBC
+    const int bdy_set,
+    const ViewCArrayKokkos<double>& internal_vars,      // (overlapping_node_gids.dims(0), 4 + num_prony_terms)
+    const ViewCArrayKokkos<double>& delta_internal_vars // (overlapping_node_gids.dims(0), 4 + num_prony_terms) 
+                                                        // lambda_dot_t, d_alpha
+)
+{
+    // read cohesive zone parameters from stress_bc_global_vars for this boundary set
+    const double E_inf = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::E_inf);
+    const double a1   = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::a1);
+    const double n_exp = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::n_exp);
+    const double u_n_star  = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::u_n_star);
+    const double u_t_star  = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::u_t_star);
+    const int    num_prony_terms  = (int)(stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::num_prony_terms) + 0.5); // 0.5 for rounding to the nearest int
 
+    // calculating E_dt
+    // for j: E_dt += E_j * tau_j * (1 - exp(-dt/tau_j)) / dt
+    double E_dt = E_inf;
+    for (int j = 0; j < num_prony_terms; ++j) {
+        const int prony_base = fractureStressBC::BCVars::prony_base + 2*j;
+        const double E_j  = stress_bc_global_vars(bdy_set, prony_base);
+        const double tau_j = stress_bc_global_vars(bdy_set, prony_base + 1);
+        const double tau_eff       = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min(); // same logic as Gavin's code to avoid div by zero
+        const double one_minus_exp = 1.0 - exp(-dt / tau_eff);
+        E_dt += E_j * tau_eff * (one_minus_exp / dt);
+    }
+
+    // loop over each cohesive zone node pair
+    for (size_t i = 0; i < overlapping_node_gids.dims(0); i++){
+
+        // reading in local openings (normal and tangential displacements) at t and t+dt
+        const double u_norm_mag_t = local_opening(i,0);
+        const double u_tan_mag_t = local_opening(i,1);
+        const double u_norm_mag_tdt = local_opening(i,2);
+        const double u_tan_mag_tdt = local_opening(i,3);
+
+        // calculating lambda_t and lambda _tdt values
+        double lambda_t = sqrt((u_norm_mag_t / u_n_star) * (u_norm_mag_t / u_n_star) + (u_tan_mag_t / u_t_star) * (u_tan_mag_t / u_t_star));
+        double lambda_tdt = sqrt((u_norm_mag_tdt / u_n_star) * (u_norm_mag_tdt / u_n_star) + (u_tan_mag_tdt / u_t_star) * (u_tan_mag_tdt / u_t_star));
+
+        // calculating lambda_dot_t
+        const double lambda_dot_t = (lambda_tdt - lambda_t) / dt;
+        delta_internal_vars(i,0) = lambda_dot_t; // lambda rate at t
+
+        // d_alpha_dt (damage growth/increment) over this step
+        double d_alpha_dt;
+        if (lambda_dot_t > 0.0){
+            const double lambda_mid = 0.5*(lambda_tdt + lambda_t); // forward euler mid-point; growth when loading > 0
+            d_alpha_dt = a1 * pow(lambda_mid, n_exp);
+        }else {
+            d_alpha_dt = 0.0;
+        } 
+        delta_internal_vars(i,1) = d_alpha_dt * dt; // damage variable, increment over the step
+
+        // updating delta prony stresses for prony terms
+       for (int j = 0; j < num_prony_terms; ++j) {
+            const int    prony_base    = fractureStressBC::BCVars::prony_base + 2*j;
+            const double E_j     = stress_bc_global_vars(bdy_set, prony_base); // in Gavin's code, this is Eandrhom(j,0)
+            const double tau_j   = stress_bc_global_vars(bdy_set, prony_base + 1); // in Gavin's code, this is Eandrhom(j,1)
+            const double tau_eff = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min(); // same logic as Gavin's code to avoid div by zero
+            const double a       = exp(-dt / tau_eff);
+            delta_internal_vars(i, 4 + j) = a * internal_vars(i, 4 + j) + E_j * tau_eff * lambda_dot_t * (1.0 - a); // prony branch stresses 4 columns 
+        }
+
+        // calculating sigma sums and sigma product sums (deltaE_term in the residual traction)
+        double sigma_sum = 0.0;
+        double sigma_sum_exp = 0.0;
+        for (int j = 0; j < num_prony_terms; ++j) {
+            const int    prony_base    = fractureStressBC::BCVars::prony_base + 2*j;
+            const double tau_j   = stress_bc_global_vars(bdy_set, prony_base + 1); // in Gavin's code, this is Eandrhom(j,1)
+            const double tau_eff = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min(); // same logic as Gavin's code to avoid div by zero
+            const double sigma_j = delta_internal_vars(i, 4 + j); // used to update prony stresses
+            sigma_sum     += sigma_j;
+            sigma_sum_exp += (1.0 - exp(-dt / tau_eff)) * sigma_j;
+        }
+
+        // enforcing alpha domain limitations (clamp to 0 or 1)
+        const double alpha_t  = internal_vars(i,1); // damage at time t beginning of step
+        double       delta_a  = delta_internal_vars(i,1);
+        if (alpha_t + delta_a > 1.0) {
+            delta_a = 1.0 - alpha_t;
+            delta_internal_vars(i,1) = delta_a;
+        }
+        // damage at the end of the step
+        const double alpha_tdt = alpha_t + delta_a;
+
+        // tractions at t+dt
+        // scalar terms
+        const double deltaE_term  = E_dt * lambda_dot_t * dt;     
+        const double elastic_term = E_inf * lambda_t + sigma_sum;  
+        const double damp_term    = -sigma_sum_exp;
+
+
+        const double inv_uns_lambda_tdt = 1.0 / (u_n_star * ((lambda_tdt>0.0)?lambda_tdt:std::numeric_limits<double>::min())); // avoid div by zero
+        const double inv_uns_lambda_t   = 1.0 / (u_n_star * ((lambda_t >0.0)?lambda_t :std::numeric_limits<double>::min()));
+        const double inv_uts_lambda_tdt = 1.0 / (u_t_star * ((lambda_tdt>0.0)?lambda_tdt:std::numeric_limits<double>::min()));
+        const double inv_uts_lambda_t   = 1.0 / (u_t_star * ((lambda_t >0.0)?lambda_t :std::numeric_limits<double>::min()));
+
+
+
+        delta_internal_vars(i,2) = // normal traction increment
+              u_norm_mag_tdt * inv_uns_lambda_tdt * (1.0 - alpha_tdt) * deltaE_term
+            + u_norm_mag_tdt * inv_uns_lambda_tdt * (1.0 - alpha_tdt) * elastic_term
+            - u_norm_mag_t   * inv_uns_lambda_t   * (1.0 - alpha_t  ) * elastic_term
+            + u_norm_mag_tdt * inv_uns_lambda_tdt * (1.0 - alpha_tdt) * damp_term;
+
+        delta_internal_vars(i,3) = // tangential traction increment
+              u_tan_mag_tdt * inv_uts_lambda_tdt * (1.0 - alpha_tdt) * deltaE_term
+            + u_tan_mag_tdt * inv_uts_lambda_tdt * (1.0 - alpha_tdt) * elastic_term
+            - u_tan_mag_t   * inv_uts_lambda_t   * (1.0 - alpha_t  ) * elastic_term
+            + u_tan_mag_tdt * inv_uts_lambda_tdt * (1.0 - alpha_tdt) * damp_term;
+
+        // everything stored:
+        // delta_internal_vars(i,0) : lambda_dot_t
+        // delta_internal_vars(i,1) : delta_a
+        // delta_internal_vars(i,2) : normal traction increment
+        // delta_internal_vars(i,3) : tangential traction increment
+        // delta_internal_vars(i, 4 + j) : prony internal variables 
+    }
+}        
+// **************************************************************** Fierro Conversion **************************************************************** 
+
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 // // This function calculates the loads due to the cohesive zone tractions in the global frame of reference
 // // inputs: vczorient, vczconn, nvcz, invars, dinvars, vczinfo, nodes, conn, ut, us
 // // output: Fvcz (global load vector from cohesive zones), KVCZ (global stiffness contributions from cohesive zones)
@@ -1882,6 +2165,8 @@ void cohesive_zones_t::ucmap(
 //                 Fvcz(3*vczconn(i,1)+1) -= Fn(1) + Ft(1);
 //                 Fvcz(3*vczconn(i,1)+2) -= Fn(2) + Ft(2);
 
+
+// DO NOT WORRY ABOUT THIS THIS IS FOR QUASI STIFFNESS CONTRIBUTION
 //                 // calculating rotation angles of truss element
 //                 // if u_x is zero it causes divide by zero errors
 //                 if (uglobtdt(0) == 0) {
@@ -1989,7 +2274,9 @@ void cohesive_zones_t::ucmap(
 //     }
 
 // }
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 // // This function calls all necessary functions to update the vcz behavior based on a displacement field
 // // inputs: nodes, conn, ne, ut, us, vczconn, vczinfo, nvcz, interpvals, vczorient, ulocvcz, npt, vcz material parameters (Einf, a1, n, Eandrhom, uns, uts), delt, invars, dinvars
 // // outputs: Fvcz (global load vector due to vczs) and Kvcz (global stiffness matrix to characterize vczs)
@@ -2576,3 +2863,4 @@ void cohesive_zones_t::ucmap(
 //         }
 //     }
 // }
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 

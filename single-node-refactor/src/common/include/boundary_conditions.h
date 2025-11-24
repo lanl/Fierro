@@ -309,6 +309,9 @@ struct BoundaryCondition_t
 
     // state variables for boundary conditions
     DCArrayKokkos<double> bc_state_vars;
+
+    // the boundary condition id for the fracture stress BC, -1 if none set (debugging aid)
+    int fracture_bc_id = -1; 
 }; // end boundary conditions
 
 // -------------------------------------

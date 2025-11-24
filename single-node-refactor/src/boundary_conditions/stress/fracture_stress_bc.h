@@ -36,6 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BOUNDARY_STRESS_FRACTURE_H
 
 #include "boundary_conditions.h"
+#include "mesh.h"
 
 struct BoundaryConditionEnums_t;
 
@@ -57,6 +58,18 @@ struct BoundaryConditionEnums_t;
 /////////////////////////////////////////////////////////////////////////////
 namespace fractureStressBC
 {
+// cohesive zone variables:
+ enum BCVars {
+     E_inf               = 0,
+     a1                  = 1,
+     n_exp               = 2,
+     u_n_star            = 3,
+     u_t_star            = 4,
+     num_prony_terms     = 5,
+     prony_base          = 6, // starting index for the prony terms: will auto populate based on num_prony_terms
+                              // per prony term, two variables: prony_0_E, prony_0_tau, prony_1_E, prony_1_tau, ...
+};
+
 // add an enum for boundary statevars and global vars
 
     KOKKOS_FUNCTION
@@ -67,7 +80,7 @@ namespace fractureStressBC
     const ViewCArrayKokkos <double>& corner_surf_force,
     const ViewCArrayKokkos <double>& corner_surf_normal,
     const double time_value,
-    //const size_t rk_stage,
+    const size_t rk_stage,
     const size_t bdy_node_gid,
     const size_t bdy_set)
     {
