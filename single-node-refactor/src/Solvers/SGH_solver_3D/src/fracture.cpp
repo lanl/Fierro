@@ -223,6 +223,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     );
 
 {
+
     printf("\n================== cohesive_zone_info debug ==================\n");
     printf("num_overlapping_node_pairs=%zu  max_elem_in_cohesive_zone=%zu\n",
            overlapping_node_gids.dims(0), max_elem_in_cohesive_zone);
@@ -230,6 +231,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     
 
     for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
+        if (i != 0) continue; // ONLY DO FIRST PAIR FOR TEST AGAINST TIME
         const size_t nodeA = overlapping_node_gids(i,0);
         const size_t nodeB = overlapping_node_gids(i,1);
 
@@ -453,11 +455,13 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     if (printed == 0) printf("   No matched faces found.\n");
 }
     // oriented debug
-    printf("[CZ::init] this=%p  pairs=%zu  maxcz=%zu  info_rows=%zu\n",
-           (void*)this,
-            overlapping_node_gids.dims(0),
-            max_elem_in_cohesive_zone,
-            cz_info.dims(0));
+// // THROTTLE OUTPUT COMMENT OUT //
+//     printf("[CZ::init] this=%p  pairs=%zu  maxcz=%zu  info_rows=%zu\n",
+//            (void*)this,
+//             overlapping_node_gids.dims(0),
+//             max_elem_in_cohesive_zone,
+//             cz_info.dims(0));
+// // THROTTLE OUTPUT COMMENT OUT //
     // end oriented debug
 
     printf("\n==============================================================\n");
@@ -476,8 +480,10 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
     //    ======================== cohesive_zone_orientation debug ========================
 
     // debug oriented
-    printf("[CZ::debug] this=%p  pairs(in)=%zu  maxcz(in)=%zu  info_rows(in)=%zu\n",
-          (void*)this, overlap.dims(0), maxcz, info.dims(0));
+// // THROTTLE OUTPUT COMMENT OUT //
+//     printf("[CZ::debug] this=%p  pairs(in)=%zu  maxcz(in)=%zu  info_rows(in)=%zu\n",
+//           (void*)this, overlap.dims(0), maxcz, info.dims(0));
+// // THROTTLE OUTPUT COMMENT OUT //
     // end debug oriented
 
 
@@ -491,8 +497,9 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
     //tol = double tol;
 
 {
-    printf("\n================== cohesive_zone_orientation debug ==================\n");
-
+// // THROTTLE OUTPUT COMMENT OUT //
+//     printf("\n================== cohesive_zone_orientation debug ==================\n");
+// // THROTTLE OUTPUT COMMENT OUT //
     // checking execute() to make sure inputs are correct
     //printf("execute() check: num_overlapping_node_pairs=%zu overlapping_node_gids=(%zu x %zu) max_elem_in_cohesive_zone=%zu\n", 
     //       overlapping_node_gids.dims(0), overlapping_node_gids.dims(1),
@@ -524,11 +531,12 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
 
     // loop over overlapping node pairs
     for (size_t i = 0; i < overlap.dims(0); ++i) {
+        if (i != 0) continue; // ONLY DO FIRST PAIR FOR TEST AGAINST TIME
         const size_t nodeA = overlap(i,0);
         const size_t nodeB = overlap(i,1);
-
-        printf("\n-- Pair %zu  (A gid=%zu, B gid=%zu) --\n", i, nodeA, nodeB);
-
+// // THROTTLE OUTPUT COMMENT OUT //
+//         printf("\n-- Pair %zu  (A gid=%zu, B gid=%zu) --\n", i, nodeA, nodeB);
+// // THROTTLE OUTPUT COMMENT OUT //
         // accumulators exactly like oriented()
         double sum_t [3] = {0.0, 0.0, 0.0};
         double sum_dt[3] = {0.0, 0.0, 0.0};
@@ -543,8 +551,9 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
         ViewCArrayKokkos<double> nA_dt(&nA_dt_buf[0], 3), rA_dt(&rA_dt_buf[0], 3), sA_dt(&sA_dt_buf[0], 3), cA_dt(&cA_dt_buf[0], 3);
 
         // contributors header
-        printf("  contributors (A-side matched faces over all slots):\n");  
-        
+// // THROTTLE OUTPUT COMMENT OUT //
+//         printf("  contributors (A-side matched faces over all slots):\n");  
+// // THROTTLE OUTPUT COMMENT OUT //        
         // walk over all slot-keyed A-side matches and accumulate (blocks [0] elems, [2] faces)
         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
             const int eA = info(i, 0*max_elem_in_cohesive_zone + j); // A elem at slot j
@@ -567,15 +576,15 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
             sum_t [0] += nA_t (0); sum_t [1] += nA_t (1); sum_t [2] += nA_t (2);
             sum_dt[0] += nA_dt(0); sum_dt[1] += nA_dt(1); sum_dt[2] += nA_dt(2);
             ++cnt;
-
-            // per-face print
-            printf("  A[j=%zu]: eA elem=%d fA face=%d  kA local corner=%d "
-                   "cen_t=(%.6g, %.6g, %.6g) n_t=(%.6g, %.6g, %.6g)  |  "
-                   "cen_tdt=(%.6g, %.6g, %.6g) n_tdt=(%.6g, %.6g, %.6g)\n",
-                   j, eA, fA, kA,
-                   cA_t(0),  cA_t(1),  cA_t(2),  nA_t(0),  nA_t(1),  nA_t(2),
-                   cA_dt(0), cA_dt(1), cA_dt(2), nA_dt(0), nA_dt(1), nA_dt(2));
-
+// // THROTTLE OUTPUT COMMENT OUT //
+//             // per-face print
+//             printf("  A[j=%zu]: eA elem=%d fA face=%d  kA local corner=%d "
+//                    "cen_t=(%.6g, %.6g, %.6g) n_t=(%.6g, %.6g, %.6g)  |  "
+//                    "cen_tdt=(%.6g, %.6g, %.6g) n_tdt=(%.6g, %.6g, %.6g)\n",
+//                    j, eA, fA, kA,
+//                    cA_t(0),  cA_t(1),  cA_t(2),  nA_t(0),  nA_t(1),  nA_t(2),
+//                    cA_dt(0), cA_dt(1), cA_dt(2), nA_dt(0), nA_dt(1), nA_dt(2));
+// // THROTTLE OUTPUT COMMENT OUT //
             // accumulate normals (exactly like oriented())
             //sum_t [0] += nA_t (0);  sum_t [1] += nA_t (1);  sum_t [2] += nA_t (2);
             //sum_dt[0] += nA_dt(0);  sum_dt[1] += nA_dt(1);  sum_dt[2] += nA_dt(2);
@@ -606,25 +615,26 @@ void cohesive_zones_t::debug_oriented(Mesh_t& mesh,
         double next_norm[3] = {0.0,0.0,0.0};
         if (mag_t  > 0.0) { current_norm[0] = sum_t [0]/mag_t;  current_norm[1] = sum_t [1]/mag_t;  current_norm[2] = sum_t [2]/mag_t; }
         if (mag_dt > 0.0) { next_norm[0] = sum_dt[0]/mag_dt; next_norm[1] = sum_dt[1]/mag_dt; next_norm[2] = sum_dt[2]/mag_dt; }
+// // THROTTLE OUTPUT COMMENT OUT //
+//         printf("  averaged (pre-norm)  t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)  cnt=%d\n",
+//                sum_t[0], sum_t[1], sum_t[2], sum_dt[0], sum_dt[1], sum_dt[2], cnt);
+//         printf("  align: dot(sum_t, sum_tdt)=%.6g\n", dot_align);
+//         printf("  averaged (unit)      t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
+//                current_norm[0], current_norm[1], current_norm[2], next_norm[0], next_norm[1], next_norm[2]);
 
-        printf("  averaged (pre-norm)  t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)  cnt=%d\n",
-               sum_t[0], sum_t[1], sum_t[2], sum_dt[0], sum_dt[1], sum_dt[2], cnt);
-        printf("  align: dot(sum_t, sum_tdt)=%.6g\n", dot_align);
-        printf("  averaged (unit)      t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
-               current_norm[0], current_norm[1], current_norm[2], next_norm[0], next_norm[1], next_norm[2]);
+//         // compare to oriented() output
+//         printf("  stored cohesive_zone_orientation:   t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
+//                cohesive_zone_orientation(i,0), cohesive_zone_orientation(i,1), cohesive_zone_orientation(i,2),
+//                cohesive_zone_orientation(i,3), cohesive_zone_orientation(i,4), cohesive_zone_orientation(i,5));
 
-        // compare to oriented() output
-        printf("  stored cohesive_zone_orientation:   t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
-               cohesive_zone_orientation(i,0), cohesive_zone_orientation(i,1), cohesive_zone_orientation(i,2),
-               cohesive_zone_orientation(i,3), cohesive_zone_orientation(i,4), cohesive_zone_orientation(i,5));
-
-        printf("  diff vs stored:      t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
-               current_norm[0]-cohesive_zone_orientation(i,0), current_norm[1]-cohesive_zone_orientation(i,1), current_norm[2]-cohesive_zone_orientation(i,2),
-               next_norm[0]-cohesive_zone_orientation(i,3), next_norm[1]-cohesive_zone_orientation(i,4), next_norm[2]-cohesive_zone_orientation(i,5));        
-
+//         printf("  diff vs stored:      t=(%.6g, %.6g, %.6g)  tdt=(%.6g, %.6g, %.6g)\n",
+//                current_norm[0]-cohesive_zone_orientation(i,0), current_norm[1]-cohesive_zone_orientation(i,1), current_norm[2]-cohesive_zone_orientation(i,2),
+//                next_norm[0]-cohesive_zone_orientation(i,3), next_norm[1]-cohesive_zone_orientation(i,4), next_norm[2]-cohesive_zone_orientation(i,5));        
+// // THROTTLE OUTPUT COMMENT OUT //
     }
-    
-    printf("\n======================================================\n");
+// // THROTTLE OUTPUT COMMENT OUT //
+//     printf("\n======================================================\n");
+// // THROTTLE OUTPUT COMMENT OUT //
     }
     
 } // end cohesive_zones_t::debug_orient()
@@ -641,9 +651,12 @@ void cohesive_zones_t::debug_ucmap(
     const CArrayKokkos<size_t>&  overlapping_node_gids,
     const CArrayKokkos<double>&  local_opening              // what ucmap() already wrote
 ){
-    printf("\n==================== ucmap debug ====================\n");
+// // THROTTLE OUTPUT COMMENT OUT //
+//     printf("\n==================== ucmap debug ====================\n");
+// // THROTTLE OUTPUT COMMENT OUT //
 
     for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
+        if (i != 0) continue; // ONLY DO FIRST PAIR FOR TEST AGAINST TIME
         const size_t A = overlapping_node_gids(i,0);
         const size_t B = overlapping_node_gids(i,1);
 
@@ -699,35 +712,37 @@ void cohesive_zones_t::debug_ucmap(
 
         // tangential magnitude of displacement at time t+dt
         const double u_tan_mag_tdt = sqrt(u_tan_x_tdt*u_tan_x_tdt + u_tan_y_tdt*u_tan_y_tdt + u_tan_z_tdt*u_tan_z_tdt);
+// // THROTTLE OUTPUT COMMENT OUT //
+//         // prints
+//         printf("\n-- Pair %zu (A gid=%zu, B gid=%zu) --\n", i, A, B);
+//         printf("  current_norm (at t)=(%.6g, %.6g, %.6g), ||current_norm||=%.6g\n",
+//                current_norm_x, current_norm_y, current_norm_z, sqrt(current_norm_x*current_norm_x + current_norm_y*current_norm_y + current_norm_z*current_norm_z));
+//         printf("  Nodal Displacement at t: u_t=(%.6g, %.6g, %.6g)\n", u_rel_x_t, u_rel_y_t, u_rel_z_t);
+//         printf("  Nodal Velocities at t: v_t=(%.6g, %.6g, %.6g)\n", v_rel_x_t, v_rel_y_t, v_rel_z_t);
+//         printf("  dt=%.6g\n", dt);
+//         //printf("  Forward Euler Method:\n");
+//         printf("  Predicted Nodal Displacement at t+dt: u_tdt=(%.6g, %.6g, %.6g)\n",
+//                u_x_tdt, u_y_tdt, u_z_tdt);
+//         printf("    Normal Crack Opening Magnitude at t: u_norm_mag_t=%.9g\n", u_norm_mag_t);
+//         printf("    Tangential Crack Opening Magnitude at t: u_tan_mag_t=%.9g\n", u_tan_mag_t);
+//         printf("    -> Forward Euler Predicted Normal Crack Opening at t+dt: u_norm_mag_tdt=%.9g\n", u_norm_mag_tdt);
+//         printf("    -> Forward Euler Predicted Tangential Crack Opening Magnitude at t+dt: u_tan_mag_tdt=%.9g\n", u_tan_mag_tdt);
+//         printf("  stored local_opening: [u_norm_mag_t=%.9g, u_tan_mag_t=%.9g, u_norm_mag_tdt=%.9g, u_tan_mag_tdt=%.9g]\n",
+//                local_opening(i,0), local_opening(i,1), local_opening(i,2), local_opening(i,3));
 
-        // prints
-        printf("\n-- Pair %zu (A gid=%zu, B gid=%zu) --\n", i, A, B);
-        printf("  current_norm (at t)=(%.6g, %.6g, %.6g), ||current_norm||=%.6g\n",
-               current_norm_x, current_norm_y, current_norm_z, sqrt(current_norm_x*current_norm_x + current_norm_y*current_norm_y + current_norm_z*current_norm_z));
-        printf("  Nodal Displacement at t: u_t=(%.6g, %.6g, %.6g)\n", u_rel_x_t, u_rel_y_t, u_rel_z_t);
-        printf("  Nodal Velocities at t: v_t=(%.6g, %.6g, %.6g)\n", v_rel_x_t, v_rel_y_t, v_rel_z_t);
-        printf("  dt=%.6g\n", dt);
-        //printf("  Forward Euler Method:\n");
-        printf("  Predicted Nodal Displacement at t+dt: u_tdt=(%.6g, %.6g, %.6g)\n",
-               u_x_tdt, u_y_tdt, u_z_tdt);
-        printf("    Normal Crack Opening Magnitude at t: u_norm_mag_t=%.9g\n", u_norm_mag_t);
-        printf("    Tangential Crack Opening Magnitude at t: u_tan_mag_t=%.9g\n", u_tan_mag_t);
-        printf("    -> Forward Euler Predicted Normal Crack Opening at t+dt: u_norm_mag_tdt=%.9g\n", u_norm_mag_tdt);
-        printf("    -> Forward Euler Predicted Tangential Crack Opening Magnitude at t+dt: u_tan_mag_tdt=%.9g\n", u_tan_mag_tdt);
-        printf("  stored local_opening: [u_norm_mag_t=%.9g, u_tan_mag_t=%.9g, u_norm_mag_tdt=%.9g, u_tan_mag_tdt=%.9g]\n",
-               local_opening(i,0), local_opening(i,1), local_opening(i,2), local_opening(i,3));
+//         printf("  diff vs stored: "
+//                "d_un_t=%.3e d_utan_t=%.3e d_un_tdt=%.3e d_utan_tdt=%.3e\n",
+//                u_norm_mag_t - local_opening(i,0),
+//                u_tan_mag_t - local_opening(i,1),
+//                u_norm_mag_tdt - local_opening(i,2),
+//                u_tan_mag_tdt - local_opening(i,3));
+//     }
 
-        printf("  diff vs stored: "
-               "d_un_t=%.3e d_utan_t=%.3e d_un_tdt=%.3e d_utan_tdt=%.3e\n",
-               u_norm_mag_t - local_opening(i,0),
-               u_tan_mag_t - local_opening(i,1),
-               u_norm_mag_tdt - local_opening(i,2),
-               u_tan_mag_tdt - local_opening(i,3));
-    }
-
-    printf("\n==============================================================\n");
+//     printf("\n==============================================================\n");
+// // THROTTLE OUTPUT COMMENT OUT //
+    
 }
-
+}
 // ======================== END ucmap debug ========================    
 
 // ======================== cohesive_zone_var_update debug ========================
@@ -737,6 +752,7 @@ KOKKOS_FUNCTION
 void cohesive_zones_t::debug_cohesive_zone_var_update(
     const CArrayKokkos<double>& local_opening,
     const double dt,
+    const double time_value, // ADDED IN FOR DEBUGGING
     const CArrayKokkos<size_t>& overlapping_node_gids,
     const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
     const int bdy_set,
@@ -762,20 +778,26 @@ void cohesive_zones_t::debug_cohesive_zone_var_update(
         const double one_minus_exp = 1.0 - exp(-dt / tau_eff);
         E_dt += Ej * tau_eff * (one_minus_exp / dt);
     }
+// // THROTTLE OUTPUT COMMENT OUT //
+//     printf("================== cohesive_zone_var_update debug ==================\n");
+// // THROTTLE OUTPUT COMMENT OUT //
 
-    printf("================== cohesive_zone_var_update debug ==================\n");
-    printf("cohesive zone input parameters (bdy_set=%d) --\n", bdy_set);
-    printf("  E_inf=%.9g  a1=%.9g  n_exp=%.9g  u_n*=%.9g  u_t*=%.9g  num_prony_terms=%d  dt=%.9g\n",
-           E_inf, a1, n_exp, u_n_star, u_t_star, num_prony_terms, dt);
-    printf("  E_dt=%.9g\n", E_dt);
-
+// // THROTTLE OUTPUT COMMENT OUT //
+//     printf("cohesive zone input parameters (bdy_set=%d) --\n", bdy_set);
+//     printf("  E_inf=%.9g  a1=%.9g  n_exp=%.9g  u_n*=%.9g  u_t*=%.9g  num_prony_terms=%d  dt=%.9g\n",
+//            E_inf, a1, n_exp, u_n_star, u_t_star, num_prony_terms, dt);
+//     printf("  E_dt=%.9g\n", E_dt);
+// // THROTTLE OUTPUT COMMENT OUT //
     // loop over each cohesive zone node pair
     for (size_t i = 0; i < overlapping_node_gids.dims(0); i++){
+        // uncomment below for when using excel for alpha, lambda, traction comparison 
+        if (i != 0) continue; // ONLY DO FIRST PAIR FOR TEST AGAINST TIME 
 
         const size_t gidA = overlapping_node_gids(i,0);
         const size_t gidB = overlapping_node_gids(i,1);
-        printf("\n-- Pair %zu (A gid=%zu, B gid=%zu) --\n", i, gidA, gidB);
-
+// // THROTTLE OUTPUT COMMENT OUT //
+//         printf("\n-- Pair %zu (A gid=%zu, B gid=%zu) --\n", i, gidA, gidB);
+// // THROTTLE OUTPUT COMMENT OUT //
         // inputs
         const double u_norm_mag_t   = local_opening(i,0);
         const double u_tan_mag_t   = local_opening(i,1);
@@ -795,10 +817,11 @@ void cohesive_zones_t::debug_cohesive_zone_var_update(
         // prony new stresses are stored directly at [4 + j]
         double sigma_sum = 0.0, sigma_sum_exp = 0.0;
 
-        printf("  local_opening(t):     u_norm_mag_t=%.9g  u_tan_mag_t=%.9g\n", u_norm_mag_t,   u_tan_mag_t);
-        printf("  local_opening(tdt):  u_norm_mag_tdt=%.9g  u_tan_mag_tdt=%.9g\n", u_norm_mag_tdt, u_tan_mag_tdt);
-        printf("  lambda_t=%.9g  lambda_tdt=%.9g  lambda_dot_t=%.9g  (stored lambda_dot_t=%.9g)\n",
-                lambda_t, lambda_tdt, lam_dot, delta_internal_vars(i,0));
+// // THROTTLE OUTPUT COMMENT OUT //        printf("  local_opening(t):     u_norm_mag_t=%.9g  u_tan_mag_t=%.9g\n", u_norm_mag_t,   u_tan_mag_t);
+//         printf("  local_opening(tdt):  u_norm_mag_tdt=%.9g  u_tan_mag_tdt=%.9g\n", u_norm_mag_tdt, u_tan_mag_tdt);
+//         printf("  lambda_t=%.9g  lambda_tdt=%.9g  lambda_dot_t=%.9g  (stored lambda_dot_t=%.9g)\n",
+//                 lambda_t, lambda_tdt, lam_dot, delta_internal_vars(i,0));
+// // THROTTLE OUTPUT COMMENT OUT //
 
         // show damage
         double dadt_report;
@@ -810,9 +833,14 @@ void cohesive_zones_t::debug_cohesive_zone_var_update(
           }
         //printf("  alpha(t)=%.9g  d_alpha(dt)=%.9g  (expected dadt*dt=%.9g)  alpha(t+dt)=%.9g\n",
                 //alpha_t, d_alpha, dadt_report*dt, alpha_tdt);
-        printf("  alpha(t)=%.9g  d_alpha(dt)=%.9g  alpha(t+dt)=%.9g\n",
-                alpha_t, d_alpha, alpha_tdt);                
+// // THROTTLE OUTPUT COMMENT OUT //
+//         printf("  alpha(t)=%.9g  d_alpha(dt)=%.9g  alpha(t+dt)=%.9g\n",
+//                 alpha_t, d_alpha, alpha_tdt);                
+// // THROTTLE OUTPUT COMMENT OUT //
 
+// // THROTTLE OUTPUT COMMENT OUT //
+//           printf("  alpha(t)=%.9g\n", alpha_t);
+// // THROTTLE OUTPUT COMMENT OUT //
         // per Prony term details and sums
         for (int j = 0; j < num_prony_terms; ++j) {
             const int    base   = fractureStressBC::BCVars::prony_base + 2*j;
@@ -821,26 +849,42 @@ void cohesive_zones_t::debug_cohesive_zone_var_update(
             const double tau_eff= (tauj > 0.0) ? tauj : std::numeric_limits<double>::min();
             const double aexp   = exp(-dt / tau_eff);
             const double sigma_current = internal_vars(i, 4 + j);          
-            const double sigma_next = delta_internal_vars(i, 4 + j);    
-            printf("  Prony[%d]: E=%.9g  tau=%.9g  a=exp(-dt/tau)=%.9g  sigma_current=%.9g  sigma_next=%.9g\n",
-                    j, Ej, tauj, aexp, sigma_current, sigma_next);
+            const double sigma_next = delta_internal_vars(i, 4 + j);
+// // THROTTLE OUTPUT COMMENT OUT //    
+//             printf("  Prony[%d]: E=%.9g  tau=%.9g  a=exp(-dt/tau)=%.9g  sigma_current=%.9g  sigma_next=%.9g\n",
+//                     j, Ej, tauj, aexp, sigma_current, sigma_next);
+// // THROTTLE OUTPUT COMMENT OUT //
             sigma_sum   += sigma_next;
             sigma_sum_exp += (1.0 - exp(-dt / tau_eff)) * sigma_next;
         }
-        printf("  sigma_sum=%.9g  sigma_sum_exp=%.9g\n", sigma_sum, sigma_sum_exp);
-
+// // THROTTLE OUTPUT COMMENT OUT //
+//         printf("  sigma_sum=%.9g  sigma_sum_exp=%.9g\n", sigma_sum, sigma_sum_exp);
+// // THROTTLE OUTPUT COMMENT OUT //
         // scalar pieces in traction increment formula
         const double deltaE_term  = E_dt * lam_dot * dt;
         const double elastic_term = E_inf * lambda_t + sigma_sum;   
         const double damp_term    = -sigma_sum_exp;
 
-        // inverses (guarded)
-        const double inv_uns_tdt = 1.0 / (u_n_star * ((lambda_tdt > 0.0) ? lambda_tdt : std::numeric_limits<double>::min()));
-        const double inv_uns_t   = 1.0 / (u_n_star * ((lambda_t   > 0.0) ? lambda_t   : std::numeric_limits<double>::min()));
-        const double inv_uts_tdt = 1.0 / (u_t_star * ((lambda_tdt > 0.0) ? lambda_tdt : std::numeric_limits<double>::min()));
-        const double inv_uts_t   = 1.0 / (u_t_star * ((lambda_t   > 0.0) ? lambda_t   : std::numeric_limits<double>::min()));
-        printf("  terms: deltaE_term=%.9g  elastic_term=%.9g  damp_term=%.9g\n", deltaE_term, elastic_term, damp_term);
+        // inverses from production function
+        //const double inv_uns_lambda_tdt = (u_n_star > 0.0 && lambda_tdt > 0.0) ? 1.0 / (u_n_star * lambda_tdt) : 0.0;
+        //const double inv_uns_lambda_t   = (u_n_star > 0.0 && lambda_t   > 0.0) ? 1.0 / (u_n_star * lambda_t  ) : 0.0;
+        //const double inv_uts_lambda_tdt = (u_t_star > 0.0 && lambda_tdt > 0.0) ? 1.0 / (u_t_star * lambda_tdt) : 0.0;
+        //const double inv_uts_lambda_t   = (u_t_star > 0.0 && lambda_t   > 0.0) ? 1.0 / (u_t_star * lambda_t  ) : 0.0;
 
+        // inverses (guarded)
+        //const double inv_uns_tdt = 1.0 / (u_n_star * ((lambda_tdt > 0.0) ? lambda_tdt : std::numeric_limits<double>::min()));
+        //const double inv_uns_t   = 1.0 / (u_n_star * ((lambda_t   > 0.0) ? lambda_t   : std::numeric_limits<double>::min()));
+        //const double inv_uts_tdt = 1.0 / (u_t_star * ((lambda_tdt > 0.0) ? lambda_tdt : std::numeric_limits<double>::min()));
+        //const double inv_uts_t   = 1.0 / (u_t_star * ((lambda_t   > 0.0) ? lambda_t   : std::numeric_limits<double>::min()));
+
+        const double inv_uns_tdt = (u_n_star > 0.0 && lambda_tdt > 0.0) ? 1.0 / (u_n_star * lambda_tdt) : 0.0;
+        const double inv_uns_t   = (u_n_star > 0.0 && lambda_t   > 0.0) ? 1.0 / (u_n_star * lambda_t  ) : 0.0;
+        const double inv_uts_tdt = (u_t_star > 0.0 && lambda_tdt > 0.0) ? 1.0 / (u_t_star * lambda_tdt) : 0.0;
+        const double inv_uts_t   = (u_t_star > 0.0 && lambda_t   > 0.0) ? 1.0 / (u_t_star * lambda_t  ) : 0.0;
+
+// // THROTTLE OUTPUT COMMENT OUT // 
+//         printf("  terms: deltaE_term=%.9g  elastic_term=%.9g  damp_term=%.9g\n", deltaE_term, elastic_term, damp_term);
+// // THROTTLE OUTPUT COMMENT OUT // 
         // traction increment terms breakdown
         const double one_m_a_tdt = (1.0 - alpha_tdt);
         const double one_m_a_t   = (1.0 - alpha_t);
@@ -852,23 +896,32 @@ void cohesive_zones_t::debug_cohesive_zone_var_update(
         const double termT2 = u_tan_mag_tdt * inv_uts_tdt * one_m_a_tdt * elastic_term; // tangential traction elastic term t+dt
         const double termT3 = -u_tan_mag_t   * inv_uts_t   * one_m_a_t   * elastic_term; // tangential traction elastic term t
         const double termT4 = u_tan_mag_tdt * inv_uts_tdt * one_m_a_tdt * damp_term; // tangential traction damping term t+dt
-        printf("  traction_norm terms: [%.9g, %.9g, %.9g, %.9g]\n", termN1, termN2, termN3, termN4);
-        printf("  traction_tan terms: [%.9g, %.9g, %.9g, %.9g]\n", termT1, termT2, termT3, termT4);
-        printf("  Tn(t) (normal traction at time t) = %.9g\n", fabs(termN3));
-        //printf(" normal traction at time t: Tn_t=%.9g\n", termN3);
-        //printf(" normal traction at time t+dt: Tn_tdt=%.9g\n", termN2);
+// // THROTTLE OUTPUT COMMENT OUT // 
+//         printf("  traction_norm terms: [%.9g, %.9g, %.9g, %.9g]\n", termN1, termN2, termN3, termN4);
+//         printf("  traction_tan terms: [%.9g, %.9g, %.9g, %.9g]\n", termT1, termT2, termT3, termT4);
+// // THROTTLE OUTPUT COMMENT OUT // 
+
+// // THROTTLE OUTPUT COMMENT OUT //
+//         printf("  Tn(t) (normal traction at time t) = %.9g\n", fabs(termN3));
+// // THROTTLE OUTPUT COMMENT OUT //
+
+// // THROTTLE OUTPUT COMMENT OUT //
+//         //printf(" normal traction at time t: Tn_t=%.9g\n", termN3);
+//         printf(" normal traction at time t+dt: Tn_tdt=%.9g\n", termN2);
         
 
     
-        //printf("  STORED: lambda_dot_t=%.9g, delta_a=%.9g, traction_norm(normal traction increment)=%.9g, traction_tan(tangential traction increment)=%.9g\n",
-                //delta_internal_vars(i,0), delta_internal_vars(i,1),
-                //delta_internal_vars(i,2), delta_internal_vars(i,3));
+//         printf("  STORED: lambda_dot_t=%.9g, delta_a=%.9g, traction_norm(normal traction increment)=%.9g, traction_tan(tangential traction increment)=%.9g\n",
+//                 delta_internal_vars(i,0), delta_internal_vars(i,1),
+//                 delta_internal_vars(i,2), delta_internal_vars(i,3));
+// // THROTTLE OUTPUT COMMENT OUT // 
 
-        printf("  STORED: lambda_dot_t=%.9g\n", delta_internal_vars(i,0));
-        printf("  STORED: delta_a=%.9g\n", delta_internal_vars(i,1));
-        printf("  STORED: traction_norm(normal traction increment)=%.9g\n", delta_internal_vars(i,2));
-        printf("  STORED: traction_tan(tangential traction increment)=%.9g\n", delta_internal_vars(i,3));
-
+// // THROTTLE OUTPUT COMMENT OUT // 
+//         printf("  STORED: lambda_dot_t=%.9g\n", delta_internal_vars(i,0));
+//         printf("  STORED: delta_a=%.9g\n", delta_internal_vars(i,1));
+//         printf("  STORED: traction_norm(normal increment)=%.9g\n", delta_internal_vars(i,2));
+//         printf("  STORED: traction_tan(tangential increment)=%.9g\n", delta_internal_vars(i,3));
+// // THROTTLE OUTPUT COMMENT OUT // 
         //if (num_prony_terms > 0) {
 //
          //   printf("  STORED : ");
@@ -877,12 +930,157 @@ void cohesive_zones_t::debug_cohesive_zone_var_update(
         //    }
         //    printf("]\n");
 
-       // }
+        // uncomment below for when using excel for alpha, lambda, traction comparison 
 
+// // THROTTLE OUTPUT COMMENT OUT //
+//        // FOR CONSTANT RATE OF OPENING BEFORE COHESIVE ZONE LOADS TEST:
+//        //CSV STYLE: time, alpha, lambda_t, Tn_t
+//        if (i == 0){
+//        printf("%.9e, %.9e, %.9e, %.9e\n",
+//               time_value,
+//               alpha_t,
+//               lambda_t,
+//               fabs(termN3));
+//        }
+// // THROTTLE OUTPUT COMMENT OUT //
+
+// THROTTLE OUTPUT COMMENT OUT //
+       // FOR CONSTANT RATE OF OPENING AFTER COHESIVE ZONE LOADS CONTRIBUTION TEST:
+       //CSV STYLE: time, alpha, lambda_t, Tn_t
+       if (i == 0){
+           const double Tn_t = internal_vars(i,2); // traction normal at time t after cohesive_zone_loads contribution
+           const double dTn   = delta_internal_vars(i,2); // traction normal increment after cohesive_zone_loads contribution
+           const double Tn_tdt = Tn_t + dTn; // traction normal at time t+dt after cohesive_zone_loads contribution
+        printf("%.9e, %.9e, %.9e, %.9e\n",
+                 time_value,
+                 alpha_t,
+                 lambda_t,
+                 fabs(termN3));
+       }
+// THROTTLE OUTPUT COMMENT OUT //
     }
-    printf("\n================ end cohesive_zone_var_update debug ================\n");
+// // THROTTLE OUTPUT COMMENT OUT //
+//     printf("\n================ end cohesive_zone_var_update debug ================\n");
+// // THROTTLE OUTPUT COMMENT OUT //
 }    
 // ======================== END cohesive_zone_var_update debug ======================== 
+
+// ======================== cohesive_zone_loads debug ========================
+KOKKOS_FUNCTION
+void cohesive_zones_t::debug_cohesive_zone_loads(
+    Mesh_t &mesh,
+    const DCArrayKokkos<double> &pos,
+    const CArrayKokkos<size_t> &overlapping_node_gids,
+    const CArrayKokkos<double> &cohesive_zone_orientation,
+    //const CArrayKokkos<int> &cz_info,
+    //const size_t max_elem_in_cohesive_zone,
+    const ViewCArrayKokkos<double> &internal_vars,
+    const ViewCArrayKokkos<double> &delta_internal_vars,
+    const CArrayKokkos<double> &pair_area,
+    const ViewCArrayKokkos<double> &F_cz
+)
+{
+
+    // // local debug arrays
+    // CArrayKokkos<double> pair_area(overlapping_node_gids.dims(0), "cz_pair_area_debug");
+    // pair_area.set_values(0.0);
+
+    // CArrayKokkos<double> F_cz(3 * mesh.num_nodes, "cz_nodal_forces_debug");
+    // F_cz.set_values(0.0);
+    // ViewCArrayKokkos<double> F_cz_view(&F_cz(0), 3 * mesh.num_nodes);
+
+    // // 1:1 construction of cohesive_zone_loads() for debugging
+    // cohesive_zone_loads(
+    //     mesh,
+    //     pos,
+    //     overlapping_node_gids,
+    //     cohesive_zone_orientation,
+    //     cz_info,
+    //     max_elem_in_cohesive_zone,
+    //     internal_vars,
+    //     delta_internal_vars,
+    //     pair_area,
+    //     F_cz_view
+    // );
+// // THROTTLE OUTPUT COMMENT OUT //
+//     printf("\n================= debug_cohesive_zone_loads =================\n");
+//     printf(" number of cohesive zone node pairs = %zu\n", overlapping_node_gids.dims(0));
+//     //printf(" num_nodes = %zu\n", mesh.num_nodes);
+// // THROTTLE OUTPUT COMMENT OUT //  
+    for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
+        if (i != 0) continue; // ONLY DO FIRST PAIR FOR TEST AGAINST TIME
+
+        const size_t gidA = overlapping_node_gids(i, 0);
+        const size_t gidB = overlapping_node_gids(i, 1);
+
+        // traction normal at time t
+        const double Tn_t = internal_vars(i, 2);
+
+        // traction normal increment (dt)
+        const double dTn = delta_internal_vars(i, 2);
+
+        // normal traction at t+dt (traction normal at time t plus increment)
+        const double Tn_tdt = Tn_t + dTn;
+
+        // traction tangential at time t
+        const double Tt_t = internal_vars(i, 3);
+
+        // traction tangential increment (dt)
+        const double dTt = delta_internal_vars(i, 3);
+
+        // traction tangential at t+dt (traction tangential at time t plus increment)
+        const double Tt_tdt = Tt_t + dTt;
+
+        // normal traction increment at t+dt
+        //const double Tn_tdt = internal_vars(i,2) + delta_internal_vars(i,2);
+
+        // tangential traction increment at t+dt
+        //const double Tt_tdt = internal_vars(i,3) + delta_internal_vars(i,3);
+
+        // orientation at t+dt
+        const double nx = cohesive_zone_orientation(i, 3);
+        const double ny = cohesive_zone_orientation(i, 4);
+        const double nz = cohesive_zone_orientation(i, 5);
+
+        // effective cohesive zone node pair area
+        const double Aeff = pair_area(i);
+
+        // forces on the cohesive zone node pair
+        const double FxA = F_cz(3*gidA    );
+        const double FyA = F_cz(3*gidA + 1);
+        const double FzA = F_cz(3*gidA + 2);
+
+        const double FxB = F_cz(3*gidB    );
+        const double FyB = F_cz(3*gidB + 1);
+        const double FzB = F_cz(3*gidB + 2);
+
+        // checking sum of the forces (should be equal and opposite == 0)
+        const double Fsum_x = FxA + FxB;
+        const double Fsum_y = FyA + FyB;
+        const double Fsum_z = FzA + FzB;
+// // THROTTLE OUTPUT COMMENT OUT //
+//         printf("pair %zu: (gidA=%zu, gidB=%zu)\n", i, gidA, gidB);
+//         printf("  area_total = %.15e\n", Aeff);
+//         printf("  Tn_t   = %+ .6e,  dTn   = %+ .6e,  Tn_tdt = %+ .6e\n",
+//                Tn_t, dTn, Tn_tdt);
+//         printf("  Tt_t   = %+ .6e,  dTt   = %+ .6e,  Tt_tdt = %+ .6e\n",
+//                Tt_t, dTt, Tt_tdt);
+//        //printf("  Tn_tdt = %+ .6e,  Tt_tdt = %+ .6e\n", Tn_tdt, Tt_tdt);        
+//         printf("  n_tdt  = ( %+ .6e, %+ .6e, %+ .6e )\n",
+//                nx, ny, nz);
+//         printf("  F_A    = ( %+ .6e, %+ .6e, %+ .6e )\n",
+//                FxA, FyA, FzA);
+//         printf("  F_B    = ( %+ .6e, %+ .6e, %+ .6e )\n",
+//                FxB, FyB, FzB);
+//         printf("  F_A + F_B = ( %+ .6e, %+ .6e, %+ .6e )  [should == 0]\n\n",
+//                Fsum_x, Fsum_y, Fsum_z);
+// // THROTTLE OUTPUT COMMENT OUT //               
+    }
+// // THROTTLE OUTPUT COMMENT OUT //
+//     printf("==============================================================\n\n");
+// // THROTTLE OUTPUT COMMENT OUT //
+}
+// ======================== END cohesive_zone_loads debug ========================
 
 // **************************************************************** Fierro Conversion **************************************************************** 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1620,43 +1818,6 @@ void cohesive_zones_t::oriented(
 
 // **************************************************************** Fierro Conversion **************************************************************** 
 
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
-// // calculates the opening of the crack in global coordinates and then maps it to local coordinates using normal vectors in
-// // vczorient array
-// // inputs: nodes, ut, us, vczorient, vczconn, nvcz
-// // output: ulocvcz (4 columns: unt untdt utt utdt)
-// void ucmap(CArray<double>& nodes, CArray<double>& ut, CArray<double>& us, CArray<double>& vczorient, CArray<int>& vczconn, int nvcz, CArray<double>& ulocvcz) {
-//     // intermediate variables
-//     auto uglobt = CArray <double> (3);
-//     auto uglobtdt = CArray <double> (3);
-//     double umagt = 0;
-//     double umagtdt = 0;
-    
-//     // looping through each vcz
-//     for (int i = 0; i < nvcz; i++) {
-//         // calculating displacement between vcz nodes in global frame
-//         uglobt(0) = (nodes(vczconn(i,1),0) + ut(3*vczconn(i,1))) - (nodes(vczconn(i,0),0) + ut(3*vczconn(i,0)));
-//         uglobt(1) = (nodes(vczconn(i,1),1) + ut(3*vczconn(i,1)+1)) - (nodes(vczconn(i,0),1) + ut(3*vczconn(i,0)+1));
-//         uglobt(2) = (nodes(vczconn(i,1),2) + ut(3*vczconn(i,1)+2)) - (nodes(vczconn(i,0),2) + ut(3*vczconn(i,0)+2));
-//         uglobtdt(0) = (nodes(vczconn(i,1),0) + ut(3*vczconn(i,1)) + us(3*vczconn(i,1))) - (nodes(vczconn(i,0),0) + ut(3*vczconn(i,0)) + us(3*vczconn(i,0)));
-//         uglobtdt(1) = (nodes(vczconn(i,1),1) + ut(3*vczconn(i,1)+1) + us(3*vczconn(i,1)+1)) - (nodes(vczconn(i,0),1) + ut(3*vczconn(i,0)+1) + us(3*vczconn(i,0)+1));
-//         uglobtdt(2) = (nodes(vczconn(i,1),2) + ut(3*vczconn(i,1)+2) + us(3*vczconn(i,1)+2)) - (nodes(vczconn(i,0),2) + ut(3*vczconn(i,0)+2) + us(3*vczconn(i,0)+2));
-        
-//         // dotting with normal vector to get normal component of displacement
-//         ulocvcz(i,0) = uglobt(0)*vczorient(i,0) + uglobt(1)*vczorient(i,1) + uglobt(2)*vczorient(i,2);
-//         ulocvcz(i,2) = uglobtdt(0)*vczorient(i,3) + uglobtdt(1)*vczorient(i,4) + uglobtdt(2)*vczorient(i,5);
-
-//         // calcuting magnitude of global u vectors
-//         umagt = sqrt(uglobt(0)*uglobt(0) + uglobt(1)*uglobt(1) + uglobt(2)*uglobt(2));
-//         umagtdt = sqrt(uglobtdt(0)*uglobtdt(0) + uglobtdt(1)*uglobtdt(1) + uglobtdt(2)*uglobtdt(2));
-        
-//         // calculating tangent component of displacement assuming that us* == ur*
-//         ulocvcz(i,1) = sqrt(abs(umagt*umagt - ulocvcz(i,0)*ulocvcz(i,0)));
-//         ulocvcz(i,3) = sqrt(abs(umagtdt*umagtdt - ulocvcz(i,2)*ulocvcz(i,2)));
-//     }
-    
-// }
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 
 // **************************************************************** Fierro Conversion **************************************************************** 
 // variable map:
@@ -1746,94 +1907,12 @@ void cohesive_zones_t::ucmap(
 
 // **************************************************************** Fierro Conversion **************************************************************** 
 
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
-// // This function calculates delta_delta_internal variables (ddinvars)
-// // Inputs: cohezive zone local displacments (uvcz [un(t), ut(t), un(t)+dun, ut(t)+dut]x3), time step size (delt), cohesive zone properties (Einf, a1, n, Eandrhom, uns, uts),
-// // NPT (number of prony terms), nvcz (number of cohesive zones), internal variables [lambdadot(t-delt) , alpha , <tn,tt> , sig_1 through sig_m] (invars),
-// // Output: delta_internal variables [lambdadot(t), d_alpha, d_<tn,tt>, d_sig_1 through d_sig_m]xNCZ (dinvars)
-// void internalvars(CArray<double> uvcz, double delt, double Einf, double a1, double n, CArray<double> Eandrhom, double uns, double uts, int npt, int nvcz, CArray<double> invars, CArray<double> dinvars) {
-    
-//     // Initializing variables for calculations
-//     double lambdadt = 0;
-//     double lambdat = 0;
-//     double dadt = 0;
-//     double Edelt = 0;
-//     double sumsig = 0;
-//     double sumsigexp = 0;
-
-//     // Calculating E(delt) NOTE: This is a redundant calculation so long as delt is uniform across time steps that ideally should be moved elsewhere to avoid repeating it unless delt is made to vary across steps
-//     Edelt += Einf;
-//     for (int i = 0; i < npt; i++) {
-//         Edelt += Eandrhom(i,0) * Eandrhom(i,1) * (1 - exp(-delt / Eandrhom(i,1))) / delt;
-//     }
-
-//     // Looping over each unique pair
-//     for (int i = 0; i < nvcz; i++) {
-
-//         // Calculating the lambda(t)+dlambda and lambda(t) values
-//         lambdadt = sqrt((uvcz(i,2) / uns) * (uvcz(i,2) / uns) + (uvcz(i,3) / uts) * (uvcz(i,3) / uts));
-//         lambdat = sqrt((uvcz(i,0) / uns) * (uvcz(i,0) / uns) + (uvcz(i,1) / uts) * (uvcz(i,1) / uts));
-
-//         // Initializing and calculating lambda rate for current load step (lambdadot(t))
-//         dinvars(i,0) = (lambdadt - lambdat) / delt;
-
-//         // Calculating dalpha/dt for current load step
-//         if (dinvars(i,0) > 0) {
-//             dadt = a1 * pow(((lambdadt + lambdat) / 2), n);
-//         }
-//         else {
-//             dadt = 0;
-//         }
-
-//         // Preventing divide by zero errors in final calculation: the value is set equal to the minimum possible positive value that can be represented by a double in C++
-//         if (lambdat == 0) {
-//             lambdat = std::numeric_limits<double>::min();
-//         }
-//         if (lambdadt == 0) {
-//             lambdadt = std::numeric_limits<double>::min();
-//         }
-        
-//         // Updating dalpha
-//         dinvars(i,1) = dadt * delt;
-
-//         // Updating dsigma values for prony terms
-//         for (int j = 0; j < npt; j++) {
-//             dinvars(i,4 + j) = exp(-delt / Eandrhom(j,1)) * invars(i,4 + j) + Eandrhom(j,0) * Eandrhom(j,1) * invars(i,0) * (1 - exp(-delt / Eandrhom(j,1)));
-//         }
-
-//         // Resetting sumsig and sumsigexp on each iteration of the loop prior to calculating them
-//         sumsig = 0;
-//         sumsigexp = 0;
-
-//         // Calculating sigma sums and sigma product sums (the deltaE term in the residual traction) in the residual traction terms
-//         for (int j = 0; j < npt; j++) {
-//             sumsig += dinvars(i,4 + j);
-//             sumsigexp += (1 - exp(-delt / Eandrhom(j,1))) * dinvars(i,4 + j);
-//         }
-
-//         // Enforcing alpha domain limitations
-//         if ((invars(i,1) + dinvars(i,1)) > 1) {
-//             dinvars(i,1) = 1 - invars(i,1);
-//         }
-
-//         // Updating dtraction values for each cohesive zone along the edge
-//         dinvars(i,2) = uvcz(i,2) / (uns * lambdadt) * (1 - (invars(i,1) + dinvars(i,1))) * Edelt * dinvars(i,0) * delt
-//             + uvcz(i,2) / (uns * lambdadt) * (1 - (invars(i,1) + dinvars(i,1))) * (Einf * lambdat + sumsig)
-//             - uvcz(i,0) / (uns * lambdat) * (1 - (invars(i,1))) * (Einf * lambdat + sumsig)
-//             + uvcz(i,2) / (uns * lambdadt) * (1 - (invars(i,1) + dinvars(i,1))) * -sumsigexp;
-//         dinvars(i,3) = uvcz(i,3) / (uts * lambdadt) * (1 - (invars(i,1) + dinvars(i,1))) * Edelt * dinvars(i,0) * delt
-//             + uvcz(i,3) / (uts * lambdadt) * (1 - (invars(i,1) + dinvars(i,1))) * (Einf * lambdat + sumsig)
-//             - uvcz(i,1) / (uts * lambdat) * (1 - (invars(i,1))) * (Einf * lambdat + sumsig)
-//             + uvcz(i,3) / (uts * lambdadt) * (1 - (invars(i,1) + dinvars(i,1))) * -sumsigexp;
-//     }
-// }
-// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
-
 // **************************************************************** Fierro Conversion **************************************************************** 
 KOKKOS_FUNCTION
 void cohesive_zones_t::cohesive_zone_var_update(
     const CArrayKokkos<double>& local_opening,
     const double dt,
+    const double time_value, // ADDED IN FOR DEBUGGING
     const CArrayKokkos<size_t>& overlapping_node_gids,
     const RaggedRightArrayKokkos<double>& stress_bc_global_vars, // BC parameters per boundary set for fractureStressBC
     const int bdy_set,
@@ -1927,11 +2006,17 @@ void cohesive_zones_t::cohesive_zone_var_update(
         const double elastic_term = E_inf * lambda_t + sigma_sum;  
         const double damp_term    = -sigma_sum_exp;
 
+        // // comment out (causing div by zero issues: nan in traction)
+        // const double inv_uns_lambda_tdt = 1.0 / (u_n_star * ((lambda_tdt>0.0)?lambda_tdt:std::numeric_limits<double>::min())); // avoid div by zero
+        // const double inv_uns_lambda_t   = 1.0 / (u_n_star * ((lambda_t >0.0)?lambda_t :std::numeric_limits<double>::min()));
+        // const double inv_uts_lambda_tdt = 1.0 / (u_t_star * ((lambda_tdt>0.0)?lambda_tdt:std::numeric_limits<double>::min()));
+        // const double inv_uts_lambda_t   = 1.0 / (u_t_star * ((lambda_t >0.0)?lambda_t :std::numeric_limits<double>::min()));
 
-        const double inv_uns_lambda_tdt = 1.0 / (u_n_star * ((lambda_tdt>0.0)?lambda_tdt:std::numeric_limits<double>::min())); // avoid div by zero
-        const double inv_uns_lambda_t   = 1.0 / (u_n_star * ((lambda_t >0.0)?lambda_t :std::numeric_limits<double>::min()));
-        const double inv_uts_lambda_tdt = 1.0 / (u_t_star * ((lambda_tdt>0.0)?lambda_tdt:std::numeric_limits<double>::min()));
-        const double inv_uts_lambda_t   = 1.0 / (u_t_star * ((lambda_t >0.0)?lambda_t :std::numeric_limits<double>::min()));
+        // comment out 12-22 (uncomment when done)
+        const double inv_uns_lambda_tdt = (u_n_star > 0.0 && lambda_tdt > 0.0) ? 1.0 / (u_n_star * lambda_tdt) : 0.0; // if lambda = 0, set inv to 0 to avoid div by zero (lambda == 0, traction == 0)
+        const double inv_uns_lambda_t   = (u_n_star > 0.0 && lambda_t   > 0.0) ? 1.0 / (u_n_star * lambda_t  ) : 0.0;
+        const double inv_uts_lambda_tdt = (u_t_star > 0.0 && lambda_tdt > 0.0) ? 1.0 / (u_t_star * lambda_tdt) : 0.0;
+        const double inv_uts_lambda_t   = (u_t_star > 0.0 && lambda_t   > 0.0) ? 1.0 / (u_t_star * lambda_t  ) : 0.0;
 
 
 
@@ -2164,8 +2249,248 @@ void cohesive_zones_t::cohesive_zone_var_update(
 //                 Fvcz(3*vczconn(i,1)) -= Fn(0) + Ft(0);
 //                 Fvcz(3*vczconn(i,1)+1) -= Fn(1) + Ft(1);
 //                 Fvcz(3*vczconn(i,1)+2) -= Fn(2) + Ft(2);
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 
+// **************************************************************** Fierro Conversion **************************************************************** 
+// flow of Gavin's function:
+// 1. loop over cohesive zones
+//      2. loop over elements connected to cohesive zones
+//      3. find gauss points to loop through based on patch number
+//      4. jacobian calculations for the patch area  
+//      5. cross product of jacobiaan on surface to find area
+//      6. calculating normal force vector
+//      7. calculating tangent vector
 
+KOKKOS_FUNCTION
+void cohesive_zones_t::cohesive_zone_loads(
+    Mesh_t &mesh,
+    const DCArrayKokkos<double> &pos,
+    const CArrayKokkos<size_t> &overlapping_node_gids,
+    const CArrayKokkos<double> &cohesive_zone_orientation,
+    const CArrayKokkos<int> &cz_info,
+    const size_t max_elem_in_cohesive_zone,
+    const ViewCArrayKokkos<double> &internal_vars,
+    const ViewCArrayKokkos<double> &delta_internal_vars,
+    CArrayKokkos<double> &pair_area,
+    const ViewCArrayKokkos<double> &F_cz  
+)
+{
+    // zero out the cohesive zone force vector
+    for (size_t a = 0; a < F_cz.dims(0); a++){
+        F_cz(a) = 0.0;
+    }
+
+    // temp views for geometry (temp storage to return geometry from compute_face_geometry)
+    // plain C array wrapped in ViewCArrayKokkos instead of allocating a new CArrayKokkos each time
+    double nA_buf[3], rA_buf[3], sA_buf[3], cA_buf[3];
+    ViewCArrayKokkos<double> nA(&nA_buf[0],3); // face normal vector
+    ViewCArrayKokkos<double> rA(&rA_buf[0],3); // orthogonal vector in face plane
+    ViewCArrayKokkos<double> sA(&sA_buf[0],3); // orthogonal vector in face plane
+    ViewCArrayKokkos<double> cA(&cA_buf[0],3); // face centroid
+
+    // looping over cohesive zone node pairs 
+    for (size_t i = 0; i < overlapping_node_gids.dims(0); i++){
+
+        // global node IDs for the cohesive zone node pairs
+        const size_t gidA = overlapping_node_gids(i,0);
+        const size_t gidB = overlapping_node_gids(i,1);
+
+        // tractions at t+dt (normal and tangential)
+        const double Tn_tdt = internal_vars(i,2) + delta_internal_vars(i,2);  // normal traction
+        const double Tt_tdt = internal_vars(i,3) + delta_internal_vars(i,3);  // tangential traction
+
+        // normal direction from cohesive zone orientation
+        const double nx = cohesive_zone_orientation(i,3);
+        const double ny = cohesive_zone_orientation(i,4);
+        const double nz = cohesive_zone_orientation(i,5);
+
+        // effective area for this cohesive zone node pair
+        double area_total = 0.0;
+
+        // from cohesive zone info, loop over elements connected to this cohesive zone node pair
+        for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
+            const int eA = cz_info(i, 0*max_elem_in_cohesive_zone + j); // A elem id
+            const int fA = cz_info(i, 2*max_elem_in_cohesive_zone + j); // A face id
+
+            // guard: if no element/face, skip
+            if (eA < 0 || fA < 0) continue;
+
+            // gp = 1/sqrt(3) for 2-point gauss quadrature for integrating over a quad HEX8 face
+            const double gp = 0.5773502691896257;
+
+            // building 4 GPs on the patch fA (Fierro patch numbering)
+            double gps[4][3]; // gps[k][0] = xi
+                              // gps[k][1] = eta
+                              // gps[k][2] = zeta
+
+            switch (fA) {
+            case 0: // xi-minus face
+                gps[0][0] = -1.0; gps[0][1] = -gp; gps[0][2] = -gp;
+                gps[1][0] = -1.0; gps[1][1] =  gp; gps[1][2] = -gp;
+                gps[2][0] = -1.0; gps[2][1] = -gp; gps[2][2] =  gp;
+                gps[3][0] = -1.0; gps[3][1] =  gp; gps[3][2] =  gp;
+                break;
+            case 1: // xi-plus face
+                gps[0][0] =  1.0; gps[0][1] = -gp; gps[0][2] = -gp;
+                gps[1][0] =  1.0; gps[1][1] =  gp; gps[1][2] = -gp;
+                gps[2][0] =  1.0; gps[2][1] = -gp; gps[2][2] =  gp;
+                gps[3][0] =  1.0; gps[3][1] =  gp; gps[3][2] =  gp;
+                break;
+            case 2: // eta-minus face
+                gps[0][1] = -1.0; gps[0][0] = -gp; gps[0][2] = -gp;
+                gps[1][1] = -1.0; gps[1][0] =  gp; gps[1][2] = -gp;
+                gps[2][1] = -1.0; gps[2][0] = -gp; gps[2][2] =  gp;
+                gps[3][1] = -1.0; gps[3][0] =  gp; gps[3][2] =  gp;
+                break;
+            case 3: // eta-plus face
+                gps[0][1] =  1.0; gps[0][0] = -gp; gps[0][2] = -gp;
+                gps[1][1] =  1.0; gps[1][0] =  gp; gps[1][2] = -gp;
+                gps[2][1] =  1.0; gps[2][0] = -gp; gps[2][2] =  gp;
+                gps[3][1] =  1.0; gps[3][0] =  gp; gps[3][2] =  gp;
+                break;
+            case 4: // zeta-minus face
+                gps[0][2] = -1.0; gps[0][0] = -gp; gps[0][1] = -gp;
+                gps[1][2] = -1.0; gps[1][0] =  gp; gps[1][1] = -gp;
+                gps[2][2] = -1.0; gps[2][0] = -gp; gps[2][1] =  gp;
+                gps[3][2] = -1.0; gps[3][0] =  gp; gps[3][1] =  gp;
+                break;
+            case 5: // zeta-plus face
+                gps[0][2] =  1.0; gps[0][0] = -gp; gps[0][1] = -gp;
+                gps[1][2] =  1.0; gps[1][0] =  gp; gps[1][1] = -gp;
+                gps[2][2] =  1.0; gps[2][0] = -gp; gps[2][1] =  gp;
+                gps[3][2] =  1.0; gps[3][0] =  gp; gps[3][1] =  gp;
+                break;
+            default:
+                // bad face id
+                break;
+            }
+
+            // local array for element nodal coords (pos) 8 nodes x 3 coords
+            double x[8][3];
+            for (int a = 0; a < 8; ++a) {
+                // element connectivity
+                x[a][0] = pos(mesh.nodes_in_elem((size_t)eA, (size_t)a),0);
+                x[a][1] = pos(mesh.nodes_in_elem((size_t)eA, (size_t)a),1);
+                x[a][2] = pos(mesh.nodes_in_elem((size_t)eA, (size_t)a),2);
+            }
+
+            // signs at each node for Fierro HEX8 ordering:
+            // node 0(-,-,-) node 1(+,-,-) node 2(-,+,-) node 3(+,+,-) node 4(-,-,+) node 5(+,-,+) node 6(-,+,+) node 7(+,+,+)
+            const double sign_xi[8] = {-1, +1, -1, +1, -1, +1, -1, +1};
+            const double sign_eta[8] = {-1, -1, +1, +1, -1, -1, +1, +1};
+            const double sign_zeta[8] = {-1, -1, -1, -1, +1, +1, +1, +1};
+
+            double area_face = 0.0;
+
+            // loop over 4 surface gauss points to compute area
+            for (int k = 0; k < 4; ++k) {
+                const double xi   = gps[k][0];
+                const double eta  = gps[k][1];
+                const double zeta = gps[k][2];
+
+                // initialize jacobian to zero
+                // jacobian J(m,o): m=0(xi),1(eta),2(zeta); o=0(x),1(y),2(z)
+                double J[3][3] = {{0,0,0},{0,0,0},{0,0,0}};
+
+                // compute jacobian by summing over element nodes
+                for (int a = 0; a < 8; ++a) {
+                    // shape function derivatives
+                    const double dN_dxi   = 0.125 * sign_xi[a] * (1.0 + sign_eta[a]*eta)  * (1.0 + sign_zeta[a]*zeta);
+                    const double dN_deta  = 0.125 * sign_eta[a] * (1.0 + sign_xi[a]*xi)   * (1.0 + sign_zeta[a]*zeta);
+                    const double dN_dzeta = 0.125 * sign_zeta[a] * (1.0 + sign_xi[a]*xi)   * (1.0 + sign_eta[a]*eta);
+
+                    for (int o = 0; o < 3; ++o) {
+                    J[0][o] += x[a][o] * dN_dxi;
+                    J[1][o] += x[a][o] * dN_deta;
+                    J[2][o] += x[a][o] * dN_dzeta;
+                    }
+                }
+
+                // choosing the two surface tangents (rows of J) based on which param is fixed
+                int a_row = 0, b_row = 1;
+                if (fA == 0 || fA == 1) { a_row = 1; b_row = 2; } // xi fixed = eta,zeta
+                if (fA == 2 || fA == 3) { a_row = 0; b_row = 2; } // eta fixed = xi,zeta
+                if (fA == 4 || fA == 5) { a_row = 0; b_row = 1; } // zeta fixed = xi,eta
+
+                // extract tangent vectors 1 and 2 (tangent vectors on the face)
+                const double tan_1_x = J[a_row][0], tan_1_y = J[a_row][1], tan_1_z = J[a_row][2];
+                const double tan_2_x = J[b_row][0], tan_2_y = J[b_row][1], tan_2_z = J[b_row][2];
+
+                // crossing tangent vectors to get normal vector (normal to the surface at that gauss point)
+                const double cross_x = tan_1_y*tan_2_z - tan_1_z*tan_2_y;
+                const double cross_y = tan_1_z*tan_2_x - tan_1_x*tan_2_z;
+                const double cross_z = tan_1_x*tan_2_y - tan_1_y*tan_2_x;
+
+                // are contribution from this gauss point
+                area_face += sqrt(cross_x*cross_x + cross_y*cross_y + cross_z*cross_z); 
+            }
+
+            // area lumping because of 4 corners of face (.25 each corner)
+            area_total += 0.25 * area_face;
+
+        }
+
+        // store effective area for this cohesive zone node pair (debugging)
+        pair_area(i) = area_total;
+
+        // guard: if there are no faces contributing to area, skip
+        if (area_total <= 0.0) continue;
+
+        // normal force vectors
+        double Fn_x = Tn_tdt * area_total * nx;
+        double Fn_y = Tn_tdt * area_total * ny;
+        double Fn_z = Tn_tdt * area_total * nz;
+
+        // tangential unit vector for B-A seperation
+        const double dx = pos(gidB,0) - pos(gidA,0);
+        const double dy = pos(gidB,1) - pos(gidA,1);
+        const double dz = pos(gidB,2) - pos(gidA,2);
+
+        // component of sepration in normal direction
+        const double udotn = dx*nx + dy*ny + dz*nz;
+
+        // project out normal component to get tangential component
+        double tx = dx - udotn * nx;
+        double ty = dy - udotn * ny;
+        double tz = dz - udotn * nz;
+
+        // normalize tangential vector
+        double tmag = sqrt(tx*tx + ty*ty + tz*tz);
+
+        // if tmag > 0 divide to get unit vector
+        if (tmag > 0.0) {
+            tx /= tmag;
+            ty /= tmag;
+            tz /= tmag;
+
+        } else {
+            // if no tangential opening, just skip tangential traction
+            tx = ty = tz = 0.0;
+        }
+
+        // tangential force vectors
+        double Ft_x = Tt_tdt * area_total * tx;
+        double Ft_y = Tt_tdt * area_total * ty;
+        double Ft_z = Tt_tdt * area_total * tz;
+
+        // total cohesive zone force on the pair (equal and opposite)
+        const double Fx = Fn_x + Ft_x;
+        const double Fy = Fn_y + Ft_y;
+        const double Fz = Fn_z + Ft_z;
+
+        // global scale; apply as equal and opposite nodal forces
+        F_cz(3*gidA    ) += Fx;
+        F_cz(3*gidA + 1) += Fy;
+        F_cz(3*gidA + 2) += Fz;
+        F_cz(3*gidB    ) -= Fx;
+        F_cz(3*gidB + 1) -= Fy;
+        F_cz(3*gidB + 2) -= Fz;
+    }
+}
+
+// **************************************************************** Fierro Conversion **************************************************************** 
+
+// **************************************************************** FROM GAVIN'S CODE **************************************************************** 
 // DO NOT WORRY ABOUT THIS THIS IS FOR QUASI STIFFNESS CONTRIBUTION
 //                 // calculating rotation angles of truss element
 //                 // if u_x is zero it causes divide by zero errors

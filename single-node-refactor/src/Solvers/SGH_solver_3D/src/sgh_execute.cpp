@@ -215,14 +215,19 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         dt = min_dt_calc;  // save this dt time step
 
-        if (cycle == 0) {
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
-        }
-        // print time step every 10 cycles
-        else if (cycle % 20 == 0) {
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
-        } // end if
-
+// // THROTTLE OUTPUT COMMENT OUT
+//     printf("cycle = %zu, time = %.9e, dt = %.9e\n",
+//            cycle, time_value, dt);
+// // THROTTLE OUTPUT COMMENT OUT
+// THROTTLE OUTPUT COMMENT OUT //
+//         if (cycle == 0) {
+//             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+//         }
+//         // print time step every 10 cycles
+//         else if (cycle % 20 == 0) {
+//             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+//         } // end if
+// // THROTTLE OUTPUT COMMENT OUT //
 
         // ---------------------------------------------------------------------
         //  integrate the solution forward to t(n+1) via Runge Kutta (RK) method
@@ -331,20 +336,190 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             State.node.coords,
                             time_value);
 
-
-
             // call body forces routine
+            if (doing_fracture) {
+
+                const int fracture_bdy_set = BoundaryConditions.fracture_bc_id;
+                    if (fracture_bdy_set >= 0) {
+
+                    const auto &BC     = BoundaryConditions;
+                    const size_t npairs = cohesive_zones_bank.overlapping_node_gids.dims(0);
+
+                    if (npairs > 0) {
+
+                        const int num_prony_terms =
+                            static_cast<int>(BC.stress_bc_global_vars(
+                                    fracture_bdy_set,
+                                    fractureStressBC::BCVars::num_prony_terms) + 0.5);
+                        const int width = 4 + num_prony_terms;
+
+                        // ensure persistent storage for cohesive internal vars
+                        if (cohesive_zones_bank.internal_vars.dims(0) != npairs ||
+                            cohesive_zones_bank.internal_vars.dims(1) != width) {
+                            cohesive_zones_bank.internal_vars =
+                                CArrayKokkos<double>(npairs, width, "cz_internal_vars");
+                            cohesive_zones_bank.internal_vars.set_values(0.0);
+                        }
+
+                        if (cohesive_zones_bank.delta_internal_vars.dims(0) != npairs ||
+                            cohesive_zones_bank.delta_internal_vars.dims(1) != width) {
+                            cohesive_zones_bank.delta_internal_vars =
+                                CArrayKokkos<double>(npairs, width, "cz_delta_internal_vars");
+                            cohesive_zones_bank.delta_internal_vars.set_values(0.0);
+                        }
+
+                        ViewCArrayKokkos<double> cz_internal_vars_view(
+                            &cohesive_zones_bank.internal_vars(0,0), npairs, width);
+                        ViewCArrayKokkos<double> cz_delta_internal_vars_view(
+                            &cohesive_zones_bank.delta_internal_vars(0,0), npairs, width);
+
+                        // reset delta internal vars to zero each RK stage
+                        cohesive_zones_bank.delta_internal_vars.set_values(0.0);
+
+                        // 1) orientation (normal at t and t+dt)
+                        const double tol = 1.0e-8;
+                        CArrayKokkos<double> cz_orientation(
+                            npairs, 6, "cz_orientation");
+                        cz_orientation.set_values(0.0);
+
+                        cohesive_zones_bank.oriented(
+                            mesh,
+                            State.node.coords, // current config
+                            cohesive_zones_bank.overlapping_node_gids,
+                            cohesive_zones_bank.cz_info,
+                            cohesive_zones_bank.max_elem_in_cohesive_zone,
+                            tol,
+                            cz_orientation);
             
-            // this is where there will be a snippet to apply fracture forces to boundary surfs
-            // do not work on this section (forces of this section) until ready to work with the vcz update function
-            //if (doing_fracture) 
-            //{
-           //     cohesive_zones_bank.update_nodes(mesh, State);
-           // }
-            //    if (time_start == time_value) {
+                        // calling debug_oriented
+                        cohesive_zones_bank.debug_oriented(
+                            mesh,
+                            State, 
+                            cohesive_zones_bank.overlapping_node_gids,
+                            cohesive_zones_bank.cz_info,
+                            cohesive_zones_bank.max_elem_in_cohesive_zone,
+                            tol);
+
+                        // 2) local openings (un_t, utan_t, un_tdt, utan_tdt)
+                        CArrayKokkos<double> local_opening(
+                            npairs, 4, "cz_local_opening");
+                        local_opening.set_values(0.0);
+
+                        cohesive_zones_bank.ucmap(
+                            State.node.coords,
+                            State.node.vel,
+                            cz_orientation,
+                            cohesive_zones_bank.overlapping_node_gids,
+                            dt,
+                            local_opening);
+            
+                        // calling debug_ucmap
+                        cohesive_zones_bank.debug_ucmap(
+                            State.node.coords,
+                            State.node.vel,
+                            dt,
+                            cz_orientation,
+                            cohesive_zones_bank.overlapping_node_gids,
+                            local_opening);     
+
+                        // 3) cohesive law: update internal_vars + compute increments
+                        cohesive_zones_bank.cohesive_zone_var_update(
+                            local_opening,
+                            dt,
+                            time_value,
+                            cohesive_zones_bank.overlapping_node_gids,
+                            BC.stress_bc_global_vars,
+                            fracture_bdy_set,
+                            cz_internal_vars_view,
+                            cz_delta_internal_vars_view);
                 
-            //    }
-            //}
+                        // calling debug_cohesive_zone_var_update
+                        cohesive_zones_bank.debug_cohesive_zone_var_update(
+                            local_opening,
+                            dt,
+                            time_value,
+                            cohesive_zones_bank.overlapping_node_gids,
+                            BC.stress_bc_global_vars,
+                            fracture_bdy_set,
+                            cz_internal_vars_view,
+                            cz_delta_internal_vars_view);      
+
+
+                        // 4) nodal cohesive forces
+                        CArrayKokkos<double> pair_area(
+                            npairs, "cz_pair_area");
+                        pair_area.set_values(0.0);
+
+                        const size_t num_nodes = mesh.num_nodes;
+                        CArrayKokkos<double> F_cz(
+                            3 * num_nodes, "cz_nodal_forces");
+                        F_cz.set_values(0.0);
+                        ViewCArrayKokkos<double> F_cz_view(&F_cz(0), 3 * num_nodes);
+
+                        cohesive_zones_bank.cohesive_zone_loads(
+                            mesh,
+                            State.node.coords,
+                            cohesive_zones_bank.overlapping_node_gids,
+                            cz_orientation,
+                            cohesive_zones_bank.cz_info,
+                            cohesive_zones_bank.max_elem_in_cohesive_zone,
+                            cz_internal_vars_view,
+                            cz_delta_internal_vars_view,
+                            pair_area,
+                            F_cz_view);
+            
+                        // calling debug_cohesive_zone_loads
+                        cohesive_zones_bank.debug_cohesive_zone_loads(
+                            mesh,
+                            State.node.coords,
+                            cohesive_zones_bank.overlapping_node_gids,
+                            cz_orientation,
+                            //cohesive_zones_bank.cz_info,
+                            //cohesive_zones_bank.max_elem_in_cohesive_zone,
+                            cz_internal_vars_view,
+                            cz_delta_internal_vars_view,
+                            pair_area,
+                            F_cz_view); 
+
+                            // 5) update global state: internal vars and nodal forces
+                        // ensuring the internal vars are updated only at the last RK stage
+                        if (rk_stage == rk_num_stages - 1){
+
+                         
+                            for (size_t i = 0; i < npairs; ++i) {
+                                // 0: lambda_dot_t (store current rate)
+                                cz_internal_vars_view(i, 0) = cz_delta_internal_vars_view(i, 0);
+
+                                // 1: alpha (accumulate damage)
+                                cz_internal_vars_view(i, 1) += cz_delta_internal_vars_view(i, 1);
+
+                                // 2, 3: tractions at t+dt become the “current” tractions for next step
+                                cz_internal_vars_view(i, 2) += cz_delta_internal_vars_view(i, 2);
+                                cz_internal_vars_view(i, 3) += cz_delta_internal_vars_view(i, 3);
+
+                                // 4..(4+num_prony_terms-1): Prony stresses at t+dt
+                                for (int j = 0; j < num_prony_terms; ++j) {
+                                    const int col = 4 + j;
+                                    cz_internal_vars_view(i, col) = cz_delta_internal_vars_view(i, col);
+                                }
+                            }
+                        }
+
+                                // 5) add F_cz into global nodal force vector
+                            for (size_t n = 0; n < num_nodes; ++n) {
+                                State.node.force(n,0) += F_cz(3*n    );
+                                State.node.force(n,1) += F_cz(3*n + 1);
+                                State.node.force(n,2) += F_cz(3*n + 2);
+                                }
+                            } // end for loop for updating global state
+                } // end gaurd if fracture_bdy_set > 0
+            } // end if doing_fracture
+        
+         
+        
+
+
+
 
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
@@ -473,169 +648,216 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         // print every 20 cycles
         // if (doing_fracture && (cycle == 0 || cycle % 20 == 0)){
         // print every cycle
-        if (doing_fracture){
-            // tolerance for face matching/orientation
-            const double tol = 1e-8;
 
-            // COMMENT OUT HERE TO STOP ORIENTED DEBUG PRINTS
-            // checking the data is recorded properly:
-              printf("[Driver::execute] &cz_bank=%p  pairs=%zu maxcz=%zu info_rows=%zu\n",
-                    (void*)&this->cohesive_zones_bank,
-                    this->cohesive_zones_bank.overlapping_node_gids.dims(0),
-                    this->cohesive_zones_bank.max_elem_in_cohesive_zone,
-                    this->cohesive_zones_bank.cz_info.dims(0));
+// // try commenting this out 12/9/2025
+//         if (doing_fracture){
+//             // tolerance for face matching/orientation
+//             const double tol = 1e-8;
 
-            cohesive_zones_bank.debug_oriented(
-                mesh,
-                State,
-                cohesive_zones_bank.overlapping_node_gids,
-                cohesive_zones_bank.cz_info,
-                cohesive_zones_bank.max_elem_in_cohesive_zone,
-                tol
-            );
-            // COMMENT OUT HERE TO STOP ORIENTED DEBUG PRINTS
+//             // COMMENT OUT HERE TO STOP ORIENTED DEBUG PRINTS
+//             // checking the data is recorded properly:
+// // // THROTTLE OUTPUT COMMENT OUT //
+// //               printf("[Driver::execute] &cz_bank=%p  pairs=%zu maxcz=%zu info_rows=%zu\n",
+// //                     (void*)&this->cohesive_zones_bank,
+// //                     this->cohesive_zones_bank.overlapping_node_gids.dims(0),
+// //                     this->cohesive_zones_bank.max_elem_in_cohesive_zone,
+// //                     this->cohesive_zones_bank.cz_info.dims(0));
+// // // THROTTLE OUTPUT COMMENT OUT //
+//             cohesive_zones_bank.debug_oriented(
+//                 mesh,
+//                 State,
+//                 cohesive_zones_bank.overlapping_node_gids,
+//                 cohesive_zones_bank.cz_info,
+//                 cohesive_zones_bank.max_elem_in_cohesive_zone,
+//                 tol
+//             );
+//             // COMMENT OUT HERE TO STOP ORIENTED DEBUG PRINTS
 
-            // COMMENT OUT HERE TO STOP UCMAP DEBUG PRINTS
+//             // COMMENT OUT HERE TO STOP UCMAP DEBUG PRINTS
 
-            // building local cohesive_zone_orientation array by calling oriented()
-            CArrayKokkos<double> cohesive_zone_orientation_local(cohesive_zones_bank.overlapping_node_gids.dims(0), 6, "cohesive_zone_orientation_local");
+//             // building local cohesive_zone_orientation array by calling oriented()
+//             CArrayKokkos<double> cohesive_zone_orientation_local(cohesive_zones_bank.overlapping_node_gids.dims(0), 6, "cohesive_zone_orientation_local");
 
-            cohesive_zones_bank.oriented(
-                mesh,
-                //State.node.coords_n0,
-                //State.node.coords,
-                State.node.coords,
-                cohesive_zones_bank.overlapping_node_gids,
-                cohesive_zones_bank.cz_info,
-                cohesive_zones_bank.max_elem_in_cohesive_zone,
-                tol,
-                cohesive_zone_orientation_local
-            );
+//             cohesive_zones_bank.oriented(
+//                 mesh,
+//                 //State.node.coords_n0,
+//                 //State.node.coords,
+//                 State.node.coords,
+//                 cohesive_zones_bank.overlapping_node_gids,
+//                 cohesive_zones_bank.cz_info,
+//                 cohesive_zones_bank.max_elem_in_cohesive_zone,
+//                 tol,
+//                 cohesive_zone_orientation_local
+//             );
 
-            // allocate local local_opening array
-            //if (cohesive_zones_bank.local_opening.dims(0) != cohesive_zones_bank.overlapping_node_gids.dims(0)) {
-            //    cohesive_zones_bank.local_opening = CArrayKokkos<double>(cohesive_zones_bank.overlapping_node_gids.dims(0), 4, "local_opening");
-            //    cohesive_zones_bank.local_opening.set_values(0.0);
-            //}
-            CArrayKokkos<double> local_opening_local(cohesive_zones_bank.overlapping_node_gids.dims(0), 4, "local_opening_local");
-            local_opening_local.set_values(0.0);
+//             // allocate local local_opening array
+//             //if (cohesive_zones_bank.local_opening.dims(0) != cohesive_zones_bank.overlapping_node_gids.dims(0)) {
+//             //    cohesive_zones_bank.local_opening = CArrayKokkos<double>(cohesive_zones_bank.overlapping_node_gids.dims(0), 4, "local_opening");
+//             //    cohesive_zones_bank.local_opening.set_values(0.0);
+//             //}
+//             CArrayKokkos<double> local_opening_local(cohesive_zones_bank.overlapping_node_gids.dims(0), 4, "local_opening_local");
+//             local_opening_local.set_values(0.0);
 
-            // update (fill) local_opening by computing the local normal and tangential displacements at cohesive zone node pairs
-            cohesive_zones_bank.ucmap(
-                //State.node.coords_n0, // == X_t (nodal positions at t)
-                State.node.coords,
-                //State.node.vel_n0, // == V_t (nodal velocities at t)
-                State.node.vel,
-                cohesive_zone_orientation_local,
-                cohesive_zones_bank.overlapping_node_gids,
-                dt,
-                local_opening_local
-            );
+//             // update (fill) local_opening by computing the local normal and tangential displacements at cohesive zone node pairs
+//             cohesive_zones_bank.ucmap(
+//                 //State.node.coords_n0, // == X_t (nodal positions at t)
+//                 State.node.coords,
+//                 //State.node.vel_n0, // == V_t (nodal velocities at t)
+//                 State.node.vel,
+//                 cohesive_zone_orientation_local,
+//                 cohesive_zones_bank.overlapping_node_gids,
+//                 dt,
+//                 local_opening_local
+//             );
 
-            // print the 1:1 debug section
-            cohesive_zones_bank.debug_ucmap(
-                //State.node.coords_n0, // == X_t (nodal positions at t)
-                State.node.coords,
-                //State.node.vel_n0, // == V_t (nodal velocities at t)
-                State.node.vel,
-                dt,
-                cohesive_zone_orientation_local,
-                cohesive_zones_bank.overlapping_node_gids,
-                local_opening_local
-            );
-            // COMMENT OUT HERE TO STOP UCMAP DEBUG PRINTS
+//             // print the 1:1 debug section
+//             cohesive_zones_bank.debug_ucmap(
+//                 //State.node.coords_n0, // == X_t (nodal positions at t)
+//                 State.node.coords,
+//                 //State.node.vel_n0, // == V_t (nodal velocities at t)
+//                 State.node.vel,
+//                 dt,
+//                 cohesive_zone_orientation_local,
+//                 cohesive_zones_bank.overlapping_node_gids,
+//                 local_opening_local
+//             );
+//             // COMMENT OUT HERE TO STOP UCMAP DEBUG PRINTS
 
-            // COMMENT OUT HERE TO STOP cohesive_zone_var_update DEBUG PRINTS
-            // locate the fracture stress boundary set (the row in stress_bc_global_vars)
-            const int fracture_bdy_set = BoundaryConditions.fracture_bc_id;
-            if (fracture_bdy_set < 0){
-                printf("[cohesive_zone_var_update] WARNING: no fracture stress BC set.\n");
-            } else {
+//             // COMMENT OUT HERE TO STOP cohesive_zone_var_update DEBUG PRINTS
+//             // locate the fracture stress boundary set (the row in stress_bc_global_vars)
+//             const int fracture_bdy_set = BoundaryConditions.fracture_bc_id;
+//             if (fracture_bdy_set < 0){
+//                 printf("[cohesive_zone_var_update] WARNING: no fracture stress BC set.\n");
+//             } else {
 
             
-                // derive num_prony_terms (Prony term count) from the fracture BC row
-                const auto& BC = BoundaryConditions; // reuse alias
-                const int num_prony_terms = static_cast<int>(BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::num_prony_terms) + 0.5);
-                // allocate storage for internal vars and delta internal vars
-                const size_t npairs = cohesive_zones_bank.overlapping_node_gids.dims(0);
-                const int    width  = 4 + num_prony_terms;
+//                 // derive num_prony_terms (Prony term count) from the fracture BC row
+//                 const auto& BC = BoundaryConditions; // reuse alias
+//                 const int num_prony_terms = static_cast<int>(BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::num_prony_terms) + 0.5);
+//                 // allocate storage for internal vars and delta internal vars
+//                 const size_t npairs = cohesive_zones_bank.overlapping_node_gids.dims(0);
+//                 const int    width  = 4 + num_prony_terms;
 
-                if (npairs == 0) {
-                    printf("[cohesive_zone_var_update] npairs=0; skipping.\n");
-                } else {
-                    // ensure storage is allocated
-                    if (cohesive_zones_bank.internal_vars.dims(0) != npairs ||
-                        cohesive_zones_bank.internal_vars.dims(1) != width) {
-                        cohesive_zones_bank.internal_vars =
-                            CArrayKokkos<double>(npairs, width, "cz_internal_vars");
-                        cohesive_zones_bank.internal_vars.set_values(0.0);
-                    }
-                    if (cohesive_zones_bank.delta_internal_vars.dims(0) != npairs ||
-                        cohesive_zones_bank.delta_internal_vars.dims(1) != width) {
-                        cohesive_zones_bank.delta_internal_vars =
-                            CArrayKokkos<double>(npairs, width, "cz_delta_internal_vars");
-                        cohesive_zones_bank.delta_internal_vars.set_values(0.0);
-                    }
+//                 if (npairs == 0) {
+//                     printf("[cohesive_zone_var_update] npairs=0; skipping.\n");
+//                 } else {
+//                     // ensure storage is allocated
+//                     if (cohesive_zones_bank.internal_vars.dims(0) != npairs ||
+//                         cohesive_zones_bank.internal_vars.dims(1) != width) {
+//                         cohesive_zones_bank.internal_vars =
+//                             CArrayKokkos<double>(npairs, width, "cz_internal_vars");
+//                         cohesive_zones_bank.internal_vars.set_values(0.0);
+//                     }
+//                     if (cohesive_zones_bank.delta_internal_vars.dims(0) != npairs ||
+//                         cohesive_zones_bank.delta_internal_vars.dims(1) != width) {
+//                         cohesive_zones_bank.delta_internal_vars =
+//                             CArrayKokkos<double>(npairs, width, "cz_delta_internal_vars");
+//                         cohesive_zones_bank.delta_internal_vars.set_values(0.0);
+//                     }
 
-                    // now form 2D views over valid storage
-                    ViewCArrayKokkos<double> cz_internal_vars_view(
-                        &cohesive_zones_bank.internal_vars(0,0), npairs, width);
-                    ViewCArrayKokkos<double> cz_delta_internal_vars_view(
-                        &cohesive_zones_bank.delta_internal_vars(0,0), npairs, width);
+//                     // now form 2D views over valid storage
+//                     ViewCArrayKokkos<double> cz_internal_vars_view(
+//                         &cohesive_zones_bank.internal_vars(0,0), npairs, width);
+//                     ViewCArrayKokkos<double> cz_delta_internal_vars_view(
+//                         &cohesive_zones_bank.delta_internal_vars(0,0), npairs, width);
 
-                    // compute and print
-                    cohesive_zones_bank.cohesive_zone_var_update(
-                        local_opening_local,
-                        dt,
-                        cohesive_zones_bank.overlapping_node_gids,
-                        BC.stress_bc_global_vars,
-                        fracture_bdy_set,
-                        cz_internal_vars_view,         // in
-                        cz_delta_internal_vars_view    // out
-                    );
+//                     // compute and print
+//                     cohesive_zones_bank.cohesive_zone_var_update(
+//                         local_opening_local,
+//                         dt,
+//                         time_value, // ADDED IN FOR DEBUGGING
+//                         cohesive_zones_bank.overlapping_node_gids,
+//                         BC.stress_bc_global_vars,
+//                         fracture_bdy_set,
+//                         cz_internal_vars_view,         // in
+//                         cz_delta_internal_vars_view    // out
+//                     );
 
-                    cohesive_zones_bank.debug_cohesive_zone_var_update(
-                        local_opening_local,
-                        dt,
-                        cohesive_zones_bank.overlapping_node_gids,
-                        BC.stress_bc_global_vars,
-                        fracture_bdy_set,
-                        cz_internal_vars_view,
-                        cz_delta_internal_vars_view
-                    );
+//                     cohesive_zones_bank.debug_cohesive_zone_var_update(
+//                         local_opening_local,
+//                         dt,
+//                         time_value, // ADDED IN FOR DEBUGGING
+//                         cohesive_zones_bank.overlapping_node_gids,
+//                         BC.stress_bc_global_vars,
+//                         fracture_bdy_set,
+//                         cz_internal_vars_view,
+//                         cz_delta_internal_vars_view
+//                     );
+
+//                     // compute cohesive zone nodal forces 
+//                     const size_t npairs = cohesive_zones_bank.overlapping_node_gids.dims(0);
+//                     if (npairs > 0){
+
+//                         // allocate pair areas
+//                         CArrayKokkos<double> pair_area(npairs, "cz_pair_area");
+//                         pair_area.set_values(0.0);
+
+//                         // allocate cohesive zone force array
+//                         // size = 3 dofs per node
+//                         const size_t num_nodes = mesh.num_nodes;
+//                         CArrayKokkos<double> F_cz(3 * num_nodes, "cz_nodal_forces");
+//                         F_cz.set_values(0.0);
+//                         ViewCArrayKokkos<double> F_cz_view(&F_cz(0), 3 * num_nodes);
+
+//                         // internal_vars (state at t) + delta_internal_vars (increments from t to t+dt)
+//                         cohesive_zones_bank.cohesive_zone_loads(
+//                             mesh,
+//                             State.node.coords,
+//                             cohesive_zones_bank.overlapping_node_gids,
+//                             cohesive_zone_orientation_local,
+//                             cohesive_zones_bank.cz_info,
+//                             cohesive_zones_bank.max_elem_in_cohesive_zone,
+//                             cz_internal_vars_view,
+//                             cz_delta_internal_vars_view,
+//                             pair_area,
+//                             F_cz_view
+//                         );
+
+//                         // 1:1 debug of cohesive_zone_loads call
+//                         cohesive_zones_bank.debug_cohesive_zone_loads(
+//                             mesh,
+//                             State.node.coords,
+//                             cohesive_zones_bank.overlapping_node_gids,
+//                             cohesive_zone_orientation_local,
+//                             cohesive_zones_bank.cz_info,
+//                             cohesive_zones_bank.max_elem_in_cohesive_zone,
+//                             cz_internal_vars_view,
+//                             cz_delta_internal_vars_view
+//                         );
+//                     }
+
                     
-                    // updating state for next timestep
-                    {
+                    
+//                     // updating state for next timestep
+//                     {
 
-                        const size_t npairs = cohesive_zones_bank.overlapping_node_gids.dims(0);
-                        const int    width  = 4 + num_prony_terms;
+//                         const size_t npairs = cohesive_zones_bank.overlapping_node_gids.dims(0);
+//                         const int    width  = 4 + num_prony_terms;
 
-                        for (size_t i = 0; i < npairs; ++i) {
-                            // 0: lambda_dot_t 
-                            cz_internal_vars_view(i, 0) = cz_delta_internal_vars_view(i, 0);
+//                         for (size_t i = 0; i < npairs; ++i) {
+//                             // 0: lambda_dot_t value 
+//                             cz_internal_vars_view(i, 0) = cz_delta_internal_vars_view(i, 0);
 
-                            // 1: alpha 
-                            cz_internal_vars_view(i, 1) += cz_delta_internal_vars_view(i, 1);
+//                             // 1: alpha increment 
+//                             cz_internal_vars_view(i, 1) += cz_delta_internal_vars_view(i, 1);
 
-                            // 2, 3: traction components, normal and tangential
-                            cz_internal_vars_view(i, 2) = cz_delta_internal_vars_view(i, 2);
-                            cz_internal_vars_view(i, 3) = cz_delta_internal_vars_view(i, 3);
+//                             // 2, 3: traction components, normal and tangential increments
+//                             cz_internal_vars_view(i, 2) += cz_delta_internal_vars_view(i, 2);
+//                             cz_internal_vars_view(i, 3) += cz_delta_internal_vars_view(i, 3);
                             
-                            // 4..4+num_prony_terms-1: prony stresses
-                            for (int j = 0; j < num_prony_terms; ++j) {
-                                const int col = 4 + j;
-                                // Right now delta_internal_vars(i,col) is prony at t+dt,
-                                    // so we overwrite old prony stress with new prony stress
-                                cz_internal_vars_view(i, col) = cz_delta_internal_vars_view(i, col);
-                            }
-                        }
-                    }
-                }
-            }
-            // COMMENT OUT HERE TO STOP cohesive_zone_var_update DEBUG PRINTS
-        }
-        // COMMENT OUT HERE TO STOP FUNCTION DEBUGGING PRINTS PER TIME STEP
-
+//                             // 4: 4+num_prony_terms-1: prony stresses
+//                             for (int j = 0; j < num_prony_terms; ++j) {
+//                                 const int col = 4 + j;
+//                                 cz_internal_vars_view(i, col) = cz_delta_internal_vars_view(i, col);
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//             // COMMENT OUT HERE TO STOP cohesive_zone_var_update DEBUG PRINTS
+//         }
+//         // COMMENT OUT HERE TO STOP FUNCTION DEBUGGING PRINTS PER TIME STEP
+// // try commenting this out 12/9/2025
         // increment the time
         time_value += dt;
 
@@ -655,7 +877,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // write outputs
         if (write == 1) {
-            printf("Writing outputs to file at %f \n", graphics_time);
+// // THROTTLE OUTPUT COMMENT OUT //
+//             printf("Writing outputs to file at %f \n", graphics_time);
+// // THROTTLE OUTPUT COMMENT OUT //
             mesh_writer.write_mesh(mesh,
                                    State,
                                    SimulationParamaters,

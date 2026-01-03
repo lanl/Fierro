@@ -53,6 +53,9 @@ struct cohesive_zones_t {
     // this is where the algorithim to find the unique node pairs (boundary nodes) will go
     // only thing that should be in sgh_setup.cpp is calling this function
 
+    // START OF DEBUG FUNCTION DECLARATIONS
+
+    // debug_oriented()
     void debug_oriented(Mesh_t& mesh,
                         State_t& State,
                         CArrayKokkos<size_t>& overlap,
@@ -60,6 +63,7 @@ struct cohesive_zones_t {
                         size_t maxcz,
                         double tol);
     
+    // debug_ucmap()                    
     void debug_ucmap(
         const DCArrayKokkos<double>& pos,
         //const DCArrayKokkos<double>& pos,
@@ -70,16 +74,35 @@ struct cohesive_zones_t {
         const CArrayKokkos<double>& local_opening
     );
 
+    // debug_cohesive_zone_var_update()
     KOKKOS_FUNCTION
     void debug_cohesive_zone_var_update(
         const CArrayKokkos<double>& local_opening,
         const double dt,
+        const double time_value, // ADDED IN FOR DEBUGGING
         const CArrayKokkos<size_t>& overlapping_node_gids,
         const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
         const int bdy_set,
         const ViewCArrayKokkos<double>& internal_vars,      // (overlapping_node_gids.dims(0), 4 + num_prony_terms)
         const ViewCArrayKokkos<double>& delta_internal_vars // (overlapping_node_gids.dims(0), 4 + num_prony_terms)
-    );   
+    );
+    
+    // debug_cohesive_zone_loads
+    KOKKOS_FUNCTION
+    void debug_cohesive_zone_loads(
+        Mesh_t &mesh,
+        const DCArrayKokkos<double> &pos,
+        const CArrayKokkos<size_t> &overlapping_node_gids,
+        const CArrayKokkos<double> &cohesive_zone_orientation,
+        //const CArrayKokkos<int> &cz_info,
+        //const size_t max_elem_in_cohesive_zone,
+        const ViewCArrayKokkos<double> &internal_vars,
+        const ViewCArrayKokkos<double> &delta_internal_vars,
+        const CArrayKokkos<double> &pair_area,
+        const ViewCArrayKokkos<double> &F_cz
+    );
+    
+    // END OF DEBUG FUNCTION DECLARATIONS
 
     cohesive_zones_t(); 
 
@@ -87,6 +110,8 @@ struct cohesive_zones_t {
                     const ViewCArrayKokkos<double> &internal_force_points,
                     const ViewCArrayKokkos<double> &fracture_force_points, const ViewCArrayKokkos<double> &mass_points_);
 
+
+    // START OF FRACTURE FUNCTION AND ARRAY DECLARATIONS
 
     size_t cohesive_zone_elem_count(const CArrayKokkos<size_t>& overlapping_node_gids, const RaggedRightArrayKokkos<size_t>& elems_in_node, const Mesh_t& mesh);
 
@@ -144,6 +169,7 @@ struct cohesive_zones_t {
     void cohesive_zone_var_update(
         const CArrayKokkos<double>& local_opening,
         const double dt,
+        const double time_value, // ADDED IN FOR DEBUGGING
         const CArrayKokkos<size_t>& overlapping_node_gids,
         const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
         const int bdy_set,
@@ -154,6 +180,21 @@ struct cohesive_zones_t {
     CArrayKokkos<double> internal_vars;
     CArrayKokkos<double> delta_internal_vars;
 
+    KOKKOS_FUNCTION
+    void cohesive_zone_loads(
+        Mesh_t &mesh,
+        const DCArrayKokkos<double> &pos,
+        const CArrayKokkos<size_t> &overlapping_node_gids,
+        const CArrayKokkos<double> &cohesive_zone_orientation,
+        const CArrayKokkos<int> &cz_info,
+        const size_t max_elem_in_cohesive_zone,
+        const ViewCArrayKokkos<double> &internal_vars,
+        const ViewCArrayKokkos<double> &delta_internal_vars,
+        CArrayKokkos<double> &pair_area,
+        const ViewCArrayKokkos<double> &F_cz  
+    ); 
+
+    // END OF FRACTURE FUNCTION AND ARRAY DECLARATIONS
 };
 
 #endif
