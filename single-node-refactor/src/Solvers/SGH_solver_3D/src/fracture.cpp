@@ -1616,7 +1616,8 @@ void cohesive_zones_t::ucmap(
     const DCArrayKokkos<double>& vel, // State.node.vel //rename as vel
     const CArrayKokkos<double>& cohesive_zone_orientation,
     const CArrayKokkos<size_t>& overlapping_node_gids,
-    const double dt, // from sgh_execute.cpp timestep driver
+    //const double dt, // from sgh_execute.cpp timestep driver // 2/2 comment out
+    const double dt_stage, // 2/2 add
     CArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
 )
 {
@@ -1662,14 +1663,27 @@ void cohesive_zones_t::ucmap(
 
         // Forward-Euler update 
 
+        // 2/2 comment out
         // normal: u_norm_mag_tdt = u_norm_mag_t + dt*v_norm_t
-        const double u_norm_mag_tdt   = u_norm_mag_t + dt*v_norm_t;
+        // const double u_norm_mag_tdt   = u_norm_mag_t + dt*v_norm_t; // 2/2 comment out
+        // 2/2 comment out
 
-        // tangential: 
-        const double u_tan_x_tdt   = u_tan_x_t + dt*v_tan_x_t;
-        const double u_tan_y_tdt   = u_tan_y_t + dt*v_tan_y_t;
-        const double u_tan_z_tdt   = u_tan_z_t + dt*v_tan_z_t;
+        // 2/2 add
+        const double u_norm_mag_tdt   = u_norm_mag_t + dt_stage*v_norm_t; // 2/2 add
+        // 2/2 add
 
+        // // 2/2 comment out
+        // // tangential: 
+        // const double u_tan_x_tdt   = u_tan_x_t + dt*v_tan_x_t;
+        // const double u_tan_y_tdt   = u_tan_y_t + dt*v_tan_y_t;
+        // const double u_tan_z_tdt   = u_tan_z_t + dt*v_tan_z_t;
+        // // 2/2 comment out
+
+        // 2/2 add
+        const double u_tan_x_tdt   = u_tan_x_t + dt_stage*v_tan_x_t;
+        const double u_tan_y_tdt   = u_tan_y_t + dt_stage*v_tan_y_t;
+        const double u_tan_z_tdt   = u_tan_z_t + dt_stage*v_tan_z_t;
+        // 2/2 add
         // tangential magnitude at time t+dt
         const double u_tan_mag_tdt = sqrt(u_tan_x_tdt*u_tan_x_tdt + u_tan_y_tdt*u_tan_y_tdt + u_tan_z_tdt*u_tan_z_tdt);
         
@@ -1678,18 +1692,20 @@ void cohesive_zones_t::ucmap(
         local_opening(i,1) = u_tan_mag_t; // tangential crack opening magnitude at time t
         local_opening(i,2) = u_norm_mag_tdt; // forward eueler predicted normal crack opening magnitude at time t+dt
         local_opening(i,3) = u_tan_mag_tdt; // forward euler predicted tangential crack opening magnitude at time t+dt
+        
     }
 }
 
 KOKKOS_FUNCTION
 void cohesive_zones_t::cohesive_zone_var_update(
     const CArrayKokkos<double>& local_opening,
-    const double dt,
+    //const double dt, // 2/2 comment out
+    const double dt_stage, // 2/2 add
     const double time_value, // ADDED IN FOR DEBUGGING
     const CArrayKokkos<size_t>& overlapping_node_gids,
     const RaggedRightArrayKokkos<double>& stress_bc_global_vars, // BC parameters per boundary set for fractureStressBC
     const int bdy_set,
-    const ViewCArrayKokkos<double>& internal_vars,      // (overlapping_node_gids.dims(0), 4 + num_prony_terms)
+    const ViewCArrayKokkos<double>& internal_vars,      // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
     const ViewCArrayKokkos<double>& delta_internal_vars // (overlapping_node_gids.dims(0), 4 + num_prony_terms) 
                                                         // lambda_dot_t, d_alpha
 )
@@ -1710,13 +1726,21 @@ void cohesive_zones_t::cohesive_zone_var_update(
         const double E_j  = stress_bc_global_vars(bdy_set, prony_base);
         const double tau_j = stress_bc_global_vars(bdy_set, prony_base + 1);
         const double tau_eff       = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min(); // same logic as Gavin's code to avoid div by zero
-        const double one_minus_exp = 1.0 - exp(-dt / tau_eff);
-        E_dt += E_j * tau_eff * (one_minus_exp / dt);
+        // 2/2 comment out
+        //const double one_minus_exp = 1.0 - exp(-dt / tau_eff); //2/2 comment out
+        //E_dt += E_j * tau_eff * (one_minus_exp / dt); //2/2 comment out
+        // 2/2 comment out
+
+        // 2/2 add
+        const double one_minus_exp = 1.0 - exp(-dt_stage / tau_eff); //2/2 add
+        E_dt += E_j * tau_eff * (one_minus_exp / dt_stage); //2/2 add
+        // 2/2 add
     }
 
     // loop over each cohesive zone node pair
     for (size_t i = 0; i < overlapping_node_gids.dims(0); i++){
 
+       
         // reading in local openings (normal and tangential displacements) at t and t+dt
         const double u_norm_mag_t = local_opening(i,0);
         const double u_tan_mag_t = local_opening(i,1);
@@ -1726,10 +1750,18 @@ void cohesive_zones_t::cohesive_zone_var_update(
         // calculating lambda_t and lambda _tdt values
         double lambda_t = sqrt((u_norm_mag_t / u_n_star) * (u_norm_mag_t / u_n_star) + (u_tan_mag_t / u_t_star) * (u_tan_mag_t / u_t_star));
         double lambda_tdt = sqrt((u_norm_mag_tdt / u_n_star) * (u_norm_mag_tdt / u_n_star) + (u_tan_mag_tdt / u_t_star) * (u_tan_mag_tdt / u_t_star));
+        
 
-        // calculating lambda_dot_t
-        const double lambda_dot_t = (lambda_tdt - lambda_t) / dt;
+        // // 2/2 comment out
+        // // calculating lambda_dot_t
+        // const double lambda_dot_t = (lambda_tdt - lambda_t) / dt;
+        // delta_internal_vars(i,0) = lambda_dot_t; // lambda rate at t
+        // // 2/2 comment out
+
+        // 2/2 add 
+        const double lambda_dot_t = (lambda_tdt - lambda_t) / dt_stage;
         delta_internal_vars(i,0) = lambda_dot_t; // lambda rate at t
+        // 2/2 add 
 
         // d_alpha_dt (damage growth/increment) over this step
         double d_alpha_dt;
@@ -1739,7 +1771,15 @@ void cohesive_zones_t::cohesive_zone_var_update(
         }else {
             d_alpha_dt = 0.0;
         } 
-        delta_internal_vars(i,1) = d_alpha_dt * dt; // damage variable, increment over the step
+
+        // // 2/2 comment out
+        // delta_internal_vars(i,1) = d_alpha_dt * dt; // damage variable, increment over the step
+        // // 2/2 comment out
+
+
+        // 2/2 add
+        delta_internal_vars(i,1) = d_alpha_dt * dt_stage;
+        // 2/2 add
 
         // updating delta prony stresses for prony terms
        for (int j = 0; j < num_prony_terms; ++j) {
@@ -1747,10 +1787,18 @@ void cohesive_zones_t::cohesive_zone_var_update(
             const double E_j     = stress_bc_global_vars(bdy_set, prony_base); // in Gavin's code, this is Eandrhom(j,0)
             const double tau_j   = stress_bc_global_vars(bdy_set, prony_base + 1); // in Gavin's code, this is Eandrhom(j,1)
             const double tau_eff = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min(); // same logic as Gavin's code to avoid div by zero
-            const double a       = exp(-dt / tau_eff);
+
+            // // 2/2 comment out
+            // const double a       = exp(-dt / tau_eff);
+            // // 2/2 comment out
+
+            // 2/2 add
+            const double a       = exp(-dt_stage / tau_eff);
+            // 2/2 add
             delta_internal_vars(i, 4 + j) = a * internal_vars(i, 4 + j) + E_j * tau_eff * lambda_dot_t * (1.0 - a); // prony branch stresses 4 columns 
         }
 
+        // 2/4 comment out
         // calculating sigma sums and sigma product sums (deltaE_term in the residual traction)
         double sigma_sum = 0.0;
         double sigma_sum_exp = 0.0;
@@ -1760,7 +1808,14 @@ void cohesive_zones_t::cohesive_zone_var_update(
             const double tau_eff = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min(); // same logic as Gavin's code to avoid div by zero
             const double sigma_j = delta_internal_vars(i, 4 + j); // used to update prony stresses
             sigma_sum     += sigma_j;
-            sigma_sum_exp += (1.0 - exp(-dt / tau_eff)) * sigma_j;
+
+            // // // 2/2 comment out
+            // sigma_sum_exp += (1.0 - exp(-dt / tau_eff)) * sigma_j;
+            // // // 2/2 comment out
+
+            // 2/2 add
+            sigma_sum_exp += (1.0 - exp(-dt_stage / tau_eff)) * sigma_j;
+            // 2/2 add
         }
 
         // enforcing alpha domain limitations (clamp to 0 or 1)
@@ -1775,7 +1830,13 @@ void cohesive_zones_t::cohesive_zone_var_update(
 
         // tractions at t+dt
         // scalar terms
-        const double deltaE_term  = E_dt * lambda_dot_t * dt;     
+        // //2/2 comment out
+        // const double deltaE_term  = E_dt * lambda_dot_t * dt;   
+        // //2/2 comment out
+        
+        //2/2 add
+        const double deltaE_term  = E_dt * lambda_dot_t * dt_stage;  
+        //2/2 add
         const double elastic_term = E_inf * lambda_t + sigma_sum;  
         const double damp_term    = -sigma_sum_exp;
 
@@ -1784,13 +1845,11 @@ void cohesive_zones_t::cohesive_zone_var_update(
         const double inv_uns_lambda_t   = (u_n_star > 0.0 && lambda_t   > 0.0) ? 1.0 / (u_n_star * lambda_t  ) : 0.0;
         const double inv_uts_lambda_tdt = (u_t_star > 0.0 && lambda_tdt > 0.0) ? 1.0 / (u_t_star * lambda_tdt) : 0.0;
         const double inv_uts_lambda_t   = (u_t_star > 0.0 && lambda_t   > 0.0) ? 1.0 / (u_t_star * lambda_t  ) : 0.0;
-
-
-
+        
         delta_internal_vars(i,2) = // normal traction increment
               u_norm_mag_tdt * inv_uns_lambda_tdt * (1.0 - alpha_tdt) * deltaE_term
             + u_norm_mag_tdt * inv_uns_lambda_tdt * (1.0 - alpha_tdt) * elastic_term
-            - u_norm_mag_t   * inv_uns_lambda_t   * (1.0 - alpha_t  ) * elastic_term
+            - u_norm_mag_t   * inv_uns_lambda_t   * (1.0 - alpha_t  ) * elastic_term // subtracting the elastic contribution at time t
             + u_norm_mag_tdt * inv_uns_lambda_tdt * (1.0 - alpha_tdt) * damp_term;
 
         delta_internal_vars(i,3) = // tangential traction increment
@@ -1805,9 +1864,11 @@ void cohesive_zones_t::cohesive_zone_var_update(
         // delta_internal_vars(i,2) : normal traction increment
         // delta_internal_vars(i,3) : tangential traction increment
         // delta_internal_vars(i, 4 + j) : prony internal variables 
-    }
-}        
 
+
+    }
+}      
+  
 KOKKOS_FUNCTION
 void cohesive_zones_t::cohesive_zone_loads(
     Mesh_t &mesh,
@@ -1819,7 +1880,7 @@ void cohesive_zones_t::cohesive_zone_loads(
     const ViewCArrayKokkos<double> &internal_vars,
     const ViewCArrayKokkos<double> &delta_internal_vars,
     CArrayKokkos<double> &pair_area,
-    const ViewCArrayKokkos<double> &F_cz  
+    const ViewCArrayKokkos<double> &F_cz
 )
 {
     // zero out the cohesive zone force vector

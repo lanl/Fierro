@@ -59,6 +59,26 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     State_t& State)
 {
 
+// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS 
+    // writing output file for time, alpha, lambda, traction test
+    FILE* cz_fp = fopen("time_alpha_lambda_traction_outputs.txt", "w");
+    if (!cz_fp) { perror("fopen"); }
+
+    // no buffering (writes show up immediately)
+    setvbuf(cz_fp, nullptr, _IONBF, 0);
+
+    fprintf(cz_fp, "time,alpha,lambda,Tn\n");
+    fflush(cz_fp);
+
+    // output every x us
+    constexpr double CZ_OUT_DT = 1e-3;
+
+    // stride variables (cycle-based)
+    static bool   cz_stride_init = false;
+    static size_t cz_stride = 0;
+    static size_t cz_next_cycle = 0;
+// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS 
+
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;  // 1.e-16
     double tiny  = SimulationParamaters.dynamic_options.tiny;  // 1.e-12
     double small = SimulationParamaters.dynamic_options.small; // 1.e-8
@@ -215,6 +235,15 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         dt = min_dt_calc;  // save this dt time step
 
+// THROTTLE OUTPUT COMMENT OUT DESCALING PRINTS
+// initialize stride once using the actual dt the solver is taking
+    if (!cz_stride_init) {
+        cz_stride = (size_t) llround(CZ_OUT_DT / dt);  // e.g. 0.5 / 1e-8 = 50,000,000
+        if (cz_stride < 1) cz_stride = 1;
+        cz_next_cycle = 0;
+        cz_stride_init = true;
+    }
+// THROTTLE OUTPUT COMMENT OUT DESCALING PRINTS
 // // THROTTLE OUTPUT COMMENT OUT
 //     printf("cycle = %zu, time = %.9e, dt = %.9e\n",
 //            cycle, time_value, dt);
@@ -260,6 +289,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // ---- RK coefficient ----
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
+            // 2/2 add
+            double dt_stage = rk_alpha * dt;
+            // 2/2 add
             // ---- Calculate velocity gradient for the element ----
 
             get_velgrad(State.GaussPoints.vel_grad,
@@ -342,6 +374,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             time_value);
 
             // call body forces routine
+            
             if (doing_fracture) {
 
                 const int fracture_bdy_set = BoundaryConditions.fracture_bc_id;
@@ -351,7 +384,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     const size_t npairs = cohesive_zones_bank.overlapping_node_gids.dims(0);
 
                     if (npairs > 0) {
-
                         const int num_prony_terms =
                             static_cast<int>(BC.stress_bc_global_vars(
                                     fracture_bdy_set,
@@ -364,7 +396,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             cohesive_zones_bank.internal_vars =
                                 CArrayKokkos<double>(npairs, width, "cz_internal_vars");
                             cohesive_zones_bank.internal_vars.set_values(0.0);
-                        }
+                        }             
 
                         if (cohesive_zones_bank.delta_internal_vars.dims(0) != npairs ||
                             cohesive_zones_bank.delta_internal_vars.dims(1) != width) {
@@ -375,6 +407,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
                         ViewCArrayKokkos<double> cz_internal_vars_view(
                             &cohesive_zones_bank.internal_vars(0,0), npairs, width);
+
                         ViewCArrayKokkos<double> cz_delta_internal_vars_view(
                             &cohesive_zones_bank.delta_internal_vars(0,0), npairs, width);
 
@@ -395,15 +428,17 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             cohesive_zones_bank.max_elem_in_cohesive_zone,
                             tol,
                             cz_orientation);
-            
-                        // calling debug_oriented
-                        cohesive_zones_bank.debug_oriented(
-                            mesh,
-                            State, 
-                            cohesive_zones_bank.overlapping_node_gids,
-                            cohesive_zones_bank.cz_info,
-                            cohesive_zones_bank.max_elem_in_cohesive_zone,
-                            tol);
+
+// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS            
+                        // // calling debug_oriented
+                        // cohesive_zones_bank.debug_oriented(
+                        //     mesh,
+                        //     State, 
+                        //     cohesive_zones_bank.overlapping_node_gids,
+                        //     cohesive_zones_bank.cz_info,
+                        //     cohesive_zones_bank.max_elem_in_cohesive_zone,
+                        //     tol);
+// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS 
 
                         // 2) local openings (un_t, utan_t, un_tdt, utan_tdt)
                         CArrayKokkos<double> local_opening(
@@ -415,41 +450,47 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             State.node.vel,
                             cz_orientation,
                             cohesive_zones_bank.overlapping_node_gids,
-                            dt,
+                            //dt, // 2/2 comment out
+                            dt_stage, // 2/2 add
                             local_opening);
-            
-                        // calling debug_ucmap
-                        cohesive_zones_bank.debug_ucmap(
-                            State.node.coords,
-                            State.node.vel,
-                            dt,
-                            cz_orientation,
-                            cohesive_zones_bank.overlapping_node_gids,
-                            local_opening);     
+
+// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS                             
+                        // // calling debug_ucmap
+                        // cohesive_zones_bank.debug_ucmap(
+                        //     State.node.coords,
+                        //     State.node.vel,
+                        //     dt,
+                        //     cz_orientation,
+                        //     cohesive_zones_bank.overlapping_node_gids,
+                        //     local_opening);     
+// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS 
 
                         // 3) cohesive law: update internal_vars + compute increments
                         cohesive_zones_bank.cohesive_zone_var_update(
                             local_opening,
-                            dt,
+                            //dt, // 2/2 comment out
+                            dt_stage, // 2/2 add 
                             time_value,
                             cohesive_zones_bank.overlapping_node_gids,
                             BC.stress_bc_global_vars,
                             fracture_bdy_set,
                             cz_internal_vars_view,
                             cz_delta_internal_vars_view);
-                
-                        // comment out 1-12-2026, for downsampling prints of time, lambda, alpha, traction
-                        // remove comment after done downsampling
-                        // calling debug_cohesive_zone_var_update
-                        cohesive_zones_bank.debug_cohesive_zone_var_update(
-                           local_opening,
-                           dt,
-                           time_value,
-                           cohesive_zones_bank.overlapping_node_gids,
-                           BC.stress_bc_global_vars,
-                           fracture_bdy_set,
-                           cz_internal_vars_view,
-                           cz_delta_internal_vars_view);      
+
+// // THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS                             
+//                         // comment out 1-12-2026, for downsampling prints of time, lambda, alpha, traction
+//                         // remove comment after done downsampling
+//                         // calling debug_cohesive_zone_var_update
+//                         cohesive_zones_bank.debug_cohesive_zone_var_update(
+//                            local_opening,
+//                            dt,
+//                            time_value,
+//                            cohesive_zones_bank.overlapping_node_gids,
+//                            BC.stress_bc_global_vars,
+//                            fracture_bdy_set,
+//                            cz_internal_vars_view,
+//                            cz_delta_internal_vars_view);      
+// // THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS 
 
 // // THROTTLE OUTPUT COMMENT OUT
 // // Print only once per timestep (last RK stage) and only every CZ_PRINT_DT in time
@@ -491,26 +532,161 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             cz_internal_vars_view,
                             cz_delta_internal_vars_view,
                             pair_area,
-                            F_cz_view);
-            
-                        // calling debug_cohesive_zone_loads
-                        cohesive_zones_bank.debug_cohesive_zone_loads(
-                            mesh,
-                            State.node.coords,
-                            cohesive_zones_bank.overlapping_node_gids,
-                            cz_orientation,
-                            //cohesive_zones_bank.cz_info,
-                            //cohesive_zones_bank.max_elem_in_cohesive_zone,
-                            cz_internal_vars_view,
-                            cz_delta_internal_vars_view,
-                            pair_area,
-                            F_cz_view); 
+                            F_cz_view
+                        );
+
+// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS  //2/3 add
+                        if (cz_fp && rk_stage == rk_num_stages - 1 && cycle == cz_next_cycle) {
+                            const double u_n_star = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::u_n_star);
+                            const double u_t_star = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::u_t_star);
+                            const double E_inf = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::E_inf);
+                            
+                            // fprintf(cz_fp, "\n=== TIME %.9e, cycle %zu ===\n", time_value, cycle);
+                            // fprintf(cz_fp, "dt=%.9e dt_stage=%.9e\n", dt, dt_stage);
+                            
+                            // Loop over ALL overlapping node pairs
+                            // for (size_t p = 0; p < npairs; p++) { // printing all cohesive zone node pairs
+                                const size_t p = 0; // printing one cohesive zone node pair (first)
+
+                                const size_t gidA = cohesive_zones_bank.overlapping_node_gids(p, 0);
+                                const size_t gidB = cohesive_zones_bank.overlapping_node_gids(p, 1);
+                                
+                                // Local openings (raw)
+                                const double un_t = local_opening(p, 0);
+                                const double ut_t = local_opening(p, 1);
+                                const double un_tdt = local_opening(p, 2);
+                                const double ut_tdt = local_opening(p, 3);
+                              
+                                // // Lambda values
+                                const double lambda_t = sqrt((un_t/u_n_star)*(un_t/u_n_star) + (ut_t/u_t_star)*(ut_t/u_t_star));
+                                const double lambda_tdt = sqrt((un_tdt/u_n_star)*(un_tdt/u_n_star) + (ut_tdt/u_t_star)*(ut_tdt/u_t_star));
+                                const double lambda_dot_t = (lambda_tdt - lambda_t) / dt_stage;
+                                
+                                // Internal vars
+                                const double alpha_t = cz_internal_vars_view(p, 1);
+                                const double Tn_t = cz_internal_vars_view(p, 2);
+                                // const double Tt_t = cz_internal_vars_view(p, 3);
+                                
+                                // // Delta internal vars
+                                // const double delta_lambda_dot = cz_delta_internal_vars_view(p, 0);
+                                // const double delta_alpha = cz_delta_internal_vars_view(p, 1);
+                                // const double delta_Tn = cz_delta_internal_vars_view(p, 2);
+                                // const double delta_Tt = cz_delta_internal_vars_view(p, 3);
+                                
+                                // // Positions and velocities of the pair
+                                // const double velA_x = State.node.vel(gidA, 0);
+                                // const double velA_y = State.node.vel(gidA, 1);
+                                // const double velA_z = State.node.vel(gidA, 2);
+                                // const double velB_x = State.node.vel(gidB, 0);
+                                // const double velB_y = State.node.vel(gidB, 1);
+                                // const double velB_z = State.node.vel(gidB, 2);
+                                
+                                // // Relative velocity magnitude
+                                // const double v_rel_x = velB_x - velA_x;
+                                // const double v_rel_y = velB_y - velA_y;
+                                // const double v_rel_z = velB_z - velA_z;
+                                // const double v_rel_mag = sqrt(v_rel_x*v_rel_x + v_rel_y*v_rel_y + v_rel_z*v_rel_z);
+                                
+                                // // Cohesive force on this pair
+                                // const double Fcz_Ax = F_cz(3*gidA);
+                                // const double Fcz_Ay = F_cz(3*gidA + 1);
+                                // const double Fcz_Az = F_cz(3*gidA + 2);
+                                // const double Fcz_mag = sqrt(Fcz_Ax*Fcz_Ax + Fcz_Ay*Fcz_Ay + Fcz_Az*Fcz_Az);
+                                
+                                // // Effective area
+                                // const double area = pair_area(p);
+
+                                // // Cohesive normals/orientation (print both sets if stored as 6 components)
+                                // const double n0x = cz_orientation(p, 0);
+                                // const double n0y = cz_orientation(p, 1);
+                                // const double n0z = cz_orientation(p, 2);
+
+                                // const double n1x = cz_orientation(p, 3);
+                                // const double n1y = cz_orientation(p, 4);
+                                // const double n1z = cz_orientation(p, 5);
+
+                                // const double n0mag = sqrt(n0x*n0x + n0y*n0y + n0z*n0z);
+                                // const double n1mag = sqrt(n1x*n1x + n1y*n1y + n1z*n1z);
+
+                                // const double dx = State.node.coords(gidB,0) - State.node.coords(gidA,0);
+                                // const double dy = State.node.coords(gidB,1) - State.node.coords(gidA,1);
+                                // const double dz = State.node.coords(gidB,2) - State.node.coords(gidA,2);
+
+                                // const double udotn0 = dx*n0x + dy*n0y + dz*n0z;
+                                // const double Tn_tdt = Tn_t + delta_Tn;
+                                // const double Tt_tdt = Tt_t + delta_Tt;
+                                
+                            //     fprintf(cz_fp, "Pair %zu: gidA=%zu gidB=%zu\n", p, gidA, gidB);
+                            //     fprintf(cz_fp, "  sep·n(0-2)=%.6e   sep·n(3-5)=%.6e\n",
+                            //             dx*n0x + dy*n0y + dz*n0z,
+                            //             dx*n1x + dy*n1y + dz*n1z);
+                            //     fprintf(cz_fp, "  n(0-2)=[%.6e %.6e %.6e] |n|=%.6e\n", n0x, n0y, n0z, n0mag);
+                            //     fprintf(cz_fp, "  n(3-5)=[%.6e %.6e %.6e] |n|=%.6e\n", n1x, n1y, n1z, n1mag);
+                            //     fprintf(cz_fp, "  Openings: un_t=%.6e ut_t=%.6e un_tdt=%.6e ut_tdt=%.6e\n", 
+                            //             un_t, ut_t, un_tdt, ut_tdt);
+                            //     fprintf(cz_fp, "  Lambda     t=%.6e tdt=%.6e dot=%.6e\n", 
+                            //             lambda_t, lambda_tdt, lambda_dot_t);
+                            //     fprintf(cz_fp, "  Alpha: t=%.6e delta=%.6e\n", alpha_t, delta_alpha);
+                            //     fprintf(cz_fp, "  Traction: Tn_t=%.6e Tt_t=%.6e dTn=%.6e dTt=%.6e\n", 
+                            //             Tn_t, Tt_t, delta_Tn, delta_Tt);
+                            //     fprintf(cz_fp, "  Traction NEW: Tn_tdt=%.6e Tt_tdt=%.6e\n", Tn_tdt, Tt_tdt);
+                            //     fprintf(cz_fp, "  Rel vel: vx=%.6e vy=%.6e vz=%.6e |v|=%.6e\n", 
+                            //             v_rel_x, v_rel_y, v_rel_z, v_rel_mag);
+                            //     fprintf(cz_fp, "  F_cz on A: Fx=%.6e Fy=%.6e Fz=%.6e |F|=%.6e\n", 
+                            //             Fcz_Ax, Fcz_Ay, Fcz_Az, Fcz_mag);
+                            //     fprintf(cz_fp, "  Area=%.6e\n", area);
+                            //     // Flag compression (negative normal opening)
+                            //     if (un_t < 0.0 || un_tdt < 0.0) {
+                            //         fprintf(cz_fp, "  *** COMPRESSION DETECTED: un_t=%s un_tdt=%s ***\n",
+                            //                 (un_t < 0.0) ? "NEGATIVE" : "ok",
+                            //                 (un_tdt < 0.0) ? "NEGATIVE" : "ok");     
+                            //     }
+                            //     if (udotn0 <= 0.0) fprintf(cz_fp,"  *** CLOSED/COMPRESSION (sep·n<=0) ***\n");                         
+                            //     // Flag suspicious values
+                            //     if (std::fabs(lambda_dot_t) > 1e3 || std::fabs(Tn_t) > 1e6 || 
+                            //         std::fabs(v_rel_mag) > 1e3 || std::fabs(delta_Tn) > 1e6) {
+                            //         fprintf(cz_fp, "  *** WARNING: SUSPICIOUS VALUES ***\n");
+                            //     }
+                            // }
+                            // fprintf(cz_fp, "=== END TIME %.9e ===\n\n", time_value);
+        
+                            
+
+                            fprintf(cz_fp, "%.9e, %.9e, %.9e, %.9e\n",
+                                    time_value, alpha_t, lambda_t, std::fabs(Tn_t));
+                            
+                            //fprintf(cz_fp, "%.9e, %.9e, %.9e, %.9e\n",
+                            //        un_t, ut_t, u_n_star, u_t_star);
+                            
+                            //fprintf(cz_fp, "RK info: rk_num_stages=%zu rk_stage=%zu rk_alpha=%.17g dt=%.9e\n",
+                            //rk_num_stages, rk_stage, rk_alpha, dt);
+
+                            // watch it live; can remove for speed
+                            fflush(cz_fp);
+
+                            cz_next_cycle += cz_stride;
+                        }
+// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS  2/3 add
+
+// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS                              
+                        // // calling debug_cohesive_zone_loads
+                        // cohesive_zones_bank.debug_cohesive_zone_loads(
+                        //     mesh,
+                        //     State.node.coords,
+                        //     cohesive_zones_bank.overlapping_node_gids,
+                        //     cz_orientation,
+                        //     //cohesive_zones_bank.cz_info,
+                        //     //cohesive_zones_bank.max_elem_in_cohesive_zone,
+                        //     cz_internal_vars_view,
+                        //     cz_delta_internal_vars_view,
+                        //     pair_area,
+                        //     F_cz_view); 
+// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS  
 
                             // 5) update global state: internal vars and nodal forces
                         // ensuring the internal vars are updated only at the last RK stage
                         if (rk_stage == rk_num_stages - 1){
 
-                         
                             for (size_t i = 0; i < npairs; ++i) {
                                 // 0: lambda_dot_t (store current rate)
                                 cz_internal_vars_view(i, 0) = cz_delta_internal_vars_view(i, 0);
@@ -528,18 +704,35 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                                     cz_internal_vars_view(i, col) = cz_delta_internal_vars_view(i, col);
                                 }
                             }
-                        }
+                        } // end rk_stage == rk_num_stages - 1
 
-                                // 5) add F_cz into global nodal force vector
+                                // 5) add F_cz into global cd binnodal force vector
                             for (size_t n = 0; n < num_nodes; ++n) {
                                 State.node.force(n,0) += F_cz(3*n    );
                                 State.node.force(n,1) += F_cz(3*n + 1);
                                 State.node.force(n,2) += F_cz(3*n + 2);
                                 }
-                            } // end for loop for updating global state
+                    } // end for loop for npairs
                 } // end gaurd if fracture_bdy_set > 0
             } // end if doing_fracture
-        
+    
+            // // 2/3 add
+            // auto dump_node = [&](size_t gid){
+            //     fprintf(cz_fp, "NODE %zu: mass=%.6e  F=(%.6e,%.6e,%.6e)  v=(%.6e,%.6e,%.6e)  x=(%.6e,%.6e,%.6e)\n",
+            //         gid,
+            //         State.node.mass(gid),
+            //         State.node.force(gid,0), State.node.force(gid,1), State.node.force(gid,2),
+            //         State.node.vel(gid,0),   State.node.vel(gid,1),   State.node.vel(gid,2),
+            //         State.node.coords(gid,0),State.node.coords(gid,1),State.node.coords(gid,2)
+            //     );
+            // };
+
+            // dump_node(1);  dump_node(8);
+            // dump_node(5);  dump_node(12);
+            // dump_node(7);  dump_node(15);
+            // dump_node(3);  dump_node(11);
+            // // 2/3 add
+
             // ---- Update nodal velocities ---- //
             update_velocity(rk_alpha,
                             dt,
@@ -661,7 +854,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             } // end if on applying geometric equilibration
 
         } // end of RK loop
-        
+
         // increment the time
         time_value += dt;
 
@@ -704,7 +897,16 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         if (time_value >= time_final) {
             break;
         }
+            
     } // end for cycle loop
+
+// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS 
+                     
+            if (cz_fp) {
+                fclose(cz_fp);
+                cz_fp = nullptr;
+            }
+// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS
 
     auto time_2    = std::chrono::high_resolution_clock::now();
     auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_2 - time_1).count();
@@ -963,3 +1165,5 @@ void set_corner_force_zero(const Mesh_t& mesh,
         }
     }); // end parallel for corners
 } // end function
+
+                    

@@ -35,6 +35,7 @@ struct cohesive_zones_t {
     //CArrayKokkos<size_t> cohesive_zone_info;
     CArrayKokkos<int> cz_info;
     size_t max_elem_in_cohesive_zone;
+    CArrayKokkos<double> internal_vars_n0; // 1/28/2026 addition: storage for internal vars at t_n
 
     
 
@@ -146,7 +147,7 @@ struct cohesive_zones_t {
     KOKKOS_FUNCTION
     void oriented(
         Mesh_t& mesh,
-        DCArrayKokkos<double>& pos,      // reference  coords (num_nodes x 3)
+        DCArrayKokkos<double>& pos,      // reference  coords (num_nodes x 3) 
         //DCArrayKokkos<double>& pos,    // updated ("t+dt") coords (num_nodes x 3) – can equal pos if not available
         CArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
         CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
@@ -161,14 +162,16 @@ struct cohesive_zones_t {
         const DCArrayKokkos<double>& vel,
         const CArrayKokkos<double>& cohesive_zone_orientation,
         const CArrayKokkos<size_t>& overlapping_node_gids,
-        const double dt, // timestep driver from sgh_execute.cpp
+        //const double dt, // timestep driver from sgh_execute.cpp  2/2 comment ouyt
+        const double dt_stage, // 2/2 add
         CArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
     );
 
     KOKKOS_FUNCTION
     void cohesive_zone_var_update(
         const CArrayKokkos<double>& local_opening,
-        const double dt,
+        //const double dt, //2/2 comment out
+        const double dt_stage, // 2/2 add
         const double time_value, // ADDED IN FOR DEBUGGING
         const CArrayKokkos<size_t>& overlapping_node_gids,
         const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
@@ -191,7 +194,7 @@ struct cohesive_zones_t {
         const ViewCArrayKokkos<double> &internal_vars,
         const ViewCArrayKokkos<double> &delta_internal_vars,
         CArrayKokkos<double> &pair_area,
-        const ViewCArrayKokkos<double> &F_cz  
+        const ViewCArrayKokkos<double> &F_cz
     ); 
 
     // END OF FRACTURE FUNCTION AND ARRAY DECLARATIONS
