@@ -1,9 +1,9 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 1.0
+    time_final: 200.0
     dt_min: 1.e-8
-    dt_max: 1.e-2
+    dt_max: 1.e-1
     dt_start: 1.e-5
     cycle_stop: 300000
 
@@ -17,14 +17,14 @@ mesh_options:
     num_dims: 3
     type: box
     origin: [0.0, 0.0, 0.0]
-    length: [400, 150, 150]
-    num_elems: [40, 15, 15]
+    length: [300, 150, 150]
+    num_elems: [30, 15, 15]
 
 
 output_options:
     timer_output_level: thorough
     output_file_format: viz
-    graphics_time_step: 0.25
+    graphics_time_step: 2.0
     #graphics_iteration_step: 2
     elem_field_outputs:
         - den
@@ -63,8 +63,6 @@ boundary_conditions:
             - 0   # y
             - 0   # z
 
-
-
     # Tag Y plane
     - boundary_condition:
         solver_id: 0
@@ -78,10 +76,12 @@ boundary_conditions:
             - 1   # y
             - 0   # z
 
+    # Tag Y plane
+    - boundary_condition:
         solver_id: 0
         surface: 
             type: y_plane
-            plane_position: 1.0
+            plane_position: 150.0
             tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
@@ -101,17 +101,20 @@ boundary_conditions:
             - 0   # x
             - 0   # y
             - 1   # z
+    
     - boundary_condition:
         solver_id: 0
         surface: 
             type: z_plane
-            plane_position: 1.0
+            plane_position: 150
             tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
             - 0   # y
             - 1   # z
+
+
 
   
 materials:
@@ -166,41 +169,60 @@ materials:
             - 0.05  # min limiter
             - 1.0   # pin_curl_min
 
-    - material:
-        id: 2  # HDPE Foam
-        #-----EOS
-        eos_model_type: decoupled
-        eos_model: linear_elastic_eos  
-        # bulk modulus
-        # shear modulus
-        # refernce den
-        # cs min
-        eos_global_vars:
-            - 0.001 # B  (0.1 GPa)
-            - 0.0001 # G (0.01 MPa)
-            - 0.5 # ref density (0.5 g/cm^3)
-            - 0.0001 # minimum sound speed
+    # - material:
+    #     id: 2  # HDPE Foam
+    #     #-----EOS
+    #     eos_model_type: decoupled
+    #     eos_model: linear_elastic_eos  
+    #     # bulk modulus
+    #     # shear modulus
+    #     # refernce den
+    #     # cs min
+    #     eos_global_vars:
+    #         - 0.001 # B  (0.1 GPa)
+    #         - 0.0001 # G (0.01 MPa)
+    #         - 0.5 # ref density (0.5 g/cm^3)
+    #         - 0.0001 # minimum sound speed
 
-        #------Strength
-        strength_model_type: increment_based
-        strength_model: hypo_plasticity_strength
-        # shear modulus of copper
-        # yield strength of copper
-        strength_global_vars:
-            - 0.0001 # shear modulus of steel
-            - 100  # assume no plasticity
-        # ------ArtVisc
+    #     #------Strength
+    #     strength_model_type: increment_based
+    #     strength_model: hypo_plasticity_strength
+    #     # shear modulus of copper
+    #     # yield strength of copper
+    #     strength_global_vars:
+    #         - 0.0001 # shear modulus of steel
+    #         - 100  # assume no plasticity
+    #     # ------ArtVisc
+    #     dissipation_model: MARS
+    #     dissipation_global_vars:
+    #         - 1.0   # q1
+    #         - 1.333 # q1ex
+    #         - 1.0   # q2
+    #         - 1.333 # q2ex
+    #         - 0.05  # min limiter
+    #         - 1.0   # pin_curl_min
+
+    - material:
+        id: 2
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        eos_global_vars:
+            - 4
+            - 1.0E-14
+            - 1.0
+        # strength_model: none
         dissipation_model: MARS
         dissipation_global_vars:
             - 1.0   # q1
-            - 1.333 # q1ex
-            - 1.0   # q2
+            - 1.0   # q1ex
+            - 1.333 # q2
             - 1.333 # q2ex
-            - 0.05  # min limiter
+            - 0.0   # phi_min
             - 1.0   # pin_curl_min
 
 
 regions:
+    # Fill with Air
     - region:
         volume:
             type: global
@@ -208,7 +230,7 @@ regions:
         material_id: 0
         density: 
             type: uniform
-            value: 1.0
+            value: 0.001225 
         specific_internal_energy: 
             type: uniform
             value: 1.e-10
@@ -221,21 +243,21 @@ regions:
             type: uniform
             value: 1.0
 
-    # Steel wall at x=6
+    # Steel wall at x=100mm (~0.5 inch thick)
     - region:
         volume:
             type: box
-            x1: 6.0
-            x2: 6.1
+            x1: 100.0
+            x2: 120.0
             y1: 0.0
-            y2: 1.0
+            y2: 150
             z1: 0.0
-            z2: 1.0
+            z2: 150
         solver_id: 0
         material_id: 1
         density: 
             type: uniform
-            value: 1.0
+            value: 7.85
         specific_internal_energy: 
             type: uniform
             value: 1.e-10
@@ -247,6 +269,138 @@ regions:
         volume_fraction:
             type: uniform
             value: 1.0
+
+    # Foam Checkerboard
+    - region:
+        volume:
+            type: box
+            x1: 80.0
+            x2: 100.0
+            y1: 0.0
+            y2: 50
+            z1: 0.0
+            z2: 50
+        solver_id: 0
+        material_id: 2
+        density: 
+            type: uniform
+            value: 0.5
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    - region:
+        volume:
+            type: box
+            x1: 80.0
+            x2: 100.0
+            y1: 100.0
+            y2: 150.0
+            z1: 0.0
+            z2: 50
+        solver_id: 0
+        material_id: 2
+        density: 
+            type: uniform
+            value: 0.5
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    - region:
+        volume:
+            type: box
+            x1: 80.0
+            x2: 100.0
+            y1: 50.0
+            y2: 100.0
+            z1: 50.0
+            z2: 100.0
+        solver_id: 0
+        material_id: 2
+        density: 
+            type: uniform
+            value: 0.5
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
+    - region:
+        volume:
+            type: box
+            x1: 80.0
+            x2: 100.0
+            y1: 0.0
+            y2: 50
+            z1: 100.0
+            z2: 150
+        solver_id: 0
+        material_id: 2
+        density: 
+            type: uniform
+            value: 0.5
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    - region:
+        volume:
+            type: box
+            x1: 80.0 
+            x2: 100.0  
+            y1: 100.0
+            y2: 150.0
+            z1: 100
+            z2: 150
+        solver_id: 0
+        material_id: 2
+        density: 
+            type: uniform
+            value: 0.5
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    
 
     # energy source initial conditions
     - region:
@@ -254,20 +408,20 @@ regions:
             type: box
             origin: [0.0, 0.0, 0.0]
             x1: 0.0
-            x2: 0.1
+            x2: 10
             y1: 0.0
-            y2: 0.1
+            y2: 150
             z1: 0.0
-            z2: 0.1
+            z2: 150
         solver_id: 0
         material_id: 0
         density: 
             type: uniform
-            value: 1.0
+            value: 0.001225 
         # ie: 0.25833839995946534
         specific_internal_energy: 
             type: uniform
-            value: 61.67375002 # 963.652344
+            value: 10000 # 963.652344
         velocity: 
             type: cartesian
             u: 0.0

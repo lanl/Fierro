@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1D Lagrangian Hydrocode (SGH)</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { margin-top: 0; color: #333; }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #canvas-container {
+            width: 100%;
+            height: 400px;
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+            position: relative;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+        #log {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .section-title {
+            grid-column: 1 / -1;
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>1D Lagrangian Hydrocode</h1>
+        <p>This is a 1D Lagrangian hydrodynamics code based on the Staggered Grid Hydrodynamics (SGH) method. In this Lagrangian formulation, the mesh nodes move with the local fluid velocity, naturally tracking material interfaces.</p>
+
+        <p>The solver uses:</p>
+        <ul>
+            <li><strong>Time Integration</strong>: Explicit Runge-Kutta 2nd Order (RK2).</li>
+            <li><strong>Spatial Discretization</strong>: Linear finite elements with a staggered grid arrangement (velocity at nodes, thermodynamic variables at cell centers).</li>
+            <li><strong>Shock Capturing</strong>: Artificial viscosity (Von Neumann-Richtmyer type) with a linear-quadratic formulation and a shock detection switch to apply dissipation only where needed.</li>
+            <li><strong>Equation of State</strong>: Ideal Gas Law (\( P = \rho e (\gamma - 1) \)).</li>
+        </ul>
+
+        <p>The simulation solves the conservation laws for mass, momentum, and energy in a compressible fluid flow.</p>
+
+        <div class="controls">
+            <div class="section-title">Mesh Settings</div>
+            <div class="control-group">
+                <label for="num_cells">Number of Elements</label>
+                <input type="number" id="num_cells" value="1000" min="10" step="10">
+            </div>
+            <div class="control-group">
+                <label for="x_min">Domain Min X</label>
+                <input type="number" id="x_min" value="0.0" step="1.0">
+            </div>
+            <div class="control-group">
+                <label for="x_max">Domain Max X</label>
+                <input type="number" id="x_max" value="100.0" step="1.0">
+            </div>
+
+            <div class="section-title">High Energy Region (Deposition)</div>
+            <div class="control-group">
+                <label for="dep_start">Start X</label>
+                <input type="number" id="dep_start" value="0.0" step="1.0">
+            </div>
+            <div class="control-group">
+                <label for="dep_end">End X</label>
+                <input type="number" id="dep_end" value="50.0" step="1.0">
+            </div>
+            <div class="control-group">
+                <label for="dep_sie">Internal Energy (SIE)</label>
+                <input type="number" id="dep_sie" value="2.5" step="0.1">
+            </div>
+            <div class="control-group">
+                <label for="dep_den">Density</label>
+                <input type="number" id="dep_den" value="1.0" step="0.1">
+            </div>
+
+            <div class="section-title">Background Region</div>
+            <div class="control-group">
+                <label for="bg_sie">Internal Energy (SIE)</label>
+                <input type="number" id="bg_sie" value="2.0" step="0.1">
+            </div>
+            <div class="control-group">
+                <label for="bg_den">Density</label>
+                <input type="number" id="bg_den" value="0.125" step="0.01">
+            </div>
+
+            <div class="section-title">Visualization Settings</div>
+            <div class="control-group" style="flex-direction: row; gap: 10px; align-items: center;">
+                <input type="checkbox" id="show_density" checked style="width: auto;">
+                <label for="show_density" style="margin: 0;">Show Density</label>
+            </div>
+            <div class="control-group" style="flex-direction: row; gap: 10px; align-items: center;">
+                <input type="checkbox" id="show_pressure" checked style="width: auto;">
+                <label for="show_pressure" style="margin: 0;">Show Pressure</label>
+            </div>
+
+            <div class="section-title">Simulation Control</div>
+             <div class="control-group">
+                <label for="max_time">Max Time</label>
+                <input type="number" id="max_time" value="20.0" step="1.0">
+            </div>
+            <div class="control-group">
+                <button id="runBtn">Run Simulation</button>
+            </div>
+        </div>
+
+        <div id="canvas-container">
+            <canvas id="plotCanvas"></canvas>
+        </div>
+
+        <div id="log">Ready to run.</div>
+    </div>
+
+    <script>
+        // -----------------------------------------------------------------------------
+        //    Global variables and Constants
+        // -----------------------------------------------------------------------------
+        const fuzz = 1.0E-15;
+        const huge = 1.0E15;
+        
+        // Simulation state
+        let running = false;
+        
+        // DOM Elements
+        const logEl = document.getElementById('log');
+        const canvas = document.getElementById('plotCanvas');
+        const ctx = canvas.getContext('2d');
+        const runBtn = document.getElementById('runBtn');
+        const showDensityCb = document.getElementById('show_density');
+        const showPressureCb = document.getElementById('show_pressure');
+
+        showDensityCb.addEventListener('change', draw);
+        showPressureCb.addEventListener('change', draw);
+
+        function log(msg) {
+            logEl.textContent += msg + '\n';
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function clearLog() {
+            logEl.textContent = '';
+        }
+
+        // -----------------------------------------------------------------------------
+        //    Helper Functions
+        // -----------------------------------------------------------------------------
+        function get_corners_in_cell(cell_gid, corner_lid) {
+            return (2 * cell_gid + corner_lid);
+        }
+
+        function get_corners_in_node(node_gid, corner_lid) {
+            return (2 * node_gid - 1 + corner_lid);
+        }
+
+        // -----------------------------------------------------------------------------
+        //    Simulation Class
+        // -----------------------------------------------------------------------------
+        class HydroSimulation {
+            constructor(params) {
+                this.params = params;
+                this.time = 0.0;
+                this.dt = 0.01;
+                this.cycle = 0;
+                
+                // Unpack params
+                this.num_cells = params.num_cells;
+                this.num_nodes = this.num_cells + 1;
+                this.num_corners = 2 * this.num_cells;
+                this.dx = (params.x_max - params.x_min) / this.num_cells;
+                
+                this.time_max = params.max_time;
+                this.dt_max = 100;
+                this.dt_cfl = 0.3;
+                this.num_rk_stages = 2;
+                this.max_cycles = 2000000;
+                
+                this.sspd_min = 1.0E-3;
+                
+                // Allocate arrays
+                this.cell_den = new Float64Array(this.num_cells);
+                this.cell_pres = new Float64Array(this.num_cells);
+                this.cell_sspd = new Float64Array(this.num_cells);
+                this.cell_sie = new Float64Array(this.num_cells);
+                this.cell_sie_n = new Float64Array(this.num_cells);
+                this.cell_mass = new Float64Array(this.num_cells);
+                this.cell_gamma = new Float64Array(this.num_cells);
+                
+                this.node_vel = new Float64Array(this.num_nodes);
+                this.node_vel_n = new Float64Array(this.num_nodes);
+                this.node_mass = new Float64Array(this.num_nodes);
+                
+                this.corner_force = new Float64Array(this.num_corners);
+                this.corner_mass = new Float64Array(this.num_corners);
+                this.corner_vel = new Float64Array(this.num_corners);
+                
+                this.cell_coords = new Float64Array(this.num_cells);
+                this.cell_vol = new Float64Array(this.num_cells);
+                
+                this.node_coords = new Float64Array(this.num_nodes);
+                this.node_coords_n = new Float64Array(this.num_nodes);
+                
+                this.integral_grad_basis = [1.0, -1.0];
+
+                this.init();
+            }
+
+            init() {
+                // Initialize node coords
+                for (let i = 0; i < this.num_nodes; i++) {
+                    this.node_coords[i] = this.params.x_min + i * this.dx;
+                }
+
+                // Initialize cell coords and vol
+                for (let i = 0; i < this.num_cells; i++) {
+                    this.cell_coords[i] = 0.5 * (this.node_coords[i] + this.node_coords[i+1]);
+                    this.cell_vol[i] = this.node_coords[i+1] - this.node_coords[i];
+                }
+
+                // Initial cell state
+                // We have two regions: Deposition (High Energy) and Background
+                // But we handle them by checking coordinates
+                for (let i = 0; i < this.num_cells; i++) {
+                    let den, sie, vel, gamma;
+                    const x = this.cell_coords[i];
+                    
+                    // Check if in High Energy Region
+                    if (x >= this.params.dep_start && x <= this.params.dep_end) {
+                        den = this.params.dep_den;
+                        sie = this.params.dep_sie;
+                        vel = 0.0;
+                        gamma = 1.4;
+                    } else {
+                        // Background
+                        den = this.params.bg_den;
+                        sie = this.params.bg_sie;
+                        vel = 0.0;
+                        gamma = 1.4;
+                    }
+
+                    this.cell_den[i] = den;
+                    this.cell_sie[i] = sie;
+                    this.cell_gamma[i] = gamma;
+                    
+                    this.cell_pres[i] = den * sie * (gamma - 1.0);
+                    this.cell_sspd[i] = Math.sqrt(gamma * this.cell_pres[i] / den);
+                    this.cell_mass[i] = den * this.cell_vol[i];
+
+                    const c0 = get_corners_in_cell(i, 0);
+                    const c1 = get_corners_in_cell(i, 1);
+                    
+                    this.corner_mass[c0] = 0.5 * this.cell_mass[i];
+                    this.corner_mass[c1] = 0.5 * this.cell_mass[i];
+                    
+                    this.corner_vel[c0] = vel;
+                    this.corner_vel[c1] = vel;
+                }
+
+                // Initialize nodal state
+                for (let i = 1; i < this.num_nodes - 1; i++) {
+                    this.node_mass[i] = 0.0;
+                    this.node_vel[i] = 0.0;
+                    for (let cid = 0; cid < 2; cid++) {
+                        const gid = get_corners_in_node(i, cid);
+                        this.node_mass[i] += this.corner_mass[gid];
+                        this.node_vel[i] += 0.5 * this.corner_vel[gid];
+                    }
+                }
+
+                // Boundary nodes
+                this.node_mass[0] = this.corner_mass[0];
+                this.node_mass[this.num_nodes - 1] = this.corner_mass[this.num_corners - 1];
+                this.node_vel[0] = 0.0;
+                this.node_vel[this.num_nodes - 1] = 0.0;
+                
+                log("Initialization complete.");
+                log(`Initial Total Energy: ${this.calculateTotalEnergy().toExponential(6)}`);
+            }
+
+            calculateTotalEnergy() {
+                let total_e = 0.0;
+                for (let i = 0; i < this.num_cells; i++) {
+                    total_e += this.cell_mass[i] * this.cell_sie[i] +
+                               0.5 * this.cell_mass[i] * 0.5 * Math.pow(this.node_vel[i], 2) +
+                               0.5 * this.cell_mass[i] * 0.5 * Math.pow(this.node_vel[i+1], 2);
+                }
+                return total_e;
+            }
+
+            step() {
+                if (this.cycle >= this.max_cycles || this.time >= this.time_max) {
+                    return false;
+                }
+
+                // Time step calculation
+                let min_dt_calc = huge;
+                const dt_ceiling = this.dt * 1.1;
+
+                for (let i = 0; i < this.num_cells; i++) {
+                    const dx_lcl = this.node_coords[i+1] - this.node_coords[i];
+                    let dt_lcl_ = this.dt_cfl * dx_lcl / (this.cell_sspd[i] + fuzz);
+                    
+                    dt_lcl_ = Math.min(dt_lcl_, this.dt_max);
+                    dt_lcl_ = Math.min(dt_lcl_, this.time_max - this.time);
+                    dt_lcl_ = Math.min(dt_lcl_, dt_ceiling);
+
+                    if (dt_lcl_ < min_dt_calc) min_dt_calc = dt_lcl_;
+                }
+
+                if (min_dt_calc < this.dt) this.dt = min_dt_calc;
+                if (this.dt <= fuzz) return false;
+
+                // RK Loop
+                for (let rk = 0; rk < this.num_rk_stages; rk++) {
+                    const rk_alpha = 1.0 / (this.num_rk_stages - rk);
+
+                    if (rk === 0) {
+                        for (let i = 0; i < this.num_nodes; i++) {
+                            this.node_vel_n[i] = this.node_vel[i];
+                            this.node_coords_n[i] = this.node_coords[i];
+                        }
+                        for (let i = 0; i < this.num_cells; i++) {
+                            this.cell_sie_n[i] = this.cell_sie[i];
+                        }
+                    }
+
+                    // Calculate corner forces
+                    for (let i = 0; i < this.num_cells; i++) {
+                        let visc;
+                        let visc_HO;
+                        
+                        const dvel = this.node_vel[i+1] - this.node_vel[i];
+                        
+                        if (dvel < 0.0) {
+                            visc = 0.5 * this.cell_den[i] * this.cell_sspd[i] * Math.abs(dvel) +
+                                   (1.2/4.0) * this.cell_den[i] * Math.pow(dvel, 2.0);
+                            visc_HO = 0.0;
+                        } else {
+                            visc = -(1.2/4.0) * this.cell_den[i] * Math.pow(dvel, 2.0);
+                            visc_HO = 0.0;
+                        }
+
+                        const ratio = 20.0 * Math.abs(dvel) / (this.cell_sspd[i] + fuzz);
+                        const alpha = Math.max(0.0, Math.min(1.0, ratio));
+                        
+                        visc = alpha * visc + (1.0 - alpha) * visc_HO;
+
+                        const c0 = get_corners_in_cell(i, 0);
+                        const c1 = get_corners_in_cell(i, 1);
+
+                        this.corner_force[c0] = this.integral_grad_basis[0] * (-this.cell_pres[i] - visc);
+                        this.corner_force[c1] = this.integral_grad_basis[1] * (-this.cell_pres[i] - visc);
+                    }
+
+                    // Calculate new velocity
+                    for (let i = 1; i < this.num_nodes - 1; i++) {
+                        const c0 = get_corners_in_node(i, 0);
+                        const c1 = get_corners_in_node(i, 1);
+                        
+                        const force_tally = this.corner_force[c0] + this.corner_force[c1];
+                        
+                        this.node_vel[i] = this.node_vel_n[i] + 
+                                           rk_alpha * this.dt / this.node_mass[i] * force_tally;
+                    }
+                    
+                    // Wall BC
+                    this.node_vel[0] = 0.0;
+                    this.node_vel[this.num_nodes - 1] = 0.0;
+
+                    // Calculate new mesh positions
+                    for (let i = 0; i < this.num_nodes; i++) {
+                        const half_vel = 0.5 * (this.node_vel_n[i] + this.node_vel[i]);
+                        this.node_coords[i] = this.node_coords_n[i] + rk_alpha * this.dt * half_vel;
+                    }
+
+                    // Calculate new internal energy
+                    for (let i = 0; i < this.num_cells; i++) {
+                        const c0 = get_corners_in_cell(i, 0);
+                        const c1 = get_corners_in_cell(i, 1);
+
+                        const half_vel_0 = 0.5 * (this.node_vel_n[i] + this.node_vel[i]);
+                        const half_vel_1 = 0.5 * (this.node_vel_n[i+1] + this.node_vel[i+1]);
+
+                        const power_tally = this.corner_force[c0] * half_vel_0 + 
+                                            this.corner_force[c1] * half_vel_1;
+                        
+                        this.cell_sie[i] = this.cell_sie_n[i] - 
+                                           rk_alpha * this.dt / this.cell_mass[i] * power_tally;
+
+                        // Update state on mesh
+                        this.cell_vol[i] = this.node_coords[i+1] - this.node_coords[i];
+                        this.cell_coords[i] = 0.5 * (this.node_coords[i] + this.node_coords[i+1]);
+                        
+                        this.cell_den[i] = this.cell_mass[i] / this.cell_vol[i];
+                        this.cell_pres[i] = this.cell_den[i] * this.cell_sie[i] * (this.cell_gamma[i] - 1.0);
+                        this.cell_sspd[i] = Math.sqrt(this.cell_gamma[i] * this.cell_pres[i] / this.cell_den[i]);
+                        this.cell_sspd[i] = Math.max(this.cell_sspd[i], this.sspd_min);
+                    }
+                } // end RK loop
+
+                this.time += this.dt;
+                if (Math.abs(this.time - this.time_max) <= fuzz) this.time = this.time_max;
+                this.cycle++;
+
+                return true;
+            }
+        }
+
+        // -----------------------------------------------------------------------------
+        //    Main Loop & UI
+        // -----------------------------------------------------------------------------
+        let sim = null;
+        let animationFrameId = null;
+
+        function draw() {
+            if (!sim) return;
+            
+            // Resize canvas if needed
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            const w = rect.width;
+            const h = rect.height;
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            // Plot settings
+            const margin = 40;
+            const plotW = w - 2 * margin;
+            const plotH = h - 2 * margin;
+            
+            // Find scales
+            let minX = sim.node_coords[0];
+            let maxX = sim.node_coords[sim.num_nodes-1];
+            
+            // Auto scale Y for Density and Pressure
+            let currentMaxDen = 0;
+            let currentMaxPres = 0;
+            let currentMaxSie = 0;
+            
+            for(let i=0; i<sim.num_cells; i++) {
+                if(sim.cell_den[i] > currentMaxDen) currentMaxDen = sim.cell_den[i];
+                if(sim.cell_pres[i] > currentMaxPres) currentMaxPres = sim.cell_pres[i];
+                if(sim.cell_sie[i] > currentMaxSie) currentMaxSie = sim.cell_sie[i];
+            }
+
+            // Update global maximums in simulation state
+            if (!sim.globalMaxDen) sim.globalMaxDen = 0;
+            if (!sim.globalMaxPres) sim.globalMaxPres = 0;
+            if (!sim.globalMaxSie) sim.globalMaxSie = 0;
+
+            if (currentMaxDen > sim.globalMaxDen) sim.globalMaxDen = currentMaxDen;
+            if (currentMaxPres > sim.globalMaxPres) sim.globalMaxPres = currentMaxPres;
+            if (currentMaxSie > sim.globalMaxSie) sim.globalMaxSie = currentMaxSie;
+
+            let maxDen = sim.globalMaxDen;
+            let maxPres = sim.globalMaxPres;
+            let maxSie = sim.globalMaxSie;
+
+            
+            // Scale factors
+            // We'll normalize each to plotH
+            const scaleX = plotW / (maxX - minX);
+            
+            // Draw Axes
+            ctx.beginPath();
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 1;
+            ctx.moveTo(margin, margin + plotH);
+            ctx.lineTo(margin + plotW, margin + plotH); // X axis
+            ctx.lineTo(margin + plotW, margin); // Right wall
+            ctx.lineTo(margin, margin); // Top wall
+            ctx.lineTo(margin, margin + plotH); // Y axis
+            ctx.stroke();
+            
+            // Draw Density (Blue)
+            if (showDensityCb.checked) {
+                ctx.beginPath();
+                ctx.strokeStyle = "blue";
+                ctx.lineWidth = 2;
+                for(let i=0; i<sim.num_cells; i++) {
+                    const x = margin + (sim.cell_coords[i] - minX) * scaleX;
+                    const y = margin + plotH - (sim.cell_den[i] / (maxDen || 1)) * plotH;
+                    if (i===0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+            
+            // Draw Pressure (Red)
+            if (showPressureCb.checked) {
+                ctx.beginPath();
+                ctx.strokeStyle = "red";
+                ctx.lineWidth = 2;
+                for(let i=0; i<sim.num_cells; i++) {
+                    const x = margin + (sim.cell_coords[i] - minX) * scaleX;
+                    const y = margin + plotH - (sim.cell_pres[i] / (maxPres || 1)) * plotH;
+                    if (i===0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+            }
+
+            // Legend
+            if (showDensityCb.checked) {
+                ctx.fillStyle = "blue";
+                ctx.fillText(`Density (Max: ${maxDen.toFixed(3)})`, margin + 10, margin + 20);
+            }
+            if (showPressureCb.checked) {
+                ctx.fillStyle = "red";
+                ctx.fillText(`Pressure (Max: ${maxPres.toFixed(3)})`, margin + 10, margin + 40);
+            }
+            
+            // Info
+            ctx.fillStyle = "black";
+            ctx.fillText(`Time: ${sim.time.toFixed(4)} / ${sim.time_max.toFixed(1)}`, margin, margin - 10);
+            ctx.fillText(`Cycle: ${sim.cycle}`, margin + 150, margin - 10);
+        }
+
+        function loop() {
+            if (!running || !sim) return;
+
+            // Run a few steps per frame to speed up visual
+            const stepsPerFrame = 10;
+            let keepGoing = true;
+            for(let k=0; k<stepsPerFrame; k++) {
+                keepGoing = sim.step();
+                if (!keepGoing) break;
+            }
+
+            draw();
+
+            if (keepGoing) {
+                animationFrameId = requestAnimationFrame(loop);
+            } else {
+                running = false;
+                runBtn.textContent = "Run Simulation";
+                log(`Simulation finished at time ${sim.time.toFixed(4)}`);
+                log(`Final Total Energy: ${sim.calculateTotalEnergy().toExponential(6)}`);
+            }
+        }
+
+        runBtn.addEventListener('click', () => {
+            if (running) {
+                // Stop
+                running = false;
+                cancelAnimationFrame(animationFrameId);
+                runBtn.textContent = "Run Simulation";
+                return;
+            }
+
+            // Start
+            clearLog();
+            const params = {
+                num_cells: parseInt(document.getElementById('num_cells').value),
+                x_min: parseFloat(document.getElementById('x_min').value),
+                x_max: parseFloat(document.getElementById('x_max').value),
+                dep_start: parseFloat(document.getElementById('dep_start').value),
+                dep_end: parseFloat(document.getElementById('dep_end').value),
+                dep_sie: parseFloat(document.getElementById('dep_sie').value),
+                dep_den: parseFloat(document.getElementById('dep_den').value),
+                bg_sie: parseFloat(document.getElementById('bg_sie').value),
+                bg_den: parseFloat(document.getElementById('bg_den').value),
+                max_time: parseFloat(document.getElementById('max_time').value)
+            };
+            
+            log("Initializing simulation...");
+            sim = new HydroSimulation(params);
+            
+            running = true;
+            runBtn.textContent = "Stop Simulation";
+            
+            draw();
+            loop();
+        });
+
+        // Initial draw
+        window.onload = () => {
+            // Setup canvas size
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            ctx.font = "12px sans-serif";
+            ctx.fillText("Press Run to start", 20, 20);
+        };
+    </script>
+</body>
+</html>
