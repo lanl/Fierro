@@ -2,7 +2,7 @@
 #define CONTACT_H
 
 #include "matar.h"
-#include "mesh.h"
+// //#include "mesh.h""
 #include "simulation_parameters.h"
 
 using namespace mtr;

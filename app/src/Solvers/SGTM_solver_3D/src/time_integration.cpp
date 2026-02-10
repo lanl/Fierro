@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgtm_solver_3D.h"
-#include "mesh.h"
+//#include "mesh.h""
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -99,7 +99,7 @@ std::cout << "done with rk_int \n ";
 /// REMOVE EXCESS TIME RELATED VARIABLES
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::get_timestep(Mesh_t& mesh,
+void SGTM3D::get_timestep(swage::Mesh& mesh,
                        DCArrayKokkos<double>& node_coords,
                        DCArrayKokkos<double>& node_vel,
                        DCArrayKokkos<double>& GaussPoints_vol,

@@ -34,7 +34,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "sgtm_solver_3D.h"
 #include "material.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "state.h"
 #include "geometry_new.h"
 
@@ -69,7 +69,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::get_heat_flux(
     const Material_t& Materials,
-    const Mesh_t& mesh,
+    const swage::Mesh& mesh,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_temp,
@@ -219,7 +219,7 @@ void SGTM3D::get_heat_flux(
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::moving_flux(
     const Material_t& Materials,
-    const Mesh_t& mesh,
+    const swage::Mesh& mesh,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& corner_q_flux,

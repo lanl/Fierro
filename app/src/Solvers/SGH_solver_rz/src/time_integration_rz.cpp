@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver_rz.h"
-#include "mesh.h"
+//#include "mesh.h""
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -110,7 +110,7 @@ void SGHRZ::rk_init_rz(
 /// \param View of element volume
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::get_timestep_rz(Mesh_t& mesh,
+void SGHRZ::get_timestep_rz(swage::Mesh& mesh,
                             DCArrayKokkos<double>& node_coords,
                             DCArrayKokkos<double>& node_vel,
                             DCArrayKokkos<double>& GaussPoints_vol,

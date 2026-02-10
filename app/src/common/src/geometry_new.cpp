@@ -366,7 +366,7 @@ void geometry::get_vol_hex(const DCArrayKokkos<double>& elem_vol,
 /////////////////////////////////////////////////////////////////////////////
 void geometry::get_vol(const DCArrayKokkos<double>& elem_vol,
     const DCArrayKokkos<double>& node_coords,
-    const Mesh_t& mesh)
+    const swage::Mesh& mesh)
 {
     const size_t num_dims = mesh.num_dims;
 
@@ -630,7 +630,7 @@ size_t check_bdy(const size_t patch_gid,
     const double  orig_x,
     const double  orig_y,
     const double  orig_z,
-    const Mesh_t& mesh,
+    const swage::Mesh& mesh,
     const DCArrayKokkos<double>& node_coords)
 {
     size_t num_dims = mesh.num_dims;
@@ -713,7 +713,7 @@ size_t check_bdy(const size_t patch_gid,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void tag_bdys(const BoundaryCondition_t& boundary,
-    Mesh_t& mesh,
+    swage::Mesh& mesh,
     const DCArrayKokkos<double>& node_coords)
 {
 
@@ -802,7 +802,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 /// \brief Build sets of boundary nodes
 ///
 /////////////////////////////////////////////////////////////////////////////
-void build_boundry_node_sets(Mesh_t& mesh)
+void build_boundry_node_sets(swage::Mesh& mesh)
 {
     // build boundary nodes in each boundary set
 

@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgtm_solver_3D.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "state.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::update_temperature(
-    const Mesh_t& mesh,
+    const swage::Mesh& mesh,
     const DCArrayKokkos<double>& corner_q_transfer,
     const DCArrayKokkos<double>& node_temp,
     const DCArrayKokkos<double>& node_temp_n0,

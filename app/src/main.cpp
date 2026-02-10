@@ -34,10 +34,11 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
-#include <Kokkos_Core.hpp>
+// #include <Kokkos_Core.hpp>
 #include <sys/stat.h>
 
-#include "matar.h"
+// #include "matar.h"
+#include "ELEMENTS.h"
 #include "driver.h"
 #include "parse_tools.hpp"
 

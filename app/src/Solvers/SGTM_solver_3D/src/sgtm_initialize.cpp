@@ -34,12 +34,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "sgtm_solver_3D.h"
 #include "state.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "simulation_parameters.h"
 
 void SGTM3D::initialize(SimulationParameters_t& SimulationParamaters, 
                 	   Material_t& Materials, 
-                	   Mesh_t& mesh, 
+                	   swage::Mesh& mesh, 
                 	   BoundaryCondition_t& Boundary,
                 	   State_t& State) const
 {
@@ -72,7 +72,7 @@ void SGTM3D::initialize(SimulationParameters_t& SimulationParamaters,
 
 void SGTM3D::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
                 	                  Material_t& Materials, 
-                	                  Mesh_t& mesh, 
+                	                  swage::Mesh& mesh, 
                 	                  BoundaryCondition_t& Boundary,
                 	                  State_t& State) const
 {

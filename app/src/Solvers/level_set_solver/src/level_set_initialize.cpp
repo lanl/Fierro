@@ -34,13 +34,13 @@
 
  #include "level_set_solver.h"
  #include "state.h"
- #include "mesh.h"
+ //#include "mesh.h""
  #include "simulation_parameters.h"
  
  
  void LevelSet::initialize(SimulationParameters_t& SimulationParamaters, 
                         Material_t& Materials, 
-                        Mesh_t& mesh, 
+                        swage::Mesh& mesh, 
                         BoundaryCondition_t& Boundary,
                         State_t& State) const
  {
@@ -61,7 +61,7 @@
  
  void LevelSet::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
                                        Material_t& Materials, 
-                                       Mesh_t& mesh, 
+                                       swage::Mesh& mesh, 
                                        BoundaryCondition_t& Boundary,
                                        State_t& State) const
  {

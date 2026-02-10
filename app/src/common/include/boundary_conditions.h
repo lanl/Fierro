@@ -36,9 +36,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "solver_inputs.h"
 
-#include "matar.h"
-
-#include "mesh.h"
+// #include "matar.h"
+// #include "unstructured_mesh.h"
+#include "ELEMENTS.h"
 
 #include <map>
 
@@ -210,7 +210,7 @@ struct BoundaryConditionEnums_t
 struct BoundaryConditionFunctions_t
 {
     // function pointer for velocity BC's
-    void (*velocity) (const Mesh_t& mesh,
+    void (*velocity) (const swage::Mesh& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
@@ -221,7 +221,7 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_set) = NULL;
 
     // function pointer for temperature BC's
-    void (*temperature) (const Mesh_t& mesh,
+    void (*temperature) (const swage::Mesh& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& temp_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
@@ -232,7 +232,7 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_set) = NULL;
 
     // Function pointer to heat flux BCs
-    void (*heat_flux) (const Mesh_t& mesh,
+    void (*heat_flux) (const swage::Mesh& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& heat_flux_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
@@ -244,7 +244,7 @@ struct BoundaryConditionFunctions_t
 
 
     // function pointer for stress BC's
-    void (*stress) (const Mesh_t& mesh,
+    void (*stress) (const swage::Mesh& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,

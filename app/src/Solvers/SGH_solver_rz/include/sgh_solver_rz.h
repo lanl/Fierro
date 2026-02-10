@@ -37,11 +37,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "solver.h"
 #include "state.h"
+#include "ELEMENTS.h"
 
 // Forward declare structs
 struct SimulationParameters_t;
 struct Material_t;
-struct Mesh_t;
+// struct swage::Mesh;
 struct BoundaryCondition_t;
 // struct State_t;
 struct RegionFill_t;
@@ -127,13 +128,13 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void initialize(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
-                    Mesh_t& mesh, 
+                    swage::Mesh& mesh, 
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override;
 
     void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
                 	               Material_t& Materials, 
-                	               Mesh_t& mesh, 
+                	               swage::Mesh& mesh, 
                 	               BoundaryCondition_t& Boundary,
                 	               State_t& State) const override;
                                    
@@ -146,7 +147,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void setup(SimulationParameters_t& SimulationParamaters, 
                Material_t& Materials, 
-               Mesh_t& mesh, 
+               swage::Mesh& mesh, 
                BoundaryCondition_t& Boundary,
                State_t& State) override;
 
@@ -161,7 +162,7 @@ public:
     void execute(SimulationParameters_t& SimulationParamaters, 
                  Material_t& Materials, 
                  BoundaryCondition_t& Boundary, 
-                 Mesh_t& mesh, 
+                 swage::Mesh& mesh, 
                  State_t& State) override;
 
     /////////////////////////////////////////////////////////////////////////////
@@ -189,19 +190,19 @@ public:
 
                         
     void init_corner_node_masses_zero_rz(
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_mass) const;
 
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity_rz(
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const BoundaryCondition_t& Boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value) const;
 
     void boundary_contact_rz(
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const BoundaryCondition_t& Boundary,
         DCArrayKokkos<double>& node_vel,
         const double time_value) const;
@@ -210,7 +211,7 @@ public:
     void update_energy_rz(
         const double rk_alpha,
         const double dt,
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_vel_n0,
         const DCArrayKokkos<double>& node_coords,
@@ -227,7 +228,7 @@ public:
 
     void get_force_rz(
         const Material_t& Materials,
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
@@ -267,7 +268,7 @@ public:
     void update_velocity_rz(
         double rk_alpha,
         double dt,
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_vel_n0,
         const DCArrayKokkos<double>& node_mass,
@@ -275,7 +276,7 @@ public:
 
     void get_velgrad_rz(
         DCArrayKokkos<double>& elem_vel_grad,
-        const Mesh_t mesh,
+        const swage::Mesh mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& elem_vol) const;
@@ -287,7 +288,7 @@ public:
 
     void get_divergence_rz(
         DCArrayKokkos<double>& GaussPoints_div,
-        const Mesh_t mesh,
+        const swage::Mesh mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vol) const;
@@ -295,7 +296,7 @@ public:
     // **** Functions defined in properties.cpp **** //
     void update_state_rz(
         const Material_t& Materials,
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
@@ -323,7 +324,7 @@ public:
 
     void update_stress(
         const Material_t& Materials,
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
@@ -367,7 +368,7 @@ public:
 
 
     void get_timestep_rz(
-        Mesh_t& mesh,
+        swage::Mesh& mesh,
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
@@ -390,7 +391,7 @@ public:
 };
 
 void calc_corner_mass_rz(const Material_t& Materials,
-                         const Mesh_t& mesh,
+                         const swage::Mesh& mesh,
                          const DCArrayKokkos<double>& node_coords,
                          const DCArrayKokkos<double>& node_mass,
                          const DCArrayKokkos<double>& corner_mass,
@@ -399,12 +400,12 @@ void calc_corner_mass_rz(const Material_t& Materials,
                          const size_t num_mat_elems,
                          const size_t mat_id);
 
-void calc_node_mass_rz(const Mesh_t& mesh,
+void calc_node_mass_rz(const swage::Mesh& mesh,
                     const DCArrayKokkos<double>& node_coords,
                     const DCArrayKokkos<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass);                         
 
-void calc_node_areal_mass_rz(const Mesh_t& mesh,
+void calc_node_areal_mass_rz(const swage::Mesh& mesh,
                              const DCArrayKokkos<double>& node_coords,
                              const DCArrayKokkos<double>& node_mass,
                              CArrayKokkos<double> node_extensive_mass,
@@ -420,7 +421,7 @@ double sum_domain_internal_energy_rz(const DRaggedRightArrayKokkos<double>& Mate
                                      const size_t num_mat_points,
                                      const size_t mat_id);
 
-double sum_domain_kinetic_energy_rz(const Mesh_t& mesh,
+double sum_domain_kinetic_energy_rz(const swage::Mesh& mesh,
                                     const DCArrayKokkos<double>& node_vel,
                                     const CArrayKokkos<double>& node_extensive_mass);
 
@@ -431,7 +432,7 @@ double sum_domain_material_mass_rz(const DRaggedRightArrayKokkos<double>& Materi
 double sum_domain_node_mass_rz(const CArrayKokkos<double>& extensive_node_mass,
                                const size_t num_nodes);
 
-void set_corner_force_zero_rz(const Mesh_t& mesh, 
+void set_corner_force_zero_rz(const swage::Mesh& mesh, 
                               const DCArrayKokkos<double>& corner_force);   
 
 #endif // end HEADER_H

@@ -37,7 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "simulation_parameters.h"
 #include "material.h"
 #include "boundary_conditions.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "state.h"
 #include "geometry_new.h"
 #include "mesh_io.h"
@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGHRZ::execute(SimulationParameters_t& SimulationParamaters, 
                   Material_t& Materials, 
                   BoundaryCondition_t& BoundaryConditions, 
-                  Mesh_t& mesh, 
+                  swage::Mesh& mesh, 
                   State_t& State)
 {
 
@@ -548,7 +548,7 @@ double sum_domain_internal_energy_rz(const DRaggedRightArrayKokkos<double>& Mate
     return IE_sum;
 } // end function 
 
-double sum_domain_kinetic_energy_rz(const Mesh_t& mesh,
+double sum_domain_kinetic_energy_rz(const swage::Mesh& mesh,
                                     const DCArrayKokkos<double>& node_vel,
                                     const CArrayKokkos<double>& node_extensive_mass)
 {
@@ -654,7 +654,7 @@ void calc_node_extensive_mass_rz(const CArrayKokkos<double>& node_extensive_mass
 /// \param tiny is a very small number close in value to zero
 ///
 /////////////////////////////////////////////////////////////////////////////
-void calc_node_areal_mass_rz(const Mesh_t& mesh,
+void calc_node_areal_mass_rz(const swage::Mesh& mesh,
                              const DCArrayKokkos<double>& node_coords,
                              const DCArrayKokkos<double>& node_mass,
                              const CArrayKokkos<double> node_extensive_mass,
@@ -698,7 +698,7 @@ void calc_node_areal_mass_rz(const Mesh_t& mesh,
 
 
 // set the corner forces to zero
-void set_corner_force_zero_rz(const Mesh_t& mesh, 
+void set_corner_force_zero_rz(const swage::Mesh& mesh, 
                               const DCArrayKokkos<double>& corner_force)
 {
 

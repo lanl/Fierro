@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgtm_solver_3D.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "region_fill.h"
 #include "material.h"
 #include "boundary_conditions.h"
@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::setup(SimulationParameters_t& SimulationParamaters, 
                 Material_t& Materials, 
-                Mesh_t& mesh, 
+                swage::Mesh& mesh, 
                 BoundaryCondition_t& Boundary,
                 State_t& State)
 {

@@ -38,11 +38,12 @@
 #include "solver.h"
 #include "state.h"
 #include "material.h"
+#include "ELEMENTS.h"
 
 // Forward declare structs
 struct SimulationParameters_t;
 struct Material_t;
-struct Mesh_t;
+// struct swage::Mesh;
 struct BoundaryCondition_t;
 struct RegionFill_t;
 struct RegionFill_host_t;
@@ -113,13 +114,13 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void initialize(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
-                    Mesh_t& mesh, 
+                    swage::Mesh& mesh, 
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override;
 
     void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
         Material_t& Materials, 
-        Mesh_t& mesh, 
+        swage::Mesh& mesh, 
         BoundaryCondition_t& Boundary,
         State_t& State) const override;
 
@@ -132,7 +133,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void setup(SimulationParameters_t& SimulationParamaters, 
                Material_t& Materials, 
-               Mesh_t& mesh, 
+               swage::Mesh& mesh, 
                BoundaryCondition_t& Boundary,
                State_t& State) override;
 
@@ -147,7 +148,7 @@ public:
     void execute(SimulationParameters_t& SimulationParamaters, 
                  Material_t& Materials, 
                  BoundaryCondition_t& Boundary, 
-                 Mesh_t& mesh, 
+                 swage::Mesh& mesh, 
                  State_t& State) override;
 
     /////////////////////////////////////////////////////////////////////////////
@@ -175,7 +176,7 @@ public:
 
     // **** Functions defined in solver_functions.cpp **** //
     void nodal_gradient(
-        const Mesh_t mesh,
+        const swage::Mesh mesh,
         const DCArrayKokkos<double>& Node_coords,
         const DCArrayKokkos<double>& node_level_set_vel,
         const DCArrayKokkos<double>& Node_grad_level_set,
@@ -187,7 +188,7 @@ public:
 
 
     void update_level_set(
-            const Mesh_t& mesh,
+            const swage::Mesh& mesh,
             const Material_t& Materials,
             const DCArrayKokkos<double>& node_level_set_vel,
             const DCArrayKokkos<double>& Node_grad_level_set,
@@ -217,7 +218,7 @@ public:
         const size_t mat_id) const;
 
     void get_timestep(
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const Material_t& Materials,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
@@ -235,7 +236,7 @@ public:
         const double tiny) const;
 
     void get_timestep_2D(
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const Material_t& Materials,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
@@ -256,7 +257,7 @@ public:
         // **** Functions defined in level_set_boundary.cpp **** //
 
     void boundary_velocity(
-        const Mesh_t&  mesh,
+        const swage::Mesh&  mesh,
         const BoundaryCondition_t& BoundaryConditions,
         DCArrayKokkos<double>& node_vel,
         const double time_value,

@@ -35,7 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define FIERRO_IO_H
 
 #include "matar.h"
-#include "mesh.h"
+// //#include "mesh.h""
 #include "state.h"
 #include "simulation_parameters.h"
 #include "region.h"
@@ -333,7 +333,7 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_mesh(Mesh_t& mesh,
+    void read_mesh(swage::Mesh& mesh,
                    State_t& State,
                    mesh_input_t& mesh_inps,
                    int      num_dims)
@@ -395,7 +395,7 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_ensight_mesh(Mesh_t& mesh,
+    void read_ensight_mesh(swage::Mesh& mesh,
                            GaussPoint_t& GaussPoints,
                            node_t&   node,
                            corner_t& corner,
@@ -546,7 +546,7 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_Abaqus_mesh(Mesh_t& mesh,
+    void read_Abaqus_mesh(swage::Mesh& mesh,
                           State_t& State,
                           int num_dims)
     {
@@ -708,7 +708,7 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_vtk_mesh(Mesh_t& mesh,
+    void read_vtk_mesh(swage::Mesh& mesh,
                     GaussPoint_t& GaussPoints,
                     node_t&   node,
                     corner_t& corner,
@@ -937,7 +937,7 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_vtu_mesh(Mesh_t& mesh,
+    void read_vtu_mesh(swage::Mesh& mesh,
                     GaussPoint_t& GaussPoints,
                     node_t&   node,
                     corner_t& corner,
@@ -1275,7 +1275,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_mesh(Mesh_t& mesh,
+    void build_mesh(swage::Mesh& mesh,
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
@@ -1319,7 +1319,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_box(Mesh_t& mesh,
+    void build_2d_box(swage::Mesh& mesh,
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
@@ -1445,7 +1445,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_polar(Mesh_t& mesh,
+    void build_2d_polar(swage::Mesh& mesh,
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
@@ -1580,7 +1580,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_box(Mesh_t& mesh,
+    void build_3d_box(swage::Mesh& mesh,
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
@@ -1713,7 +1713,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_HexN_box(Mesh_t& mesh,
+    void build_3d_HexN_box(swage::Mesh& mesh,
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
@@ -1907,7 +1907,7 @@ public:
     /// \param Simulation input parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_mesh(Mesh_t& mesh,
+    void write_mesh(swage::Mesh& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double dt,
@@ -2898,7 +2898,7 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_ensight(Mesh_t& mesh,
+    void write_ensight(swage::Mesh& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double dt,
@@ -3310,7 +3310,7 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_vtk_old(Mesh_t& mesh,
+    void write_vtk_old(swage::Mesh& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double dt,
@@ -4584,7 +4584,7 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_material_elem_node_lists(
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const DCArrayKokkos<double>& state_node_coords,
         DCArrayKokkos<double>& mat_node_coords,
         DCArrayKokkos <size_t>& mat_nodes_in_mat_elem,
@@ -4683,7 +4683,7 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_material_point_state(Mesh_t& mesh,
+    void write_material_point_state(swage::Mesh& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double time_value,

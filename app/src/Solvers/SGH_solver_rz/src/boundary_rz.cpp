@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver_rz.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "boundary_conditions.h"
 
 
@@ -49,7 +49,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
+void SGHRZ::boundary_velocity_rz(const swage::Mesh&      mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
                                  DCArrayKokkos<double>& node_vel,
                                  const double time_value) const
@@ -100,7 +100,7 @@ void SGHRZ::boundary_velocity_rz(const Mesh_t&      mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::boundary_contact_rz(const Mesh_t& mesh,
+void SGHRZ::boundary_contact_rz(const swage::Mesh& mesh,
                                 const BoundaryCondition_t& BoundaryConditions,
                                 DCArrayKokkos<double>& node_vel,
                                 const double time_value) const

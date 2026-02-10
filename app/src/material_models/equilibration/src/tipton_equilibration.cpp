@@ -67,7 +67,7 @@ namespace TiptonEquilibrationModel {
     // This is the Tipton material pt equilibration model
     // ----------------------------------------------------------
     void mat_equilibration(const Material_t& Materials, 
-                      const Mesh_t& mesh, 
+                      const swage::Mesh& mesh, 
                       State_t& State,
                       CArrayKokkos <double>& GaussPoint_pres,
                       CArrayKokkos <double>& GaussPoint_pres_denominator,
@@ -189,7 +189,7 @@ namespace TiptonEquilibrationModel {
     // This is the Tipton geometric material pt equilibration model
     // ----------------------------------------------------------
     void geo_equilibration(const Material_t& Materials, 
-        const Mesh_t& mesh, 
+        const swage::Mesh& mesh, 
         State_t& State,
         CArrayKokkos <double>& GaussPoint_pres,
         CArrayKokkos <double>& GaussPoint_pres_denominator,
@@ -315,7 +315,7 @@ namespace TiptonEquilibrationModel {
     // ------------------------
 
     void build_gauss_point_averages (
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const CArrayKokkos<double>& GaussPoint_pres,
         const CArrayKokkos<double>& GaussPoint_pres_denominator,
         const CArrayKokkos<double>& GaussPoint_volfrac_min,
@@ -380,7 +380,7 @@ namespace TiptonEquilibrationModel {
 
 
     void  calc_gauss_point_averages( 
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const CArrayKokkos<double>&  GaussPoint_pres,
         const CArrayKokkos<double>&  GaussPoint_pres_denominator,
         const double fuzz){
@@ -409,7 +409,7 @@ namespace TiptonEquilibrationModel {
 
 
     void calc_volfrac_change(
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const CArrayKokkos<double>& GaussPoint_pres,
         const CArrayKokkos<double>& GaussPoint_pres_denominator,
         const CArrayKokkos<double>& GaussPoint_volfrac_min,
@@ -493,7 +493,7 @@ namespace TiptonEquilibrationModel {
 
 
     void update_state_equilibration(
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const Material_t& Materials,
         const CArrayKokkos<double>& GaussPoint_pres,
         const CArrayKokkos <double>& GaussPoint_volfrac_limiter,

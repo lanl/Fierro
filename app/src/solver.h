@@ -42,7 +42,9 @@
 
 struct SimulationParameters_t;
 struct Material_t;
-struct Mesh_t;
+namespace swage {
+    struct Mesh;
+}
 struct State_t;
 struct BoundaryCondition_t;
 
@@ -61,26 +63,26 @@ public:
 
     virtual void initialize(SimulationParameters_t& SimulationParamaters, 
                             Material_t& Materials, 
-                            Mesh_t& mesh, 
+                            swage::Mesh& mesh, 
                             BoundaryCondition_t& Boundary,
                             State_t& State) const = 0;
 
     virtual void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
                 	                      Material_t& Materials, 
-                	                      Mesh_t& mesh, 
+                	                      swage::Mesh& mesh, 
                 	                      BoundaryCondition_t& Boundary,
                 	                      State_t& State) const = 0;
 
     virtual void setup(SimulationParameters_t& SimulationParamaters, 
                        Material_t& Materials, 
-                       Mesh_t& mesh, 
+                       swage::Mesh& mesh, 
                        BoundaryCondition_t& Boundary,
                        State_t& State) = 0;
 
     virtual void execute(SimulationParameters_t& SimulationParamaters, 
                          Material_t& Materials, 
                          BoundaryCondition_t& BoundaryConditions, 
-                         Mesh_t& mesh, 
+                         swage::Mesh& mesh, 
                          State_t& State) = 0;
 
     virtual void finalize(SimulationParameters_t& SimulationParamaters, 

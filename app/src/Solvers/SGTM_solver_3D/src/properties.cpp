@@ -34,7 +34,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "sgtm_solver_3D.h"
 #include "material.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "geometry_new.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -62,7 +62,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::update_state(
     const Material_t& Materials,
-    const Mesh_t&     mesh,
+    const swage::Mesh&     mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_den,

@@ -37,7 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "simulation_parameters.h"
 #include "material.h"
 #include "boundary_conditions.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "state.h"
 #include "geometry_new.h"
 #include "mesh_io.h"
@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGTM3D::execute(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
-                    Mesh_t& mesh, 
+                    swage::Mesh& mesh, 
                     State_t& State)
 {
 

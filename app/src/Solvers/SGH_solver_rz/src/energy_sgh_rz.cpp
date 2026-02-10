@@ -33,7 +33,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver_rz.h"
-#include "mesh.h"
 #include "state.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -55,7 +54,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGHRZ::update_energy_rz(
       const double rk_alpha,
       const double dt,
-      const Mesh_t& mesh,
+      const swage::Mesh& mesh,
       const DCArrayKokkos<double>& node_vel,
       const DCArrayKokkos<double>& node_vel_n0,
       const DCArrayKokkos<double>& node_coords,

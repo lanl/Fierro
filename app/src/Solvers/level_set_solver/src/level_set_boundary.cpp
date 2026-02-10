@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "level_set_solver.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "boundary_conditions.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -48,7 +48,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void LevelSet::boundary_velocity(const Mesh_t&      mesh,
+void LevelSet::boundary_velocity(const swage::Mesh&      mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
                                  DCArrayKokkos<double>& node_level_set_vel,
                                  const double time_value,

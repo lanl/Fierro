@@ -76,7 +76,7 @@ enum BCVars
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-static void stress(const Mesh_t& mesh,
+static void stress(const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
     const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,

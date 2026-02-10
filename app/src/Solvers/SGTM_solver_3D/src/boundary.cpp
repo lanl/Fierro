@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgtm_solver_3D.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "boundary_conditions.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -48,7 +48,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::boundary_temperature(const Mesh_t& mesh,
+void SGTM3D::boundary_temperature(const swage::Mesh& mesh,
                                   const BoundaryCondition_t& BoundaryConditions,
                                   DCArrayKokkos<double>& node_temp,
                                   const double time_value) const
@@ -98,7 +98,7 @@ void SGTM3D::boundary_temperature(const Mesh_t& mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::boundary_convection(const Mesh_t& mesh,
+void SGTM3D::boundary_convection(const swage::Mesh& mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
                                  const DCArrayKokkos<double>& node_temp,
                                  const DCArrayKokkos<double>& node_flux,
@@ -238,7 +238,7 @@ void SGTM3D::boundary_convection(const Mesh_t& mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::boundary_radiation(const Mesh_t& mesh,
+void SGTM3D::boundary_radiation(const swage::Mesh& mesh,
                                 const BoundaryCondition_t& BoundaryConditions,
                                 const DCArrayKokkos<double>& node_temp,
                                 const DCArrayKokkos<double>& node_flux,
@@ -386,7 +386,7 @@ void SGTM3D::boundary_radiation(const Mesh_t& mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::boundary_heat_flux(const Mesh_t& mesh,
+void SGTM3D::boundary_heat_flux(const swage::Mesh& mesh,
                                   const BoundaryCondition_t& BoundaryConditions,
                                   DCArrayKokkos<double>& node_temp,
                                   const double time_value) const

@@ -54,7 +54,7 @@ def extract_state_data(filename):
 executables = []
 for i in range(len(builds)):
     for j in range(len(solvers)):
-        executables.append("../build-SGH-"+builds[i]+"/bin/"+solvers[j])
+        executables.append("../build/src/"+solvers[j])
         if not os.path.exists(executables[i]):
             raise ValueError("Executable not found in "+executables[i]+" directory")
 

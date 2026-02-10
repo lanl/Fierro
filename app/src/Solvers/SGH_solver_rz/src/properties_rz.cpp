@@ -34,7 +34,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "sgh_solver_rz.h"
 #include "material.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "geometry_new.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -66,7 +66,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::update_state_rz(
     const Material_t& Materials,
-    const Mesh_t& mesh,
+    const swage::Mesh& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& GuassPoints_vel_grad,
@@ -306,7 +306,7 @@ void SGHRZ::update_state_rz(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::update_stress(const Material_t& Materials,
-                          const Mesh_t& mesh,
+                          const swage::Mesh& mesh,
                           const DCArrayKokkos<double>& GaussPoints_vol,
                           const DCArrayKokkos<double>& node_coords,
                           const DCArrayKokkos<double>& node_vel,

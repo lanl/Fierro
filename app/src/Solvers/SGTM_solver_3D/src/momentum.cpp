@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgtm_solver_3D.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "geometry_new.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::update_velocity(double rk_alpha,
     double dt,
-    const Mesh_t& mesh,
+    const swage::Mesh& mesh,
     DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& corner_force) const

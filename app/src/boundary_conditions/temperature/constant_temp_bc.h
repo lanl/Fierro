@@ -59,7 +59,7 @@ namespace ConstantTemperatureBC
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-static void temperature(const Mesh_t& mesh,
+static void temperature(const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
     const RaggedRightArrayKokkos<double>& temp_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,

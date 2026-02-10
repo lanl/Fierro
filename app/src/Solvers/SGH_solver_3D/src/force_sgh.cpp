@@ -34,7 +34,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "sgh_solver_3D.h"
 #include "material.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "state.h"
 #include "geometry_new.h"
 
@@ -67,7 +67,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::get_force(const Material_t& Materials,
-                      const Mesh_t& mesh,
+                      const swage::Mesh& mesh,
                       const DCArrayKokkos<double>& GaussPoints_vol,
                       const DCArrayKokkos<double>& GaussPoints_vel_grad,
                       const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,

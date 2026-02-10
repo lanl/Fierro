@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver_rz.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "region_fill.h"
 #include "material.h"
 #include "boundary_conditions.h"
@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param corner_mass is the corner mass
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::init_corner_node_masses_zero_rz(const Mesh_t& mesh,
+void SGHRZ::init_corner_node_masses_zero_rz(const swage::Mesh& mesh,
                                             const DCArrayKokkos<double>& node_mass,
                                             const DCArrayKokkos<double>& corner_mass) const
 {
@@ -80,7 +80,7 @@ void SGHRZ::init_corner_node_masses_zero_rz(const Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::setup(SimulationParameters_t& SimulationParamaters, 
                 Material_t& Materials, 
-                Mesh_t& mesh, 
+                swage::Mesh& mesh, 
                 BoundaryCondition_t& Boundary,
                 State_t& State)
 {
@@ -153,7 +153,7 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass_rz(const Material_t& Materials,
-                         const Mesh_t& mesh,
+                         const swage::Mesh& mesh,
                          const DCArrayKokkos<double>& node_coords,
                          const DCArrayKokkos<double>& node_mass,
                          const DCArrayKokkos<double>& corner_mass,
@@ -202,7 +202,7 @@ void calc_corner_mass_rz(const Material_t& Materials,
 /// \param num_mat_elems is the number of material elements for mat_id
 ///
 /////////////////////////////////////////////////////////////////////////////
-void calc_node_mass_rz(const Mesh_t& mesh,
+void calc_node_mass_rz(const swage::Mesh& mesh,
                     const DCArrayKokkos<double>& node_coords,
                     const DCArrayKokkos<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass)

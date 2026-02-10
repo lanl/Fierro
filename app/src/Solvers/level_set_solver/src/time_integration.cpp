@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "level_set_solver.h"
-#include "mesh.h"
+//#include "mesh.h""
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -92,7 +92,7 @@ void LevelSet::rk_init(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::get_timestep(
-    const Mesh_t& mesh,
+    const swage::Mesh& mesh,
     const Material_t& Materials,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& GaussPoints_vol,
@@ -219,7 +219,7 @@ void LevelSet::get_timestep(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::get_timestep_2D(
-    const Mesh_t& mesh,
+    const swage::Mesh& mesh,
     const Material_t& Materials,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& GaussPoints_vol,

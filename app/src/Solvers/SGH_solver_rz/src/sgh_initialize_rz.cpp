@@ -34,12 +34,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "sgh_solver_rz.h"
 #include "state.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "simulation_parameters.h"
 
 void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters, 
                 	   Material_t& Materials, 
-                	   Mesh_t& mesh, 
+                	   swage::Mesh& mesh, 
                 	   BoundaryCondition_t& Boundary,
                 	   State_t& State) const
 {
@@ -65,7 +65,7 @@ void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters,
 
 void SGHRZ::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
                 	                  Material_t& Materials, 
-                	                  Mesh_t& mesh, 
+                	                  swage::Mesh& mesh, 
                 	                  BoundaryCondition_t& Boundary,
                 	                  State_t& State) const
 {

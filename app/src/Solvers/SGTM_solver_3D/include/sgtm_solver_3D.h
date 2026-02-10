@@ -37,11 +37,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "solver.h"
 #include "state.h"
+#include "ELEMENTS.h"
 
 // Forward declare structs
 struct SimulationParameters_t;
 struct Material_t;
-struct Mesh_t;
+// struct swage::Mesh;
 struct BoundaryCondition_t;
 // struct State_t;
 struct RegionFill_t;
@@ -166,13 +167,13 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void initialize(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
-                    Mesh_t& mesh, 
+                    swage::Mesh& mesh, 
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override;
 
     void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
                 	               Material_t& Materials, 
-                	               Mesh_t& mesh, 
+                	               swage::Mesh& mesh, 
                 	               BoundaryCondition_t& Boundary,
                 	               State_t& State) const override;
 
@@ -185,7 +186,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void setup(SimulationParameters_t& SimulationParamaters,
         Material_t& Materials,
-        Mesh_t&     mesh,
+        swage::Mesh&     mesh,
         BoundaryCondition_t& Boundary,
         State_t& State) override;
 
@@ -200,7 +201,7 @@ public:
     void execute(SimulationParameters_t& SimulationParamaters,
         Material_t& Materials,
         BoundaryCondition_t& Boundary,
-        Mesh_t&  mesh,
+        swage::Mesh&  mesh,
         State_t& State) override;
 
     /////////////////////////////////////////////////////////////////////////////
@@ -228,13 +229,13 @@ public:
 
     // **** Functions defined in boundary.cpp **** //
     void boundary_temperature(
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const BoundaryCondition_t& Boundary,
         DCArrayKokkos<double>&     node_temp,
         const double time_value) const;
 
     void boundary_convection(
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const BoundaryCondition_t& BoundaryConditions,
         const DCArrayKokkos<double>& node_temp,
         const DCArrayKokkos<double>& node_flux,
@@ -243,7 +244,7 @@ public:
 
 
     void boundary_radiation(
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const BoundaryCondition_t& BoundaryConditions,
         const DCArrayKokkos<double>& node_temp,
         const DCArrayKokkos<double>& node_flux,
@@ -251,7 +252,7 @@ public:
         const double time_value) const;
 
     void boundary_heat_flux(
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const BoundaryCondition_t& Boundary,
         DCArrayKokkos<double>&     node_temp,
         const double time_value) const;
@@ -260,7 +261,7 @@ public:
     //void update_temperature(
     //    const double rk_alpha,
     //    const double dt,
-    //    const Mesh_t& mesh,
+    //    const swage::Mesh& mesh,
     //    const DCArrayKokkos<double>& node_vel,
     //    const DCArrayKokkos<double>& node_vel_n0,
     //    const DCArrayKokkos<double>& node_coords,
@@ -275,7 +276,7 @@ public:
     //    const size_t mat_id) const;
 
     void update_temperature(
-            const Mesh_t& mesh,
+            const swage::Mesh& mesh,
             const DCArrayKokkos<double>& corner_q_transfer,
             const DCArrayKokkos<double>& node_temp,
             const DCArrayKokkos<double>& node_temp_n0,
@@ -288,7 +289,7 @@ public:
     // **** Functions defined in heat_flux.cpp **** //
     void get_heat_flux(
         const Material_t& Materials,
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_temp,
@@ -308,7 +309,7 @@ public:
 
     void moving_flux(
         const Material_t& Materials,
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& corner_q_flux,
@@ -338,7 +339,7 @@ public:
     void update_velocity(
         double rk_alpha,
         double dt,
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_force) const;
@@ -346,7 +347,7 @@ public:
     // **** Functions defined in properties.cpp **** //
     void update_state(
         const Material_t& Materials,
-        const Mesh_t&     mesh,
+        const swage::Mesh&     mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
@@ -381,7 +382,7 @@ public:
         const size_t num_mat_points) const;
 
     void get_timestep(
-        Mesh_t& mesh,
+        swage::Mesh& mesh,
         DCArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,

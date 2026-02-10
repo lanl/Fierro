@@ -34,7 +34,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "level_set_solver.h"
 #include "state.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "geometry_new.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::nodal_gradient(
-        const Mesh_t mesh,
+        const swage::Mesh mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_level_set_vel,
         const DCArrayKokkos<double>& node_grad_level_set,
@@ -199,7 +199,7 @@ void LevelSet::nodal_gradient(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::update_level_set(
-    const Mesh_t& mesh,
+    const swage::Mesh& mesh,
     const Material_t& Materials,
     const DCArrayKokkos<double>& node_level_set_vel,
     const DCArrayKokkos<double>& node_grad_level_set,

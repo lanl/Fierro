@@ -37,7 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "simulation_parameters.h"
 #include "material.h"
 #include "boundary_conditions.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "state.h"
 #include "geometry_new.h"
 #include "mesh_io.h"
@@ -54,7 +54,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGH3D::execute(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
-                    Mesh_t& mesh, 
+                    swage::Mesh& mesh, 
                     State_t& State)
 {
 
@@ -694,7 +694,7 @@ double sum_domain_internal_energy(
 ///
 /////////////////////////////////////////////////////////////////////////////
 double sum_domain_kinetic_energy(
-    const Mesh_t& mesh,
+    const swage::Mesh& mesh,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_mass)
@@ -751,7 +751,7 @@ double sum_domain_material_mass(
 /// \return <return type and definition description if not void>
 ///
 /////////////////////////////////////////////////////////////////////////////
-double sum_domain_node_mass(const Mesh_t& mesh,
+double sum_domain_node_mass(const swage::Mesh& mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_mass)
 {
@@ -773,7 +773,7 @@ double sum_domain_node_mass(const Mesh_t& mesh,
 
 
 // set the corner forces to zero
-void set_corner_force_zero(const Mesh_t& mesh,
+void set_corner_force_zero(const swage::Mesh& mesh,
     const DCArrayKokkos<double>& corner_force)
 {
     // set corner force to zero

@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver_3D.h"
-#include "mesh.h"
+//#include "mesh.h""
 #include "boundary_conditions.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -48,7 +48,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::boundary_velocity(const Mesh_t&      mesh,
+void SGH3D::boundary_velocity(const swage::Mesh&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
                               DCArrayKokkos<double>& node_vel,
                               const double time_value) const
@@ -94,7 +94,7 @@ void SGH3D::boundary_velocity(const Mesh_t&      mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::boundary_contact(const Mesh_t& mesh,
+void SGH3D::boundary_contact(const swage::Mesh& mesh,
                              const BoundaryCondition_t& BoundaryConditions,
                              DCArrayKokkos<double>& node_vel,
                              const double time_value) const
@@ -111,7 +111,7 @@ void SGH3D::boundary_contact(const Mesh_t& mesh,
 /// \param The time step size
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D:: boundary_contact_force(State_t& State, const Mesh_t &mesh, const double &del_t, contact_state_t &Contact_State)
+void SGH3D:: boundary_contact_force(State_t& State, const swage::Mesh &mesh, const double &del_t, contact_state_t &Contact_State)
 {
     
     sort(State.node.coords, mesh.num_bdy_nodes, mesh.bdy_nodes, State.node.vel, mesh.num_corners_in_node,
@@ -163,7 +163,7 @@ void SGH3D:: boundary_contact_force(State_t& State, const Mesh_t &mesh, const do
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::boundary_stress(const Mesh_t&      mesh,
+void SGH3D::boundary_stress(const swage::Mesh&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
                               DCArrayKokkos<double>& node_bdy_force,
                               DCArrayKokkos<double>& node_coords,

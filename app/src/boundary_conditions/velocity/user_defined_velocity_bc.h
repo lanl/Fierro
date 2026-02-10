@@ -60,7 +60,7 @@ namespace UserDefinedVelocityBC
 // add an enum for boundary statevars and global vars
 
 KOKKOS_FUNCTION
-static void velocity(const Mesh_t& mesh,
+static void velocity(const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
     const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,

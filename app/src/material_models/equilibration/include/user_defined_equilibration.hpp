@@ -35,6 +35,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef USER_DEFINED_EQUILIBRATION_H
 #define USER_DEFINED_EQUILIBRATION_H
 
+#include "ELEMENTS.h"
+
 
 
 /////////////////////////////////////////////////////////////////////////////

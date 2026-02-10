@@ -34,8 +34,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef TIPTON_EQUILIBRATION_H
 #define TIPTON_EQUILIBRATION_H
-#include "matar.h"
-#include "mesh.h"
+#include "ELEMENTS.h"
 #include "material.h"
 #include "state.h"
 
@@ -47,7 +46,7 @@ namespace TiptonEquilibrationModel {
     
     void mat_equilibration(
         const Material_t& Materials, 
-        const Mesh_t& mesh, 
+        const swage::Mesh& mesh, 
         State_t& State,
         CArrayKokkos <double>& GaussPoint_pres,
         CArrayKokkos <double>& GaussPoint_pres_denominator,
@@ -59,7 +58,7 @@ namespace TiptonEquilibrationModel {
         const double small);
 
     void geo_equilibration(const Material_t& Materials, 
-        const Mesh_t& mesh, 
+        const swage::Mesh& mesh, 
         State_t& State,
         CArrayKokkos <double>& GaussPoint_pres,
         CArrayKokkos <double>& GaussPoint_pres_denominator,
@@ -71,7 +70,7 @@ namespace TiptonEquilibrationModel {
         const double small);
 
     void build_gauss_point_averages (
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const CArrayKokkos<double>& GaussPoint_pres,
         const CArrayKokkos<double>& GaussPoint_pres_denominator,
         const CArrayKokkos<double>& GaussPoint_volfrac_min,
@@ -89,13 +88,13 @@ namespace TiptonEquilibrationModel {
 
 
     void calc_gauss_point_averages( 
-            const Mesh_t& mesh,
+            const swage::Mesh& mesh,
             const CArrayKokkos<double>&  GaussPoint_pres,
             const CArrayKokkos<double>&  GaussPoint_pres_denominator,
             const double fuzz);
 
     void calc_volfrac_change (
-        const Mesh_t& mesh,
+        const swage::Mesh& mesh,
         const CArrayKokkos<double>& GaussPoint_pres,
         const CArrayKokkos<double>& GaussPoint_pres_denominator,
         const CArrayKokkos <double>& GaussPoint_volfrac_min,
@@ -120,7 +119,7 @@ namespace TiptonEquilibrationModel {
 
 
         void update_state_equilibration (
-            const Mesh_t& mesh,
+            const swage::Mesh& mesh,
             const Material_t& Materials,
             const CArrayKokkos<double>& GaussPoint_pres,
             const CArrayKokkos <double>& GaussPoint_volfrac_limiter,
