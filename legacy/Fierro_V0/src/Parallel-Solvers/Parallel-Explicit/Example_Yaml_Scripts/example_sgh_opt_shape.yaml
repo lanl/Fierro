@@ -1,0 +1,81 @@
+num_dims: 3
+dynamic_options:
+  time_final: 2.0
+  dt_min: 1.e-8
+  dt_max: 1.e-2
+  dt_start: 1.e-5
+  cycle_stop: 2000000
+  print_cycle: 100
+  output_time_sequence_level: extreme
+
+mesh_generation_options:
+  type: Box
+  origin: [0, 0, 0]
+  length: [1.2, 1.2, 1.2]
+  num_elems: [32, 32, 32]
+
+output_options:
+  timer_output_level: thorough
+  output_file_format: vtk
+  graphics_step: 1.0
+  write_initial: true
+  write_final: false
+  
+fea_module_parameters:
+  - type: SGH
+    material_id: 0
+    boundary_conditions:
+        # Tag Z plane
+      - surface: 
+          type: z_plane
+          plane_position: 0.0
+        type: reflected
+        
+materials:
+  - id: 0
+    eos_model: ideal_gas
+    strength_model: none
+    maximum_limiter: true
+    q1: 2.0
+    q2: 4.0
+    q1ex: 2.0
+    q2ex: 4.0
+    eos_global_vars:
+      - 10.0
+      - 1.0E-14
+      - 1.0
+
+regions:
+  - volume: 
+      type: global
+    material_id: 0
+    den: 1.0
+    sie: 1.0e-10
+        
+    velocity: cartesian
+    u: 0
+    v: 0
+    w: -0.1
+
+optimization_options:
+    optimization_process: shape_optimization
+    optimization_objective: maximize_internal_energy
+    use_solve_checkpoints: true
+    num_solve_checkpoints : 10
+    disable_forward_solve_output: false
+    optimization_output_freq: 1
+    check_objective_gradient: true
+    use_simpson: false
+    rol_params:
+        subproblem_algorithm: line_search
+        initial_constraint_penalty: 1.e-2
+        step_tolerance: 1.e-3
+        gradient_tolerance: 1.e-3
+        constraint_tolerance: 1.e-3
+        iteration_limit: 20
+    max_coord_move_length: 0.00375
+    variable_outer_shell: true
+    constraints:
+      - type: mass
+        relation: equality
+        value: 0.80
