@@ -8,38 +8,20 @@ dynamic_options:
     cycle_stop: 300000
 
 
-# mesh_options:
-#     source: file
-#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
-
 mesh_options:
     source: generate
     num_dims: 3
     type: box
     origin: [0.0, 0.0, 0.0]
-    length: [1.2, 1.2, 1.2]
-    num_elems: [30, 30, 30]
+    length: [0.5, 0.5, 1]
+    num_elems: [32, 32, 64]
 
 
 output_options:
     timer_output_level: thorough
-    output_file_format: viz # only options are viz or viz_and_state
-    graphics_time_step: 0.05
+    output_file_format: ensight
+    graphics_time_step: 0.25
     # graphics_iteration_step: 10
-    elem_field_outputs:
-        - den
-        - pres
-        - stress
-        - sie
-        - mass
-    mat_pt_field_outputs:
-        - den
-        - pres
-        - sie
-        - volfrac
-    node_field_outputs:
-        - vel
-        - mass
 
 solver_options:
   - solver:
@@ -57,51 +39,62 @@ boundary_conditions:
         surface: 
             type: x_plane
             plane_position: 0.0
-            tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
             - 1   # x
             - 0   # y
             - 0   # z
-
-
+            
     # Tag Y plane
     - boundary_condition:
         solver_id: 0
         surface: 
             type: y_plane
             plane_position: 0.0
-            tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
             - 1   # y
             - 0   # z
 
-    # Tag z plane
+    # Tag Z plane
     - boundary_condition:
         solver_id: 0
         surface: 
             type: z_plane
             plane_position: 0.0
-            tolerance: 1.e-5
         velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
             - 0   # y
+            - 1   # z    
+
+    # Tag z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 1.0
+        velocity_model: time_varying
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
             - 1   # z
-
-
+            - -0.1
+            - 2
+            - 0
+            - 10
+        # V = V0 exp (-V1 * (t-t_start))
+        # vel_0: -0.1
+        # vel_1: 2
+        # vel_t_start: 0
+        # vel_t_end: 10
   
 materials:
     - material:
         id: 0
         eos_model_type: decoupled
         eos_model: gamma_law_gas
-        eos_global_vars:
-            - 1.666666666666667
-            - 1.0E-14
-            - 1.0
         # strength_model: none
         dissipation_model: MARS
         dissipation_global_vars:
@@ -109,16 +102,37 @@ materials:
             - 1.0   # q1ex
             - 1.333 # q2
             - 1.333 # q2ex
-            - 0.0   # phi_min
-            - 1.0   # pin_curl_min
+            - 0.1   # phi_min
+            - 1.0   # phi_curl_min
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
 
+    - material:
+        id: 1
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.1   # phi_min
+            - 1.0   # phi_curl_min
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
 
 regions:
     - region:
         volume:
             type: global
-        solver_id: 0
         material_id: 0
+        solver_id: 0
         density: 
             type: uniform
             value: 1.0
@@ -130,32 +144,28 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
-            type: uniform
-            value: 1.0
 
-    # energy source initial conditions
+    
     - region:
         volume:
-            type: sphere
-            origin: [0.0, 0.0, 0.0]
-            radius1: 0.0
-            radius2: 0.04
+            type: voxel_file
+            file_path: ../../VTK_Geometry_lattice.vtk 
+            scale_x: 0.02
+            scale_y: 0.02
+            scale_z: 0.040635127
+            origin: [-0.5, -0.5, 0.]
+        material_id: 1
         solver_id: 0
-        material_id: 0
         density: 
             type: uniform
-            value: 1.0
-        # ie: 0.25833839995946534
+            value: 7.86
         specific_internal_energy: 
             type: uniform
-            value: 61.67375002 # 963.652344
+            value: 1.e-10
         velocity: 
             type: cartesian
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
-            type: uniform
-            value: 1.0
+
 

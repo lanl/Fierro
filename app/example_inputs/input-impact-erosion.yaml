@@ -65,23 +65,61 @@ boundary_conditions:
 materials:
 
     # the rod
+    # - material:
+    #     id: 0
+    #     eos_model_type: decoupled
+    #     eos_model: gamma_law_gas
+    #     # strength_model: none
+    #     dissipation_model: MARS
+    #     dissipation_global_vars:
+    #         - 1.0   # q1
+    #         - 1.0   # q1ex
+    #         - 1.333 # q2
+    #         - 1.333 # q2ex
+    #         - 0.1   # phi_min
+    #         - 1.0   # phi_curl_min
+    #     eos_global_vars:
+    #         - 1.666666666666667
+    #         - 1.0E-4
+    #         - 1.0
+
+
     - material:
-        id: 0
+        id: 0  # metal: Copper
+        #-----EOS
         eos_model_type: decoupled
-        eos_model: gamma_law_gas
-        # strength_model: none
+        eos_model: linear_elastic_eos  
+        # bulk modulus
+        # shear modulus
+        # refernce den
+        # cs min
+        eos_global_vars:
+            - 1.30 # B from Azo materials online
+            - 0.44 # G from Azo materials online
+            - 8.93 # ref density from Azo materials online
+            - 0.001 
+        #------Strength
+        strength_model_type: increment_based
+        strength_model: hypo_plasticity_strength
+        # shear modulus of copper
+        # yield strength of copper
+        strength_global_vars:
+            - 0.44 
+            - 0.0021  # from Azo materials online
+        # ------ArtVisc
         dissipation_model: MARS
         dissipation_global_vars:
             - 1.0   # q1
-            - 1.0   # q1ex
-            - 1.333 # q2
+            - 1.333 # q1ex
+            - 1.0   # q2
             - 1.333 # q2ex
-            - 0.1   # phi_min
-            - 1.0   # phi_curl_min
-        eos_global_vars:
-            - 1.666666666666667
-            - 1.0E-4
+            - 0.05   # min limiter
             - 1.0
+        # erosion_model: basic
+        # erode_tension_val: -100
+        # erode_density_val: 8.0
+
+    
 
     #plate
     - material:
@@ -103,8 +141,41 @@ materials:
             - 1.0
         erosion_model: basic
         erode_tension_val: 2.0e-7
-        erode_density_val: 0.02
-    
+        erode_density_val: 5.0
+    # - material:
+    #     id: 1  # metal: Copper
+    #     #-----EOS
+    #     eos_model_type: decoupled
+    #     eos_model: linear_elastic_eos  
+    #     # bulk modulus
+    #     # shear modulus
+    #     # refernce den
+    #     # cs min
+    #     eos_global_vars:
+    #         - 1.30 # B from Azo materials online
+    #         - 0.44 # G from Azo materials online
+    #         - 8.93 # ref density from Azo materials online
+    #         - 0.001 
+    #     #------Strength
+    #     strength_model_type: increment_based
+    #     strength_model: hypo_plasticity_strength
+    #     # shear modulus of copper
+    #     # yield strength of copper
+    #     strength_global_vars:
+    #         - 0.44 
+    #         - 0.0021  # from Azo materials online
+    #     # ------ArtVisc
+    #     dissipation_model: MARS
+    #     dissipation_global_vars:
+    #         - 1.0   # q1
+    #         - 1.333 # q1ex
+    #         - 1.0   # q2
+    #         - 1.333 # q2ex
+    #         - 0.05   # min limiter
+    #         - 1.0
+    #     erosion_model: basic
+    #     erode_tension_val: -100
+    #     erode_density_val: 8.0
 
     # background air
     - material:
@@ -152,14 +223,14 @@ regions:
             x1: 0.1
             x2: 0.5
             y1: 0.0
-            y2: 0.2
+            y2: 0.21
             z1: 0.0
-            z2: 0.2
+            z2: 0.21
         material_id: 0
         solver_id: 0
         density: 
             type: uniform
-            value: 8.0
+            value: 8.93
         specific_internal_energy: 
             type: uniform
             value: 1.0e-6
@@ -184,7 +255,7 @@ regions:
         solver_id: 0
         density: 
             type: uniform
-            value: 2.7
+            value: 8.93
         specific_internal_energy: 
             type: uniform
             value: 1.0e-6 

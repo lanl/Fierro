@@ -6,7 +6,7 @@ dynamic_options:
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 1000
+    cycle_stop: 10000
 
 mesh_options:
     source: generate

@@ -23,9 +23,23 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: state
-    graphics_time_step: 0.6
+    output_file_format: viz # only options are viz or viz_and_state
+    graphics_time_step: 0.05
     # graphics_iteration_step: 10
+    elem_field_outputs:
+        - den
+        - pres
+        - stress
+        - sie
+        - mass
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+        - volfrac
+    node_field_outputs:
+        - vel
+        - mass
 
 solver_options:
   - solver:
