@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver_3D.h"
-
+#include <cmath>
 #include "simulation_parameters.h"
 #include "material.h"
 #include "boundary_conditions.h"
@@ -52,6 +52,162 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
+// REORIENTATION TESTING
+// rotation matrix about y axis (x2)
+KOKKOS_FUNCTION
+void rotation_matrix_y(double angle, double R[3][3]) {
+    double c = cos(angle);
+    double s = sin(angle);
+    R[0][0] = c;   R[0][1] = 0.0; R[0][2] = s;
+    R[1][0] = 0.0; R[1][1] = 1.0; R[1][2] = 0.0;
+    R[2][0] = -s;  R[2][1] = 0.0; R[2][2] = c;
+}
+
+// rotation matrix about z axis (x3)
+KOKKOS_FUNCTION
+void rotation_matrix_z(double angle, double R[3][3]) {
+    double c = cos(angle);
+    double s = sin(angle);
+    R[0][0] = c;   R[0][1] = -s;  R[0][2] = 0.0;
+    R[1][0] = s;   R[1][1] = c;   R[1][2] = 0.0;
+    R[2][0] = 0.0; R[2][1] = 0.0; R[2][2] = 1.0;
+}
+
+// multiply two 3x3 matrices: C = A * B
+KOKKOS_FUNCTION
+void mat_mult_3x3(const double A[3][3], const double B[3][3], double C[3][3]) {
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            C[i][j] = 0.0;
+            for (int k = 0; k < 3; ++k) {
+                C[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+}
+
+// apply rotation matrix to a vector: v_out = R * v_in
+KOKKOS_FUNCTION
+void rotate_vector(const double R[3][3], const double v_in[3], double v_out[3]) {
+    for (int i = 0; i < 3; ++i) {
+        v_out[i] = 0.0;
+        for (int j = 0; j < 3; ++j) {
+            v_out[i] += R[i][j] * v_in[j];
+        }
+    }
+}
+
+// PRESCRIBE NODAL POSITIONS FOR REORIENTATION VALIDATION
+// this function overrides the solver's position update with prescribed kinematics
+void prescribe_reorientation_kinematics(
+    Mesh_t& mesh,
+    State_t& State,
+    const CArrayKokkos<double>& initial_coords, // (num_nodes,3)
+    const CArrayKokkos<int>&    cz_b_side_flag, // (num_nodes) 0/1
+    double time_value,
+    double dt_stage,
+    double omega_y,
+    double omega_z,
+    double cz_opening_rate
+) {
+    const double angle_y_t   = omega_y * time_value;
+    const double angle_z_t   = omega_z * time_value;
+    const double angle_y_tdt = omega_y * (time_value + dt_stage);
+    const double angle_z_tdt = omega_z * (time_value + dt_stage);
+
+    const double s_t   = cz_opening_rate * time_value;
+    const double s_tdt = cz_opening_rate * (time_value + dt_stage);
+
+    double Ry_t[3][3], Rz_t[3][3], R_t[3][3];
+    double Ry_tdt[3][3], Rz_tdt[3][3], R_tdt[3][3];
+
+    rotation_matrix_y(angle_y_t,   Ry_t);
+    rotation_matrix_z(angle_z_t,   Rz_t);
+    mat_mult_3x3(Rz_t, Ry_t, R_t);
+
+    rotation_matrix_y(angle_y_tdt, Ry_tdt);
+    rotation_matrix_z(angle_z_tdt, Rz_tdt);
+    mat_mult_3x3(Rz_tdt, Ry_tdt, R_tdt);
+
+    // n(t) = R(t)*[1,0,0] => column 0
+    const double n_t[3]   = { R_t[0][0],   R_t[1][0],   R_t[2][0]   };
+    const double n_tdt[3] = { R_tdt[0][0], R_tdt[1][0], R_tdt[2][0] };
+
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+
+        const double Xx = initial_coords(node_gid,0);
+        const double Xy = initial_coords(node_gid,1);
+        const double Xz = initial_coords(node_gid,2);
+
+        // active rotation of position vector X0 (rotation about the origin 0,0,0)
+        // x(t) = R(t)*X0
+        double xt   = R_t[0][0]*Xx + R_t[0][1]*Xy + R_t[0][2]*Xz;
+        double yt   = R_t[1][0]*Xx + R_t[1][1]*Xy + R_t[1][2]*Xz;
+        double zt   = R_t[2][0]*Xx + R_t[2][1]*Xy + R_t[2][2]*Xz;
+
+        // x(t+dt_stage) = R(t+dt_stage)*X0
+        double xtdt = R_tdt[0][0]*Xx + R_tdt[0][1]*Xy + R_tdt[0][2]*Xz;
+        double ytdt = R_tdt[1][0]*Xx + R_tdt[1][1]*Xy + R_tdt[1][2]*Xz;
+        double ztdt = R_tdt[2][0]*Xx + R_tdt[2][1]*Xy + R_tdt[2][2]*Xz;
+
+        if (cz_b_side_flag(node_gid)) {
+            xt   += s_t   * n_t[0];   yt   += s_t   * n_t[1];   zt   += s_t   * n_t[2];
+            xtdt += s_tdt * n_tdt[0]; ytdt += s_tdt * n_tdt[1]; ztdt += s_tdt * n_tdt[2];
+        }
+
+        // set coords(t) and vel consistent with dt_stage
+        State.node.coords(node_gid,0) = xt;
+        State.node.coords(node_gid,1) = yt;
+        State.node.coords(node_gid,2) = zt;
+
+        State.node.vel(node_gid,0) = (xtdt - xt) / dt_stage;
+        State.node.vel(node_gid,1) = (ytdt - yt) / dt_stage;
+        State.node.vel(node_gid,2) = (ztdt - zt) / dt_stage;
+    });
+
+    Kokkos::fence();
+}
+
+// ANALYTICAL SOLUTION FOR VALIDATION (not using, but useful if needed)
+// computes expected values for comparison with Fierro output
+void compute_analytical_solution(
+    double time_value,
+    double cz_opening_rate,
+    double u_n_star,
+    double u_t_star,
+    double E_inf,
+    double& lambda_analytical,
+    double& alpha_analytical,
+    double& Tn_analytical
+) {
+    // for pure Mode I opening (normal separation only, no tangent)
+    double u_n = cz_opening_rate * time_value;  // Normal opening
+    double u_t = 0.0;                            // No tangent opening in this test
+    
+    // Lambda (effective opening parameter)
+    lambda_analytical = sqrt(pow(u_n / u_n_star, 2) + pow(u_t / u_t_star, 2));
+    
+    // alpha (damage parameter) - monotonically increasing
+    // alpha = max over history of (lambda - 1) for lambda > 1, else alpha evolution
+    // for simplicity with linear elastic response before damage:
+    if (lambda_analytical <= 1.0) {
+        alpha_analytical = 0.0;
+    } else {
+        // famage evolution depends on your specific cohesive law
+        // this is a simplified version
+        alpha_analytical = (lambda_analytical - 1.0) / (lambda_analytical);
+        alpha_analytical = fmin(1.0, fmax(0.0, alpha_analytical));
+    }
+    
+    // normal traction (simplified elastic case)
+    // T_n = E_inf * (1 - alpha) * (u_n / u_n_star) / lambda
+    if (lambda_analytical > 1e-14) {
+        Tn_analytical = E_inf * (1.0 - alpha_analytical) * (u_n / u_n_star) / lambda_analytical;
+    } else {
+        Tn_analytical = 0.0;
+    }
+}
+// REORIENTATION TESTING
 void SGH3D::execute(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
@@ -128,7 +284,53 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // the number of materials specified by the user input
     const size_t num_mats = Materials.num_mats;
+// REORIENTATION TESTING
+// =============================================================================
+// REORIENTATION VALIDATION MODE FLAG
+// set to true to use prescribed kinematics instead of dynamic solver
+// =============================================================================
+const bool REORIENTATION_VALIDATION_MODE = true;
 
+// Validation parameters (matching Figure 11 setup [1])
+const double OMEGA_Y = 0.0792860967; // full 360 deg rotation for 79.247 us //0.02747; //full 360 degree rotation for 228.764 us final time;           // rad/us rotation about y-axis
+const double OMEGA_Z = 0.0792860967; // full 360 deg rotation for 79.247 us //0.02747; //full 360 degree rotation for 228.764 us final time;          // rad/us rotation about z-axis  
+const double CZ_OPENING_RATE = 1e-5;  // cm/us opening rate
+
+// store initial coordinates for prescribed motion
+// always allocate; only fill/use when mode is on
+CArrayKokkos<double> initial_coords(mesh.num_nodes, 3, "initial_coords");
+CArrayKokkos<int>    cz_b_side_flag(mesh.num_nodes, "cz_b_side_flag");
+cz_b_side_flag.set_values(0.0);
+if (REORIENTATION_VALIDATION_MODE && doing_fracture) {
+    FOR_ALL(n, 0, mesh.num_nodes, {
+        initial_coords(n,0) = State.node.coords(n,0);
+        initial_coords(n,1) = State.node.coords(n,1);
+        initial_coords(n,2) = State.node.coords(n,2);
+    });
+    Kokkos::fence();
+    // mark B-side nodes once (gidB in each pair)
+    const double x_interface = 0.5; // your interface plane
+    const size_t nne = mesh.num_nodes_in_elem;
+
+    // find the right element by centroid and flag ALL its nodes
+    FOR_ALL(e, 0, mesh.num_elems, {
+        double xc = 0.0;
+        for (size_t a = 0; a < nne; ++a) {
+            const size_t gid = mesh.nodes_in_elem(e,a);
+            xc += initial_coords(gid,0);
+        }
+        xc /= (double)nne;
+
+        if (xc > x_interface) {
+            for (size_t a = 0; a < nne; ++a) {
+                const size_t gid = mesh.nodes_in_elem(e,a);
+                cz_b_side_flag(gid) = 1; // OK: all writes set to 1
+            }
+        }
+    });
+    Kokkos::fence();
+}
+// REORIENTATION TESTING
     // extensive IE
     for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
 
@@ -292,8 +494,22 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // 2/2 add
             double dt_stage = rk_alpha * dt;
             // 2/2 add
+// REORIENTATION TESTING
+const bool reorient_mode = (REORIENTATION_VALIDATION_MODE && doing_fracture);
+if (reorient_mode) {
+    prescribe_reorientation_kinematics(
+        mesh, State,
+        initial_coords,
+        cz_b_side_flag,
+        time_value,      // current time
+        dt_stage,        // stage dt
+        OMEGA_Y, OMEGA_Z,
+        CZ_OPENING_RATE
+    );
+}
+// REORIENTATION TESTING
             // ---- Calculate velocity gradient for the element ----
-
+        if (!reorient_mode){
             get_velgrad(State.GaussPoints.vel_grad,
                         mesh,
                         State.node.coords,
@@ -372,7 +588,12 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             State.node.force, 
                             State.node.coords,
                             time_value);
-
+        } else {
+        // kinematics-only: start forces at zero (you can still add cohesive forces below)
+        State.node.force.set_values(0.0);
+        set_corner_force_zero(mesh, State.corner.force);
+        }            
+        
             // call body forces routine
             
             if (doing_fracture) {
@@ -534,138 +755,182 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             pair_area,
                             F_cz_view
                         );
+// REORIENTATION TESTING
+if (REORIENTATION_VALIDATION_MODE &&
+    cz_fp &&
+    rk_stage == rk_num_stages - 1 &&
+    cycle == cz_next_cycle)
+{
+    const double u_n_star = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::u_n_star);
+    const double u_t_star = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::u_t_star);
 
+    // time,pair,gidA,gidB,un_t,ut_t,un_tdt,ut_tdt,lambda,alpha,Tn,n0x,n0y,n0z,n1x,n1y,n1z
+
+        size_t p = 0; // printing first cohesive zone node pair values
+    //for (size_t p = 0; p < npairs; ++p) {
+        const size_t gidA = cohesive_zones_bank.overlapping_node_gids(p,0);
+        const size_t gidB = cohesive_zones_bank.overlapping_node_gids(p,1);
+
+        const double un_t   = local_opening(p,0);
+        const double ut_t   = local_opening(p,1);
+        const double un_tdt = local_opening(p,2);
+        const double ut_tdt = local_opening(p,3);
+
+        const double lambda_t = std::sqrt(
+            (un_t/u_n_star)*(un_t/u_n_star) + (ut_t/u_t_star)*(ut_t/u_t_star));
+
+        const double alpha_t = cz_internal_vars_view(p,1);
+        const double Tn_t    = cz_internal_vars_view(p,2);
+        // fprintf(cz_fp,
+        // "time,pair,gidA,gidB,un_t,ut_t,un_tdt,ut_tdt,lambda,alpha,Tn,n0x,n0y,n0z,n1x,n1y,n1z\n");
+        // fprintf(cz_fp,
+        //     "%.9e,%zu,%zu,%zu,%.9e,%.9e,%.9e,%.9e,%.9e,%.9e,%.9e,"
+        //     "%.9e,%.9e,%.9e,%.9e,%.9e,%.9e\n",
+        //     time_value, p, gidA, gidB,
+        //     un_t, ut_t, un_tdt, ut_tdt,
+        //     lambda_t, alpha_t, std::fabs(Tn_t),
+        //     cz_orientation(p,0), cz_orientation(p,1), cz_orientation(p,2),
+        //     cz_orientation(p,3), cz_orientation(p,4), cz_orientation(p,5));
+
+            fprintf(cz_fp, "%.9e, %.9e, %.9e, %.9e\n",
+                    time_value, alpha_t, lambda_t, fabs(Tn_t));
+    //}
+
+    cz_next_cycle += cz_stride;
+    fflush(cz_fp);
+}
+// REORIENTATION TESTING
 // THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS  //2/3 add
-                        if (cz_fp && rk_stage == rk_num_stages - 1 && cycle == cz_next_cycle) {
-                            const double u_n_star = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::u_n_star);
-                            const double u_t_star = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::u_t_star);
-                            const double E_inf = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::E_inf);
+                        // if (cz_fp && rk_stage == rk_num_stages - 1 && cycle == cz_next_cycle) {
+                        //     const double u_n_star = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::u_n_star);
+                        //     const double u_t_star = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::u_t_star);
+                        //     const double E_inf = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::E_inf);
                             
-                            // fprintf(cz_fp, "\n=== TIME %.9e, cycle %zu ===\n", time_value, cycle);
-                            // fprintf(cz_fp, "dt=%.9e dt_stage=%.9e\n", dt, dt_stage);
+                        //     // fprintf(cz_fp, "\n=== TIME %.9e, cycle %zu ===\n", time_value, cycle);
+                        //     // fprintf(cz_fp, "dt=%.9e dt_stage=%.9e\n", dt, dt_stage);
                             
-                            // Loop over ALL overlapping node pairs
-                            // for (size_t p = 0; p < npairs; p++) { // printing all cohesive zone node pairs
-                                const size_t p = 0; // printing one cohesive zone node pair (first)
+                        //     // Loop over ALL overlapping node pairs
+                        //     // for (size_t p = 0; p < npairs; p++) { // printing all cohesive zone node pairs
+                        //         const size_t p = 0; // printing one cohesive zone node pair (first)
 
-                                const size_t gidA = cohesive_zones_bank.overlapping_node_gids(p, 0);
-                                const size_t gidB = cohesive_zones_bank.overlapping_node_gids(p, 1);
+                        //         const size_t gidA = cohesive_zones_bank.overlapping_node_gids(p, 0);
+                        //         const size_t gidB = cohesive_zones_bank.overlapping_node_gids(p, 1);
                                 
-                                // Local openings (raw)
-                                const double un_t = local_opening(p, 0);
-                                const double ut_t = local_opening(p, 1);
-                                const double un_tdt = local_opening(p, 2);
-                                const double ut_tdt = local_opening(p, 3);
+                        //         // Local openings (raw)
+                        //         const double un_t = local_opening(p, 0);
+                        //         const double ut_t = local_opening(p, 1);
+                        //         const double un_tdt = local_opening(p, 2);
+                        //         const double ut_tdt = local_opening(p, 3);
                               
-                                // // Lambda values
-                                const double lambda_t = sqrt((un_t/u_n_star)*(un_t/u_n_star) + (ut_t/u_t_star)*(ut_t/u_t_star));
-                                const double lambda_tdt = sqrt((un_tdt/u_n_star)*(un_tdt/u_n_star) + (ut_tdt/u_t_star)*(ut_tdt/u_t_star));
-                                const double lambda_dot_t = (lambda_tdt - lambda_t) / dt_stage;
+                        //         // // Lambda values
+                        //         const double lambda_t = sqrt((un_t/u_n_star)*(un_t/u_n_star) + (ut_t/u_t_star)*(ut_t/u_t_star));
+                        //         const double lambda_tdt = sqrt((un_tdt/u_n_star)*(un_tdt/u_n_star) + (ut_tdt/u_t_star)*(ut_tdt/u_t_star));
+                        //         const double lambda_dot_t = (lambda_tdt - lambda_t) / dt_stage;
                                 
-                                // Internal vars
-                                const double alpha_t = cz_internal_vars_view(p, 1);
-                                const double Tn_t = cz_internal_vars_view(p, 2);
-                                // const double Tt_t = cz_internal_vars_view(p, 3);
+                        //         // Internal vars
+                        //         const double alpha_t = cz_internal_vars_view(p, 1);
+                        //         const double Tn_t = cz_internal_vars_view(p, 2);
+                        //         // const double Tt_t = cz_internal_vars_view(p, 3);
                                 
-                                // // Delta internal vars
-                                // const double delta_lambda_dot = cz_delta_internal_vars_view(p, 0);
-                                // const double delta_alpha = cz_delta_internal_vars_view(p, 1);
-                                // const double delta_Tn = cz_delta_internal_vars_view(p, 2);
-                                // const double delta_Tt = cz_delta_internal_vars_view(p, 3);
+                        //         // // Delta internal vars
+                        //         // const double delta_lambda_dot = cz_delta_internal_vars_view(p, 0);
+                        //         // const double delta_alpha = cz_delta_internal_vars_view(p, 1);
+                        //         // const double delta_Tn = cz_delta_internal_vars_view(p, 2);
+                        //         // const double delta_Tt = cz_delta_internal_vars_view(p, 3);
                                 
-                                // // Positions and velocities of the pair
-                                // const double velA_x = State.node.vel(gidA, 0);
-                                // const double velA_y = State.node.vel(gidA, 1);
-                                // const double velA_z = State.node.vel(gidA, 2);
-                                // const double velB_x = State.node.vel(gidB, 0);
-                                // const double velB_y = State.node.vel(gidB, 1);
-                                // const double velB_z = State.node.vel(gidB, 2);
+                        //         // // Positions and velocities of the pair
+                        //         // const double velA_x = State.node.vel(gidA, 0);
+                        //         // const double velA_y = State.node.vel(gidA, 1);
+                        //         // const double velA_z = State.node.vel(gidA, 2);
+                        //         // const double velB_x = State.node.vel(gidB, 0);
+                        //         // const double velB_y = State.node.vel(gidB, 1);
+                        //         // const double velB_z = State.node.vel(gidB, 2);
                                 
-                                // // Relative velocity magnitude
-                                // const double v_rel_x = velB_x - velA_x;
-                                // const double v_rel_y = velB_y - velA_y;
-                                // const double v_rel_z = velB_z - velA_z;
-                                // const double v_rel_mag = sqrt(v_rel_x*v_rel_x + v_rel_y*v_rel_y + v_rel_z*v_rel_z);
+                        //         // // Relative velocity magnitude
+                        //         // const double v_rel_x = velB_x - velA_x;
+                        //         // const double v_rel_y = velB_y - velA_y;
+                        //         // const double v_rel_z = velB_z - velA_z;
+                        //         // const double v_rel_mag = sqrt(v_rel_x*v_rel_x + v_rel_y*v_rel_y + v_rel_z*v_rel_z);
                                 
-                                // // Cohesive force on this pair
-                                // const double Fcz_Ax = F_cz(3*gidA);
-                                // const double Fcz_Ay = F_cz(3*gidA + 1);
-                                // const double Fcz_Az = F_cz(3*gidA + 2);
-                                // const double Fcz_mag = sqrt(Fcz_Ax*Fcz_Ax + Fcz_Ay*Fcz_Ay + Fcz_Az*Fcz_Az);
+                        //         // // Cohesive force on this pair
+                        //         // const double Fcz_Ax = F_cz(3*gidA);
+                        //         // const double Fcz_Ay = F_cz(3*gidA + 1);
+                        //         // const double Fcz_Az = F_cz(3*gidA + 2);
+                        //         // const double Fcz_mag = sqrt(Fcz_Ax*Fcz_Ax + Fcz_Ay*Fcz_Ay + Fcz_Az*Fcz_Az);
                                 
-                                // // Effective area
-                                // const double area = pair_area(p);
+                        //         // // Effective area
+                        //         // const double area = pair_area(p);
 
-                                // // Cohesive normals/orientation (print both sets if stored as 6 components)
-                                // const double n0x = cz_orientation(p, 0);
-                                // const double n0y = cz_orientation(p, 1);
-                                // const double n0z = cz_orientation(p, 2);
+                        //         // // Cohesive normals/orientation (print both sets if stored as 6 components)
+                        //         // const double n0x = cz_orientation(p, 0);
+                        //         // const double n0y = cz_orientation(p, 1);
+                        //         // const double n0z = cz_orientation(p, 2);
 
-                                // const double n1x = cz_orientation(p, 3);
-                                // const double n1y = cz_orientation(p, 4);
-                                // const double n1z = cz_orientation(p, 5);
+                        //         // const double n1x = cz_orientation(p, 3);
+                        //         // const double n1y = cz_orientation(p, 4);
+                        //         // const double n1z = cz_orientation(p, 5);
 
-                                // const double n0mag = sqrt(n0x*n0x + n0y*n0y + n0z*n0z);
-                                // const double n1mag = sqrt(n1x*n1x + n1y*n1y + n1z*n1z);
+                        //         // const double n0mag = sqrt(n0x*n0x + n0y*n0y + n0z*n0z);
+                        //         // const double n1mag = sqrt(n1x*n1x + n1y*n1y + n1z*n1z);
 
-                                // const double dx = State.node.coords(gidB,0) - State.node.coords(gidA,0);
-                                // const double dy = State.node.coords(gidB,1) - State.node.coords(gidA,1);
-                                // const double dz = State.node.coords(gidB,2) - State.node.coords(gidA,2);
+                        //         // const double dx = State.node.coords(gidB,0) - State.node.coords(gidA,0);
+                        //         // const double dy = State.node.coords(gidB,1) - State.node.coords(gidA,1);
+                        //         // const double dz = State.node.coords(gidB,2) - State.node.coords(gidA,2);
 
-                                // const double udotn0 = dx*n0x + dy*n0y + dz*n0z;
-                                // const double Tn_tdt = Tn_t + delta_Tn;
-                                // const double Tt_tdt = Tt_t + delta_Tt;
+                        //         // const double udotn0 = dx*n0x + dy*n0y + dz*n0z;
+                        //         // const double Tn_tdt = Tn_t + delta_Tn;
+                        //         // const double Tt_tdt = Tt_t + delta_Tt;
                                 
-                            //     fprintf(cz_fp, "Pair %zu: gidA=%zu gidB=%zu\n", p, gidA, gidB);
-                            //     fprintf(cz_fp, "  sep·n(0-2)=%.6e   sep·n(3-5)=%.6e\n",
-                            //             dx*n0x + dy*n0y + dz*n0z,
-                            //             dx*n1x + dy*n1y + dz*n1z);
-                            //     fprintf(cz_fp, "  n(0-2)=[%.6e %.6e %.6e] |n|=%.6e\n", n0x, n0y, n0z, n0mag);
-                            //     fprintf(cz_fp, "  n(3-5)=[%.6e %.6e %.6e] |n|=%.6e\n", n1x, n1y, n1z, n1mag);
-                            //     fprintf(cz_fp, "  Openings: un_t=%.6e ut_t=%.6e un_tdt=%.6e ut_tdt=%.6e\n", 
-                            //             un_t, ut_t, un_tdt, ut_tdt);
-                            //     fprintf(cz_fp, "  Lambda     t=%.6e tdt=%.6e dot=%.6e\n", 
-                            //             lambda_t, lambda_tdt, lambda_dot_t);
-                            //     fprintf(cz_fp, "  Alpha: t=%.6e delta=%.6e\n", alpha_t, delta_alpha);
-                            //     fprintf(cz_fp, "  Traction: Tn_t=%.6e Tt_t=%.6e dTn=%.6e dTt=%.6e\n", 
-                            //             Tn_t, Tt_t, delta_Tn, delta_Tt);
-                            //     fprintf(cz_fp, "  Traction NEW: Tn_tdt=%.6e Tt_tdt=%.6e\n", Tn_tdt, Tt_tdt);
-                            //     fprintf(cz_fp, "  Rel vel: vx=%.6e vy=%.6e vz=%.6e |v|=%.6e\n", 
-                            //             v_rel_x, v_rel_y, v_rel_z, v_rel_mag);
-                            //     fprintf(cz_fp, "  F_cz on A: Fx=%.6e Fy=%.6e Fz=%.6e |F|=%.6e\n", 
-                            //             Fcz_Ax, Fcz_Ay, Fcz_Az, Fcz_mag);
-                            //     fprintf(cz_fp, "  Area=%.6e\n", area);
-                            //     // Flag compression (negative normal opening)
-                            //     if (un_t < 0.0 || un_tdt < 0.0) {
-                            //         fprintf(cz_fp, "  *** COMPRESSION DETECTED: un_t=%s un_tdt=%s ***\n",
-                            //                 (un_t < 0.0) ? "NEGATIVE" : "ok",
-                            //                 (un_tdt < 0.0) ? "NEGATIVE" : "ok");     
-                            //     }
-                            //     if (udotn0 <= 0.0) fprintf(cz_fp,"  *** CLOSED/COMPRESSION (sep·n<=0) ***\n");                         
-                            //     // Flag suspicious values
-                            //     if (std::fabs(lambda_dot_t) > 1e3 || std::fabs(Tn_t) > 1e6 || 
-                            //         std::fabs(v_rel_mag) > 1e3 || std::fabs(delta_Tn) > 1e6) {
-                            //         fprintf(cz_fp, "  *** WARNING: SUSPICIOUS VALUES ***\n");
-                            //     }
-                            // }
-                            // fprintf(cz_fp, "=== END TIME %.9e ===\n\n", time_value);
+                        //     //     fprintf(cz_fp, "Pair %zu: gidA=%zu gidB=%zu\n", p, gidA, gidB);
+                        //     //     fprintf(cz_fp, "  sep·n(0-2)=%.6e   sep·n(3-5)=%.6e\n",
+                        //     //             dx*n0x + dy*n0y + dz*n0z,
+                        //     //             dx*n1x + dy*n1y + dz*n1z);
+                        //     //     fprintf(cz_fp, "  n(0-2)=[%.6e %.6e %.6e] |n|=%.6e\n", n0x, n0y, n0z, n0mag);
+                        //     //     fprintf(cz_fp, "  n(3-5)=[%.6e %.6e %.6e] |n|=%.6e\n", n1x, n1y, n1z, n1mag);
+                        //     //     fprintf(cz_fp, "  Openings: un_t=%.6e ut_t=%.6e un_tdt=%.6e ut_tdt=%.6e\n", 
+                        //     //             un_t, ut_t, un_tdt, ut_tdt);
+                        //     //     fprintf(cz_fp, "  Lambda     t=%.6e tdt=%.6e dot=%.6e\n", 
+                        //     //             lambda_t, lambda_tdt, lambda_dot_t);
+                        //     //     fprintf(cz_fp, "  Alpha: t=%.6e delta=%.6e\n", alpha_t, delta_alpha);
+                        //     //     fprintf(cz_fp, "  Traction: Tn_t=%.6e Tt_t=%.6e dTn=%.6e dTt=%.6e\n", 
+                        //     //             Tn_t, Tt_t, delta_Tn, delta_Tt);
+                        //     //     fprintf(cz_fp, "  Traction NEW: Tn_tdt=%.6e Tt_tdt=%.6e\n", Tn_tdt, Tt_tdt);
+                        //     //     fprintf(cz_fp, "  Rel vel: vx=%.6e vy=%.6e vz=%.6e |v|=%.6e\n", 
+                        //     //             v_rel_x, v_rel_y, v_rel_z, v_rel_mag);
+                        //     //     fprintf(cz_fp, "  F_cz on A: Fx=%.6e Fy=%.6e Fz=%.6e |F|=%.6e\n", 
+                        //     //             Fcz_Ax, Fcz_Ay, Fcz_Az, Fcz_mag);
+                        //     //     fprintf(cz_fp, "  Area=%.6e\n", area);
+                        //     //     // Flag compression (negative normal opening)
+                        //     //     if (un_t < 0.0 || un_tdt < 0.0) {
+                        //     //         fprintf(cz_fp, "  *** COMPRESSION DETECTED: un_t=%s un_tdt=%s ***\n",
+                        //     //                 (un_t < 0.0) ? "NEGATIVE" : "ok",
+                        //     //                 (un_tdt < 0.0) ? "NEGATIVE" : "ok");     
+                        //     //     }
+                        //     //     if (udotn0 <= 0.0) fprintf(cz_fp,"  *** CLOSED/COMPRESSION (sep·n<=0) ***\n");                         
+                        //     //     // Flag suspicious values
+                        //     //     if (std::fabs(lambda_dot_t) > 1e3 || std::fabs(Tn_t) > 1e6 || 
+                        //     //         std::fabs(v_rel_mag) > 1e3 || std::fabs(delta_Tn) > 1e6) {
+                        //     //         fprintf(cz_fp, "  *** WARNING: SUSPICIOUS VALUES ***\n");
+                        //     //     }
+                        //     // }
+                        //     // fprintf(cz_fp, "=== END TIME %.9e ===\n\n", time_value);
         
                             
 
-                            fprintf(cz_fp, "%.9e, %.9e, %.9e, %.9e\n",
-                                    time_value, alpha_t, lambda_t, std::fabs(Tn_t));
+                        //     //fprintf(cz_fp, "%.9e, %.9e, %.9e, %.9e\n",
+                        //             //time_value, alpha_t, lambda_t, std::fabs(Tn_t));
                             
-                            //fprintf(cz_fp, "%.9e, %.9e, %.9e, %.9e\n",
-                            //        un_t, ut_t, u_n_star, u_t_star);
+                        //     //fprintf(cz_fp, "%.9e, %.9e, %.9e, %.9e\n",
+                        //     //        un_t, ut_t, u_n_star, u_t_star);
                             
-                            //fprintf(cz_fp, "RK info: rk_num_stages=%zu rk_stage=%zu rk_alpha=%.17g dt=%.9e\n",
-                            //rk_num_stages, rk_stage, rk_alpha, dt);
+                        //     //fprintf(cz_fp, "RK info: rk_num_stages=%zu rk_stage=%zu rk_alpha=%.17g dt=%.9e\n",
+                        //     //rk_num_stages, rk_stage, rk_alpha, dt);
 
-                            // watch it live; can remove for speed
-                            fflush(cz_fp);
+                        //     // watch it live; can remove for speed
+                        //     fflush(cz_fp);
 
-                            cz_next_cycle += cz_stride;
-                        }
+                        //     cz_next_cycle += cz_stride;
+                        // }
 // THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS  2/3 add
 
 // THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS                              
@@ -712,9 +977,15 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                                 State.node.force(n,1) += F_cz(3*n + 1);
                                 State.node.force(n,2) += F_cz(3*n + 2);
                                 }
+
                     } // end for loop for npairs
                 } // end gaurd if fracture_bdy_set > 0
             } // end if doing_fracture
+        
+            // SKIP SGH SOLVER EVOLUTION (REORIENTATION TESTING MODE)
+            if (reorient_mode) {
+                continue; // skip update velocity, boundary vel, contact, energy, position, etc.
+            }
     
             // // 2/3 add
             // auto dump_node = [&](size_t gid){
