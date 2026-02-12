@@ -86,7 +86,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     double graphics_time = this->time_start; // the times for writing graphics dump, was zero
     size_t output_id=0; // the id for the outputs written
     
-    std::cout << "Applying initial boundary conditions" << std::endl;
     boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value); // Time value = 0.0;
 
     double cached_pregraphics_dt = fuzz;
@@ -132,8 +131,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     output_id++; // saved an output file
 
     graphics_time = time_value + graphics_dt_ival;
-
-std::cout << "here after outputs t0 \n";
 
     // ---- Set up sphere to act as a moving heat source ---- //
     DCArrayKokkos<double> sphere_position(3, "sphere_position");
@@ -182,7 +179,6 @@ std::cout << "here after outputs t0 \n";
 
             // initialize the material dt
             double dt_mat = dt;
-std::cout << "here getting time step\n";
             // ---- get the stable time step, both from CFL and Von Neumann stability ---- //
             get_timestep(mesh,
                          State.node.coords,
@@ -226,7 +222,6 @@ std::cout << "here getting time step\n";
         // ---- Initialize the state for the RK integration scheme ---- //
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-std::cout << "checking: rk_init \n";
             // save the values at t = n
             rk_init(State.node.coords,
                     State.node.coords_n0,
@@ -255,7 +250,6 @@ std::cout << "checking: rk_init \n";
             // ---- Calculate the corner heat flux from conduction per material ---- //
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-std::cout << "checking: get_heat_flux \n";
                 get_heat_flux(
                     Materials,
                     mesh,
@@ -277,7 +271,6 @@ std::cout << "checking: get_heat_flux \n";
                     rk_alpha);
 
                 // ---- Calculate the corner heat flux from moving volumetric heat source ----
-std::cout << "checking: moving_flux \n";
                 moving_flux(
                     Materials,
                     mesh,
@@ -298,7 +291,6 @@ std::cout << "checking: moving_flux \n";
             } // end for mat_id
 
             // ---- apply flux boundary conditions (convection/radiation)  ---- //
-std::cout << "checking: applying BCs \n";
             boundary_convection(mesh, 
                                 BoundaryConditions, 
                                 State.node.temp, // fixed to use current time level
@@ -311,8 +303,6 @@ std::cout << "checking: applying BCs \n";
                                State.node.q_transfer, 
                                State.node.coords, 
                                time_value);
-
-std::cout << "update temperature \n";
             // ---- Update nodal temperature ---- //
             update_temperature(
                 mesh,

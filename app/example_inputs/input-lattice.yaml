@@ -154,7 +154,7 @@ regions:
         solver_id: 0
         density: 
             type: uniform
-            value: 7.86
+            value: 8.93
         specific_internal_energy: 
             type: uniform
             value: 1.e-10

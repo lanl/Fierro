@@ -65,7 +65,6 @@ void SGTM3D::rk_init(
     const size_t num_mat_points) const
 {
     // save elem quantities
-std::cout << "here in rk_int \n ";
     // save nodal quantities
     FOR_ALL(node_gid, 0, num_nodes, {
         for (size_t i = 0; i < num_dims; i++) {
@@ -74,7 +73,6 @@ std::cout << "here in rk_int \n ";
         }
         node_temp_n0(node_gid) = node_temp(node_gid);
     }); // end parallel for
-std::cout << "done with rk_int \n ";
 
     Kokkos::fence();
 
