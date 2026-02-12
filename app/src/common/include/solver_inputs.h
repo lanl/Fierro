@@ -74,6 +74,8 @@ struct solver_input_t
     solver_input::method method = solver_input::NONE;
 
     double time_end = 0.0;
+
+    bool use_moving_heat_source = false;
 }; // solver_input_t
 
 // ----------------------------------
@@ -83,7 +85,8 @@ static std::vector<std::string> str_solver_inps
 {
     "method",
     "id",
-    "time_end"
+    "time_end",
+    "use_moving_heat_source"
 };
 
 // ----------------------------------

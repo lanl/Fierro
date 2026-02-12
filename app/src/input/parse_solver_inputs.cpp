@@ -165,6 +165,11 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
 
                 solver_inputs[solver_id].time_end = t_end;
             }
+            else if (a_word.compare("use_moving_heat_source") == 0) {
+                bool use_moving_heat_source = root["solver_options"][s_id]["solver"]["use_moving_heat_source"].As<bool>();
+
+                solver_inputs[solver_id].use_moving_heat_source = use_moving_heat_source;
+            }
             // add solver_vars parsing here
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;

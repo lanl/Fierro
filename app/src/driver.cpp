@@ -304,6 +304,19 @@ void Driver::setup_solver_vars(T& a_solver,
 
     // add other solver vars here
 
+    // Check if the solver is of type SGTM3D and set use_moving_heat_source if specified
+    if (this->SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
+        // By default, do not use moving heat source unless specified in input
+        if (this->SimulationParamaters.solver_inputs[solver_id].use_moving_heat_source) {
+            a_solver->use_moving_heat_source = true;
+        }
+
+        else {
+            a_solver->use_moving_heat_source = false;
+        }
+    }
+    
+
 
     // -------
     // setting the ending times are tricky, requiring logic

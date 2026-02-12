@@ -58,6 +58,9 @@ public:
     double time_start;
     double time_end;
 
+
+    bool use_moving_heat_source = false; // flag for SGTM solver for additive manufacturing moving heat source
+
     Solver();
     virtual ~Solver();
 
