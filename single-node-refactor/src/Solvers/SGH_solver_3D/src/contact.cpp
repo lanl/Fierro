@@ -1343,8 +1343,8 @@ void isoparametric_inverse(const double pos[3], const double elem_pos[3][8], dou
 } // end isoparametric_inverse
 
 void find_penetrating_nodes(double depth_cap, DCArrayKokkos <double> &coords,
-                            double num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces,
-                            CArrayKokkos <size_t> bdy_patches, double Sx, double Sy, double Sz, double x_min,
+                            size_t num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces,
+                            CArrayKokkos <size_t> bdy_patches, size_t Sx, size_t Sy, size_t Sz, double x_min,
                             double y_min, double z_min, double bucket_size, CArrayKokkos <size_t> &buckets,
                             CArrayKokkos <size_t> &node_penetrations, CArrayKokkos <size_t> &npoint,
                             size_t num_patches, CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &nsort,
@@ -1364,12 +1364,19 @@ void find_penetrating_nodes(double depth_cap, DCArrayKokkos <double> &coords,
             penetration_capture_box(depth_cap, bounding_box, nodes_gid, coords);
 
             // Determine the buckets that intersect with the capture box
-            size_t ibox_max = fmax(0, fmin(Sx - 1, floor((bounding_box[0] - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
-            size_t jbox_max = fmax(0, fmin(Sy - 1, floor((bounding_box[1] - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
-            size_t kbox_max = fmax(0, fmin(Sz - 1, floor((bounding_box[2] - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
-            size_t ibox_min = fmax(0, fmin(Sx - 1, floor((bounding_box[3] - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
-            size_t jbox_min = fmax(0, fmin(Sy - 1, floor((bounding_box[4] - y_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
-            size_t kbox_min = fmax(0, fmin(Sz - 1, floor((bounding_box[5] - z_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
+            double ibox_max_d = fmax(0.0, fmin((double)(Sx - 1), floor((bounding_box[0] - x_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
+            double jbox_max_d = fmax(0.0, fmin((double)(Sy - 1), floor((bounding_box[1] - y_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
+            double kbox_max_d = fmax(0.0, fmin((double)(Sz - 1), floor((bounding_box[2] - z_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
+            double ibox_min_d = fmax(0.0, fmin((double)(Sx - 1), floor((bounding_box[3] - x_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
+            double jbox_min_d = fmax(0.0, fmin((double)(Sy - 1), floor((bounding_box[4] - y_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
+            double kbox_min_d = fmax(0.0, fmin((double)(Sz - 1), floor((bounding_box[5] - z_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
+
+            size_t ibox_max = (size_t)ibox_max_d;
+            size_t jbox_max = (size_t)jbox_max_d;
+            size_t kbox_max = (size_t)kbox_max_d;
+            size_t ibox_min = (size_t)ibox_min_d;
+            size_t jbox_min = (size_t)jbox_min_d;
+            size_t kbox_min = (size_t)kbox_min_d;
             
             size_t bucket_index = 0;
             for (size_t i = ibox_min; i < ibox_max + 1; i++)
@@ -1411,7 +1418,7 @@ void find_penetrating_nodes(double depth_cap, DCArrayKokkos <double> &coords,
                     {
                         for (int j = 0; j < num_bdy_nodes; j++) {
                             if (node_penetrations(j,0) == node_gid) {
-                                for (int k = 0; k < 18; k++) {
+                                for (int k = 0; k < 100; k++) {
                                     if (node_penetrations(j,k+1) == num_patches) {
                                         node_penetrations(j,k+1) = bdy_patches(patch_lid);
                                         break;
@@ -1600,7 +1607,7 @@ void sort(DCArrayKokkos <double> &coords, size_t num_bdy_nodes, CArrayKokkos <si
     /* bucket_size_dir[0] = (x_max-x_min)/buckets_in_dim;
     bucket_size_dir[1] = (y_max-y_min)/buckets_in_dim;
     bucket_size_dir[2] = (z_max-z_min)/buckets_in_dim; */
-    bucket_size = fmax((x_max - x_min)/8, fmax((y_max-y_min)/8,(z_max-z_min)/8));
+    bucket_size = fmax((x_max - x_min)/500, fmax((y_max-y_min)/500 ,(z_max-z_min)/500));
 
     // Define Sx, Sy, and Sz
     Sx = floor((x_max - x_min)/bucket_size) + 1; // NOLINT(*-narrowing-conversions)
@@ -1612,22 +1619,22 @@ void sort(DCArrayKokkos <double> &coords, size_t num_bdy_nodes, CArrayKokkos <si
     // Initializing the nbox, lbox, nsort, and npoint arrays
     size_t nb = Sx*Sy*Sz;  // total number of buckets
 
-    nbox = CArrayKokkos<size_t>(nb);
-    lbox = CArrayKokkos<size_t>(num_bdy_nodes);
-    nsort = CArrayKokkos<size_t>(num_bdy_nodes);
-    npoint = CArrayKokkos<size_t>(nb);
-    CArrayKokkos<size_t> nsort_lid(num_bdy_nodes);
+    nbox = CArrayKokkos<size_t>(nb, "nbox");
+    lbox = CArrayKokkos<size_t>(num_bdy_nodes, "lbox");
+    nsort = CArrayKokkos<size_t>(num_bdy_nodes, "nsort");
+    npoint = CArrayKokkos<size_t>(nb, "npoint");
+    CArrayKokkos<size_t> nsort_lid(num_bdy_nodes, "nsort_lid");
     
     // Find the bucket id for each node by constructing lbox
     FOR_ALL(i, 0, num_bdy_nodes, {
         double x = coords(bdy_nodes(i),0);
         double y = coords(bdy_nodes(i),1);
         double z = coords(bdy_nodes(i),2);
-        
+
         size_t Si_x = floor((x - x_min)/bucket_size);
         size_t Si_y = floor((y - y_min)/bucket_size);
         size_t Si_z = floor((z - z_min)/bucket_size);
-        
+
         lbox(i) = Si_z*Sx*Sy + Si_y*Sx + Si_x;
         Kokkos::atomic_add(&nbox(lbox(i)),1);  // increment nbox
     });
@@ -1664,8 +1671,8 @@ void sort(DCArrayKokkos <double> &coords, size_t num_bdy_nodes, CArrayKokkos <si
 }  // end sort
 
 void penetration_sweep(double x_min, double y_min, double z_min, double bounding_box[], DCArrayKokkos <double> &coords,
-                       double num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces, CArrayKokkos <size_t> bdy_patches,
-                       double Sx, double Sy, double Sz, double bucket_size, CArrayKokkos <size_t> &buckets,
+                       size_t num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces, CArrayKokkos <size_t> bdy_patches,
+                       size_t Sx, size_t Sy, size_t Sz, double bucket_size, CArrayKokkos <size_t> &buckets,
                        CArrayKokkos <size_t> &node_penetrations, CArrayKokkos <size_t> &npoint, size_t num_patches,
                        CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &nsort, DCArrayKokkos <size_t> nodes_in_elem,
                        CArrayKokkos <size_t> elems_in_patch, size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch,
@@ -1681,10 +1688,12 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
     // todo: the multiplication values are currently arbitrary and should be checked for performance
     // todo: bucket size is bad now after stability update to sort
     double depth_cap = std::min(dim_min/4,3*bucket_size);
-   
+    //depth_cap = 0.1;
+    //dim_min = 0.1;
+
     // setting all values to an initially impossible number for surf ids (i.e. greater than total number of patches)
     FOR_ALL(i,0,num_bdy_nodes,{
-        for (int j = 0; j < 18; j++) {
+        for (int j = 0; j < 100; j++) {
             node_penetrations(i,j+1) = num_patches;
         }
     });
@@ -1708,7 +1717,9 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
     /* RUN({
         for (int i = 0; i < node_penetrations.dims(0); i++) {
             for (int j = 0; j < node_penetrations.dims(1); j++) {
-                printf("%lu  ", (unsigned long)node_penetrations(i,j));
+                if (node_penetrations(i,j) < num_bdy_patches) {
+                    printf("%lu  ", (unsigned long)node_penetrations(i,j));
+                }
             }
             printf("\n");
         }
@@ -1716,12 +1727,12 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
     }); */
     
     // testing element limited pairing
-    CArrayKokkos <size_t> elem_count(num_bdy_nodes);
+    CArrayKokkos <size_t> elem_count(num_bdy_nodes, "elem_count");
     RUN({
-        for (int i = 0; i < num_bdy_nodes; i++) {
+        /* for (int i = 0; i < num_bdy_nodes; i++) {
             size_t count = 0;
             size_t temp = num_patches;
-            for (int j = 0; j < 18; j++) {
+            for (int j = 0; j < 100; j++) {
                 if (node_penetrations(i,j+1) != num_patches) {
                     if (temp != elems_in_patch(node_penetrations(i,j+1),0)){
                         temp = elems_in_patch(node_penetrations(i,j+1),0);
@@ -1733,30 +1744,101 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
             if (count == 0) {
                 elem_count(i) = 1;
             }
+        } */
+        // counting unique elements from boundary patches to find which penetrating nodes are inside MORE THAN ONE element
+        for (int i = 0; i < num_bdy_nodes; i++) {
+            // initializing the count variable for the boundary node
+            int count = 0;
+            for (int j = 0; j < 100; j++) {
+                if (node_penetrations(i,j+1) == num_patches) {
+                    break; // break, not continue because node_penetrations is filled from left to right and once num_patches pops up it means the rest is filler
+                }
+                // initially assuming not a duplicate
+                bool dup = false;
+                for (int k = 0; k < j; k++) {
+                    // if a duplicate value prior in the row indexes, it's a duplicate
+                    if (elems_in_patch(node_penetrations(i,j+1),0) == elems_in_patch(node_penetrations(i,k+1),0)) {
+                        dup = true;
+                        break;
+                    }
+                }
+                // if not a duplicate and not a filler value, it's a unique element so add to tally
+                if (!dup) {
+                    count += 1;
+                }
+            }
+            // elem_count is the stride array so can't be 0
+            if (count == 0) {
+                count = 1;
+            }
+            elem_count(i) = count;
         }
+       
     });
+
+    /* RUN({
+        for (int i = 0; i < elem_count.dims(0); i++) {
+            printf("%lu  %lu", (unsigned long)node_penetrations(i,0), (unsigned long)elem_count(i));
+            printf("\n");
+        }
+        printf("\n");
+    }); */
     
     RaggedRightArrayKokkos <size_t> elems_penetrated(elem_count);
     elems_penetrated.set_values(num_elems);
     RUN({
+        /* for (int i = 0; i < num_bdy_nodes; i++) {
+            int cnt = 1;
+            for (int j = 0; j < 100; j++) {
+                if (node_penetrations(i,j+1 == num_patches)) {
+                    break; // break, not continue because node_penetrations is filled from left to right and once num_patches pops up it means the rest is filler
+                }
+                for (int k = 0; k < elems_penetrated.stride(i); k++) {
+                    if (elems_penetrated(i,k) == num_elems && elems_penetrated(i,cnt-1) != elems_in_patch(node_penetrations(i,j+1),0)){
+                        elems_penetrated(i,k) = elems_in_patch(node_penetrations(i,j+1),0);
+                        cnt += 1;
+                        break;
+                    }
+                }
+            }
+        } */
         for (int i = 0; i < num_bdy_nodes; i++) {
-            for (int j = 0; j < 18; j++) {
-                if (node_penetrations(i,j+1) != num_patches) {
-                    for (int k = 0; k < elems_penetrated.stride(i); k++) {
-                        if (elems_penetrated(i,k) == num_elems && elems_penetrated(i,0) != elems_in_patch(node_penetrations(i,j+1),0)){
-                            elems_penetrated(i,k) = elems_in_patch(node_penetrations(i,j+1),0);
-                            continue;
+            for (int j = 0; j < elem_count(i); j++) {
+                for (int k = 0; k < 100; k++) {
+                    if (node_penetrations(i,k+1) == num_patches) {
+                        break; // break, not continue because node_penetrations is filled from left to right and once num_patches pops up it means the rest is filler
+                    }
+                    bool dup = false;
+                    for (int m = 0; m < j; m++) { // tracking which patches are already found to be duplicates and changing the start value on this loop could speed up a little
+                        if (elems_in_patch(node_penetrations(i, k+1),0) == elems_penetrated(i,m)) {
+                            dup = true;
+                            break;
                         }
+                    }
+                    if (!dup) {
+                        elems_penetrated(i,j) = elems_in_patch(node_penetrations(i, k+1),0);
+                        break;
                     }
                 }
             }
         }
     });
 
+    /* RUN({
+        for (int i = 0; i < elem_count.dims(0); i++) {
+            printf("%lu ",(unsigned long)node_penetrations(i,0));
+            for (int j = 0; j < elem_count(i); j++) {
+                printf("%lu ", (unsigned long)elems_penetrated(i,j));
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }); */
+
     // allocating pair arrays
     node_patch_pairs = RaggedRightArrayKokkos <size_t> (elem_count);
     node_patch_pairs.set_values(num_patches);
-    CArrayKokkos <size_t> pair_vars_stride(num_bdy_nodes);
+    CArrayKokkos <size_t> pair_vars_stride(num_bdy_nodes, "pair_vars_stride");
     RUN({
         for (int i = 0; i < num_bdy_nodes; i++) {
             pair_vars_stride(i) = elem_count(i)*8;
@@ -1830,7 +1912,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                 for (int el_id = 0; el_id < elems_penetrated.stride(node_lid); el_id++) {
                     dot_prod = -1;
                     ptoPmag = pow(10,16);
-                    for (int j = 0; j < 18; j++) {
+                    for (int j = 0; j < 100; j++) {
                         if (node_penetrations(node_lid, j+1) != num_patches) {
                             if (elems_in_patch(node_penetrations(node_lid, j+1), 0) == elems_penetrated(node_lid, el_id)) {
                                 for (int k = 0; k < 4; k++){
@@ -1865,7 +1947,9 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                         }
                     }
                     //std::cout << "NODE: " << node_penetrations(node_lid,0) << " ELEM: " << elems_penetrated(node_lid, el_id) << " PATCH NODES: " << nodes_in_patch(node_penetrations(node_lid, surf_lid),0) << " " << nodes_in_patch(node_penetrations(node_lid, surf_lid),1) << " " << nodes_in_patch(node_penetrations(node_lid, surf_lid),2) << " " << nodes_in_patch(node_penetrations(node_lid, surf_lid),3) << std::endl;
-                    
+                    if (surf_lid == -1) {
+                        continue;
+                    }
                     // pairing step 5) find closest point on surf in normal direction from node
                     // plane can be defined from any of the 4 nodes by A(x-xn)+B(y-yn)+C(z-zn)=0 where n=<A,B,C>
                     // given coords of penetrating node "p" we find point of contact "P"
@@ -2151,7 +2235,8 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
                       DCArrayKokkos <double> &coords, CArrayKokkos <size_t> bdy_nodes, DCArrayKokkos <double> &mass,
                       CArrayKokkos <double> &contact_forces, DCArrayKokkos <double> &corner_force, DCArrayKokkos <double> &vel,
                       RaggedRightArrayKokkos <size_t> corners_in_node, CArrayKokkos <size_t> num_corners_in_node,
-                      const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, const double &del_t, CArrayKokkos <double> &contact_force, size_t num_bdy_nodes)
+                      const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, const double &del_t, CArrayKokkos <double> &contact_force, size_t num_bdy_nodes,
+                      size_t num_patches)
 {
     f_c_incs.set_values(0);
     for (int i = 0; i < max_iter; i++)
@@ -2162,13 +2247,16 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
             ViewCArrayKokkos<double> incs_view(&f_c_incs(0), num_active(0));
             size_t contact_id = active_set(j);
             for (int k = 0; k < node_patch_pairs.stride(contact_id); k++) {
-                ViewCArrayKokkos <size_t> surface_map(&contact_surface_map(node_patch_pairs(contact_id,k),0), 4);
-                ViewCArrayKokkos <double> pair(&pair_vars(contact_id,8*k), 8);
-                
-                frictionless_increment(pair, contact_id, xi, eta, del_t, coords, bdy_nodes, surface_map, mass,
-                                       contact_forces, corner_force, vel, corners_in_node, num_corners_in_node);
-                incs_view(j) += pair_vars(contact_id, 8*k + 6);
-            }            
+                if (node_patch_pairs(contact_id,k) != num_patches) {
+                    ViewCArrayKokkos <size_t> surface_map(&contact_surface_map(node_patch_pairs(contact_id,k),0), 4);
+                    ViewCArrayKokkos <double> pair(&pair_vars(contact_id,8*k), 8);
+                    
+                    frictionless_increment(pair, contact_id, xi, eta, del_t, coords, bdy_nodes, surface_map, mass,
+                                        contact_forces, corner_force, vel, corners_in_node, num_corners_in_node);
+                    incs_view(j) += pair_vars(contact_id, 8*k + 6);
+                }
+            }    
+            //printf("%e\n", incs_view(j));        
         });
         
         Kokkos::fence();
@@ -2184,14 +2272,17 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
         {
             size_t contact_id = active_set(j);
             for (int k = 0; k < node_patch_pairs.stride(contact_id); k++) {
-                ViewCArrayKokkos <size_t> surface_map(&contact_surface_map(node_patch_pairs(contact_id,k),0), 4);
-                ViewCArrayKokkos <double> pair(&pair_vars(contact_id,8*k), 8);
-                distribute_frictionless_force(pair, contact_id, surface_map, xi, eta, contact_forces);
+                if (node_patch_pairs(contact_id,k) != num_patches) {
+                    ViewCArrayKokkos <size_t> surface_map(&contact_surface_map(node_patch_pairs(contact_id,k),0), 4);
+                    ViewCArrayKokkos <double> pair(&pair_vars(contact_id,8*k), 8);
+                    distribute_frictionless_force(pair, contact_id, surface_map, xi, eta, contact_forces);
+                }
             }
+            //printf("contact forces for node: %lu  are: %e %e %e\n", contact_id, contact_forces(j, 0), contact_forces(j, 1), contact_forces(j, 2));
         });
         
         Kokkos::fence();
-
+        
         // check convergence (the force increments should be zero)
         DCArrayKokkos <double> norm_incs(1);
 
@@ -2218,6 +2309,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
     }
     RUN({
         for (int i = 0; i < num_bdy_nodes; i++) {
+            //printf("contact forces for node: %lu  are: %e %e %e\n", bdy_nodes(i), contact_forces(i, 0), contact_forces(i, 1), contact_forces(i, 2));
             for (int j = 0; j < 3; j++) {
                 contact_force(bdy_nodes(i), j) = contact_forces(i,j);
             }
@@ -2416,23 +2508,23 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     });
 
     // sizing possible nodes and buckets
-    possible_nodes = CArrayKokkos<size_t>(num_bdy_nodes);
-    buckets = CArrayKokkos<size_t>(pow(9,3));
+    possible_nodes = CArrayKokkos<size_t>(num_bdy_nodes, "possible_nodes");
+    buckets = CArrayKokkos<size_t>(pow(500,3), "buckets");
 
     // sizing arrays based on num of bdy patches and bdy nodes
-    contact_forces = CArrayKokkos<double>(num_bdy_nodes,3);
+    contact_forces = CArrayKokkos<double>(num_bdy_nodes,3, "contact_forces");
     contact_forces.set_values(0);
-    penetration_surfaces = CArrayKokkos<size_t>(num_bdy_patches,5,4);
+    penetration_surfaces = CArrayKokkos<size_t>(num_bdy_patches,5,4, "penetration_surfaces");
 
     // sizing contact_surface_map
-    contact_surface_map = CArrayKokkos<size_t>(num_bdy_patches,4);
+    contact_surface_map = CArrayKokkos<size_t>(num_bdy_patches,4, "contact_surface_map");
 
     // sizing and filling pairing arrays
     //node_patch_pairs = CArrayKokkos <size_t> (num_bdy_nodes);
     //pair_vars = CArrayKokkos <double> (num_bdy_nodes, 8);
     //node_patch_pairs.set_values(num_patches);
     //pair_vars.set_values(0);
-    active_set = CArrayKokkos <size_t> (num_bdy_nodes);
+    active_set = CArrayKokkos <size_t> (num_bdy_nodes, "active_set");
     num_active = DCArrayKokkos <size_t> (1);
 
     RUN_CLASS({
@@ -2551,7 +2643,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     Kokkos::fence();
     
     // finding num_surfs_in_node
-    num_surfs_in_node = CArrayKokkos <size_t> (num_bdy_nodes);
+    num_surfs_in_node = CArrayKokkos <size_t> (num_bdy_nodes, "num_surfs_in_nodes");
     num_surfs_in_node.set_values(0);
     FOR_ALL_CLASS(i, 0, num_bdy_nodes, {
         size_t node_gid = bdy_nodes(i);
@@ -2589,7 +2681,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
 
     // sizing and filling node_penetrations
     // todo: this should be a dynamic ragged type
-    node_penetrations = CArrayKokkos <size_t> (num_bdy_nodes,19);
+    node_penetrations = CArrayKokkos <size_t> (num_bdy_nodes,101, "node_penetrations");
     node_penetrations.set_values(num_patches);
     FOR_ALL_CLASS(i, 0, num_bdy_nodes, {
         node_penetrations(i,0) = bdy_nodes(i);
@@ -2597,11 +2689,11 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     Kokkos::fence();
 
     // sizing convergence vector
-    f_c_incs = CArrayKokkos <double> (num_bdy_nodes);
+    f_c_incs = CArrayKokkos <double> (num_bdy_nodes, "f_c_incs");
     f_c_incs.set_values(0);
 
     // sizing contact force array
-    contact_force = CArrayKokkos <double> (num_nodes, 3);
+    contact_force = CArrayKokkos <double> (num_nodes, 3, "contact_force");
     contact_force.set_values(0);
     
     // getting bucket_size

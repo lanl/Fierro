@@ -8,7 +8,7 @@
 using namespace mtr;
 
 // solving options
-static constexpr size_t max_iter = 100;  // max number of iterations
+static constexpr size_t max_iter = 10;  // max number of iterations
 static constexpr double tol = 1e-15;  // tolerance for the things that are supposed to be zero
 static constexpr double edge_tol = 1e-3;  // tolerance for edge case solutions (see contact_check for more info)
 
@@ -579,8 +579,8 @@ void isoparametric_inverse(const double pos[3], const double elem_pos[3][8], dou
 /// \param iso_pos isoparametric position (xi,eta,zeta) output
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void find_penetrating_nodes(double depth_cap, DCArrayKokkos <double> &coords,
-                            double num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces,
-                            CArrayKokkos <size_t> bdy_patches, double Sx, double Sy, double Sz, double x_min,
+                            size_t num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces,
+                            CArrayKokkos <size_t> bdy_patches, size_t Sx, size_t Sy, size_t Sz, double x_min,
                             double y_min, double z_min, double bucket_size, CArrayKokkos <size_t> &buckets,
                             CArrayKokkos <size_t> &node_penetrations, CArrayKokkos <size_t> &npoint,
                             size_t num_patches, CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &nsort,
@@ -619,8 +619,8 @@ void sort(DCArrayKokkos <double> &coords, size_t num_bdy_nodes, CArrayKokkos <si
 /// \param mesh Necessary to pull total number of nodes
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void penetration_sweep(double x_min, double y_min, double z_min, double bounding_box[], DCArrayKokkos <double> &coords,
-                       double num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces, CArrayKokkos <size_t> bdy_patches,
-                       double Sx, double Sy, double Sz, double bucket_size, CArrayKokkos <size_t> &buckets,
+                       size_t num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces, CArrayKokkos <size_t> bdy_patches,
+                       size_t Sx, size_t Sy, size_t Sz, double bucket_size, CArrayKokkos <size_t> &buckets,
                        CArrayKokkos <size_t> &node_penetrations, CArrayKokkos <size_t> &npoint, size_t num_patches,
                        CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &nsort, DCArrayKokkos <size_t> nodes_in_elem,
                        CArrayKokkos <size_t> elems_in_patch, size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch,
@@ -643,7 +643,8 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
                       DCArrayKokkos <double> &coords, CArrayKokkos <size_t> bdy_nodes, DCArrayKokkos <double> &mass,
                       CArrayKokkos <double> &contact_forces, DCArrayKokkos <double> &corner_force, DCArrayKokkos <double> &vel,
                       RaggedRightArrayKokkos <size_t> corners_in_node, CArrayKokkos <size_t> num_corners_in_node,
-                      const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, const double &del_t, CArrayKokkos <double> &contact_force, size_t num_bdy_nodes);
+                      const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, const double &del_t, CArrayKokkos <double> &contact_force, size_t num_bdy_nodes,
+                      size_t num_patches);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn remove_pairs
