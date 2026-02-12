@@ -953,7 +953,8 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
     {
         std::cout << "\n\n**********************************\n\n";
         std::cout << " ERROR:\n";
-        std::cout << " Voxel vtk input does not exist \n";
+        std::cout << " Voxel vtk input does not exist at path: " << MESH << "\n";
+        std::cout << " Please verify absolute path to file is correct" << "\n";
         std::cout << "**********************************\n\n" << std::endl;
         std::exit(EXIT_FAILURE);
     } // end if
