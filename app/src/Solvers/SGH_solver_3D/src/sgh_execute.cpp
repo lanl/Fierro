@@ -33,7 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver_3D.h"
-
+#include <cmath>
 #include "simulation_parameters.h"
 #include "material.h"
 #include "boundary_conditions.h"
@@ -42,7 +42,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "geometry_new.h"
 #include "mesh_io.h"
 #include "tipton_equilibration.hpp"
-
+#include "fracture_stress_bc.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -295,7 +295,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 // REORIENTATION VALIDATION MODE FLAG
 // set to true to use prescribed kinematics instead of dynamic solver
 // =============================================================================
-const bool REORIENTATION_VALIDATION_MODE = true;
+const bool REORIENTATION_VALIDATION_MODE = false;
 
 // Validation parameters (matching Figure 11 setup [1])
 const double OMEGA_Y = 0.0792860967; // full 360 deg rotation for 79.247 us //0.02747; //full 360 degree rotation for 228.764 us final time;           // rad/us rotation about y-axis
@@ -587,7 +587,12 @@ if (reorient_mode) {
                             State.node.coords,
                             time_value);
 
-
+        } else {
+        // kinematics-only: start forces at zero (you can still add cohesive forces below)
+        State.node.force.set_values(0.0);
+        set_corner_force_zero(mesh, State.corner.force);
+        }                        
+        
 
             // call body forces routine
             if (doing_fracture) {
@@ -750,8 +755,7 @@ if (reorient_mode) {
                             F_cz_view
                         );
 // REORIENTATION TESTING
-if (REORIENTATION_VALIDATION_MODE &&
-    cz_fp &&
+if (cz_fp &&
     rk_stage == rk_num_stages - 1 &&
     cycle == cz_next_cycle)
 {
@@ -1164,8 +1168,8 @@ if (REORIENTATION_VALIDATION_MODE &&
         if (time_value >= time_final) {
             break;
         }
-    } // end for cycle loop
-
+    } 
+// end for cycle loop
     
 // THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS 
                      
