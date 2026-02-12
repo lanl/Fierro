@@ -28,18 +28,11 @@ output_options:
     # graphics_iteration_step: 1
     elem_field_outputs:
         - den
-        - pres
-        - stress
-        - sie
         - mass
     mat_pt_field_outputs:
         - den
-        - pres
-        - sie
     node_field_outputs:
-        - vel
         - temp
-        - mass
 
 solver_options:
   - solver:

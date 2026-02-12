@@ -98,20 +98,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     auto time_1 = std::chrono::high_resolution_clock::now();
 
-    // ----  Tweak node positions to test irregular meshes ---- //
-    // for(int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
 
-    //     int a=rand()%2;
-
-    //     double da = (double)a;
-
-    //     State.node.coords.host(0, node_gid, 0) += da*0.0002*sin(5000.0 * State.node.coords.host(0, node_gid, 0));
-    //     State.node.coords.host(0, node_gid, 1) += da*0.0002*sin(9000.0 * State.node.coords.host(0, node_gid, 1));
-    //     State.node.coords.host(1, node_gid, 0) += da*0.0002*sin(5000.0 * State.node.coords.host(1, node_gid, 0));
-    //     State.node.coords.host(1, node_gid, 1) += da*0.0002*sin(9000.0 * State.node.coords.host(1, node_gid, 1));
-    // }
-
-    // State.node.coords.update_device();
 
 
     // ---- Write initial state at t=0 ---- 
@@ -131,6 +118,27 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     output_id++; // saved an output file
 
     graphics_time = time_value + graphics_dt_ival;
+
+
+
+    // ----  Tweak node positions to test irregular meshes ---- //
+    for(int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
+
+        int a=rand()%2;
+
+        double da = 0.01;
+
+
+        State.node.coords.host(node_gid, 0) += da*1.0*sin(5000.0 * State.node.coords.host(node_gid, 0));
+        State.node.coords.host(node_gid, 1) += da*1.0*sin(9000.0 * State.node.coords.host(node_gid, 1));
+        State.node.coords.host(node_gid, 0) += da*1.0*sin(5000.0 * State.node.coords.host(node_gid, 0));
+        State.node.coords.host(node_gid, 1) += da*1.0*sin(9000.0 * State.node.coords.host(node_gid, 1));
+    }
+
+    State.node.coords.update_device();
+
+
+
 
     // ---- Set up sphere to act as a moving heat source ---- //
     DCArrayKokkos<double> sphere_position(3, "sphere_position");
