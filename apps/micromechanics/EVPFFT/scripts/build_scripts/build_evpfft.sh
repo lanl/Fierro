@@ -146,7 +146,7 @@ EVPFFT_BUILD_DIR="$PARENT_DIR/evpfft_${heffte_build_type}_${kokkos_build_type}"
 HEFFTE_INSTALL_DIR="$LIB_DIR/heffte/install_heffte_$heffte_build_type"
 KOKKOS_INSTALL_DIR="$LIB_DIR/kokkos/install_kokkos_$kokkos_build_type"
 MATAR_INSTALL_DIR="$LIB_DIR/MATAR/install_MATAR_$kokkos_build_type"
-if [ "$build_hdf5" -eq 1 ]; then
+if [ "$build_hdf5" -eq 1 ] || [ -d "$LIB_DIR/hdf5/install_hdf5" ]; then
   HDF5_INSTALL_DIR="$LIB_DIR/hdf5/install_hdf5"
 fi
 
