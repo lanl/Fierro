@@ -72,3 +72,6 @@ add_subdirectory(Solvers/level_set_solver)
 
 add_executable(Fierro main.cpp driver.cpp solver.cpp ${COMMON_Files} ${EQUILIBRATION_Files} ${YAML_SRC_Files} ${SGH_3D_SRC_Files} ${SGH_RZ_SRC_Files} ${SGTM_3D_SRC_Files} ${LVLSET_SRC_Files})
 target_link_libraries(Fierro PRIVATE ELEMENTS)
+
+# Place the executable in the 'app' directory under the build directory
+set_target_properties(Fierro PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/app")

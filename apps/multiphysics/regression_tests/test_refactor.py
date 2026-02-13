@@ -7,7 +7,7 @@ import math
 import glob
 
 # Builds being tested
-builds = ["openmp"]
+# builds = ["openmp"]
 
 # Name(s) of the solver being used
 solvers = ["Fierro"]
@@ -52,11 +52,10 @@ def extract_state_data(filename):
 
 # Grab paths to executable
 executables = []
-for i in range(len(builds)):
-    for j in range(len(solvers)):
-        executables.append("../build/src/"+solvers[j])
-        if not os.path.exists(executables[i]):
-            raise ValueError("Executable not found in "+executables[i]+" directory")
+for j in range(len(solvers)):
+    executables.append("../build/app/"+solvers[j])
+    if not os.path.exists(executables[0]):
+        raise ValueError("Executable not found in "+executables[i]+" directory")
 
 # Get paths to inputs
 inputs = []
