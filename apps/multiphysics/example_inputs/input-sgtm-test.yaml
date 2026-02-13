@@ -1,7 +1,7 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 30.0
+    time_final: 20.0
     dt_min: 1.e-8
     dt_max: 1.e-1
     dt_start: 1.e-5
@@ -24,8 +24,8 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     output_file_format: viz
-    graphics_time_step: 0.5
-    # graphics_iteration_step: 1
+    graphics_time_step: 0.1
+    #graphics_iteration_step: 1
     elem_field_outputs:
         - den
         - mass

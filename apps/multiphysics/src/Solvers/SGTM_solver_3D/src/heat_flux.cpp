@@ -227,6 +227,7 @@ void SGTM3D::moving_flux(
     const corners_in_mat_t corners_in_mat_elem,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const size_t num_mat_elems,
+    const double power,
     const size_t mat_id,
     const double fuzz,
     const double small,
@@ -240,12 +241,11 @@ void SGTM3D::moving_flux(
         // get elem gid
         size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
-        // the material point index = the material elem index for a 1-point element
-        // size_t mat_point_sid = mat_elem_sid;
-
-
         // check if element center is within the sphere
-
+        double radius = 0.25;
+        double radius_squared = radius * radius;
+        double volume = (4.0/3) * 3.14159 * radius_squared * radius;
+        
         // calculate the coordinates and radius of the element
         double elem_coords_1D[3]; // note:initialization with a list won't work
         ViewCArrayKokkos<double> elem_coords(&elem_coords_1D[0], 3);
@@ -263,20 +263,10 @@ void SGTM3D::moving_flux(
         elem_coords(1) = (elem_coords(1) / mesh.num_nodes_in_elem);
         elem_coords(2) = (elem_coords(2) / mesh.num_nodes_in_elem);
 
-        double radius = 0.004;
-        double radius_squared = radius * radius;
-
         double dist_squared = 0.0;
         for(int dim = 0; dim < mesh.num_dims; dim++){
             dist_squared +=  (sphere_position(dim) - elem_coords(dim))*(sphere_position(dim) - elem_coords(dim));
         }
-
-        // double dist = sqrt(dist_squared);
-
-
-        // Bump function data
-        double scale = 1.0/radius;
-
 
         if(dist_squared <= radius_squared){
 
@@ -284,48 +274,30 @@ void SGTM3D::moving_flux(
 
                 size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
 
-
                 // the local corner id is the local node id
                 size_t corner_lid = node_lid;
 
                 // Get corner gid
                 size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
 
+                // Compute the volumetric heat flux
+                double q_dot = power / volume;
+                // std::cout << "q_dot = " << q_dot << std::endl;
 
-                // Get the value of the normalized bump function at this point in space
-                double x = node_coords(node_gid, 0);
-                double y = node_coords(node_gid, 1);
-
-                double denomx = (scale*x - scale*sphere_position(0))*(scale*x - scale*sphere_position(0));
-                double denomy = (scale*y - scale*sphere_position(1))*(scale*y - scale*sphere_position(1));
-
-                double denom = denomx+denomy;
-                denom = 1.0 - denom;
-
-                denom = fmax(denom, 1E-8);
-
-                
-
-                double val = 2.71828 * exp(-1.0/denom);
-
-                // printf("Denom = %f\n", denom);
-                // printf("val = %f\n", val);
-
-
-
-                // Get the material corner lid
-                // size_t mat_corner_lid = State.corners_in_mat_elem(mat_elem_sid, corner_lid);
-                double dt = 0.001162;
 
                 // Note: this will be 1/8th the volumetric flux times the volume
-                corner_q_flux(corner_gid) += 120.0 * val * 0.125 * GaussPoints_vol(elem_gid) * 1E9;
+                corner_q_flux(corner_gid) += q_dot * 0.125 * GaussPoints_vol(elem_gid);
 
-                // printf("corner flux = %e\n", corner_q_flux(corner_gid));
+
+                // std::cout << "corner_q_flux = " << corner_q_flux(corner_gid) << std::endl;
+                //std::cout << "flux delta = " << q_dot * 0.125 * GaussPoints_vol(elem_gid) * 1000000.0 << std::endl;
+
             }
         }
 
     }); // end parallel for loop over elements
 
+    // Note: a correction term may be needed to account for the fact that the flux is not evenly distributed to enforce conservation
 
     return;
 }

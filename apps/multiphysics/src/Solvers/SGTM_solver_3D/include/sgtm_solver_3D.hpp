@@ -317,6 +317,7 @@ public:
         const corners_in_mat_t corners_in_mat_elem,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
+        const double power,
         const size_t mat_id,
         const double fuzz,
         const double small,

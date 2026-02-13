@@ -55,9 +55,12 @@ public:
     DCArrayKokkos<double> times;  // shape: (N)
     // 1xN Array storing the power of the tool at each point
     DCArrayKokkos<double> power;  // shape: (N)
+
+    // Intersecton sphere radius;
+    double radius = -1.0;
     
     // Number of points in the tool path
-    size_t num_points;
+    size_t num_points = 0;
     
     // Default constructor that takes the number of data points
     ToolPathInfo(size_t npoints)
@@ -104,7 +107,10 @@ public:
         }
         // If t after last point, return last point
         if (t >= times(num_points-1)) {
-            return { points(0, num_points-1), points(1, num_points-1), points(2, num_points-1) };
+            x = points(0, num_points-1);
+            y = points(1, num_points-1);
+            z = points(2, num_points-1);
+            return;
         }
         // Find which segment t is in
         for (size_t i = 0; i < num_points-1; ++i) {
@@ -213,10 +219,16 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // a flag to exit the calculation
     size_t stop_calc = 0;
+    auto time_1 = std::chrono::high_resolution_clock::now();    
 
-    auto time_1 = std::chrono::high_resolution_clock::now();
+    // ---- Initialize the tool path information ---- //
+    ToolPathInfo tool_path_info(4);
+    tool_path_info.set_data_point(0, 2.0, 5.0, 0.5, 0.0, 3000.0);
+    tool_path_info.set_data_point(1, 8.0, 5.0, 0.5, 10.0, 4000.0);
+    tool_path_info.set_data_point(2, 2.0, 5.0, 1.0, 10.0, 4000.0);
+    tool_path_info.set_data_point(3, 8.0, 5.0, 1.0, 20.0, 3000.0);
 
-
+    tool_path_info.update_device();
 
 
     // ---- Write initial state at t=0 ---- 
@@ -244,28 +256,13 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     sphere_position.host(0) = 0.0;
     sphere_position.host(1) = 0.0;
     sphere_position.host(2) = 0.0;
+    sphere_position.update_device();
 
-
-    // ---- parameterized sines and cosines to make pretty pictures ---- //
-    double sx = 0.05;
-    double sy = 0.05;
-
-    double fy = 2.0*3.16;
-    double fx = 2.0*3.16;
-
-    sphere_position.host(0) = 0.03*cos(fx*time_value) + sx;
-    sphere_position.host(1) = 0.03*sin(fy*time_value) + sy;
-
-    // sphere_position.host(0) = 0.02 + (time_value/time_final)*0.06;
-    // sphere_position.host(1) = 0.05;
-
-    // sphere_position.host(0) = fmod(time_value, 0.02) + 0.01;
-    // sphere_position.host(1) = 0.05;
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
         State.node.q_transfer(node_gid) = 0.0;
     }); // end for parallel for over nodes
-    sphere_position.update_device();
+
 
 
     // ---- loop over the max number of time integration cycles ---- //
@@ -377,6 +374,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     rk_alpha);
 
                 // ---- Calculate the corner heat flux from moving volumetric heat source ----
+                double power = tool_path_info.get_power(time_value);
                 moving_flux(
                     Materials,
                     mesh,
@@ -387,6 +385,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.corners_in_mat_elem,
                     State.MaterialToMeshMaps.elem_in_mat_elem,
                     State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
+                    power,
                     mat_id,
                     fuzz,
                     small,
@@ -442,20 +441,14 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // ---- Move heat source ---- //
         RUN({
-
-            sphere_position(0) = 0.03*cos(fx*time_value) + sx;
-            sphere_position(1) = 0.03*sin(fy*time_value) + sy;
-
-
-            // sphere_position(0) = 0.02 + (time_value/time_final)*0.06;
-            // sphere_position(1) = 0.05;
-
-
-            // sphere_position(0) = 2 * fmod(time_value, 0.02) + 0.01;
-            // sphere_position(1) = 0.05;
-            // sphere_position(2) = 0.05*time_value/10.0;
+            double x = 0.0;
+            double y = 0.0;
+            double z = 0.0;
+            tool_path_info.get_position(time_value, x, y, z);
+            sphere_position(0) = x;
+            sphere_position(1) = y;
+            sphere_position(2) = z;
         });
-        
 
         // increment the time
         time_value += dt;
