@@ -5,7 +5,7 @@ real_t vm(real_t *dtensor_)
 {
   /* Returens VonMises strain */
 
-  dt_[3*3];
+  real_t dt_[3*3];
 
   ViewMatrixTypeReal dtensor(dtensor_,3,3);
   ViewMatrixTypeReal dt(dt_,3,3);
