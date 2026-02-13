@@ -29,6 +29,6 @@ ${CMAKE_CURRENT_SOURCE_DIR}/src/sgh_execute.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/time_integration.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/sgh_initialize.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/sgh_setup.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/include/sgh_solver_3D.h
+${CMAKE_CURRENT_SOURCE_DIR}/include/sgh_solver_3D.hpp
 PARENT_SCOPE
 )

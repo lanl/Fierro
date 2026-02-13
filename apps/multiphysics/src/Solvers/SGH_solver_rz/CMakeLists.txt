@@ -28,6 +28,6 @@ ${CMAKE_CURRENT_SOURCE_DIR}/src/sgh_execute_rz.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/time_integration_rz.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/sgh_setup_rz.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/sgh_initialize_rz.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/include/sgh_solver_rz.h
+${CMAKE_CURRENT_SOURCE_DIR}/include/sgh_solver_rz.hpp
 PARENT_SCOPE
 )

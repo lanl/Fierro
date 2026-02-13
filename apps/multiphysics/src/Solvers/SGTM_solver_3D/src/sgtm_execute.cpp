@@ -37,10 +37,128 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "simulation_parameters.hpp"
 #include "material.hpp"
 #include "boundary_conditions.hpp"
-//#include "mesh.hpp""
 #include "state.hpp"
 #include "geometry_new.hpp"
 #include "mesh_io.hpp"
+
+
+
+
+// Class to store and manage additive manufacturing tool paths with time-parameterized 3D points and utility for current tool position.
+// Uses MATAR data types (e.g., CArray)
+class ToolPathInfo {
+public:
+    
+// 3 x N array of points (each column is a point: [x;y;z])
+    DCArrayKokkos<double> points; // shape: (3, N)
+    // 1 x N array of times associated with each point
+    DCArrayKokkos<double> times;  // shape: (N)
+    // 1xN Array storing the power of the tool at each point
+    DCArrayKokkos<double> power;  // shape: (N)
+    
+    // Number of points in the tool path
+    size_t num_points;
+    
+    // Default constructor that takes the number of data points
+    ToolPathInfo(size_t npoints)
+    {
+        num_points = npoints;
+        points = DCArrayKokkos<double>(3, npoints, "ToolPathInfo_points");
+        times  = DCArrayKokkos<double>(npoints, "ToolPathInfo_times");
+        power  = DCArrayKokkos<double>(npoints, "ToolPathInfo_power");
+    }
+
+    // Set a data point (x, y, z, t, p) at index i
+    void set_data_point(size_t i, double x, double y, double z, double t, double p) {
+        points.host(0, i) = x;
+        points.host(1, i) = y;
+        points.host(2, i) = z;
+        times.host(i) = t;
+        power.host(i) = p;
+    }
+    
+    // Update the device views (copy to the GPU from the CPU)
+    void update_device() {
+        points.update_device();
+        times.update_device();
+        power.update_device();
+    }
+
+    // Compute current position of tool at time t, assuming linear motion between path points.
+    // Returns a std::array<double,3> {x, y, z}
+    KOKKOS_INLINE_FUNCTION
+    void get_position(double t, double& x, double& y, double& z) const {
+        // Handle the case when no points exist
+        if (num_points == 0) {
+            x = 0.0;
+            y = 0.0;
+            z = 0.0;
+            return;
+        }
+        // If t before first point, return first point
+        if (t <= times(0)) {
+            x = points(0,0);
+            y = points(1,0);
+            z = points(2,0);
+            return;
+        }
+        // If t after last point, return last point
+        if (t >= times(num_points-1)) {
+            return { points(0, num_points-1), points(1, num_points-1), points(2, num_points-1) };
+        }
+        // Find which segment t is in
+        for (size_t i = 0; i < num_points-1; ++i) {
+            double t0 = times(i);
+            double t1 = times(i+1);
+            if (t >= t0 && t <= t1) {
+                double alpha = (t - t0)/(t1 - t0); // Linear interpolation parameter
+                double xl = (1.0 - alpha)*points(0, i) + alpha*points(0, i+1);
+                double yl = (1.0 - alpha)*points(1, i) + alpha*points(1, i+1);
+                double zl = (1.0 - alpha)*points(2, i) + alpha*points(2, i+1);
+                x = xl;
+                y = yl;
+                z = zl;
+                return;
+            }
+        }
+        // Should not reach here if inputs are valid
+        x = 0.0;
+        y = 0.0;
+        z = 0.0;
+        return;
+    } // end function
+
+
+    // Compute current power of tool at time t, assuming linear interpolation between path points.
+    // Returns the power at the time t
+    KOKKOS_INLINE_FUNCTION
+    double get_power(double t) const {
+        // Handle the case when no points exist
+        if (num_points == 0) {
+            return 0.0;
+        }
+        // If t before first point, return first point
+        if (t <= times(0)) {
+            return power(0);
+        }
+        // If t after last point, return last point
+        if (t >= times(num_points-1)) {
+            return power(num_points-1);
+        }
+        // Find which segment t is in
+        for (size_t i = 0; i < num_points-1; ++i) {
+            double t0 = times(i);
+            double t1 = times(i+1);
+            if (t >= t0 && t <= t1) {
+                double alpha = (t - t0)/(t1 - t0); // Linear interpolation parameter
+                double pl = (1.0 - alpha)*power(i) + alpha*power(i+1);
+                return pl;
+            }
+        }
+        // Should not reach here if inputs are valid
+        return 0.0;
+    } // end function
+};
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -118,26 +236,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     output_id++; // saved an output file
 
     graphics_time = time_value + graphics_dt_ival;
-
-
-
-    // ----  Tweak node positions to test irregular meshes ---- //
-    for(int node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
-
-        int a=rand()%2;
-
-        double da = 0.01;
-
-
-        State.node.coords.host(node_gid, 0) += da*1.0*sin(5000.0 * State.node.coords.host(node_gid, 0));
-        State.node.coords.host(node_gid, 1) += da*1.0*sin(9000.0 * State.node.coords.host(node_gid, 1));
-        State.node.coords.host(node_gid, 0) += da*1.0*sin(5000.0 * State.node.coords.host(node_gid, 0));
-        State.node.coords.host(node_gid, 1) += da*1.0*sin(9000.0 * State.node.coords.host(node_gid, 1));
-    }
-
-    State.node.coords.update_device();
-
-
 
 
     // ---- Set up sphere to act as a moving heat source ---- //

@@ -24,6 +24,6 @@ ${CMAKE_CURRENT_SOURCE_DIR}/src/time_integration.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/level_set_execute.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/level_set_setup.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/level_set_initialize.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/include/level_set_solver.h
+${CMAKE_CURRENT_SOURCE_DIR}/include/level_set_solver.hpp
 PARENT_SCOPE
 )

@@ -49,7 +49,7 @@ option(ELEMENTS_BUILD_DOCS "Build Elements docs" OFF)
 # --- Dependencies ---
 # Elements (includes Kokkos, Matar, Scotch)
 # Using relative path to lib/Elements
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../lib/Elements ${CMAKE_CURRENT_BINARY_DIR}/lib/Elements)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../lib/Elements ${CMAKE_CURRENT_BINARY_DIR}/../../lib/Elements)
 
 # --- Include Directories ---
 # Material models
