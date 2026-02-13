@@ -2,5 +2,13 @@ dev-utils/** linguist-documentation
 dev-utils/** linguist-documentation
 docs/** linguist-documentation
 legacy/** linguist-documentation
-app/example_inputs/** linguist-documentation
-app/regression_tests/** linguist-documentation
+apps/multiphysics/example_inputs/** linguist-documentation
+apps/multiphysics/regression_tests/** linguist-documentation
+apps/micromechanics/EVPFFT/example_input_files/** linguist-documentation
+apps/micromechanics/EVPFFT/scripts/** linguist-documentation
+apps/micromechanics/LS-EVPFFT/example_input_files/** linguist-documentation
+apps/micromechanics/LS-EVPFFT/example_J2_lattice/** linguist-documentation
+apps/micromechanics/LS-EVPFFT/scripts/** linguist-documentation
+apps/micromechanics/LS-EVPFFT-J2/example_lattice_run/** linguist-documentation
+apps/micromechanics/LSNP-EVPFFT/example_input_files/** linguist-documentation
+apps/micromechanics/LSNP-EVPFFT/scripts/** linguist-documentation
