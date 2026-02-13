@@ -374,24 +374,26 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     rk_alpha);
 
                 // ---- Calculate the corner heat flux from moving volumetric heat source ----
-                double power = tool_path_info.get_power(time_value);
-                moving_flux(
-                    Materials,
-                    mesh,
-                    State.GaussPoints.vol,
-                    State.node.coords,
-                    State.corner.q_transfer,
-                    sphere_position,
-                    State.corners_in_mat_elem,
-                    State.MaterialToMeshMaps.elem_in_mat_elem,
-                    State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
-                    power,
-                    mat_id,
-                    fuzz,
-                    small,
-                    dt, 
-                    rk_alpha
-                    );
+                if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source) {
+                    double power = tool_path_info.get_power(time_value);
+                    moving_flux(
+                        Materials,
+                        mesh,
+                        State.GaussPoints.vol,
+                        State.node.coords,
+                        State.corner.q_transfer,
+                        sphere_position,
+                        State.corners_in_mat_elem,
+                        State.MaterialToMeshMaps.elem_in_mat_elem,
+                        State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
+                        power,
+                        mat_id,
+                        fuzz,
+                        small,
+                        dt, 
+                        rk_alpha
+                        );
+                }
 
             } // end for mat_id
 
@@ -440,16 +442,17 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
 
         // ---- Move heat source ---- //
-        RUN({
-            double x = 0.0;
-            double y = 0.0;
-            double z = 0.0;
-            tool_path_info.get_position(time_value, x, y, z);
-            sphere_position(0) = x;
-            sphere_position(1) = y;
-            sphere_position(2) = z;
-        });
-
+        if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source) {
+            RUN({
+                double x = 0.0;
+                double y = 0.0;
+                double z = 0.0;
+                tool_path_info.get_position(time_value, x, y, z);
+                sphere_position(0) = x;
+                sphere_position(1) = y;
+                sphere_position(2) = z;
+            });
+        }
         // increment the time
         time_value += dt;
 
