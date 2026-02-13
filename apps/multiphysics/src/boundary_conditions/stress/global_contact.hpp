@@ -35,11 +35,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef BOUNDARY_STRESS_NONE_H
 #define BOUNDARY_STRESS_NONE_H
 
-#include "boundary_conditions.h"
+#include "boundary_conditions.hpp"
 
 struct BoundaryConditionEnums_t;
 
-namespace preloadContact
+namespace globalContact
 {
 /////////////////////////////////////////////////////////////////////////////
 ///

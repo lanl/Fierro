@@ -32,46 +32,100 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_STRESS_NONE_H
-#define BOUNDARY_STRESS_NONE_H
+#ifndef BOUNDARY_VEL_TIME_VARYING_H
+#define BOUNDARY_VEL_TIME_VARYING_H
 
-#include "boundary_conditions.h"
+#include "boundary_conditions.hpp"
 
 struct BoundaryConditionEnums_t;
 
-namespace NoStressBC
+namespace TimeVaryingVelocityBC
 {
+// add an enum for boundary statevars and global vars
+enum BCVars
+{
+    x_comp = 0,
+    y_comp = 1,
+    z_comp = 2,
+    hydro_bc_vel_0 = 3,
+    hydro_bc_vel_1 = 4,
+    hydro_bc_vel_t_start = 5,
+    hydro_bc_vel_t_end = 6
+};
+
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn Boundary stress does not exist, its a free surface
+/// \fn velocity
 ///
-/// \brief This is a function for a free surface, the default case
+/// \brief This is a function to force the boundary to move with a specified
+///        velocity that varies in time as a function of polynomial given by:
+///         if (t_end > time > t_start) then
+///           v(t) = v0 + v1*(time - time_start) + 
+///                         0.5*v2*(time - time_start)*(time - time_start) 
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
-/// \param Node force
+/// \param Node velocity
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
 /// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-static void stress(const swage::Mesh& mesh,
+static void velocity(const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
+    const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,
-    const ViewCArrayKokkos <double>& corner_surf_force,
-    const ViewCArrayKokkos <double>& corner_surf_normal,
+    const DCArrayKokkos<double>& node_vel,
     const double time_value,
+    const size_t rk_stage,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
+    const double x_comp = vel_bc_global_vars(bdy_set, BCVars::x_comp);
+    const double y_comp = vel_bc_global_vars(bdy_set, BCVars::y_comp);
+    const double z_comp = vel_bc_global_vars(bdy_set, BCVars::z_comp);
+    const double hydro_bc_vel_0 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_0);
+    const double hydro_bc_vel_1 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_1);
+    const double hydro_bc_vel_t_start = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_start);
+    const double hydro_bc_vel_t_end   = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_end);
 
+    // directions are as follows:
+    // x_plane  = 0,
+    // y_plane  = 1,
+    // z_plane  = 2,
+
+    // Set velocity to that direction to specified value
+    // if t_end > time > t_start
+    // v(t) = v0 exp(-v1*(time - time_start) )
+    if (time_value >= hydro_bc_vel_t_start && time_value <= hydro_bc_vel_t_end) {
+        // the time difference
+        const double time_delta = time_value - hydro_bc_vel_t_start;
+
+        // the desired velocity
+        const double vel = hydro_bc_vel_0 * exp(-hydro_bc_vel_1 * time_delta);
+
+        // magnitude of the normal in the specified direction
+        double mag = 0.0;
+        for (size_t dim = 0; dim<mesh.num_dims; dim++){
+            mag += vel_bc_global_vars(bdy_set,dim)*vel_bc_global_vars(bdy_set,dim);
+        } // will make sure it's a unit vector
+        mag = sqrt(mag);
+
+        for (size_t dim = 0; dim<mesh.num_dims; dim++){
+            // remove the velocity in the specified direction
+            node_vel(bdy_node_gid, dim) -= node_vel(bdy_node_gid, dim)*vel_bc_global_vars(bdy_set,dim)/mag;
+
+            // add the desired velocity in the specified direction
+            node_vel(bdy_node_gid, dim) += vel*vel_bc_global_vars(bdy_set,dim)/mag;
+        }
+        
+    } // end if on time
 
     return;
-} // end stress
+} // end func
 } // end namespace
 
 #endif // end Header Guard

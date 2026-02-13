@@ -35,8 +35,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SGHRZ_SOLVER_RZ_H
 #define SGHRZ_SOLVER_RZ_H
 
-#include "solver.h"
-#include "state.h"
+#include "solver.hpp"
+#include "state.hpp"
 #include "ELEMENTS.h"
 
 // Forward declare structs

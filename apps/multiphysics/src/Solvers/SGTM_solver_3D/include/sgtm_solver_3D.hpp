@@ -35,8 +35,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SGTM3D_SOLVER_H
 #define SGTM3D_SOLVER_H
 
-#include "solver.h"
-#include "state.h"
+#include "solver.hpp"
+#include "state.hpp"
 #include "ELEMENTS.h"
 
 // Forward declare structs

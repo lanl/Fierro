@@ -43,15 +43,15 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <algorithm>
 #include <map>
 
-#include "string_utils.h"
+#include "string_utils.hpp"
 
 #include "Yaml.hpp"
 #include "matar.h"
 #include "parse_tools.hpp"
-#include "simulation_parameters.h"
+#include "simulation_parameters.hpp"
 #include "parse_regions.hpp"
 
-#include "state.h"
+#include "state.hpp"
 
 
 

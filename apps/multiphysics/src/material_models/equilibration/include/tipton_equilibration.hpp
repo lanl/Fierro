@@ -35,8 +35,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef TIPTON_EQUILIBRATION_H
 #define TIPTON_EQUILIBRATION_H
 #include "ELEMENTS.h"
-#include "material.h"
-#include "state.h"
+#include "material.hpp"
+#include "state.hpp"
 
 // -----------------------------------------------------------------------------
 // This is the Tipton material pt equilibration model

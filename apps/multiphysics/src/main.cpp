@@ -37,9 +37,8 @@
 // #include <Kokkos_Core.hpp>
 #include <sys/stat.h>
 
-// #include "matar.h"
 #include "ELEMENTS.h"
-#include "driver.h"
+#include "driver.hpp"
 #include "parse_tools.hpp"
 
 

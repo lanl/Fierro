@@ -39,9 +39,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "matar.h"
 
-#include "state.h"
+#include "state.hpp"
 
-#include "initial_conditions.h"
+#include "initial_conditions.hpp"
 
 // ==============================================================================
 //   Fierro material regions

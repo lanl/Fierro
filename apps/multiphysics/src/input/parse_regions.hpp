@@ -45,7 +45,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "matar.h"
 #include "Yaml.hpp"
 
-#include "state.h"
+#include "state.hpp"
 
 struct RegionFill_t;
 struct RegionFill_host_t;

@@ -32,10 +32,10 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_3D.h"
-#include "state.h"
-//#include "mesh.h""
-#include "simulation_parameters.h"
+#include "sgh_solver_3D.hpp"
+#include "state.hpp"
+//#include "mesh.hpp""
+#include "simulation_parameters.hpp"
 
 
 void SGH3D::initialize(SimulationParameters_t& SimulationParamaters, 

@@ -32,48 +32,46 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_VEL_USER_DEFINED_H
-#define BOUNDARY_VEL_USER_DEFINED_H
+#ifndef BOUNDARY_STRESS_NONE_H
+#define BOUNDARY_STRESS_NONE_H
 
-#include "boundary_conditions.h"
+#include "boundary_conditions.hpp"
 
 struct BoundaryConditionEnums_t;
 
+namespace NoStressBC
+{
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn Boundary velocity is user defined
+/// \fn Boundary stress does not exist, its a free surface
 ///
-/// \brief This is a function to set the velocity based on user implementation
+/// \brief This is a function for a free surface, the default case
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
-/// \param Node velocity
+/// \param Node force
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
 /// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace UserDefinedVelocityBC
-{
-// add an enum for boundary statevars and global vars
-
 KOKKOS_FUNCTION
-static void velocity(const swage::Mesh& mesh,
+static void stress(const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
+    const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,
-    const DCArrayKokkos<double>& node_vel,
+    const ViewCArrayKokkos <double>& corner_surf_force,
+    const ViewCArrayKokkos <double>& corner_surf_normal,
     const double time_value,
-    const size_t rk_stage,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
-    // add user coding here
+
 
     return;
-} // end func
+} // end stress
 } // end namespace
 
 #endif // end Header Guard

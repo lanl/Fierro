@@ -35,14 +35,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define REGION_FILL_H
 
 #include "matar.h"
-#include "region.h"
+#include "region.hpp"
 
-#include "simulation_parameters.h"
-#include "material.h"
-#include "boundary_conditions.h"
-#include "state.h"
+#include "simulation_parameters.hpp"
+#include "material.hpp"
+#include "boundary_conditions.hpp"
+#include "state.hpp"
 
-#include "geometry_new.h"
+#include "geometry_new.hpp"
 
 struct SimulationParamaters_t;
 struct Material_t;

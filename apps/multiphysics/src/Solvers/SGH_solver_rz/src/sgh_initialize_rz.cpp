@@ -32,10 +32,10 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_rz.h"
-#include "state.h"
-//#include "mesh.h""
-#include "simulation_parameters.h"
+#include "sgh_solver_rz.hpp"
+#include "state.hpp"
+//#include "mesh.hpp""
+#include "simulation_parameters.hpp"
 
 void SGHRZ::initialize(SimulationParameters_t& SimulationParamaters, 
                 	   Material_t& Materials, 

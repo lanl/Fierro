@@ -40,8 +40,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define GEOMETRY_NEW_H
 
 #include "matar.h"
-// //#include "mesh.h""
-#include "boundary_conditions.h"
+// //#include "mesh.hpp""
+#include "boundary_conditions.hpp"
 
 struct BoundaryConditionEnums_t;
 struct BoundaryConditionSetup_t;

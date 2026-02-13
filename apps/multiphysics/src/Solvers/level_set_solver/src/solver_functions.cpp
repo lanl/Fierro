@@ -32,10 +32,10 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "level_set_solver.h"
-#include "state.h"
-//#include "mesh.h""
-#include "geometry_new.h"
+#include "level_set_solver.hpp"
+#include "state.hpp"
+//#include "mesh.hpp""
+#include "geometry_new.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///

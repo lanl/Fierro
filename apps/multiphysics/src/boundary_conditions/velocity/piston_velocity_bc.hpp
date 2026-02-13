@@ -32,112 +32,103 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_STRESS_TIME_VARYING_H
-#define BOUNDARY_STRESS_TIME_VARYING_H
+#ifndef BOUNDARY_VEL_PISTON_H
+#define BOUNDARY_VEL_PISTON_H
 
-#include "boundary_conditions.h"
+#include "boundary_conditions.hpp"
 
 struct BoundaryConditionEnums_t;
 
-namespace TimeVaryingStressBC
+namespace PistonVelocityBC
 {
-// add an enum for boundary statevars and global vars
-enum BCVars
-{
-    sig_00 = 0,
-    sig_11 = 1,
-    sig_22 = 2,
-    sig_12 = 3,
-    sig_02 = 4,
-    sig_01 = 5,
-    var_decay = 6,
-    time_start = 7,
-    time_end = 8
-};
+    // add an enum for boundary statevars and global vars
+    enum BCVars
+    {
+        x_comp = 0,
+        y_comp = 1,
+        z_comp = 2,
+        hydro_bc_vel_0 = 3,
+        hydro_bc_vel_1 = 4,
+        hydro_bc_vel_2 = 5,
+        hydro_bc_vel_t_start = 6,
+        hydro_bc_vel_t_end = 7
+    };
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn stress
+/// \fn velocity
 ///
-/// \brief This is a function to force the boundary to move with a specified
-///        pressure that varies in time.  The function form is an exponential
-///        decay, given by:
-///         if (t_end > time > t_start) then
-///              sigma(t) = sigma0 exp(-varDecay*(time - time_start) )
+/// \brief This is a function to set the velocity in one direction to a
+///        specified velocity.  The other components can freely slide on
+///        the piston
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
-/// \param corner stress
+/// \param Node velocity
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
 /// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-static void stress(const swage::Mesh& mesh,
+static void velocity(const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
+    const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,
-    const ViewCArrayKokkos <double>& corner_surf_force,
-    const ViewCArrayKokkos <double>& corner_surf_normal,
+    const DCArrayKokkos<double>& node_vel,
     const double time_value,
     const size_t rk_stage,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
 
-    double sigma_1D[9];
-    ViewCArrayKokkos<double> sigma(&sigma_1D[0], 3,3);  // its 3D even in 2D
-   
-    // Cauchy stress is symmetric
-    sigma(0,0) = stress_bc_global_vars(bdy_set,BCVars::sig_00);
-    sigma(1,1) = stress_bc_global_vars(bdy_set,BCVars::sig_11);
-    sigma(2,2) = stress_bc_global_vars(bdy_set,BCVars::sig_22);
 
-    sigma(1,2) = stress_bc_global_vars(bdy_set,BCVars::sig_12);
-    sigma(2,1) = stress_bc_global_vars(bdy_set,BCVars::sig_12);
-
-    sigma(0,2) = stress_bc_global_vars(bdy_set,BCVars::sig_02);
-    sigma(2,0) = stress_bc_global_vars(bdy_set,BCVars::sig_02);
-
-    sigma(0,1) = stress_bc_global_vars(bdy_set,BCVars::sig_01);
-    sigma(1,0) = stress_bc_global_vars(bdy_set,BCVars::sig_01);
-
-    const double var_decay = stress_bc_global_vars(bdy_set, BCVars::var_decay);
-    const double time_start = stress_bc_global_vars(bdy_set, BCVars::time_start);
-    const double time_end   = stress_bc_global_vars(bdy_set, BCVars::time_end);
-
-    // directions are as follows:
+    // directions are:
     // x_plane  = 0,
     // y_plane  = 1,
     // z_plane  = 2,
 
-    // Set pressure in that direction to specified value
+    const double x_comp = vel_bc_global_vars(bdy_set, BCVars::x_comp);
+    const double y_comp = vel_bc_global_vars(bdy_set, BCVars::y_comp);
+    const double z_comp = vel_bc_global_vars(bdy_set, BCVars::z_comp);
+    const double hydro_bc_vel_0 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_0);
+    const double hydro_bc_vel_1 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_1);
+    const double hydro_bc_vel_2 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_2);
+    const double hydro_bc_vel_t_start = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_start);
+    const double hydro_bc_vel_t_end   = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_end);
+
+    // Set velocity to that direction to specified value
     // if t_end > time > t_start
-    // simga(t) = simga0 exp(-varDecay*(time - time_start) )
-    if (time_value >= time_start && time_value <= time_end) {
+    // v(t) = v0 exp(-v1*(time - time_start) )
+    if (time_value >= hydro_bc_vel_t_start && time_value <= hydro_bc_vel_t_end) {
         // the time difference
-        const double time_delta = time_value - time_start;
+        const double time_delta = time_value - hydro_bc_vel_t_start;
 
-        // the desired mag
-        const double mag = exp(-var_decay * time_delta);
+        // the desired velocity
+        const double vel = hydro_bc_vel_0 + hydro_bc_vel_1*time_delta + 0.5*hydro_bc_vel_2*time_delta*time_delta;
 
+        // magnitude of the normal in the specified direction
+        double mag = 0.0;
+        for (size_t dim = 0; dim<mesh.num_dims; dim++){
+            mag += vel_bc_global_vars(bdy_set,dim)*vel_bc_global_vars(bdy_set,dim);
+        } // will make sure it's a unit vector
+        mag = sqrt(mag);
+
+        for (size_t dim = 0; dim<mesh.num_dims; dim++){
+            // remove the velocity in the specified direction
+            //  direction normal = vel_bc_global_vars(bdy_set,dim)/mag
+            node_vel(bdy_node_gid, dim) -= node_vel(bdy_node_gid, dim) * (vel_bc_global_vars(bdy_set,dim)/mag);
+
+            // add the desired velocity in the specified direction
+            node_vel(bdy_node_gid, dim) += vel * (vel_bc_global_vars(bdy_set,dim)/mag);
+        }
         
-        // sigma(0,0)*normal(0) + sigma(0,1)*normal(1) + sigma(0,2)*normal(2)
-        // sigma(1,0)*normal(0) + sigma(1,1)*normal(1) + sigma(1,2)*normal(2)
-        // sigma(2,0)*normal(0) + sigma(2,1)*normal(1) + sigma(2,2)*normal(2)
-        for(size_t i=0; i<mesh.num_dims; i++){
-            for(size_t j=0; j<mesh.num_dims; j++){
-                corner_surf_force(i) += mag*sigma(i,j)*corner_surf_normal(j);
-            } // end j
-        } // end i
-
-    } // end if within the time frame
+    } // end if on time
 
     return;
-} // end func
+}     // end func
 } // end namespace
 
 #endif // end Header Guard

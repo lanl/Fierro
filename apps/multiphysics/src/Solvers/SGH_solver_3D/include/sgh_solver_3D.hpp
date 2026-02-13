@@ -35,9 +35,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef SGH3D_SOLVER_H
 #define SGH3D_SOLVER_H
 
-#include "solver.h"
-#include "state.h"
-#include "contact.h"
+#include "solver.hpp"
+#include "state.hpp"
+#include "contact.hpp"
 
 // Forward declare structs
 struct SimulationParameters_t;

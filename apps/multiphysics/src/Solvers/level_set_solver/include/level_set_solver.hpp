@@ -35,9 +35,9 @@
 #ifndef LVLSET_SOLVER_H
 #define LVLSET_SOLVER_H
 
-#include "solver.h"
-#include "state.h"
-#include "material.h"
+#include "solver.hpp"
+#include "state.hpp"
+#include "material.hpp"
 #include "ELEMENTS.h"
 
 // Forward declare structs

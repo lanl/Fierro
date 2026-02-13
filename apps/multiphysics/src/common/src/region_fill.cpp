@@ -32,15 +32,15 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "region_fill.h"
+#include "region_fill.hpp"
 #include "matar.h"
-// //#include "mesh.h""
-#include "material.h"
-#include "state.h"
-#include "region.h"
-#include "mesh_io.h"
-#include "string_utils.h"
-#include "geometry_new.h"
+// //#include "mesh.hpp""
+#include "material.hpp"
+#include "state.hpp"
+#include "region.hpp"
+#include "mesh_io.hpp"
+#include "string_utils.hpp"
+#include "geometry_new.hpp"
 
 #include <stdio.h>
 #include <fstream>

@@ -32,14 +32,14 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_rz.h"
-//#include "mesh.h""
-#include "region_fill.h"
-#include "material.h"
-#include "boundary_conditions.h"
-#include "simulation_parameters.h"
-#include "state.h"
-#include "geometry_new.h"
+#include "sgh_solver_rz.hpp"
+//#include "mesh.hpp""
+#include "region_fill.hpp"
+#include "material.hpp"
+#include "boundary_conditions.hpp"
+#include "simulation_parameters.hpp"
+#include "state.hpp"
+#include "geometry_new.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///

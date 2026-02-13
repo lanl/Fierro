@@ -32,16 +32,18 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_VEL_FIXED_H
-#define BOUNDARY_VEL_FIXED_H
+#ifndef BOUNDARY_VEL_NONE_H
+#define BOUNDARY_VEL_NONE_H
 
-#include "boundary_conditions.h"
+#include "boundary_conditions.hpp"
 
 struct BoundaryConditionEnums_t;
 
+namespace NoVelocityBC
+{
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn Boundary velocity is set to zero in all directions
+/// \fn Boundary velocity is never set
 ///
 /// \brief This is a function to set the velocity all directions to a value
 ///
@@ -55,10 +57,6 @@ struct BoundaryConditionEnums_t;
 /// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace ZeroVelocityBC
-{
-// add an enum for boundary statevars and global vars
-
 KOKKOS_FUNCTION
 static void velocity(const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
@@ -70,13 +68,9 @@ static void velocity(const swage::Mesh& mesh,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
-    // Set velocity to zero in all directions
-    for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-        node_vel(bdy_node_gid, dim) = 0.0;
-    }
-
+    // this is a blank function by design
     return;
-} // end func
+} // end velocity
 } // end namespace
 
 #endif // end Header Guard

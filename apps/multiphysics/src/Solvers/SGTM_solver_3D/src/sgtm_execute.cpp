@@ -32,15 +32,15 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgtm_solver_3D.h"
+#include "sgtm_solver_3D.hpp"
 
-#include "simulation_parameters.h"
-#include "material.h"
-#include "boundary_conditions.h"
-//#include "mesh.h""
-#include "state.h"
-#include "geometry_new.h"
-#include "mesh_io.h"
+#include "simulation_parameters.hpp"
+#include "material.hpp"
+#include "boundary_conditions.hpp"
+//#include "mesh.hpp""
+#include "state.hpp"
+#include "geometry_new.hpp"
+#include "mesh_io.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///

@@ -33,7 +33,7 @@
  **********************************************************************************************/
 
 #include "matar.h"
-#include "solver.h"
+#include "solver.hpp"
 
 // debug and performance includes
 #include <sys/time.h>

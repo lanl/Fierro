@@ -43,7 +43,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <algorithm>
 #include <map>
 
-#include "string_utils.h"
+#include "string_utils.hpp"
 
 #include "matar.h"
 #include "parse_tools.hpp"
@@ -55,29 +55,29 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //   dynamic_options
 //   solver_inputs
 //   region_setups
-#include "simulation_parameters.h"
+#include "simulation_parameters.hpp"
 
 // boundary conditions
-#include "boundary_conditions.h"
+#include "boundary_conditions.hpp"
 
 // velocity bc files
-#include "constant_velocity_bc.h"
-#include "no_velocity_bc.h"
-#include "piston_velocity_bc.h"
-#include "reflected_velocity_bc.h"
-#include "time_varying_velocity_bc.h"
-#include "user_defined_velocity_bc.h"
-#include "zero_velocity_bc.h"
+#include "constant_velocity_bc.hpp"
+#include "no_velocity_bc.hpp"
+#include "piston_velocity_bc.hpp"
+#include "reflected_velocity_bc.hpp"
+#include "time_varying_velocity_bc.hpp"
+#include "user_defined_velocity_bc.hpp"
+#include "zero_velocity_bc.hpp"
 
 
 // temperature bc files
-#include "constant_temp_bc.h"
+#include "constant_temp_bc.hpp"
 
 // stress bc files
-#include "constant_stress_bc.h"
-#include "no_stress_bc.h"
-#include "time_varying_stress_bc.h"
-#include "user_defined_stress_bc.h"
+#include "constant_stress_bc.hpp"
+#include "no_stress_bc.hpp"
+#include "time_varying_stress_bc.hpp"
+#include "user_defined_stress_bc.hpp"
 
 
 

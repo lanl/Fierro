@@ -1,4 +1,4 @@
-#include "contact.h"
+#include "contact.hpp"
 
 // Definition of static member variables
 double contact_state_t::bucket_size;

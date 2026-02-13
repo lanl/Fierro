@@ -32,10 +32,10 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
- #include "level_set_solver.h"
- #include "state.h"
- //#include "mesh.h""
- #include "simulation_parameters.h"
+ #include "level_set_solver.hpp"
+ #include "state.hpp"
+ //#include "mesh.hpp""
+ #include "simulation_parameters.hpp"
  
  
  void LevelSet::initialize(SimulationParameters_t& SimulationParamaters, 

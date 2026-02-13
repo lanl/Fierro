@@ -32,86 +32,51 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_STRESS_CONST_H
-#define BOUNDARY_STRESS_CONST_H
+#ifndef BOUNDARY_VEL_FIXED_H
+#define BOUNDARY_VEL_FIXED_H
 
-#include "boundary_conditions.h"
+#include "boundary_conditions.hpp"
 
 struct BoundaryConditionEnums_t;
 
-namespace ConstantStressBC
-{
-
-// add an enum for boundary statevars and global vars
-// Voight notion
-enum BCVars
-{
-    sig_00 = 0,
-    sig_11 = 1,
-    sig_22 = 2,
-    sig_12 = 3,
-    sig_02 = 4,
-    sig_01 = 5,
-};
-
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn Boundary stress is constant
+/// \fn Boundary velocity is set to zero in all directions
 ///
-/// \brief This is a function to set the stress in the normal dir to a value
+/// \brief This is a function to set the velocity all directions to a value
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
-/// \param Node force
+/// \param Node velocity
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
 /// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
+namespace ZeroVelocityBC
+{
+// add an enum for boundary statevars and global vars
+
 KOKKOS_FUNCTION
-static void stress(const swage::Mesh& mesh,
+static void velocity(const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
+    const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,
-    const ViewCArrayKokkos <double>& corner_surf_force,
-    const ViewCArrayKokkos <double>& corner_surf_normal,
+    const DCArrayKokkos<double>& node_vel,
     const double time_value,
     const size_t rk_stage,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
-    double sigma_1D[9];
-    ViewCArrayKokkos<double> sigma(&sigma_1D[0], 3,3);  // its 3D even in 2D
-   
-    // Cauchy stress is symmetric
-    sigma(0,0) = stress_bc_global_vars(bdy_set,BCVars::sig_00);
-    sigma(1,1) = stress_bc_global_vars(bdy_set,BCVars::sig_11);
-    sigma(2,2) = stress_bc_global_vars(bdy_set,BCVars::sig_22);
-
-    sigma(1,2) = stress_bc_global_vars(bdy_set,BCVars::sig_12);
-    sigma(2,1) = stress_bc_global_vars(bdy_set,BCVars::sig_12);
-
-    sigma(0,2) = stress_bc_global_vars(bdy_set,BCVars::sig_02);
-    sigma(2,0) = stress_bc_global_vars(bdy_set,BCVars::sig_02);
-
-    sigma(0,1) = stress_bc_global_vars(bdy_set,BCVars::sig_01);
-    sigma(1,0) = stress_bc_global_vars(bdy_set,BCVars::sig_01);
-
-    
-    // sigma(0,0)*normal(0) + sigma(0,1)*normal(1) + sigma(0,2)*normal(2)
-    // sigma(1,0)*normal(0) + sigma(1,1)*normal(1) + sigma(1,2)*normal(2)
-    // sigma(2,0)*normal(0) + sigma(2,1)*normal(1) + sigma(2,2)*normal(2)
-    for(size_t i=0; i<mesh.num_dims; i++){
-        for(size_t j=0; j<mesh.num_dims; j++){
-            corner_surf_force(i) += sigma(i,j)*corner_surf_normal(j);
-        } // end j
-    } // end i
-
+    // Set velocity to zero in all directions
+    for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+        node_vel(bdy_node_gid, dim) = 0.0;
+    }
 
     return;
-} // end stress
+} // end func
 } // end namespace
 
 #endif // end Header Guard

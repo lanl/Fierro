@@ -32,21 +32,21 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "mesh_io.h"
+#include "mesh_io.hpp"
 #include "parse_yaml.hpp"
-#include "solver.h"
-#include "simulation_parameters.h"
+#include "solver.hpp"
+#include "simulation_parameters.hpp"
 
-#include "geometry_new.h"
+#include "geometry_new.hpp"
 
 // // Headers for solver classes
-// #include "sgh_solver_3D.h"
-// #include "sgh_solver_rz.h"
-// #include "sgtm_solver_3D.h"
+// #include "sgh_solver_3D.hpp"
+// #include "sgh_solver_rz.hpp"
+// #include "sgtm_solver_3D.hpp"
 
 
 // Physical state data
-#include "state.h"
+#include "state.hpp"
 
 
 

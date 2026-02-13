@@ -32,40 +32,46 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef FIERRO_SIM_PARAMS_H
-#define FIERRO_SIM_PARAMS_H
-#include <stdio.h>
-#include "matar.h"
+#ifndef BOUNDARY_STRESS_NONE_H
+#define BOUNDARY_STRESS_NONE_H
 
-#include "material.h"
-#include "region.h"
-#include "mesh_inputs.h"
-#include "solver_inputs.h"
-#include "output_options.h"
-#include "boundary_conditions.h"
-#include "dynamic_options.h"
+#include "boundary_conditions.hpp"
 
-using namespace mtr;
+struct BoundaryConditionEnums_t;
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \struct simulation_parameters_t
-///
-/// \brief Struct for holding simulation metadata
-///
-/////////////////////////////////////////////////////////////////////////////
-struct SimulationParameters_t
+namespace preloadContact
 {
-    mesh_input_t mesh_input;    ///< Mesh input information
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn Boundary stress does not exist, its a free surface
+///
+/// \brief This is a function for a free surface, the default case
+///
+/// \param Mesh object
+/// \param Boundary condition enums to select options
+/// \param Boundary condition global variables array
+/// \param Boundary condition state variables array
+/// \param Node force
+/// \param Time of the simulation
+/// \param Boundary global index for the surface node
+/// \param Boundary set local id
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+static void stress(const swage::Mesh& mesh,
+    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+    const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
+    const DCArrayKokkos<double>& bc_state_vars,
+    const ViewCArrayKokkos <double>& corner_surf_force,
+    const ViewCArrayKokkos <double>& corner_surf_normal,
+    const double time_value,
+    const size_t bdy_node_gid,
+    const size_t bdy_set)
+{
 
-    output_options_t output_options; ///< Simulation output information
 
-    dynamic_options_t dynamic_options;  ///< Simulation timing and dynamic options
-
-    std::vector<solver_input_t> solver_inputs;  ///< Solvers to use during the simulation
-
-    SolverRegionSetup_t region_setups;  ///< region fills across all solvers
-
-}; // simulation_parameters_t
+    return;
+} // end stress
+} // end namespace
 
 #endif // end Header Guard

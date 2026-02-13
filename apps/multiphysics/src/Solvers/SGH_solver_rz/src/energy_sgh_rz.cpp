@@ -32,8 +32,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_rz.h"
-#include "state.h"
+#include "sgh_solver_rz.hpp"
+#include "state.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///

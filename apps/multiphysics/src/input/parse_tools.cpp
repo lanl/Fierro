@@ -43,7 +43,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <algorithm>
 #include <map>
 
-#include "string_utils.h"
+#include "string_utils.hpp"
 
 #include "Yaml.hpp"
 #include "matar.h"
@@ -54,10 +54,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //   dynamic_options
 //   solver_inputs
 //   region_setups
-#include "simulation_parameters.h"
+#include "simulation_parameters.hpp"
 
 // boundary conditions
-#include "boundary_conditions.h"
+#include "boundary_conditions.hpp"
 
 
 // check to see if a word is in the string, the sentence is a string

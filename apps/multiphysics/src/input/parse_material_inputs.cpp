@@ -43,7 +43,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <algorithm>
 #include <map>
 
-#include "string_utils.h"
+#include "string_utils.hpp"
 
 #include "matar.h"
 #include "parse_tools.hpp"
@@ -51,42 +51,42 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 // eos files
-#include "gamma_law_eos.h"
-#include "no_eos.h"
-#include "user_defined_eos.h"
-#include "void_eos.h"
-#include "host_user_defined_eos.h"
-#include "elasticity.h"
+#include "gamma_law_eos.hpp"
+#include "no_eos.hpp"
+#include "user_defined_eos.hpp"
+#include "void_eos.hpp"
+#include "host_user_defined_eos.hpp"
+#include "elasticity.hpp"
 
 // ----
-#if __has_include("analytic_defined_eos.h")
-#include "analytic_defined_eos.h"
+#if __has_include("analytic_defined_eos.hpp")
+#include "analytic_defined_eos.hpp"
 #endif
 // ----
 
 // strength
-#include "no_strength.h"
-#include "user_defined_strength.h"
-#include "host_user_defined_strength.h"
-#include "host_ann_strength.h"
-#include "decoupled_plasticity.h"
+#include "no_strength.hpp"
+#include "user_defined_strength.hpp"
+#include "host_user_defined_strength.hpp"
+#include "host_ann_strength.hpp"
+#include "decoupled_plasticity.hpp"
 
 // ----
-#if __has_include("decoupled_strength.h")
-#include "decoupled_strength.h"
+#if __has_include("decoupled_strength.hpp")
+#include "decoupled_strength.hpp"
 #endif
 // ----
 
 // erosion files
-#include "basic_erosion.h"
-#include "no_erosion.h"
+#include "basic_erosion.hpp"
+#include "no_erosion.hpp"
 
 // dissipation files
-#include "mars.h"
-#include "no_dissipation.h"
+#include "mars.hpp"
+#include "no_dissipation.hpp"
 
 // fracture files
-#include "user_defined_fracture.h"
+#include "user_defined_fracture.hpp"
 
 
 

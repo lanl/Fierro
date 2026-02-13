@@ -32,15 +32,15 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "level_set_solver.h"
+#include "level_set_solver.hpp"
 
-//#include "mesh.h""
-#include "region_fill.h"
-#include "material.h"
-#include "boundary_conditions.h"
-#include "state.h"
-#include "simulation_parameters.h"
-#include "geometry_new.h"
+//#include "mesh.hpp""
+#include "region_fill.hpp"
+#include "material.hpp"
+#include "boundary_conditions.hpp"
+#include "state.hpp"
+#include "simulation_parameters.hpp"
+#include "geometry_new.hpp"
 
 
 

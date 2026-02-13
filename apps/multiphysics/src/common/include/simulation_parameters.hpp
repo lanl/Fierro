@@ -1,5 +1,5 @@
 /**********************************************************************************************
-2020. Triad National Security, LLC. All rights reserved.
+� 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -32,51 +32,40 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_TEMP_CONSTANT_H
-#define BOUNDARY_TEMP_CONSTANT_H
+#ifndef FIERRO_SIM_PARAMS_H
+#define FIERRO_SIM_PARAMS_H
+#include <stdio.h>
+#include "matar.h"
 
-#include "boundary_conditions.h"
+#include "material.hpp"
+#include "region.hpp"
+#include "mesh_inputs.hpp"
+#include "solver_inputs.hpp"
+#include "output_options.hpp"
+#include "boundary_conditions.hpp"
+#include "dynamic_options.hpp"
 
-struct BoundaryConditionEnums_t;
+using namespace mtr;
 
-namespace ConstantTemperatureBC
-{
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn temperature
+/// \struct simulation_parameters_t
 ///
-/// \brief This is a function to set the nodal temperature along a symmetry 
-///        plane or a wall. 
-///
-/// \param Mesh object
-/// \param Boundary condition enums to select options
-/// \param Boundary condition global variables array
-/// \param Boundary condition state variables array
-/// \param Node velocity
-/// \param Time of the simulation
-/// \param Boundary global index for the surface node
-/// \param Boundary set local id
+/// \brief Struct for holding simulation metadata
 ///
 /////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
-static void temperature(const swage::Mesh& mesh,
-    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& temp_bc_global_vars,
-        const DCArrayKokkos<double>& bc_state_vars,
-        const DCArrayKokkos<double>& node_temp,
-        const double time_value,
-        const size_t rk_stage,
-        const size_t bdy_node_gid,
-        const size_t bdy_set)
+struct SimulationParameters_t
 {
+    mesh_input_t mesh_input;    ///< Mesh input information
 
-    // Temperature to set the boundary to = bc_global_vars(4)
-    // Set velocity to zero in the specified direction
-    node_temp(bdy_node_gid) = temp_bc_global_vars(bdy_set,0); // bc_global_vars(4);
+    output_options_t output_options; ///< Simulation output information
 
-    return;
-} // end func
+    dynamic_options_t dynamic_options;  ///< Simulation timing and dynamic options
 
-} // end namespace
+    std::vector<solver_input_t> solver_inputs;  ///< Solvers to use during the simulation
+
+    SolverRegionSetup_t region_setups;  ///< region fills across all solvers
+
+}; // simulation_parameters_t
 
 #endif // end Header Guard

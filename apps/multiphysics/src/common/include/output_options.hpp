@@ -36,7 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define FIERRO_OUTPUT_OPTIONS_H
 #include <stdio.h>
 #include "matar.h"
-#include "state.h"
+#include "state.hpp"
 
 namespace output_options
 {

@@ -32,9 +32,9 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgtm_solver_3D.h"
-//#include "mesh.h""
-#include "boundary_conditions.h"
+#include "sgtm_solver_3D.hpp"
+//#include "mesh.hpp""
+#include "boundary_conditions.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///

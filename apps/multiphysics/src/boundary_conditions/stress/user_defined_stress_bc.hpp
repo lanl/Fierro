@@ -32,53 +32,46 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_VEL_REFLECTED_H
-#define BOUNDARY_VEL_REFLECTED_H
+#ifndef BOUNDARY_STRESS_USER_DEFINED_H
+#define BOUNDARY_STRESS_USER_DEFINED_H
 
-#include "boundary_conditions.h"
+#include "boundary_conditions.hpp"
 
 struct BoundaryConditionEnums_t;
 
-namespace ReflectedVelocityBC
-{
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn velocity
+/// \fn Boundary stress is user defined
 ///
-/// \brief This is a function to set the velocity along a symmetry plane or
-///        a wall.  This fcn imposes a normal velocity, in the specified
-///        direction, to be equal to zero
+/// \brief This is a function to set the stress based on user implementation
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
-/// \param Node velocity
+/// \param Node boundary force
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
 /// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
+namespace UserDefinedStressBC
+{
+// add an enum for boundary statevars and global vars
+
 KOKKOS_FUNCTION
-static void velocity(const swage::Mesh& mesh,
+static void stress(const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
     const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,
-    const DCArrayKokkos<double>& node_vel,
+    const ViewCArrayKokkos <double>& corner_surf_force,
+    const ViewCArrayKokkos <double>& corner_surf_normal,
     const double time_value,
     const size_t rk_stage,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
-    double mag = 0.0;
-    for (size_t dim = 0; dim<mesh.num_dims; dim++){
-        mag += vel_bc_global_vars(bdy_set,dim)*vel_bc_global_vars(bdy_set,dim);
-    } // will make sure it's a unit vector
-
-    // Remove the velocity in the specified direction
-    for (size_t dim = 0; dim<mesh.num_dims; dim++){
-        node_vel(bdy_node_gid, dim) -= node_vel(bdy_node_gid, dim)*vel_bc_global_vars(bdy_set,dim)/mag;
-    }
+    // add user coding here
 
     return;
 } // end func

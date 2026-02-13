@@ -1,5 +1,5 @@
 /**********************************************************************************************
-� 2020. Triad National Security, LLC. All rights reserved.
+2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -32,46 +32,51 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_STRESS_NONE_H
-#define BOUNDARY_STRESS_NONE_H
+#ifndef BOUNDARY_TEMP_CONSTANT_H
+#define BOUNDARY_TEMP_CONSTANT_H
 
-#include "boundary_conditions.h"
+#include "boundary_conditions.hpp"
 
 struct BoundaryConditionEnums_t;
 
-namespace globalContact
+namespace ConstantTemperatureBC
 {
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn Boundary stress does not exist, its a free surface
+/// \fn temperature
 ///
-/// \brief This is a function for a free surface, the default case
+/// \brief This is a function to set the nodal temperature along a symmetry 
+///        plane or a wall. 
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
-/// \param Node force
+/// \param Node velocity
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
 /// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-static void stress(const swage::Mesh& mesh,
+static void temperature(const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
-    const DCArrayKokkos<double>& bc_state_vars,
-    const ViewCArrayKokkos <double>& corner_surf_force,
-    const ViewCArrayKokkos <double>& corner_surf_normal,
-    const double time_value,
-    const size_t bdy_node_gid,
-    const size_t bdy_set)
+    const RaggedRightArrayKokkos<double>& temp_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const DCArrayKokkos<double>& node_temp,
+        const double time_value,
+        const size_t rk_stage,
+        const size_t bdy_node_gid,
+        const size_t bdy_set)
 {
 
+    // Temperature to set the boundary to = bc_global_vars(4)
+    // Set velocity to zero in the specified direction
+    node_temp(bdy_node_gid) = temp_bc_global_vars(bdy_set,0); // bc_global_vars(4);
 
     return;
-} // end stress
+} // end func
+
 } // end namespace
 
 #endif // end Header Guard

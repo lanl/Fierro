@@ -34,10 +34,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef FIERRO_BC_H
 #define FIERRO_BC_H
 
-#include "solver_inputs.h"
+#include "solver_inputs.hpp"
 
 // #include "matar.h"
-// #include "unstructured_mesh.h"
+// #include "unstructured_mesh.hpp"
 #include "ELEMENTS.h"
 
 #include <map>

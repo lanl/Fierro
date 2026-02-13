@@ -32,16 +32,16 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "driver.h"
+#include "driver.hpp"
 
 
 // Headers for solver classes
-#include "sgh_solver_3D.h"
-#include "sgh_solver_rz.h"
-#include "sgtm_solver_3D.h"
-#include "level_set_solver.h"
+#include "sgh_solver_3D.hpp"
+#include "sgh_solver_rz.hpp"
+#include "sgtm_solver_3D.hpp"
+#include "level_set_solver.hpp"
 
-#include "region_fill.h"
+#include "region_fill.hpp"
 
 
 
