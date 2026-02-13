@@ -12,3 +12,5 @@ apps/micromechanics/LS-EVPFFT/scripts/** linguist-documentation
 apps/micromechanics/LS-EVPFFT-J2/example_lattice_run/** linguist-documentation
 apps/micromechanics/LSNP-EVPFFT/example_input_files/** linguist-documentation
 apps/micromechanics/LSNP-EVPFFT/scripts/** linguist-documentation
+legacy/single-node/src/Explicit-Lagrange/meshes/** linguist-documentation
+apps/multiphysics/regression_tests/standard_inputs/meshes/** linguist-documentation
