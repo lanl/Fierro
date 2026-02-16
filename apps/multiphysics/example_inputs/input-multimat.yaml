@@ -1,0 +1,213 @@
+# num_dims: 3
+# UNITS: g, cm, micro second, MegaBar
+
+dynamic_options:
+    time_final: 10.0
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_start: 1.e-5
+    cycle_stop: 10000
+
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1.0, 1.0, 2.0] 
+    num_elems: [1, 1, 1]
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: viz # only options are viz or viz_and_state
+    graphics_time_step: 0.025
+    # graphics_iteration_step: 10
+    elem_field_outputs:
+        - den
+        - pres
+        - stress
+        - sie
+        - mass
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+        - volfrac
+    node_field_outputs:
+        - vel
+        - mass
+
+solver_options:
+  - solver:
+        method: dynx_FE
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+boundary_conditions:
+    # Tag -X plane
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 0.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1 # x
+            - 0 # y
+            - 0 # z
+            
+#    # Tag +X plane
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 1.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1 # x
+            - 0 # y
+            - 0 # z
+
+    # Tag -Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0 # x
+            - 1 # y
+            - 0 # z
+
+#    # Tag +Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 1.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0 # x
+            - 1 # y
+            - 0 # z
+
+    # Tag +z plane
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0 # x
+            - 0 # y
+            - 1 # z
+            
+#    # Tag -z plane
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 2.0
+        velocity_model: fixed
+        velocity_bc_global_vars:
+            - 0 # x
+            - 0 # y
+            - 1 # z
+
+  
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-4
+            - 1.0
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 1.0   # phi_min
+            - 1.0   # pin_curl_min
+
+    - material:
+        id: 1
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        eos_global_vars:
+            - 10 #1.666666666666667
+            - 1.0E-4
+            - 1.0
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 1.0   # phi_min
+            - 1.0   # pin_curl_min
+
+
+multimaterial_options:
+    max_num_mats_per_element: 3 # allow for up to 3 materials in an element during setup and for reverse map
+
+    mat_equilibration_model: tipton #no_equilibration #tipton
+    mat_equilibration_global_vars:
+        - 0.01   # max volume fraction change
+        - 1.0 # pressure relax coeff (delta P)/coef
+
+regions:
+    # gas
+    - region:
+        volume:
+            type: global
+        solver_id: 0
+        material_id: 0
+        density:
+            type: uniform
+            value: 1.14
+        specific_internal_energy:
+            type: uniform
+            value: 1.e-10
+        velocity:
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 0.5
+
+    # notional metal
+    - region:
+        volume:
+            type: global
+        solver_id: 0
+        material_id: 1
+        density:
+            type: uniform
+            value: 2.7
+        specific_internal_energy:
+            type: uniform
+            value: 0.2
+        velocity:
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 0.5
+            
+        
