@@ -75,6 +75,7 @@ include_directories(src/input)
 # These populate source lists (PARENT_SCOPE) used by src/CMakeLists.txt
 add_subdirectory(src/material_models/equilibration)
 add_subdirectory(src/input)
+add_subdirectory(src/material_models/tabular)
 
 # Main Fierro target
 add_subdirectory(src)

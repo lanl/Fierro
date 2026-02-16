@@ -17,25 +17,15 @@ include_directories(../common)
 
 set(YAML_SRC_Files 
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_tools.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/parse_tools.hpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_output_options.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/parse_output_options.hpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_dynamic_inputs.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/parse_dynamic_inputs.hpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_bdy_conds_inputs.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/parse_bdy_conds_inputs.hpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_material_inputs.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/parse_material_inputs.hpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_solver_inputs.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/parse_solver_inputs.hpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_mesh_inputs.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/parse_mesh_inputs.hpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_regions.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/parse_regions.hpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_yaml.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/parse_yaml.hpp
 ${CMAKE_CURRENT_SOURCE_DIR}/Yaml.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/Yaml.hpp
 PARENT_SCOPE
 )
 
