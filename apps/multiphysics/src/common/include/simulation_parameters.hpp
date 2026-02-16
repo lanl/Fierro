@@ -44,6 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "output_options.hpp"
 #include "boundary_conditions.hpp"
 #include "dynamic_options.hpp"
+#include "table.hpp"
 
 using namespace mtr;
 

@@ -24,7 +24,7 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     output_file_format: viz
-    graphics_time_step: 0.1
+    graphics_time_step: 0.5
     #graphics_iteration_step: 1
     elem_field_outputs:
         - den
@@ -38,7 +38,7 @@ solver_options:
   - solver:
         method: thrmex_FE
         id: 0
-        use_moving_heat_source: false
+        use_moving_heat_source: true
         # solver_vars:
         #  - blah
         #  - blah

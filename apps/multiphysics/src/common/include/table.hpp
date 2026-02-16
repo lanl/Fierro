@@ -63,7 +63,7 @@ struct Table_t{
     }
 
     // Constructor  
-    Table_t(const char* name_, size_t num_rows_, size_t num_columns_) 
+    Table_t(size_t num_rows_, size_t num_columns_, const char* name_) 
         : num_rows(num_rows_), num_columns(num_columns_)
     {
         // Initialize data with dimensions and name
@@ -84,7 +84,7 @@ struct Table_t{
 
     // Set a value in the table on the host
     void set_value(size_t row, size_t col, double val) {
-        assert(row < num_rows && col < num_columns, "Row and column indices are out of bounds in Table_t::set_value");
+        assert(row < num_rows && col < num_columns && "Row and column indices are out of bounds in Table_t::set_value");
         data.host(row, col) = val;
     }
     
@@ -100,15 +100,15 @@ struct Table_t{
 
     // Verify that the table is valid and the data in at least one column is sorted in ascending order.
     void verify_data(size_t sorted_column_idx) {
-        assert(data.host.extent(0) == num_rows && data.host.extent(1) == num_columns, "Data dimensions do not match the table dimensions in Table_t::verify_data");
+        assert(data.host.extent(0) == num_rows && data.host.extent(1) == num_columns && "Data dimensions do not match the table dimensions in Table_t::verify_data");
         for (size_t row = 0; row < num_rows - 1; row++) {
-            assert(data.host(row, sorted_column_idx) <= data.host(row + 1, sorted_column_idx), "Data in column " + std::to_string(sorted_column_idx) + " is not sorted in ascending order in Table_t::verify_data");
+            assert(data.host(row, sorted_column_idx) <= data.host(row + 1, sorted_column_idx) && "Data in column " + std::to_string(sorted_column_idx) + " is not sorted in ascending order in Table_t::verify_data");
         }
 
         // Check for NaN in each element; throw assertion if found
         for (size_t row = 0; row < num_rows; ++row) {
             for (size_t col = 0; col < num_columns; ++col) {
-                assert(!std::isnan(data.host(row, col)), 
+                assert(!std::isnan(data.host(row, col)) &&
                     "NaN detected in Table_t::verify_data at row " + std::to_string(row) + ", column " + std::to_string(col));
             }
         }
@@ -138,6 +138,8 @@ struct Table_t{
         for (size_t i = 0; i < num_rows - 1; ++i) {
             double x0 = data.host(i, independent_idx);
             double x1 = data.host(i + 1, independent_idx);
+
+            double x = independent_value;
             
             if (x >= x0 && x <= x1) {
                 // Avoid division by zero
@@ -179,6 +181,8 @@ struct Table_t{
         for (size_t i = 0; i < num_rows - 1; ++i) {
             double x0 = data(i, independent_idx);
             double x1 = data(i + 1, independent_idx);
+
+            double x = independent_value;
             
             if (x >= x0 && x <= x1) {
                 // Avoid division by zero
@@ -194,6 +198,16 @@ struct Table_t{
         
         // Should not be reached given the boundary checks above
         return 0.0;
+    }
+
+    // Print the table to the console
+    void print_table() const {
+        for (size_t i = 0; i < num_rows; ++i) {
+            for (size_t j = 0; j < num_columns; ++j) {
+                std::cout << data.host(i, j) << " ";
+            }
+            std::cout << std::endl;
+        }
     }
 
 };

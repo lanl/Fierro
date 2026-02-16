@@ -42,127 +42,62 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mesh_io.hpp"
 
 
-
-
 // Class to store and manage additive manufacturing tool paths with time-parameterized 3D points and utility for current tool position.
 // Uses MATAR data types (e.g., CArray)
 class ToolPathInfo {
 public:
     
-// 3 x N array of points (each column is a point: [x;y;z])
-    DCArrayKokkos<double> points; // shape: (3, N)
-    // 1 x N array of times associated with each point
-    DCArrayKokkos<double> times;  // shape: (N)
-    // 1xN Array storing the power of the tool at each point
-    DCArrayKokkos<double> power;  // shape: (N)
+    enum Fields
+    {
+        time = 0,      ///<  time
+        x = 1,   ///<  x position
+        y = 2,   ///<  y position
+        z = 3,   ///<  z position
+        power = 4,   ///<  power
+    };
+    Table_t tool_path_table;
 
-    // Intersecton sphere radius;
-    double radius = -1.0;
-    
-    // Number of points in the tool path
-    size_t num_points = 0;
+    size_t num_columns = 5;
     
     // Default constructor that takes the number of data points
     ToolPathInfo(size_t npoints)
     {
-        num_points = npoints;
-        points = DCArrayKokkos<double>(3, npoints, "ToolPathInfo_points");
-        times  = DCArrayKokkos<double>(npoints, "ToolPathInfo_times");
-        power  = DCArrayKokkos<double>(npoints, "ToolPathInfo_power");
+        tool_path_table = Table_t(npoints, num_columns, "ToolPathInfo_table");
     }
 
-    // Set a data point (x, y, z, t, p) at index i
-    void set_data_point(size_t i, double x, double y, double z, double t, double p) {
-        points.host(0, i) = x;
-        points.host(1, i) = y;
-        points.host(2, i) = z;
-        times.host(i) = t;
-        power.host(i) = p;
+    // Set a data point (time, x, y, z, power) at index i
+    void set_data_point(size_t i, double time, double x, double y, double z, double power) {
+        tool_path_table.set_value(i, Fields::time, time);
+        tool_path_table.set_value(i, Fields::x, x);
+        tool_path_table.set_value(i, Fields::y, y);
+        tool_path_table.set_value(i, Fields::z, z);
+        tool_path_table.set_value(i, Fields::power, power);
     }
     
     // Update the device views (copy to the GPU from the CPU)
     void update_device() {
-        points.update_device();
-        times.update_device();
-        power.update_device();
+        tool_path_table.update_device();
     }
 
     // Compute current position of tool at time t, assuming linear motion between path points.
     // Returns a std::array<double,3> {x, y, z}
     KOKKOS_INLINE_FUNCTION
-    void get_position(double t, double& x, double& y, double& z) const {
-        // Handle the case when no points exist
-        if (num_points == 0) {
-            x = 0.0;
-            y = 0.0;
-            z = 0.0;
-            return;
-        }
-        // If t before first point, return first point
-        if (t <= times(0)) {
-            x = points(0,0);
-            y = points(1,0);
-            z = points(2,0);
-            return;
-        }
-        // If t after last point, return last point
-        if (t >= times(num_points-1)) {
-            x = points(0, num_points-1);
-            y = points(1, num_points-1);
-            z = points(2, num_points-1);
-            return;
-        }
-        // Find which segment t is in
-        for (size_t i = 0; i < num_points-1; ++i) {
-            double t0 = times(i);
-            double t1 = times(i+1);
-            if (t >= t0 && t <= t1) {
-                double alpha = (t - t0)/(t1 - t0); // Linear interpolation parameter
-                double xl = (1.0 - alpha)*points(0, i) + alpha*points(0, i+1);
-                double yl = (1.0 - alpha)*points(1, i) + alpha*points(1, i+1);
-                double zl = (1.0 - alpha)*points(2, i) + alpha*points(2, i+1);
-                x = xl;
-                y = yl;
-                z = zl;
-                return;
-            }
-        }
-        // Should not reach here if inputs are valid
-        x = 0.0;
-        y = 0.0;
-        z = 0.0;
-        return;
+    void get_position(const double& t, double& x, double& y, double& z) const {
+
+        // get the x position at time t
+        x = tool_path_table.linear_interpolation(t, Fields::x, Fields::time);
+        // get the y position at time t
+        y = tool_path_table.linear_interpolation(t, Fields::y, Fields::time);
+        // get the z position at time t
+        z = tool_path_table.linear_interpolation(t, Fields::z, Fields::time);
     } // end function
 
 
     // Compute current power of tool at time t, assuming linear interpolation between path points.
     // Returns the power at the time t
     KOKKOS_INLINE_FUNCTION
-    double get_power(double t) const {
-        // Handle the case when no points exist
-        if (num_points == 0) {
-            return 0.0;
-        }
-        // If t before first point, return first point
-        if (t <= times(0)) {
-            return power(0);
-        }
-        // If t after last point, return last point
-        if (t >= times(num_points-1)) {
-            return power(num_points-1);
-        }
-        // Find which segment t is in
-        for (size_t i = 0; i < num_points-1; ++i) {
-            double t0 = times(i);
-            double t1 = times(i+1);
-            if (t >= t0 && t <= t1) {
-                double alpha = (t - t0)/(t1 - t0); // Linear interpolation parameter
-                double pl = (1.0 - alpha)*power(i) + alpha*power(i+1);
-                return pl;
-            }
-        }
-        // Should not reach here if inputs are valid
-        return 0.0;
+    double get_power(double& t) const {
+        return tool_path_table.linear_interpolation(t, Fields::power, Fields::time);
     } // end function
 };
 
@@ -174,10 +109,10 @@ public:
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::execute(SimulationParameters_t& SimulationParamaters, 
-                    Material_t& Materials, 
-                    BoundaryCondition_t& BoundaryConditions, 
-                    swage::Mesh& mesh, 
-                    State_t& State)
+                     Material_t& Materials, 
+                     BoundaryCondition_t& BoundaryConditions, 
+                     swage::Mesh& mesh, 
+                     State_t& State)
 {
 
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;
@@ -222,14 +157,16 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     auto time_1 = std::chrono::high_resolution_clock::now();    
 
     // ---- Initialize the tool path information ---- //
-    ToolPathInfo tool_path_info(4);
-    tool_path_info.set_data_point(0, 2.0, 5.0, 0.5, 0.0, 3000.0);
-    tool_path_info.set_data_point(1, 8.0, 5.0, 0.5, 10.0, 4000.0);
-    tool_path_info.set_data_point(2, 2.0, 5.0, 1.0, 10.0, 4000.0);
-    tool_path_info.set_data_point(3, 8.0, 5.0, 1.0, 20.0, 3000.0);
+    int number_of_points = 4;
+    ToolPathInfo path(number_of_points);
+    path.set_data_point(0, 0.0,  2.0, 5.0, 0.5, 3000000.0);
+    path.set_data_point(1, 10.0, 8.0, 5.0, 0.5, 4000000.0);
+    path.set_data_point(2, 10.0, 2.0, 5.0, 1.0, 4000000.0);
+    path.set_data_point(3, 20.0, 8.0, 5.0, 1.0, 3000000.0);
 
-    tool_path_info.update_device();
+    path.tool_path_table.print_table();
 
+    path.update_device();
 
     // ---- Write initial state at t=0 ---- 
     printf("Writing outputs to file at %f \n", graphics_time);
@@ -375,7 +312,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 // ---- Calculate the corner heat flux from moving volumetric heat source ----
                 if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source) {
-                    double power = tool_path_info.get_power(time_value);
+                    double power = path.get_power(time_value);
                     moving_flux(
                         Materials,
                         mesh,
@@ -441,20 +378,25 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---- Activate new elements, if needed ---- //
 
 
+        
+        time_value += dt;
+
+
         // ---- Move heat source ---- //
         if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source) {
             RUN({
                 double x = 0.0;
                 double y = 0.0;
                 double z = 0.0;
-                tool_path_info.get_position(time_value, x, y, z);
+                path.get_position(time_value, x, y, z);
                 sphere_position(0) = x;
                 sphere_position(1) = y;
                 sphere_position(2) = z;
             });
         }
         // increment the time
-        time_value += dt;
+
+
 
         size_t write = 0;
         if ((cycle + 1) % graphics_cyc_ival == 0 && cycle > 0) {
