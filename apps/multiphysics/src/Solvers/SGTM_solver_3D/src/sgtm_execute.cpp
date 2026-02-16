@@ -159,10 +159,10 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     // ---- Initialize the tool path information ---- //
     int number_of_points = 4;
     ToolPathInfo path(number_of_points);
-    path.set_data_point(0, 0.0,  2.0, 5.0, 0.5, 3000000.0);
-    path.set_data_point(1, 10.0, 8.0, 5.0, 0.5, 4000000.0);
-    path.set_data_point(2, 10.0, 2.0, 5.0, 1.0, 4000000.0);
-    path.set_data_point(3, 20.0, 8.0, 5.0, 1.0, 3000000.0);
+    path.set_data_point(0, 0.0,  2.0, 5.0, 0.5, 3000.0);
+    path.set_data_point(1, 10.0, 8.0, 5.0, 0.5, 4000.0);
+    path.set_data_point(2, 10.0, 2.0, 5.0, 1.0, 4000.0);
+    path.set_data_point(3, 20.0, 8.0, 5.0, 1.0, 3000.0);
 
     path.tool_path_table.print_table();
 

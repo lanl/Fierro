@@ -209,7 +209,6 @@ struct Table_t{
             std::cout << std::endl;
         }
     }
-
 };
 
 

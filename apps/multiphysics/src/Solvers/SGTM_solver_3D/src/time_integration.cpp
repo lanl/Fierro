@@ -178,8 +178,6 @@ void SGTM3D::get_timestep(swage::Mesh& mesh,
         // local dt calc based on CFL
         double dt_cfl = 1.0; //dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_sid) + fuzz);
 
-        // dt_cfl = 1.0; // WARNING: Fix once evolving position
-
         // Thermal diffusivity
         double alpha = MaterialPoints_conductivity(mat_id, mat_elem_sid) / 
             (MaterialPoints_density(mat_id, mat_elem_sid)*MaterialPoints_specific_heat(mat_id, mat_elem_sid));
