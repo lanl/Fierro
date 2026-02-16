@@ -40,66 +40,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.hpp"
 #include "geometry_new.hpp"
 #include "mesh_io.hpp"
+#include "additive_data.hpp"
 
 
-// Class to store and manage additive manufacturing tool paths with time-parameterized 3D points and utility for current tool position.
-// Uses MATAR data types (e.g., CArray)
-class ToolPathInfo {
-public:
-    
-    enum Fields
-    {
-        time = 0,      ///<  time
-        x = 1,   ///<  x position
-        y = 2,   ///<  y position
-        z = 3,   ///<  z position
-        power = 4,   ///<  power
-    };
-    Table_t tool_path_table;
 
-    size_t num_columns = 5;
-    
-    // Default constructor that takes the number of data points
-    ToolPathInfo(size_t npoints)
-    {
-        tool_path_table = Table_t(npoints, num_columns, "ToolPathInfo_table");
-    }
-
-    // Set a data point (time, x, y, z, power) at index i
-    void set_data_point(size_t i, double time, double x, double y, double z, double power) {
-        tool_path_table.set_value(i, Fields::time, time);
-        tool_path_table.set_value(i, Fields::x, x);
-        tool_path_table.set_value(i, Fields::y, y);
-        tool_path_table.set_value(i, Fields::z, z);
-        tool_path_table.set_value(i, Fields::power, power);
-    }
-    
-    // Update the device views (copy to the GPU from the CPU)
-    void update_device() {
-        tool_path_table.update_device();
-    }
-
-    // Compute current position of tool at time t, assuming linear motion between path points.
-    // Returns a std::array<double,3> {x, y, z}
-    KOKKOS_INLINE_FUNCTION
-    void get_position(const double& t, double& x, double& y, double& z) const {
-
-        // get the x position at time t
-        x = tool_path_table.linear_interpolation(t, Fields::x, Fields::time);
-        // get the y position at time t
-        y = tool_path_table.linear_interpolation(t, Fields::y, Fields::time);
-        // get the z position at time t
-        z = tool_path_table.linear_interpolation(t, Fields::z, Fields::time);
-    } // end function
-
-
-    // Compute current power of tool at time t, assuming linear interpolation between path points.
-    // Returns the power at the time t
-    KOKKOS_INLINE_FUNCTION
-    double get_power(double& t) const {
-        return tool_path_table.linear_interpolation(t, Fields::power, Fields::time);
-    } // end function
-};
 
 /////////////////////////////////////////////////////////////////////////////
 ///

@@ -3,9 +3,9 @@
 dynamic_options:
     time_final: 20.0
     dt_min: 1.e-8
-    dt_max: 1.e-1
+    dt_max: 1.0
     dt_start: 1.e-5
-    cycle_stop: 1000000
+    cycle_stop: 100
 
 
 # mesh_options:
@@ -25,7 +25,7 @@ output_options:
     timer_output_level: thorough
     output_file_format: viz
     graphics_time_step: 0.5
-    #graphics_iteration_step: 1
+    graphics_iteration_step: 5
     elem_field_outputs:
         - den
         - mass
@@ -225,7 +225,7 @@ regions:
             value: 4.01 #W/(cm*K)
         specific_heat: 
             type: uniform
-            value: 903 #  0.385 #J/(g⋅K)
+            value: 0.385 #903 #  0.385 #J/(g⋅K)
         temperature: 
             type: uniform
             value: 293.15 #K 

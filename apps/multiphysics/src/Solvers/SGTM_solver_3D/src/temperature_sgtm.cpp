@@ -80,6 +80,8 @@ void SGTM3D::update_temperature(
             Cp += mat_pt_specific_heat(0,elem_gid)/mesh.num_corners_in_node(node_gid);
         }
 
+        // std::cout << "Cp*mass = " << Cp * node_mass(node_gid) << std::endl;
+
         // ---- Update the nodal temperature ---- //
         node_temp(node_gid) = node_temp_n0(node_gid) + rk_alpha * dt * node_q_transfer(node_gid) / (node_mass(node_gid)*Cp);
 
