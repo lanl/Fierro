@@ -1,6 +1,29 @@
 cmake_minimum_required(VERSION 3.17)
 project(Fierro NONE)
+# --- WSL / CUDA driver fix ---
+# Ensure CUDA imported targets (CUDA::cuda_driver, etc.) are created by CMake
+# BEFORE Kokkos exports try to link against them.
+find_package(CUDAToolkit REQUIRED)
 
+# If CMake still doesn't populate CUDA::cuda_driver with a location, force it.
+if(TARGET CUDA::cuda_driver)
+  # Prefer the stub library for link-time (works everywhere), runtime uses real driver.
+  set(_cuda_driver "/usr/local/cuda/targets/x86_64-linux/lib/stubs/libcuda.so")
+
+  # On WSL you also have the WSL-provided driver library (fine too):
+  if(EXISTS "/usr/lib/wsl/lib/libcuda.so.1")
+    set(_cuda_driver "/usr/lib/wsl/lib/libcuda.so.1")
+  elseif(EXISTS "/usr/lib/x86_64-linux-gnu/libcuda.so.1")
+    set(_cuda_driver "/usr/lib/x86_64-linux-gnu/libcuda.so.1")
+  endif()
+
+  set_property(TARGET CUDA::cuda_driver PROPERTY IMPORTED_LOCATION "${_cuda_driver}")
+  foreach(cfg RELEASE RELWITHDEBINFO DEBUG MINSIZEREL)
+    set_property(TARGET CUDA::cuda_driver PROPERTY IMPORTED_LOCATION_${cfg} "${_cuda_driver}")
+  endforeach()
+
+  message(STATUS "Forcing CUDA::cuda_driver to: ${_cuda_driver}")
+endif()
 set(CMAKE_CXX_STANDARD 17)
 enable_language(CXX)
 # Disable Kokkos warning about not supporting C++ extensions
