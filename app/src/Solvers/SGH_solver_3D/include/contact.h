@@ -574,9 +574,30 @@ void isoparametric_inverse(const double pos[3], const double elem_pos[3][8], dou
 /// Finds the boundary patches that each individual node is penetrating and populates node_penetrations array
 /// accordingly
 ///
-/// \param pos (x,y,z) position value
-/// \param elem_pos element nodal coordinates
-/// \param iso_pos isoparametric position (xi,eta,zeta) output
+/// \param depth_cap defines bounding box dims
+/// \param coords node positions
+/// \param num_bdy_patches number of boundary patches
+/// \param penetration_surfaces the patch ids for boundary elements
+/// \param bdy_patches ids for boundary patches
+/// \param Sx number of bins in x dir
+/// \param Sy number of bins in y dir
+/// \param Sz number of bins in z dir
+/// \param x_min minimum x value in domain
+/// \param y_min minimum y value in domain
+/// \param z_min minimum z value in domain
+/// \param bucket_size length of bins
+/// \param buckets stores bin ids for boundary nodes from sort
+/// \param node_penetrations output for the function
+/// \param npoint for parsing nodes in bins
+/// \param num_patches number of patches in mesh
+/// \param nbox for parsing nodes in bins
+/// \param nsort for parsing nodes in bins
+/// \param nodes_in_elem node ids for each element
+/// \param elems_in_patch element ids for each patch
+/// \param num_bdy_nodes number of boundary nodes
+/// \param nodes_in_patch node ids for each patch
+/// \param xi stores xi values in order for patch connectivity
+/// \param eta stores eta values in order for patch connectivity
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void find_penetrating_nodes(double depth_cap, DCArrayKokkos <double> &coords,
                             size_t num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces,
