@@ -1,11 +1,11 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 20.0
+    time_final: 1.0
     dt_min: 1.e-8
     dt_max: 1.0
     dt_start: 1.e-5
-    cycle_stop: 100
+    cycle_stop: 100000
 
 
 # mesh_options:
@@ -24,8 +24,8 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     output_file_format: viz
-    graphics_time_step: 0.5
-    graphics_iteration_step: 5
+    graphics_time_step: 0.01
+    #graphics_iteration_step: 5
     elem_field_outputs:
         - den
         - mass
@@ -53,7 +53,7 @@ boundary_conditions:
             plane_position: 0.0
         temperature_model: constant
         temperature_bc_global_vars:
-            - 293.15   # temperature
+            - 693.15   # temperature
 
     # convection on the z=1 plane
     - boundary_condition:
@@ -228,6 +228,6 @@ regions:
             value: 0.385 #903 #  0.385 #J/(g⋅K)
         temperature: 
             type: uniform
-            value: 293.15 #K 
+            value: 273.15 #K 
 
 

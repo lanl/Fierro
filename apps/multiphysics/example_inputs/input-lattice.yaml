@@ -19,9 +19,23 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: ensight
-    graphics_time_step: 0.001
+    output_file_format: viz
+    graphics_time_step: 0.01
     # graphics_iteration_step: 10
+    elem_field_outputs:
+        - den
+        - pres
+        - stress
+        - sie
+        - mass
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+        - volfrac
+    node_field_outputs:
+        - vel
+        - mass
 
 solver_options:
   - solver:
@@ -145,7 +159,7 @@ regions:
     - region:
         volume:
             type: voxel_file
-            file_path: /home/jacobmoore/Desktop/repos/Fierro/app/example_inputs/meshes/VTK_Geometry_lattice.vtk
+            file_path: /home/jacobmoore/Desktop/repos/Fierro/apps/multiphysics/example_inputs/meshes/VTK_Geometry_lattice.vtk
             scale_x: 0.02
             scale_y: 0.02
             scale_z: 0.040635127
@@ -164,29 +178,29 @@ regions:
             v: 0.0
             w: 0.0
 
-    # # top block initial velocity conditions
-    # - region:
-    #     volume:
-    #         type: box
-    #         origin: [0.0, 0.0, 0.0]
-    #         x1: -0.1
-    #         x2: 0.51
-    #         y1: -0.1
-    #         y2: 0.51
-    #         z1: 0.956
-    #         z2: 1.05
-    #     material_id: 1
-    #     solver_id: 0
-    #     density:
-    #         type: uniform
-    #         value: 8.93
-    #     specific_internal_energy:
-    #         type: uniform
-    #         value: 1.e-10
-    #     velocity: 
-    #         type: cartesian
-    #         u: 0.0
-    #         v: 0.0
-    #         w: -0.005
+    # top block initial velocity conditions
+    - region:
+        volume:
+            type: box
+            origin: [0.0, 0.0, 0.0]
+            x1: -0.1
+            x2: 0.51
+            y1: -0.1
+            y2: 0.51
+            z1: 0.956
+            z2: 1.05
+        material_id: 1
+        solver_id: 0
+        density:
+            type: uniform
+            value: 8.93
+        specific_internal_energy:
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: -0.05
 
 
