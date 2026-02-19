@@ -3571,9 +3571,9 @@ public:
 
         // vtk vector vars = (position, velocity)
         for (int var = 0; var < num_point_vec_vars; var++) {
-            fprintf(out[0], "VECTORS %s float \n", point_vec_var_names[var]);
+            fprintf(out[0], "VECTORS %s double \n", point_vec_var_names[var]);
             for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
-                fprintf(out[0], "%f %f %f\n",
+                fprintf(out[0], "%.15e %.15e %.15e\n",
                         vec_fields(node_gid, var, 0),
                         vec_fields(node_gid, var, 1),
                         vec_fields(node_gid, var, 2));
@@ -3583,10 +3583,10 @@ public:
 
         // vtk scalar vars = (temp)
         for (int var = 0; var < num_point_scalar_vars; var++) {
-            fprintf(out[0], "SCALARS %s float 1\n", point_scalar_var_names[var]);
+            fprintf(out[0], "SCALARS %s double 1\n", point_scalar_var_names[var]);
             fprintf(out[0], "LOOKUP_TABLE default\n");
             for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
-                fprintf(out[0], "%f\n",
+                fprintf(out[0], "%.15e\n",
                         point_scalar_fields(node_gid, 0));
             } // end for nodes
         } // end for vec_vars
@@ -3600,10 +3600,10 @@ public:
         fprintf(out[0], "CELL_DATA %zu \n", mesh.num_elems);
 
         for (int var = 0; var < num_cell_scalar_vars; var++) {
-            fprintf(out[0], "SCALARS %s float 1\n", cell_scalar_var_names[var]); // the 1 is number of scalar components [1:4]
+            fprintf(out[0], "SCALARS %s double 1\n", cell_scalar_var_names[var]); // the 1 is number of scalar components [1:4]
             fprintf(out[0], "LOOKUP_TABLE default\n");
             for (size_t elem_gid = 0; elem_gid < mesh.num_elems; elem_gid++) {
-                fprintf(out[0], "%f\n", elem_fields(elem_gid, var));
+                fprintf(out[0], "%.15e\n", elem_fields(elem_gid, var));
             } // end for elem
         } // end for cell scalar_vars
 
@@ -4224,7 +4224,7 @@ public:
         fprintf(out[0], "\n");
         fprintf(out[0], "      <!-- Define the mesh nodes -->\n");
         fprintf(out[0], "      <Points>\n");
-        fprintf(out[0], "        <DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">\n");
+        fprintf(out[0], "        <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">\n");
 
         // write all components of the point coordinates
         for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
@@ -4233,7 +4233,7 @@ public:
                 coord_z = node_coords_host(node_gid, 2);
             } 
             fprintf(out[0],
-                    "          %f %f %f\n",
+                    "          %.15e %.15e %.15e\n",
                     node_coords_host(node_gid, 0),
                     node_coords_host(node_gid, 1),
                     coord_z);
@@ -4348,10 +4348,10 @@ public:
 
             // node vectors
             for (int a_var = 0; a_var < num_node_vector_vars; a_var++) {
-                fprintf(out[0], "        <DataArray type=\"Float32\" Name=\"%s\" NumberOfComponents=\"3\" format=\"ascii\">\n", node_vector_var_names[a_var].c_str());
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" NumberOfComponents=\"3\" format=\"ascii\">\n", node_vector_var_names[a_var].c_str());
                
                 for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
-                    fprintf(out[0], "          %f %f %f\n",
+                    fprintf(out[0], "          %.15e %.15e %.15e\n",
                             node_vector_fields.host(a_var, node_gid, 0),
                             node_vector_fields.host(a_var, node_gid, 1),
                             node_vector_fields.host(a_var, node_gid, 2));
@@ -4363,9 +4363,9 @@ public:
 
             // node scalar vars
             for (int a_var = 0; a_var < num_node_scalar_vars; a_var++) {
-                fprintf(out[0], "        <DataArray type=\"Float32\" Name=\"%s\" format=\"ascii\">\n", node_scalar_var_names[a_var].c_str());
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" format=\"ascii\">\n", node_scalar_var_names[a_var].c_str());
                 for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
-                    fprintf(out[0], "          %f\n", node_scalar_fields.host(a_var, node_gid));
+                    fprintf(out[0], "          %.15e\n", node_scalar_fields.host(a_var, node_gid));
                 } // end for nodes
                 fprintf(out[0], "        </DataArray>\n");
             } // end for vec_vars
@@ -4387,10 +4387,10 @@ public:
 
             for (int a_var = 0; a_var < num_elem_scalar_vars; a_var++) {
 
-                fprintf(out[0], "        <DataArray type=\"Float32\" Name=\"%s\" format=\"ascii\">\n", elem_scalar_var_names[a_var].c_str()); // the 1 is number of scalar components [1:4]
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" format=\"ascii\">\n", elem_scalar_var_names[a_var].c_str()); // the 1 is number of scalar components [1:4]
 
                 for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-                    fprintf(out[0], "          %f\n", elem_scalar_fields.host(a_var, elem_gid));
+                    fprintf(out[0], "          %.15e\n", elem_scalar_fields.host(a_var, elem_gid));
                 } // end for elem
                 fprintf(out[0], "        </DataArray>\n");
             } // end for elem scalar_vars
@@ -4398,14 +4398,14 @@ public:
 
             // tensors
             for (int a_var = 0; a_var < num_elem_tensor_vars; a_var++) {
-                fprintf(out[0], "        <DataArray type=\"Float32\" Name=\"%s\" NumberOfComponents=\"9\" format=\"ascii\">\n", elem_tensor_var_names[a_var].c_str()); // the 1 is number of scalar components [1:4]
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" NumberOfComponents=\"9\" format=\"ascii\">\n", elem_tensor_var_names[a_var].c_str()); // the 1 is number of scalar components [1:4]
                 
                 for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
                     // note: paraview is row-major, CArray convention
                     // Txx  Txy  Txz  Tyx  Tyy  Tyz  Tzx  Tzy  Tzz
                     for (size_t i=0; i<3; i++){
                         for(size_t j=0; j<3; j++){
-                            fprintf(out[0], "          %f ", elem_tensor_fields.host(a_var, elem_gid, i, j));
+                            fprintf(out[0], "          %.15e ", elem_tensor_fields.host(a_var, elem_gid, i, j));
                         } // end j
                     } // end i
                 } // end for elem

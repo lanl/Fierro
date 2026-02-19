@@ -182,11 +182,18 @@ void SGTM3D::get_timestep(swage::Mesh& mesh,
         double alpha = MaterialPoints_conductivity(mat_id, mat_elem_sid) / 
             (MaterialPoints_density(mat_id, mat_elem_sid)*MaterialPoints_specific_heat(mat_id, mat_elem_sid));
 
-        // Local dt calc based on thermal conductivity (VN Stability)
-        double h = (dist_min); // maybe half?
-        double dt_vn = (h * h)/(2.0*alpha); // maybe 6
+        // std::cout << "alpha: " << alpha << std::endl;
 
-        dt_vn *= 0.9; // stability factor
+        // Local dt calc based on thermal conductivity (VN Stability)
+        // WARNING: There is a better definition of h that should be used here
+        // h_effective = cell volume / max face area
+
+        
+        double h = (dist_min); // maybe half?
+        double dt_vn = (h * h)/(2.0*3.0*alpha); 
+        // std::cout << "dt_vn: " << dt_vn << std::endl;
+
+        dt_vn *= 0.3; // stability factor to account for BC flux terms, 
  
         // if (MaterialPoints_eroded(mat_elem_sid) == true) {
         //     dt_cfl = 1.0e32;  // a huge time step as this element doesn't exist

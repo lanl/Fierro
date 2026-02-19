@@ -103,14 +103,27 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     // ---- Initialize the tool path information ---- //
     int number_of_points = 4;
     ToolPathInfo path(number_of_points);
-    path.set_data_point(0, 0.0,  2.0, 5.0, 0.5, 3000.0);
-    path.set_data_point(1, 10.0, 8.0, 5.0, 0.5, 4000.0);
-    path.set_data_point(2, 10.0, 2.0, 5.0, 1.0, 4000.0);
-    path.set_data_point(3, 20.0, 8.0, 5.0, 1.0, 3000.0);
+    path.set_data_point(0, 0.0,  100.0, 150.0, 15.0, 3000000.0);
+    path.set_data_point(1, 5.0,  200.0, 150.0, 15.0, 4000000.0);
+    path.set_data_point(2, 5.0,  100.0, 150.0, 30.0, 4000000.0);
+    path.set_data_point(3, 10.0, 200.0, 150.0, 30.0, 3000000.0);
 
     path.tool_path_table.print_table();
 
     path.update_device();
+
+
+
+    // Print the material tables
+    for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+        std::cout << "Material " << mat_id << " density table:" << std::endl;
+        Materials.MaterialTables(mat_id).density_table.print_table();
+        std::cout << "Material " << mat_id << " thermal conductivity table:" << std::endl;
+        Materials.MaterialTables(mat_id).thermal_conductivity_table.print_table();
+        std::cout << "Material " << mat_id << " specific heat table:" << std::endl;
+        Materials.MaterialTables(mat_id).specific_heat_table.print_table();
+
+    } // end for mat_id
 
     // ---- Write initial state at t=0 ---- 
     printf("Writing outputs to file at %f \n", graphics_time);
@@ -144,7 +157,19 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         State.node.q_transfer(node_gid) = 0.0;
     }); // end for parallel for over nodes
 
-
+    // ---- Update the material properties ---- //
+    for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+        update_properties(
+            Materials, 
+            mesh, 
+            State.node.temp, 
+            State.MaterialPoints.den, 
+            State.MaterialPoints.conductivity, 
+            State.MaterialPoints.specific_heat, 
+            State.MaterialToMeshMaps.elem_in_mat_elem, 
+            State.MaterialToMeshMaps.num_mat_elems.host(mat_id), 
+            mat_id);
+    } // end for mat_id
 
     // ---- loop over the max number of time integration cycles ---- //
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {

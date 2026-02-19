@@ -26,6 +26,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/parse_mesh_inputs.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_regions.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_yaml.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/Yaml.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/read_abaqus_files.cpp
 PARENT_SCOPE
 )
 

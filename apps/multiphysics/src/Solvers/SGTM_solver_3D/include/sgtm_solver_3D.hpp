@@ -346,23 +346,14 @@ public:
         const DCArrayKokkos<double>& corner_force) const;
 
     // **** Functions defined in properties.cpp **** //
-    void update_state(
+    void update_properties(
         const Material_t& Materials,
         const swage::Mesh&     mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_vel,
+        const DCArrayKokkos<double>& node_temp,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-        const DCArrayKokkos<double>& GaussPoints_vol,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_statev,
-        const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_specific_heat,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
-        const double dt,
-        const double rk_alpha,
         const size_t num_material_elems,
         const size_t mat_id) const;
 

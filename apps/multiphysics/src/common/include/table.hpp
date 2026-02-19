@@ -204,9 +204,9 @@ struct Table_t{
     void print_table() const {
         for (size_t i = 0; i < num_rows; ++i) {
             for (size_t j = 0; j < num_columns; ++j) {
-                std::cout << data.host(i, j) << " ";
+                printf("%g ", data.host(i, j));
             }
-            std::cout << std::endl;
+            printf("\n");
         }
     }
 };

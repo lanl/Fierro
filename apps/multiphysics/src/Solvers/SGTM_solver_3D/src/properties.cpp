@@ -60,28 +60,40 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::update_state(
+void SGTM3D::update_properties(
     const Material_t& Materials,
     const swage::Mesh&     mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
+    const DCArrayKokkos<double>& node_temp,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-    const DCArrayKokkos<double>& GaussPoints_vol,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_statev,
-    const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-    const DRaggedRightArrayKokkos<size_t>& elem_mat_elem,
-    const double dt,
-    const double rk_alpha,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_specific_heat,
+    const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const size_t num_material_elems,
     const size_t mat_id) const
 {
     const size_t num_dims = mesh.num_dims;
+    const size_t num_nodes_in_elem = 8;
 
+    auto material_table = Materials.MaterialTables(mat_id);
+
+    // Compute the element temperature by averaging the node temperatures
+    FOR_ALL(mat_elem_sid, 0, num_material_elems, {
+
+        // get elem gid
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
+
+        double avg_temp = 0.0;
+        for(int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+            size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+            avg_temp += node_temp(node_gid) / (double)num_nodes_in_elem;
+        }
+
+        // Use that temperature to update the element state using the tabular properties
+        MaterialPoints_den(mat_id, mat_elem_sid) = Materials.MaterialFunctions(mat_id).get_density_from_temperature(material_table.density_table, avg_temp);
+        MaterialPoints_conductivity(mat_id, mat_elem_sid) = Materials.MaterialFunctions(mat_id).get_thermal_conductivity_from_temperature(material_table.thermal_conductivity_table, avg_temp);
+        MaterialPoints_specific_heat(mat_id, mat_elem_sid) = Materials.MaterialFunctions(mat_id).get_specific_heat_from_temperature(material_table.specific_heat_table, avg_temp);
+
+    });
 
 
     return;

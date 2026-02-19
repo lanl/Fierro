@@ -32,45 +32,29 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef TABULAR_MATERIAL_MODEL_H
-#define TABULAR_MATERIAL_MODEL_H
+#ifndef FIERRO_READ_ABAQUS_FILES_H
+#define FIERRO_READ_ABAQUS_FILES_H
 
-#include "material.hpp"
+
+#include <string>
+#include <stdio.h>
+
+#include "matar.h"
 #include "table.hpp"
 
 
-namespace TabularMaterialModel {
+struct SimulationParameters_t;
+struct solver_input_t;
+struct Material_t;
+struct BoundaryCondition_t;
 
-    // tabular material model fields
-    enum Fields
-    {
-        temperature = 0,      ///<  materialdensity
-        density = 1,   ///<  material density
-        thermal_conductivity = 2,   ///<  material thermal conductivity
-        specific_heat = 3,   ///<  material specific heat
-        // bulk_modulus = 4,   ///<  material bulk modulus
-        // Add other fields here
-    };
+using namespace mtr;
 
+namespace AbaqusReader {
 
-    KOKKOS_FUNCTION
-    double get_density_from_temperature(const Table_t& data_table, const double temperature){
-        return data_table.linear_interpolation(temperature, 1, Fields::temperature);
-    }
+    void read_tabular_jmatpro_file(const std::string& file_path, const std::string& table_name, Table_t& table);
 
-    KOKKOS_FUNCTION
-    double get_thermal_conductivity_from_temperature(const Table_t& data_table, const double temperature){
-        return data_table.linear_interpolation(temperature, 1, Fields::temperature);
-    }
-
-    KOKKOS_FUNCTION
-    double get_specific_heat_from_temperature(const Table_t& data_table, const double temperature){
-        return data_table.linear_interpolation(temperature, 1, Fields::temperature);
-    }
-    
-} // end namespace
-
-
+}
 
 
 

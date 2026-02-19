@@ -60,6 +60,7 @@ include_directories(src/material_models/fracture)
 include_directories(src/material_models/strength)
 include_directories(src/material_models/equilibration)
 include_directories(src/material_models/equilibration/include)
+include_directories(src/material_models/tabular/include)
 
 # Boundary conditions
 include_directories(src/boundary_conditions/velocity)

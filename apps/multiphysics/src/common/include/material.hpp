@@ -37,6 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <stdio.h>
 #include "matar.h"
+#include "table.hpp"
 
 using namespace mtr;
 
@@ -131,6 +132,12 @@ namespace model
         advectFront = 2,    ///<  advect the front using prescribed velocity
     };
 
+    // Tabular Models
+    enum TabularModels
+    {
+        noTabularModel = 0, ///<  No tabular model used
+        tabularTemperatureDependent = 1, ///<  tabular temperature dependent model
+    };
 } // end model namespace
 
 
@@ -216,6 +223,16 @@ static std::map<std::string, model::levelSetType> level_set_type_map
     //{ "advect_front", model::advectFront }
 };
 
+
+static std::map<std::string, model::TabularModels> tabular_model_type_map
+{
+    { "no_tabular_model", model::noTabularModel },
+    { "temperature_dependent", model::tabularTemperatureDependent },
+};
+
+
+
+
 namespace model_init
 {
 // strength model setup
@@ -280,11 +297,13 @@ struct MaterialEnums_t
     // dissipation model
     model::DissipationModels DissipationModels = model::noDissipation;
 
-
     // -- level set --
-
     // level set model type: none, evolve, or advect
     model::levelSetType levelSetType = model::noLevelSet;
+
+    // -- tabular --
+    // tabular model type: none, density, thermal conductivity, or specific heat
+    model::TabularModels TabularModels = model::noTabularModel;
 
 }; // end boundary condition enums
 
@@ -384,7 +403,6 @@ struct MaterialFunctions_t
 
 
     // -- Dissipation --
-
     void (*calc_dissipation) (
         const ViewCArrayKokkos<size_t> elem_node_gids,
         const RaggedRightArrayKokkos <double>& dissipation_global_vars,
@@ -408,16 +426,49 @@ struct MaterialFunctions_t
 
     // -- level set --
     // front_velocity = (normal_velocity - curvature*Kappa)
-    double normal_velocity=0.0;    ///< level set velocity in normal direction
-    double curvature_velocity=0.0; ///< level set velocity contribution from curvature
+    double normal_velocity = 0.0;    ///< level set velocity in normal direction
+    double curvature_velocity = 0.0; ///< level set velocity contribution from curvature
 
-}; // end material_t
+
+    // -- tabular --
+    // Tabular density as a function of temperature
+    double (*get_density_from_temperature)(const Table_t& data_table, const double temperature) = NULL;
+    // Tabular thermal conductivity as a function of temperature
+    double (*get_thermal_conductivity_from_temperature)(const Table_t& data_table, const double temperature) = NULL;
+    // Tabular specific heat as a function of temperature
+    double (*get_specific_heat_from_temperature)(const Table_t& data_table, const double temperature) = NULL;
+
+}; // end MaterialFunctions_t
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct material_t
+/// \struct MaterialTables_t
 ///
-/// \brief  A container to hold boundary condition information.  This holds
+/// \brief  Material model tables
+///
+/// In the material object: CArrayKokkos <MaterialTables_t> MaterialTables;
+/////////////////////////////////////////////////////////////////////////////
+struct MaterialTables_t
+{
+
+    // -- tabular --
+    // Tabular density as a function of temperature
+    Table_t density_table;
+    // Tabular thermal conductivity as a function of temperature
+    Table_t thermal_conductivity_table;
+    // Tabular specific heat as a function of temperature
+    Table_t specific_heat_table;
+
+
+}; // end MaterialTables_t
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct Material_t
+///
+/// \brief  A container to hold material information.  This holds
 ///         material functions, and model state, parameters, and values
 ///
 /////////////////////////////////////////////////////////////////////////////
@@ -472,6 +523,9 @@ struct Material_t
 
     size_t max_num_mats_per_element = 3; ///< default is to allow up to 3 materials in an element in setup
 
+    // -- Tabular Material Data --
+    DCArrayKokkos<MaterialTables_t> MaterialTables;
+
 }; // end MaterialModelVars_t
 
 // ----------------------------------
@@ -493,7 +547,8 @@ static std::vector<std::string> str_material_inps
     "erode_density_val",
     "level_set_type",
     "normal_velocity",
-    "curvature_velocity"
+    "curvature_velocity",
+    "tabular_model",
 };
 
 // ----------------------------------
@@ -506,6 +561,22 @@ static std::vector<std::string> str_multimat_inps
     "mat_equilibration_global_vars",
     "geo_equilibration_model",
     "geo_equilibration_global_vars"
+};
+
+// ----------------------------------
+// valid inputs for tabular material options
+// ----------------------------------
+static std::vector<std::string> str_tabular_model_inps
+{
+    "temperature_dependent",
+};
+
+
+static std::vector<std::string> str_tabular_model_valid_fields
+{
+    "density",
+    "thermal_conductivity",
+    "specific_heat",
 };
 
 // ---------------------------------------------------------------

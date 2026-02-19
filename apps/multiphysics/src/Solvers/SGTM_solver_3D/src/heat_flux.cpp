@@ -242,7 +242,7 @@ void SGTM3D::moving_flux(
         size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
         // check if element center is within the sphere
-        double radius = 0.25;
+        double radius = 8.0;
         double radius_squared = radius * radius;
         double volume = (4.0/3) * 3.14159 * radius_squared * radius;
         
