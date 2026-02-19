@@ -1,16 +1,16 @@
 # num_dims: 3
 
 dynamic_options:
-  time_final: 5
+  time_final: 4.0
   dt_min: 1e-6
-  dt_max: 0.05
-  dt_start: 1e-6
+  dt_max: 0.01
+  dt_start: 1.e-5
   cycle_stop: 300000
 
 
 mesh_options:
   source: file
-  file_path: ./standard_inputs/meshes/preload.vtk
+  file_path: ./standard_inputs/meshes/billiards.vtk
   num_dims: 3
 
 #mesh_options:
@@ -25,7 +25,7 @@ mesh_options:
 output_options:
   timer_output_level: thorough
   output_file_format: state
-  graphics_time_step: 5
+  graphics_time_step: 4.0
   # graphics_iteration_step: 10
 
 solver_options:
@@ -56,7 +56,7 @@ boundary_conditions:
       solver_id: 0
       surface: 
           type: z_plane
-          plane_position: 1.5
+          plane_position: 0.5
       velocity_model: reflected
       velocity_bc_global_vars:
           - 0
@@ -68,7 +68,7 @@ boundary_conditions:
       solver_id: 0
       surface:
           type: global
-      stress_model: preload_contact
+      stress_model: global_contact
 
 materials:
   - material:
@@ -114,10 +114,10 @@ regions:
         origin: [0.0, 0.0, 0.0]
         x1: -0.25
         x2: 0.25
-        y1: -0.25
-        y2: 0.25
-        z1: 1.0
-        z2: 1.5
+        y1: 0.0
+        y2: 0.5
+        z1: 0.0
+        z2: 0.5
       material_id: 0
       solver_id: 0
       density:
@@ -129,6 +129,5 @@ regions:
       velocity: 
         type: cartesian
         u: 0.0
-        v: 0.0
+        v: 0.5
         w: 0.0
-

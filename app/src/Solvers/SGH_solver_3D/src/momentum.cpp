@@ -73,7 +73,7 @@ void SGH3D::update_velocity(double rk_alpha,
                 //node_force(node_gid, dim) += contact_node.contact_force(dim);
                 node_force(node_gid, dim) += contact_force(node_gid, dim);
             } // end for dim
-            //std::cout << node_gid << "    "  << contact_node.contact_force(0) <<  "    "  << contact_node.contact_force(1) << "    "  << contact_node.contact_force(2) << std::endl;
+            //printf("contact forces for node: %lu  are: %e %e %e\n", node_gid, contact_force(node_gid, 0), contact_force(node_gid, 1), contact_force(node_gid, 2));
         }
 
         // loop over all corners around the node and calculate the nodal force

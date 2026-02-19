@@ -1,0 +1,171 @@
+# num_dims: 3
+
+dynamic_options:
+    time_final: 149
+    dt_min: 1.e-8
+    dt_max: 1.e-1
+    dt_start: 1.e-5
+    cycle_stop: 10000000
+
+
+mesh_options:
+  source: file
+  file_path: ./standard_inputs/meshes/cylinder_contact.vtk
+  num_dims: 3
+  #scale_x: 1.0
+  #scale_y: 1.0
+  #scale_z: 1.0
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: state
+    graphics_time_step: 149 #1
+    # graphics_iteration_step: 10
+
+solver_options:
+  - solver:
+        method: dynx_FE
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+boundary_conditions:
+  # global contact condition (this should be used when it is not clear what the contact surface(s) will be)
+  - boundary_condition:
+      solver_id: 0
+      surface:
+          type: global
+      stress_model: global_contact
+
+  
+materials:
+
+    - material:
+        id: 0  # metal: Copper
+        #-----EOS
+        eos_model_type: decoupled
+        eos_model: linear_elastic_eos  
+        # bulk modulus
+        # shear modulus
+        # refernce den
+        # cs min
+        eos_global_vars:
+            - 1.30 # B from Azo materials online
+            - 0.4333 # G from Azo materials online
+            - 8.93 # ref density from Azo materials online
+            - 0.001 
+        #------Strength
+        strength_model_type: increment_based
+        strength_model: hypo_plasticity_strength
+        # shear modulus of copper
+        # yield strength of copper
+        strength_global_vars:
+            - 0.4333
+            - 0.004
+        # ------ArtVisc
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.333 # q1ex
+            - 1.0   # q2
+            - 1.333 # q2ex
+            - 0.05   # min limiter
+            - 1.0
+    
+    #- material:
+    #    id: 1  # metal: Steel
+    #    #-----EOS
+    #    eos_model_type: decoupled
+    #    eos_model: linear_elastic_eos  
+    #    # bulk modulus
+    #    # shear modulus
+    #    # refernce den
+    #    # cs min
+    #    eos_global_vars:
+    #        - 1.40 # B from Azo materials online
+    #        - 0.801 # G from Azo materials online
+    #        - 8.00 # ref density from Azo materials online
+    #        - 0.001 
+    #    #------Strength
+    #    strength_model_type: increment_based
+    #    strength_model: hypo_plasticity_strength
+    #    # shear modulus of copper
+    #    # yield strength of copper
+    #    strength_global_vars:
+    #        - 0.801
+    #        - 0.02
+    #    # ------ArtVisc
+    #    dissipation_model: MARS
+    #    dissipation_global_vars:
+    #        - 1.0   # q1
+    #        - 1.333 # q1ex
+    #        - 1.0   # q2
+    #        - 1.333 # q2ex
+    #        - 0.05   # min limiter
+    #        - 1.0
+  #- material:
+  #    id: 0
+  #    eos_model_type: decoupled
+  #    eos_model: gamma_law_gas
+  #    # strength_model: none
+  #    dissipation_model: MARS
+  #    dissipation_global_vars:
+  #        - 1.0   # q1
+  #        - 1.0   # q1ex
+  #        - 1.333 # q2
+  #        - 1.333 # q2ex
+  #        - 0.1     # phi_min
+  #        - 1.0   # phi_curl
+  #    eos_global_vars:
+  #        - 10 #1.666666666666667
+  #        - 1.0E-14
+  #        - 1.0
+
+
+regions:
+    # fill with copper
+    - region:
+        volume:
+            type: global
+        material_id: 0
+        density: 
+            type: uniform
+            value: 8.93
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity:
+            type: cartesian
+            u: 0.0  
+            v: 0.0
+            w: 0.0 #-0.0205
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    - region:
+        volume:
+            type: box
+            x1: -2
+            x2: 2
+            y1: -2
+            y2: 2
+            z1: 3
+            z2: 7
+        material_id: 0
+        density: 
+            type: uniform
+            value: 8.93
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity:
+            type: cartesian
+            u: 0.0  
+            v: 0.0
+            w: -0.01 #-0.0205
+        volume_fraction:
+            type: uniform
+            value: 1.0
