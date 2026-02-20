@@ -1,5 +1,5 @@
 /**********************************************************************************************
-� 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -32,72 +32,35 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef FIERRO_SOLVER_INPUT_OPTIONS_H
-#define FIERRO_SOLVER_INPUT_OPTIONS_H
-#include <stdio.h>
-#include "matar.h"
+#include "tlqs_solver_3D.hpp"
+#include "region_fill.hpp"
+#include "material.hpp"
+#include "boundary_conditions.hpp"
+#include "state.hpp"
+#include "simulation_parameters.hpp"
+#include "geometry_new.hpp"
 
-namespace solver_input
-{
-    // solver method
-    enum method
-    {
-        NONE = 0,
-        SGH3D = 1,
-        SGHRZ = 2,
-        SGTM3D = 3,
-        levelSet = 4,
-        TLQS3D = 5
-    };
-} // end of namespace
 
-static std::map<std::string, solver_input::method> solver_map
-{
-    { "dynx_FE",    solver_input::SGH3D },
-    { "dynx_FE_rz", solver_input::SGHRZ },
-    { "thrmex_FE",  solver_input::SGTM3D },
-    { "level_set",   solver_input::levelSet },
-    { "tlqs_FE",   solver_input::TLQS3D }
-};
-// quasi-static mechanics FE (qz-FE)
-// quasi-static thermal-mechanical FE  (qz-thmec-FE)
-// quasi-static mechanical GF (qz-GF)
-// quasi-static mechanical large-strain GF 
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \structsolver_input_t
+/// \fn setup the TLQS method
 ///
-/// \brief Struct for holding metadata on which solvers are used.
+/// \brief Allocate state, setup models, and fill mesh regions per the YAML input
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct solver_input_t
+void TLQS3D::setup(SimulationParameters_t& SimulationParamaters, 
+                Material_t& Materials, 
+                swage::Mesh& mesh, 
+                BoundaryCondition_t& Boundary,
+                State_t& State)
 {
-    solver_input::method method = solver_input::NONE;
+    // add a flag on whether TLQS was set up, if(TLQS_setup_already==false)
+    
+    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
-    double time_end = 0.0;
 
-    bool use_moving_heat_source = false;
-}; // solver_input_t
 
-// ----------------------------------
-// valid inputs for solver options
-// ----------------------------------
-static std::vector<std::string> str_solver_inps
-{
-    "method",
-    "id",
-    "time_end",
-    "use_moving_heat_source"
-};
-
-// ----------------------------------
-// required inputs for solver options
-// ----------------------------------
-static std::vector<std::string> solver_required_inps
-{
-    "method",
-    "id"
-};
-
-#endif // end Header Guard
+    return;
+} // end TLQS setup

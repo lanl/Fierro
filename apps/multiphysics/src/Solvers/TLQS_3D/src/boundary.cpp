@@ -32,72 +32,53 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef FIERRO_SOLVER_INPUT_OPTIONS_H
-#define FIERRO_SOLVER_INPUT_OPTIONS_H
-#include <stdio.h>
-#include "matar.h"
 
-namespace solver_input
-{
-    // solver method
-    enum method
-    {
-        NONE = 0,
-        SGH3D = 1,
-        SGHRZ = 2,
-        SGTM3D = 3,
-        levelSet = 4,
-        TLQS3D = 5
-    };
-} // end of namespace
+#include "tlqs_solver_3D.hpp"
+#include "boundary_conditions.hpp"
 
-static std::map<std::string, solver_input::method> solver_map
-{
-    { "dynx_FE",    solver_input::SGH3D },
-    { "dynx_FE_rz", solver_input::SGHRZ },
-    { "thrmex_FE",  solver_input::SGTM3D },
-    { "level_set",   solver_input::levelSet },
-    { "tlqs_FE",   solver_input::TLQS3D }
-};
-// quasi-static mechanics FE (qz-FE)
-// quasi-static thermal-mechanical FE  (qz-thmec-FE)
-// quasi-static mechanical GF (qz-GF)
-// quasi-static mechanical large-strain GF 
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \structsolver_input_t
+/// \fn boundary_position
 ///
-/// \brief Struct for holding metadata on which solvers are used.
+/// \brief Evolves the boundary according to a given velocity
+///
+/// \param mesh The simulation mesh
+/// \param BoundaryConditions Boundary contains arrays of information about BCs
+/// \param node_vel The nodal velocity array
+/// \param time_value The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct solver_input_t
+void TLQS3D::boundary_position(const swage::Mesh& mesh,
+    const BoundaryCondition_t& BoundaryConditions,
+    DCArrayKokkos<double>& node_vel,
+    const double time_value) const
 {
-    solver_input::method method = solver_input::NONE;
+    size_t num_pos_bdy_sets = BoundaryConditions.num_pos_bdy_sets_in_solver.host(this->solver_id);
 
-    double time_end = 0.0;
+    // Loop over the velocity boundary sets
+    for (size_t bc_lid = 0; bc_lid < num_pos_bdy_sets; bc_lid++) {
 
-    bool use_moving_heat_source = false;
-}; // solver_input_t
+        size_t bdy_set = BoundaryConditions.vel_bdy_sets_in_solver.host(this->solver_id, bc_lid);
 
-// ----------------------------------
-// valid inputs for solver options
-// ----------------------------------
-static std::vector<std::string> str_solver_inps
-{
-    "method",
-    "id",
-    "time_end",
-    "use_moving_heat_source"
-};
+        // Loop over boundary nodes in a boundary set
+        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
+            // get the global index for this node on the boundary
+            size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
-// ----------------------------------
-// required inputs for solver options
-// ----------------------------------
-static std::vector<std::string> solver_required_inps
-{
-    "method",
-    "id"
-};
+            // evaluate velocity on this boundary node
+            BoundaryConditions.BoundaryConditionFunctions(bdy_set).position(
+                mesh,
+                BoundaryConditions.BoundaryConditionEnums,
+                BoundaryConditions.velocity_bc_global_vars,
+                BoundaryConditions.bc_state_vars,
+                node_vel,
+                time_value,
+                1, // rk_stage isn't used
+                bdy_node_gid,
+                bdy_set);
+        }); // end for bdy_node_lid
+    } // end for bdy_set
 
-#endif // end Header Guard
+    return;
+} // end boundary_position function

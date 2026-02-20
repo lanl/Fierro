@@ -1,5 +1,5 @@
 /**********************************************************************************************
-� 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -32,72 +32,62 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef FIERRO_SOLVER_INPUT_OPTIONS_H
-#define FIERRO_SOLVER_INPUT_OPTIONS_H
-#include <stdio.h>
-#include "matar.h"
+#include "tlqs_solver_3D.hpp"
+#include "state.hpp"
+#include "simulation_parameters.hpp"
 
-namespace solver_input
+
+void TLQS3D::initialize(SimulationParameters_t& SimulationParamaters, 
+                	   Material_t& Materials, 
+                	   swage::Mesh& mesh, 
+                	   BoundaryCondition_t& Boundary,
+                	   State_t& State) const
 {
-    // solver method
-    enum method
-    {
-        NONE = 0,
-        SGH3D = 1,
-        SGHRZ = 2,
-        SGTM3D = 3,
-        levelSet = 4,
-        TLQS3D = 5
-    };
-} // end of namespace
+	const size_t num_nodes = mesh.num_nodes;
+    const size_t num_gauss_pts = mesh.num_elems;
+    const size_t num_corners = mesh.num_corners;
+    const size_t num_dims = mesh.num_dims;
 
-static std::map<std::string, solver_input::method> solver_map
+    if (num_dims != 3){
+        std::cout << "Wrong dimensions of " << num_dims << "\n";
+        throw std::runtime_error("**** Total Lagrangian Quasi-Static solver is for 3D coordinates, wrong dimensions specified in input ****");
+    }
+
+    // mesh state
+    State.node.initialize(num_nodes, num_dims, TLQS3D_State::required_node_state);
+    State.GaussPoints.initialize(num_gauss_pts, num_dims, TLQS3D_State::required_gauss_pt_state);
+    State.corner.initialize(num_corners, num_dims, TLQS3D_State::required_corner_state);
+
+    // check that the fills specify the required nodal fields
+    bool filled_nodal_state =
+        check_fill_node_states(TLQS3D_State::required_fill_node_state,
+                               SimulationParamaters.region_setups.fill_node_states);
+    
+    if (filled_nodal_state == false){
+        std::cout <<" Missing required nodal state in the fill instructions for the TLQS solver \n";
+        std::cout <<" The nodal velocity must be specified. \n" << std::endl;
+        throw std::runtime_error("**** Provide fill instructions for all required nodal variables ****");
+    }
+
+
+} // end solver initialization
+
+void TLQS3D::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+    Material_t& Materials, 
+    swage::Mesh& mesh, 
+    BoundaryCondition_t& Boundary,
+    State_t& State) const
 {
-    { "dynx_FE",    solver_input::SGH3D },
-    { "dynx_FE_rz", solver_input::SGHRZ },
-    { "thrmex_FE",  solver_input::SGTM3D },
-    { "level_set",   solver_input::levelSet },
-    { "tlqs_FE",   solver_input::TLQS3D }
-};
-// quasi-static mechanics FE (qz-FE)
-// quasi-static thermal-mechanical FE  (qz-thmec-FE)
-// quasi-static mechanical GF (qz-GF)
-// quasi-static mechanical large-strain GF 
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \structsolver_input_t
-///
-/// \brief Struct for holding metadata on which solvers are used.
-///
-/////////////////////////////////////////////////////////////////////////////
-struct solver_input_t
-{
-    solver_input::method method = solver_input::NONE;
+    // -----
+    //  Allocation of state includes the buffer set in region_fill.cpp, it's needed for ALE
+    // -----
 
-    double time_end = 0.0;
+    State.MaterialToMeshMaps.initialize();
+    State.MaterialPoints.initialize(mesh.num_dims, TLQS3D_State::required_material_pt_state); 
+    // corners are not used
+    // zones are not used
 
-    bool use_moving_heat_source = false;
-}; // solver_input_t
+} // end solver initialization
 
-// ----------------------------------
-// valid inputs for solver options
-// ----------------------------------
-static std::vector<std::string> str_solver_inps
-{
-    "method",
-    "id",
-    "time_end",
-    "use_moving_heat_source"
-};
 
-// ----------------------------------
-// required inputs for solver options
-// ----------------------------------
-static std::vector<std::string> solver_required_inps
-{
-    "method",
-    "id"
-};
-
-#endif // end Header Guard

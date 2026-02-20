@@ -59,12 +59,12 @@
  
  
  
- void LevelSet::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
-                                       Material_t& Materials, 
-                                       swage::Mesh& mesh, 
-                                       BoundaryCondition_t& Boundary,
-                                       State_t& State) const
- {
+void LevelSet::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
+                                    Material_t& Materials, 
+                                    swage::Mesh& mesh, 
+                                    BoundaryCondition_t& Boundary,
+                                    State_t& State) const
+{
 
     // -----
     //  Allocation of state includes the buffer set in region_fill.cpp, it's needed for ALE
@@ -75,4 +75,4 @@
     // corners are not used
     // zones are not used
 
- } // end solver initialization
+} // end solver initialization

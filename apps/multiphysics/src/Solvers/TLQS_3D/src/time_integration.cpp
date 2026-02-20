@@ -32,72 +32,59 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef FIERRO_SOLVER_INPUT_OPTIONS_H
-#define FIERRO_SOLVER_INPUT_OPTIONS_H
-#include <stdio.h>
-#include "matar.h"
-
-namespace solver_input
-{
-    // solver method
-    enum method
-    {
-        NONE = 0,
-        SGH3D = 1,
-        SGHRZ = 2,
-        SGTM3D = 3,
-        levelSet = 4,
-        TLQS3D = 5
-    };
-} // end of namespace
-
-static std::map<std::string, solver_input::method> solver_map
-{
-    { "dynx_FE",    solver_input::SGH3D },
-    { "dynx_FE_rz", solver_input::SGHRZ },
-    { "thrmex_FE",  solver_input::SGTM3D },
-    { "level_set",   solver_input::levelSet },
-    { "tlqs_FE",   solver_input::TLQS3D }
-};
-// quasi-static mechanics FE (qz-FE)
-// quasi-static thermal-mechanical FE  (qz-thmec-FE)
-// quasi-static mechanical GF (qz-GF)
-// quasi-static mechanical large-strain GF 
+    #include "sgh_solver_3D.hpp"
+    //#include "mesh.hpp""
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \structsolver_input_t
+/// \fn timestep_init
 ///
-/// \brief Struct for holding metadata on which solvers are used.
+/// \brief This function saves the variables at rk_stage = 0, which is t_n
+///
+/// \param View of nodal position data
+/// \param View of nodal velocity data
+/// \param View of element specific internal energy data
+/// \param View of element stress
+/// \param Number of dimension (REMOVE)
+/// \param Number of elements
+/// \param Number of nodes
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct solver_input_t
+void TLQS3D::timestep_init(
+    DCArrayKokkos<double>& node_coords,
+    DCArrayKokkos<double>& node_coords_n0,
+    DCArrayKokkos<double>& node_vel,
+    DCArrayKokkos<double>& node_vel_n0,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
+    const size_t num_dims,
+    const size_t num_elems,
+    const size_t num_nodes,
+    const size_t num_mat_points,
+    const size_t mat_id) const
 {
-    solver_input::method method = solver_input::NONE;
+    // // save elem quantities
+    // FOR_ALL(matpt_lid, 0, num_mat_points, {
+    //     // stress is always 3D even with 2D-RZ
+    //     for (size_t i = 0; i < 3; i++) {
+    //         for (size_t j = 0; j < 3; j++) {
+    //             MaterialPoints_stress_n0(mat_id, matpt_lid, i, j) = MaterialPoints_stress(mat_id, matpt_lid, i, j);
+    //         }
+    //     }  // end for
 
-    double time_end = 0.0;
+    //     MaterialPoints_sie_n0(mat_id, matpt_lid) = MaterialPoints_sie(mat_id, matpt_lid);
+    // }); // end parallel for
 
-    bool use_moving_heat_source = false;
-}; // solver_input_t
+    // // save nodal quantities
+    // FOR_ALL(node_gid, 0, num_nodes, {
+    //     for (size_t i = 0; i < num_dims; i++) {
+    //         node_coords_n0(node_gid, i) = node_coords(node_gid, i);
+    //         node_vel_n0(node_gid, i)    = node_vel(node_gid, i);
+    //     }
+    // }); // end parallel for
+    // Kokkos::fence();
 
-// ----------------------------------
-// valid inputs for solver options
-// ----------------------------------
-static std::vector<std::string> str_solver_inps
-{
-    "method",
-    "id",
-    "time_end",
-    "use_moving_heat_source"
-};
-
-// ----------------------------------
-// required inputs for solver options
-// ----------------------------------
-static std::vector<std::string> solver_required_inps
-{
-    "method",
-    "id"
-};
-
-#endif // end Header Guard
+    return;
+} // end rk_init

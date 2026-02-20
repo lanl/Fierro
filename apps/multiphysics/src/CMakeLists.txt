@@ -2,34 +2,34 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mod
 include(cmake/Modules/FindVector.cmake OPTIONAL)
 
 if(NOT DEFINED BUILD_EXPLICIT_SOLVER)
-  set(BUILD_EXPLICIT_SOLVER ON)
+    set(BUILD_EXPLICIT_SOLVER ON)
 endif()
 
 if(NOT DEFINED BUILD_KOKKOS_SGH)
-  set(BUILD_KOKKOS_SGH OFF)
+    set(BUILD_KOKKOS_SGH OFF)
 endif()
 
 if(NOT DEFINED BUILD_1D_KOKKOS_SGH)
-  set(BUILD_1D_KOKKOS_SGH OFF)
+    set(BUILD_1D_KOKKOS_SGH OFF)
 endif()
 
 if(NOT DEFINED PARALLEL_DIRECT_SOLVER)
-  set(PARALLEL_DIRECT_SOLVER OFF)
+    set(PARALLEL_DIRECT_SOLVER OFF)
 endif()
 
 if(NOT DEFINED BUILD_KOKKOS_RDH)
-  set(BUILD_KOKKOS_RDH OFF)
+    set(BUILD_KOKKOS_RDH OFF)
 endif()
 
 find_package(Vector)
 if (CMAKE_VECTOR_NOVEC)
-  set(VECTOR_C_FLAGS "${VECTOR_NOVEC_C_FLAGS}")
-  set(VECTOR_CXX_FLAGS "${VECTOR_NOVEC_CXX_FLAGS}")
+    set(VECTOR_C_FLAGS "${VECTOR_NOVEC_C_FLAGS}")
+    set(VECTOR_CXX_FLAGS "${VECTOR_NOVEC_CXX_FLAGS}")
 endif (CMAKE_VECTOR_NOVEC)
 if (CMAKE_VECTOR_VERBOSE)
-  set(VECTOR_C_FLAGS "${VECTOR_C_FLAGS} ${VECTOR_C_VERBOSE}")
-  set(VECTOR_CXX_FLAGS "${VECTOR_CXX_FLAGS} ${VECTOR_CXX_VERBOSE}")
-  set(VECTOR_Fortran_FLAGS "${VECTOR_Fortran_FLAGS} ${VECTOR_Fortran_VERBOSE}")
+    set(VECTOR_C_FLAGS "${VECTOR_C_FLAGS} ${VECTOR_C_VERBOSE}")
+    set(VECTOR_CXX_FLAGS "${VECTOR_CXX_FLAGS} ${VECTOR_CXX_VERBOSE}")
+    set(VECTOR_Fortran_FLAGS "${VECTOR_Fortran_FLAGS} ${VECTOR_Fortran_VERBOSE}")
 endif (CMAKE_VECTOR_VERBOSE)
 set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} ${VECTOR_Fortran_FLAGS}")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${VECTOR_C_FLAGS}")
@@ -41,13 +41,13 @@ message("\n ****** ADDING FIERRO EXECUTABLE ******** \n ")
 add_definitions(-DHAVE_KOKKOS=1)
 
 if (CUDA)
-  add_definitions(-DHAVE_CUDA=1)
+    add_definitions(-DHAVE_CUDA=1)
 elseif (HIP)
-  add_definitions(-DHAVE_HIP=1)
+    add_definitions(-DHAVE_HIP=1)
 elseif (OPENMP)
-  add_definitions(-DHAVE_OPENMP=1)
+    add_definitions(-DHAVE_OPENMP=1)
 elseif (THREADS)
-  add_definitions(-DHAVE_THREADS=1)
+    add_definitions(-DHAVE_THREADS=1)
 endif()
 
 # Add common files
@@ -68,9 +68,21 @@ add_subdirectory(Solvers/SGTM_solver_3D)
 
 #Add Level Set Solver
 include_directories(Solvers/level_set_solver/include)
-add_subdirectory(Solvers/level_set_solver)
+add_subdirectory(Solvers/level_set_solver)\
 
-add_executable(Fierro main.cpp driver.cpp solver.cpp ${COMMON_Files} ${EQUILIBRATION_Files} ${YAML_SRC_Files} ${SGH_3D_SRC_Files} ${SGH_RZ_SRC_Files} ${SGTM_3D_SRC_Files} ${LVLSET_SRC_Files})
+# Add TLQS Solver
+include_directories(Solvers/TLQS_solver_3D/include)
+add_subdirectory(Solvers/TLQS_solver_3D)
+
+add_executable(Fierro main.cpp driver.cpp solver.cpp 
+    ${COMMON_Files} 
+    ${EQUILIBRATION_Files} 
+    ${YAML_SRC_Files}
+    ${SGH_3D_SRC_Files}
+    ${SGH_RZ_SRC_Files} 
+    ${SGTM_3D_SRC_Files} 
+    ${LVLSET_SRC_Files} 
+    ${TLQS_3D_SRC_Files})
 target_link_libraries(Fierro PRIVATE ELEMENTS)
 
 # Place the executable in the 'app' directory under the build directory
