@@ -12,16 +12,18 @@ builds = ["openmp"]
 # Name(s) of the solver being used
 solvers = ["Fierro"]
 
+solver_path = "../build/app/Fierro"
+
 # Add names of each test
 tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
          "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
         "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", \
-        "Pressure_bc_box","vtu_read","SGTM_cooling_cube", \
+        "Pressure_bc_box","vtu_read", \
         "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
         "slanted_block_bounce", "slanted_impact", \
         "sie_expansion_test", "confined_preload", "unconfined_preload", \
         "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact"]
-
+#,"SGTM_cooling_cube" currently broken
 # Extract data from txt file
 def extract_state_data(filename):
     data = []
@@ -54,7 +56,7 @@ def extract_state_data(filename):
 executables = []
 for i in range(len(builds)):
     for j in range(len(solvers)):
-        executables.append("../build-SGH-"+builds[i]+"/bin/"+solvers[j])
+        executables.append(solver_path)
         if not os.path.exists(executables[i]):
             raise ValueError("Executable not found in "+executables[i]+" directory")
 

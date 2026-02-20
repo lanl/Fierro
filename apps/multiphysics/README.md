@@ -147,6 +147,32 @@ cmake -DFIERRO_ENABLE_SERIAL=ON \
 Note that CUDA and HIP backends are mutually exclusive and cannot be enabled together.
 
 
+## Testing Your Install
+
+After building, you can verify your installation by running the regression test suite. The regression tests compare simulation results against known reference solutions to ensure the code is working correctly.
+
+### Running Regression Tests
+
+1. **Navigate to the regression tests directory**:
+   ```bash
+   cd regression_tests
+   ```
+2.  **Run the regression test suite**:
+   ```bash
+   python test_refactor.py
+   ```
+
+   The script will:
+   - Run each test case using the Fierro executable from `../build/app/Fierro`
+   - Compare the output state files against reference results in `standard_results/`
+   - Report any failures if results don't match within the tolerance (1E-8)
+   - Clean up temporary state files after each test
+
+3. **Expected output**: You should see progress messages for each test followed by "PASSED" confirmations. If any test fails, the script will report the specific field and test case that failed.
+
+**Note**: The test script expects the Fierro executable to be located at `../build/app/Fierro` relative to the `regression_tests` directory. If you built Fierro in a different location, you may need to update the `solver_path` variable in `test_refactor.py` or create a symbolic link.
+
+
 ## Running Fierro-multiphysics
 
 Fierro is executed from the command line and requires a YAML input file.

@@ -312,14 +312,14 @@ public:
 
     void get_velgrad(
         DCArrayKokkos<double>& vel_grad,
-        const swage::Mesh mesh,
+        const swage::Mesh& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& elem_vol) const;
 
     void get_divergence(
         DCArrayKokkos<double>& GaussPoints_div,
-        const swage::Mesh mesh,
+        const swage::Mesh& mesh,
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vol) const;
