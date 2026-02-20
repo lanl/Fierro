@@ -1,87 +1,3 @@
-# Fierro Multiphysics
-
-Fierro Multiphysics is a suite of Lagrangian finite element methods designed to simulate multi-material, multi-physics problems. The code supports various solvers including 3D Cartesian hydrodynamics, 2D axisymmetric hydrodynamics, level set evolution, and transient thermal analysis for additive manufacturing.
-
-## Solvers
-
-### SGH-3D
-The SGH-3D solver is a 3D Cartesian Hydrodynamics Solver operating on unstructured hexahedral meshes. It employs a lumped-mass conservative Lagrangian finite element hydrodynamic method capable of handling compressible material dynamics with diverse materials. Key features include:
-- **Geometry:** Geometry and velocity fields defined by Lagrangian basis functions.
-- **Mass Conservation:** Strong mass conservation used for density calculation.
-- **Velocity Evolution:** Galerkin approach with a lumped mass matrix.
-- **Energy Conservation:** Compatible discretization for specific internal energy evolution, staggered from velocity.
-- **Time Integration:** Explicit two-step Runge-Kutta method.
-- **Dissipation:** Tensoral dissipation term (MARS) for shock stability.
-
-### SGH-RZ
-The SGH-RZ solver is an Axisymmetric Hydrodynamics Solver designed for 2D axisymmetric coordinates $(z, r, \varphi)$. It reduces 3D problems to 2D while preserving mass and total energy.
-- **Geometry:** Defined by Lagrange basis functions in 2D.
-- **Symmetry:** Preserves symmetry on 1D radial flows using equal angle polar meshes.
-- **Velocity Evolution:** Petrov-Galerkin approach with specialized test functions ($\eta_q = \phi_q \frac{r_q}{r}$).
-- **Energy Conservation:** Compatible specific internal energy evolution ensuring total energy conservation.
-- **Time Integration:** Explicit two-step Runge-Kutta method.
-
-### Level_set_solver
-The Level Set Solver is designed to model dynamically evolving fronts, such as interfaces or phase boundaries, on unstructured meshes.
-- **Evolution Equation:** Solves $\frac{\partial \phi}{\partial t} + v_n ||\nabla \phi|| = 0$.
-- **Discretization:** Finite difference approach with upwind approximation of the Hamiltonian using corner weights.
-- **Corner Weights:** Calculated based on the dot product of corner velocity and element corner unit normal to ensure stable upwinding.
-- **Time Integration:** Multi-stage Runge-Kutta method.
-
-### Staggered Grid Thermo Mechanical Solver (SGTM)
-The SGTM solver is a transient thermal solver tailored for simulating evolving temperature fields in additive manufacturing (AM) and welding processes.
-- **Thermal Evolution:** Finite volume-like approach for nodal temperatures using finite element basis functions for gradients.
-- **Heat Flux:** Calculated as $\textbf{q}_h = -k_h\nabla T_h$.
-- **Boundary Conditions:** Supports convection and radiation heat transfer.
-- **Coupling:** Calculates thermal stress based on thermal expansion: $\boldsymbol{\sigma}_h = E\alpha (T_h - T^0)\textbf{I}$.
-- **Time Integration:** Second-order Runge-Kutta scheme.
-
-## Building the Multiphysics Code
-
-To build the Fierro multiphysics executable, you can use CMake. The project depends on the **ELEMENTS** library, which is included as a submodule.
-
-### Prerequisites
-- CMake (3.17+)
-- C++ Compiler (C++17 standard)
-- MPI
-- OpenMP (optional, for parallel backend)
-
-
-### Build Steps
-
-1.  **Clone the repository** (if not already done):
-    ```bash
-    git clone --recursive https://github.com/lanl/Fierro.git
-    cd Fierro
-    ```
-
-2.  **Create a build directory:**
-    ```bash
-    mkdir build
-    cd build
-    ```
-
-3.  **Configure with CMake:**
-    To build with the default Serial backend:
-    ```bash
-    cmake ../apps/multiphysics
-    ```
-    To build with OpenMP support:
-    ```bash
-    cmake -DFIERRO_ENABLE_OPENMP=ON ../apps/multiphysics
-    ```
-
-4.  **Build the executable:**
-    ```bash
-    make -j
-    ```
-
-5.  **Run:**
-    The executable `Fierro` will be located in the `app` directory.
-    ```bash
-    ./app/Fierro [input_file.yaml]
-    ```
-
 ## Running Fierro
 
 Fierro is executed from the command line and requires a YAML input file.
@@ -107,12 +23,16 @@ The Fierro input file is organized into several key sections, each controlling a
 #### dynamic_options
 This section controls time integration parameters for the simulation.
 
+*   `time_initial`: The start time for the simulation (double).
 *   `time_final`: The end time for the simulation (double).
 *   `dt_min`: The minimum allowable time step (double).
 *   `dt_max`: The maximum allowable time step (double).
 *   `dt_start`: The initial time step (double).
 *   `dt_cfl`: The CFL (Courant-Friedrichs-Lewy) condition factor, controlling time step stability (double).
 *   `cycle_stop`: The maximum number of computational cycles/iterations to run (integer).
+*   `fuzz`: Small epsilon value for floating point comparisons (double).
+*   `tiny`: Very small value threshold (double).
+*   `small`: Small value threshold (double).
 *   `rk_num_stages`: Number of Runge-Kutta stages for time integration (integer).
 
 #### mesh_options
@@ -141,10 +61,10 @@ Manages simulation output frequency, format, and fields.
 *   `output_file_format`: Format of the output files (string, e.g., `viz`, `viz_and_state`).
 *   `graphics_time_step`: Simulation time interval between output dumps (double).
 *   `graphics_iteration_step`: Cycle interval between output dumps (integer).
-*   `elem_field_outputs`: List of element-centered fields to output (e.g., `den`, `mass`, `pres`, `sie`, `sspd`, `stress`).
-*   `node_field_outputs`: List of node-centered fields to output (e.g., `coords`, `force`, `grad_level_set`, `mass`, `temp`, `vel`).
-*   `mat_pt_field_outputs`: List of material point fields to output (e.g., `den`, `eroded`, `mass`, `pres`, `sie`, `sspd`, `stress`, `volfrac`).
-*   `gauss_pt_field_outputs`: List of Gauss point fields to output (e.g., `level_set`, `vel_grad`, `volume`).
+*   `elem_field_outputs`: List of element-centered fields to output. Options: `den`, `mass`, `pres`, `sie`, `sspd`, `stress`.
+*   `node_field_outputs`: List of node-centered fields to output. Options: `coords`, `force`, `grad_level_set`, `mass`, `temp`, `vel`.
+*   `mat_pt_field_outputs`: List of material point fields to output. Options: `den`, `eroded`, `mass`, `pres`, `sie`, `sspd`, `stress`, `volfrac`.
+*   `gauss_pt_field_outputs`: List of Gauss point fields to output. Options: `level_set`, `vel_grad`, `volume`.
 
 #### solver_options
 Specifies the physics solvers to be used in the simulation. This is a list of solver blocks.
@@ -192,6 +112,9 @@ Defines the material properties. This is a list of material blocks.
     *   `erode_tension_val`: Tension value for erosion (double).
     *   `erode_density_val`: Density value for erosion (double).
     *   `level_set_type`: Type of level set for this material (string).
+    *   `normal_velocity`: Normal velocity component for level set evolution (double).
+    *   `curvature_velocity`: Curvature-dependent velocity component for level set evolution (double).
+    *   `tabular_model`: File path or definition for tabular material models (string).
 
 #### multimaterial_options
 Configures options for handling mixed-material elements.
@@ -212,12 +135,39 @@ Defines initial conditions by assigning material properties and state variables 
         *   `x1`, `x2`, `y1`, `y2`, `z1`, `z2`: Bounds for box regions (doubles).
         *   `radius1`, `radius2`: Radii for cylinder/sphere (doubles).
         *   `origin`: Origin of the volume (list of doubles).
+        *   `part_id`: ID of the part for multi-part meshes (integer).
     *   `solver_id`: ID of the solver this region belongs to (integer).
     *   `material_id`: ID of the material to assign to this region (integer).
     *   `volume_fraction`: Fraction of the element volume filled by this region.
         *   `type`: Distribution type. Options: `<radial>`, `<spherical>`, `<tg_vortex>`, `<uniform>`, `<x_linear>`, `<y_linear>`, `<z_linear>`.
         *   `value`: Constant value or base value (double).
-    *   `velocity`, `temperature`, `density`, `specific_heat`, `thermal_conductivity`, `specific_internal_energy`, `internal_energy`, `level_set`: Initial state fields.
-        *   `type`: Distribution type (same options as volume_fraction plus `<cartesian>` for velocity).
+        *   `slope`: Slope for linear distributions (double).
+        *   `origin`: Origin for radial/spherical distributions (list of doubles).
+    *   `velocity`: Initial velocity field.
+        *   `type`: Distribution type. Options: `<cartesian>`, `<radial>`, `<radial_linear>`, `<spherical>`, `<spherical_linear>`, `<static>`, `<tg_vortex>`.
         *   `value`: Value for uniform distribution (double).
         *   `u`, `v`, `w`: Velocity components for Cartesian velocity (doubles).
+        *   `speed`: Speed magnitude for radial/spherical distributions (double).
+    *   `temperature`: Initial temperature field.
+        *   `type`: Distribution type. Options: `<radial>`, `<spherical>`, `<tg_vortex>`, `<uniform>`, `<x_linear>`, `<y_linear>`, `<z_linear>`.
+        *   `value`: Value for uniform distribution (double).
+    *   `density`: Initial density field.
+        *   `type`: Distribution type. Options: `<radial>`, `<spherical>`, `<tg_vortex>`, `<uniform>`, `<x_linear>`, `<y_linear>`, `<z_linear>`.
+        *   `value`: Value for uniform distribution (double).
+    *   `specific_heat`: Initial specific heat field.
+        *   `type`: Distribution type. Options: `<radial>`, `<spherical>`, `<tg_vortex>`, `<uniform>`, `<x_linear>`, `<y_linear>`, `<z_linear>`.
+        *   `value`: Value for uniform distribution (double).
+    *   `thermal_conductivity`: Initial thermal conductivity field.
+        *   `type`: Distribution type. Options: `<radial>`, `<spherical>`, `<tg_vortex>`, `<uniform>`, `<x_linear>`, `<y_linear>`, `<z_linear>`.
+        *   `value`: Value for uniform distribution (double).
+    *   `specific_internal_energy`: Initial specific internal energy field.
+        *   `type`: Distribution type. Options: `<radial>`, `<spherical>`, `<tg_vortex>`, `<uniform>`, `<x_linear>`, `<y_linear>`, `<z_linear>`.
+        *   `value`: Value for uniform distribution (double).
+    *   `internal_energy`: Initial internal energy field.
+        *   `type`: Distribution type. Options: `<radial>`, `<spherical>`, `<tg_vortex>`, `<uniform>`, `<x_linear>`, `<y_linear>`, `<z_linear>`.
+        *   `value`: Value for uniform distribution (double).
+    *   `level_set`: Initial level set field.
+        *   `type`: Distribution type. Options: `<radial>`, `<spherical>`, `<tg_vortex>`, `<uniform>`, `<x_linear>`, `<y_linear>`, `<z_linear>`.
+        *   `value`: Value for uniform distribution (double).
+        *   `slope`: Slope for linear distributions (double).
+        *   `origin`: Origin for radial/spherical distributions (list of doubles).
