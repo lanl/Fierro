@@ -1,6 +1,17 @@
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/)
 include(cmake/Modules/FindVector.cmake OPTIONAL)
 
+# Setup nvcc_wrapper if compiling with CUDA
+if(FIERRO_ENABLE_CUDA)
+    find_program(NVCC_WRAPPER_PATH nvcc_wrapper HINTS ${kokkos_SOURCE_DIR}/bin ${CMAKE_BINARY_DIR}/_deps/kokkos-src/bin)
+    if(NVCC_WRAPPER_PATH)
+        set(CMAKE_CXX_COMPILER ${NVCC_WRAPPER_PATH})
+        message(STATUS "Setting C++ compiler to nvcc_wrapper: ${NVCC_WRAPPER_PATH}")
+    else()
+        message(WARNING "CUDA enabled but nvcc_wrapper not found.")
+    endif()
+endif()
+
 # if(NOT DEFINED BUILD_EXPLICIT_SOLVER)
 #     set(BUILD_EXPLICIT_SOLVER ON)
 # endif()
