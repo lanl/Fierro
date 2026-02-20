@@ -34,28 +34,42 @@ The core of the EVPFFT approach relies on transforming the differential equation
 
 ### Small Strain Formulation
 The Cauchy stress $\boldsymbol{\sigma}(\mathbf{x})$ is decomposed into a polarization field $\boldsymbol{\phi}(\mathbf{x})$ relative to a homogeneous reference medium with stiffness $\mathbf{C}^0$:
-$$ \boldsymbol{\sigma}(\mathbf{x}) = \mathbf{C}^{0}:\nabla\mathbf{u}(\mathbf{x}) + \boldsymbol{\phi}(\mathbf{x}) $$
+$$
+\boldsymbol{\sigma}(\mathbf{x}) = \mathbf{C}^{0}:\nabla\mathbf{u}(\mathbf{x}) + \boldsymbol{\phi}(\mathbf{x})
+$$
 where $\boldsymbol{\phi}(\mathbf{x}) = \boldsymbol{\sigma}(\mathbf{x}) - \mathbf{C}^{0}:\nabla\mathbf{u}(\mathbf{x})$.
 
 Substituting this into the equilibrium equation $\nabla \cdot \boldsymbol{\sigma} = \mathbf{0}$ yields:
-$$ \mathbf{C}^{0}:\nabla \nabla \mathbf{u}(\mathbf{x}) + \nabla \cdot \boldsymbol{\phi}(\mathbf{x}) = \mathbf{0} $$
+$$
+\mathbf{C}^{0}:\nabla \nabla \mathbf{u}(\mathbf{x}) + \nabla \cdot \boldsymbol{\phi}(\mathbf{x}) = \mathbf{0}
+$$
 
 The solution for the displacement gradient $\nabla\mathbf{u}(\mathbf{x})$ is given by the convolution of the periodic Green's operator $\boldsymbol{\Gamma}$ and the polarization field:
-$$ \nabla\mathbf{u}(\mathbf{x}) = \mathbf{E} - \boldsymbol{\Gamma}(\mathbf{x}) * \boldsymbol{\phi}(\mathbf{x}) $$
+$$
+\nabla\mathbf{u}(\mathbf{x}) = \mathbf{E} - \boldsymbol{\Gamma}(\mathbf{x}) * \boldsymbol{\phi}(\mathbf{x})
+$$
 where $\mathbf{E}$ is the macroscopic strain.
 
 In Fourier space, this convolution becomes a simple multiplication:
-$$ \hat{\nabla\mathbf{u}}(\mathbf{k}) = - \hat{\boldsymbol{\Gamma}}(\mathbf{k}) : \hat{\boldsymbol{\phi}}(\mathbf{k}) \quad \forall \mathbf{k} \neq \mathbf{0} $$
+$$
+\hat{\nabla\mathbf{u}}(\mathbf{k}) = - \hat{\boldsymbol{\Gamma}}(\mathbf{k}) : \hat{\boldsymbol{\phi}}(\mathbf{k}) \quad \forall \mathbf{k} \neq \mathbf{0}
+$$
 The Fourier transform of the Green's operator $\hat{\boldsymbol{\Gamma}}(\mathbf{k})$ is defined as:
-$$ \hat{\Gamma}_{ijkl}(\mathbf{k}) = k_j k_l (C^0_{ipkq} k_p k_q)^{-1} $$
+$$
+\hat{\Gamma}_{ijkl}(\mathbf{k}) = k_j k_l (C^0_{ipkq} k_p k_q)^{-1}
+$$
 where $k_i$ are the components of the wave vector $\mathbf{k}$.
 
 ### Finite Strain Formulation
 For finite strains, the formulation is adapted to solve for the velocity gradient $\nabla\mathbf{v}(\mathbf{x})$ in the current configuration. A heterogeneous viscosity tensor $\mathbf{L}^{0}(\mathbf{x})$ is introduced, leading to a similar polarization decomposition:
-$$ \boldsymbol{\sigma}(\mathbf{x}) = \mathbf{L}^{0}(\mathbf{x}):\nabla\mathbf{v}(\mathbf{x}) + \boldsymbol{\phi}(\mathbf{x}) $$
+$$
+\boldsymbol{\sigma}(\mathbf{x}) = \mathbf{L}^{0}(\mathbf{x}):\nabla\mathbf{v}(\mathbf{x}) + \boldsymbol{\phi}(\mathbf{x})
+$$
 
 The velocity gradient is then updated via:
-$$ \nabla\mathbf{v}(\mathbf{x}) = \dot{\mathbf{E}} - FT^{-1}\left(\hat{\boldsymbol{\Gamma}}(\mathbf{k}):\hat{\boldsymbol{\Phi}}(\mathbf{k})\right) \cdot \mathbf{F}^{t,-1}(\mathbf{x}) $$
+$$
+\nabla\mathbf{v}(\mathbf{x}) = \dot{\mathbf{E}} - FT^{-1}\left(\hat{\boldsymbol{\Gamma}}(\mathbf{k}):\hat{\boldsymbol{\Phi}}(\mathbf{k})\right) \cdot \mathbf{F}^{t,-1}(\mathbf{x})
+$$
 where $\mathbf{F}$ is the deformation gradient and $\dot{\mathbf{E}}$ is the macroscopic strain rate.
 
 ## Material Models
@@ -65,12 +79,18 @@ Fierro's EVPFFT solvers support advanced material constitutive models to capture
 ### 1. Crystal Plasticity (Voce Hardening)
 This model captures the anisotropy of single crystals and the evolution of plastic slip on specific crystallographic systems.
 *   **Kinematics:** The plastic strain rate $\dot{\boldsymbol{\epsilon}}^{p}$ is sum of shear rates $\dot{\gamma}^{s}$ on all active slip systems $s$:
-    $$ \dot{\boldsymbol{\epsilon}}^{p} = \sum_{s} \mathbf{m}^{s} \dot{\gamma}^{s} $$
+    $$
+    \dot{\boldsymbol{\epsilon}}^{p} = \sum_{s} \mathbf{m}^{s} \dot{\gamma}^{s}
+    $$
     where $\mathbf{m}^{s}$ is the Schmid tensor.
 *   **Flow Rule:** A power-law relationship relates the shear rate to the resolved shear stress $\tau^s$:
-    $$ \dot{\gamma}^{s} = \dot{\gamma}_{0} \left( \frac{|\tau^s|}{\tau_{c}^{s}} \right)^n \text{sgn}(\tau^s) $$
+    $$
+    \dot{\gamma}^{s} = \dot{\gamma}_{0} \left( \frac{|\tau^s|}{\tau_{c}^{s}} \right)^n \text{sgn}(\tau^s)
+    $$
 *   **Hardening Law (Voce):** The critical resolved shear stress (CRSS) $\tau_{c}^{s}$ evolves with accumulated shear $\Gamma$:
-    $$ \tau_{c}^{s} = \tau_{0}^{s} + (\tau_{1}^{s} + \theta_{1}^{s}\Gamma) \left( 1 - \exp\left( -\frac{\theta_0^s \Gamma}{\tau_1^s} \right) \right) $$
+    $$
+    \tau_{c}^{s} = \tau_{0}^{s} + (\tau_{1}^{s} + \theta_{1}^{s}\Gamma) \left( 1 - \exp\left( -\frac{\theta_0^s \Gamma}{\tau_1^s} \right) \right)
+    $$
     Parameters:
     *   $\tau_{0}^{s}$: Initial CRSS.
     *   $\tau_{1}^{s}$: Back-extrapolated CRSS.

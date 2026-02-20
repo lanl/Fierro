@@ -5,24 +5,32 @@ The Level Set Solver is designed to model dynamically evolving fronts, such as i
 ## Governing Equation
 
 The level set evolution equation is:
-$$ \frac{\partial \phi}{\partial t} + H(\nabla \phi, {\bf x}) = 0 $$
+$$
+\frac{\partial \phi}{\partial t} + H(\nabla \phi, {\bf x}) = 0
+$$
 where the Hamiltonian $H(\nabla \phi, {\bf x}) = v_n ||\nabla \phi||$ and $v_n$ is the normal velocity magnitude.
 
 ## Numerical Methods
 
 ### Discretization
 A finite difference approach is used on unstructured meshes. The upwind value of $H(\nabla \phi, {\bf x})$ is calculated using corner weights $\gamma_{hp}$:
-$$ H_{+h} = \frac{\sum \limits_{hp \in h} (\gamma_{hp} {\bf v}_{hp} \cdot \nabla \phi_p)}{\sum \limits_{hp \in h} \gamma_{hp}} $$
+$$
+H_{+h} = \frac{\sum \limits_{hp \in h} (\gamma_{hp} {\bf v}_{hp} \cdot \nabla \phi_p)}{\sum \limits_{hp \in h} \gamma_{hp}}
+$$
 where the subscript $+$ denotes the upwind direction relative to element $h$.
 
 ### Nodal Gradient
 Nodal gradients are calculated using the central difference method:
-$$ \nabla \phi_p = -\frac{1}{V_p} \sum \limits_{hp \in p} {\bf N}_{hp} \phi_{g(h)} $$
+$$
+\nabla \phi_p = -\frac{1}{V_p} \sum \limits_{hp \in p} {\bf N}_{hp} \phi_{g(h)}
+$$
 where ${\bf N}_{hp}$ is the corner normal.
 
 ### Corner Weights
 Corner weights $\gamma_{hp}$ are calculated based on the dot product of the corner velocity and the element corner unit normal:
-$$ \gamma_{hp} = \max\left(0, -\frac{{\bf v}_{hp}}{||{\bf v}_{hp}||} \cdot {\bf n}_{hp}\right) $$
+$$
+\gamma_{hp} = \max\left(0, -\frac{{\bf v}_{hp}}{||{\bf v}_{hp}||} \cdot {\bf n}_{hp}\right)
+$$
 This ensures stable upwinding.
 
 ### Time Integration
