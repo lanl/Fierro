@@ -32,9 +32,9 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "sgh_solver_3D.hpp"
-//#include "mesh.hpp""
-#include "geometry_new.hpp"
+#include "sgh_solver_3D.h"
+#include "mesh.h"
+#include "geometry_new.h"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::update_velocity(double rk_alpha,
     double dt,
-    const swage::Mesh& mesh,
+    const Mesh_t& mesh,
     DCArrayKokkos<double>& node_vel,
     DCArrayKokkos<double>& node_vel_n0,
     const DCArrayKokkos<double>& node_mass,
@@ -73,7 +73,7 @@ void SGH3D::update_velocity(double rk_alpha,
                 //node_force(node_gid, dim) += contact_node.contact_force(dim);
                 node_force(node_gid, dim) += contact_force(node_gid, dim);
             } // end for dim
-            //std::cout << node_gid << "    "  << contact_node.contact_force(0) <<  "    "  << contact_node.contact_force(1) << "    "  << contact_node.contact_force(2) << std::endl;
+            //printf("contact forces for node: %lu  are: %e %e %e\n", node_gid, contact_force(node_gid, 0), contact_force(node_gid, 1), contact_force(node_gid, 2));
         }
 
         // loop over all corners around the node and calculate the nodal force
@@ -113,7 +113,7 @@ void SGH3D::update_velocity(double rk_alpha,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
-    const swage::Mesh mesh,
+    const Mesh_t mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
@@ -218,7 +218,7 @@ void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::get_divergence(DCArrayKokkos<double>& elem_div,
-    const swage::Mesh mesh,
+    const Mesh_t mesh,
     const DCArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const

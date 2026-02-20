@@ -1,7 +1,7 @@
 # num_dims: 3
 
 dynamic_options:
-  time_final: 5
+  time_final: 10
   dt_min: 1e-6
   dt_max: 0.05
   dt_start: 1e-6
@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: ./standard_inputs/meshes/preload.geo
+  file_path: ./standard_inputs/meshes/preload.vtk
   num_dims: 3
 
 #mesh_options:
@@ -25,7 +25,7 @@ mesh_options:
 output_options:
   timer_output_level: thorough
   output_file_format: state
-  graphics_time_step: 0.05
+  graphics_time_step: 10.0
   # graphics_iteration_step: 10
 
 solver_options:
@@ -60,22 +60,36 @@ boundary_conditions:
 
 materials:
   - material:
-      id: 0
-      eos_model_type: decoupled
-      eos_model: gamma_law_gas
-      # strength_model: none
-      dissipation_model: MARS
-      dissipation_global_vars:
-          - 1.0   # q1
-          - 1.0   # q1ex
-          - 1.333 # q2
-          - 1.333 # q2ex
-          - 0.1     # phi_min
-          - 1.0   # phi_curl
-      eos_global_vars:
-          - 10 #1.666666666666667
-          - 1.0E-14
-          - 1.0
+        id: 0  # metal: Copper
+        #-----EOS
+        eos_model_type: decoupled
+        eos_model: linear_elastic_eos  
+        # bulk modulus
+        # shear modulus
+        # refernce den
+        # cs min
+        eos_global_vars:
+            - 1.30 # B from Azo materials online
+            - 0.4333 # G from Azo materials online
+            - 8.93 # ref density from Azo materials online
+            - 0.001 
+        #------Strength
+        strength_model_type: increment_based
+        strength_model: hypo_plasticity_strength
+        # shear modulus of copper
+        # yield strength of copper
+        strength_global_vars:
+            - 0.4333
+            - 0.004
+        # ------ArtVisc
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.333 # q1ex
+            - 1.0   # q2
+            - 1.333 # q2ex
+            - 0.05   # min limiter
+            - 1.0
 
 regions:
   - region:
@@ -85,7 +99,7 @@ regions:
         solver_id: 0
         density: 
             type: uniform
-            value: 1
+            value: 8.93
         specific_internal_energy: 
             type: uniform
             value: 1.0e-10
@@ -96,27 +110,27 @@ regions:
             w: 0.0
 
   # top block initial velocity conditions
-  - region:
-      volume:
-        type: box
-        origin: [0.0, 0.0, 0.0]
-        x1: -0.25
-        x2: 0.25
-        y1: -0.25
-        y2: 0.25
-        z1: 1.0
-        z2: 1.5
-      material_id: 0
-      solver_id: 0
-      density:
-        type: uniform
-        value: 1.0
-      specific_internal_energy:
-        type: uniform
-        value: 1.e-10
-      velocity: 
-        type: cartesian
-        u: 0.0
-        v: 0.0
-        w: 0.0
+  #- region:
+  #    volume:
+  #      type: box
+  #      origin: [0.0, 0.0, 0.0]
+  #      x1: -0.25
+  #      x2: 0.25
+  #      y1: -0.25
+  #      y2: 0.25
+  #      z1: 1.0
+  #      z2: 1.5
+  #    material_id: 0
+  #    solver_id: 0
+  #    density:
+  #      type: uniform
+  #      value: 1.0
+  #    specific_internal_energy:
+  #      type: uniform
+  #      value: 1.e-10
+  #    velocity: 
+  #      type: cartesian
+  #      u: 0.0
+  #      v: 0.0
+  #      w: 0.0
 

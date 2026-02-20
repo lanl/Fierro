@@ -1,16 +1,16 @@
 # num_dims: 3
 
 dynamic_options:
-  time_final: 3.0
-  dt_min: 1.e-6
-  dt_max: 0.05
+  time_final: 2.26
+  dt_min: 1e-6
+  dt_max: 0.02
   dt_start: 1.e-5
   cycle_stop: 300000
 
 
 mesh_options:
   source: file
-  file_path: ./standard_inputs/meshes/sie_expansion_contact.geo
+  file_path: ./standard_inputs/meshes/slanted_block_bounce.vtk
   num_dims: 3
 
 #mesh_options:
@@ -25,7 +25,7 @@ mesh_options:
 output_options:
   timer_output_level: thorough
   output_file_format: state
-  graphics_time_step: 0.02
+  graphics_time_step: 2.26
   # graphics_iteration_step: 10
 
 solver_options:
@@ -100,12 +100,12 @@ regions:
       volume:
         type: box
         origin: [0.0, 0.0, 0.0]
-        x1: -1.0
-        x2: 1.0
-        y1: -1.0
-        y2: 1.0
-        z1: 0.0
-        z2: 1.5
+        x1: 0.0
+        x2: 0.5
+        y1: 1.0
+        y2: 2.0
+        z1: 1.8
+        z2: 2.9
       material_id: 0
       solver_id: 0
       density:
@@ -113,9 +113,9 @@ regions:
         value: 1.0
       specific_internal_energy:
         type: uniform
-        value: 0.5
+        value: 1.e-10
       velocity: 
         type: cartesian
         u: 0.0
-        v: 0.0
+        v: -1.5
         w: 0.0

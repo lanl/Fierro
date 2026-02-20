@@ -7,7 +7,7 @@ import math
 import glob
 
 # Builds being tested
-# builds = ["openmp"]
+builds = ["openmp"]
 
 # Name(s) of the solver being used
 solvers = ["Fierro"]
@@ -18,9 +18,9 @@ tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
         "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", \
         "Pressure_bc_box","vtu_read","SGTM_cooling_cube", \
         "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
-        "slanted_bounce_contact", "slanted_impact_contact", \
-        "sie_expansion_contact", "confined_preload", "unconfined_preload", \
-        "edge_flat_contact"]
+        "slanted_block_bounce", "slanted_impact", \
+        "sie_expansion_test", "confined_preload", "unconfined_preload", \
+        "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact"]
 
 # Extract data from txt file
 def extract_state_data(filename):
@@ -52,10 +52,11 @@ def extract_state_data(filename):
 
 # Grab paths to executable
 executables = []
-for j in range(len(solvers)):
-    executables.append("../build/app/"+solvers[j])
-    if not os.path.exists(executables[0]):
-        raise ValueError("Executable not found in "+executables[i]+" directory")
+for i in range(len(builds)):
+    for j in range(len(solvers)):
+        executables.append("../build-SGH-"+builds[i]+"/bin/"+solvers[j])
+        if not os.path.exists(executables[i]):
+            raise ValueError("Executable not found in "+executables[i]+" directory")
 
 # Get paths to inputs
 inputs = []
