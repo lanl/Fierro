@@ -79,18 +79,18 @@ Fierro's EVPFFT solvers support advanced material constitutive models to capture
 ### 1. Crystal Plasticity (Voce Hardening)
 This model captures the anisotropy of single crystals and the evolution of plastic slip on specific crystallographic systems.
 *   **Kinematics:** The plastic strain rate $\dot{\boldsymbol{\epsilon}}^{p}$ is sum of shear rates $\dot{\gamma}^{s}$ on all active slip systems $s$:
-    $$
-    \dot{\boldsymbol{\epsilon}}^{p} = \sum_{s} \mathbf{m}^{s} \dot{\gamma}^{s}
-    $$
+$$
+\dot{\boldsymbol{\epsilon}}^{p} = \sum_{s} \mathbf{m}^{s} \dot{\gamma}^{s}
+$$
     where $\mathbf{m}^{s}$ is the Schmid tensor.
 *   **Flow Rule:** A power-law relationship relates the shear rate to the resolved shear stress $\tau^s$:
-    $$
-    \dot{\gamma}^{s} = \dot{\gamma}_{0} \left( \frac{|\tau^s|}{\tau_{c}^{s}} \right)^n \text{sgn}(\tau^s)
-    $$
+$$
+\dot{\gamma}^{s} = \dot{\gamma}_{0} \left( \frac{|\tau^s|}{\tau_{c}^{s}} \right)^n \text{sgn}(\tau^s)
+$$
 *   **Hardening Law (Voce):** The critical resolved shear stress (CRSS) $\tau_{c}^{s}$ evolves with accumulated shear $\Gamma$:
-    $$
-    \tau_{c}^{s} = \tau_{0}^{s} + (\tau_{1}^{s} + \theta_{1}^{s}\Gamma) \left( 1 - \exp\left( -\frac{\theta_0^s \Gamma}{\tau_1^s} \right) \right)
-    $$
+$$
+\tau_{c}^{s} = \tau_{0}^{s} + (\tau_{1}^{s} + \theta_{1}^{s}\Gamma) \left( 1 - \exp\left( -\frac{\theta_0^s \Gamma}{\tau_1^s} \right) \right)
+$$
     Parameters:
     *   $\tau_{0}^{s}$: Initial CRSS.
     *   $\tau_{1}^{s}$: Back-extrapolated CRSS.
