@@ -1,4 +1,153 @@
-## Running Fierro
+## Building Fierro-multiphysics
+
+Fierro-multiphysics uses CMake for configuration and building. The build process involves creating a build directory, configuring with CMake, and compiling the code.
+
+### Basic Build Steps
+
+1. **Create a build directory** (recommended to keep source tree clean):
+   ```bash
+   cd apps/multiphysics
+   mkdir build
+   cd build
+   ```
+
+2. **Configure with CMake** from the build directory:
+   ```bash
+   cmake ..
+   ```
+
+3. **Build the code**:
+   ```bash
+   make -j$(nproc)
+   ```
+
+   The executable will be located at `build/app/Fierro` (or `build/app/Fierro.exe` on Windows).
+
+### Building for Different Backends
+
+Fierro-multiphysics supports multiple execution backends through MATAR+Kokkos. You can enable one or more backends using CMake options. The available backends are:
+
+*   **Serial** — Single-threaded CPU execution (default, always enabled)
+*   **OpenMP** — Multi-threaded CPU execution using OpenMP
+*   **PThreads** — Multi-threaded CPU execution using POSIX threads
+*   **CUDA** — GPU execution on NVIDIA GPUs
+*   **HIP** — GPU execution on AMD GPUs
+*   **SYCL** — GPU execution on Intel GPUs
+
+#### Serial Backend
+
+The Serial backend is enabled by default and requires no additional configuration:
+
+```bash
+cd apps/multiphysics
+mkdir build_serial
+cd build_serial
+cmake ..
+make -j$(nproc)
+```
+
+
+#### OpenMP Backend
+
+To build with OpenMP support for multi-threaded CPU execution:
+
+```bash
+cd apps/multiphysics
+mkdir build_openmp
+cd build_openmp
+cmake -DFIERRO_ENABLE_OPENMP=ON ..
+make -j$(nproc)
+```
+
+**Requirements:**
+*   A C++ compiler with OpenMP support (GCC, Clang, or Intel)
+*   OpenMP runtime library
+
+#### PThreads Backend
+
+To build with PThreads support for multi-threaded CPU execution:
+
+```bash
+cd apps/multiphysics
+mkdir build_pthreads
+cd build_pthreads
+cmake -DFIERRO_ENABLE_PTHREADS=ON ..
+make -j$(nproc)
+```
+
+**Requirements:**
+*   A C++ compiler with POSIX threads support
+*   PThreads library (typically included with the system)
+
+#### CUDA Backend
+
+To build with CUDA support for NVIDIA GPU execution:
+
+```bash
+cd apps/multiphysics
+mkdir build_cuda
+cd build_cuda
+cmake -DFIERRO_ENABLE_CUDA=ON -DFIERRO_ENABLE_SERIAL=OFF ..
+make -j$(nproc)
+```
+
+**Requirements:**
+*   NVIDIA GPU with Compute Capability 3.5 or higher
+*   CUDA Toolkit (version 11.0 or later recommended)
+*   CUDA-capable C++ compiler (nvcc)
+*   Ensure `nvcc` is in your `PATH`
+
+**Note:** You may need to specify the CUDA architecture for your GPU. For example, for a GPU with Compute Capability 7.0:
+```bash
+cmake -DFIERRO_ENABLE_CUDA=ON -DFIERRO_ENABLE_SERIAL=OFF \
+      -DKokkos_ARCH_AMPERE80=ON ..
+```
+
+#### HIP Backend
+
+To build with HIP support for AMD GPU execution:
+
+```bash
+cd apps/multiphysics
+mkdir build_hip
+cd build_hip
+cmake -DFIERRO_ENABLE_HIP=ON -DFIERRO_ENABLE_SERIAL=OFF ..
+make -j$(nproc)
+```
+
+**Requirements:**
+*   AMD GPU with ROCm support
+*   ROCm/HIP installation
+*   HIP-capable C++ compiler (hipcc)
+*   Ensure `hipcc` is in your `PATH`
+
+### Build Type Options
+
+You can specify the build type (Debug, Release, RelWithDebInfo) using:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Release ..
+```
+
+Available build types:
+*   `Debug` — Debug symbols, no optimization
+*   `Release` — Full optimization, no debug symbols
+*   `RelWithDebInfo` — Optimization with debug symbols (default)
+
+### Multiple Backends
+
+You can enable multiple backends simultaneously, though typically only one is used at runtime:
+
+```bash
+cmake -DFIERRO_ENABLE_SERIAL=ON \
+      -DFIERRO_ENABLE_OPENMP=ON \
+      -DFIERRO_ENABLE_PTHREADS=ON ..
+```
+
+Note that CUDA and HIP backends are mutually exclusive and cannot be enabled together.
+
+
+## Running Fierro-multiphysics
 
 Fierro is executed from the command line and requires a YAML input file.
 

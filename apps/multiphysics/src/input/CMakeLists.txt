@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.17)
 
 
 add_definitions(-DHAVE_KOKKOS=1)
@@ -14,6 +14,8 @@ elseif (THREADS)
 endif()
 
 include_directories(../common)
+
+message("\n ****** ADDING YAML INPUT PARSING LIBRARY ******** \n ")
 
 set(YAML_SRC_Files 
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_tools.cpp
@@ -31,7 +33,7 @@ PARENT_SCOPE
 )
 
 
-message("\n ****** ADDING PARSE_YAML LIBRARY ******** \n ")
+
 
 
 

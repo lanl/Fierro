@@ -1,5 +1,5 @@
 /**********************************************************************************************
-� 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -32,59 +32,35 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-    #include "sgh_solver_3D.hpp"
-    //#include "mesh.hpp""
+#include "tlqs_solver_3D.hpp"
+#include "region_fill.hpp"
+#include "material.hpp"
+#include "boundary_conditions.hpp"
+#include "state.hpp"
+#include "simulation_parameters.hpp"
+#include "geometry_new.hpp"
+
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn timestep_init
+/// \fn setup the TLQS method
 ///
-/// \brief This function saves the variables at rk_stage = 0, which is t_n
-///
-/// \param View of nodal position data
-/// \param View of nodal velocity data
-/// \param View of element specific internal energy data
-/// \param View of element stress
-/// \param Number of dimension (REMOVE)
-/// \param Number of elements
-/// \param Number of nodes
+/// \brief Allocate state, setup models, and fill mesh regions per the YAML input
 ///
 /////////////////////////////////////////////////////////////////////////////
-void TLQS3D::timestep_init(
-    DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& node_coords_n0,
-    DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& node_vel_n0,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
-    const size_t num_dims,
-    const size_t num_elems,
-    const size_t num_nodes,
-    const size_t num_mat_points,
-    const size_t mat_id) const
+void TLQS3D::setup(SimulationParameters_t& SimulationParamaters, 
+                Material_t& Materials, 
+                swage::Mesh& mesh, 
+                BoundaryCondition_t& Boundary,
+                State_t& State)
 {
-    // // save elem quantities
-    // FOR_ALL(matpt_lid, 0, num_mat_points, {
-    //     // stress is always 3D even with 2D-RZ
-    //     for (size_t i = 0; i < 3; i++) {
-    //         for (size_t j = 0; j < 3; j++) {
-    //             MaterialPoints_stress_n0(mat_id, matpt_lid, i, j) = MaterialPoints_stress(mat_id, matpt_lid, i, j);
-    //         }
-    //     }  // end for
+    // add a flag on whether TLQS was set up, if(TLQS_setup_already==false)
+    
+    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
-    //     MaterialPoints_sie_n0(mat_id, matpt_lid) = MaterialPoints_sie(mat_id, matpt_lid);
-    // }); // end parallel for
 
-    // // save nodal quantities
-    // FOR_ALL(node_gid, 0, num_nodes, {
-    //     for (size_t i = 0; i < num_dims; i++) {
-    //         node_coords_n0(node_gid, i) = node_coords(node_gid, i);
-    //         node_vel_n0(node_gid, i)    = node_vel(node_gid, i);
-    //     }
-    // }); // end parallel for
-    // Kokkos::fence();
-
+    std::cout << "TLQS solver setup \n";
     return;
-} // end rk_init
+} // end TLQS setup

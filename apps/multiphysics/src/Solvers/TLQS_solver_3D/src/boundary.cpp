@@ -54,31 +54,31 @@ void TLQS3D::boundary_position(const swage::Mesh& mesh,
     DCArrayKokkos<double>& node_vel,
     const double time_value) const
 {
-    size_t num_pos_bdy_sets = BoundaryConditions.num_pos_bdy_sets_in_solver.host(this->solver_id);
+    // size_t num_pos_bdy_sets = BoundaryConditions.num_pos_bdy_sets_in_solver.host(this->solver_id);
 
-    // Loop over the velocity boundary sets
-    for (size_t bc_lid = 0; bc_lid < num_pos_bdy_sets; bc_lid++) {
+    // // Loop over the velocity boundary sets
+    // for (size_t bc_lid = 0; bc_lid < num_pos_bdy_sets; bc_lid++) {
 
-        size_t bdy_set = BoundaryConditions.vel_bdy_sets_in_solver.host(this->solver_id, bc_lid);
+    //     size_t bdy_set = BoundaryConditions.vel_bdy_sets_in_solver.host(this->solver_id, bc_lid);
 
-        // Loop over boundary nodes in a boundary set
-        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
-            // get the global index for this node on the boundary
-            size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
+    //     // Loop over boundary nodes in a boundary set
+    //     FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
+    //         // get the global index for this node on the boundary
+    //         size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
-            // evaluate velocity on this boundary node
-            BoundaryConditions.BoundaryConditionFunctions(bdy_set).position(
-                mesh,
-                BoundaryConditions.BoundaryConditionEnums,
-                BoundaryConditions.velocity_bc_global_vars,
-                BoundaryConditions.bc_state_vars,
-                node_vel,
-                time_value,
-                1, // rk_stage isn't used
-                bdy_node_gid,
-                bdy_set);
-        }); // end for bdy_node_lid
-    } // end for bdy_set
+    //         // evaluate velocity on this boundary node
+    //         BoundaryConditions.BoundaryConditionFunctions(bdy_set).position(
+    //             mesh,
+    //             BoundaryConditions.BoundaryConditionEnums,
+    //             BoundaryConditions.velocity_bc_global_vars,
+    //             BoundaryConditions.bc_state_vars,
+    //             node_vel,
+    //             time_value,
+    //             1, // rk_stage isn't used
+    //             bdy_node_gid,
+    //             bdy_set);
+    //     }); // end for bdy_node_lid
+    // } // end for bdy_set
 
     return;
 } // end boundary_position function

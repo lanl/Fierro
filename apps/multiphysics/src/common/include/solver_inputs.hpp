@@ -57,7 +57,7 @@ static std::map<std::string, solver_input::method> solver_map
     { "dynx_FE_rz", solver_input::SGHRZ },
     { "thrmex_FE",  solver_input::SGTM3D },
     { "level_set",   solver_input::levelSet },
-    { "tlqs_FE",   solver_input::TLQS3D }
+    { "qstatx_FE",   solver_input::TLQS3D }
 };
 // quasi-static mechanics FE (qz-FE)
 // quasi-static thermal-mechanical FE  (qz-thmec-FE)

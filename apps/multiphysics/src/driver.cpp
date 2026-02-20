@@ -40,6 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "sgh_solver_rz.hpp"
 #include "sgtm_solver_3D.hpp"
 #include "level_set_solver.hpp"
+#include "tlqs_solver_3D.hpp"
 
 #include "region_fill.hpp"
 
@@ -171,6 +172,24 @@ void Driver::initialize()
             solvers.push_back(level_set_solver);
 
         } // end if level set solver
+        else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::TLQS3D) {
+            std::cout << "Initializing TLQS solver" << std::endl;
+            TLQS3D* tlqs_solver = new TLQS3D(); 
+
+            tlqs_solver->initialize(SimulationParamaters, 
+                                    Materials, 
+                                    mesh, 
+                                    BoundaryConditions, State);
+
+            // set the variables in the solver class
+            setup_solver_vars(tlqs_solver, 
+                              solver_id);
+
+            solvers.push_back(tlqs_solver);
+
+            std::cout << "TLQS solver added to solvers vector \n";
+
+        } // end if TLQS solver
         else {
             throw std::runtime_error("**** NO SOLVER INPUT OPTIONS PROVIDED IN YAML, OR OPTION NOT UNDERSTOOD ****");
             return;
@@ -185,6 +204,8 @@ void Driver::initialize()
     fillGaussState_t fillGaussState;
     fillElemState_t  fillElemState;
 
+    std::cout << "Applying fills to the mesh" << std::endl;
+
     simulation_setup(SimulationParamaters, 
                      Materials, 
                      mesh, 
@@ -193,7 +214,7 @@ void Driver::initialize()
                      fillGaussState,
                      fillElemState);
 
-
+    std::cout << "Fills applied to the mesh" << std::endl;
     // Allocate material state
     for (auto& solver : solvers) {
         solver->initialize_material_state(SimulationParamaters, 
@@ -205,6 +226,7 @@ void Driver::initialize()
 
 
     // populate the material point state
+    std::cout << "Populating the material point state" << std::endl;
     material_state_setup(SimulationParamaters, 
                          Materials, 
                          mesh, 
@@ -212,6 +234,9 @@ void Driver::initialize()
                          State,
                          fillGaussState,
                          fillElemState);
+    std::cout << "Material point state populated" << std::endl;
+
+    std::cout << "Driver initialization complete" << std::endl;
 }
 
 /////////////////////////////////////////////////////////////////////////////

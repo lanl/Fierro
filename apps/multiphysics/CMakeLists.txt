@@ -20,8 +20,10 @@ option(FIERRO_ENABLE_OPENMP   "Enable OpenMP backend"   OFF)
 option(FIERRO_ENABLE_PTHREADS "Enable PThreads backend" OFF)
 option(FIERRO_ENABLE_CUDA     "Enable CUDA backend"     OFF)
 option(FIERRO_ENABLE_HIP      "Enable HIP backend"      OFF)
+option(FIERRO_ENABLE_SYCL     "Enable SYCL backend"      OFF)
 
 # --- Map Options to Variables expected by subdirectories ---
+add_definitions(-DHAVE_KOKKOS=1)
 if(FIERRO_ENABLE_CUDA)
   set(CUDA ON)
 endif()
@@ -51,32 +53,6 @@ option(ELEMENTS_BUILD_DOCS "Build Elements docs" OFF)
 # Using relative path to lib/Elements
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../lib/Elements ${CMAKE_BINARY_DIR}/lib/Elements)
 
-# --- Include Directories ---
-# Material models
-include_directories(src/material_models/artificial_viscosity)
-include_directories(src/material_models/eos)
-include_directories(src/material_models/erosion)
-include_directories(src/material_models/fracture)
-include_directories(src/material_models/strength)
-include_directories(src/material_models/equilibration)
-include_directories(src/material_models/equilibration/include)
-include_directories(src/material_models/tabular/include)
-
-# Boundary conditions
-include_directories(src/boundary_conditions/velocity)
-include_directories(src/boundary_conditions/temperature)
-include_directories(src/boundary_conditions/stress)
-
-# Common and Input
-include_directories(src)
-include_directories(src/common)
-include_directories(src/input)
-
-# --- Source Subdirectories ---
-# These populate source lists (PARENT_SCOPE) used by src/CMakeLists.txt
-add_subdirectory(src/material_models/equilibration)
-add_subdirectory(src/input)
-add_subdirectory(src/material_models/tabular)
 
 # Main Fierro multiphysics target
 add_subdirectory(src)

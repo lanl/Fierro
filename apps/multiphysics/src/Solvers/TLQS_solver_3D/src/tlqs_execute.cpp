@@ -114,9 +114,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         dt, 
         time_value, 
         graphics_times,
-        LevelSet_State::required_node_state,
-        LevelSet_State::required_gauss_pt_state,
-        LevelSet_State::required_material_pt_state,
+        TLQS3D_State::required_node_state,
+        TLQS3D_State::required_gauss_pt_state,
+        TLQS3D_State::required_material_pt_state,
         this->solver_id);
     
 
@@ -150,7 +150,10 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         State.MaterialPoints.sie_n0,
                         State.MaterialPoints.stress,
                         State.MaterialPoints.stress_n0,
-                        mesh.num_dims, mesh.num_elems, mesh.num_nodes, mesh.num_mat_points, mat_id);
+                        mesh.num_dims, 
+                        mesh.num_elems, 
+                        mesh.num_nodes, 
+                        mat_id);
 
     
         } // end for loop over all mats
@@ -199,9 +202,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                                    dt,
                                    time_value,
                                    graphics_times,
-                                   LevelSet_State::required_node_state,
-                                   LevelSet_State::required_gauss_pt_state,
-                                   LevelSet_State::required_material_pt_state,
+                                   TLQS3D_State::required_node_state,
+                                   TLQS3D_State::required_gauss_pt_state,
+                                   TLQS3D_State::required_material_pt_state,
                                    this->solver_id);
 
             graphics_time = time_value + graphics_dt_ival;

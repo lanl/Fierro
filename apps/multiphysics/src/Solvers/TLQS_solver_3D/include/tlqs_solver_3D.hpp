@@ -63,34 +63,64 @@ namespace TLQS3D_State
     // Gauss point state to be initialized for the TLQS solver
     static const std::vector<gauss_pt_state> required_gauss_pt_state = 
     { 
+        gauss_pt_state::volume,
     };
 
     // Material point state to be initialized for the TLQS solver
     static const std::vector<material_pt_state> required_material_pt_state = 
     { 
         material_pt_state::density,
+        material_pt_state::pressure,
+        material_pt_state::stress,
+        material_pt_state::specific_internal_energy,
+        material_pt_state::sound_speed,
+        material_pt_state::mass,
+        material_pt_state::volume_fraction,
+        material_pt_state::eroded_flag,
+        material_pt_state::shear_modulii
     };
 
     // Material corner state to be initialized for the TLQS solver
     static const std::vector<material_corner_state> required_material_corner_state = 
     { 
-        material_corner_state::force
+        material_corner_state::force,
     };
 
-    // Corner state to be initialized for the TLQS solver
-    static const std::vector<corner_state> required_corner_state = 
-    { 
-        corner_state::force,
-
-    };
-
-    // --- checks on fill instructions ---
-    // Node state that must be filled (setup) for the TLQS solver
-    static const std::vector<fill_node_state> required_fill_node_state = 
-    { 
-        fill_node_state::velocity,
-        fill_node_state::temperature
-    };
+ 
+     // Corner state to be initialized for the SGH solver
+     static const std::vector<corner_state> required_corner_state = 
+     { 
+         corner_state::force,
+         corner_state::mass
+     };
+ 
+     // --- checks on fill instructions ---
+     // Node state that must be filled (setup) for the SGH solver
+     static const std::vector<fill_node_state> required_fill_node_state = 
+     { 
+         fill_node_state::velocity
+     };
+ 
+     // Material point state that must be filled (setup) for the SGH solver
+     // option A
+     static const std::vector<fill_gauss_state> required_optA_fill_material_pt_state = 
+     { 
+        fill_gauss_state::density,
+        fill_gauss_state::specific_internal_energy
+     };
+     // option B
+     static const std::vector<fill_gauss_state> required_optB_fill_material_pt_state = 
+     { 
+        fill_gauss_state::density,
+        fill_gauss_state::internal_energy
+     };
+     // option C
+     static const std::vector<fill_gauss_state> required_optC_fill_material_pt_state = 
+     { 
+        fill_gauss_state::density,
+        fill_gauss_state::stress
+     };
+     // -------------------------------------
 
   
 }
@@ -212,7 +242,6 @@ public:
         const size_t num_dims,
         const size_t num_elems,
         const size_t num_nodes,
-        const size_t num_mat_points,
         const size_t mat_id) const;
 
         

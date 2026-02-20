@@ -69,6 +69,7 @@ void TLQS3D::initialize(SimulationParameters_t& SimulationParamaters,
         throw std::runtime_error("**** Provide fill instructions for all required nodal variables ****");
     }
 
+    std::cout << "TLQS solver initialized \n";
 
 } // end solver initialization
 

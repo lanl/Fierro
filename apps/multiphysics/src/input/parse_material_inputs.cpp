@@ -111,6 +111,12 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
     size_t num_materials = material_yaml.Size();
     std::cout << "Number of materials =  "<< num_materials << std::endl;
 
+    // Verify that at least one material is specified
+    if (num_materials == 0) {
+        std::cout << "ERROR: No materials were specified in the input file" << std::endl;
+        throw std::runtime_error("**** No materials were specified in the input file ****");
+    }
+
     Materials.num_mats = num_materials;
 
     // --- allocate memory for arrays inside material struct ---
@@ -1030,6 +1036,12 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
 
     // extract words from the input file and validate they are correct
     validate_inputs(multimat_yaml, user_multimat_inputs, str_multimat_inps, multimat_required_inps);
+
+    // Verify that at least one material is specified
+    if (Materials.num_mats == 0) {
+        std::cout << "ERROR: No materials were specified in the input file" << std::endl;
+        throw std::runtime_error("**** No materials were specified in the input file ****");
+    }
     
     // loop over the words in the multimaterial input definition
     for (auto& a_word : user_multimat_inputs) {
