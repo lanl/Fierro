@@ -14,22 +14,6 @@ $$
 
 The superscript 3D will be used to differentiate a variable from one that is purely planar. The axisymmetric approximation reduces a 3D system $(z,r,\varphi)$ to a 2D solve $(z,r)$.
 
-Using this approximation, the velocity and stress (Figure below) become:
-
-![Stress Components](../../../../../docs/figs/stressRZelement.png)
-
-$$
-{\mathbf v}^{3D} = 
-\begin{bmatrix} 
-v_z & v_r & v_\varphi 
-\end{bmatrix}^T 
-= 
-\begin{bmatrix} 
-v_z & v_r & 0 
-\end{bmatrix}^T
-$$
-
-The derivation of the governing physics equations in axisymmetric coordinates is complete.
 
 ## Numerical Methods
 
@@ -80,12 +64,17 @@ where:
 The specific internal energy evolution equation guarantees total energy conservation (compatible discretization). The change in specific internal energy for an element is given by:
 
 $$
-{e}_h^{m,\, n+1} = {e}_h^{m,\, n} - \frac{\Delta t}{m^m_h} \sum \limits_{p \in h} \left( { \mathbf{F}^{m, \,n+1/2}_{hp}}\cdot \frac{1}{2}\left(\mathbf{v}_p^{n+1} + \mathbf{v}_p^{n} \right) \right)
+e^{m, n+1/2}_h =e^{m, \, n}_h - \frac{1}{2}\frac{\Delta t}{m^{m, \, 3D}_h}\sum \limits_{hp \in h}  {\bf F}^m_{hp}r_p \cdot \frac{1}{2}\left( {\bf v}_p^{n+1/2} + {\bf v}_p^{n} \right).
+$$
+
+$$
+e^{m,  n+1}_h =e^{m, n+1/2}_h - \frac{\Delta t}{m^{m, \, 3D}_h}\sum \limits_{hp \in h}  {\bf F}^m_{hp}r_p \cdot 
+    \frac{1}{2}\left( {\bf v}_p^{n+1} + {\bf v}_p^{n} \right).
 $$
 
 where:
-- ${e}_h^{m,\, n+1}$ is the specific internal energy of material $m$ in element $h$ at time step $n+1$.
-- ${e}_h^{m,\, n}$ is the specific internal energy at time step $n$.
+- ${e}_h^{m, n+1}$ is the specific internal energy of material $m$ in element $h$ at time step $n+1$.
+- ${e}_h^{m, n}$ is the specific internal energy at time step $n$.
 - $\Delta t$ is the time step size.
 - $p$ represents the node index of element $h$.
 - $\mathbf{F}^{m, \,n+1/2}_{hp}$ is the corner force exerted by material $m$ in element $h$ on node $p$ at the half time step.
