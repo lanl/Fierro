@@ -19,27 +19,64 @@ Using this approximation, the velocity and stress (Figure below) become:
 ![Stress Components](../../../../../docs/figs/stressRZelement.png)
 
 $$
-{\mathbf v}^{3D} = \begin{bmatrix} v_z & v_r & v_\varphi \end{bmatrix}^T = \begin{bmatrix} v_z & v_r & 0 \end{bmatrix}^T
+{\mathbf v}^{3D} = 
+\begin{bmatrix} 
+v_z & v_r & v_\varphi 
+\end{bmatrix}^T 
+= 
+\begin{bmatrix} 
+v_z & v_r & 0 
+\end{bmatrix}^T
 $$
 
 $$
-{\boldsymbol{\sigma}}^{3D} = \begin{bmatrix} \sigma_{zz} & \sigma_{zr} & \sigma_{z\varphi} \\ \sigma_{rz} & \sigma_{rr} & \sigma_{r\varphi} \\ \sigma_{\varphi z} & \sigma_{\varphi r} & \sigma_{\varphi \varphi} \end{bmatrix} = \begin{bmatrix} \sigma_{zz} & \sigma_{zr} & 0 \\ \sigma_{rz} & \sigma_{rr} & 0 \\ 0 & 0 & \sigma_{\varphi \varphi} \end{bmatrix}
+{\boldsymbol{\sigma}}^{3D} = 
+\begin{bmatrix} 
+\sigma_{zz} & \sigma_{zr} & \sigma_{z\varphi} \\
+\sigma_{rz} & \sigma_{rr} & \sigma_{r\varphi} \\
+\sigma_{\varphi z} & \sigma_{\varphi r} & \sigma_{\varphi \varphi} 
+\end{bmatrix} 
+= 
+\begin{bmatrix} 
+\sigma_{zz} & \sigma_{zr} & 0 \\
+\sigma_{rz} & \sigma_{rr} & 0 \\
+0 & 0 & \sigma_{\varphi \varphi} 
+\end{bmatrix}
 $$
 
 The divergence of velocity and stress become:
 
 $$
-\nabla^{3D} \cdot {\mathbf v}^{3D} = \frac{\partial v_{z}}{\partial z} + \frac{1}{r} \frac{\partial}{\partial r}(r v_{r}) = \frac{\partial v_{z}}{\partial z} + \frac{\partial v_{r}}{\partial r}+ \frac{v_{r}}{r}
+\nabla^{3D} \cdot {\mathbf v}^{3D} = 
+\frac{\partial v_{z}}{\partial z} + \frac{1}{r} \frac{\partial}{\partial r}(r v_{r}) = 
+\frac{\partial v_{z}}{\partial z} + \frac{\partial v_{r}}{\partial r}+ \frac{v_{r}}{r}
 $$
 
 $$
-\nabla^{3D} \cdot {\boldsymbol \sigma}^{3D} = \begin{bmatrix} \frac{\partial \sigma_{zz}}{\partial z} + \frac{1}{r} \frac{\partial}{\partial r}(r\sigma_{rz}) \\ \frac{\partial \sigma_{zr}}{\partial z} + \frac{1}{r} \frac{\partial}{\partial r}(r\sigma_{rr}) - \frac{\sigma_{\varphi\varphi}}{r} \\ 0 \end{bmatrix} = \begin{bmatrix} \frac{\partial \sigma_{zz}}{\partial z} + \frac{\partial \sigma_{rz}}{\partial r} + \frac{\sigma_{rz}}{r} \\ \frac{\partial \sigma_{zr}}{\partial z} + \frac{\partial \sigma_{rr}}{\partial r} + \frac{\sigma_{rr} - \sigma_{\varphi\varphi}}{r} \\ 0 \end{bmatrix}
+\nabla^{3D} \cdot {\boldsymbol \sigma}^{3D} = 
+\begin{bmatrix} 
+\frac{\partial \sigma_{zz}}{\partial z} + \frac{1}{r} \frac{\partial}{\partial r}(r\sigma_{rz}) \\
+\frac{\partial \sigma_{zr}}{\partial z} + \frac{1}{r} \frac{\partial}{\partial r}(r\sigma_{rr}) - \frac{\sigma_{\varphi\varphi}}{r} \\
+0 
+\end{bmatrix} 
+= 
+\begin{bmatrix} 
+\frac{\partial \sigma_{zz}}{\partial z} + \frac{\partial \sigma_{rz}}{\partial r} + \frac{\sigma_{rz}}{r} \\
+\frac{\partial \sigma_{zr}}{\partial z} + \frac{\partial \sigma_{rr}}{\partial r} + \frac{\sigma_{rr} - \sigma_{\varphi\varphi}}{r} \\
+0 
+\end{bmatrix}
 $$
 
 The velocity gradient is
 
 $$
-{\mathbf {L}} = \nabla^{3D} {\mathbf v}^{3D} = \begin{bmatrix} \frac{\partial v_z}{\partial z} & \frac{\partial v_z}{\partial r} & 0 \\ \frac{\partial v_r}{\partial z} & \frac{\partial v_r}{\partial r} & 0 \\ 0 & 0 & \frac{v_r}{r} \end{bmatrix}
+{\mathbf {L}} = 
+\nabla^{3D} {\mathbf v}^{3D} = 
+\begin{bmatrix} 
+\frac{\partial v_z}{\partial z} & \frac{\partial v_z}{\partial r} & 0 \\
+\frac{\partial v_r}{\partial z} & \frac{\partial v_r}{\partial r} & 0 \\
+0 & 0 & \frac{v_r}{r} 
+\end{bmatrix}
 $$
 
 The governing physics equations can be written as 2D equations with a source term.
@@ -50,17 +87,35 @@ $$
 $$
 
 $$
-\nabla^{3D} \cdot {\boldsymbol \sigma}^{3D} = \nabla \cdot {\boldsymbol\sigma} + \begin{bmatrix} \frac{\sigma_{rz}}{r} \\ \frac{\sigma_{rr}-\sigma_{\varphi\varphi}}{r} \end{bmatrix}
+\nabla^{3D} \cdot {\boldsymbol \sigma}^{3D} = 
+\nabla \cdot {\boldsymbol\sigma} 
++ 
+\begin{bmatrix} 
+\frac{\sigma_{rz}}{r} \\
+\frac{\sigma_{rr}-\sigma_{\varphi\varphi}}{r} 
+\end{bmatrix}
 $$
 
 $$
-\nabla^{3D} {\mathbf v}^{3D} = \nabla {\mathbf v} + \begin{bmatrix} 0 & 0 & 0 \\ 0 & 0 & 0 \\ 0 & 0 & \frac{v_r}{r} \end{bmatrix}
+\nabla^{3D} {\mathbf v}^{3D} = 
+\nabla {\mathbf v} + 
+\begin{bmatrix} 
+0 & 0 & 0 \\
+0 & 0 & 0 \\
+0 & 0 & \frac{v_r}{r} 
+\end{bmatrix}
 $$
 
 The velocity evolution equation can be expressed as:
 
 $$
-\rho^{3D} \frac{d{\mathbf v} }{dt} = \nabla \cdot {\boldsymbol \sigma} + \begin{bmatrix} \frac{\sigma_{rz}}{r} \\ \frac{\sigma_{rr}-\sigma_{\varphi\varphi}}{r} \end{bmatrix}
+\rho^{3D} \frac{d{\mathbf v} }{dt} = 
+\nabla \cdot {\boldsymbol \sigma} 
++ 
+\begin{bmatrix} 
+\frac{\sigma_{rz}}{r} \\
+\frac{\sigma_{rr}-\sigma_{\varphi\varphi}}{r} 
+\end{bmatrix}
 $$
 
 Likewise, the specific internal energy equation is:
@@ -72,13 +127,17 @@ $$
 The reader is reminded that there is no variation in the azimuthal direction and the omission of a superscript $3D$ means it is a $2D$ operator or variable in the $(z,r)$ coordinates. The specific kinetic energy evolution equation can be recovered by multiplying velocity evolution equation by the velocity vector,
 
 $$
-\rho^{3D} \frac{d k }{dt} = (\nabla \cdot {\boldsymbol \sigma}) \cdot \mathbf v + \frac{\sigma_{rz} v_{z} + \sigma_{rr} v_{r} - \sigma_{\varphi\varphi} v_{r}}{r}
+\rho^{3D} \frac{d k }{dt} = 
+(\nabla \cdot {\boldsymbol \sigma}) \cdot \mathbf v 
++ \frac{\sigma_{rz} v_{z} + \sigma_{rr} v_{r} - \sigma_{\varphi\varphi} v_{r}}{r}
 $$
 
 The specific total energy evolution equation is
 
 $$
-\rho^{3D} \frac{d \tau }{dt} = \nabla \cdot ( {\boldsymbol \sigma} \cdot \mathbf v) + \frac{\sigma_{rz} v_{z} + \sigma_{rr} v_{r}}{r}
+\rho^{3D} \frac{d \tau }{dt} = 
+\nabla \cdot ( {\boldsymbol \sigma} \cdot \mathbf v) 
++ \frac{\sigma_{rz} v_{z} + \sigma_{rr} v_{r}}{r}
 $$
 
 The derivation of the governing physics equations in axisymmetric coordinates is complete.
