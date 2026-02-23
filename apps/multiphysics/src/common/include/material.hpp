@@ -449,21 +449,21 @@ struct MaterialFunctions_t
 ///
 /// In the material object: CArrayKokkos <MaterialTables_t> MaterialTables;
 /////////////////////////////////////////////////////////////////////////////
-struct MaterialTables_t
-{
+// struct MaterialTables_t
+// {
 
-    // -- tabular --
-    // Tabular density as a function of temperature
-    Table_t density_table;
+//     // -- tabular --
+//     // Tabular density as a function of temperature
+//     Table_t density_table;
     
-    // Tabular thermal conductivity as a function of temperature
-    Table_t thermal_conductivity_table;
+//     // Tabular thermal conductivity as a function of temperature
+//     Table_t thermal_conductivity_table;
     
-    // Tabular specific heat as a function of temperature
-    Table_t specific_heat_table;
+//     // Tabular specific heat as a function of temperature
+//     Table_t specific_heat_table;
 
 
-}; // end MaterialTables_t
+// }; // end MaterialTables_t
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -507,8 +507,10 @@ struct Material_t
 
 
     // -- Tabular Material Data --
-    DCArrayKokkos<MaterialTables_t> MaterialTables;
-
+    // DCArrayKokkos<MaterialTables_t> MaterialTables;
+    Table_t density_table;
+    Table_t thermal_conductivity_table;
+    Table_t specific_heat_table;
 
     // ...
 

@@ -140,7 +140,9 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
     Materials.num_dissipation_global_vars   = CArrayKokkos <size_t> (num_materials, "num_dissipations_vars");
 
     // allocate memory for the material tables. WARNING: THIS IS A TEMPORARY SOLUTION.  We should only allocate these for the materials that have tabular models.
-    Materials.MaterialTables = DCArrayKokkos<MaterialTables_t>(num_materials, "material_tables");
+    // Materials.density_table = Table_t(num_materials, 2, "density_table");
+    // Materials.thermal_conductivity_table = Table_t(num_materials, 2, "thermal_conductivity_table");
+    // Materials.specific_heat_table = Table_t(num_materials, 2, "specific_heat_table");
    
     // initialize the num of global vars to 0 for all models
     FOR_ALL(mat_id, 0, num_materials, {
@@ -847,23 +849,21 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
 
                     if(field_name.compare("density") == 0){
-                        // Create the table data structure for density
-                        Materials.MaterialTables(mat_id).density_table = Table_t();
+
                         // Read the data from the Abaqus JMatPro file
-                        AbaqusReader::read_tabular_jmatpro_file(file_path, field_name, Materials.MaterialTables(mat_id).density_table);
+                        AbaqusReader::read_tabular_jmatpro_file(file_path, field_name,  Materials.density_table);
                         // Copy the table to the device
-                        Materials.MaterialTables(mat_id).density_table.update_device();
+                        Materials.density_table.update_device();
 
                         RUN({
                             Materials.MaterialFunctions(mat_id).get_density_from_temperature = &TabularMaterialModel::get_density_from_temperature;
                         });
                     }
                     else if(field_name.compare("thermal_conductivity") == 0){
-                        Materials.MaterialTables(mat_id).thermal_conductivity_table = Table_t();
                         // Read the data from the Abaqus JMatPro file
-                        AbaqusReader::read_tabular_jmatpro_file(file_path, field_name, Materials.MaterialTables(mat_id).thermal_conductivity_table);
+                        AbaqusReader::read_tabular_jmatpro_file(file_path, field_name, Materials.thermal_conductivity_table);
 
-                        Materials.MaterialTables(mat_id).thermal_conductivity_table.update_device();
+                        Materials.thermal_conductivity_table.update_device();
 
                         RUN({
                             Materials.MaterialFunctions(mat_id).get_thermal_conductivity_from_temperature = &TabularMaterialModel::get_thermal_conductivity_from_temperature;
@@ -871,11 +871,10 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
                     }
                     else if(field_name.compare("specific_heat") == 0){
-                        Materials.MaterialTables(mat_id).specific_heat_table = Table_t();
                         // Read the data from the Abaqus JMatPro file
-                        AbaqusReader::read_tabular_jmatpro_file(file_path, field_name, Materials.MaterialTables(mat_id).specific_heat_table);
+                        AbaqusReader::read_tabular_jmatpro_file(file_path, field_name, Materials.specific_heat_table);
 
-                        Materials.MaterialTables(mat_id).specific_heat_table.update_device();
+                        Materials.specific_heat_table.update_device();
 
                         RUN({
                             Materials.MaterialFunctions(mat_id).get_specific_heat_from_temperature = &TabularMaterialModel::get_specific_heat_from_temperature;

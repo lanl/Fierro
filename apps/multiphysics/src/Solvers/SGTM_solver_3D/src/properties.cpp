@@ -74,7 +74,9 @@ void SGTM3D::update_properties(
     const size_t num_dims = mesh.num_dims;
     const size_t num_nodes_in_elem = 8;
 
-    auto material_table = Materials.MaterialTables(mat_id);
+    auto density_table = Materials.density_table;
+    auto thermal_conductivity_table = Materials.thermal_conductivity_table;
+    auto specific_heat_table = Materials.specific_heat_table;
 
     // Compute the element temperature by averaging the node temperatures
     FOR_ALL(mat_elem_sid, 0, num_material_elems, {
@@ -89,12 +91,13 @@ void SGTM3D::update_properties(
         }
 
         // Use that temperature to update the element state using the tabular properties
-        MaterialPoints_den(mat_id, mat_elem_sid) = Materials.MaterialFunctions(mat_id).get_density_from_temperature(material_table.density_table, avg_temp);
-        MaterialPoints_conductivity(mat_id, mat_elem_sid) = Materials.MaterialFunctions(mat_id).get_thermal_conductivity_from_temperature(material_table.thermal_conductivity_table, avg_temp);
-        MaterialPoints_specific_heat(mat_id, mat_elem_sid) = Materials.MaterialFunctions(mat_id).get_specific_heat_from_temperature(material_table.specific_heat_table, avg_temp);
+        MaterialPoints_den(mat_id, mat_elem_sid) = Materials.MaterialFunctions(mat_id).get_density_from_temperature(density_table, avg_temp);
+        MaterialPoints_conductivity(mat_id, mat_elem_sid) = Materials.MaterialFunctions(mat_id).get_thermal_conductivity_from_temperature(thermal_conductivity_table, avg_temp);
+        MaterialPoints_specific_heat(mat_id, mat_elem_sid) = Materials.MaterialFunctions(mat_id).get_specific_heat_from_temperature(specific_heat_table, avg_temp);
 
     });
 
 
     return;
 } // end method to update state
+

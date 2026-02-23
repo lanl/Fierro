@@ -117,11 +117,11 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     // Print the material tables
     for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
         std::cout << "Material " << mat_id << " density table:" << std::endl;
-        Materials.MaterialTables(mat_id).density_table.print_table();
+        Materials.density_table.print_table();
         std::cout << "Material " << mat_id << " thermal conductivity table:" << std::endl;
-        Materials.MaterialTables(mat_id).thermal_conductivity_table.print_table();
+        Materials.thermal_conductivity_table.print_table();
         std::cout << "Material " << mat_id << " specific heat table:" << std::endl;
-        Materials.MaterialTables(mat_id).specific_heat_table.print_table();
+        Materials.specific_heat_table.print_table();
 
     } // end for mat_id
 
