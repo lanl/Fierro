@@ -158,18 +158,20 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     }); // end for parallel for over nodes
 
     // ---- Update the material properties ---- //
-    for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-        update_properties(
-            Materials, 
-            mesh, 
-            State.node.temp, 
-            State.MaterialPoints.den, 
-            State.MaterialPoints.conductivity, 
-            State.MaterialPoints.specific_heat, 
-            State.MaterialToMeshMaps.elem_in_mat_elem, 
-            State.MaterialToMeshMaps.num_mat_elems.host(mat_id), 
-            mat_id);
-    } // end for mat_id
+    if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source) {
+        for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+            update_properties(
+                Materials, 
+                mesh, 
+                State.node.temp, 
+                State.MaterialPoints.den, 
+                State.MaterialPoints.conductivity, 
+                State.MaterialPoints.specific_heat, 
+                State.MaterialToMeshMaps.elem_in_mat_elem, 
+                State.MaterialToMeshMaps.num_mat_elems.host(mat_id), 
+                mat_id);
+        } // end for mat_id
+    }
 
     // ---- loop over the max number of time integration cycles ---- //
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
