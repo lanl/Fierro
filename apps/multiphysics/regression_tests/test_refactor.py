@@ -5,6 +5,7 @@ import os.path
 import sys
 import math
 import glob
+import argparse
 
 # Builds being tested
 builds = ["openmp"]
@@ -24,6 +25,19 @@ tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
         "sie_expansion_test", "confined_preload", "unconfined_preload",\
         "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact"]
 #,"SGTM_cooling_cube" currently broken
+
+# Parse command line arguments
+parser = argparse.ArgumentParser(description='Run regression tests.')
+parser.add_argument('test_name', nargs='?', help='Name of the specific test to run')
+args = parser.parse_args()
+
+if args.test_name:
+    if args.test_name in tests:
+        tests = [args.test_name]
+    else:
+        print(f"Error: Test '{args.test_name}' not found.")
+        sys.exit(1)
+
 # Extract data from txt file
 def extract_state_data(filename):
     data = []
