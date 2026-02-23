@@ -50,84 +50,83 @@ struct cohesive_zones_t {
     size_t cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids, const RaggedRightArrayKokkos<size_t>& elems_in_node, const Mesh_t& mesh);
 
     KOKKOS_FUNCTION
-    void compute_face_geometry(const DCArrayKokkos<double> &nodes,
-                                const Mesh_t &mesh,
-                                const DCArrayKokkos<double> &node_coords,
-                                const DCArrayKokkos<size_t> &conn,
-                                const size_t surf,
-                                const size_t elem,
-                                ViewCArrayKokkos<double> &n,
-                                ViewCArrayKokkos<double> &r,
-                                ViewCArrayKokkos<double> &s,
-                                ViewCArrayKokkos<double> &cenface
-                            ) const;
+    static void compute_face_geometry(
+        const DCArrayKokkos<size_t>& nodes_in_elem,  // just this from mesh
+        const DCArrayKokkos<double>& node_coords,
+        const size_t surf,
+        const size_t elem,
+        ViewCArrayKokkos<double>& n,
+        ViewCArrayKokkos<double>& r,
+        ViewCArrayKokkos<double>& s,
+        ViewCArrayKokkos<double>& cenface
+    );
 
 
     DCArrayKokkos<int> build_cohesive_zone_info(
-    const Mesh_t& mesh,
-    const State_t& state,
-    DCArrayKokkos<size_t>& overlapping_node_gids,   
-    const size_t max_elem_in_cohesive_zone,              // from cohesive_zone_elem_count()
-    const double tol                                     // centroid coincidence tolerance
+        RaggedRightArrayKokkos<size_t>& elems_in_node,  // mesh.elems_in_node
+        DCArrayKokkos<size_t>& nodes_in_elem,           // mesh.nodes_in_elem
+        DCArrayKokkos<double>& node_coords,             // state.node.coords
+        DCArrayKokkos<size_t>& overlapping_node_gids,
+        size_t max_elem_in_cohesive_zone,
+        const double tol
     );
 
     CArrayKokkos<int> cohesive_zone_faces(
        DCArrayKokkos<size_t>& overlapping_node_gids,
-       const size_t max_elem_in_cohesive_zone
+       size_t max_elem_in_cohesive_zone
     );
 
 
     KOKKOS_FUNCTION
     void oriented(
-        Mesh_t& mesh,
-        DCArrayKokkos<double>& pos,      // reference  coords (num_nodes x 3) 
-        //DCArrayKokkos<double>& pos,    // updated ("t+dt") coords (num_nodes x 3) – can equal pos if not available
+        DCArrayKokkos<size_t>& nodes_in_elem,
+        DCArrayKokkos<double>& node_coords,      // reference  coords (num_nodes x 3) 
         DCArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
         DCArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
         size_t max_elem_in_cohesive_zone,
         double tol,                 // centroid coincidence tolerance (ABS distance)
-        CArrayKokkos<double>& cohesive_zone_orientation       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
+        DCArrayKokkos<double>& cohesive_zone_orientation       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
     ); 
 
     KOKKOS_FUNCTION
     void ucmap(
-        const DCArrayKokkos<double>& pos,
+        const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& vel,
-        const CArrayKokkos<double>& cohesive_zone_orientation,
+        const DCArrayKokkos<double>& cohesive_zone_orientation,
         DCArrayKokkos<size_t>& overlapping_node_gids,
-        //const double dt, // timestep driver from sgh_execute.cpp  2/2 comment ouyt
-        const double dt_stage, // 2/2 add
-        CArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
+        const double dt_stage, 
+        DCArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
     );
 
     KOKKOS_FUNCTION
     void cohesive_zone_var_update(
-        const CArrayKokkos<double>& local_opening,
+        const DCArrayKokkos<double>& local_opening,
         const double dt_stage, 
-        const double time_value, 
+        const double time_value, // ADDED IN FOR DEBUGGING
         DCArrayKokkos<size_t>& overlapping_node_gids,
-        const double E_inf, const double a1, const double n_exp, const double u_n_star, const double u_t_star,
-        const int num_prony_terms,
-        const DCArrayKokkos<double> prony_params, // (num_prony_terms x 2) : [E_j, tau_j]
-        const ViewCArrayKokkos<double>& internal_vars,      // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
-        const ViewCArrayKokkos<double>& delta_internal_vars 
+        const double E_inf, const double a1, const double n_exp, const double u_n_star, const double u_t_star, const int num_prony_terms, // cohesive zone parameters
+        const DCArrayKokkos<double>& prony_params, // E_j, tau_j pairs
+        //const RaggedRightArrayKokkos<double>& stress_bc_global_vars, // BC parameters per boundary set for fractureStressBC
+        //const int bdy_set,
+        const DCArrayKokkos<double>& internal_vars,      // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
+        DCArrayKokkos<double>& delta_internal_vars 
     );
 
-    CArrayKokkos<double> internal_vars;
-    CArrayKokkos<double> delta_internal_vars;
+    DCArrayKokkos<double> internal_vars;
+    DCArrayKokkos<double> delta_internal_vars;
 
     KOKKOS_FUNCTION
     void cohesive_zone_loads(
-        Mesh_t &mesh,
-        const DCArrayKokkos<double> &pos,
+        DCArrayKokkos<size_t>& nodes_in_elem,
+        const DCArrayKokkos<double> &node_coords,
         DCArrayKokkos<size_t> &overlapping_node_gids,
-        const CArrayKokkos<double> &cohesive_zone_orientation,
+        const DCArrayKokkos<double> &cohesive_zone_orientation,
         DCArrayKokkos<int> &cz_info,
         const size_t max_elem_in_cohesive_zone,
-        const ViewCArrayKokkos<double> &internal_vars,
-        const ViewCArrayKokkos<double> &delta_internal_vars,
+        const DCArrayKokkos<double> &internal_vars,
+        const DCArrayKokkos<double> &delta_internal_vars,
         CArrayKokkos<double> &pair_area,
-        const ViewCArrayKokkos<double> &F_cz
+        CArrayKokkos<double> &F_cz
     ); 
 
     // END OF FRACTURE FUNCTION AND ARRAY DECLARATIONS
