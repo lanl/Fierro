@@ -25,11 +25,12 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+        fetch-depth: 1  # Only gets the latest commit, much faster
 
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential cmake libopenmpi-dev openmpi-bin libblas-dev liblapack-dev python3
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake libopenmpi-dev openmpi-bin libblas-dev liblapack-dev python3
 
     - name: Configure CMake
       run: |
