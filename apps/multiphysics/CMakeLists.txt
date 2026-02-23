@@ -26,17 +26,24 @@ option(FIERRO_ENABLE_SYCL     "Enable SYCL backend"      OFF)
 add_definitions(-DHAVE_KOKKOS=1)
 if(FIERRO_ENABLE_CUDA)
   set(CUDA ON)
-
   # Kokkos CUDA build configuration
   set(Kokkos_ARCH_NATIVE ON CACHE BOOL "Enable native architecture" FORCE)
-  set(BUILD_TESTING OFF CACHE BOOL "Enable testing" FORCE)
-  set(Kokkos_ENABLE_CUDA ON CACHE BOOL "Enable CUDA backend" FORCE)
   set(Kokkos_ENABLE_CUDA_CONSTEXPR ON CACHE BOOL "Enable CUDA constexpr" FORCE)
   set(Kokkos_ENABLE_CUDA_LAMBDA ON CACHE BOOL "Enable CUDA lambda" FORCE)
   set(Kokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE ON CACHE BOOL "Enable relocatable device code" FORCE)
+
+  # Find nvcc_wrapper
+  find_program(NVCC_WRAPPER_PATH nvcc_wrapper HINTS ${kokkos_SOURCE_DIR}/bin ${CMAKE_BINARY_DIR}/_deps/kokkos-src/bin)
+    if(NVCC_WRAPPER_PATH)
+        set(CMAKE_CXX_COMPILER ${NVCC_WRAPPER_PATH})
+        message(STATUS "Setting C++ compiler to nvcc_wrapper: ${NVCC_WRAPPER_PATH}")
+    else()
+        message(WARNING "CUDA enabled but nvcc_wrapper not found.")
+    endif()
 endif()
 if(FIERRO_ENABLE_HIP)
   set(HIP ON)
+
 endif()
 if(FIERRO_ENABLE_OPENMP)
   set(OPENMP ON)
