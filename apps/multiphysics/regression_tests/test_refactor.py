@@ -20,8 +20,8 @@ tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
         "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", \
         "Pressure_bc_box","vtu_read", \
         "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
-        "slanted_block_bounce", "slanted_impact", \
-        "sie_expansion_test", "confined_preload", "unconfined_preload", \
+        "slanted_block_bounce", "slanted_impact", "SGTM_cooling_cube", \
+        "sie_expansion_test", "confined_preload", "unconfined_preload",\
         "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact"]
 #,"SGTM_cooling_cube" currently broken
 # Extract data from txt file
@@ -33,8 +33,7 @@ def extract_state_data(filename):
         with open(filename, 'r') as file:
             lines = file.readlines()
     except FileNotFoundError:
-        print("The file was not found at the specified location.")
-        sys.exit(1)
+        raise FileNotFoundError(f"The file {filename} was not found at the specified location.")
 
     # Skip the first line to get table headers
     lines = lines[1:]
@@ -70,51 +69,88 @@ standard_results = []
 for i in range(len(tests)):
     pattern = "standard_results/"+tests[i]+"/state/mat_pt_state*"
     file = glob.glob(pattern)
-    standard_results.append(file[0])
+    if not file:
+        print(f"Warning: Standard result file not found for {tests[i]}")
+        standard_results.append("") # Placeholder
+    else:
+        standard_results.append(file[0])
+
+failed_tests = []
+passed_tests = []
 
 # Run each tests
 for i in range(len(executables)):
     for j in range(len(tests)):
-        # Call Fierro with YAML inputs
-        print("Running "+tests[j])
-        os.system(executables[i] + ' ' + inputs[j])
+        test_name = tests[j]
+        try:
+            # Call Fierro with YAML inputs
+            print("Running "+test_name)
+            os.system(executables[i] + ' ' + inputs[j])
+    
+            # Compare to standard results
+            if not standard_results[j]:
+                raise FileNotFoundError(f"Standard result file missing for {test_name}")
 
-        # Compare to standard results
-        pattern = "state/mat_pt_state*"
-        files = glob.glob(pattern)
+            pattern = "state/mat_pt_state*"
+            files = glob.glob(pattern)
+            
+            try: 
+                fileIndex = list(file.split("/")[-1] for file in files).index(standard_results[j].split("/")[-1])
+            except ValueError:
+                raise ValueError("State file not found for "+test_name+" test")
+    
+    
+            file_path = files[fileIndex]
+    
+            print(file_path)
+            print(standard_results[j])
+    
+            result_data, header1 = extract_state_data(file_path)
+            standard_data, header2 = extract_state_data(standard_results[j])
+    
+            for k in range(len(result_data[0])):
+                calc = [row[k] for row in result_data]
+                true = [row[k] for row in standard_data]
+    
+    
+    
+                for l in range(len(calc)):
+                    diff = calc[l] - true[l]
+                    # print(diff)
+    
+                    if abs(diff) > 1E-8:
+                        print(f"{'Calculated Result:':<20} {calc[l]:.10e}")
+                        print(f"{'Expected Result:':<20} {true[l]:.10e}")
+                        print(f"{'Difference:':<20} {diff:.10e}")
+                        raise Exception("Results do not match for "+header1[k]+" for the "+test_name+" test!")
+            
+            print("\n******************************")
+            print("\nPASSED : "+test_name+"\n")
+            print("******************************\n")
+            passed_tests.append(test_name)
+
+        except Exception as e:
+            print(f"\nFAILED : {test_name}")
+            print(f"Error: {e}\n")
+            failed_tests.append(test_name)
         
-        try: fileIndex = list(file.split("/")[-1] for file in files).index(standard_results[j].split("/")[-1])
-        except ValueError:
-            raise ValueError("State file not found for "+tests[j]+" test")
+        finally:
+            # Remove simulated state dump
+            if os.path.exists('state'):
+                os.system('rm -rf state')
 
+print("\n" + "="*30)
+print("       TEST SUMMARY")
+print("="*30)
+print(f"Total Tests Run: {len(passed_tests) + len(failed_tests)}")
+print(f"Passed: {len(passed_tests)}")
+print(f"Failed: {len(failed_tests)}")
 
-        file_path = files[fileIndex]
-
-        print(file_path)
-        print(standard_results[j])
-
-        result_data, header1 = extract_state_data(file_path)
-        standard_data, header2 = extract_state_data(standard_results[j])
-
-        for k in range(len(result_data[0])):
-            calc = [row[k] for row in result_data]
-            true = [row[k] for row in standard_data]
-
-
-
-            for l in range(len(calc)):
-                diff = calc[l] - true[l]
-                # print(diff)
-
-                if abs(diff) > 1E-8:
-                    print(f"{'Calculated Result:':<20} {calc[l]:.10e}")
-                    print(f"{'Expected Result:':<20} {true[l]:.10e}")
-                    print(f"{'Difference:':<20} {diff:.10e}")
-                    raise Exception("Results do not match for "+header1[k]+" for the "+tests[j]+" test!")
-
-        # Remove simulated state dump
-        os.system('rm -rf  state' )
-
-        print("\n******************************")
-        print("\nPASSED : "+tests[j]+"\n")
-        print("******************************\n")
+if failed_tests:
+    print("\nFailed Tests:")
+    for test in failed_tests:
+        print(f"  - {test}")
+    sys.exit(1)
+else:
+    print("\nAll tests passed!")
+    sys.exit(0)
