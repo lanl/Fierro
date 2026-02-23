@@ -2,7 +2,7 @@ name: Regression Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, CMake_build ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
