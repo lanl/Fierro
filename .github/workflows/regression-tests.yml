@@ -8,8 +8,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  Regression-Tests:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Serial
+            cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
+            omp_threads: 1
+          - name: OpenMP
+            cmake_args: -DFIERRO_ENABLE_OPENMP=ON
+            omp_threads: 2
+
     steps:
     - uses: actions/checkout@v4
       with:
@@ -24,57 +35,16 @@ jobs:
       run: |
         mkdir -p apps/multiphysics/build
         cd apps/multiphysics/build
-        cmake -DCMAKE_BUILD_TYPE=Release -DFIERRO_ENABLE_OPENMP=ON ..
+        cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} ..
 
     - name: Build Fierro
       run: |
         cd apps/multiphysics/build
         make -j$(nproc)
 
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: fierro-executable
-        path: apps/multiphysics/build/app/Fierro
-
-
-  test:
-    needs: build
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        test_name: [
-          "TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz",
-          "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion",
-          "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read",
-          "Pressure_bc_box", "vtu_read", "lin_vol_frac_two_mat",
-          "Bending-3D-plate", "Vel_bc_box", "slanted_block_bounce",
-          "slanted_impact", "SGTM_cooling_cube", "sie_expansion_test",
-          "confined_preload", "unconfined_preload", "edge_flat_test",
-          "billiards", "3by3_stack", "cylinder_contact"
-        ]
-
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libopenmpi-dev openmpi-bin python3
-
-    - name: Download Build Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: fierro-executable
-        path: apps/multiphysics/build/app
-
-    - name: Set executable permissions
-      run: chmod +x apps/multiphysics/build/app/Fierro
-
-    - name: Run Regression Test
+    - name: Run Regression Tests
+      env:
+        OMP_NUM_THREADS: ${{ matrix.omp_threads }}
       run: |
         cd apps/multiphysics/regression_tests
-        python3 test_refactor.py ${{ matrix.test_name }}
+        python3 test_refactor.py
