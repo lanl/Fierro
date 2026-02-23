@@ -37,6 +37,7 @@ jobs:
         name: fierro-executable
         path: apps/multiphysics/build/app/Fierro
 
+
   test:
     needs: build
     runs-on: ubuntu-latest
