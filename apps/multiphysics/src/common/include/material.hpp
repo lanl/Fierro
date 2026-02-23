@@ -455,8 +455,10 @@ struct MaterialTables_t
     // -- tabular --
     // Tabular density as a function of temperature
     Table_t density_table;
+    
     // Tabular thermal conductivity as a function of temperature
     Table_t thermal_conductivity_table;
+    
     // Tabular specific heat as a function of temperature
     Table_t specific_heat_table;
 
@@ -504,6 +506,10 @@ struct Material_t
     CArrayKokkos<size_t> num_dissipation_global_vars;
 
 
+    // -- Tabular Material Data --
+    DCArrayKokkos<MaterialTables_t> MaterialTables;
+
+
     // ...
 
 
@@ -523,10 +529,9 @@ struct Material_t
 
     size_t max_num_mats_per_element = 3; ///< default is to allow up to 3 materials in an element in setup
 
-    // -- Tabular Material Data --
-    DCArrayKokkos<MaterialTables_t> MaterialTables;
+    
 
-}; // end MaterialModelVars_t
+}; // end Material_t
 
 // ----------------------------------
 // valid inputs for material options

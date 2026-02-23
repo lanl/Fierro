@@ -104,7 +104,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // =================================================================================
 //    Parse Material Definitions
 // =================================================================================
-void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims)
+void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims)    
 {
     Yaml::Node& material_yaml = root["materials"];
 
