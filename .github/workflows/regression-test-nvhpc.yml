@@ -27,10 +27,12 @@ jobs:
         submodules: recursive
         fetch-depth: 1
 
+    # REPLACEMENT: Install the actual HPC SDK instead of using setup-mpi
     - name: Install NVHPC SDK
-      uses: mpi4py/setup-mpi@v1
+      uses: nvidia/hpc-sdk-action@v1
       with:
-        mpi: nvhpc
+        hpc_sdk_version: '24.1'
+        hpc_sdk_components: 'compilers,mpi'
 
     - name: Install dependencies
       run: |
@@ -38,14 +40,16 @@ jobs:
         sudo apt-get install -y build-essential cmake libblas-dev liblapack-dev python3 bison flex
 
     - name: Configure CMake
+      # Using the MPI wrappers provided by NVHPC ensures correct linking
       env:
-        CC: nvc
-        CXX: nvc++
-        FC: nvfortran
+        CC: mpicc
+        CXX: mpicxx
+        FC: mpifort
       run: |
         mkdir -p apps/multiphysics/build
         cd apps/multiphysics/build
-        cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} ..
+        # Added -DFIERRO_ENABLE_MPI=ON since you are using an MPI stack
+        cmake -DCMAKE_BUILD_TYPE=Release -DFIERRO_ENABLE_MPI=ON ${{ matrix.cmake_args }} ..
 
     - name: Build Fierro
       run: |
@@ -57,4 +61,5 @@ jobs:
         OMP_NUM_THREADS: ${{ matrix.omp_threads }}
       run: |
         cd apps/multiphysics/regression_tests
+        # Ensure MPI tests run correctly with mpirun if needed by your script
         python3 test_refactor.py
