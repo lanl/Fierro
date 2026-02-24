@@ -1,0 +1,51 @@
+name: Regression Tests (macOS)
+
+on:
+  push:
+    branches: [ main, CMake_build ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  Regression-Tests:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Serial
+            cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
+            omp_threads: 1
+          - name: OpenMP
+            cmake_args: -DFIERRO_ENABLE_OPENMP=ON
+            omp_threads: 2
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 1
+
+    - name: Install dependencies
+      run: |
+        brew update
+        brew install cmake openmpi libomp openblas lapack python3
+
+    - name: Configure CMake
+      run: |
+        mkdir -p apps/multiphysics/build
+        cd apps/multiphysics/build
+        cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} ..
+
+    - name: Build Fierro
+      run: |
+        cd apps/multiphysics/build
+        make -j1
+
+    - name: Run Regression Tests
+      env:
+        OMP_NUM_THREADS: ${{ matrix.omp_threads }}
+      run: |
+        cd apps/multiphysics/regression_tests
+        python3 test_refactor.py
