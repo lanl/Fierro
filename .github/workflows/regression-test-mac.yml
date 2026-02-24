@@ -30,7 +30,8 @@ jobs:
     - name: Install dependencies
       run: |
         brew update
-        brew install cmake openmpi libomp openblas lapack python3 gcc
+        brew install cmake openmpi libomp openblas lapack python3 gcc bison@3.8
+        echo "/opt/homebrew/opt/bison@3.8/bin" >> $GITHUB_PATH
 
     - name: Configure CMake
       env:

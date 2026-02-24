@@ -54,9 +54,18 @@ option(ELEMENTS_BUILD_TESTS "Build Elements unit tests" OFF)
 option(ELEMENTS_BUILD_EXAMPLES "Build Elements examples" OFF)
 option(ELEMENTS_BUILD_DOCS "Build Elements docs" OFF)
 
-# --- Dependencies ---
+# --- PT-Scotch Dependencies --- (note, move this to ELEMENTS)
+# Check for Bison 3.2 or newer
+find_package(BISON 3.2 REQUIRED)
+if(BISON_FOUND)
+  message(STATUS "Found Bison: ${BISON_VERSION}")
+else()
+  message(FATAL_ERROR "Bison 3.2 or newer is required.")
+endif()
+
 # Elements (includes Kokkos, Matar, Scotch)
 # Using relative path to lib/Elements
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../lib/Elements ${CMAKE_BINARY_DIR}/lib/Elements)
 
 
