@@ -9,7 +9,7 @@ on:
 
 jobs:
   Regression-Tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
@@ -27,40 +27,33 @@ jobs:
         submodules: recursive
         fetch-depth: 1
 
-    # MANUALLY INSTALL NVHPC SDK FROM NVIDIA REPO
     - name: Install NVHPC SDK
-      run: |
-        curl https://developer.download.nvidia.com/hpc-sdk/ubuntu/DEB-GPG-KEY-NVIDIA-HPC-SDK | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg
-        echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list
-        sudo apt-get update -y
-        sudo apt-get install -y nvhpc-24-1
+      uses: mpi4py/setup-mpi@v1
+      with:
+        mpi: nvhpc
 
     - name: Install dependencies
       run: |
+        sudo apt-get update
         sudo apt-get install -y build-essential cmake libblas-dev liblapack-dev python3 bison flex
 
     - name: Configure CMake
       env:
-        # Update path to find nvc++ and the bundled OpenMPI
-        PATH: /opt/nvidia/hpc_sdk/Linux_x86_64/24.1/compilers/bin:/opt/nvidia/hpc_sdk/Linux_x86_64/24.1/comm_libs/mpi/bin:${{ env.PATH }}
-        CC: mpicc
-        CXX: mpicxx
-        FC: mpifort
+        CC: nvc
+        CXX: nvc++
+        FC: nvfortran
       run: |
         mkdir -p apps/multiphysics/build
         cd apps/multiphysics/build
-        cmake -DCMAKE_BUILD_TYPE=Release -DFIERRO_ENABLE_MPI=ON ${{ matrix.cmake_args }} ..
+        cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} ..
 
     - name: Build Fierro
-      env:
-        PATH: /opt/nvidia/hpc_sdk/Linux_x86_64/24.1/compilers/bin:/opt/nvidia/hpc_sdk/Linux_x86_64/24.1/comm_libs/mpi/bin:${{ env.PATH }}
       run: |
         cd apps/multiphysics/build
         make -j$(nproc)
 
     - name: Run Regression Tests
       env:
-        PATH: /opt/nvidia/hpc_sdk/Linux_x86_64/24.1/compilers/bin:/opt/nvidia/hpc_sdk/Linux_x86_64/24.1/comm_libs/mpi/bin:${{ env.PATH }}
         OMP_NUM_THREADS: ${{ matrix.omp_threads }}
       run: |
         cd apps/multiphysics/regression_tests
