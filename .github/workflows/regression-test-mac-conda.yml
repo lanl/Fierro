@@ -27,16 +27,26 @@ jobs:
         submodules: recursive
         fetch-depth: 1
 
-    - name: Set up Miniconda
+    - name: Set up Mamba
       uses: conda-incubator/setup-miniconda@v3
       with:
         auto-update-conda: true
         python-version: 3.9
+        miniforge-variant: Mambaforge
+        use-mamba: true
+
+    - name: Configure Conda/Mamba
+      shell: bash -l {0}
+      run: |
+        conda config --set remote_read_timeout_secs 300.0
+        conda config --set remote_connect_timeout_secs 300.0
+        conda config --set remote_max_retries 10
+        conda clean --all --yes
 
     - name: Install dependencies
       shell: bash -l {0}
       run: |
-        conda install -c conda-forge cmake openmpi llvm-openmp openblas lapack python bison flex compilers
+        mamba install -c conda-forge -y cmake openmpi llvm-openmp openblas lapack python bison flex compilers
 
     - name: Configure CMake
       shell: bash -l {0}

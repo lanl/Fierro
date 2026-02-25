@@ -27,15 +27,15 @@ jobs:
         submodules: recursive
         fetch-depth: 1
 
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libblas-dev liblapack-dev python3 bison flex libncurses5
+
     - name: Install NVHPC SDK
       uses: mpi4py/setup-mpi@v1
       with:
         mpi: nvhpc
-
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake libblas-dev liblapack-dev python3 bison flex
 
     - name: Configure CMake
       env:
