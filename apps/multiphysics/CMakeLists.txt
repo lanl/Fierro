@@ -1,0 +1,89 @@
+cmake_minimum_required(VERSION 3.17)
+project(Fierro LANGUAGES CXX C)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Set build type if not already set
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif()
+
+# Set module path
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+# --- Options ---
+option(FIERRO_ENABLE_SERIAL   "Enable Serial backend"   ON)
+option(FIERRO_ENABLE_OPENMP   "Enable OpenMP backend"   ON)
+option(FIERRO_ENABLE_PTHREADS "Enable PThreads backend" OFF)
+option(FIERRO_ENABLE_CUDA     "Enable CUDA backend"     OFF)
+option(FIERRO_ENABLE_HIP      "Enable HIP backend"      OFF)
+option(FIERRO_ENABLE_SYCL     "Enable SYCL backend"      OFF)
+
+# --- Map Options to Variables expected by subdirectories ---
+add_definitions(-DHAVE_KOKKOS=1)
+if(FIERRO_ENABLE_CUDA)
+  set(CUDA ON)
+  # Kokkos CUDA build configuration
+  set(Kokkos_ARCH_NATIVE ON CACHE BOOL "Enable native architecture" FORCE)
+  set(Kokkos_ENABLE_CUDA_CONSTEXPR ON CACHE BOOL "Enable CUDA constexpr" FORCE)
+  set(Kokkos_ENABLE_CUDA_LAMBDA ON CACHE BOOL "Enable CUDA lambda" FORCE)
+  set(Kokkos_ENABLE_CUDA_RELOCATABLE_DEVICE_CODE ON CACHE BOOL "Enable relocatable device code" FORCE)
+endif()
+if(FIERRO_ENABLE_HIP)
+  set(HIP ON)
+
+endif()
+if(FIERRO_ENABLE_OPENMP)
+  set(OPENMP ON)
+endif()
+if(FIERRO_ENABLE_PTHREADS)
+  set(THREADS ON)
+endif()
+
+# --- Pass options to Elements ---
+set(ELEMENTS_ENABLE_SERIAL   ${FIERRO_ENABLE_SERIAL}   CACHE BOOL "" FORCE)
+set(ELEMENTS_ENABLE_OPENMP   ${FIERRO_ENABLE_OPENMP}   CACHE BOOL "" FORCE)
+set(ELEMENTS_ENABLE_PTHREADS ${FIERRO_ENABLE_PTHREADS} CACHE BOOL "" FORCE)
+set(ELEMENTS_ENABLE_CUDA     ${FIERRO_ENABLE_CUDA}     CACHE BOOL "" FORCE)
+set(ELEMENTS_ENABLE_HIP      ${FIERRO_ENABLE_HIP}      CACHE BOOL "" FORCE)
+
+option(ELEMENTS_BUILD_TESTS "Build Elements unit tests" OFF)
+option(ELEMENTS_BUILD_EXAMPLES "Build Elements examples" OFF)
+option(ELEMENTS_BUILD_DOCS "Build Elements docs" OFF)
+
+# --- PT-Scotch Dependencies --- (note, move this to ELEMENTS)
+# Check for Bison 3.2 or newer
+find_package(BISON 3.2 REQUIRED)
+if(BISON_FOUND)
+  message(STATUS "Found Bison: ${BISON_VERSION}")
+else()
+  message(FATAL_ERROR "Bison 3.2 or newer is required.")
+endif()
+
+# Elements (includes Kokkos, Matar, Scotch)
+# Using relative path to lib/Elements
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../lib/Elements ${CMAKE_BINARY_DIR}/lib/Elements)
+
+
+# Main Fierro multiphysics target
+add_subdirectory(src)
+
+# --- Output Directory ---
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# --- Uninstall Target ---
+if(NOT TARGET uninstall)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in")
+    configure_file(
+      "${CMAKE_CURRENT_SOURCE_DIR}/cmake_uninstall.cmake.in"
+      "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+      IMMEDIATE @ONLY
+    )
+    add_custom_target(uninstall
+      COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+  endif()
+endif()

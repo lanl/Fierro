@@ -1,0 +1,267 @@
+# num_dims: 3
+
+dynamic_options:
+    time_final: 10.0
+    dt_min: 1.e-8
+    dt_max: 1.e-3
+    dt_start: 1.e-5
+    cycle_stop: 300000
+
+
+# mesh_options:
+#     source: file
+#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
+
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1.2, 1.2, 1.2]
+    num_elems: [30, 30, 30]
+
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: ensight
+    graphics_time_step: 0.05
+    # graphics_iteration_step: 10
+
+solver_options:
+  - solver:
+        method: dynx_FE
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+boundary_conditions:
+            
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+    # Tag z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z    
+  
+materials:
+
+    # the rod
+    # - material:
+    #     id: 0
+    #     eos_model_type: decoupled
+    #     eos_model: gamma_law_gas
+    #     # strength_model: none
+    #     dissipation_model: MARS
+    #     dissipation_global_vars:
+    #         - 1.0   # q1
+    #         - 1.0   # q1ex
+    #         - 1.333 # q2
+    #         - 1.333 # q2ex
+    #         - 0.1   # phi_min
+    #         - 1.0   # phi_curl_min
+    #     eos_global_vars:
+    #         - 1.666666666666667
+    #         - 1.0E-4
+    #         - 1.0
+
+
+    - material:
+        id: 0  # metal: Copper
+        #-----EOS
+        eos_model_type: decoupled
+        eos_model: linear_elastic_eos  
+        # bulk modulus
+        # shear modulus
+        # refernce den
+        # cs min
+        eos_global_vars:
+            - 1.30 # B from Azo materials online
+            - 0.44 # G from Azo materials online
+            - 8.93 # ref density from Azo materials online
+            - 0.001 
+        #------Strength
+        strength_model_type: increment_based
+        strength_model: hypo_plasticity_strength
+        # shear modulus of copper
+        # yield strength of copper
+        strength_global_vars:
+            - 0.44 
+            - 0.0021  # from Azo materials online
+        # ------ArtVisc
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.333 # q1ex
+            - 1.0   # q2
+            - 1.333 # q2ex
+            - 0.05   # min limiter
+            - 1.0
+        # erosion_model: basic
+        # erode_tension_val: -100
+        # erode_density_val: 8.0
+
+    
+
+    #plate
+    - material:
+        id: 1
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.1   # phi_min
+            - 1.0   # phi_curl_min
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-4
+            - 1.0
+        erosion_model: basic
+        erode_tension_val: 2.0e-7
+        erode_density_val: 5.0
+    # - material:
+    #     id: 1  # metal: Copper
+    #     #-----EOS
+    #     eos_model_type: decoupled
+    #     eos_model: linear_elastic_eos  
+    #     # bulk modulus
+    #     # shear modulus
+    #     # refernce den
+    #     # cs min
+    #     eos_global_vars:
+    #         - 1.30 # B from Azo materials online
+    #         - 0.44 # G from Azo materials online
+    #         - 8.93 # ref density from Azo materials online
+    #         - 0.001 
+    #     #------Strength
+    #     strength_model_type: increment_based
+    #     strength_model: hypo_plasticity_strength
+    #     # shear modulus of copper
+    #     # yield strength of copper
+    #     strength_global_vars:
+    #         - 0.44 
+    #         - 0.0021  # from Azo materials online
+    #     # ------ArtVisc
+    #     dissipation_model: MARS
+    #     dissipation_global_vars:
+    #         - 1.0   # q1
+    #         - 1.333 # q1ex
+    #         - 1.0   # q2
+    #         - 1.333 # q2ex
+    #         - 0.05   # min limiter
+    #         - 1.0
+    #     erosion_model: basic
+    #     erode_tension_val: -100
+    #     erode_density_val: 8.0
+
+    # background air
+    - material:
+        id: 2
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.1   # phi_min
+            - 1.0   # phi_curl_min
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-4
+            - 1.0
+
+regions:
+    # air
+    - region:
+        volume:
+            type: global
+        material_id: 2
+        solver_id: 0
+        density: 
+            type: uniform
+            value: 0.010
+        specific_internal_energy: 
+            type: uniform
+            value: 1.0e-6
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+    
+    # high-speed projectile
+    - region:
+        volume:
+            type: box
+            origin: [0.0, 0.0, 0.0]
+            x1: 0.1
+            x2: 0.5
+            y1: 0.0
+            y2: 0.21
+            z1: 0.0
+            z2: 0.21
+        material_id: 0
+        solver_id: 0
+        density: 
+            type: uniform
+            value: 8.93
+        specific_internal_energy: 
+            type: uniform
+            value: 1.0e-6
+        velocity: 
+            type: cartesian
+            u: 0.3
+            v: 0.0
+            w: 0.0
+
+    # a wall
+    - region:
+        volume:
+            type: box
+            origin: [0.0, 0.0, 0.0]
+            x1: 0.5
+            x2: 0.6
+            y1: 0.0
+            y2: 1.2
+            z1: 0.0
+            z2: 1.2
+        material_id: 1
+        solver_id: 0
+        density: 
+            type: uniform
+            value: 8.93
+        specific_internal_energy: 
+            type: uniform
+            value: 1.0e-6 
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+
