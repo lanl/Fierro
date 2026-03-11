@@ -2149,10 +2149,10 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
             }
         //testing = norm_incs.host(0);
     }
-    if (norm_incs.host(0) > 1E-8)
-    {
-        std::cout << "NOT CONVERGED at: " << norm_incs.host(0) << std::endl;
-    }
+    // if (norm_incs.host(0) > 1E-8)
+    // {
+    //     std::cout << "NOT CONVERGED at: " << norm_incs.host(0) << std::endl;
+    // }
     /* if (testing > 0) {
         std::cout << "after all iters: " << testing << std::endl;
     } */
