@@ -45,8 +45,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "region_fill.hpp"
 
 
-
-
 // Initialize driver data.  Solver type, number of solvers
 // Will be parsed from YAML input
 void Driver::initialize()
@@ -66,26 +64,48 @@ void Driver::initialize()
     parse_yaml(root, SimulationParamaters, Materials, BoundaryConditions);
     std::cout << "Finished  parsing YAML file" << std::endl;
 
+
+    // Create initial mesh on rank 0
+    swage::Mesh initial_mesh;
+    MPICArrayKokkos<double> initial_node_coords;
+    MPICArrayKokkos<double> final_node_coords;
+
     if (SimulationParamaters.mesh_input.source == mesh_input::file) {
-        // Create and/or read mesh
-        std::cout << "Mesh file path: " << SimulationParamaters.mesh_input.file_path << std::endl;
-        mesh_reader.set_mesh_file(SimulationParamaters.mesh_input.file_path.data());
-        mesh_reader.read_mesh(mesh, 
-                              State,
-                              SimulationParamaters.mesh_input, 
-                              num_dims);
+        // Create and/or read mesh on rank 0
+        if (rank == 0) {
+            std::cout << "Mesh file path: " << SimulationParamaters.mesh_input.file_path << std::endl;
+            mesh_reader.set_mesh_file(SimulationParamaters.mesh_input.file_path.data());
+            mesh_reader.read_mesh(initial_mesh, 
+                                  State,
+                                  SimulationParamaters.mesh_input, 
+                                  num_dims);
+        }
     }
     else if (SimulationParamaters.mesh_input.source == mesh_input::generate) {
-        mesh_builder.build_mesh(mesh, 
-                                State.GaussPoints, 
-                                State.node, 
-                                State.corner, 
-                                SimulationParamaters);
+        if (rank == 0) {
+            mesh_builder.build_mesh(initial_mesh, 
+                                    State.GaussPoints, 
+                                    State.node, 
+                                    State.corner, 
+                                    SimulationParamaters);
+        }
     }
     else{
         throw std::runtime_error("**** NO MESH INPUT OPTIONS PROVIDED IN YAML ****");
         return;
     }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    // Partition the mesh to all ranks
+    if(world_size != 1) { // pass through the partitioning function if not a single rank
+        elements::partition_mesh(initial_mesh, mesh, initial_node_coords, final_node_coords, element_communication_plan, node_communication_plan, world_size, rank);   
+    } else {
+        final_mesh = initial_mesh;
+        final_mesh.num_owned_elems = initial_mesh.num_elems;
+        final_mesh.num_owned_nodes = initial_mesh.num_nodes;
+        final_node_coords = initial_node_coords;
+    }
+
 
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;

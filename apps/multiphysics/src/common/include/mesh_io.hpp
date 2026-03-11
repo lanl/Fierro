@@ -1026,11 +1026,15 @@ public:
                                 in,
                                 size);
         if(found==false){
-            throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
-            //std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
+            // throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
+            std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
+            mesh_inps.object_ids.host.set_values(0.0);
         }
         mesh_inps.object_ids.update_device();
 
+        // Reset file stream to beginning to search for Points
+        in.clear();
+        in.seekg(0, std::ios::beg);
 
         // ---
         //  Nodal coordinates of mesh
@@ -1046,7 +1050,7 @@ public:
                                 size);
         if(found==false){
             throw std::runtime_error("**** ERROR: mesh nodes were not found in the XML file! ****");
-            //std::cout << "ERROR: mesh nodes were not found in the XML file!" << std::endl;
+            std::cout << "ERROR: mesh nodes were not found in the XML file! Setting them to zero" << std::endl;
         }
         if (size!=num_nodes*3){
             throw std::runtime_error("ERROR: failed to read all the mesh nodes!");

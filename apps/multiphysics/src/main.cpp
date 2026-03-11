@@ -52,25 +52,33 @@
 /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[])
 {
-    // check to see of an input file was supplied when running the code
-    if (argc == 1) {
-        std::cout << "\n\n**********************************\n\n";
-        std::cout << " ERROR:\n";
-        std::cout << " Please supply a YAML input, \n";
-        std::cout << "   ./Fierro input.yaml \n\n";
-        std::cout << "**********************************\n\n" << std::endl;
-        return 0;
-    } // end if
 
-    if (std::string(argv[1]) == "--help"){
+    MPI_Init(&argc, &argv);
+    MATAR_INITIALIZE(argc, argv);
+    { // MATAR scope
 
-        print_inputs();
 
-        return 0;
-    }
+        int world_size;
+        int rank;
+        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    Kokkos::initialize();
-    {
+        // check to see of an input file was supplied when running the code
+        if (argc == 1) {
+            std::cout << "\n\n**********************************\n\n";
+            std::cout << " ERROR:\n";
+            std::cout << " Please supply a YAML input, \n";
+            std::cout << "   ./Fierro input.yaml \n\n";
+            std::cout << "**********************************\n\n" << std::endl;
+            return 0;
+        } // end if
+
+        if (std::string(argv[1]) == "--help"){
+
+            print_inputs();
+
+            return 0;
+        }
 
         // Create driver
         Driver* driver = new Driver(argv[1]);
@@ -109,10 +117,11 @@ int main(int argc, char* argv[])
 
         // Delete driver
         delete driver;
-    }
 
-    Kokkos::finalize();
+    } // end MATAR scope
+    MATAR_FINALIZE();
+    MPI_Finalize();
 
-    std::cout << "**** End of main **** " << std::endl;
+    std::cout << "**** Simulations completed **** " << std::endl;
     return 0;
 }
