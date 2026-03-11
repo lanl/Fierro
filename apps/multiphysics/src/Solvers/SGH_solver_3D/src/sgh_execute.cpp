@@ -342,7 +342,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // call body forces routine
 
             // apply contact forces to boundary patches
-            if (doing_contact) 
+            if (doing_contact && rk_stage == rk_num_stages-1) 
             {
                 //contact_bank.update_nodes(mesh, State);
                 Contact_State.contact_forces.set_values(0);
@@ -356,7 +356,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                         boundary_contact_force(State, mesh, 5*dt*rk_alpha, Contact_State);
                     }
                 } else {
-                    boundary_contact_force(State, mesh, 5*dt*rk_alpha, Contact_State);
+                    //boundary_contact_force(State, mesh, 5*dt*rk_alpha, Contact_State);
+                    boundary_contact_force(State, mesh, dt, Contact_State);
                 }
             }
 
