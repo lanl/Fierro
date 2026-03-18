@@ -1,5 +1,30 @@
-# num_dims: 3
 
+# ---------------------------------------------------------------------------
+# Example Fierro input: Sedov blast with origin erosion
+#
+# Purpose
+# - Runs a Sedov-like point explosion (initial internal energy source)
+#   centered at the origin.
+# - Uses two materials, where erosion is enabled only for the material
+#   assigned to the explosion “source element” (material id 0).
+#
+# Assumed input scaling / units 
+# - Mass: grams (g)
+# - Length: centimeters (cm)
+# - Time: micro second (microsecond)
+# - Pressure / stress: MegaBar
+# - Velocity: cm / micro second
+# - Density: g / cm^3
+#
+# Erosion model notes
+# - `erosion_model: basic` triggers erosion when:
+#     pressure <= erode_tension_val  OR  density <= erode_density_val
+#   See `BasicErosionModel::erode`.
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
 dynamic_options:
     time_final: 4.25
     dt_min: 1.e-8
@@ -8,25 +33,33 @@ dynamic_options:
     cycle_stop: 30000
 
 
-# mesh_options:
-#     source: file
-#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
-
+# ---------------------------------------------------------------------------
+# Mesh options
+# ---------------------------------------------------------------------------
 mesh_options:
     source: generate
     num_dims: 3
     type: box
+    # Box origin in x,y,z (cm).
     origin: [0.0, 0.0, 0.0]
+    # Box lengths in x,y,z (cm).
     length: [1.2, 1.2, 1.2]
     num_elems: [12, 12, 12]
 
 
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
 output_options:
     timer_output_level: thorough
     output_file_format: ensight
+    # Visualization cadence in time units (microsecond).
     graphics_time_step: 0.1
     # graphics_iteration_step: 10
 
+# ---------------------------------------------------------------------------
+# Solver configuration
+# ---------------------------------------------------------------------------
 solver_options:
   - solver:
         method: dynx_FE
@@ -36,6 +69,9 @@ solver_options:
         #  - blah
         #  - blah
 
+# ---------------------------------------------------------------------------
+# Boundary conditions (velocity BCs)
+# ---------------------------------------------------------------------------
 boundary_conditions:
     # Tag X plane
     - boundary_condition:
@@ -73,6 +109,9 @@ boundary_conditions:
             - 0   # y
             - 1   # z   
 
+# ---------------------------------------------------------------------------
+# Materials
+# ---------------------------------------------------------------------------
 materials:
     - material:
         id: 0
@@ -91,8 +130,13 @@ materials:
             - 1.666666666666667
             - 1.0E-14
             - 1.0
+        # Erosion enabled for this material (material id 0).
+        # Basic erosion trigger:
+        #   erode if pressure <= erode_tension_val OR density <= erode_density_val
         erosion_model: basic
+        # Pressure threshold for erosion (MegaBar in this input scaling).
         erode_tension_val: 0.00003
+        # Density threshold for erosion (g/cm^3 in this input scaling).
         erode_density_val: 0.02
 
 
@@ -113,7 +157,11 @@ materials:
             - 1.666666666666667
             - 1.0E-14
             - 1.0
+        # No erosion model specified for material id 1.
 
+# ---------------------------------------------------------------------------
+# Regions (initial conditions)
+# ---------------------------------------------------------------------------
 regions:
     - region:
         volume:
@@ -121,12 +169,15 @@ regions:
         material_id: 0
         solver_id: 0
         density: 
+            # Ambient initial density (g/cm^3 with input scaling).
             type: uniform
             value: 1.0
         specific_internal_energy: 
+            # Ambient initial specific internal energy (sie).
             type: uniform        
             value: 0.001
         velocity: 
+            # Initial velocity field (cartesian [u,v,w]).
             type: cartesian
             u: 0.0
             v: 0.0
@@ -134,19 +185,28 @@ regions:
 
 
 
-    # energy source initial conditions
+    # -----------------------------------------------------------------------
+    # Energy source initial conditions (Sedov-like blast)
+    # -----------------------------------------------------------------------
     - region:
         volume:
             type: sphere
+            # Explosion center at origin (cm).
             origin: [0.0, 0.0, 0.0]
+            # Inner/outer radius defining the spherical source shell (cm).
             radius1: 0.0
             radius2: 0.1
         material_id: 0
+        # IMPORTANT: the source is assigned to material id 0, which has
+        # `erosion_model: basic`. Therefore erosion is active in the region
+        # that receives the blast energy.
         solver_id: 0
         density: 
+            # Source density (g/cm^3).
             type: uniform
             value: 1.0
         specific_internal_energy: 
+            # Blast specific internal energy (sie).
             type: uniform
             value: 61.67375002 # 963.652344
         # ie: 0.25833839995946534 
