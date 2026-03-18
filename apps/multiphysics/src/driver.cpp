@@ -34,6 +34,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "driver.hpp"
 
+// Resolve relative mesh file paths relative to the YAML input directory.
+#include <filesystem>
 
 // Headers for solver classes
 #include "sgh_solver_3D.hpp"
@@ -43,8 +45,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "tlqs_solver_3D.hpp"
 
 #include "region_fill.hpp"
-
-
 
 
 // Initialize driver data.  Solver type, number of solvers
@@ -67,6 +67,21 @@ void Driver::initialize()
     std::cout << "Finished  parsing YAML file" << std::endl;
 
     if (SimulationParamaters.mesh_input.source == mesh_input::file) {
+
+        // Make mesh paths relative to the YAML location (so `file_path: meshes/abaqus.inp`
+        // works regardless of where you run `./app/Fierro`).
+        try {
+            std::filesystem::path yaml_path(yaml_file ? yaml_file : "");
+            std::filesystem::path mesh_path(SimulationParamaters.mesh_input.file_path);
+            if (!yaml_path.empty() && !mesh_path.empty() && !mesh_path.is_absolute()) {
+                mesh_path = yaml_path.parent_path() / mesh_path;
+                mesh_path = mesh_path.lexically_normal();
+                SimulationParamaters.mesh_input.file_path = mesh_path.string();
+            }
+        } catch (...) {
+            // Fall back to the original path if path resolution fails.
+        }
+
         // Create and/or read mesh
         std::cout << "Mesh file path: " << SimulationParamaters.mesh_input.file_path << std::endl;
         mesh_reader.set_mesh_file(SimulationParamaters.mesh_input.file_path.data());
