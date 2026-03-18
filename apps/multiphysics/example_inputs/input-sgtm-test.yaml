@@ -1,5 +1,29 @@
-# num_dims: 3
+# ---------------------------------------------------------------------------
+# Example Fierro input: SGTM test (constant bottom temperature)
+#
+# This example solves a transient staggered-grid thermal problem
+# (`thrmex_FE` / SGTM3D) over a simple box domain.
+#
+# The main feature is the bottom boundary condition:
+# - `boundary_conditions[].temperature_model: constant` on `z_plane`
+#   at `plane_position: 0.0`, with `temperature_bc_global_vars` specifying
+#   a fixed boundary temperature.
+#
+# Other faces are thermalized using:
+# - `temperature_model: convection` (reference temperature + h)
+# - `temperature_model: radiation` (radiative exchange)
+#
+# Implementation detail / caveat (from `SGTM3D::boundary_convection` and
+# `SGTM3D::boundary_radiation`):
+# - Convection and radiation currently use internal hard-coded parameters
+#   in SGTM3D’s boundary implementation, so the YAML
+#   `temperature_bc_global_vars` values for those models may not affect the
+#   result until the solver is updated to read them.
+# ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
 dynamic_options:
     time_final: 1.0
     dt_min: 1.e-8
@@ -8,10 +32,16 @@ dynamic_options:
     cycle_stop: 100000
 
 
+
+# mesh_options (alternative: generate from an external file)
+#
 # mesh_options:
 #     source: file
 #     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
 
+# ---------------------------------------------------------------------------
+# Mesh options
+# ---------------------------------------------------------------------------
 mesh_options:
     source: generate
     num_dims: 3
@@ -21,6 +51,9 @@ mesh_options:
     num_elems: [100, 100, 10]
 
 
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
 output_options:
     timer_output_level: thorough
     output_file_format: viz
@@ -34,6 +67,9 @@ output_options:
     node_field_outputs:
         - temp
 
+# ---------------------------------------------------------------------------
+# Solver configuration
+# ---------------------------------------------------------------------------
 solver_options:
   - solver:
         method: thrmex_FE
@@ -44,8 +80,11 @@ solver_options:
         #  - blah
         #  - blah
 
+# ---------------------------------------------------------------------------
+# Boundary conditions (temperature BCs)
+# ---------------------------------------------------------------------------
 boundary_conditions:
-    # Set temperature on the z=0 plane
+    # Constant temperature on the bottom plane (`z = 0`)
     - boundary_condition:
         solver_id: 0
         surface:
@@ -53,9 +92,11 @@ boundary_conditions:
             plane_position: 0.0
         temperature_model: constant
         temperature_bc_global_vars:
-            - 693.15   # temperature
+            # `temperature_model: constant` uses `temperature_bc_global_vars`
+            # as `[T]` (only index 0 is consumed).
+            - 693.15   # fixed boundary temperature (K)
 
-    # convection on the z=1 plane
+    # Convection on the top and side faces (reference + h)
     - boundary_condition:
         solver_id: 0
         surface:
@@ -63,8 +104,11 @@ boundary_conditions:
             plane_position: 1.0
         temperature_model: convection
         temperature_bc_global_vars:
-            - 293.15   # reference temperature (room temp in kelvin)
-            - 100.0    # h (film temperature)
+            # Intended convection form: `temperature_bc_global_vars = [T_ref, h]`.
+            # In the current SGTM3D implementation, convection coefficients are
+            # not taken from YAML globals (hard-coded internally).
+            - 293.15   # reference temperature (K)
+            - 100.0    # h (film temperature / convection coefficient)
 
     - boundary_condition:
         solver_id: 0
@@ -117,6 +161,10 @@ boundary_conditions:
 
 
     # Radiation on the non-constant temp surfaces
+    #
+    # NOTE: SGTM3D’s radiation implementation currently uses hard-coded
+    # emissivity / ambient parameters internally (it does not read YAML
+    # radiation-specific global vars in this example).
     - boundary_condition:
         solver_id: 0
         surface:
@@ -153,6 +201,9 @@ boundary_conditions:
         temperature_model: radiation
 
 
+# ---------------------------------------------------------------------------
+# Materials (thermal properties)
+# ---------------------------------------------------------------------------
 materials:
     - material:
         id: 0
@@ -171,38 +222,11 @@ materials:
             - 1.666666666666667
             - 1.0E-14
             - 1.0
-    # - material:
-    #     id: 0  # metal: Copper
-    #     #-----EOS
-    #     eos_model_type: decoupled
-    #     eos_model: linear_elastic_eos  
-    #     # bulk modulus
-    #     # shear modulus
-    #     # refernce den
-    #     # cs min
-    #     eos_global_vars:
-    #         - 1.30 # B from Azo materials online
-    #         - 0.44 # G from Azo materials online
-    #         - 8.93 # ref density from Azo materials online (g/cm^3)
-    #         - 0.001 
-    #     #------Strength
-    #     strength_model_type: increment_based
-    #     strength_model: hypo_plasticity_strength
-    #     # shear modulus of copper
-    #     # yield strength of copper
-    #     strength_global_vars:
-    #         - 0.44 
-    #         - 0.0021  # from Azo materials online
-    #     # ------ArtVisc
-    #     dissipation_model: MARS
-    #     dissipation_global_vars:
-    #         - 1.0   # q1
-    #         - 1.333 # q1ex
-    #         - 1.0   # q2
-    #         - 1.333 # q2ex
-    #         - 0.05   # min limiter
-    #         - 1.0
+
        
+# ---------------------------------------------------------------------------
+# Regions (fills / initial conditions)
+# ---------------------------------------------------------------------------
 regions:
     - region:
         volume:
@@ -210,23 +234,30 @@ regions:
         solver_id: 0
         material_id: 0
         density: 
+            # Uniform density for thermal capacity (tonne/mm^3 with this setup’s scaling).
             type: uniform
             value: 8.93
         specific_internal_energy: 
+            # Uniform specific internal energy (used by the solver; small non-zero background).
             type: uniform
             value: 1.e-10
         velocity: 
+            # SGTM3D requires a nodal velocity fill. In this purely thermal test,
+            # it is set to zero everywhere.
             type: cartesian
             u: 0.0
             v: 0.0
             w: 0.0
         thermal_conductivity: 
+            # Uniform thermal conductivity (W/(cm*K) with the inline comment’s unit scaling).
             type: uniform
             value: 4.01 #W/(cm*K)
         specific_heat: 
+            # Uniform specific heat (J/(g*K) as indicated by the inline comment).
             type: uniform
             value: 0.385 #903 #  0.385 #J/(g⋅K)
         temperature: 
+            # Uniform initial nodal temperature (K).
             type: uniform
             value: 273.15 #K 
 
