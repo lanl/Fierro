@@ -108,6 +108,9 @@ struct RegionFill_t
     // initial condition for velocity 
     init_conds::init_vector_conds vel_field = init_conds::noICsVec;  ///< ICs for velocity in this region
 
+    // initial condition for displacement
+    init_conds::init_vector_conds disp_field = init_conds::noICsVec;
+
     // initial conditions for density
     init_conds::init_scalar_conds den_field = init_conds::noICsScalar;
 
@@ -136,6 +139,13 @@ struct RegionFill_t
     double u = 0.0; ///< U component of velocity
     double v = 0.0; ///< V component of velocity
     double w = 0.0; ///< W component of velocity
+
+    // displacement coefficients by component
+    double ux = 0.0;
+    double uy = 0.0;
+    double uz = 0.0;
+
+    double magnitude = 0.0; ///< displacement magnitude for radial displacement initialization
 
     double speed = 0.0; ///< velocity magnitude for radial velocity initialization
 
@@ -265,6 +275,18 @@ static std::vector<std::string> str_region_vel_inps
 };
 
 // ---------------------------------------------------------------------
+// valid inputs for filling displacement, these are subfields under displacement
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_region_disp_inps
+{
+    "type",
+    "ux",
+    "uy",
+    "uz",
+    "magnitude"
+};
+
+// ---------------------------------------------------------------------
 // valid inputs for filling den, these are subfields under den
 // ---------------------------------------------------------------------
 static std::vector<std::string> str_region_den_inps
@@ -363,6 +385,14 @@ static std::vector<std::string> region_volume_required_inps
 // required inputs for filling velocity
 // -------------------------------------
 static std::vector<std::string> region_vel_required_inps
+{
+    "type"
+};
+
+// -------------------------------------
+// required inputs for filling displacement
+// -------------------------------------
+static std::vector<std::string> region_disp_required_inps
 {
     "type"
 };

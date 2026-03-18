@@ -1240,6 +1240,156 @@ void parse_regions(Yaml::Node& root,
 
                 } // end for loop over text
             } // end if on velocity
+            else if (a_word.compare("displacement") == 0) {
+
+                // check to see if velocity enum was saved
+                bool store = true;
+                for (auto field : fill_node_states){
+                    if (field == fill_node_state::displacement){store = false;}
+                }
+                // store velocity name if it has not been stored already
+                if(store){
+                    fill_node_states.push_back(fill_node_state::displacement);
+                }
+
+                // -----
+                // loop over the sub fields under displacement
+                // -----
+                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["displacement"];
+
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_region_disp_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_region_disp_inputs, str_region_disp_inps, region_disp_required_inps);
+
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_region_disp_inputs){ 
+
+                    if (a_subfield_word.compare("ux") == 0) {
+                        // x-component of displacement
+                        double ux = root["regions"][reg_id]["region"]["displacement"]["ux"].As<double>();
+
+                        RUN({
+                        region_fills(reg_id).ux = ux;
+                        });
+                    } // ux
+                    else if (a_subfield_word.compare("uy") == 0) {
+                        // y-component of displacement
+                        double uy = root["regions"][reg_id]["region"]["displacement"]["uy"].As<double>();
+
+                        RUN({
+                            region_fills(reg_id).uy = uy;
+                        });
+                    } // uy
+                    else if (a_subfield_word.compare("uz") == 0) {
+                        // z-component of displacement
+
+                        double uz = root["regions"][reg_id]["region"]["displacement"]["uz"].As<double>();
+
+                        RUN({
+                            region_fills(reg_id).uz = uz;
+                        });
+                    } // uz
+                    else if (a_subfield_word.compare("type") == 0){
+
+                        std::string type = root["regions"][reg_id]["region"]["displacement"]["type"].As<std::string>();
+
+                        // set the volume tag type
+                        if (vector_ics_type_map.find(type) != vector_ics_type_map.end()) {
+                        
+                            // vector_ics_type_map[type] returns enum value, e.g., init_conds::velocity 
+                            switch(vector_ics_type_map[type]){
+
+                                case init_conds::stationary:
+                                    std::cout << "Setting displacement initial conditions type to static " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).disp_field = init_conds::stationary;
+                                    });
+                                    break;
+
+                                case init_conds::cartesian:
+                                    std::cout << "Setting displacement initial conditions type to cartesian " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).disp_field = init_conds::cartesian;
+                                    });
+                                    break;
+
+                                case init_conds::radialVec:
+                                    std::cout << "Setting displacement initial conditions type to radial " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).disp_field = init_conds::radialVec;
+                                    });
+                                    break;
+
+                                case init_conds::sphericalVec:
+                                    std::cout << "Setting displacement initial conditions type to spherical " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).disp_field = init_conds::sphericalVec;
+                                    });
+                                    break;
+
+                                case init_conds::radialLinearVec:
+                                    std::cout << "Setting displacement initial conditions type to radial_linear " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).disp_field = init_conds::radialLinearVec;
+                                    });
+                                    break;
+
+                                case init_conds::sphericalLinearVec:
+                                    std::cout << "Setting displacement initial conditions type to spherical_linear " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).disp_field = init_conds::sphericalLinearVec;
+                                    });
+                                    break;
+
+                                case init_conds::tgVortexVec:
+                                    std::cout << "Setting displacement initial conditions type to tg_vortex " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).disp_field = init_conds::tgVortexVec;
+                                    });
+                                    break;
+
+                                case init_conds::noICsVec:
+                                    std::cout << "Setting displacement initial conditions type to no velocity" << std::endl;
+                                    RUN({ 
+                                        region_fills(reg_id).disp_field = init_conds::noICsVec;
+                                    });
+                                    break;
+
+                                default:
+
+                                    RUN({ 
+                                        region_fills(reg_id).disp_field = init_conds::noICsVec;
+                                    });
+
+                                    std::cout << "ERROR: No valid displacement intial conditions type input " << std::endl;
+                                    std::cout << "Valid IC types are: " << std::endl;
+                                    
+                                    for (const auto& pair : vector_ics_type_map) {
+                                        std::cout << pair.second << std::endl;
+                                    }
+
+                                    throw std::runtime_error("**** Displacement Initial Conditions Type Not Understood ****");
+                                    break;
+                            } // end switch
+
+                        }
+                        else{
+                            std::cout << "ERROR: invalid input: " << type << std::endl;
+                            throw std::runtime_error("**** Displacement IC Not Understood ****");
+                        } // end if on velocity type
+                    } // end if on velocity type
+                    else {
+                        std::cout << "ERROR: invalid input: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_region_disp_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Region Displacement Inputs Not Understood ****");
+                    } // end if on all subfields under displacement
+                } // end for loop over text
+            } // end if on displacement
             else if (a_word.compare("volume") == 0) {
 
                 // -----

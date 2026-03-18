@@ -100,6 +100,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
     fill_regions(Materials,
                  mesh,
                  State.node.coords,
+                 State.node.displacement,
                  State.node.vel,
                  State.node.temp,
                  fillGaussState.den,
@@ -231,6 +232,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 /// \param Materials holds the material models and global parameters
 /// \param mesh is the simulation mesh
 /// \param node_coords are the coordinates of the nodes
+/// \param node_disp is the nodal displacement array
 /// \param node_vel is the nodal velocity array
 /// \param GaussPoint_den is density at the GaussPoints on the mesh
 /// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
@@ -250,6 +252,7 @@ void fill_regions(
         const Material_t& Materials,
         const swage::Mesh& mesh,
         const DCArrayKokkos <double>& node_coords,
+        DCArrayKokkos <double>& node_disp,
         DCArrayKokkos <double>& node_vel,
         DCArrayKokkos <double>& node_temp,
         DCArrayKokkos <double>& gauss_den,
@@ -573,6 +576,19 @@ void fill_regions(
                                  mesh.num_dims,
                                  region_fills(fill_id).vel_field);
                 }
+
+                // paint the displacement onto the nodes of the mesh
+                if(node_disp.size()>0){
+                    paint_vector(node_vel,
+                                 a_node_coords,
+                                 region_fills(fill_id).ux,
+                                 region_fills(fill_id).uy,
+                                 region_fills(fill_id).uz,
+                                 region_fills(fill_id).magnitude,
+                                 node_gid,
+                                 mesh.num_dims,
+                                 region_fills(fill_id).disp_field);
+                }
                 
                 // paint nodal temperature
                 if (node_temp.size()>0){
@@ -654,6 +670,8 @@ void fill_regions(
                 // if check is needed as solver state might not match fill instructions
                 if (node_temp.size()>0){node_temp.update_host();}
                 break;
+            case fill_node_state::displacement:
+                if (node_disp.size()>0){node_disp.update_host();}
         } // end switch
     } // end for
     

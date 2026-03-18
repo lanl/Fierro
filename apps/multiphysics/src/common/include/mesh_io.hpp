@@ -2033,6 +2033,12 @@ public:
                 case node_state::gradient_level_set:
                     State.node.gradient_level_set.update_host();
                     break;  
+                case node_state::displacement:
+                    State.node.displacement.update_host();
+                    break;
+                case node_state::coords_t0:
+                    // blank because never changes and update host called in the driver
+                    break;
 
                 case node_state::force:
                     break;
@@ -2457,6 +2463,12 @@ public:
                     break;
                 case node_state::gradient_level_set:
                     num_node_vector_vars ++;
+                    break;
+                case node_state::displacement:
+                    num_node_vector_vars ++;
+                    break;
+                case node_state::coords_t0:
+                    // not necessary to output as coords at t=0 will be coords_t0
                     break;                    
                 case node_state::force:
                     break;
@@ -2479,6 +2491,7 @@ public:
         int node_coord_id = -1;
         int node_temp_id = -1;
         int node_grad_level_set_id = -1;
+        int node_disp_id = -1;
 
         // reset counters for node fields
         var = 0;
@@ -2521,6 +2534,15 @@ public:
                     node_vector_var_names[vector_var] = "node_grad_lvlset";
                     node_grad_level_set_id = vector_var;
                     vector_var++;
+                    break;
+
+                case node_state::displacement:
+                    node_vector_var_names[vector_var] = "node_disp";
+                    node_disp_id = vector_var;
+                    vector_var ++;
+                    break;
+
+                case node_state::coords_t0:
                     break;
 
                 // -- not used vars
@@ -2618,7 +2640,8 @@ public:
                                  node_accel_id,
                                  node_coord_id,
                                  node_grad_level_set_id,
-                                 node_temp_id);
+                                 node_temp_id,
+                                 node_disp_id);
                                  
 
         Kokkos::fence();
@@ -4057,7 +4080,8 @@ public:
                                   const int node_accel_id,
                                   const int node_coord_id,
                                   const int node_grad_level_set_id,
-                                  const int node_temp_id)
+                                  const int node_temp_id,
+                                  const int node_disp_id)
     {
         for (auto field : output_node_states){
             switch(field){
@@ -4120,6 +4144,18 @@ public:
 
                     }); // end parallel for
 
+                    break;
+
+                case node_state::displacement:
+
+                    FOR_ALL(node_gid, 0, num_nodes, {
+                        node_vector_fields(node_disp_id,node_gid,0) = Node.displacement(node_gid,0);
+                        node_vector_fields(node_disp_id,node_gid,1) = Node.displacement(node_gid,1);
+                        node_vector_fields(node_disp_id,node_gid,2) = Node.displacement(node_gid,2);
+                    });
+                    break;
+
+                case node_state::coords_t0:
                     break;
                     
                     

@@ -58,6 +58,9 @@ namespace TLQS3D_State
     static const std::vector<node_state> required_node_state = 
     { 
         node_state::coords,
+        node_state::coords_t0,
+        node_state::displacement,
+        node_state::mass
     };
 
     // Gauss point state to be initialized for the TLQS solver
@@ -70,14 +73,10 @@ namespace TLQS3D_State
     static const std::vector<material_pt_state> required_material_pt_state = 
     { 
         material_pt_state::density,
-        material_pt_state::pressure,
         material_pt_state::stress,
-        material_pt_state::specific_internal_energy,
-        material_pt_state::sound_speed,
         material_pt_state::mass,
         material_pt_state::volume_fraction,
         material_pt_state::eroded_flag,
-        material_pt_state::shear_modulii
     };
 
     // Material corner state to be initialized for the TLQS solver
@@ -98,7 +97,7 @@ namespace TLQS3D_State
      // Node state that must be filled (setup) for the SGH solver
      static const std::vector<fill_node_state> required_fill_node_state = 
      { 
-         fill_node_state::velocity
+         fill_node_state::displacement
      };
  
      // Material point state that must be filled (setup) for the SGH solver
@@ -106,13 +105,11 @@ namespace TLQS3D_State
      static const std::vector<fill_gauss_state> required_optA_fill_material_pt_state = 
      { 
         fill_gauss_state::density,
-        fill_gauss_state::specific_internal_energy
      };
      // option B
      static const std::vector<fill_gauss_state> required_optB_fill_material_pt_state = 
      { 
         fill_gauss_state::density,
-        fill_gauss_state::internal_energy
      };
      // option C
      static const std::vector<fill_gauss_state> required_optC_fill_material_pt_state = 
@@ -127,13 +124,13 @@ namespace TLQS3D_State
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \class SGTM
+/// \class TLQS
 ///
-/// \brief Class for containing functions required to perform staggered grid
-///        thermomechanical 3D Cartesian meshes.
+/// \brief Class for containing functions required to perform Total Lagrangian
+/// quasi-static 3D Cartesian meshes.
 ///
 /// This class contains the requisite functions requited to perform
-/// staggered grid thermomechanical heat transfer.
+/// Total Lagrangian quasi-static mechanics.
 ///
 /////////////////////////////////////////////////////////////////////////////
 class TLQS3D : public Solver

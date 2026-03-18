@@ -197,6 +197,14 @@ void Driver::initialize()
 
     } // end for loop over solvers
 
+    // storing reference configuration if variable initialized
+    if (State.node.coords_t0.size() > 0) {
+        FOR_ALL(i, 0, static_cast<long long>(mesh.num_nodes),
+                j, 0, 3, {
+                    State.node.coords_t0(i,j) = State.node.coords(i,j);
+                });
+        State.node.coords_t0.update_host();
+    }
 
     // ----
     // setup the simulation by applying all the fills to the mesh

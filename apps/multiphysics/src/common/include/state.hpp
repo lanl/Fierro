@@ -42,7 +42,8 @@ using namespace mtr;
 enum class fill_node_state
 {
     velocity,
-    temperature
+    temperature,
+    displacement
 };
 
 enum class fill_gauss_state
@@ -251,12 +252,14 @@ static bool check_fill_mat_states(
 enum class node_state
 {
     coords,
+    coords_t0,
     velocity,
     mass,
     temp,
     heat_transfer,
     force,
-    gradient_level_set
+    gradient_level_set,
+    displacement
 };
 
 
@@ -271,6 +274,7 @@ struct node_t
 {
     DCArrayKokkos<double> coords;     ///< Nodal coordinates
     DCArrayKokkos<double> coords_n0;  ///< Nodal coordinates at tn=0 of time integration
+    DCArrayKokkos<double> coords_t0;  ///< Nodal coordinates in reference configuration
     DCArrayKokkos<double> vel;        ///< Nodal velocity
     DCArrayKokkos<double> vel_n0;     ///< Nodal velocity at tn=0 of time integration
     DCArrayKokkos<double> mass;       ///< Nodal mass
@@ -279,6 +283,7 @@ struct node_t
     DCArrayKokkos<double> temp_n0;    ///< Nodal temperature at tn=0 of time integration
     DCArrayKokkos<double> q_transfer; ///< Nodal heat flux
     DCArrayKokkos<double> gradient_level_set;   ///< Nodal gradient of the level set function
+    DCArrayKokkos<double> displacement; ///< nodal displacement
 
     // initialization method (num_nodes, num_dims, state to allocate)
     void initialize(size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
@@ -288,6 +293,9 @@ struct node_t
                 case node_state::coords:
                     if (coords.size() == 0) this->coords = DCArrayKokkos<double>(num_nodes, num_dims, "node_coordinates");
                     if (coords_n0.size() == 0) this->coords_n0 = DCArrayKokkos<double>(num_nodes, num_dims, "node_coordinates_n0");
+                    break;
+                case node_state::coords_t0:
+                    if (coords_t0.size() == 0) this->coords_t0 = DCArrayKokkos<double>(num_nodes, num_dims, "node_reference_coordinates");
                     break;
                 case node_state::velocity:
                     if (vel.size() == 0) this->vel = DCArrayKokkos<double>(num_nodes, num_dims, "node_velocity");
@@ -308,6 +316,9 @@ struct node_t
                     break;
                 case node_state::gradient_level_set:
                     if (gradient_level_set.size() == 0) this->gradient_level_set = DCArrayKokkos<double>(num_nodes, num_dims, "node_grad_levelset");
+                    break;
+                case node_state::displacement:
+                    if (displacement.size() == 0) this->displacement = DCArrayKokkos<double>(num_nodes, num_dims, "node_force_displacement");
                     break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;

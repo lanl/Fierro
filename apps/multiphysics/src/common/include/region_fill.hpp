@@ -70,6 +70,7 @@ void fill_regions(
         const Material_t& Materials,
         const swage::Mesh& mesh,
         const DCArrayKokkos <double>& node_coords,
+        DCArrayKokkos <double>& node_disp,
         DCArrayKokkos <double>& node_vel,
         DCArrayKokkos <double>& node_temp,
         DCArrayKokkos <double>& gauss_den,
