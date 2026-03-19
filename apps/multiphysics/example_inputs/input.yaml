@@ -1,29 +1,61 @@
-# num_dims: 3
-
+# ---------------------------------------------------------------------------
+# Example Fierro input: Sedov point explosion (3D box, SGH)
+#
+# Goal
+# - Run a Sedov-like point explosion (initial internal energy "blast")
+#   on a 3D Cartesian box mesh.
+# - Uses reflective velocity boundary conditions on the x=0, y=0, and z=0
+#   planes to model symmetry (octant-style setup).
+#
+# Solver mapping note
+# - `solver_options[].solver.method: dynx_FE` maps to `SGH3D` in Fierro.
+#
+# Assumed input scaling / units (consistent with `input-noh.yaml`)
+# - Mass: grams (g)
+# - Length: centimeters (cm)
+# - Time: micro second (microsecond)
+# - Pressure / stress: MegaBar
+# - Velocity: cm / micro second
+# - Density: g / cm^3
+#
+# Derived
+# - `specific_internal_energy` is in energy units consistent with the EOS
+#   scaling (see `gamma_law_gas` pressure relationship in code).
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
 dynamic_options:
-    time_final: 100.0
-    dt_min: 1.e-8
-    dt_max: 1.e-2
-    dt_start: 1.e-5
-    cycle_stop: 300000
 
+    time_final: 100.0 # Final simulation time (microseconds).
+    dt_min: 1.e-8 # Minimum adaptive timestep bound (microseconds).
+    dt_max: 1.e-2 # Maximum adaptive timestep bound (microseconds).
+    dt_start: 1.e-5 # Initial timestep guess (microseconds).
+    cycle_stop: 300000 # Hard stop after this many cycles.
 
-# mesh_options:
-#     source: file
-#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
-
+# ---------------------------------------------------------------------------
+# Mesh options (3D box)
+# ---------------------------------------------------------------------------
 mesh_options:
     source: generate
     num_dims: 3
     type: box
+    # Box origin in x,y,z (cm).
     origin: [0.0, 0.0, 0.0]
+    # Box side lengths in x,y,z (cm).
     length: [1.2, 1.2, 1.2]
+    # Element counts [nx, ny, nz].
     num_elems: [30, 30, 30]
 
 
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
 output_options:
     timer_output_level: thorough
+    # Output format for visualization.
     output_file_format: viz # only options are viz or viz_and_state
+    # Amount of simulated time between visualization dumps (microseconds).
     graphics_time_step: 0.05
     # graphics_iteration_step: 10
     elem_field_outputs:
@@ -41,25 +73,39 @@ output_options:
         - vel
         - mass
 
+# ---------------------------------------------------------------------------
+# Solver configuration
+# ---------------------------------------------------------------------------
 solver_options:
   - solver:
+        # `dynx_FE` corresponds to the SGH3D (3D Cartesian) solver.
         method: dynx_FE
+        # Solver instance id; used by `regions` and `boundary_conditions`.
         id: 0
         # solver_vars:
         #  - blah
         #  - blah
         #  - blah
 
+# ---------------------------------------------------------------------------
+# Boundary conditions (velocity BCs)
+# ---------------------------------------------------------------------------
 boundary_conditions:
     # Tag X plane
     - boundary_condition:
         solver_id: 0
         surface: 
             type: x_plane
+            # Location of the symmetry plane (cm).
             plane_position: 0.0
+            # Tolerance used to match nodes to the specified plane.
             tolerance: 1.e-5
+        # SGH reflective BC: remove the normal component of velocity along
+        # the specified direction and reflect about the plane.
         velocity_model: reflected
         velocity_bc_global_vars:
+            # Direction defining the plane normal (unit vector recommended):
+            # x-plane normal is (+x).
             - 1   # x
             - 0   # y
             - 0   # z
@@ -70,10 +116,14 @@ boundary_conditions:
         solver_id: 0
         surface: 
             type: y_plane
+            # Location of the symmetry plane (cm).
             plane_position: 0.0
+            # Tolerance used to match nodes to the specified plane.
             tolerance: 1.e-5
+        # Reflect velocity about the y=0 plane.
         velocity_model: reflected
         velocity_bc_global_vars:
+            # y-plane normal is (+y).
             - 0   # x
             - 1   # y
             - 0   # z
@@ -83,27 +133,42 @@ boundary_conditions:
         solver_id: 0
         surface: 
             type: z_plane
+            # Location of the symmetry plane (cm).
             plane_position: 0.0
+            # Tolerance used to match nodes to the specified plane.
             tolerance: 1.e-5
+        # Reflect velocity about the z=0 plane.
         velocity_model: reflected
         velocity_bc_global_vars:
+            # z-plane normal is (+z).
             - 0   # x
             - 0   # y
             - 1   # z
 
 
   
+# ---------------------------------------------------------------------------
+# Materials (EOS + artificial viscosity)
+# ---------------------------------------------------------------------------
 materials:
     - material:
         id: 0
         eos_model_type: decoupled
+        # Gamma-law gas EOS.
         eos_model: gamma_law_gas
+        # For `gamma_law_gas`, `eos_global_vars` are:
+        # - [0] gamma
+        # - [1] minimum sound speed
+        # - [2] c_v (may not be used directly in pressure in current code path)
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-14
             - 1.0
         # strength_model: none
+        # MARS artificial viscosity for shock capturing.
         dissipation_model: MARS
+        # For `MARS`, `dissipation_global_vars` are ordered as:
+        # [q1, q1ex, q2, q2ex, phi_min, phi_curl_min].
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex
@@ -113,49 +178,65 @@ materials:
             - 1.0   # pin_curl_min
 
 
+# ---------------------------------------------------------------------------
+# Regions (initial fills)
+# ---------------------------------------------------------------------------
 regions:
     - region:
         volume:
             type: global
+        # Fill the entire domain with ambient (uniform) initial conditions.
         solver_id: 0
         material_id: 0
         density: 
+            # Ambient density (g/cm^3 with the assumed cm scaling).
             type: uniform
             value: 1.0
         specific_internal_energy: 
+            # Ambient specific internal energy.
             type: uniform
             value: 1.e-10
         velocity: 
+            # Ambient initial velocity field.
             type: cartesian
             u: 0.0
             v: 0.0
             w: 0.0
         volume_fraction:
+            # Single-material case: volume fraction is 1 everywhere.
             type: uniform
             value: 1.0
 
-    # energy source initial conditions
+    # Energy source initial conditions (Sedov blast)
     - region:
         volume:
             type: sphere
+            # Sphere centered at the origin.
             origin: [0.0, 0.0, 0.0]
+            # radius1 is the inner radius (0.0 means a solid sphere).
             radius1: 0.0
+            # radius2 is the outer radius (cm); the sphere injects internal energy.
             radius2: 0.04
+        # Apply the Sedov "blast" only to this localized region.
         solver_id: 0
         material_id: 0
         density: 
+            # Density fill inside the blast region.
             type: uniform
             value: 1.0
         # ie: 0.25833839995946534
         specific_internal_energy: 
+            # Elevated specific internal energy to create the initial pressure pulse.
             type: uniform
             value: 61.67375002 # 963.652344
         velocity: 
+            # Initial velocity inside the blast sphere is zero.
             type: cartesian
             u: 0.0
             v: 0.0
             w: 0.0
         volume_fraction:
+            # Single-material case: 1 everywhere.
             type: uniform
             value: 1.0
 

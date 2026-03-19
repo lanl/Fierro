@@ -1,5 +1,35 @@
+# ---------------------------------------------------------------------------
+# Example Fierro input: VTU output fields (RZ)
+#
+# This example writes visualization output in VTK UnstructuredGrid form
+# (`.vtu`) and demonstrates how to select which fields to export.
+#
+# How to control the VTU output
+# - `output_options.output_file_format: viz` enables the VTU writer.
+# - `output_options.graphics_time_step` controls how often (in simulation
+#   time units) the outputs are written.
+# - Field selection:
+#   - `elem_field_outputs`: element fields exported in the `fields` VTK
+#     block (element-averaged material point scalars/tensors; see
+#     `mesh_io.hpp::write_vtu`).
+#   - `mat_pt_field_outputs`: material-point fields exported separately
+#     for each material as `mat{material_id}` blocks.
+#   - `node_field_outputs`: node-centered fields exported in the `fields`
+#     block.
+#
+# VTU filename / location (implementation detail)
+# - Files are written under `vtk/data/`.
+# - The default pattern is:
+#     `vtk/data/Fierro.solver{solver_id}.{partname}.{graphics_id:05d}.vtu`
+#   where `{partname}` is `fields` for element+node exports and `mat{mat_id}`
+#   for per-material exports.
+# ---------------------------------------------------------------------------
+
 # num_dims: 3
 
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
 dynamic_options:
     time_final: 1.0
     dt_min: 1.e-8
@@ -12,6 +42,9 @@ dynamic_options:
 #     source: file
 #     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
 
+# ---------------------------------------------------------------------------
+# Mesh options
+# ---------------------------------------------------------------------------
 mesh_options:
     source: generate
     num_dims: 2
@@ -21,28 +54,41 @@ mesh_options:
     num_elems: [12, 12]
 
 
+# ---------------------------------------------------------------------------
+# Output options (including VTU fields)
+# ---------------------------------------------------------------------------
 output_options:
     timer_output_level: thorough
+    # `viz` writes VTK UnstructuredGrid `.vtu` output.
     output_file_format: viz
+    # Output cadence for graphics dumps (time units).
     graphics_time_step: 0.25
     #graphics_iteration_step: 2
+    # Element fields to export to the VTK `fields` block.
     elem_field_outputs:
         - den
         - pres
         - stress
         - sie
         - mass
+    # Per-material point fields exported to separate `mat{mat_id}` blocks.
     mat_pt_field_outputs:
         - den
         - pres
         - sie
+    # Node-centered fields exported to the `fields` block.
     node_field_outputs:
         - vel
         - mass
 
+# ---------------------------------------------------------------------------
+# Solver configuration
+# ---------------------------------------------------------------------------
 solver_options:
   - solver:
         method: dynx_FE_rz
+        # `id` is the solver_id used for region/BC assignment and for VTU
+        # output file naming (`Fierro.solver{id}.<...>.vtu`).
         id: 0
         # solver_vars:
         #  - blah

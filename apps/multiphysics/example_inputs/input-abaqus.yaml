@@ -1,5 +1,29 @@
-# num_dims: 3
-
+# Example Fierro input for reading in an Abaqus mesh file and running a 3D simulation
+# that currently does nothing.
+#
+# This file is organized into top-level sections that control time integration,
+# mesh/input, output, the physics solver, boundary conditions, material models,
+# and initial conditions (regions).
+#
+# Key idea: several sections reference the same integer IDs:
+# - `solver_options[].solver.id` is referenced by `boundary_conditions[].solver_id`
+#   and `regions[].solver_id`.
+# - `materials[].material.id` is referenced by `regions[].material_id`.
+#
+# See `apps/multiphysics/README.md` for the full option documentation.
+#
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
+# Controls how the transient simulation advances in time.
+# `dt_min`/`dt_max` bound the adaptive time step, while `dt_start` provides
+# the initial guess. The simulation stops after reaching the configured limits
+# (time and/or `cycle_stop`).
+# The time_final is the final time of the simulation.
+# The dt_min is the minimum time step.
+# The dt_max is the maximum time step.
+# The dt_start is the initial time step.
+# The cycle_stop is the number of cycles to stop the simulation.
 dynamic_options:
     time_final: 1.0
     dt_min: 1.e-8
@@ -7,55 +31,89 @@ dynamic_options:
     dt_start: 1.e-5
     cycle_stop: 300000
 
-
-# mesh_options:
-#     source: file
-#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
-
+# Mesh options define the computational mesh.
+# (See `apps/multiphysics/README.md` → `mesh_options`.)
+# - If `source: file`, `file_path` points to the mesh file to read.
+# - `num_dims` selects 2D vs 3D behavior (this example uses 3).
+# The source is the source of the mesh.
+# The file_path is the path to the mesh file.
+# The num_dims is the number of dimensions of the mesh.
 mesh_options:
     source: file
-    file_path: /meshes/abaqus.inp
+    # Path to the Abaqus mesh to read.
+    # This can be relative to the *directory containing this YAML file*.
+    file_path: meshes/abaqus.inp
     num_dims: 3
 
-
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
 output_options:
+    # Verbosity level for timing/performance reporting.
     timer_output_level: thorough
-    output_file_format: viz # only options are viz or viz_and_state
+    # Output format for results.
+    # `viz`: visualization output only.
+    # `viz_and_state`: visualization plus additional state suitable for restart.
+    output_file_format: viz # options: `viz` or `viz_and_state`
+    # Amount of simulated time between visualization dumps.
     graphics_time_step: 0.05
     # graphics_iteration_step: 10
+    # Element-centered fields written to output.
     elem_field_outputs:
         - den
         - pres
         - stress
         - sie
         - mass
+    # Material-point fields written to output.
     mat_pt_field_outputs:
         - den
         - pres
         - sie
         - volfrac
+    # Node-centered fields written to output.
     node_field_outputs:
         - vel
         - mass
 
+# ---------------------------------------------------------------------------
+# Physics solver configuration
+# ---------------------------------------------------------------------------
 solver_options:
   - solver:
         method: dynx_FE
+        # Solver ID referenced by boundary conditions (`boundary_conditions[].solver_id`)
+        # and by region initializations (`regions[].solver_id`).
         id: 0
         # solver_vars:
         #  - blah
         #  - blah
         #  - blah
 
+# ---------------------------------------------------------------------------
+# Boundary conditions configuration
+# ---------------------------------------------------------------------------
 boundary_conditions:
+    # Reflective velocity boundary conditions on planes x=0, y=0, z=0.
+    #
+    # Each boundary condition:
+    # - selects a geometric surface via `surface.type` and `plane_position`
+    # - chooses how velocities are modified via `velocity_model: reflected`
+    # - uses `velocity_bc_global_vars` as the component mask/direction for reflection.
+    #
+    # Note: `solver_id` must match an entry in `solver_options[].solver.id`.
     # Tag X plane
     - boundary_condition:
+        # Connects this BC to the configured solver (`solver_options[].solver.id`).
         solver_id: 0
         surface: 
+            # Planes are selected with a small geometric tolerance.
             type: x_plane
             plane_position: 0.0
             tolerance: 1.e-5
+        # `reflected` reflects the specified velocity component(s).
         velocity_model: reflected
+        # Component mask for reflection at the x=0 plane: reflect x, not y/z.
         velocity_bc_global_vars:
             - 1   # x
             - 0   # y
@@ -64,12 +122,15 @@ boundary_conditions:
 
     # Tag Y plane
     - boundary_condition:
+        # Connects this BC to the configured solver (`solver_options[].solver.id`).
         solver_id: 0
         surface: 
             type: y_plane
             plane_position: 0.0
             tolerance: 1.e-5
+        # `reflected` reflects the specified velocity component(s).
         velocity_model: reflected
+        # Component mask for reflection at the y=0 plane: reflect y, not x/z.
         velocity_bc_global_vars:
             - 0   # x
             - 1   # y
@@ -77,30 +138,48 @@ boundary_conditions:
 
     # Tag z plane
     - boundary_condition:
+        # Connects this BC to the configured solver (`solver_options[].solver.id`).
         solver_id: 0
         surface: 
             type: z_plane
             plane_position: 0.0
             tolerance: 1.e-5
+        # `reflected` reflects the specified velocity component(s).
         velocity_model: reflected
+        # Component mask for reflection at the z=0 plane: reflect z, not x/y.
         velocity_bc_global_vars:
             - 0   # x
             - 0   # y
             - 1   # z
 
 
-  
+
+# ---------------------------------------------------------------------------
+# Materials (constitutive models)
+# ---------------------------------------------------------------------------
+# Defines material parameters such as EOS and dissipation models.
+# `regions[].material_id` selects one of these entries by matching `id`.
+# (See `apps/multiphysics/README.md` → `materials`.)
+
 materials:
     - material:
+        # Material ID referenced by `regions[].material_id`.
         id: 0
+        # EOS handling mode: `decoupled` updates EOS without fully coupling
+        # all state equations.
         eos_model_type: decoupled
+        # EOS model name (here, gamma-law gas).
         eos_model: gamma_law_gas
+        # EOS parameters consumed by the chosen `eos_model`.
+        # The order/meaning depends on the EOS type.
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-14
             - 1.0
         # strength_model: none
+        # Artificial viscosity / dissipation model used for stabilization.
         dissipation_model: MARS
+        # Dissipation model parameters (order/meaning depends on `MARS`).
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex
@@ -110,24 +189,37 @@ materials:
             - 1.0   # pin_curl_min
 
 
+# ---------------------------------------------------------------------------
+# Regions (initial conditions)
+# ---------------------------------------------------------------------------
+# Regions assign initial state variables (density, energy, velocity, etc.)
+# over geometric volumes and link those variables to a solver and material.
+# (See `apps/multiphysics/README.md` → `regions`.)
 regions:
     - region:
         volume:
+            # `global` applies the region to the whole computational domain.
             type: global
+        # Solver ID this region belongs to (must match `solver_options`).
         solver_id: 0
+        # Material ID used by constitutive models in this region.
         material_id: 0
         density: 
+            # Uniform density initialization.
             type: uniform
             value: 1.0
         specific_internal_energy: 
+            # Uniform specific internal energy initialization.
             type: uniform
             value: 1.e-10
         velocity: 
+            # Initial velocity specified in global Cartesian components (u,v,w).
             type: cartesian
             u: 0.0
             v: 0.0
             w: 0.0
         volume_fraction:
+            # Region volume fraction (used for mixed-material / interface logic).
             type: uniform
             value: 1.0
 

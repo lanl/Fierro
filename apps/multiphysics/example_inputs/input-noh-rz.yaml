@@ -1,5 +1,29 @@
+# ---------------------------------------------------------------------------
+# Example Fierro input: Noh problem (RZ / 2D axisymmetric-like)
+#
+# This is the Noh-type converging shock setup in an RZ geometry:
+# - Uniform material fills the domain (`regions[].volume: global`).
+# - Fluid starts with an inward radial velocity field
+#   (`velocity: radial` with `speed: -1.0`).
+# - Converging flow generates a shock; MARS_rz artificial viscosity helps
+#   stabilize it.
+#
+# Assumed input scaling / units (consistent with `input-multimat.yaml`)
+# - Mass: grams (g)
+# - Length: centimeters (cm)
+# - Time: micro second (microsecond)
+# - Pressure / stress: MegaBar
+#
+# Derived:
+# - Velocity: cm / micro second
+# - Density: g / cm^3
+# ---------------------------------------------------------------------------
+
 # num_dims: 2
 
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
 dynamic_options:
     time_final: 0.6
     dt_min: 1.e-8
@@ -12,31 +36,52 @@ dynamic_options:
 #     source: file
 #     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
 
+# ---------------------------------------------------------------------------
+# Mesh options (RZ / 2D)
+# ---------------------------------------------------------------------------
 mesh_options:
     source: generate
     num_dims: 2
     type: box
+    # Box origin in x,y (cm).
     origin: [0.0, 0.0]
+    # Box lengths in x,y (cm).
     length: [1.0, 1.0]
+    # Element counts [nx, ny].
     num_elems: [12, 12]
 
 
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
 output_options:
     timer_output_level: thorough
     output_file_format: ensight
+    # Visualization cadence in time units (microsecond).
     graphics_time_step: 0.6
     # graphics_iteration_step: 10
 
+# ---------------------------------------------------------------------------
+# Solver configuration
+# ---------------------------------------------------------------------------
 solver_options:
   - solver:
         method: dynx_FE_rz
         id: 0
+        # `dynx_FE_rz` is the axisymmetric (RZ) hydro/dynamics solver.
         # solver_vars:
         #  - blah
         #  - blah
         #  - blah
 
+# ---------------------------------------------------------------------------
+# Boundary conditions
+# ---------------------------------------------------------------------------
 boundary_conditions:
+    # Velocity BC meaning:
+    # - `reflected` removes the velocity component along the direction given
+    #   by `velocity_bc_global_vars` (treated as a unit direction). This is a
+    #   symmetry / wall-like constraint that prevents motion through the plane.
     # Tag X plane
     - boundary_condition:
         solver_id: 0
@@ -65,13 +110,25 @@ boundary_conditions:
 
 
   
+# ---------------------------------------------------------------------------
+# Materials (single material EOS + artificial viscosity)
+# ---------------------------------------------------------------------------
 materials:
     - material:
         id: 0
         eos_model_type: decoupled
         eos_model: gamma_law_gas
+        # `gamma_law_gas` EOS: eos_global_vars ordering
+        #   0: gamma (ratio of specific heats)
+        #   1: min_sound_speed (sound-speed floor)
+        #   2: c_v (specific heat at constant volume)
+        #
+        # Pressure relation:
+        #   pres = (gamma - 1) * sie * den
         # strength_model: none
         dissipation_model: MARS_rz
+        # MARS_rz artificial viscosity ordering (same concept as MARS):
+        #   q1, q1ex, q2, q2ex, phi_min, phi_curl_min
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex
@@ -84,6 +141,9 @@ materials:
             - 1.0E-14
             - 1.0
 
+# ---------------------------------------------------------------------------
+# Initial conditions
+# ---------------------------------------------------------------------------
 regions:
     - region:
         volume:
@@ -91,12 +151,20 @@ regions:
         material_id: 0
         solver_id: 0
         density: 
+            # Initial density (g/cm^3 with input scaling).
             type: uniform
             value: 1.0
         specific_internal_energy: 
+            # Initial specific internal energy (sie).
             type: uniform
             value: 1.e-10
         velocity: 
+            # Initial velocity field.
+            #
+            # `velocity: radial` sets:
+            #   v = speed * (x,y) / sqrt(x^2 + y^2)
+            # so `speed: -1.0` produces inward (converging) flow toward
+            # the origin in the x-y plane.
             type: radial
             speed: -1.0
 
