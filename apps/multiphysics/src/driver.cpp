@@ -87,6 +87,11 @@ void Driver::initialize()
         return;
     }
 
+    if (mesh.elem_kind != mesh_init::linear_simplex_element) {
+        int elem_order = pow(mesh.num_nodes_in_elem,1/3) - 1;
+        ref_elem.init(elem_order, mesh.num_dims);
+    }
+
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;
 
@@ -285,7 +290,8 @@ void Driver::execute()
                         Materials, 
                         BoundaryConditions, 
                         mesh, 
-                        State);
+                        State,
+                        ref_elem);
     } // loop over solvers
 }
 

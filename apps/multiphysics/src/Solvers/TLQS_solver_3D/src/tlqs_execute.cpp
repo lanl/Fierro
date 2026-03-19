@@ -52,7 +52,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
                     swage::Mesh& mesh, 
-                    State_t& State)
+                    State_t& State,
+                    elements::fe_ref_elem_t& ref_elem)
 {
     // Conveinent local variables
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;

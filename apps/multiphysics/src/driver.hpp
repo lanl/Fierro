@@ -86,6 +86,11 @@ public:
     // ---------------------------------------------------------------------
     State_t  State;
 
+    // ---------------------------------------------------------------------
+    //    reference element data type declaration
+    // ---------------------------------------------------------------------
+    elements::fe_ref_elem_t ref_elem;
+
     int num_solvers = 0;
 
     // set of enabled solvers
