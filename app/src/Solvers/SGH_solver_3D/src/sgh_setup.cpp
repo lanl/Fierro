@@ -120,24 +120,13 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
             printf("Setting up global fracture (cohesive zones)\n");
             doing_fracture = true;
         
-        // test to see if function is being entered
+        // calling initialize for the cohesive zones bank
         printf("Calling initialize()...\n");
         //cohesive_zones_t cohesive_zones_bank;
         this->cohesive_zones_bank.initialize(mesh, State);
 
-        // debug oriented
-        printf("[Driver::setup] &cz_bank=%p  pairs=%zu maxcz=%zu info_rows=%zu\n",
-               (void*)&this->cohesive_zones_bank,
-               this->cohesive_zones_bank.overlapping_node_gids.dims(0),
-               this->cohesive_zones_bank.max_elem_in_cohesive_zone,
-               this->cohesive_zones_bank.cz_info.dims(0));
-
-        // to see if function is being entered
+        // done calling initialize
         printf("Done calling initialize()...\n");
-
-        // Example from Gavin's code for running fracture tests:
-        // run_fracture_tests(cohesive_zones_bank, mesh, State, sim_param);
-
         break; 
         }
     }

@@ -10,28 +10,9 @@
 struct cohesive_zones_t {
     // member functions defined in this header file and sized inside of the source file
     
-    size_t gid; // global node id
-    size_t lid; // local node id
-    size_t nvcz; // number of actual cohesive zone pairs
-    CArrayKokkos <size_t> nodes_gid; // global ids of the nodes in the cohesive zone
     DCArrayKokkos <size_t> overlapping_node_gids; // node pairs with overlapping coordinates ; // will need to size this inside of a function in the source file 
-    CArrayKokkos <size_t> vczconn; // 2D [num_pairs][2] definition for function finds the max number of elements that any cohesive zone node is part of
-    //CArrayKokkos<size_t> cohesive_zone_info;
     DCArrayKokkos<int> cz_info;
     size_t max_elem_in_cohesive_zone;
-    CArrayKokkos<double> internal_vars_n0; // 1/28/2026 addition: storage for internal vars at t_n
-
-    
-
-    // Iso-parametric coordinates of the patch nodes (1D array of size mesh.num_nodes_in_surf)
-    // For a standard linear hex, xi = [-1.0, 1.0, 1.0, -1.0], eta = [-1.0, -1.0, 1.0, 1.0]
-    // For now, these are the same for all surface objects, but should they be different, then remove static and look to
-    // cohesive_zones_t::initialize for how to set these values
-    CArrayKokkos<double> xi;  // xi coordinates
-    CArrayKokkos<double> eta;  // eta coordinates
-    static size_t num_nodes_in_surf;  // number of nodes on the surface
-    static constexpr size_t max_nodes = 4;  // max number of nodes on the surface; for allocating memory at compile time
-
 
     void initialize(Mesh_t& mesh, State_t& State); // in fracture.cpp can go in and say what initialize does
     // would look something like void node_pairs_t::initialize(const Mesh_t &mesh, ...)
@@ -47,7 +28,7 @@ struct cohesive_zones_t {
 
     // START OF FRACTURE FUNCTION AND ARRAY DECLARATIONS
 
-    size_t cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids, const RaggedRightArrayKokkos<size_t>& elems_in_node, const Mesh_t& mesh);
+    size_t cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids, const RaggedRightArrayKokkos<size_t>& elems_in_node);
 
     KOKKOS_FUNCTION
     static void compute_face_geometry(

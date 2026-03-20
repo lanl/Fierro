@@ -60,13 +60,10 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
                    
     // counting the number of boundary nodes
     size_t num_bdy_nodes = mesh.num_bdy_nodes;
-    //std::cout << "Number of boundary nodes: " << num_bdy_nodes << std::endl;
-    printf("Total boundary nodes: %zu\n", mesh.num_bdy_nodes);
+    
+    // debug: print total number of boundary nodes
+    //printf("Total boundary nodes: %zu\n", mesh.num_bdy_nodes);
 
-    // total number of boundary nodes across all sets
-    //size_t total_bdy_nodes = 0;
-    //for (size_t i = 0; i < mesh.num_bdy_sets; ++i) {
-    //    std::cout << "Boundary nodes in set " << i << ": " << mesh.num_bdy_nodes_in_set(i) << std::endl;
     
     const double tol = 1e-8; //0.000001; //e-3; // adjust as needed; added just in case coordinate pairs are close but not exactly equal
 
@@ -79,16 +76,13 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     // local reference to array of bdy_nodes
     auto bdy_nodes = mesh.bdy_nodes; 
 
-
-    size_t overlap_index = 0; // counts unique overlapping nodes (2 unique overlapping nodes = 1 overlapping node pair)
-    //size_t pair_count = 0; // counts how many overlapping node pairs exist
-
     // device-accessible counter
     DCArrayKokkos<size_t> pair_count(1, "pair_count");
     pair_count.host(0) = 0;
     pair_count.update_device();    
 
 
+    // device side computation
     RUN({
     // count unique overlapping nodes
         for (size_t i = 0; i < num_bdy_nodes; ++i) {
@@ -100,6 +94,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
 
                 bool overlap = true;
                 for (size_t k = 0; k < 3; ++k) {
+                    
                     if (fabs(node_coords(node_i, k) - node_coords(node_j, k)) > tol) {
                         overlap = false;
                         break;
@@ -118,7 +113,9 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     // copy pair count back to host and print
     pair_count.update_host();
     size_t num_pairs = pair_count.host(0);
-    printf("Number of overlapping node pairs: %zu\n", num_pairs);
+
+    // debug: print number of overlapping node pairs (cohesive zone node pairs) found
+    //printf("Number of overlapping node pairs: %zu\n", num_pairs);
 
     
     // allocate only the size of overlapping nodes 
@@ -133,6 +130,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     pair_count.host(0) = 0;
     pair_count.update_device();
 
+    // device side computation
     RUN({
         // second pass: store actual overlapping node pairs
         size_t pair_index = 0; // fills the rows (pairs) that are added to 2D overlapping_node_gids array  
@@ -154,9 +152,11 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
                     }
                 }
 
+
                 if (overlap) {
                     //++pair_count;
-                    printf("Overlap (cohesive zone) found between node %llu and node %llu\n", node_i, node_j);
+                    // debug: print overlapping node pair global ids 
+                    //printf("Overlap (cohesive zone) found between node %zu and node %zu\n", node_i, node_j);
                     local_overlapping_node_gids(pair_index, 0) = node_i;
                     local_overlapping_node_gids(pair_index, 1) = node_j;
                     ++pair_index;
@@ -168,36 +168,44 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     Kokkos::fence();
 
     //printf("Total overlapping node pairs: %zu\n", pair_count);
-    RUN({
-    // print overlapping node coordinates
-        for (size_t i = 0; i < pair_count(0); ++i) {
-            size_t node_i = local_overlapping_node_gids(i, 0);
-            size_t node_j = local_overlapping_node_gids(i, 1);
 
-            printf("Overlapping Pair: %zu <-> %zu\n", node_i, node_j);
+    // debug print of the overlapping node pairs and coordinates
+    // RUN({
+    // // print overlapping node coordinates
+    //     for (size_t i = 0; i < pair_count(0); ++i) {
+    //         size_t node_i = local_overlapping_node_gids(i, 0);
+    //         size_t node_j = local_overlapping_node_gids(i, 1);
 
-            printf("    Node %llu coords: ", node_i);
-            for (size_t k = 0; k < 3; ++k) {
-                printf("%g ", node_coords(node_i, k));
-            }
-            printf("\n");
+    //         // debug: print overlapping node pair global ids
+    //         //printf("Overlapping Pair: %zu <-> %zu\n", node_i, node_j);
 
-            printf("    Node %llu coords: ", node_j);
-                for (size_t k = 0; k < 3; ++k) {
-                    printf("%g ", node_coords(node_j, k));
-                }
-                printf("\n");
-        }
-    }); // end RUN
-    Kokkos::fence();
+    //         // debug: print coordinates of the overlapping nodes
+    //         //printf("    Node %zu coords: ", node_i);
+    //         //for (size_t k = 0; k < 3; ++k) {
+    //         //    printf("%g ", node_coords(node_i, k));
+    //         //}
+    //         //printf("\n");
 
-    max_elem_in_cohesive_zone = cohesive_zone_elem_count(overlapping_node_gids, mesh.elems_in_node, mesh);
-    printf("Max elements connected to any cohesive zone node: %zu\n", max_elem_in_cohesive_zone);
+    //         // debug: print coordinates of the overlapping nodes
+    //         //printf("    Node %zu coords: ", node_j);
+    //         //for (size_t k = 0; k < 3; ++k) {
+    //         //    printf("%g ", node_coords(node_j, k));
+    //         //}
+    //         //printf("\n");
+    //     }
+    // }); // end RUN
+    // Kokkos::fence();
+
+    max_elem_in_cohesive_zone = cohesive_zone_elem_count(overlapping_node_gids, mesh.elems_in_node);
+
+    // debug: print maximum number of elements connected to any cohesive zone node
+    //printf("Max elements connected to any cohesive zone node: %zu\n", max_elem_in_cohesive_zone);
 
     // sync mesh connectivity to device before building cz_info
     mesh.nodes_in_elem.update_device();
 
     // build cz_info array
+    // (num_pairs, 6 * max_elem_in_cohesive_zone)
     cz_info = build_cohesive_zone_info(
         mesh.elems_in_node,
         mesh.nodes_in_elem,
@@ -219,15 +227,15 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
 /// \return Maximum number of elements connected to any node in any cohesive pair
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 size_t cohesive_zones_t::cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids,
-               const RaggedRightArrayKokkos<size_t>& elems_in_node, const Mesh_t& mesh) {
+               const RaggedRightArrayKokkos<size_t>& elems_in_node) {
 
     overlapping_node_gids.update_host();
 
     size_t max_elem_in_cohesive_zone = 0;
     FOR_REDUCE_MAX(i, 0, overlapping_node_gids.dims(0),
                    j, 0, overlapping_node_gids.dims(1), max_elem_in_cohesive_zone, {
-        if (max_elem_in_cohesive_zone < mesh.elems_in_node.stride(overlapping_node_gids(i,j))) {
-            max_elem_in_cohesive_zone = mesh.elems_in_node.stride(overlapping_node_gids(i,j));
+        if (max_elem_in_cohesive_zone < elems_in_node.stride(overlapping_node_gids(i,j))) {
+            max_elem_in_cohesive_zone = elems_in_node.stride(overlapping_node_gids(i,j));
         }
     }, max_elem_in_cohesive_zone);
 
@@ -480,31 +488,6 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
     );
     cohesive_zone_faces.set_values(-1);
 
-
-    // fill the first two blocks of cohesive_zone_info with incident element lists taken from mesh.elems_in_node (A- and B-side)
-
-    // overlapping_node_gids.update_host();
-    // for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
-    //     const size_t nodeA = overlapping_node_gids.host(i, 0);
-    //     const size_t nodeB = overlapping_node_gids.host(i, 1);
-
-    //     const size_t degA = mesh.elems_in_node.stride(nodeA);
-    //     for (size_t j = 0; j < max_elem_in_cohesive_zone && j < degA; ++j) {
-    //         cohesive_zone_info(i, 0 + j) = static_cast<int>( mesh.elems_in_node(nodeA, j) );
-    //     }
-
-    //     const size_t degB = mesh.elems_in_node.stride(nodeB);
-    //     for (size_t j = 0; j < max_elem_in_cohesive_zone && j < degB; ++j) {
-    //         cohesive_zone_info(i, max_elem_in_cohesive_zone + j) = static_cast<int>( mesh.elems_in_node(nodeB, j) );
-    //     }
-    // }
-
-    // create local copies for device access and convert host for loop to FOR_ALL kernels so code runs on GPU
-    //auto local_overlapping_node_gids = overlapping_node_gids;
-    //auto local_elems_in_node = mesh.elems_in_node;
-    //auto local_nodes_in_elem = mesh.nodes_in_elem;
-    //auto local_cohesive_zone_info = cohesive_zone_info;
-
     FOR_ALL(i, 0, overlapping_node_gids.dims(0), {
         const size_t nodeA = overlapping_node_gids(i, 0);
         const size_t nodeB = overlapping_node_gids(i, 1);
@@ -521,13 +504,6 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
         }   
     });
     Kokkos::fence();
-
-    // sync to host beofre host loops
-    //cohesive_zone_info.update_host();
-    //overlapping_node_gids.update_host();
-    //nodes_in_elem.update_host();
-    //node_coords.update_host();
-    //elems_in_node.update_host();
 
     RUN({
     // build candidate faces + store local corner k slot-keyed
@@ -1166,14 +1142,6 @@ void cohesive_zones_t::cohesive_zone_var_update(
         return;
     }
 
-    // read cohesive zone parameters from stress_bc_global_vars for this boundary set
-    //const double E_inf = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::E_inf);
-    //const double a1   = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::a1);
-    //const double n_exp = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::n_exp);
-    //const double u_n_star  = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::u_n_star);
-    //const double u_t_star  = stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::u_t_star);
-    //const int    num_prony_terms  = (int)(stress_bc_global_vars(bdy_set, fractureStressBC::BCVars::num_prony_terms) + 0.5); // 0.5 for rounding to the nearest int
-
     // loop over each cohesive zone node pair
     RUN({
     for (size_t i = 0; i < overlapping_node_gids.dims(0); i++){
@@ -1198,7 +1166,7 @@ void cohesive_zones_t::cohesive_zone_var_update(
         // calculating lambda_t and lambda_tdt values
         double lambda_t = sqrt((u_norm_mag_t / u_n_star) * (u_norm_mag_t / u_n_star) + (u_tan_mag_t / u_t_star) * (u_tan_mag_t / u_t_star));
         double lambda_tdt = sqrt((u_norm_mag_tdt / u_n_star) * (u_norm_mag_tdt / u_n_star) + (u_tan_mag_tdt / u_t_star) * (u_tan_mag_tdt / u_t_star));
-        if (!isfinite(lambda_t) || !isfinite(lambda_tdt)) {
+        if (!Kokkos::isfinite(lambda_t) || !Kokkos::isfinite(lambda_tdt)) {
             delta_internal_vars(i,0) = 0.0;
             delta_internal_vars(i,1) = 0.0;
             delta_internal_vars(i,2) = 0.0;

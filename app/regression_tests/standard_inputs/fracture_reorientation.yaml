@@ -1,0 +1,117 @@
+# num_dims: 3
+
+dynamic_options:
+  time_final: 19.816
+  dt_min: 0.002
+  dt_max: 0.002
+  dt_start: 0.002
+  cycle_stop: 30000
+  rk_num_stages: 1
+
+mesh_options:
+  source: file
+  file_path: ./standard_inputs/meshes/fracture_reorientation.vtk
+  num_dims: 3
+
+output_options:
+  timer_output_level: thorough
+  output_file_format: state
+  graphics_time_step: 19.816
+  # graphics_iteration_step: 10
+  elem_field_outputs:
+    - pres
+    - stress
+  mat_pt_field_outputs:
+    - pres
+    - stress
+
+solver_options:
+  - solver:
+      method: dynx_FE
+      id: 0
+      # solver_vars:
+      #  - blah
+      #  - blah
+      #  - blah
+
+boundary_conditions:
+
+  - boundary_condition:
+      solver_id: 0
+      surface:
+        type: global
+      velocity_model: user_defined
+      velocity_bc_global_vars:
+        - 1.0 # reorientation mode flag : 1.0 = enabled; 0.0 = disabled
+        - 0.3171443868 # omega_y (rotation about x2 axis)
+        - 0.3171443868 # omega_z (rotation about x3 axis)
+        - 4.0e-5 # cz opening rate (constant rate of opening for cohesive zone node pairs)
+        - 0.5 # x interface (cm) (x location of interface)
+          
+  # fracture stress boundary condition
+  - boundary_condition:
+      solver_id: 0
+      surface:
+        type: global
+      stress_model: fracture
+      stress_bc_global_vars:
+        - 2.0e-3   #g/cm*us^2 #E_inf (Prony constant term)
+        - 0.1    #a1 (Damage evolution coefficient) dimensionless
+        - 0.25        #n_exp (Damage evolution exponent) dimensionless
+        - 5.0e-3   #cm  #u_n_star (uns: Characteristic length normal)
+        - 5.0e-3   #cm   #u_t_star (uts: Characteristic length tangential)
+        - 1        #num_prony_terms (Filled below: E and tau temrs) dimensionless
+        - 1.8e-2   #g/cm*us^2   #prony_0_E
+        - 2.0      #g/cm*us^3    #prony_0_tau p
+                   #prony_1_E
+                   #prony_1_tau
+
+materials:
+  - material:
+      id: 0
+      eos_model_type: decoupled
+      eos_model: linear_elastic_eos
+      eos_global_vars:
+          - 1.4 #  B Bulk modulus g/cm*us^2
+          - 0.4333 # G Shear modulus g/cm*us^2
+          - 1.0 # ref density from Azo materials online
+          - 0.001
+        #------Strength
+      strength_model_type: increment_based
+      strength_model: hypo_plasticity_strength
+      # shear modulus of copper
+      # yield strength of copper
+      strength_global_vars:
+          - 0.4333
+          - 0.004
+      dissipation_model: MARS
+      dissipation_global_vars:
+          - 3.0   # q1
+          - 0.0   # q1ex
+          - 1.333 # q2
+          - 0.0 # q2ex
+          - 0.0   # phi_min
+          - 1.0   # phi_min_curl
+
+regions:
+# global region (everything start with zero velocity)
+  - region:
+        volume:
+            type: global
+        material_id: 0
+        solver_id: 0
+        density: 
+            type: uniform
+            value: 1
+        specific_internal_energy: 
+            type: uniform
+            value: 1.0e-10
+        velocity: 
+            type: cartesian
+            u: 0.0 # whole domain initially at rest
+            v: 0.0
+            w: 0.0
+
+
+
+

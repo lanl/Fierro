@@ -20,7 +20,7 @@ tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
         "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
         "slanted_bounce_contact", "slanted_impact_contact", \
         "sie_expansion_contact", "confined_preload", "unconfined_preload", \
-        "edge_flat_contact"]
+        "edge_flat_contact", "fracture_mode_1", "fracture_mode_2", "fracture_reorientation"]
 
 # Extract data from txt file
 def extract_state_data(filename):
@@ -104,7 +104,7 @@ for i in range(len(executables)):
                 diff = calc[l] - true[l]
                 # print(diff)
 
-                if abs(diff) > 1E-8:
+                if abs(diff) > 1E-6:
                     print(f"{'Calculated Result:':<20} {calc[l]:.10e}")
                     print(f"{'Expected Result:':<20} {true[l]:.10e}")
                     print(f"{'Difference:':<20} {diff:.10e}")

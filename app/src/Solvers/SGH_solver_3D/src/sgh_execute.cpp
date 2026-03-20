@@ -43,6 +43,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mesh_io.h"
 #include "tipton_equilibration.hpp"
 #include "fracture_stress_bc.h"
+#include "reorientation_kinematics.hpp"
+#include "user_defined_velocity_bc.h"
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -51,123 +54,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
-// REORIENTATION TESTING
-// rotation matrix about y axis (x2)
-KOKKOS_FUNCTION
-void rotation_matrix_y(double angle, double R[3][3]) {
-    double c = cos(angle);
-    double s = sin(angle);
-    R[0][0] = c;   R[0][1] = 0.0; R[0][2] = s;
-    R[1][0] = 0.0; R[1][1] = 1.0; R[1][2] = 0.0;
-    R[2][0] = -s;  R[2][1] = 0.0; R[2][2] = c;
-}
 
-// rotation matrix about z axis (x3)
-KOKKOS_FUNCTION
-void rotation_matrix_z(double angle, double R[3][3]) {
-    double c = cos(angle);
-    double s = sin(angle);
-    R[0][0] = c;   R[0][1] = -s;  R[0][2] = 0.0;
-    R[1][0] = s;   R[1][1] = c;   R[1][2] = 0.0;
-    R[2][0] = 0.0; R[2][1] = 0.0; R[2][2] = 1.0;
-}
-
-// multiply two 3x3 matrices: C = A * B
-KOKKOS_FUNCTION
-void mat_mult_3x3(const double A[3][3], const double B[3][3], double C[3][3]) {
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            C[i][j] = 0.0;
-            for (int k = 0; k < 3; ++k) {
-                C[i][j] += A[i][k] * B[k][j];
-            }
-        }
-    }
-}
-
-// apply rotation matrix to a vector: v_out = R * v_in
-KOKKOS_FUNCTION
-void rotate_vector(const double R[3][3], const double v_in[3], double v_out[3]) {
-    for (int i = 0; i < 3; ++i) {
-        v_out[i] = 0.0;
-        for (int j = 0; j < 3; ++j) {
-            v_out[i] += R[i][j] * v_in[j];
-        }
-    }
-}
-
-// PRESCRIBE NODAL POSITIONS FOR REORIENTATION VALIDATION
-// this function overrides the solver's position update with prescribed kinematics
-void prescribe_reorientation_kinematics(
-    Mesh_t& mesh,
-    State_t& State,
-    const CArrayKokkos<double>& initial_coords, // (num_nodes,3)
-    const CArrayKokkos<int>&    cz_b_side_flag, // (num_nodes) 0/1
-    double time_value,
-    double dt_stage,
-    double omega_y,
-    double omega_z,
-    double cz_opening_rate
-) {
-    const double angle_y_t   = omega_y * time_value;
-    const double angle_z_t   = omega_z * time_value;
-    const double angle_y_tdt = omega_y * (time_value + dt_stage);
-    const double angle_z_tdt = omega_z * (time_value + dt_stage);
-
-    const double s_t   = cz_opening_rate * time_value;
-    const double s_tdt = cz_opening_rate * (time_value + dt_stage);
-
-    double Ry_t[3][3], Rz_t[3][3], R_t[3][3];
-    double Ry_tdt[3][3], Rz_tdt[3][3], R_tdt[3][3];
-
-    rotation_matrix_y(angle_y_t,   Ry_t);
-    rotation_matrix_z(angle_z_t,   Rz_t);
-    mat_mult_3x3(Rz_t, Ry_t, R_t);
-
-    rotation_matrix_y(angle_y_tdt, Ry_tdt);
-    rotation_matrix_z(angle_z_tdt, Rz_tdt);
-    mat_mult_3x3(Rz_tdt, Ry_tdt, R_tdt);
-
-    // n(t) = R(t)*[1,0,0] => column 0
-    const double n_t[3]   = { R_t[0][0],   R_t[1][0],   R_t[2][0]   };
-    const double n_tdt[3] = { R_tdt[0][0], R_tdt[1][0], R_tdt[2][0] };
-
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
-
-        const double Xx = initial_coords(node_gid,0);
-        const double Xy = initial_coords(node_gid,1);
-        const double Xz = initial_coords(node_gid,2);
-
-        // active rotation of position vector X0 (rotation about the origin 0,0,0)
-        // x(t) = R(t)*X0
-        double xt   = R_t[0][0]*Xx + R_t[0][1]*Xy + R_t[0][2]*Xz;
-        double yt   = R_t[1][0]*Xx + R_t[1][1]*Xy + R_t[1][2]*Xz;
-        double zt   = R_t[2][0]*Xx + R_t[2][1]*Xy + R_t[2][2]*Xz;
-
-        // x(t+dt_stage) = R(t+dt_stage)*X0
-        double xtdt = R_tdt[0][0]*Xx + R_tdt[0][1]*Xy + R_tdt[0][2]*Xz;
-        double ytdt = R_tdt[1][0]*Xx + R_tdt[1][1]*Xy + R_tdt[1][2]*Xz;
-        double ztdt = R_tdt[2][0]*Xx + R_tdt[2][1]*Xy + R_tdt[2][2]*Xz;
-
-        if (cz_b_side_flag(node_gid)) {
-            xt   += s_t   * n_t[0];   yt   += s_t   * n_t[1];   zt   += s_t   * n_t[2];
-            xtdt += s_tdt * n_tdt[0]; ytdt += s_tdt * n_tdt[1]; ztdt += s_tdt * n_tdt[2];
-        }
-
-        // set coords(t) and vel consistent with dt_stage
-        State.node.coords(node_gid,0) = xt;
-        State.node.coords(node_gid,1) = yt;
-        State.node.coords(node_gid,2) = zt;
-
-        State.node.vel(node_gid,0) = (xtdt - xt) / dt_stage;
-        State.node.vel(node_gid,1) = (ytdt - yt) / dt_stage;
-        State.node.vel(node_gid,2) = (ztdt - zt) / dt_stage;
-    });
-
-    Kokkos::fence();
-}
-
-// REORIENTATION TESTING
 void SGH3D::execute(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
@@ -251,53 +138,108 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // the number of materials specified by the user input
     const size_t num_mats = Materials.num_mats;
+
 // REORIENTATION TESTING
-// =============================================================================
-// REORIENTATION VALIDATION MODE FLAG
-// set to true to use prescribed kinematics instead of dynamic solver
-// =============================================================================
-const bool REORIENTATION_VALIDATION_MODE = false;
+// =======================================================================================
+// DETECT REORIENTATION VALIDATION MODE FROM USER DEFINED VELOCITY BOUNDARY CONDITION
+// =======================================================================================
+    bool reorientation_validation_mode = false; // reorientation mode flag
+    double omega_y = 0.0; // rotation about x2
+    double omega_z = 0.0; // rotation about x3
+    double cz_opening_rate = 0.0; // constant opening rate for cohesive zone nodes
+    double x_interface = 0.0; // x location of interface for b-side flagging of cohesive zone nodes
 
-// Validation parameters (matching Figure 11 setup [1])
-const double OMEGA_Y = 0.0792860967; // full 360 deg rotation for 79.247 us //0.02747; //full 360 degree rotation for 228.764 us final time;           // rad/us rotation about y-axis
-const double OMEGA_Z = 0.0792860967; // full 360 deg rotation for 79.247 us //0.02747; //full 360 degree rotation for 228.764 us final time;          // rad/us rotation about z-axis  
-const double CZ_OPENING_RATE = 1e-5;  // cm/us opening rate
+    // deviice arrays to hold reorientation parameters
+    DCArrayKokkos<double> reorient_params(5, "reorient_params");
+    DCArrayKokkos<int> found_reorient(1, "found_reorient");
+    //found_reorient.host(0) = 0; 
+    found_reorient.update_device();
 
-// store initial coordinates for prescribed motion
-// always allocate; only fill/use when mode is on
-CArrayKokkos<double> initial_coords(mesh.num_nodes, 3, "initial_coords");
-CArrayKokkos<int>    cz_b_side_flag(mesh.num_nodes, "cz_b_side_flag");
-cz_b_side_flag.set_values(0.0);
-if (REORIENTATION_VALIDATION_MODE && doing_fracture) {
-    FOR_ALL(n, 0, mesh.num_nodes, {
-        initial_coords(n,0) = State.node.coords(n,0);
-        initial_coords(n,1) = State.node.coords(n,1);
-        initial_coords(n,2) = State.node.coords(n,2);
-    });
-    Kokkos::fence();
-    // mark B-side nodes once (gidB in each pair)
-    const double x_interface = 0.5; // your interface plane
-    const size_t nne = mesh.num_nodes_in_elem;
+    // local references for device access
+    auto bc_enums = BoundaryConditions.BoundaryConditionEnums;
+    auto vel_bc_vars = BoundaryConditions.velocity_bc_global_vars;
+    size_t num_bcs = BoundaryConditions.num_bcs;
 
-    // find the right element by centroid and flag ALL its nodes
-    FOR_ALL(e, 0, mesh.num_elems, {
-        double xc = 0.0;
-        for (size_t a = 0; a < nne; ++a) {
-            const size_t gid = mesh.nodes_in_elem(e,a);
-            xc += initial_coords(gid,0);
+    RUN({
+        // search boundary conditions for user-defined velocity BC with reorientation !reo
+        for (size_t bdy_set = 0; bdy_set < num_bcs; bdy_set++) {
+            // check if this BC has reorientation parameters set (omega_y != 0 or omega_z != 0)
+            if (bc_enums(bdy_set).BCVelocityModel
+                != boundary_conditions::userDefinedVelocityBC) {
+                continue;  // skip non-user-defined BCs
+            }
+    
+            double mode_flag = vel_bc_vars(
+                bdy_set, UserDefinedVelocityBC::BCVars::reorientation_mode);
+    
+    
+            if (mode_flag > 0.5) {
+                found_reorient(0) = 1;
+                reorient_params(0) = mode_flag;
+                reorient_params(1) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::omega_y);
+                reorient_params(2) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::omega_z);
+                reorient_params(3) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::cz_opening_rate);
+                reorient_params(4) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::x_interface);
+                break;
+                }  
         }
-        xc /= (double)nne;
+    }); // end RUN
+    Kokkos::fence();
 
-        if (xc > x_interface) {
+    // copying reults back to host
+    found_reorient.update_host();
+    reorient_params.update_host();
+
+    // set host variables from the copied data
+    reorientation_validation_mode = (found_reorient.host(0) == 1);
+    if (reorientation_validation_mode) {
+        omega_y = reorient_params.host(1);
+        omega_z = reorient_params.host(2);
+        cz_opening_rate = reorient_params.host(3);
+        x_interface = reorient_params.host(4);
+
+        printf("=== REORIENTATION VALIDATION MODE ENABLED ===\n");
+        printf("  omega_y         = %.10f rad/us\n", omega_y);
+        printf("  omega_z         = %.10f rad/us\n", omega_z);
+        printf("  cz_opening_rate = %.10e cm/us\n", cz_opening_rate);
+        printf("  x_interface     = %.4f cm\n", x_interface);
+        printf("==============================================\n");
+    }    
+   
+    // allocate storage for reorientation test
+    CArrayKokkos<double> initial_coords(mesh.num_nodes, 3, "initial_coords");
+    CArrayKokkos<int>    cz_b_side_flag(mesh.num_nodes, "cz_b_side_flag");
+    cz_b_side_flag.set_values(0);
+
+    if (reorientation_validation_mode && doing_fracture) {
+        // store initial coordinates for all nodes
+        FOR_ALL(n, 0, mesh.num_nodes, {
+            initial_coords(n,0) = State.node.coords(n,0);
+            initial_coords(n,1) = State.node.coords(n,1);
+            initial_coords(n,2) = State.node.coords(n,2);
+        });
+        Kokkos::fence();
+
+        // initialize b-side flags using x_interface parameter from .yaml
+        const size_t nne = mesh.num_nodes_in_elem;
+        FOR_ALL(e, 0, mesh.num_elems, {
+            double xc = 0.0;
             for (size_t a = 0; a < nne; ++a) {
                 const size_t gid = mesh.nodes_in_elem(e,a);
-                cz_b_side_flag(gid) = 1; // OK: all writes set to 1
+                xc += initial_coords(gid,0);
             }
-        }
-    });
-    Kokkos::fence();
-}
+            xc /= (double)nne;
+            if (xc > x_interface) {
+                for (size_t a = 0; a < nne; ++a) {
+                    const size_t gid = mesh.nodes_in_elem(e,a);
+                    cz_b_side_flag(gid) = 1;
+                }
+            }
+        });
+        Kokkos::fence();
+    }
 // REORIENTATION TESTING
+
     // extensive IE
     for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
 
@@ -448,27 +390,29 @@ if (REORIENTATION_VALIDATION_MODE && doing_fracture) {
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
             // ---- RK coefficient ----
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
-
-            // 2/2 add
             double dt_stage = rk_alpha * dt;
-            // 2/2 add
-// REORIENTATION TESTING
-const bool reorient_mode = (REORIENTATION_VALIDATION_MODE && doing_fracture);
-if (reorient_mode) {
-    prescribe_reorientation_kinematics(
-        mesh, State,
-        initial_coords,
-        cz_b_side_flag,
-        time_value,      // current time
-        dt_stage,        // stage dt
-        OMEGA_Y, OMEGA_Z,
-        CZ_OPENING_RATE
-    );
-}
-// REORIENTATION TESTING            
-            // ---- Calculate velocity gradient for the element ----
+            
 // REORIENTATIONT TESTING:
-        if (!reorient_mode){ 
+        // check if reorientation validation mode testing is on
+        const bool reorient_mode = (reorientation_validation_mode && doing_fracture);
+
+        if (reorient_mode) {
+            // prescribe reorientation kinematics to all nodes (skip over normal SGH evolution)
+            ReorientationKinematics::prescribe_reorientation_kinematics(
+                mesh, State,
+                initial_coords,
+                cz_b_side_flag,
+                time_value,
+                dt_stage,
+                omega_y, omega_z,
+                cz_opening_rate
+            );
+        }
+
+        // skip SGH evolution (force/velocity calculations) if in reorientation kinematics mode, otherwise do normal SGH evolution
+        if (!reorient_mode){         
+            // ---- Calculate velocity gradient for the element ---- 
+// REORIENTATIONT TESTING:
             get_velgrad(State.GaussPoints.vel_grad,
                         mesh,
                         State.node.coords,
@@ -631,10 +575,7 @@ if (reorient_mode) {
                         // reset delta internal vars to zero each RK stage
                         cohesive_zones_bank.delta_internal_vars.set_values(0.0);
 
-                        // Do not call update_device() on coords/vel here.
-                        // These DualViews are evolved on device during the RK loop;
-                        // forcing host->device sync each stage can overwrite newer
-                        // device state with stale host snapshots.
+                    
                         // update mesh.nodes_in_elem for device-side kernels
                         mesh.nodes_in_elem.update_device();
 
@@ -1065,6 +1006,7 @@ if (cz_fp &&
             break;
         }
     } 
+
 // end for cycle loop
     
 // THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS 
