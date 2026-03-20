@@ -57,8 +57,6 @@ struct cohesive_zones_t {
        size_t max_elem_in_cohesive_zone
     );
 
-
-    KOKKOS_FUNCTION
     void oriented(
         DCArrayKokkos<size_t>& nodes_in_elem,
         DCArrayKokkos<double>& node_coords,      // reference  coords (num_nodes x 3) 
@@ -69,7 +67,6 @@ struct cohesive_zones_t {
         DCArrayKokkos<double>& cohesive_zone_orientation       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
     ); 
 
-    KOKKOS_FUNCTION
     void ucmap(
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& vel,
@@ -79,7 +76,6 @@ struct cohesive_zones_t {
         DCArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
     );
 
-    KOKKOS_FUNCTION
     void cohesive_zone_var_update(
         const DCArrayKokkos<double>& local_opening,
         const double dt_stage, 
@@ -96,7 +92,6 @@ struct cohesive_zones_t {
     DCArrayKokkos<double> internal_vars;
     DCArrayKokkos<double> delta_internal_vars;
 
-    KOKKOS_FUNCTION
     void cohesive_zone_loads(
         DCArrayKokkos<size_t>& nodes_in_elem,
         const DCArrayKokkos<double> &node_coords,

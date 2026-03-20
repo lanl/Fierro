@@ -167,6 +167,7 @@ void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
     }); // end run
     Kokkos::fence();
 
+    
     //printf("Total overlapping node pairs: %zu\n", pair_count);
 
     // debug print of the overlapping node pairs and coordinates
@@ -322,7 +323,7 @@ void cohesive_zones_t::compute_face_geometry(
             return;
     }
 
-    // shape function derivatives at face center
+    // evaluate bilinear face shape function derivatives at face center (xi = 0, eta = 0)
     double xi = 0.0, eta = 0.0;
     double dN_dxi[4], dN_deta[4];
 
@@ -356,7 +357,7 @@ void cohesive_zones_t::compute_face_geometry(
         double y = node_coords(node_id, 1);
         double z = node_coords(node_id, 2);
 
-        // centroid
+        // centroid (mean of the 4 face corner coordinates)
         cenface(0) += 0.25 * x;
         cenface(1) += 0.25 * y;
         cenface(2) += 0.25 * z;
@@ -628,7 +629,7 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
     // find ALL opposing/coincident face matches (one per element slot)
     for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
 
-        // void top-level commas in macro body so RUN(...) is parsed as one argument.
+        // void top-level commas in macro body so RUN(...) is parsed as one argument
         double nA[3];
         double rA[3];
         double sA[3];
@@ -723,6 +724,9 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
                     const double dot  = nAj(0)*nBk(0) + nAj(1)*nBk(1) + nAj(2)*nBk(2);
 
                     // check that match is within tolerance
+                    // A and B faces are considered the same physical interface if:
+                    // 1) their representative centroids are within tol, AND
+                    // 2) their normals are nearly opposite (dot <= -1 + tol)
 
                     if (dist <= tol && dot <= -1.0 + tol) {
 
@@ -798,7 +802,7 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 ///    checks ensure we do not divide by zero.
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
+
 void cohesive_zones_t::oriented(
     DCArrayKokkos<size_t>& nodes_in_elem,
     DCArrayKokkos<double>& node_coords,      // current  coords (num_nodes x 3)
@@ -947,6 +951,8 @@ void cohesive_zones_t::oriented(
         }
 
         // store
+        // current implementation computes the orientation from the current configuration only, so current_norm and next_norm are the same,
+        // this leaves room to explore using the reference configuration for orientation in the future if desired
         cohesive_zone_orientation(i,0) = current_norm[0]; // nx_t (current)
         cohesive_zone_orientation(i,1) = current_norm[1]; // ny_t (current)
         cohesive_zone_orientation(i,2) = current_norm[2]; // nz_t (current)
@@ -1011,7 +1017,7 @@ void cohesive_zones_t::oriented(
 ///   8) Store [un_t, utan_t, un_tdt, utan_tdt] into local_opening(i,0..3).
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
+
 void cohesive_zones_t::ucmap(
     const DCArrayKokkos<double>& node_coords, // State.node.coords // rename as pos
     const DCArrayKokkos<double>& vel, // State.node.vel //rename as vel
@@ -1123,7 +1129,7 @@ void cohesive_zones_t::ucmap(
 ///        delta_internal_vars(i,4+j) = updated Prony branch variable (stage-advanced sigma_j)
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
+
 void cohesive_zones_t::cohesive_zone_var_update(
     const DCArrayKokkos<double>& local_opening,
     const double dt_stage, 
@@ -1294,7 +1300,7 @@ void cohesive_zones_t::cohesive_zone_var_update(
 /// \param pair_area Output (num_pairs): stored effective area per pair (useful for debugging/verification).
 /// \param F_cz Output global force vector (3*num_nodes): cohesive nodal forces accumulated as [Fx,Fy,Fz] per node.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
+
 void cohesive_zones_t::cohesive_zone_loads(
     DCArrayKokkos<size_t>& nodes_in_elem,
     const DCArrayKokkos<double> &node_coords,
@@ -1511,7 +1517,7 @@ void cohesive_zones_t::cohesive_zone_loads(
                 area_face += sqrt(cross_x*cross_x + cross_y*cross_y + cross_z*cross_z); 
             }
 
-            // area lumping because of 4 corners of face (.25 each corner)
+            // lump one quarter of each matched face area to the cohesive zone node pair
             area_total += 0.25 * area_face;
 
         }
