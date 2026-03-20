@@ -1,0 +1,251 @@
+# ---------------------------------------------------------------------------
+# Example Fierro input: bending a 3D plate (generated box mesh).
+#
+# Purpose: constrain motion on side planes (x=0, x=10, y=0, y=10) and apply a
+# time-varying symmetric Cauchy stress tensor on the top plane (z=1) to
+# drive a transient response.
+#
+# Assumed units (unless you use a different non-dimensionalization):
+# - Length / coordinates: centimeters (cm)
+# - Time: milliseconds (ms)
+# - Density: kg/cm^3 (if using SI mass units)
+# - Specific internal energy: J/kg
+# - Velocity: cm/ms
+# - Stress components: Pa (negative = compression)
+#
+# Key idea: several sections reference the same integer IDs:
+# - `solver_options[].solver.id` is referenced by `boundary_conditions[].solver_id`
+#   and by `regions[].solver_id`.
+# - `materials[].material.id` is referenced by `regions[].material_id`.
+#
+# See `apps/multiphysics/README.md` for the full option documentation.
+# ---------------------------------------------------------------------------
+
+dynamic_options:
+    # Final simulation time (ms).
+    time_final: 25.0
+    # Minimum adaptive timestep bound (ms).
+    dt_min: 1.e-8
+    # Maximum adaptive timestep bound (ms).
+    dt_max: 1.e-2
+    # Initial timestep guess (ms).
+    dt_start: 1.e-5
+    # Hard stop after this many cycles.
+    cycle_stop: 300000
+
+
+# ---------------------------------------------------------------------------
+# Mesh options
+# ---------------------------------------------------------------------------
+mesh_options:
+    # Generate a mesh, or read from a file
+    source: generate
+    # Number of dimensions for the simulation/mesh (3D).
+    num_dims: 3
+    # Rectangular box mesh.
+    type: box
+    # Box origin in x,y,z (cm).
+    origin: [0.0, 0.0, 0.0]
+    # Box side lengths in x,y,z (cm).
+    length: [10.0, 10.0, 1.0]
+    # Element counts [nx, ny, nz].
+    num_elems: [40, 40, 4]
+
+
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
+output_options:
+    # Verbosity level for timing/performance reporting.
+    timer_output_level: thorough
+    # Output format for results (format support depends on build).
+    output_file_format: ensight
+    # Amount of simulated time between visualization dumps (ms).
+    graphics_time_step: 1.0
+    # graphics_iteration_step: 10 # Number of iterations between output dumps, if you want that
+
+# ---------------------------------------------------------------------------
+# Physics solver configuration
+# ---------------------------------------------------------------------------
+solver_options:
+  - solver:
+        # `dynx_FE` = 3D hydro solver.
+        method: dynx_FE
+        # Solver ID referenced by boundary conditions and region initialization.
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+# ---------------------------------------------------------------------------
+# Boundary conditions configuration
+# ---------------------------------------------------------------------------
+boundary_conditions:
+    # -----------------------------------------------------------------------
+    # Plane x=0: reflective velocity BC
+    #
+    # `reflected` removes the velocity component along the direction vector
+    # specified by `velocity_bc_global_vars` (normalized internally).
+    # [1,0,0] => remove/reflect x-velocity at this plane.
+    # -----------------------------------------------------------------------
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+        # Reflective/symmetry constraint.
+        velocity_model: reflected
+        # Direction vector for the reflective component: [1,0,0] => x.
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
+
+    # -----------------------------------------------------------------------
+    # Plane y=0: reflective velocity BC
+    #
+    # [0,1,0] => remove/reflect y-velocity at this plane.
+    # -----------------------------------------------------------------------
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+    # -----------------------------------------------------------------------
+    # Plane x=10: fixed (zero) velocity BC
+    #
+    # `fixed` sets all velocity components (u,v,w) to 0 at this plane.
+    # -----------------------------------------------------------------------
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 10.0
+        velocity_model: fixed
+
+
+    # -----------------------------------------------------------------------
+    # Plane y=10: fixed (zero) velocity BC
+    #
+    # `fixed` sets all velocity components (u,v,w) to 0 at this plane.
+    # -----------------------------------------------------------------------
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 10.0
+        velocity_model: fixed
+
+
+    # -----------------------------------------------------------------------
+    # Plane z=1: time-varying symmetric Cauchy stress BC
+    #
+    # `time_varying` applies an exponential decay in time to the provided
+    # stress tensor components.
+    #
+    # If (time_start <= t <= time_end):
+    #   sigma(t) = sigma0 * exp(-var_decay * (t - time_start))
+    #
+    # stress_bc_global_vars ordering:
+    #   0: sig_00 = sigma_xx
+    #   1: sig_11 = sigma_yy
+    #   2: sig_22 = sigma_zz
+    #   3: sig_12 = sigma_yz
+    #   4: sig_02 = sigma_xz
+    #   5: sig_01 = sigma_xy
+    #   6: var_decay  (1/ms)
+    #   7: time_start (ms)
+    #   8: time_end   (ms)
+    # -----------------------------------------------------------------------
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 1.0
+        stress_model: time_varyingsimga0 exp(-varDecay*(time - time_start) )
+        #simga(t) = simga0 exp(-varDecay*(time - time_start) )
+        stress_bc_global_vars:
+            - -0.01   # press, stress(0,0)
+            - -0.01   # press, stress(1,1)
+            - -0.01   # press, stress(2,2)
+            - 0   # stress(1,2)
+            - 0   # stress(0,2)
+            - 0   # stress(0,1)
+            - 0.01   # decay rate
+            - 0   # time start
+            - 30   # time end
+
+
+
+  
+# ---------------------------------------------------------------------------
+# Materials (constitutive models)
+# ---------------------------------------------------------------------------
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        # gamma-law gas EOS. In this code path the EOS uses:
+        #   p = (gamma - 1) * sie * den
+        eos_model: gamma_law_gas
+        # strength_model: none (strength model intentionally omitted)
+        dissipation_model: MARS
+        # MARS artificial viscosity coefficients (3D):
+        #   [q1, q1ex, q2, q2ex, phi_min, phi_curl_min]
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.1   # phi_min (minimum dissipation floor)
+            - 1.0   # phi_curl_min (curl/vorticity limiter floor)
+        # gamma-law gas EOS global variables:
+        #   eos_global_vars[0] = gamma (dimensionless)
+        #   eos_global_vars[1] = minimum sound speed (cm/ms)
+        #   eos_global_vars[2] = c_v parameter (units depend on EOS convention;
+        #                           may not be used by `calc_pressure` in this build)
+        eos_global_vars:
+            - 10 # gamma
+            - 1.0E-14 # minimum sound speed (cm/ms)
+            - 1.0 # c_v parameter
+
+
+# ---------------------------------------------------------------------------
+# Regions (initial conditions)
+# ---------------------------------------------------------------------------
+regions:
+    - region:
+        volume:
+            type: global
+        material_id: 0
+        solver_id: 0
+        # Initial state variables for the entire computational domain.
+        density: 
+            type: uniform
+            # Density (kg/m^3, assuming SI-like scaling).
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            # Specific internal energy (J/kg, assuming SI-like scaling).
+            value: 1.e-10
+        velocity: 
+            # Initial velocity in global Cartesian components (cm/ms).
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            # Region volume fraction (1.0 for single-material initialization).
+            type: uniform
+            value: 1.0
+
+    
+
+

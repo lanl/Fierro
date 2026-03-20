@@ -1,0 +1,68 @@
+name: Regression Tests (macOS Conda)
+
+on:
+  push:
+    branches: [ main, CMake_build ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  Regression-Tests:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Serial
+            cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
+            omp_threads: 1
+          - name: OpenMP
+            cmake_args: -DFIERRO_ENABLE_OPENMP=ON
+            omp_threads: 2
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 1
+
+    - name: Set up Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: true
+        python-version: 3.9
+
+    - name: Configure Conda
+      shell: bash -l {0}
+      run: |
+        conda config --set remote_read_timeout_secs 600.0
+        conda config --set remote_connect_timeout_secs 600.0
+        conda config --set remote_max_retries 10
+        conda clean --all --yes
+
+    - name: Install dependencies
+      shell: bash -l {0}
+      run: |
+        conda install -c conda-forge -y cmake openmpi llvm-openmp openblas lapack python bison flex compilers
+
+    - name: Configure CMake
+      shell: bash -l {0}
+      run: |
+        mkdir -p apps/multiphysics/build
+        cd apps/multiphysics/build
+        cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} ..
+
+    - name: Build Fierro
+      shell: bash -l {0}
+      run: |
+        cd apps/multiphysics/build
+        make -j$(sysctl -n hw.ncpu)
+
+    - name: Run Regression Tests
+      shell: bash -l {0}
+      env:
+        OMP_NUM_THREADS: ${{ matrix.omp_threads }}
+      run: |
+        cd apps/multiphysics/regression_tests
+        python3 test_refactor.py

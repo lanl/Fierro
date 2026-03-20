@@ -1,0 +1,218 @@
+# ---------------------------------------------------------------------------
+# Example Fierro input: Sedov on polar RZ mesh
+#
+# This example runs a Sedov-like point explosion (initial internal energy
+# localized in a small sphere) on a 2D polar mesh (`mesh_options.type: polar`).
+#
+# Assumed input scaling / units (consistent with `input-multimat.yaml`)
+# - Mass: grams (g)
+# - Length: centimeters (cm)
+# - Time: micro second (microsecond)
+# - Pressure / stress: MegaBar
+# - Velocity: cm / micro second
+# - Density: g / cm^3
+# - `specific_internal_energy` is in the code’s internal energy units
+#   consistent with your EOS scaling.
+#
+# Key modeling choices
+# - Uses solver `dynx_FE_rz` (axisymmetric / RZ hydrodynamics).
+# - Uses `gamma_law_gas` EOS for pressure and `MARS_rz` artificial
+#   viscosity for shock stabilization.
+# - Boundary conditions:
+#   - `reflected` on the x/y planes (symmetry-like velocity constraint).
+#   - `fixed` on the inner/outer polar circles (zero velocity at radius
+#     boundaries).
+#
+# The initial explosion is implemented by:
+# - `regions[].volume: sphere` with `radius1`/`radius2` describing the
+#   source region in the RZ plane.
+# - Assigning a large `specific_internal_energy` to that source region.
+# ---------------------------------------------------------------------------
+
+# num_dims: 3
+
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
+dynamic_options:
+    time_final: 1.0
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_start: 1.e-5
+    cycle_stop: 100000
+
+# ---------------------------------------------------------------------------
+# Mesh options (polar RZ)
+# ---------------------------------------------------------------------------
+mesh_options:
+    source: generate
+    num_dims: 2
+    type: polar
+    origin: [0.0, 0.0]
+    # Inner/outer radius bounds (cm).
+    inner_radius: 0.025
+    outer_radius: 1.2
+    # Angle range in degrees. (Polar mesh sector)
+    starting_angle: 0
+    ending_angle: 90
+    # Discretization: radial and angular element counts.
+    num_radial_elems: 12
+    num_angular_elems: 10
+
+
+
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
+output_options:
+    timer_output_level: thorough
+    output_file_format: ensight  #ensight  state
+    # Visualization cadence in time units (microsecond).
+    graphics_time_step: 0.25
+    #graphics_iteration_step: 2
+
+# ---------------------------------------------------------------------------
+# Solver configuration
+# ---------------------------------------------------------------------------
+solver_options:
+  - solver:
+        method: dynx_FE_rz
+        # `dynx_FE_rz` is the axisymmetric (RZ) hydro/dynamics solver.
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+# ---------------------------------------------------------------------------
+# Boundary conditions
+# ---------------------------------------------------------------------------
+boundary_conditions:
+    # Tag X plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+        # `reflected` removes the velocity component along the direction given
+        # by `velocity_bc_global_vars` (treated as a unit normal direction).
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
+    
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+        # `reflected` removes the velocity component along the direction given
+        # by `velocity_bc_global_vars` (treated as a unit normal direction).
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+    # Tag inner circle
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: cylinder
+            radius: 0.025
+        # `fixed` sets velocity to zero in all directions.
+        velocity_model: fixed
+
+    # Tag outer circle
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: cylinder
+            radius: 1.2
+        # `fixed` sets velocity to zero in all directions.
+        velocity_model: fixed
+  
+# ---------------------------------------------------------------------------
+# Materials
+# ---------------------------------------------------------------------------
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model: none
+        dissipation_model: MARS_rz
+        # `gamma_law_gas` eos_global_vars ordering:
+        #   0: gamma (ratio of specific heats)
+        #   1: min_sound_speed (sound-speed floor)
+        #   2: c_v (specific heat at constant volume)
+        #
+        # `MARS_rz` dissipation_global_vars ordering (same idea as MARS):
+        #   q1, q1ex, q2, q2ex, phi_min, phi_curl_min
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.0   # phi_min
+            - 1.0   # phi_curl_min
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
+
+ # ---------------------------------------------------------------------------
+ # Regions: initial conditions
+ # ---------------------------------------------------------------------------
+regions:
+    - region:
+        volume:
+            type: global
+        material_id: 0
+        solver_id: 0
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
+    
+
+    # -----------------------------------------------------------------------
+    # Energy source initial conditions (Sedov-like explosion)
+    # -----------------------------------------------------------------------
+    - region:
+        volume:
+            type: sphere
+            origin: [0.0, 0.0, 0.0]
+            radius1: 0.0
+            radius2: 0.1
+            # Sphere radius parameters (cm) define the source region.
+        solver_id: 0
+        material_id: 0
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            # Large initial internal energy placed into the source region.
+            value: 119.65 #  (0.5*0.49339/(mat_fill(1).den*vol))
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
+

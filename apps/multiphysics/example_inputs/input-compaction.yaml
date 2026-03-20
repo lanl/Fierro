@@ -1,0 +1,333 @@
+# ---------------------------------------------------------------------------
+# Example Fierro input: two-material Sedov/compaction test (3D).
+#
+# What this example does
+# - Uses a generated 3D box mesh.
+# - Initializes two materials across the whole domain with equal
+#   `volume_fraction` (0.5 / 0.5).
+# - Applies a localized spherical “blast” by setting a high
+#   `specific_internal_energy` inside `radius2` around the origin, for
+#   `material_id: 0`.
+# - Uses `multimaterial_options.mat_equilibration_model: tipton` to relax
+#   the material volume fractions / pressure toward local equilibrium.
+#
+# Geometry / boundary conditions
+# - Reflective velocity BCs are applied on the planes x=0, y=0, z=0.
+#   This effectively creates a symmetry corner at the origin.
+#
+# Assumed units (for documentation; Fierro uses whatever scaling you provide)
+# - Length / coordinates: centimeters (cm)
+# - Time: milliseconds (ms)
+# - Density: kg/cm^3 (if using SI mass units)
+# - Specific internal energy: J/kg
+# - Velocity: cm/ms
+# - Stress/pressure derived from EOS (for gamma-law EOS): Pa
+#
+# Key idea: several sections reference the same integer IDs:
+# - `solver_options[].solver.id` is referenced by `boundary_conditions[].solver_id`
+#   and by `regions[].solver_id`.
+# - `materials[].material.id` is referenced by `regions[].material_id`.
+#
+# See `apps/multiphysics/README.md` for the full option documentation.
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
+dynamic_options:
+    # Final simulation time (ms).
+    time_final: 1.0
+    # Minimum adaptive timestep bound (ms).
+    dt_min: 1.e-8
+    # Maximum adaptive timestep bound (ms).
+    dt_max: 1.e-2
+    # CFL factor used for timestep stability (dimensionless).
+    dt_cfl: 0.5
+    # Initial timestep guess (ms).
+    dt_start: 1.e-5
+    # Hard stop after this many cycles.
+    cycle_stop: 100000
+
+# ---------------------------------------------------------------------------
+# Mesh options
+# ---------------------------------------------------------------------------
+mesh_options:
+    source: generate
+    # Number of dimensions for the simulation/mesh (3D).
+    num_dims: 3
+    # Rectangular box mesh.
+    type: box
+    # Box origin in x,y,z (cm).
+    origin: [0.0, 0.0, 0.0]
+    # Box side lengths in x,y,z (cm).
+    length: [1.2, 1.2, 1.2]
+    # Element counts [nx, ny, nz].
+    num_elems: [12, 12, 12]
+
+
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
+output_options:
+    timer_output_level: thorough
+    # Output format for results (`viz`, `state`, etc. depends on build).
+    output_file_format: viz #state
+    # Amount of simulated time between visualization dumps (ms).
+    graphics_time_step: 0.025
+    #graphics_iteration_step: 1
+    # Element-centered fields written to output.
+    elem_field_outputs:
+        - den
+        - pres
+        - sie
+    # Material-point fields written to output.
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+        - volfrac
+    # Node-centered fields written to output.
+    node_field_outputs:
+        - vel
+
+
+
+# ---------------------------------------------------------------------------
+# Physics solver configuration
+# ---------------------------------------------------------------------------
+solver_options:
+  - solver:
+        method: dynx_FE
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+
+
+# ---------------------------------------------------------------------------
+# Boundary conditions configuration
+# ---------------------------------------------------------------------------
+boundary_conditions:
+    # -----------------------------------------------------------------------
+    # Reflective velocity BCs on the symmetry planes at x=0, y=0, z=0.
+    #
+    # Each plane is selected using `surface.type` + `plane_position` with
+    # a small geometric `tolerance`.
+    #
+    # `velocity_model: reflected` removes the velocity component along the
+    # direction given by `velocity_bc_global_vars`.
+    # -----------------------------------------------------------------------
+    # Plane x=0
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
+
+    # Plane y=0
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+    # Plane z=0
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.0
+            tolerance: 1.e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z
+
+
+  
+# ---------------------------------------------------------------------------
+# Materials (constitutive models)
+# ---------------------------------------------------------------------------
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # gamma-law EOS global variables:
+        #   eos_global_vars[0] = gamma (dimensionless)
+        #   eos_global_vars[1] = minimum sound speed (cm/ms)
+        #   eos_global_vars[2] = c_v / parameter (EOS convention dependent)
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-4
+            - 1.0
+        # strength_model: none
+        dissipation_model: MARS
+        # MARS dissipation coefficients (3D).
+        # Ordering:
+        #   [q1, q1ex, q2, q2ex, phi_min, phi_curl_min]
+        # These map internally to:
+        #   q1, q1ex, q2, q2ex, phiFloor, phiCurlFloor.
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.0   # phi_min (minimum dissipation floor)
+            - 1.0   # pin_curl_min (curl/vorticity limiter floor)
+
+    - material:
+        id: 1
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # gamma-law EOS global variables (same ordering as material 0):
+        #   [gamma, min_sound_speed, c_v_or_param]
+        eos_global_vars:
+            - 10.
+            - 1.0E-4
+            - 1.0
+        # strength_model: none
+        dissipation_model: MARS
+        # MARS dissipation coefficients (same ordering as material 0).
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.0   # phi_min (minimum dissipation floor)
+            - 1.0   # pin_curl_min (curl/vorticity limiter floor)
+
+# ---------------------------------------------------------------------------
+# Multimaterial handling (volume-fraction equilibration)
+# ---------------------------------------------------------------------------
+multimaterial_options:
+    # Tipton equilibration relaxes material pressure and allows material
+    # volume fractions to change toward local equilibrium where multiple
+    # materials are present in a cell/element.
+    mat_equilibration_model: tipton
+    mat_equilibration_global_vars:
+        # tipton global vars (order matters):
+        #   mat_equilibration_global_vars[0]:
+        #     limiter on the allowed material volume fraction change.
+        #     Internally the model clamps this to [0,1].
+        - 0.01   # max volume fraction change (unitless)
+        #   mat_equilibration_global_vars[1]:
+        #     pressure relaxation denominator controlling how quickly pressure
+        #     differences are driven toward an equilibrated average.
+        - 0.25  # pressure relax coefficient (unit depends on EOS scaling)
+
+    # geometric equilibrium model
+    # --- will add this later ---
+
+# ---------------------------------------------------------------------------
+# Regions (initial conditions)
+# ---------------------------------------------------------------------------
+regions:
+    # The first two regions initialize a 50/50 mixture:
+    # - material_id 0 occupies volume_fraction = 0.5 everywhere
+    # - material_id 1 occupies volume_fraction = 0.5 everywhere
+    # The third region (sphere) overwrites inside the blast region by
+    # setting material_id 0 to volume_fraction = 1.0 and a high internal
+    # energy to start the Sedov-like expansion.
+    - region:
+        # Background material 0 across the whole domain.
+        # - `density` and `specific_internal_energy` are low so the
+        #   initial pressure is small.
+        # - `volume_fraction = 0.5` means a 50/50 mixture with material 1
+        #   initially everywhere (before the blast region is applied).
+        volume:
+            type: global
+        solver_id: 0
+        material_id: 0
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 0.5
+
+    - region:
+        # Background material 1 across the whole domain.
+        # See the previous region for the description of how the two
+        # materials form an initial 50/50 mixture via `volume_fraction`.
+        volume:
+            type: global
+        solver_id: 0
+        material_id: 1
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 0.5
+
+
+    - region:
+        # Sedov-like “blast” energy source.
+        # Geometry:
+        # - `volume: {type: sphere}` uses `radius1` as the inner radius and
+        #   `radius2` as the outer radius.
+        # - With radius1=0.0 and radius2=0.1, this fills a solid sphere with
+        #   r <= 0.1 around `origin: [0,0,0]`.
+        #
+        # Physics:
+        # - Initializes a high `specific_internal_energy` for `material_id: 0`.
+        # - Sets `volume_fraction = 1.0` inside the blast so material 0
+        #   initially occupies the full local volume.
+        volume:
+            type: sphere
+            origin: [0.0, 0.0, 0.0]
+            radius1: 0.0
+            radius2: 0.1
+        solver_id: 0
+        material_id: 0
+        density: 
+            type: uniform
+            value: 1.0
+        # ie: 0.25833839995946534
+        specific_internal_energy: 
+            type: uniform
+            # Specific internal energy inside the blast sphere.
+            # For `gamma_law_gas`, pressure is computed from:
+            #   p = (gamma - 1) * sie * den
+            value: 61.67375002 # (example reference: 963.652344)
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
+

@@ -1,0 +1,393 @@
+# ---------------------------------------------------------------------------
+# Example Fierro input: impact + erosion (3D).
+#
+# This example demonstrates:
+# - A 3D generated box mesh.
+# - Two reflective velocity boundary planes (symmetry planes) and a third
+#   reflective plane (creating a corner-type setup).
+# - Three materials:
+#   1) `material_id: 0` rod (Copper-like) using `linear_elastic_eos` and
+#      `hypo_plasticity_strength`.
+#   2) `material_id: 1` plate using `gamma_law_gas` EOS.
+#   3) `material_id: 2` background air using `gamma_law_gas` EOS.
+# - `erosion_model: basic` on the plate material, where erosion triggers
+#   based on EOS pressure and density thresholds.
+# - Region-based initial conditions:
+#   - global background air
+#   - a moving high-speed projectile region
+#   - a stationary wall/plate region
+#
+# Assumed units (documentation only; Fierro uses whatever scaling you provide)
+# - Length / coordinates: centimeters (cm)
+# - Time: milliseconds (ms)
+# - Density: kg/cm^3 (if using SI mass units)
+# - Specific internal energy: J/kg
+# - Velocity: cm/ms
+# - Pressure derived from the EOS / elastic model (Pa)
+#
+# Key idea: IDs are referenced consistently:
+# - `solver_options[].solver.id` is referenced by `regions[].solver_id`
+#   and by `boundary_conditions[].solver_id`.
+# - `materials[].material.id` is referenced by `regions[].material_id`.
+#
+# See `apps/multiphysics/README.md` for the full option documentation.
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
+dynamic_options:
+    time_final: 10.0
+    dt_min: 1.e-8
+    dt_max: 1.e-3
+    dt_start: 1.e-5
+    cycle_stop: 300000
+
+
+# ---------------------------------------------------------------------------
+# Mesh options
+# ---------------------------------------------------------------------------
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1.2, 1.2, 1.2]
+    num_elems: [30, 30, 30]
+
+
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
+output_options:
+    timer_output_level: thorough
+    output_file_format: ensight
+    graphics_time_step: 0.05
+    # graphics_iteration_step: 10
+
+# ---------------------------------------------------------------------------
+# Physics solver configuration
+# ---------------------------------------------------------------------------
+solver_options:
+  - solver:
+        method: dynx_FE
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+ # ---------------------------------------------------------------------------
+ # Boundary conditions configuration
+ # ---------------------------------------------------------------------------
+boundary_conditions:
+    # Reflective velocity boundary conditions.
+    #
+    # `velocity_model: reflected` removes the velocity component along the
+    # direction given by `velocity_bc_global_vars` (normalized internally).
+    #
+    # This example applies reflection on two planes:
+    # - y=0 (reflect y-velocity)
+    # - z=0 (reflect z-velocity)
+    #
+    # The `solver_id` must match `solver_options[].solver.id`.
+
+    # -----------------------------------------------------------------------
+    # Plane y=0: reflective velocity BC
+    # Direction vector: [0, 1, 0] => remove/reflect y-velocity.
+    # -----------------------------------------------------------------------
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+    # -----------------------------------------------------------------------
+    # Plane z=0: reflective velocity BC
+    # Direction vector: [0, 0, 1] => remove/reflect z-velocity.
+    # -----------------------------------------------------------------------
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z    
+  
+# ---------------------------------------------------------------------------
+# Materials (constitutive models)
+# ---------------------------------------------------------------------------
+materials:
+
+    # -----------------------------------------------------------------------
+    # material_id: 0 = rod (Copper-like)
+    #
+    # EOS: `linear_elastic_eos`
+    #   eos_global_vars ordering:
+    #     0: bulk modulus B
+    #     1: shear modulus G
+    #     2: reference density rho0
+    #     3: minimum sound speed cs_min
+    #
+    # Strength: `hypo_plasticity_strength` (increment_based)
+    #   strength_global_vars ordering:
+    #     0: shear modulus used as G_stress
+    #     1: yield strength used as Y_stress
+    #
+    # Dissipation: `MARS` (3D)
+    #   dissipation_global_vars ordering:
+    #     [q1, q1ex, q2, q2ex, phi_floor, phi_curl_floor]
+    #
+    # Erosion:
+    #   `erosion_model` is not enabled for this material in this example.
+    # -----------------------------------------------------------------------
+    # the rod (commented alternative EOS/strength setup below)
+    # - material:
+    # - material:
+    #     id: 0
+    #     eos_model_type: decoupled
+    #     eos_model: gamma_law_gas
+    #     # strength_model: none
+    #     dissipation_model: MARS
+    #     dissipation_global_vars:
+    #         - 1.0   # q1
+    #         - 1.0   # q1ex
+    #         - 1.333 # q2
+    #         - 1.333 # q2ex
+    #         - 0.1   # phi_min
+    #         - 1.0   # phi_curl_min
+    #     eos_global_vars:
+    #         - 1.666666666666667
+    #         - 1.0E-4
+    #         - 1.0
+
+
+    - material:
+        id: 0  # metal: Copper-like rod
+        # EOS: `linear_elastic_eos` (linear elastic pressure / sound speed).
+        # eos_global_vars ordering:
+        #   [B, G, rho0, cs_min]
+        eos_model_type: decoupled
+        eos_model: linear_elastic_eos
+        eos_global_vars:
+            - 1.30 # B from Azo materials online
+            - 0.44 # G from Azo materials online
+            - 8.93 # ref density from Azo materials online
+            - 0.001 # minimum sound speed
+        # Strength: `hypo_plasticity_strength` (increment_based update).
+        # strength_global_vars ordering:
+        #   [G_stress, Y_stress]
+        strength_model_type: increment_based
+        strength_model: hypo_plasticity_strength
+        # shear modulus of copper
+        # yield strength of copper
+        strength_global_vars:
+            - 0.44 
+            - 0.0021  # from Azo materials online
+        # Artificial viscosity: `MARS` (3D).
+        # dissipation_global_vars ordering:
+        #   [q1, q1ex, q2, q2ex, phi_floor, phi_curl_floor]
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.333 # q1ex
+            - 1.0   # q2
+            - 1.333 # q2ex
+            - 0.05   # phi_floor (minimum dissipation floor)
+            - 1.0    # phi_curl_floor (curl/vorticity limiter floor)
+        # Erosion is not enabled for this material in this example.
+        # (The following block is left as an option.)
+        # erosion_model: basic
+        # erode_tension_val: -100
+        # erode_density_val: 8.0
+
+    
+
+    # -----------------------------------------------------------------------
+    # material_id: 1 = plate
+    #
+    # EOS: `gamma_law_gas`
+    #   pressure computed as: p = (gamma - 1) * sie * den
+    #   eos_global_vars ordering (as used by this example):
+    #     0: gamma (dimensionless)
+    #     1: minimum sound speed cs_min
+    #     2: c_v / parameter (EOS convention dependent)
+    #
+    # Dissipation: `MARS` (3D)
+    #   dissipation_global_vars ordering:
+    #     [q1, q1ex, q2, q2ex, phi_floor, phi_curl_floor]
+    #
+    # Erosion: `basic`
+    #   erodes when:
+    #     pressure <= erode_tension_val  OR  density <= erode_density_val
+    # -----------------------------------------------------------------------
+    - material:
+        id: 1
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model intentionally omitted => no strength model used.
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.1   # phi_min
+            - 1.0   # phi_curl_min
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-4
+            - 1.0
+        # Erosion triggers when either threshold is met:
+        #   MaterialPoints_pres <= erode_tension_val  OR
+        #   MaterialPoints_den  <= erode_density_val
+        erosion_model: basic
+        erode_tension_val: 2.0e-7
+        erode_density_val: 5.0
+    # - material:
+    #     id: 1  # metal: Copper
+    #     #-----EOS
+    #     eos_model_type: decoupled
+    #     eos_model: linear_elastic_eos  
+    #     # bulk modulus
+    #     # shear modulus
+    #     # refernce den
+    #     # cs min
+    #     eos_global_vars:
+    #         - 1.30 # B from Azo materials online
+    #         - 0.44 # G from Azo materials online
+    #         - 8.93 # ref density from Azo materials online
+    #         - 0.001 
+    #     #------Strength
+    #     strength_model_type: increment_based
+    #     strength_model: hypo_plasticity_strength
+    #     # shear modulus of copper
+    #     # yield strength of copper
+    #     strength_global_vars:
+    #         - 0.44 
+    #         - 0.0021  # from Azo materials online
+    #     # ------ArtVisc
+    #     dissipation_model: MARS
+    #     dissipation_global_vars:
+    #         - 1.0   # q1
+    #         - 1.333 # q1ex
+    #         - 1.0   # q2
+    #         - 1.333 # q2ex
+    #         - 0.05   # min limiter
+    #         - 1.0
+    #     erosion_model: basic
+    #     erode_tension_val: -100
+    #     erode_density_val: 8.0
+
+    # -----------------------------------------------------------------------
+    # material_id: 2 = background air
+    #
+    # Same EOS/dissipation form as the plate, but erosion is not enabled.
+    # -----------------------------------------------------------------------
+    - material:
+        id: 2
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model intentionally omitted => no strength model used.
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.1   # phi_min
+            - 1.0   # phi_curl_min
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-4
+            - 1.0
+
+ # ---------------------------------------------------------------------------
+ # Regions (initial conditions)
+ # ---------------------------------------------------------------------------
+regions:
+    # -----------------------------------------------------------------------
+    # material_id: 2 = background air (global fill)
+    # -----------------------------------------------------------------------
+    - region:
+        volume:
+            type: global
+        material_id: 2
+        solver_id: 0
+        density: 
+            type: uniform
+            value: 0.010 # air density
+        specific_internal_energy: 
+            type: uniform
+            value: 1.0e-6 # air specific internal energy
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+    
+    # -----------------------------------------------------------------------
+    # material_id: 0 = high-speed projectile block
+    #
+    # `volume.type: box` uses the coordinate bounds:
+    #   x in [x1, x2], y in [y1, y2], z in [z1, z2]
+    # -----------------------------------------------------------------------
+    - region:
+        volume:
+            type: box
+            origin: [0.0, 0.0, 0.0]
+            x1: 0.1
+            x2: 0.5
+            y1: 0.0
+            y2: 0.21
+            z1: 0.0
+            z2: 0.21
+        material_id: 0
+        solver_id: 0
+        density: 
+            type: uniform
+            value: 8.93
+        specific_internal_energy: 
+            type: uniform
+            value: 1.0e-6
+        velocity: 
+            type: cartesian
+            u: 0.3 # projectile x-velocity
+            v: 0.0
+            w: 0.0
+
+    # -----------------------------------------------------------------------
+    # material_id: 1 = stationary wall/plate block
+    # -----------------------------------------------------------------------
+    - region:
+        volume:
+            type: box
+            origin: [0.0, 0.0, 0.0]
+            x1: 0.5
+            x2: 0.6
+            y1: 0.0
+            y2: 1.2
+            z1: 0.0
+            z2: 1.2
+        material_id: 1
+        solver_id: 0
+        density: 
+            type: uniform
+            value: 8.93
+        specific_internal_energy: 
+            type: uniform
+            value: 1.0e-6 
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+

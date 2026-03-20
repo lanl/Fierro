@@ -1,0 +1,232 @@
+
+# ---------------------------------------------------------------------------
+# Example Fierro input: Velocity boundary conditions (SGH3D)
+#
+# This example demonstrates how to specify `boundary_conditions[].velocity_model`
+# for a 3D box problem using:
+# - `velocity_model: reflected` on planes x=0, y=0, z=0 (sets the normal velocity
+#   component to zero; tangential components are free to slide).
+# - `velocity_model: piston` on planes x=1, y=1, z=1 (imposes a prescribed
+#   velocity along a chosen direction; the other components are free to slide).
+#
+# Solver
+# - `solver_options[].solver.method: dynx_FE` maps to the SGH3D (3D Cartesian)
+#   solver in Fierro.
+#
+# Time note
+# - The `piston` model is time-dependent and becomes active only for
+#   `t_start <= time_value <= t_end`, where `time_value` is the simulation time
+#   from `dynamic_options`.
+#
+# Unit note (documentation only)
+# - The numeric values in this file assume a consistent input scaling
+#   across `mesh_options`, `dynamic_options`, and the BC/region values.
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
+dynamic_options:
+    time_final: 0.6
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_start: 1.e-5
+    cycle_stop: 300000
+
+
+# ---------------------------------------------------------------------------
+# Mesh options (3D box)
+# ---------------------------------------------------------------------------
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1.0, 1.0, 1.0]
+    num_elems: [12, 12, 12]
+
+
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
+output_options:
+    timer_output_level: thorough
+    output_file_format: ensight
+    graphics_time_step: 0.1
+    # graphics_iteration_step: 10
+
+# ---------------------------------------------------------------------------
+# Solver configuration
+# ---------------------------------------------------------------------------
+solver_options:
+  - solver:
+        # `dynx_FE` corresponds to the SGH3D (3D Cartesian) solver.
+        method: dynx_FE
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+# ---------------------------------------------------------------------------
+# Boundary conditions (velocity BCs)
+# ---------------------------------------------------------------------------
+boundary_conditions:
+
+    # Tag x plane: symmetry/reflection at x=0
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+            # Nodes with x ~= plane_position (within tolerance) get this BC.
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            # Direction vector specifying the component to remove:
+            # `reflected` sets the velocity component along this direction to 0.
+            - 1   # x
+            - 0   # y
+            - 0   # z
+
+
+    # Tag y plane: symmetry/reflection at y=0
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            # y-plane normal is (+y).
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+    # Tag z plane: symmetry/reflection at z=0
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            # z-plane normal is (+z).
+            - 0   # x
+            - 0   # y
+            - 1   # z
+
+    # Tag x plane: piston driven at x=1
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 1.0
+            # Piston direction is specified by the first 3 entries below.
+        velocity_model: piston
+        velocity_bc_global_vars:
+            # Piston direction vector (normal to the driven face):
+            - 1   # x
+            - 0   # y
+            - 0   # z
+            #
+            # Piston velocity polynomial coefficients along the piston direction.
+            # Let dt = time_value - t_start. For t_start <= time_value <= t_end:
+            #   v(dt) = v0 + v1*dt + 0.5*v2*dt^2
+            # where v0/v1/v2 correspond to hydro_bc_vel_0/1/2.
+            - -1   # hydro_bc_vel_0 
+            - -0.1 # hydro_bc_vel_1 
+            - 0.0  # hydro_bc_vel_2 
+            - 0.0  # t_start
+            - 100  # t_end
+
+    # Tag y plane: piston driven at y=1
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 1.0
+        velocity_model: piston
+        velocity_bc_global_vars:
+            # y-plane piston direction (normal is +y):
+            - 0   # x
+            - 1   # y
+            - 0   # z
+            # See piston polynomial definition above.
+            - -1   # hydro_bc_vel_0 
+            - -0.1 # hydro_bc_vel_1 
+            - 0.0  # hydro_bc_vel_2 
+            - 0.0  # t_start
+            - 100  # t_end
+    
+    # Tag z plane: piston driven at z=1
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 1.0
+        velocity_model: piston
+        velocity_bc_global_vars:
+            # z-plane piston direction (normal is +z):
+            - 0   # x
+            - 0   # y
+            - 1   # z
+            # See piston polynomial definition above.
+            - -1   # hydro_bc_vel_0 
+            - -0.1 # hydro_bc_vel_1 
+            - 0.0  # hydro_bc_vel_2 
+            - 0.0  # t_start
+            - 100  # t_end
+
+  
+# ---------------------------------------------------------------------------
+# Materials (EOS + artificial viscosity)
+# ---------------------------------------------------------------------------
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        # Gamma-law gas EOS.
+        eos_model: gamma_law_gas
+        # strength_model: none
+        # MARS artificial viscosity for shock stabilization.
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0     # phi_min
+            - 1.0   # phi_curl
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
+
+# ---------------------------------------------------------------------------
+# Regions (initial fills)
+# ---------------------------------------------------------------------------
+regions:
+    - region:
+        volume:
+            type: global
+        # Ambient fill for the whole domain.
+        solver_id: 0
+        material_id: 0
+        density: 
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            # Initial velocity is zero everywhere.
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            type: uniform
+            value: 1.0
+    
+
+

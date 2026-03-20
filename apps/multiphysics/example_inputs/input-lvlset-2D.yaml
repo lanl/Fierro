@@ -1,0 +1,292 @@
+# ---------------------------------------------------------------------------
+# Example Fierro input: evolve a 2D level set
+#
+# Purpose
+# - Evolves a 2D level set front using:
+#   - `level_set_type: evolve_front`
+#   - `normal_velocity` for front propagation
+#   - `curvature_velocity` for timestep stability (CFL estimate)
+#
+# Implementation notes (from code)
+# - `normal_velocity` is used directly in the level-set update as `front_vel`.
+# - `curvature_velocity` is used in the timestep calculation via:
+#     front_velocity = 1.5 + normal_velocity + curvature_velocity * kappa
+#   where kappa ~= 1 / (3 * dist_min).
+# - The curvature RHS term is not enabled in the current `update_level_set`
+#   implementation (curvature contribution is commented out).
+#
+# Assumed units (documentation only; use your input scaling)
+# - Length / coordinates: centimeters (cm)
+# - Time: milliseconds (ms)
+# - Velocity: cm/ms
+# - `normal_velocity` / `curvature_velocity`: cm/ms
+# - `regions[].level_set`: spherical distance function (cm-like), scaled by
+#   `level_set.slope` and offset by `level_set.value`.
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
+dynamic_options:
+    # Final simulation time (ms).
+    time_final: 4.0
+    # Minimum adaptive timestep bound (ms).
+    dt_min: 1.e-8
+    # Maximum adaptive timestep bound (ms).
+    dt_max: 1.e-2
+    # Initial timestep guess (ms).
+    dt_start: 1.e-5
+    # Hard stop after this many cycles.
+    cycle_stop: 1000000
+
+ # ---------------------------------------------------------------------------
+ # Mesh options
+ # ---------------------------------------------------------------------------
+mesh_options:
+    source: generate
+    # 2D mesh.
+    num_dims: 2
+    type: box
+    # Box origin in x,y (cm).
+    origin: [0.0, 0.0]
+    # Box side lengths in x,y (cm).
+    length: [1.0, 1.0]
+    # Element counts [nx, ny].
+    num_elems: [61, 61]
+
+
+ # ---------------------------------------------------------------------------
+ # Output / visualization controls
+ # ---------------------------------------------------------------------------
+output_options:
+    timer_output_level: thorough
+    output_file_format: viz #state
+    # Amount of simulated time between visualization dumps (ms).
+    graphics_time_step: 0.1
+    #graphics_iteration_step: 100
+    # Gauss-point fields written to output.
+    gauss_pt_field_outputs: 
+        - level_set
+        - volume
+    # Node-centered fields written to output.
+    node_field_outputs:
+        - vel
+        - grad_level_set
+
+ # ---------------------------------------------------------------------------
+ # Physics solver configuration
+ # ---------------------------------------------------------------------------
+solver_options:
+  - solver:
+        method: level_set
+        # Solver ID referenced by `boundary_conditions` and `regions`.
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+# ---------------------------------------------------------------------------
+# Boundary conditions configuration (level-set boundary_velocity)
+# ---------------------------------------------------------------------------
+boundary_conditions:
+    # Tag X plane (x = 0 and x = 1).
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+            tolerance: 1.e-5
+        # `reflected` provides the velocity direction used by
+        # `LevelSet::boundary_velocity` to update boundary level-set motion.
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
+
+
+    # Tag Y plane (y = 0 and y = 1).
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+            tolerance: 1.e-5
+        # `reflected` provides the velocity direction used by
+        # `LevelSet::boundary_velocity` to update boundary level-set motion.
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+
+    # Tag X plane (x = 1).
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 1.0
+            tolerance: 1.e-5
+        # `reflected` provides the velocity direction used by
+        # `LevelSet::boundary_velocity` to update boundary level-set motion.
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
+
+
+    # Tag Y plane (y = 1).
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 1.0
+            tolerance: 1.e-5
+        # `reflected` provides the velocity direction used by
+        # `LevelSet::boundary_velocity` to update boundary level-set motion.
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+
+  
+materials:
+    - material:
+        id: 0
+
+        # -------------------------------------------------------------------
+        # Level set configuration for `level_set_type: evolve_front`
+        # -------------------------------------------------------------------
+        # The code evolves the level set `phi` only for materials whose
+        # `level_set_type` is set to `evolve_front`.
+        #
+        # The update uses a front propagation speed:
+        #   front_vel = normal_velocity
+        #
+        # Curvature-related stability:
+        # - `curvature_velocity` enters the stable timestep estimation via:
+        #     front_velocity = 1.5 + normal_velocity + curvature_velocity*kappa
+        #   where kappa ~= 1 / (3 * dist_min)
+        # - The curvature RHS term is not enabled in the current
+        #   `update_level_set` implementation (it is commented out).
+        #
+        # Units: cm/ms.
+        # -------------------------------------------------------------------
+        level_set_type: evolve_front
+        # Normal front propagation speed (cm/ms).
+        normal_velocity: 0.1
+        # Curvature-related coefficient for CFL timestep stability (cm/ms).
+        curvature_velocity: 0.1
+
+
+ # ---------------------------------------------------------------------------
+ # Regions: initialize level set `phi` on multiple subdomains
+ # ---------------------------------------------------------------------------
+regions:
+
+    - region:
+        volume:
+            type: box
+            x1: 0.0
+            x2: 0.5
+            y1: 0.0
+            y2: 0.5
+            z1: 0.0
+            z2: 0.5
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            #type: uniform
+            #value: 1.0
+            type: spherical
+            # Spherical level-set initialization (phi):
+            #   phi(x,y[,z]) = slope * ||[x,y(,z)] - origin|| - value
+            # The solver evolves `phi` as a distance-like function.
+            # Units are consistent with your coordinate scaling (cm); `phi`
+            # itself is stored as a floating scalar field.
+            value: 0.1
+            # Level-set offset term (cm-like).
+            slope: 1.0
+            # Distance scaling applied to `||x-origin||` (dimensionless).
+            origin: [0.0, 0.0, 0.0]
+            # Sphere center (cm).
+        volume_fraction:
+            type: uniform
+            value: 1.0
+    
+    - region:
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.0
+            y2: 0.5
+            z1: 0.0
+            z2: 0.5
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            #type: uniform
+            #value: 1.0
+            type: spherical
+            # Spherical level-set initialization (phi):
+            #   phi(x,y[,z]) = slope * ||[x,y(,z)] - origin|| - value
+            value: 0.1
+            slope: 1.0
+            origin: [1.0, 0.0, 0.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    - region:
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.5
+            y2: 1.0
+            z1: 0.0
+            z2: 0.5
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            #type: uniform
+            #value: 1.0
+            type: spherical
+            # Spherical level-set initialization (phi):
+            #   phi(x,y[,z]) = slope * ||[x,y(,z)] - origin|| - value
+            value: 0.1
+            slope: 1.0
+            origin: [1.0, 1.0, 0.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    - region:
+        volume:
+            type: box
+            x1: 0.0
+            x2: 0.5
+            y1: 0.5
+            y2: 1.0
+            z1: 0.0
+            z2: 0.5
+        solver_id: 0
+        material_id: 0
+        level_set: 
+            #type: uniform
+            #value: 1.0
+            type: spherical
+            # Spherical level-set initialization (phi):
+            #   phi(x,y[,z]) = slope * ||[x,y(,z)] - origin|| - value
+            value: 0.1
+            slope: 1.0
+            origin: [0.0, 1.0, 0.0]
+        volume_fraction:
+            type: uniform
+            value: 1.0

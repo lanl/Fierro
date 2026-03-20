@@ -1,0 +1,288 @@
+
+# ---------------------------------------------------------------------------
+# Example Fierro input: SGTM (staggered grid thermal) for additive simulations
+#
+# Key idea (additive manufacturing):
+# - Use solver `thrmex_FE` (SGTM3D) with `use_moving_heat_source: true` to
+#   model a moving volumetric heat source (laser / heat spot).
+# - Thermal loads are applied via:
+#   - temperature boundary conditions (constant, convection, radiation)
+#   - optional moving heat source (see `use_moving_heat_source`)
+#
+# Implementation details (from SGTM3D code)
+# - When `use_moving_heat_source: true`, SGTM3D uses a hard-coded tool path
+#   (4 time-stamped (x,y,z,power) points, linearly interpolated in time)
+#   and a fixed source sphere of radius `8.0` (in your mesh coordinate units).
+# - The heat input is applied as a *volumetric* heat flux term inside that
+#   sphere during each time step.
+# - Your YAML toggle controls only whether the moving heat source is enabled;
+#   the actual path/power definition is currently embedded in
+#   `SGTM3D::execute()` rather than read from YAML.
+#
+# Thermal units / quantities (based on this example’s inline comments)
+# - temperature: Kelvin (K)
+# - thermal_conductivity: mW/(mm.K)
+# - specific_heat: mJ/(tonne.K)
+# - density: tonne/mm^3
+#
+# Required fill inputs for `thrmex_FE` (SGTM3D)
+# - On nodes: `velocity` and `temperature`
+# - On material points (gauss points in this code’s discretization):
+#   `density`, `thermal_conductivity`, `specific_heat`, and
+#   `specific_internal_energy`
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
+dynamic_options:
+    time_final: 10.0
+    dt_min: 1.e-8
+    dt_max: 1.0
+    dt_start: 1.e-5
+    cycle_stop: 100000
+
+
+# ---------------------------------------------------------------------------
+# Mesh options
+# ---------------------------------------------------------------------------
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [300.0, 300.0, 30.0]
+    num_elems: [100, 100, 10]
+
+
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
+output_options:
+    timer_output_level: thorough
+    output_file_format: viz
+    graphics_time_step: 1.0
+    #graphics_iteration_step: 5
+    elem_field_outputs:
+        - den
+        - mass
+    mat_pt_field_outputs:
+        - den
+    node_field_outputs:
+        # Node temperature field (written to output).
+        - temp
+
+# ---------------------------------------------------------------------------
+# Solver configuration
+# ---------------------------------------------------------------------------
+solver_options:
+  - solver:
+        method: thrmex_FE
+        id: 0
+        # `thrmex_FE` selects the SGTM3D (staggered grid thermal) solver.
+        # `use_moving_heat_source` enables an additive-manufacturing style
+        # moving heat source (hard-coded in the SGTM3D implementation).
+        use_moving_heat_source: true
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+# ---------------------------------------------------------------------------
+# Boundary conditions (temperature BCs for SGTM3D)
+# ---------------------------------------------------------------------------
+boundary_conditions:
+    # Set temperature on the z=0 plane
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 0.0
+        temperature_model: constant
+        temperature_bc_global_vars:
+            - 293.15   # constantly held at room temperature (20°C)
+
+    # Convection on the z=1 plane (heat loss/gain via h*(T-T_ref))
+    #
+    # NOTE: SGTM3D’s convection implementation currently uses hard-coded
+    # coefficients internally; the `temperature_bc_global_vars` values
+    # provided here may not affect the result unless SGTM’s boundary
+    # implementation is updated.
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 30.0
+        temperature_model: convection
+        temperature_bc_global_vars:
+            - 293.15   # reference temperature (room temp in kelvin)
+            - 0.01    # h (film temperature) = 0.01 mW/(mm^2⋅K)
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 0.0
+        temperature_model: convection
+        # See note above about convection coefficients being hard-coded.
+        temperature_bc_global_vars:
+            - 293.15   # reference temperature (room temp in kelvin)
+            - 0.01    # h (film temperature) = 0.01 mW/(mm^2⋅K)
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 300.0
+        temperature_model: convection
+        # See note above about convection coefficients being hard-coded.
+        temperature_bc_global_vars:
+            - 293.15   # reference temperature (room temp in kelvin)
+            - 0.01    # h (film temperature) = 0.01 mW/(mm^2⋅K)
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 0.0
+        temperature_model: convection
+        # See note above about convection coefficients being hard-coded.
+        temperature_bc_global_vars:
+            - 293.15   # reference temperature (room temp in kelvin)
+            - 0.01    # h (film temperature) = 0.01 mW/(mm^2⋅K)
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 300.0
+        temperature_model: convection
+        # See note above about convection coefficients being hard-coded.
+        temperature_bc_global_vars:
+            - 293.15   # reference temperature (room temp in kelvin)
+            - 0.01    # h (film temperature) = 0.01 mW/(mm^2⋅K)
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 300.0
+        temperature_model: convection
+        # See note above about convection coefficients being hard-coded.
+        temperature_bc_global_vars:
+            - 293.15   # reference temperature (room temp in kelvin)
+            - 0.01    # h (film temperature) = 0.01 mW/(mm^2⋅K)
+
+
+    # Radiation on the non-constant temp surfaces
+    #
+    # NOTE: SGTM3D’s radiation implementation currently uses hard-coded
+    # emissivity / ambient values internally; it does not read YAML
+    # radiation-specific global vars in this example.
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 0.0
+        temperature_model: radiation
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 300.0
+        temperature_model: radiation
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 0.0
+        temperature_model: radiation    
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 300.0
+        temperature_model: radiation
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 30.0
+        temperature_model: radiation
+
+
+# ---------------------------------------------------------------------------
+# Materials (thermal properties + EOS for SGTM’s thermomechanical parts)
+# ---------------------------------------------------------------------------
+materials:
+    - material:
+        id: 0
+        tabular_model:
+            type: temperature_dependent
+            file_format: Abaqus_jmatpro
+            tabular_data: /home/jacobmoore/Desktop/repos/Fierro/apps/multiphysics/example_inputs/Abaqus_inputs/1018_thermal_jmatpro.inp
+            fields:
+                - density
+                - thermal_conductivity
+                - specific_heat
+        # `tabular_model.fields` selects which quantities are interpolated
+        # from the temperature-dependent table. In this example it provides:
+        # - density (used for masses/thermal capacity)
+        # - thermal_conductivity (heat conduction)
+        # - specific_heat (nodal temperature update)
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model: none
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.0   # phi_min
+            - 1.0   # phi_curl_min
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
+        
+
+# ---------------------------------------------------------------------------
+# Regions (fills / initial conditions)
+# ---------------------------------------------------------------------------
+regions:
+    - region:
+        volume:
+            type: global
+        solver_id: 0
+        material_id: 0
+        density: 
+            # Initial density (tonne/mm^3 for this example’s scaling).
+            type: uniform
+            value: 7.8236E-09 # (tonne/mm^3)
+        specific_internal_energy: 
+            # Initial specific internal energy / thermal reference energy.
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        thermal_conductivity: 
+            # Initial thermal conductivity (mW/(mm.K)).
+            type: uniform
+            value: 59.09142 # mW/(mm.K)
+        specific_heat: 
+            # Initial specific heat (mJ/(tonne.K)).
+            type: uniform
+            value: 458960000 # mJ/(tonne.K)
+        temperature: 
+            # Initial nodal temperature (K).
+            type: uniform
+            value: 273.15 #K 
+
+

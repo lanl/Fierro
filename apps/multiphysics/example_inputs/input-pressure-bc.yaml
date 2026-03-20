@@ -1,0 +1,250 @@
+# ---------------------------------------------------------------------------
+# Example Fierro input: constant pressure/stress boundary conditions
+#
+# This example applies a constant Cauchy stress state on three orthogonal
+# faces of a unit cube, while using `velocity_model: reflected` symmetry
+# conditions on the opposite faces.
+#
+# Assumed input scaling / units (same style as `input-noh.yaml`)
+# - Mass: grams (g)
+# - Length: centimeters (cm)
+# - Time: micro second (microsecond)
+# - Pressure / stress: MegaBar
+# - Velocity: cm / micro second
+# - Density: g / cm^3
+#
+# Pressure / stress BC details
+# - `stress_model: constant` sets the *symmetric* stress tensor at the
+#   boundary corners from `stress_bc_global_vars`.
+# - `stress_bc_global_vars` is ordered (Voigt notation) as:
+#     [sig_00, sig_11, sig_22, sig_12, sig_02, sig_01]
+# - The implementation enforces symmetry: sig_ij == sig_ji.
+# - In this example, the diagonal components are set to `-1`, and the shear
+#   components to `0`, giving a pressure-like (isotropic) compressive load
+#   under the solver sign convention.
+# ---------------------------------------------------------------------------
+
+# num_dims: 3
+
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
+dynamic_options:
+    time_final: 0.6
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_start: 1.e-5
+    cycle_stop: 300000
+
+# ---------------------------------------------------------------------------
+# Mesh options
+# ---------------------------------------------------------------------------
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    # Box origin in x,y,z (cm).
+    origin: [0.0, 0.0, 0.0]
+    # Box side lengths in x,y,z (cm).
+    length: [1.0, 1.0, 1.0]
+    # Element counts [nx, ny, nz].
+    num_elems: [12, 12, 12]
+
+
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
+output_options:
+    timer_output_level: thorough
+    output_file_format: ensight
+    # Visualization cadence in time units (microsecond).
+    graphics_time_step: 0.6
+    # graphics_iteration_step: 10
+
+# ---------------------------------------------------------------------------
+# Solver configuration
+# ---------------------------------------------------------------------------
+solver_options:
+  - solver:
+        method: dynx_FE
+        # `dynx_FE` is the 3D hydro/dynamics solver.
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+# ---------------------------------------------------------------------------
+# Boundary conditions
+# ---------------------------------------------------------------------------
+boundary_conditions:
+
+    # Tag X plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+        # `reflected` removes the velocity component along the direction given by
+        # `velocity_bc_global_vars` (used like a unit normal).
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
+
+
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+        # `reflected` removes the velocity component along the direction given by
+        # `velocity_bc_global_vars` (used like a unit normal).
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+    # Tag z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.0
+        # `reflected` removes the velocity component along the direction given by
+        # `velocity_bc_global_vars` (used like a unit normal).
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z
+
+    # Tag X plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 1.0
+        # Apply constant symmetric Cauchy stress on the boundary corner forces.
+        stress_model: constant
+        # Voight notation:
+        # sig_00
+        # sig_11
+        # sig_22
+        # sig_12
+        # sig_02
+        # sig_01
+        # Voigt-ordered symmetric stress components:
+        #   [sig_00, sig_11, sig_22, sig_12, sig_02, sig_01]
+        # In this example:
+        # - diagonals are `-1` (pressure-like compressive loading)
+        # - shear components are `0`
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0
+
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 1.0
+        # Apply constant symmetric Cauchy stress on the boundary corner forces.
+        stress_model: constant
+        # Voigt-ordered symmetric stress components:
+        #   [sig_00, sig_11, sig_22, sig_12, sig_02, sig_01]
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0
+
+
+    # Tag Z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 1.0
+        # Apply constant symmetric Cauchy stress on the boundary corner forces.
+        stress_model: constant
+        # Voigt-ordered symmetric stress components:
+        #   [sig_00, sig_11, sig_22, sig_12, sig_02, sig_01]
+        stress_bc_global_vars:
+            - -1   # press
+            - -1   # press
+            - -1   # press
+            - 0
+            - 0
+            - 0 
+
+
+  
+# ---------------------------------------------------------------------------
+# Materials
+# ---------------------------------------------------------------------------
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        # strength_model: none
+        dissipation_model: MARS
+        # MARS artificial viscosity ordering:
+        #   q1, q1ex, q2, q2ex, phi_min, phi_curl
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0     # phi_min
+            - 1.0   # phi_curl
+        # `eos_global_vars` ordering for `gamma_law_gas`:
+        #   0: gamma (ratio of specific heats)
+        #   1: min_sound_speed (sound-speed floor)
+        #   2: c_v (specific heat at constant volume)
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
+
+# ---------------------------------------------------------------------------
+# Initial conditions (uniform fill)
+# ---------------------------------------------------------------------------
+regions:
+    - region:
+        volume:
+            type: global
+        solver_id: 0
+        material_id: 0
+        density: 
+            # Uniform initial density (g/cm^3 with input scaling).
+            type: uniform
+            value: 1.0
+        specific_internal_energy: 
+            # Uniform initial specific internal energy (sie).
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            # Uniform initial velocity vector (cartesian u,v,w).
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+        volume_fraction:
+            # Fraction of the element occupied by this material (single
+            # material case here).
+            type: uniform
+            value: 1.0
+    
+
+
