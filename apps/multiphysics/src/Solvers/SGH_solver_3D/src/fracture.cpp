@@ -40,10 +40,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sstream>
 #include <cmath>
 #include <iomanip>
-#include "mesh.h"
-#include "state.h"
-#include "fracture.h"
-#include "fracture_stress_bc.h"
+#include "mesh_io.hpp"
+#include "state.hpp"
+#include "fracture.hpp"
+#include "fracture_stress_bc.hpp"
+#include "ELEMENTS.h"
 
 using namespace mtr; // matar namespace
 
@@ -54,7 +55,7 @@ cohesive_zones_t::cohesive_zones_t() {
 // initialize the identification of cohesive zones
 // this is an algorithim for identifying cohesive zones in a mesh
 // it loops over all nodal coordinates and identifies overlapping nodal coordinate pairs
-void cohesive_zones_t::initialize(Mesh_t& mesh, State_t& State){
+void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
     // the following code counts the number of boundary nodes and checks for node overlaps (2 nodes with the same coordinates)
     // this is the beginning step to setting up cohesive zones for fracture
                    

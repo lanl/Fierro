@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: ./standard_inputs/meshes/fracture_reorientation.vtk
+  file_path: meshes/fracture_reorientation.vtk
   num_dims: 3
 
 output_options:

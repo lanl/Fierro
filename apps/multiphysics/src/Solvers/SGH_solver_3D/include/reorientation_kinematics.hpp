@@ -36,8 +36,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define REORIENTATION_KINEMATICS_H
 
 #include "matar.h"
-#include "mesh.h"
-#include "state.h"
+#include "ELEMENTS.h"
+#include "mesh_io.hpp"
+#include "state.hpp"
 #include <cmath>
 
 namespace ReorientationKinematics
@@ -104,7 +105,7 @@ void rotate_vector(const double R[3][3], const double v_in[3], double v_out[3]) 
 ///
 /////////////////////////////////////////////////////////////////////////////
 inline void prescribe_reorientation_kinematics(
-    Mesh_t& mesh,
+    const swage::Mesh& mesh,
     State_t& State,
     const CArrayKokkos<double>& initial_coords,
     const CArrayKokkos<int>&    cz_b_side_flag,
@@ -178,7 +179,7 @@ inline void prescribe_reorientation_kinematics(
 ///
 /////////////////////////////////////////////////////////////////////////////
 inline void initialize_b_side_flags(
-    const Mesh_t& mesh,
+    const swage::Mesh& mesh,
     const CArrayKokkos<double>& initial_coords,
     CArrayKokkos<int>& cz_b_side_flag,
     double x_interface)

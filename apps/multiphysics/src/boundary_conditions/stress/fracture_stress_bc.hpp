@@ -35,8 +35,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef BOUNDARY_STRESS_FRACTURE_H
 #define BOUNDARY_STRESS_FRACTURE_H
 
-#include "boundary_conditions.h"
-#include "mesh.h"
+#include "boundary_conditions.hpp"
+#include "mesh_io.hpp"
 
 struct BoundaryConditionEnums_t;
 
@@ -73,7 +73,8 @@ namespace fractureStressBC
 // add an enum for boundary statevars and global vars
 
     KOKKOS_FUNCTION
-    static void stress(const Mesh_t& mesh,
+    static void stress(
+    const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
     const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,

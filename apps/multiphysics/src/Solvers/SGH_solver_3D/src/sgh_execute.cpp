@@ -42,9 +42,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "geometry_new.hpp"
 #include "mesh_io.hpp"
 #include "tipton_equilibration.hpp"
-#include "fracture_stress_bc.h"
+#include "fracture_stress_bc.hpp"
 #include "reorientation_kinematics.hpp"
-#include "user_defined_velocity_bc.h"
+#include "user_defined_velocity_bc.hpp"
 
 
 /////////////////////////////////////////////////////////////////////////////
