@@ -1,29 +1,72 @@
-# num_dims: 3
+# ---------------------------------------------------------------------------
+# Example Fierro input: Sedov blast with linearly varying volume fraction
+#                        (two materials, identical properties).
+#
+# Goal:
+# - Demonstrate the `volume_fraction: {type: x_linear}` initialization for
+#   two materials whose EOS/constitutive parameters are identical.
+# - Because the materials are identical, the mixture behavior matches a
+#   single-material Sedov solution, enabling validation against analytic
+#   results (up to expected numerical errors / boundary reflections).
+#
+# Setup summary:
+# - Generated 3D box mesh.
+# - Reflective velocity boundary conditions on planes x=0, y=0, z=0, which
+#   effectively models the blast in an octant (wave reflections enforce
+#   symmetry).
+# - A spherical energy source centered at the origin adds internal energy
+#   to both materials.
+# - The two materials are separated initially by a linear volume fraction
+#   along the x-direction:
+#     volfrac_0(x) = clamp(slope_0 * x + value_0, 0, 1)
+#     volfrac_1(x) = clamp(slope_1 * x + value_1, 0, 1)
+#   In this YAML, the parameters are chosen so volfrac_0 + volfrac_1 = 1.
+#
+# Assumed units (documentation only; use the scaling you intend):
+# - Length / coordinates: centimeters (cm)
+# - Time: milliseconds (ms)
+# - Velocity: cm/ms
+# - Density: kg/cm^3 (if using SI mass units with cm length)
+# - Specific internal energy: consistent energy unit with your EOS model
+# - Pressure/stress derived from EOS: Pa (pressure is computed in code units)
+# ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
 dynamic_options:
+    # Final simulation time (ms).
     time_final: 1.0
+    # Minimum adaptive timestep bound (ms).
     dt_min: 1.e-8
+    # Maximum adaptive timestep bound (ms).
     dt_max: 1.e-2
+    # Initial timestep guess (ms).
     dt_start: 1.e-5
+    # Hard stop after this many cycles.
     cycle_stop: 3000000
 
-
-# mesh_options:
-#     source: file
-#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
-
+# ---------------------------------------------------------------------------
+# Mesh options
+# ---------------------------------------------------------------------------
 mesh_options:
     source: generate
     num_dims: 3
     type: box
+    # Box origin in x,y,z (cm).
     origin: [0.0, 0.0, 0.0]
+    # Box side lengths in x,y,z (cm).
     length: [1.2, 1.2, 1.2]
     num_elems: [12, 12, 12]
 
 
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
 output_options:
     timer_output_level: thorough
     output_file_format: viz #viz #ensight #state
+    # Amount of simulated time between visualization dumps (ms).
     graphics_time_step: 1.0
     # graphics_iteration_step: 10
     elem_field_outputs:
@@ -41,6 +84,9 @@ output_options:
         - vel
         - mass
 
+# ---------------------------------------------------------------------------
+# Physics solver configuration
+# ---------------------------------------------------------------------------
 solver_options:
   - solver:
         method: dynx_FE
@@ -50,12 +96,16 @@ solver_options:
         #  - blah
         #  - blah
 
+# ---------------------------------------------------------------------------
+# Boundary conditions configuration
+# ---------------------------------------------------------------------------
 boundary_conditions:
     # Tag X plane
     - boundary_condition:
         solver_id: 0
         surface: 
             type: x_plane
+            # Plane position x=0 (cm).
             plane_position: 0.0
             tolerance: 1.e-5
         velocity_model: reflected
@@ -70,6 +120,7 @@ boundary_conditions:
         solver_id: 0
         surface: 
             type: y_plane
+            # Plane position y=0 (cm).
             plane_position: 0.0
             tolerance: 1.e-5
         velocity_model: reflected
@@ -83,6 +134,7 @@ boundary_conditions:
         solver_id: 0
         surface: 
             type: z_plane
+            # Plane position z=0 (cm).
             plane_position: 0.0
             tolerance: 1.e-5
         velocity_model: reflected
@@ -93,9 +145,14 @@ boundary_conditions:
 
 
   
+# ---------------------------------------------------------------------------
+# Materials (constitutive models)
+# ---------------------------------------------------------------------------
 materials:
     - material:
         id: 0
+        # material_id: 0 and 1 are intentionally identical (same EOS and
+        # dissipation/strength choices) to enable analytic validation.
         eos_model_type: decoupled
         eos_model: gamma_law_gas
         eos_global_vars:
@@ -104,6 +161,8 @@ materials:
             - 1.0
         # strength_model: none
         dissipation_model: MARS
+        # MARS dissipation coefficients (3D) ordering:
+        #   [q1, q1ex, q2, q2ex, phi_min, phi_curl_min]
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex
@@ -114,6 +173,7 @@ materials:
 
     - material:
         id: 1
+        # Identical to material_id 0 (same EOS and MARS parameters).
         eos_model_type: decoupled
         eos_model: gamma_law_gas
         eos_global_vars:
@@ -130,6 +190,9 @@ materials:
             - 0.0   # phi_min
             - 1.0   # pin_curl_min
 
+# ---------------------------------------------------------------------------
+# Regions (initial conditions)
+# ---------------------------------------------------------------------------
 regions:
 
     - region:
@@ -149,6 +212,10 @@ regions:
             v: 0.0
             w: 0.0
         volume_fraction:
+            # Linear-in-x volume fraction:
+            #   volfrac(x) = clamp(slope * x + value, 0, 1)
+            # where x is the mesh x-coordinate (mesh_coords(0)).
+            # In code, the computed value is clamped to [0,1].
             type: x_linear
             value: 0.0
             slope: 1.0
@@ -170,11 +237,15 @@ regions:
             v: 0.0
             w: 0.0
         volume_fraction:
+            # Linear-in-x volume fraction for material 1:
+            #   volfrac_1(x) = clamp(slope * x + value, 0, 1)
             type: x_linear
             value: 1.0
             slope: -1.0
 
-    # energy source initial conditions
+    # -----------------------------------------------------------------------
+    # Energy source initial conditions (Sedov blast)
+    # -----------------------------------------------------------------------
     - region:
         volume:
             type: sphere
@@ -189,17 +260,19 @@ regions:
         # ie: 0.25833839995946534
         specific_internal_energy: 
             type: uniform
-            value: 61.67375002 # 963.652344
+            # Internal energy inside the blast region.
+            value: 61.67375002 # (reference value comment kept)
         velocity: 
             type: cartesian
             u: 0.0
             v: 0.0
             w: 0.0
         volume_fraction:
+            # Fraction of material 0 within the blast sphere.
             type: uniform
             value: 0.25
 
-    # energy source initial conditions
+    # Energy source (material_id 1) with the same blast geometry
     - region:
         volume:
             type: sphere
@@ -214,12 +287,14 @@ regions:
         # ie: 0.25833839995946534
         specific_internal_energy: 
             type: uniform
-            value: 61.67375002 # 963.652344
+            # Internal energy inside the blast region.
+            value: 61.67375002 # (reference value comment kept)
         velocity: 
             type: cartesian
             u: 0.0
             v: 0.0
             w: 0.0
         volume_fraction:
+            # Fraction of material 1 within the blast sphere.
             type: uniform
             value: 0.75

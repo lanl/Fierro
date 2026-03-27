@@ -1,3 +1,24 @@
+# ---------------------------------------------------------------------------
+# Example Fierro input: VTU output fields (Sedov/SGH3D)
+#
+# Purpose
+# - Demonstrate how to configure `.vtu`-style visualization output by setting:
+#   - `output_options.output_file_format: viz`
+#   - and selecting which fields to write.
+#
+# What gets written
+# - `elem_field_outputs`: element-centered fields (written to the VTU cell
+#   data).
+# - `mat_pt_field_outputs`: material-point fields (written as material-point
+#   data).
+# - `node_field_outputs`: node-centered fields (written to the VTU point
+#   data).
+#
+# Output cadence
+# - `graphics_time_step` controls how frequently visualization dumps occur in
+#   simulation time units.
+# ---------------------------------------------------------------------------
+
 # num_dims: 3
 
 dynamic_options:
@@ -21,21 +42,28 @@ mesh_options:
     num_elems: [12, 12, 12]
 
 
+# ---------------------------------------------------------------------------
+# Output / visualization controls (VTU selection)
+# ---------------------------------------------------------------------------
 output_options:
     timer_output_level: thorough
     output_file_format: viz
+    # Visualization cadence in time units.
     graphics_time_step: 0.25
     #graphics_iteration_step: 2
+    # Element-centered fields to output.
     elem_field_outputs:
         - den
         - pres
         - stress
         - sie
         - mass
+    # Material-point fields to output.
     mat_pt_field_outputs:
         - den
         - pres
         - sie
+    # Node-centered fields to output.
     node_field_outputs:
         - vel
         - mass

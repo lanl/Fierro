@@ -1,5 +1,40 @@
+# ---------------------------------------------------------------------------
+# Example Fierro input: Sedov in RZ coordinates
+#
+# This example runs a Sedov-like point explosion in an axisymmetric (RZ)
+# setting by using:
+# - `solver_options[].solver.method: dynx_FE_rz` (2D axisymmetric)
+# - `mesh_options.type: box` with `num_dims: 2`, where the coordinates are
+#   `(z, r)` (see `SGHRZ::update_position_rz`: node coords are treated as
+#   `(z,r)` and `r` is clamped to be non-negative).
+# - An initial ambient fill (`regions[].volume.type: global`) plus a localized
+#   high `specific_internal_energy` region (`regions[].volume.type: sphere`)
+#   at the origin.
+#
+# Assumed input scaling / units (consistent with `input-noh.yaml`)
+# - Mass: grams (g)
+# - Length: centimeters (cm)
+# - Time: micro second (microsecond)
+# - Pressure / stress: MegaBar
+# - Velocity: cm / micro second
+# - Density: g / cm^3
+# - `specific_internal_energy`: in the internal energy units implied by
+#   your EOS scaling.
+#
+# Materials
+# - Uses `gamma_law_gas` EOS (`materials[].eos_global_vars` ordering is
+#   documented in other examples).
+# - Uses `MARS_rz` artificial viscosity for shock stabilization.
+# - Note: this file defines `material id: 1`, but only `material_id: 0`
+#   is referenced in `regions`, so `material 1` should be inert unless you add
+#   regions that use it.
+# ---------------------------------------------------------------------------
+
 # num_dims: 3
 
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
 dynamic_options:
     time_final: 1.0
     dt_min: 1.e-8
@@ -12,30 +47,52 @@ dynamic_options:
 #     source: file
 #     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
 
+# ---------------------------------------------------------------------------
+# Mesh options (RZ coordinate plane)
+# ---------------------------------------------------------------------------
 mesh_options:
     source: generate
     num_dims: 2
     type: box
     origin: [0.0, 0.0]
+    # Coordinate system: (z,r). Here:
+    # - `origin[0]` is z = 0 (cm)
+    # - `origin[1]` is r = 0 (cm)
     length: [1.2, 1.2]
+    # Domain lengths in (z,r) (cm).
     num_elems: [12, 12]
 
 
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
 output_options:
     timer_output_level: thorough
+    # `ensight` output format for this example.
     output_file_format: ensight
+    # Output cadence in time units (microsecond).
     graphics_time_step: 0.25
     #graphics_iteration_step: 2
 
+# ---------------------------------------------------------------------------
+# Solver configuration
+# ---------------------------------------------------------------------------
 solver_options:
   - solver:
         method: dynx_FE_rz
+        # Solver instance id; used by `regions` and `boundary_conditions`.
         id: 0
         # solver_vars:
         #  - blah
         #  - blah
         #  - blah
 
+# ---------------------------------------------------------------------------
+# Boundary conditions
+#
+# `reflected` is used to impose a symmetry-like constraint by removing the
+# velocity component in the direction specified by `velocity_bc_global_vars`.
+# ---------------------------------------------------------------------------
 boundary_conditions:
     # Tag X plane
     - boundary_condition:
@@ -43,6 +100,7 @@ boundary_conditions:
         surface: 
             type: x_plane
             plane_position: 0.0
+        # x_plane corresponds to z = constant in the (z,r) RZ coordinate system.
         velocity_model: reflected
         velocity_bc_global_vars:
             - 1   # x
@@ -56,6 +114,7 @@ boundary_conditions:
         surface: 
             type: y_plane
             plane_position: 0.0
+        # y_plane corresponds to r = constant. In RZ, the solver keeps r >= 0.
         velocity_model: reflected
         velocity_bc_global_vars:
             - 0   # x
@@ -71,6 +130,10 @@ materials:
         eos_model: gamma_law_gas
         # strength_model: none
         dissipation_model: MARS_rz
+        # `gamma_law_gas` eos_global_vars ordering:
+        #   0: gamma (ratio of specific heats)
+        #   1: min_sound_speed (sound-speed floor)
+        #   2: c_v (specific heat at constant volume)
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex
@@ -78,6 +141,8 @@ materials:
             - 1.333 # q2ex
             - 0.0   # phi_min
             - 1.0   # phi_curl_min
+        # MARS_rz dissipation_global_vars ordering:
+        #   q1, q1ex, q2, q2ex, phi_min, phi_curl_min
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-14
@@ -89,6 +154,8 @@ materials:
         eos_model: gamma_law_gas
         # strength_model: none
         dissipation_model: MARS_rz
+        # Note: material id 1 is defined but not used in this file’s regions
+        # (only `material_id: 0` appears under `regions`).
         dissipation_global_vars:
             - 1.0   # q1
             - 1.333 # q1ex
@@ -108,6 +175,10 @@ regions:
             type: global
         solver_id: 0
         material_id: 0
+        # Ambient initial fill for the Sedov problem:
+        # - Uniform density
+        # - Uniform specific internal energy (low background)
+        # - Zero initial velocity
         density: 
             type: uniform
             value: 1.0
@@ -131,6 +202,13 @@ regions:
             radius2: 0.1
         solver_id: 0
         material_id: 0
+        # Sedov-like energy source:
+        # This sphere region is initialized with a high specific internal
+        # energy (`value` under `specific_internal_energy`), which represents
+        # the initial blast energy.
+        #
+        # `radius2` is the outer radius of the energy source in the RZ
+        # coordinate plane (cm with this input scaling).
         density: 
             type: uniform
             value: 1.0

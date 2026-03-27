@@ -1,5 +1,30 @@
+# ---------------------------------------------------------------------------
+# Example Fierro input: link multiple solvers (RZ)
+#
+# This example shows how to run multiple solvers in one simulation by using
+# consistent `solver_id` values in three places:
+#
+# 1. `solver_options[]` defines each solver instance and its `id`.
+# 2. `boundary_conditions[]` assigns each boundary condition to a solver via
+#    `solver_id`.
+# 3. `regions[]` assigns each initial-condition region/fill to a solver via
+#    `solver_id`.
+#
+# In the driver setup, the program parses `solver_options` into a solver array.
+# Later, when parsing regions/BCs, `solver_id` determines which solver gets
+# which fills/constraints.
+#
+# Output note:
+# - Visualization outputs are controlled by `output_options` and are written per
+#   solver instance (internally, `MeshWriter::write_mesh(..., solver_id)` is
+#   called with the active solver id).
+# ---------------------------------------------------------------------------
+
 # num_dims: 3
 
+# ---------------------------------------------------------------------------
+# Time integration / stepping control (shared global time loop)
+# ---------------------------------------------------------------------------
 dynamic_options:
     time_final: 1.0
     dt_min: 1.e-8
@@ -12,6 +37,9 @@ dynamic_options:
 #     source: file
 #     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
 
+# ---------------------------------------------------------------------------
+# Mesh options
+# ---------------------------------------------------------------------------
 mesh_options:
     source: generate
     num_dims: 2
@@ -21,6 +49,9 @@ mesh_options:
     num_elems: [12, 12]
 
 
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
 output_options:
     timer_output_level: thorough
     output_file_format: viz
@@ -40,10 +71,14 @@ output_options:
         - vel
         - mass
 
+# ---------------------------------------------------------------------------
+# Solver linking (multiple solver instances)
+# ---------------------------------------------------------------------------
 solver_options:
   - solver:
         method: dynx_FE_rz
         id: 0
+        # `id` is the solver_id used by boundary_conditions/regions.
         time_end: 0.5
         # solver_vars:
         #  - blah
@@ -52,11 +87,15 @@ solver_options:
   - solver:
         method: dynx_FE_rz
         id: 1
+        # Solver instance with a different solver_id.
         # solver_vars:
         #  - blah
         #  - blah
         #  - blah
 
+# ---------------------------------------------------------------------------
+# Boundary conditions (each BC can target a specific solver)
+# ---------------------------------------------------------------------------
 boundary_conditions:
     # Tag X plane
     - boundary_condition:
@@ -83,7 +122,7 @@ boundary_conditions:
             - 1   # y
             - 0   # z
 
-    # Tag X plane
+    # Tag X plane (separate constraints for solver_id 1)
     - boundary_condition:
         solver_id: 1
         surface: 
@@ -95,7 +134,7 @@ boundary_conditions:
             - 0   # y
             - 0   # z
 
-    # Tag Y plane
+    # Tag Y plane (separate constraints for solver_id 1)
     - boundary_condition:
         solver_id: 1
         surface: 
@@ -107,6 +146,9 @@ boundary_conditions:
             - 1   # y
             - 0   # z
   
+# ---------------------------------------------------------------------------
+# Materials (global material properties used by all solvers)
+# ---------------------------------------------------------------------------
 materials:
     - material:
         id: 0
@@ -145,11 +187,15 @@ materials:
             - 1.0
 
 
+# ---------------------------------------------------------------------------
+# Regions (fills/initial conditions) assigned to solvers via solver_id
+# ---------------------------------------------------------------------------
 regions:
     - region:
         volume:
             type: global
         solver_id: 0
+        # solver_id 0: this fill/IC is applied only to solver instance `id: 0`.
         material_id: 0
         density: 
             type: uniform
@@ -173,6 +219,8 @@ regions:
             radius1: 0.0
             radius2: 0.1
         solver_id: 0
+        # solver_id 0: the Sedov-like energy source is applied only to
+        # solver instance `id: 0` (not solver_id 1).
         material_id: 0
         density: 
             type: uniform

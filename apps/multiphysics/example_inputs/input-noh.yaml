@@ -1,5 +1,29 @@
+# ---------------------------------------------------------------------------
+# Example Fierro input: Noh problem (3D converging shock)
+#
+# This is the classic “Noh”-type setup:
+# - Uniform material fills the domain (`regions[].volume: global`).
+# - Fluid starts with an inward, radially symmetric velocity field
+#   (`velocity: spherical` with `speed: -1.0`).
+# - Converging flow generates a shock; MARS artificial viscosity helps
+#   stabilize the shock.
+#
+# Assumed input scaling / units (consistent with `input-multimat.yaml`)
+# - Mass: grams (g)
+# - Length: centimeters (cm)
+# - Time: micro second (microsecond)
+# - Pressure / stress: MegaBar
+#
+# Derived:
+# - Velocity: cm / micro second
+# - Density: g / cm^3
+# ---------------------------------------------------------------------------
+
 # num_dims: 3
 
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
 dynamic_options:
     time_final: 0.6
     dt_min: 1.e-8
@@ -12,18 +36,28 @@ dynamic_options:
 #     source: file
 #     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
 
+# ---------------------------------------------------------------------------
+# Mesh options
+# ---------------------------------------------------------------------------
 mesh_options:
     source: generate
     num_dims: 3
     type: box
+    # Box origin in x,y,z (cm).
     origin: [0.0, 0.0, 0.0]
+    # Box lengths in x,y,z (cm).
     length: [1.0, 1.0, 1.0]
+    # Element counts [nx, ny, nz].
     num_elems: [12, 12, 12]
 
 
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
 output_options:
     timer_output_level: thorough
     output_file_format: viz # only options are viz or viz_and_state
+    # Visualization cadence in time units (microsecond).
     graphics_time_step: 0.05
     # graphics_iteration_step: 10
     elem_field_outputs:
@@ -41,16 +75,27 @@ output_options:
         - vel
         - mass
 
+# ---------------------------------------------------------------------------
+# Solver configuration
+# ---------------------------------------------------------------------------
 solver_options:
   - solver:
         method: dynx_FE
+        # `dynx_FE` is the 3D hydro/dynamics solver.
         id: 0
         # solver_vars:
         #  - blah
         #  - blah
         #  - blah
 
+# ---------------------------------------------------------------------------
+# Boundary conditions
+# ---------------------------------------------------------------------------
 boundary_conditions:
+    # Velocity BC meaning:
+    # - `reflected` removes the velocity component along the direction given
+    #   by `velocity_bc_global_vars` (treated as a unit direction). This is a
+    #   symmetry / wall-like constraint that prevents motion through the plane.
     # Tag X plane
     - boundary_condition:
         solver_id: 0
@@ -90,12 +135,24 @@ boundary_conditions:
 
   
 materials:
+# ---------------------------------------------------------------------------
+# Materials (single material Eulerian fluid + artificial viscosity)
+# ---------------------------------------------------------------------------
     - material:
         id: 0
         eos_model_type: decoupled
         eos_model: gamma_law_gas
+        # `gamma_law_gas` EOS: eos_global_vars ordering
+        #   0: gamma (ratio of specific heats)
+        #   1: min_sound_speed (sound-speed floor)
+        #   2: c_v (specific heat at constant volume)
+        #
+        # Pressure relation (from model code):
+        #   pres = (gamma - 1) * sie * den
         # strength_model: none
         dissipation_model: MARS
+        # MARS artificial viscosity ordering:
+        #   q1, q1ex, q2, q2ex, phi_min, phi_curl
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex
@@ -108,6 +165,9 @@ materials:
             - 1.0E-14
             - 1.0
 
+# ---------------------------------------------------------------------------
+# Initial conditions (Noh inflow)
+# ---------------------------------------------------------------------------
 regions:
     - region:
         volume:
@@ -115,12 +175,18 @@ regions:
         material_id: 0
         solver_id: 0
         density: 
+            # Initial density (g/cm^3 with input scaling).
             type: uniform
             value: 1.0
         specific_internal_energy: 
+            # Initial specific internal energy (sie).
             type: uniform
             value: 1.e-10
         velocity: 
+            # Initial velocity field magnitude/direction.
+            # `velocity: spherical` sets:
+            #   v = speed * (x,y,z)/sqrt(x^2+y^2+z^2)
+            # so `speed: -1.0` produces inward (converging) flow.
             type: spherical
             speed: -1.0
 
