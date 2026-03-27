@@ -16,7 +16,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # --- Options ---
 option(FIERRO_ENABLE_SERIAL   "Enable Serial backend"   ON)
-option(FIERRO_ENABLE_OPENMP   "Enable OpenMP backend"   ON)
+option(FIERRO_ENABLE_OPENMP   "Enable OpenMP backend"   OFF)
 option(FIERRO_ENABLE_PTHREADS "Enable PThreads backend" OFF)
 option(FIERRO_ENABLE_CUDA     "Enable CUDA backend"     OFF)
 option(FIERRO_ENABLE_HIP      "Enable HIP backend"      OFF)
