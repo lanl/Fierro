@@ -13,7 +13,7 @@ builds = ["cuda"]
 # Name(s) of the solver being used
 solvers = ["Fierro"]
 
-solver_path = "../build/app/Fierro"
+solver_path = "../build_cuda/app/Fierro"
 
 # Add names of each test
 tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \

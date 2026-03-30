@@ -69,25 +69,34 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                                  mesh.bdy_nodes, mesh.num_patches, mesh.num_nodes, State.node.coords);
     }
 
-// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS 
-    // writing output file for time, alpha, lambda, traction test
-    FILE* cz_fp = fopen("time_alpha_lambda_traction_outputs.txt", "w");
-    if (!cz_fp) { perror("fopen"); }
+    // cohesive zone initialization for fracture
+    if (doing_fracture) {
+        const int fracture_bdy_set = BoundaryConditions.fracture_bc_id;
+        if (fracture_bdy_set >= 0) {
+            cohesive_zones_bank.initialize_fracture_bc(
+            mesh,
+            BoundaryConditions,
+            fracture_bdy_set
+            );
+        }
+    }
 
-    // no buffering (writes show up immediately)
-    setvbuf(cz_fp, nullptr, _IONBF, 0);
+    // fracture reorientation validation mode initialization
+    if (doing_fracture) {
+        cohesive_zones_bank.initialize_reorientation_mode(
+            mesh,
+            State,
+            BoundaryConditions,
+            doing_fracture
+        );
+    }
 
-    fprintf(cz_fp, "time,alpha,lambda,Tn\n");
-    fflush(cz_fp);
-
-    // output every x us
-    constexpr double CZ_OUT_DT = 1e-3;
-
-    // stride variables (cycle-based)
-    static bool   cz_stride_init = false;
-    static size_t cz_stride = 0;
-    static size_t cz_next_cycle = 0;
-// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS 
+// FRACTURE DEBUG 
+    // fracture debug output initilization (for validation)
+    if (doing_fracture && cohesive_zones_bank.is_ready()) {
+        cohesive_zones_bank.initialize_debug_output("time_alpha_lambda_traction_outputs.txt", 1e-3);
+    }
+// FRACTURE DEBUG 
 
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;  // 1.e-16
     double tiny  = SimulationParamaters.dynamic_options.tiny;  // 1.e-12
@@ -138,120 +147,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // the number of materials specified by the user input
     const size_t num_mats = Materials.num_mats;
-
-// REORIENTATION TESTING
-// =======================================================================================
-// DETECT REORIENTATION VALIDATION MODE FROM USER DEFINED VELOCITY BOUNDARY CONDITION
-// reorientation valdation mode is a kinematics-driven verification case for fracture
-// it bypasses normal SGH motion updates so that cohesive zone geometry and kinematics can be 
-// presribed exactly for code verification/validation
-// =======================================================================================
-    bool reorientation_validation_mode = false; // reorientation mode flag
-    double omega_y = 0.0; // rotation about x2
-    double omega_z = 0.0; // rotation about x3
-    double cz_opening_rate = 0.0; // constant opening rate for cohesive zone nodes
-    double x_interface = 0.0; // x location of interface for b-side flagging of cohesive zone nodes
-
-    // device arrays to hold reorientation parameters
-    DCArrayKokkos<double> reorient_params(5, "reorient_params");
-    DCArrayKokkos<int> found_reorient(1, "found_reorient");
-    found_reorient.set_values(0); // initialize to zero
-    reorient_params.set_values(0.0); // initialize to zero
-    //found_reorient.host(0) = 0; 
-    found_reorient.update_device();
-
-    // local references for device access, so RUN kernel can read BC data
-    auto bc_enums = BoundaryConditions.BoundaryConditionEnums;
-    auto vel_bc_vars = BoundaryConditions.velocity_bc_global_vars;
-    size_t num_bcs = BoundaryConditions.num_bcs;
-
-    RUN({
-        // search boundary conditions for user-defined velocity BC with reorientation !reo
-        for (size_t bdy_set = 0; bdy_set < num_bcs; bdy_set++) {
-            // check if this BC has reorientation parameters set (omega_y != 0 or omega_z != 0)
-            if (bc_enums(bdy_set).BCVelocityModel
-                != boundary_conditions::userDefinedVelocityBC) {
-                continue;  // skip non-user-defined BCs
-            }
-    
-            // read validation mode flag from BC parameter array
-            double mode_flag = vel_bc_vars(
-                bdy_set, UserDefinedVelocityBC::BCVars::reorientation_mode);
-    
-            // treat values > 0.5 as true
-            if (mode_flag > 0.5) {
-                found_reorient(0) = 1;
-
-                // store relevant BC parameters into compact array for copying back to host
-                reorient_params(0) = mode_flag;
-                reorient_params(1) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::omega_y);
-                reorient_params(2) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::omega_z);
-                reorient_params(3) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::cz_opening_rate);
-                reorient_params(4) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::x_interface);
-                break;
-                }  
-        }
-    }); // end RUN
-    Kokkos::fence();
-
-    // copying reults back to host
-    found_reorient.update_host();
-    reorient_params.update_host();
-
-    // set host variables from the copied data
-    reorientation_validation_mode = (found_reorient.host(0) == 1);
-    if (reorientation_validation_mode) {
-        omega_y = reorient_params.host(1);
-        omega_z = reorient_params.host(2);
-        cz_opening_rate = reorient_params.host(3);
-        x_interface = reorient_params.host(4);
-
-        // temporary prints for validation
-        printf("=== REORIENTATION VALIDATION MODE ENABLED ===\n");
-        printf("  omega_y         = %.10f rad/us\n", omega_y);
-        printf("  omega_z         = %.10f rad/us\n", omega_z);
-        printf("  cz_opening_rate = %.10e cm/us\n", cz_opening_rate);
-        printf("  x_interface     = %.4f cm\n", x_interface);
-        printf("==============================================\n");
-    }    
-   
-    // allocate storage for reorientation test
-    CArrayKokkos<double> initial_coords(mesh.num_nodes, 3, "initial_coords");
-    CArrayKokkos<int>    cz_b_side_flag(mesh.num_nodes, "cz_b_side_flag");
-    cz_b_side_flag.set_values(0);
-
-    if (reorientation_validation_mode && doing_fracture) {
-        // store initial coordinates for all nodes
-        FOR_ALL(n, 0, mesh.num_nodes, {
-            initial_coords(n,0) = State.node.coords(n,0);
-            initial_coords(n,1) = State.node.coords(n,1);
-            initial_coords(n,2) = State.node.coords(n,2);
-        });
-        Kokkos::fence();
-
-        // initialize b-side flags using x_interface parameter from .yaml
-        const size_t nne = mesh.num_nodes_in_elem;
-        FOR_ALL(e, 0, mesh.num_elems, {
-            double xc = 0.0;
-            // compute element centroid x coordinate
-            for (size_t a = 0; a < nne; ++a) {
-                const size_t gid = mesh.nodes_in_elem(e,a);
-                xc += initial_coords(gid,0);
-            }
-            xc /= (double)nne;
-
-            // if the element centroid is on the B side, flag all of its nodes
-            // as B side nodes for cohesive zone opening in the kinematics prescription
-            if (xc > x_interface) {
-                for (size_t a = 0; a < nne; ++a) {
-                    const size_t gid = mesh.nodes_in_elem(e,a);
-                    cz_b_side_flag(gid) = 1;
-                }
-            }
-        });
-        Kokkos::fence();
-    }
-// REORIENTATION TESTING
 
     // extensive IE
     for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
@@ -359,15 +254,11 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         dt = min_dt_calc;  // save this dt time step
 
-// THROTTLE OUTPUT COMMENT OUT DESCALING PRINTS
-// initialize stride once using the actual dt the solver is taking
-    if (!cz_stride_init) {
-        cz_stride = (size_t) llround(CZ_OUT_DT / dt);  // e.g. 0.5 / 1e-8 = 50,000,000
-        if (cz_stride < 1) cz_stride = 1;
-        cz_next_cycle = 0;
-        cz_stride_init = true;
-    }
-// THROTTLE OUTPUT COMMENT OUT DESCALING PRINTS
+// FRACTURE DEBUG
+        if (doing_fracture && cohesive_zones_bank.is_ready()) {
+            cohesive_zones_bank.initialize_debug_stride(dt);
+        }
+// FRACTURE DEBUG
 
         if (cycle == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
@@ -408,64 +299,64 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // zone predictor/update so that the Forward-Euler-style incrementilization
             // stage increment is consistent with the RK stage 
             double dt_stage = rk_alpha * dt;
-            
-// REORIENTATIONT TESTING:
-        // check if reorientation validation mode testing is on
-        const bool reorient_mode = (reorientation_validation_mode && doing_fracture);
+        
+            // check if reorientation validation mode testing is on
+            const bool reorient_mode = (doing_fracture && cohesive_zones_bank.reorientation_validation_mode);
 
-        if (reorient_mode) {
-            // prescribe reorientation kinematics to all nodes (skip over normal SGH evolution)
-            ReorientationKinematics::prescribe_reorientation_kinematics(
-                mesh, State,
-                initial_coords,
-                cz_b_side_flag,
-                time_value,
-                dt_stage,
-                omega_y, omega_z,
-                cz_opening_rate
-            );
-        }
+            if (reorient_mode) {
+                // prescribe reorientation kinematics to all nodes (skip over normal SGH evolution)
+                ReorientationKinematics::prescribe_reorientation_kinematics(
+                    mesh, State,
+                    cohesive_zones_bank.initial_coords,
+                    cohesive_zones_bank.cz_b_side_flag,
+                    time_value,
+                    dt_stage,
+                    cohesive_zones_bank.omega_y, 
+                    cohesive_zones_bank.omega_z,
+                    cohesive_zones_bank.cz_opening_rate
+                );
+            }
 
-        // if not in reorientation mode, proceed with normal SGH evolution
-        if (!reorient_mode){         
-            // ---- Calculate velocity gradient for the element ---- 
-// REORIENTATIONT TESTING:
-            get_velgrad(State.GaussPoints.vel_grad,
-                        mesh,
-                        State.node.coords,
-                        State.node.vel,
-                        State.GaussPoints.vol);
+            // if not in reorientation mode, proceed with normal SGH evolution
+            if (!reorient_mode){  
 
-            set_corner_force_zero(mesh, State.corner.force);
+                // ---- Calculate velocity gradient for the element ---- 
+                get_velgrad(State.GaussPoints.vel_grad,
+                            mesh,
+                            State.node.coords,
+                            State.node.vel,
+                            State.GaussPoints.vol);
+
+                set_corner_force_zero(mesh, State.corner.force);
 
 
-            // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
-            for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+                // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
+                for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-                get_force(Materials,
-                          mesh,
-                          State.GaussPoints.vol,
-                          State.GaussPoints.vel_grad,
-                          State.MaterialPoints.eroded,
-                          State.corner.force,
-                          State.node.coords,
-                          State.node.vel,
-                          State.MaterialPoints.den,
-                          State.MaterialPoints.sie,
-                          State.MaterialPoints.pres,
-                          State.MaterialPoints.stress,
-                          State.MaterialPoints.sspd,
-                          State.MaterialCorners.force,
-                          State.MaterialPoints.volfrac,
-                          State.MaterialPoints.geo_volfrac,
-                          State.corners_in_mat_elem,
-                          State.MaterialToMeshMaps.elem_in_mat_elem,
-                          State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
-                          mat_id,
-                          fuzz,
-                          small,
-                          dt,
-                          rk_alpha);
+                    get_force(Materials,
+                            mesh,
+                            State.GaussPoints.vol,
+                            State.GaussPoints.vel_grad,
+                            State.MaterialPoints.eroded,
+                            State.corner.force,
+                            State.node.coords,
+                            State.node.vel,
+                            State.MaterialPoints.den,
+                            State.MaterialPoints.sie,
+                            State.MaterialPoints.pres,
+                            State.MaterialPoints.stress,
+                            State.MaterialPoints.sspd,
+                            State.MaterialCorners.force,
+                            State.MaterialPoints.volfrac,
+                            State.MaterialPoints.geo_volfrac,
+                            State.corners_in_mat_elem,
+                            State.MaterialToMeshMaps.elem_in_mat_elem,
+                            State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
+                            mat_id,
+                            fuzz,
+                            small,
+                            dt,
+                            rk_alpha);
 
                 if (Materials.MaterialEnums.host(mat_id).StrengthType == model::incrementBased) {
                     update_stress(Materials,
@@ -515,341 +406,46 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         set_corner_force_zero(mesh, State.corner.force);
         }                        
         
+        // apply cohesive zone nodal forces (fracture)
+            if (doing_fracture && cohesive_zones_bank.is_ready()) {
+                
+                // reset delta internal vars to zero
+                cohesive_zones_bank.reset_delta_internal_vars();
+                
+                // allocate force array for this stage
+                const size_t num_nodes = mesh.num_nodes;
+                CArrayKokkos<double> F_cz(3 * num_nodes, "cz_nodal_forces");
+                F_cz.set_values(0.0);
+                
+                // Compute cohesive forces (orientation, openings, constitutive, loads)
+                cohesive_zones_bank.compute_cohesive_zone_nodal_forces(
+                    mesh,
+                    State,
+                    dt_stage,
+                    time_value,
+                    cycle,
+                    rk_stage,
+                    rk_num_stages,
+                    F_cz
+                );
 
-            // call body forces routine
-            if (doing_fracture) {
+                // commit internal variable updates at final RK stage only
+                // consistent with forward euler incrementalization of the cohesive zone evolution
+                cohesive_zones_bank.commit_internal_vars(rk_stage, rk_num_stages);
+                
+                // add cohesive zone nodal forces to global nodal force array (State.node.force)
+                cohesive_zones_bank.add_cohesive_zone_nodal_forces(
+                    State.node.force,
+                    F_cz,
+                    num_nodes
+                );
+            }        
 
-                // index of the fracture stress BC set
-                const int fracture_bdy_set = BoundaryConditions.fracture_bc_id;
-                    // proceed only if a fracture BC was actually defined
-                    if (fracture_bdy_set >= 0) {
-
-                    const auto &BC     = BoundaryConditions;
-                    // number of overlapping node pairs (cohesive zone node pairs)
-                    const size_t npairs = cohesive_zones_bank.overlapping_node_gids.dims(0);
-
-                    if (npairs > 0) {
-                        // sync BC data to host
-                        DCArrayKokkos<double> bc_params(30, "bc_params");
-
-                        RUN({
-                            // store the cohsive zone consituitive parameters ina compact temp array
-                            // cohesive zone parameters 0 through 5
-                            // E_inf, a1, n_exp, u_n_star, u_t_star, num_prony_terms
-                            bc_params(0) = BC.stress_bc_global_vars(fracture_bdy_set,
-                                           fractureStressBC::BCVars::E_inf);
-                            bc_params(1) = BC.stress_bc_global_vars(fracture_bdy_set,
-                                           fractureStressBC::BCVars::a1);
-                            bc_params(2) = BC.stress_bc_global_vars(fracture_bdy_set,
-                                           fractureStressBC::BCVars::n_exp);
-                            bc_params(3) = BC.stress_bc_global_vars(fracture_bdy_set,
-                                           fractureStressBC::BCVars::u_n_star);
-                            bc_params(4) = BC.stress_bc_global_vars(fracture_bdy_set,
-                                           fractureStressBC::BCVars::u_t_star);
-                            bc_params(5) = BC.stress_bc_global_vars(fracture_bdy_set,
-                                           fractureStressBC::BCVars::num_prony_terms);
-                        
-                            // copy prony coefficients
-                            // prony terms (E_j, tau_j pairs starting at index 6)
-                            int nprony = (int)(bc_params(5) + 0.5);
-                            for (int j = 0; j < nprony && j < 10; ++j) {
-                                int prony_base = fractureStressBC::BCVars::prony_base + 2*j;
-                                bc_params(6 + 2*j)     = BC.stress_bc_global_vars(fracture_bdy_set, prony_base);     // E_j
-                                bc_params(6 + 2*j + 1) = BC.stress_bc_global_vars(fracture_bdy_set, prony_base + 1); // tau_j
-                            }
-                        }); // end RUN
-                        Kokkos::fence();
-                        bc_params.update_host();
-            
-                        // read in cohesive zone parameters on host
-                        const double E_inf_host      = bc_params.host(0);
-                        const double a1_host         = bc_params.host(1);
-                        const double n_exp_host      = bc_params.host(2);
-                        const double u_n_star_host   = bc_params.host(3);
-                        const double u_t_star_host   = bc_params.host(4);
-                        const int num_prony_terms    = static_cast<int>(bc_params.host(5) + 0.5);
-                        const int width = 4 + num_prony_terms;
-
-                        // device-accessible Prony parameters (E_j, tau_j pairs)
-                        DCArrayKokkos<double> prony_params(2 * num_prony_terms, "cz_prony_params");
-                        for (int j = 0; j < num_prony_terms; ++j) {
-                            prony_params.host(2*j)     = bc_params.host(6 + 2*j);     // E_j
-                            prony_params.host(2*j + 1) = bc_params.host(6 + 2*j + 1); // tau_j
-                        }
-                        prony_params.update_device();
-
-
-                        // ensure persistent storage for cohesive internal vars
-                        // internal_vars = persistent history carried across full tme steps
-                        if (cohesive_zones_bank.internal_vars.dims(0) != npairs ||
-                            cohesive_zones_bank.internal_vars.dims(1) != width) {
-                            cohesive_zones_bank.internal_vars =
-                                DCArrayKokkos<double>(npairs, width, "cz_internal_vars");
-                            cohesive_zones_bank.internal_vars.set_values(0.0);
-                        }             
-
-                        // ensure persistent storage for cohesive delta internal vars
-                        // delta_internal_vars = stage local predicted updates for current RK stage
-                        if (cohesive_zones_bank.delta_internal_vars.dims(0) != npairs ||
-                            cohesive_zones_bank.delta_internal_vars.dims(1) != width) {
-                            cohesive_zones_bank.delta_internal_vars =
-                                DCArrayKokkos<double>(npairs, width, "cz_delta_internal_vars");
-                            cohesive_zones_bank.delta_internal_vars.set_values(0.0);
-                        }
-
-                        // reset delta internal vars to zero each RK stage
-                        cohesive_zones_bank.delta_internal_vars.set_values(0.0);
-
-                    
-                        // update mesh.nodes_in_elem for device-side kernels
-                        mesh.nodes_in_elem.update_device();
-
-                        // cohsive zone RK-stage pipeline:
-                        // 1) compute interface orientation
-                        // 2) map global nodal motion to local openings
-                        // 3) evaluate consituitive response for this stage
-                        // 4) asssemble equivalent nodal cohesive forces
-                        // 5) commit constituitive updates to internal variables at the end of the last RK stage
-
-                        // 1) orientation (normal at t and t+dt)
-                        const double tol = 1.0e-8;
-                        DCArrayKokkos<double> cz_orientation(
-                            npairs, 6, "cz_orientation");
-                        cz_orientation.set_values(0.0);
-
-                        cohesive_zones_bank.oriented(
-                            mesh.nodes_in_elem,
-                            State.node.coords, // current config
-                            cohesive_zones_bank.overlapping_node_gids,
-                            cohesive_zones_bank.cz_info,
-                            cohesive_zones_bank.max_elem_in_cohesive_zone,
-                            tol,
-                            cz_orientation);
-
-                        // 2) local openings (un_t, utan_t, un_tdt, utan_tdt)
-                        DCArrayKokkos<double> local_opening(
-                            npairs, 4, "cz_local_opening");
-                        local_opening.set_values(0.0);
-
-                        cohesive_zones_bank.ucmap(
-                            State.node.coords,
-                            State.node.vel,
-                            cz_orientation,
-                            cohesive_zones_bank.overlapping_node_gids,
-                            dt_stage, 
-                            local_opening);
-
-                        // calling cohesive_zone_var_update with extracted parameters
-                        // 3) cohesive law: update internal_vars + compute increments
-                        cohesive_zones_bank.cohesive_zone_var_update(
-                            local_opening,
-                            dt_stage, 
-                            time_value,
-                            cohesive_zones_bank.overlapping_node_gids,
-                            E_inf_host,
-                            a1_host,
-                            n_exp_host,
-                            u_n_star_host,
-                            u_t_star_host,
-                            num_prony_terms,
-                            prony_params,
-                            cohesive_zones_bank.internal_vars,
-                            cohesive_zones_bank.delta_internal_vars);
-                        
-                        // 4) nodal cohesive forces
-                        CArrayKokkos<double> pair_area(
-                            npairs, "cz_pair_area");
-                        pair_area.set_values(0.0);
-
-                        const size_t num_nodes = mesh.num_nodes;
-                        CArrayKokkos<double> F_cz(
-                            3 * num_nodes, "cz_nodal_forces");
-                        F_cz.set_values(0.0);
-
-                        cohesive_zones_bank.cohesive_zone_loads(
-                            mesh.nodes_in_elem,
-                            State.node.coords,
-                            cohesive_zones_bank.overlapping_node_gids,
-                            cz_orientation,
-                            cohesive_zones_bank.cz_info,
-                            cohesive_zones_bank.max_elem_in_cohesive_zone,
-                            cohesive_zones_bank.internal_vars,
-                            cohesive_zones_bank.delta_internal_vars,
-                            pair_area,
-                            F_cz
-                        );
-                        Kokkos::fence();
-                        
-// REORIENTATION TESTING
-if (cz_fp &&
-    rk_stage == rk_num_stages - 1 &&
-    cycle == cz_next_cycle)
-{
-    //const double u_n_star = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::u_n_star);
-    //const double u_t_star = BC.stress_bc_global_vars(fracture_bdy_set, fractureStressBC::BCVars::u_t_star);
-    const double u_n_star   = bc_params.host(3);
-    const double u_t_star   = bc_params.host(4);
-
-    local_opening.update_host();
-    cohesive_zones_bank.overlapping_node_gids.update_host();
-    cohesive_zones_bank.internal_vars.update_host();
-
-    // time,pair,gidA,gidB,un_t,ut_t,un_tdt,ut_tdt,lambda,alpha,Tn,n0x,n0y,n0z,n1x,n1y,n1z
-
-        size_t p = 0; // printing first cohesive zone node pair values
-    //for (size_t p = 0; p < npairs; ++p) {
-        const size_t gidA = cohesive_zones_bank.overlapping_node_gids.host(p,0);
-        const size_t gidB = cohesive_zones_bank.overlapping_node_gids.host(p,1);
-
-        const double un_t   = local_opening.host(p,0);
-        const double ut_t   = local_opening.host(p,1);
-        const double un_tdt = local_opening.host(p,2);
-        const double ut_tdt = local_opening.host(p,3);
-
-        const double lambda_t = sqrt(
-            (un_t/u_n_star)*(un_t/u_n_star) + (ut_t/u_t_star)*(ut_t/u_t_star));
-
-        const double alpha_t = cohesive_zones_bank.internal_vars.host(p,1);
-        const double Tn_t    = cohesive_zones_bank.internal_vars.host(p,2);
-        // fprintf(cz_fp,
-        // "time,pair,gidA,gidB,un_t,ut_t,un_tdt,ut_tdt,lambda,alpha,Tn,n0x,n0y,n0z,n1x,n1y,n1z\n");
-        // fprintf(cz_fp,
-        //     "%.9e,%zu,%zu,%zu,%.9e,%.9e,%.9e,%.9e,%.9e,%.9e,%.9e,"
-        //     "%.9e,%.9e,%.9e,%.9e,%.9e,%.9e\n",
-        //     time_value, p, gidA, gidB,
-        //     un_t, ut_t, un_tdt, ut_tdt,
-        //     lambda_t, alpha_t, std::fabs(Tn_t),
-        //     cz_orientation(p,0), cz_orientation(p,1), cz_orientation(p,2),
-        //     cz_orientation(p,3), cz_orientation(p,4), cz_orientation(p,5));
-
-            fprintf(cz_fp, "%.9e, %.9e, %.9e, %.9e\n",
-                    time_value, alpha_t, lambda_t, fabs(Tn_t));
-    //}
-
-    cz_next_cycle += cz_stride;
-    fflush(cz_fp);
-}
-
-                        // 5) update global state: internal vars and nodal forces
-                        // ensuring the internal vars are updated only at the last RK stage
-                        if (rk_stage == rk_num_stages - 1){
-
-                            // local aliases to the cohesive zone internal/delta_internal variable arrays for cleaner code in the RUN loop
-                            auto cz_internal_vars = cohesive_zones_bank.internal_vars;
-                            auto cz_delta_internal_vars = cohesive_zones_bank.delta_internal_vars;
-                            
-                            // cache number of prony terms on host so it can be captured into device kernel
-                            const int npr_host = num_prony_terms;
-
-                            // launch device kernel to update internal variables with stage increments
-                            RUN({
-
-                            // use the smaller of the two row counts as a safety gaurd in case mismatched numbers of cohesive zone node pairs
-                            const size_t npairs_use = (cz_internal_vars.dims(0) < cz_delta_internal_vars.dims(0))
-                                ? cz_internal_vars.dims(0) : cz_delta_internal_vars.dims(0);
-                            
-                            // use the smaller of the two column counts as a safety gaurd in case mismatched widths
-                            const size_t width_use = (cz_internal_vars.dims(1) < cz_delta_internal_vars.dims(1))
-                                ? cz_internal_vars.dims(1) : cz_delta_internal_vars.dims(1);
-
-                            // columns 0..3 reserved for:
-                            // 0: lambda_dot_t
-                            // 1: alpha
-                            // 2: Tn (normal traction)
-                            // 3: Tt (tangential traction)
-                            
-                            // any columns beyond 4 are Prony-history terms
-                            // max number of Prony terms supported by this array width is width_use - 4
-                            const int npr_max = (width_use > 4) ? static_cast<int>(width_use - 4) : 0;
-
-                            // use smaller of:
-                            // number of Prony terms specified by the BC parameters, or
-                            // the number of Prony columns that actually fit in the array
-                            const int npr_use = (npr_host < npr_max) ? npr_host : npr_max;
-
-                            // loop over all cohesive zone node pairs 
-                            for (size_t i = 0; i < npairs_use; ++i) {
-
-                                // 0: lambda_dot_t (store current rate)
-                                if (width_use > 0) {
-                                    cz_internal_vars(i, 0) = cz_delta_internal_vars(i, 0);
-                                }
-
-                                // 1: alpha (accumulate damage)
-                                // accumulated damage increment
-                                if (width_use > 1) {
-                                    cz_internal_vars(i, 1) += cz_delta_internal_vars(i, 1);
-                                }
-
-                                // 2, 3: tractions at t+dt become the “current” tractions for next step
-                                // update committted tractions using the stage increment
-                                if (width_use > 2) {
-                                    cz_internal_vars(i, 2) += cz_delta_internal_vars(i, 2);
-                                }
-                                if (width_use > 3) {
-                                    cz_internal_vars(i, 3) += cz_delta_internal_vars(i, 3);
-                                }
-
-                                // 4..(4+num_prony_terms-1): Prony stresses at t+dt
-                                for (int j = 0; j < npr_use; ++j) {
-                                    const int col = 4 + j;
-                                    // commit updated Prony stress/history
-                                    cz_internal_vars(i, col) = cz_delta_internal_vars(i, col);
-                                }
-                            }
-                            });
-                            Kokkos::fence();
-                        } // end rk_stage == rk_num_stages - 1
-
-                            // 5) add F_cz into solver's global nodal force array State.node.force
-
-                            // local alias to global nodal force array for cleaner code in the RUN loop
-                            auto node_force = State.node.force;
-                            auto F_cz_local = F_cz;
-
-                            // launch device kernel 
-                            RUN({
-                                // total number of mesh node to loop over
-                                const size_t nmax = num_nodes;
-
-                                // total length of the cohesive force array
-                                // size = 3*num_nodes
-                                const size_t fzlen = F_cz_local.size();
-                                
-                                // loop over all mesh nodes
-                                for (size_t n = 0; n < nmax; ++n) {
-
-                                    // index of z component of node n in the cohesive force array
-                                    const size_t idx2 = 3*n + 2;
-
-                                    // safety gaurd: if cohesive force array smaller than expected,
-                                    // skip this node to avoid out-of-bounds memory access
-                                    if (idx2 >= fzlen) {
-                                        continue;
-                                    }
-
-                                    // add cohesive force x component into global nodal force array
-                                    node_force(n,0) += F_cz_local(3*n    );
-
-                                    // add cohesive force y component into global nodal force array
-                                    node_force(n,1) += F_cz_local(3*n + 1);
-
-                                    // add cohesive force z component into global nodal force array
-                                    node_force(n,2) += F_cz_local(3*n + 2);
-                                }
-                            });
-                            Kokkos::fence();
-                } // end for loop for npairs
-            } // end gaurd if fracture_bdy_set > 0
-        } // end if doing_fracture
-    
-        
-// REORIENTATION TESTING
             // SKIP SGH SOLVER EVOLUTION (REORIENTATION TESTING MODE)
             if (reorient_mode) {
                 continue; // skip update velocity, boundary vel, contact, energy, position, etc.
             }
-// REORIENTATION TESTING           
+
             // apply contact forces to boundary patches
             if (doing_contact) 
             {
@@ -1033,17 +629,14 @@ if (cz_fp &&
         if (time_value >= time_final) {
             break;
         }
-    } 
+    } // end for cycle loop
 
-// end for cycle loop
-    
-// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS 
-                     
-            if (cz_fp) {
-                fclose(cz_fp);
-                cz_fp = nullptr;
-            }
-// THROTTLE OUTPUT COMMENT OUT FOR DESCALING PRINTS
+// FRACTURE DEBUG
+    // finalize debug output file
+    if (doing_fracture) {
+        cohesive_zones_bank.finalize_debug_output();
+    }
+// FRACTURE DEBUG
 
     auto time_2    = std::chrono::high_resolution_clock::now();
     auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_2 - time_1).count();

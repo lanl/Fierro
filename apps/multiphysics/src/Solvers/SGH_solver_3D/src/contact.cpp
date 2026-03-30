@@ -136,6 +136,7 @@ void ref_to_physical(double ref[2], const double A[3][4], double phys[3], const 
     phi(phi_k, ref[0], ref[1], xi, eta);
     phys[0] = 0;
     phys[1] = 0;
+    phys[2] = 0;
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 4; j++) {
             phys[i] += A[i][j]*phi_k[j];
