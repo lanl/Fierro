@@ -50,11 +50,6 @@ struct cohesive_zones_t {
     // constructor
     cohesive_zones_t(); 
 
-    // cohesive_zones_t(const ViewCArrayKokkos<double> &points, const ViewCArrayKokkos<double> &vel_points,
-    //                 const ViewCArrayKokkos<double> &internal_force_points,
-    //                 const ViewCArrayKokkos<double> &fracture_force_points, const ViewCArrayKokkos<double> &mass_points_);
-
-
     // mesh topology initialization
     // finds overlapping node pairs (cohesive zone node pairs_ and builds the cz_info array which contains the element and face connectivity for each cohesive zone node pair)
     void initialize(swage::Mesh& mesh, State_t& State); 
@@ -75,16 +70,6 @@ struct cohesive_zones_t {
         const BoundaryCondition_t& BoundaryConditions,
         bool doing_fracture
     );
-
-    // 
-    bool is_reorientation_mode() const;
-
-    // reorientation kinematics parameters (only used if reorientation mode is on)
-    const CArrayKokkos<double>& get_initial_coords() const;
-    const CArrayKokkos<int>& get_cz_b_side_flag() const;
-    double get_omega_y() const;
-    double get_omega_z() const;
-    double get_cz_opening_rate() const;
 
     // returns true if fracture_BC initialization was successful
     bool is_ready() const;
@@ -138,11 +123,6 @@ struct cohesive_zones_t {
         DCArrayKokkos<size_t>& overlapping_node_gids,
         size_t max_elem_in_cohesive_zone,
         const double tol
-    );
-
-    CArrayKokkos<int> cohesive_zone_faces(
-       DCArrayKokkos<size_t>& overlapping_node_gids,
-       size_t max_elem_in_cohesive_zone
     );
 
     void oriented(

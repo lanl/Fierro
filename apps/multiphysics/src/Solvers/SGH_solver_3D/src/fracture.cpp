@@ -52,19 +52,14 @@ using namespace mtr; // matar namespace
 // initialize fracture BC parameters 
 cohesive_zones_t::cohesive_zones_t() {}
 
-// initialize the identification of cohesive zones
+// initialize the identification of cohesive zones (nodes with overlapping coordinates)
 // this is an algorithim for identifying cohesive zones in a mesh
 // it loops over all nodal coordinates and identifies overlapping nodal coordinate pairs
 void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
-    // the following code counts the number of boundary nodes and checks for node overlaps (2 nodes with the same coordinates)
     // this is the beginning step to setting up cohesive zones for fracture
                    
     // counting the number of boundary nodes
     size_t num_bdy_nodes = mesh.num_bdy_nodes;
-    
-    // debug: print total number of boundary nodes
-    //printf("Total boundary nodes: %zu\n", mesh.num_bdy_nodes);
-
     
     const double tol = 1e-8; //0.000001; //e-3; // adjust as needed; added just in case coordinate pairs are close but not exactly equal
 
@@ -81,7 +76,6 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
     DCArrayKokkos<size_t> pair_count(1, "pair_count");
     pair_count.host(0) = 0;
     pair_count.update_device();    
-
 
     // device side computation
     RUN({
@@ -114,14 +108,8 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
     // copy pair count back to host and print
     pair_count.update_host();
     size_t num_pairs = pair_count.host(0);
-
-    // debug: print number of overlapping node pairs (cohesive zone node pairs) found
-    //printf("Number of overlapping node pairs: %zu\n", num_pairs);
-
-    
+ 
     // allocate only the size of overlapping nodes 
-    //CArrayKokkos<size_t> overlapping_node_gids(pair_count, 2, "overlapping_node_gids");
-    //overlapping_node_gids = CArrayKokkos<size_t> (pair_count, 2, "overlapping_node_gids");
     overlapping_node_gids = DCArrayKokkos<size_t>(num_pairs, 2, "overlapping_node_gids");
 
     // local copy of overlapping_node_gids for device access
@@ -153,11 +141,7 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
                     }
                 }
 
-
                 if (overlap) {
-                    //++pair_count;
-                    // debug: print overlapping node pair global ids 
-                    //printf("Overlap (cohesive zone) found between node %zu and node %zu\n", node_i, node_j);
                     local_overlapping_node_gids(pair_index, 0) = node_i;
                     local_overlapping_node_gids(pair_index, 1) = node_j;
                     ++pair_index;
@@ -168,40 +152,9 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
     }); // end run
     Kokkos::fence();
 
-    
-    //printf("Total overlapping node pairs: %zu\n", pair_count);
-
-    // debug print of the overlapping node pairs and coordinates
-    // RUN({
-    // // print overlapping node coordinates
-    //     for (size_t i = 0; i < pair_count(0); ++i) {
-    //         size_t node_i = local_overlapping_node_gids(i, 0);
-    //         size_t node_j = local_overlapping_node_gids(i, 1);
-
-    //         // debug: print overlapping node pair global ids
-    //         //printf("Overlapping Pair: %zu <-> %zu\n", node_i, node_j);
-
-    //         // debug: print coordinates of the overlapping nodes
-    //         //printf("    Node %zu coords: ", node_i);
-    //         //for (size_t k = 0; k < 3; ++k) {
-    //         //    printf("%g ", node_coords(node_i, k));
-    //         //}
-    //         //printf("\n");
-
-    //         // debug: print coordinates of the overlapping nodes
-    //         //printf("    Node %zu coords: ", node_j);
-    //         //for (size_t k = 0; k < 3; ++k) {
-    //         //    printf("%g ", node_coords(node_j, k));
-    //         //}
-    //         //printf("\n");
-    //     }
-    // }); // end RUN
-    // Kokkos::fence();
-
+    // determine maximum number of elements attached to any overlapping node pair
+    // this determines the max size of the cohesive zone neighborhood and thus the size of the cz_info array
     max_elem_in_cohesive_zone = cohesive_zone_elem_count(overlapping_node_gids, mesh.elems_in_node);
-
-    // debug: print maximum number of elements connected to any cohesive zone node
-    //printf("Max elements connected to any cohesive zone node: %zu\n", max_elem_in_cohesive_zone);
 
     // sync mesh connectivity to device before building cz_info
     mesh.nodes_in_elem.update_device();
@@ -241,7 +194,6 @@ void cohesive_zones_t::initialize_fracture_bc(
         is_initialized = false;
         return;
     }
-
 
     // extract BC parameters from device to host
     const auto& BC = BoundaryConditions;
@@ -303,7 +255,6 @@ void cohesive_zones_t::initialize_fracture_bc(
     // ensure persistent storage for cohesive internal vars
     // internal_vars = persistent history carried across full tme steps
     const int width = 4 + num_prony_terms;
-
     internal_vars = DCArrayKokkos<double>(npairs, width, "cz_internal_vars");
     internal_vars.set_values(0.0);
 
@@ -312,11 +263,10 @@ void cohesive_zones_t::initialize_fracture_bc(
     delta_internal_vars = DCArrayKokkos<double>(npairs, width, "cz_delta_internal_vars");
     delta_internal_vars.set_values(0.0);
 
-    // mrk initialization complete
+    // mrk fracture BC initialization complete
     is_initialized = true;
 
     // print output for setup of cohesive zone constitutive parameters  
-    // E_inf, a1, n
     printf("Cohesive zone constitutive parameters initialized:\n");
     printf("  cohesive zone node pairs = %zu\n", overlapping_node_gids.dims(0));
     printf("  E_inf = %e\n", E_inf);
@@ -467,7 +417,7 @@ void cohesive_zones_t::reset_delta_internal_vars()
     delta_internal_vars.set_values(0.0);
 }
 
-// FRACTURE DEBUG
+// FRACTURE DEBUG ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ============================================================================
 // initialize_debug_output: Open debug file for cohesive zone output
 // ============================================================================
@@ -569,7 +519,7 @@ void cohesive_zones_t::write_debug_output(
     debug_next_cycle += debug_stride;
     fflush(cz_debug_fp);
 }
-// FRACTURE DEBUG
+// FRACTURE DEBUG ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn cohesive_zone_elem_count
@@ -830,18 +780,6 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
     );
     cohesive_zone_info.set_values(-1);
 
-    // intermediate faces table (same shape as original vczfaces)
-    // for each row i:
-    //   slots [0 .. 3*max-1]     : up to 3 faces for each A-side element
-    //   slots [3*max .. 6*max-1] : up to 3 faces for each B-side element
-    // max 3 faces per element corner
-    DCArrayKokkos<int> cohesive_zone_faces(
-        overlapping_node_gids.dims(0),
-        6 * max_elem_in_cohesive_zone,
-        "cohesive_zone_faces"
-    );
-    cohesive_zone_faces.set_values(-1);
-
     FOR_ALL(i, 0, overlapping_node_gids.dims(0), {
         const size_t nodeA = overlapping_node_gids(i, 0);
         const size_t nodeB = overlapping_node_gids(i, 1);
@@ -866,118 +804,34 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
 
             // A-side
-            {
-                const int elemA = cohesive_zone_info(i, 0 + j);
-                if (elemA != -1) {
-                    // find local corner kA of nodeA in elemA
-                    int kA = -1;
-                    for (int k = 0; k < 8; ++k) {
-                        if (nodes_in_elem(static_cast<size_t>(elemA), static_cast<size_t>(k))
-                            == overlapping_node_gids(i, 0)) { kA = k; break; }
-                    }
-                    // store kA slot-keyed in block [4]
-                    cohesive_zone_info(i, 4*max_elem_in_cohesive_zone + j) = kA;
-
-                    // store 3 face candidates for A-slot j
-                    if (kA >= 0) {
-                        switch (kA) { // three faces incident to each local corner k
-                            case 0:
-                                cohesive_zone_faces(i, 3*j + 0) = 0;
-                                cohesive_zone_faces(i, 3*j + 1) = 2;
-                                cohesive_zone_faces(i, 3*j + 2) = 4; break;
-                            case 1:
-                                cohesive_zone_faces(i, 3*j + 0) = 1;
-                                cohesive_zone_faces(i, 3*j + 1) = 2;
-                                cohesive_zone_faces(i, 3*j + 2) = 4; break;
-                            case 2:
-                                cohesive_zone_faces(i, 3*j + 0) = 0;
-                                cohesive_zone_faces(i, 3*j + 1) = 3;
-                                cohesive_zone_faces(i, 3*j + 2) = 4; break;
-                            case 3:
-                                cohesive_zone_faces(i, 3*j + 0) = 1;
-                                cohesive_zone_faces(i, 3*j + 1) = 3;
-                                cohesive_zone_faces(i, 3*j + 2) = 4; break;
-                            case 4:
-                                cohesive_zone_faces(i, 3*j + 0) = 0;
-                                cohesive_zone_faces(i, 3*j + 1) = 2;
-                                cohesive_zone_faces(i, 3*j + 2) = 5; break;
-                            case 5:
-                                cohesive_zone_faces(i, 3*j + 0) = 1;
-                                cohesive_zone_faces(i, 3*j + 1) = 2;
-                                cohesive_zone_faces(i, 3*j + 2) = 5; break;
-                            case 6:
-                                cohesive_zone_faces(i, 3*j + 0) = 0;
-                                cohesive_zone_faces(i, 3*j + 1) = 3;
-                                cohesive_zone_faces(i, 3*j + 2) = 5; break;
-                            case 7:
-                                cohesive_zone_faces(i, 3*j + 0) = 1;
-                                cohesive_zone_faces(i, 3*j + 1) = 3;
-                                cohesive_zone_faces(i, 3*j + 2) = 5; break;
-                            default: break;
-                        }
-                    }
+            const int elemA = cohesive_zone_info(i, 0 + j);
+            if (elemA != -1) {
+                // find local corner kA of nodeA in elemA
+                int kA = -1;
+                for (int k = 0; k < 8; ++k) {
+                    if (nodes_in_elem(static_cast<size_t>(elemA), static_cast<size_t>(k))
+                        == overlapping_node_gids(i, 0)) { kA = k; break; }
                 }
+                // store kA slot-keyed in block [4]
+                cohesive_zone_info(i, 4*max_elem_in_cohesive_zone + j) = kA;
             }
-
-            // B-side
-            {
                
-                const int elemB = cohesive_zone_info(i, max_elem_in_cohesive_zone + j);
-                if (elemB != -1) {
-                    // find local corner kB of nodeB in elemB
-                    int kB = -1;
-                    for (int k = 0; k < 8; ++k) {
-                        if (nodes_in_elem(static_cast<size_t>(elemB), static_cast<size_t>(k))
-                            == overlapping_node_gids(i, 1)) { kB = k; break; }
-                    }
-                    // store kB slot-keyed in block [5]
-                    cohesive_zone_info(i, 5*max_elem_in_cohesive_zone + j) = kB;
-
-                    // store 3 face candidates for B-slot j (upper half offset = 3*max)
-                    const size_t base = 3*max_elem_in_cohesive_zone + 3*j;
-                    if (kB >= 0) {
-                        switch (kB) { // three faces incident to each local corner k
-                            case 0:
-                                cohesive_zone_faces(i, base + 0) = 0;
-                                cohesive_zone_faces(i, base + 1) = 2;
-                                cohesive_zone_faces(i, base + 2) = 4; break;
-                            case 1:
-                                cohesive_zone_faces(i, base + 0) = 1;
-                                cohesive_zone_faces(i, base + 1) = 2;
-                                cohesive_zone_faces(i, base + 2) = 4; break;
-                            case 2:
-                                cohesive_zone_faces(i, base + 0) = 0;
-                                cohesive_zone_faces(i, base + 1) = 3;
-                                cohesive_zone_faces(i, base + 2) = 4; break;
-                            case 3:
-                                cohesive_zone_faces(i, base + 0) = 1;
-                                cohesive_zone_faces(i, base + 1) = 3;
-                                cohesive_zone_faces(i, base + 2) = 4; break;
-                            case 4:
-                                cohesive_zone_faces(i, base + 0) = 0;
-                                cohesive_zone_faces(i, base + 1) = 2;
-                                cohesive_zone_faces(i, base + 2) = 5; break;
-                            case 5:
-                                cohesive_zone_faces(i, base + 0) = 1;
-                                cohesive_zone_faces(i, base + 1) = 2;
-                                cohesive_zone_faces(i, base + 2) = 5; break;
-                            case 6:
-                                cohesive_zone_faces(i, base + 0) = 0;
-                                cohesive_zone_faces(i, base + 1) = 3;
-                                cohesive_zone_faces(i, base + 2) = 5; break;
-                            case 7:
-                                cohesive_zone_faces(i, base + 0) = 1;
-                                cohesive_zone_faces(i, base + 1) = 3;
-                                cohesive_zone_faces(i, base + 2) = 5; break;
-                            default: break;
-                        }
-                    }
+            const int elemB = cohesive_zone_info(i, max_elem_in_cohesive_zone + j);
+            if (elemB != -1) {
+                // find local corner kB of nodeB in elemB
+                int kB = -1;
+                for (int k = 0; k < 8; ++k) {
+                    if (nodes_in_elem(static_cast<size_t>(elemB), static_cast<size_t>(k))
+                        == overlapping_node_gids(i, 1)) { kB = k; break; }
                 }
-            }
+                // store kB slot-keyed in block [5]
+                cohesive_zone_info(i, 5*max_elem_in_cohesive_zone + j) = kB;
+            }   
         }
     }
     }); // end RUN
     Kokkos::fence();
+
     RUN({
     // find ALL opposing/coincident face matches (one per element slot)
     for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
@@ -1015,85 +869,84 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
             }
         };
 
-    
-    // loop over A element slots; fill at most one match per A slot
-    for (size_t slotA = 0; slotA < max_elem_in_cohesive_zone; ++slotA) {
+        // loop over A element slots; fill at most one match per A slot
+        for (size_t slotA = 0; slotA < max_elem_in_cohesive_zone; ++slotA) {
 
-        // element A
-        const int eA = cohesive_zone_info(i, 0*max_elem_in_cohesive_zone + slotA);
-        if (eA < 0) continue;
+            // element A
+            const int eA = cohesive_zone_info(i, 0*max_elem_in_cohesive_zone + slotA);
+            if (eA < 0) continue;
 
-        // skip if this A slot already has a matched face (filled earlier)
-        if (cohesive_zone_info(i, 2*max_elem_in_cohesive_zone + slotA) >= 0) continue;
+            // skip if this A slot already has a matched face (filled earlier)
+            if (cohesive_zone_info(i, 2*max_elem_in_cohesive_zone + slotA) >= 0) continue;
 
-        // corner kA
-        const int kA = cohesive_zone_info(i, 4*max_elem_in_cohesive_zone + slotA);
-        if (kA < 0) continue;
+            // corner kA
+            const int kA = cohesive_zone_info(i, 4*max_elem_in_cohesive_zone + slotA);
+            if (kA < 0) continue;
 
-        // candidate faces for A slot
-        int fA_cand[3]; push_three_faces(kA, fA_cand);
-        bool matched_this_A_slot = false;
+            // candidate faces for A slot
+            int fA_cand[3]; push_three_faces(kA, fA_cand);
+            bool matched_this_A_slot = false;
 
-        // search A side
-        for (int tA = 0; tA < 3 && !matched_this_A_slot; ++tA) {
-            const int fA = fA_cand[tA];
-            if (fA < 0) continue;
+            // search A side
+            for (int tA = 0; tA < 3 && !matched_this_A_slot; ++tA) {
+                const int fA = fA_cand[tA];
+                if (fA < 0) continue;
 
-            // compute A face geometry
-            cohesive_zones_t::compute_face_geometry(nodes_in_elem, node_coords,
-                      static_cast<size_t>(fA), static_cast<size_t>(eA),
-                      nAj, rAj, sAj, cAj);
+                // compute A face geometry
+                cohesive_zones_t::compute_face_geometry(nodes_in_elem, node_coords,
+                        static_cast<size_t>(fA), static_cast<size_t>(eA),
+                        nAj, rAj, sAj, cAj);
 
-            // search B side
-            for (size_t slotB = 0; slotB < max_elem_in_cohesive_zone && !matched_this_A_slot; ++slotB) {
-                const int eB = cohesive_zone_info(i, 1*max_elem_in_cohesive_zone + slotB);
-                if (eB < 0) continue;
+                // search B side
+                for (size_t slotB = 0; slotB < max_elem_in_cohesive_zone && !matched_this_A_slot; ++slotB) {
+                    const int eB = cohesive_zone_info(i, 1*max_elem_in_cohesive_zone + slotB);
+                    if (eB < 0) continue;
 
-                // skip B slot if already filled
-                if (cohesive_zone_info(i, 3*max_elem_in_cohesive_zone + slotB) >= 0) continue;
+                    // skip B slot if already filled
+                    if (cohesive_zone_info(i, 3*max_elem_in_cohesive_zone + slotB) >= 0) continue;
 
-                // corner kB
-                const int kB = cohesive_zone_info(i, 5*max_elem_in_cohesive_zone + slotB);
-                if (kB < 0) continue;
+                    // corner kB
+                    const int kB = cohesive_zone_info(i, 5*max_elem_in_cohesive_zone + slotB);
+                    if (kB < 0) continue;
 
-                // candidate faces for B slot
-                int fB_cand[3]; push_three_faces(kB, fB_cand);
+                    // candidate faces for B slot
+                    int fB_cand[3]; push_three_faces(kB, fB_cand);
 
-                // search B candidate faces
-                for (int tB = 0; tB < 3 && !matched_this_A_slot; ++tB) {
-                    const int fB = fB_cand[tB];
-                    if (fB < 0) continue;
+                    // search B candidate faces
+                    for (int tB = 0; tB < 3 && !matched_this_A_slot; ++tB) {
+                        const int fB = fB_cand[tB];
+                        if (fB < 0) continue;
 
-                    // compute B face geometry
-                    cohesive_zones_t::compute_face_geometry(nodes_in_elem, node_coords,
-                        static_cast<size_t>(fB), static_cast<size_t>(eB),
-                        nBk, rBk, sBk, cBk);
+                        // compute B face geometry
+                        cohesive_zones_t::compute_face_geometry(nodes_in_elem, node_coords,
+                            static_cast<size_t>(fB), static_cast<size_t>(eB),
+                            nBk, rBk, sBk, cBk);
 
-                    // ABS centroid distance + opposite normals
-                    const double dx = cAj(0) - cBk(0);
-                    const double dy = cAj(1) - cBk(1);
-                    const double dz = cAj(2) - cBk(2);
-                    const double dist = sqrt(dx*dx + dy*dy + dz*dz);
-                    const double dot  = nAj(0)*nBk(0) + nAj(1)*nBk(1) + nAj(2)*nBk(2);
+                        // ABS centroid distance + opposite normals
+                        const double dx = cAj(0) - cBk(0);
+                        const double dy = cAj(1) - cBk(1);
+                        const double dz = cAj(2) - cBk(2);
+                        const double dist = sqrt(dx*dx + dy*dy + dz*dz);
+                        const double dot  = nAj(0)*nBk(0) + nAj(1)*nBk(1) + nAj(2)*nBk(2);
 
-                    // check that match is within tolerance
-                    // A and B faces are considered the same physical interface if:
-                    // 1) their representative centroids are within tol, AND
-                    // 2) their normals are nearly opposite (dot <= -1 + tol)
+                        // check that match is within tolerance
+                        // A and B faces are considered the same physical interface if:
+                        // 1) their representative centroids are within tol, AND
+                        // 2) their normals are nearly opposite (dot <= -1 + tol)
 
-                    if (dist <= tol && dot <= -1.0 + tol) {
+                        if (dist <= tol && dot <= -1.0 + tol) {
 
-                        // record the match in the following slots
-                        cohesive_zone_info(i, 2*max_elem_in_cohesive_zone + slotA) = fA; // A-face for A slot
-                        cohesive_zone_info(i, 3*max_elem_in_cohesive_zone + slotB) = fB; // B-face for B slot
-                        matched_this_A_slot = true; // done with this A slot; move to next A slot
+                            // record the match in the following slots
+                            cohesive_zone_info(i, 2*max_elem_in_cohesive_zone + slotA) = fA; // A-face for A slot
+                            cohesive_zone_info(i, 3*max_elem_in_cohesive_zone + slotB) = fB; // B-face for B slot
+                            matched_this_A_slot = true; // done with this A slot; move to next A slot
+                        }
                     }
                 }
             }
         }
-    }
 
-} // end for overlapping_node_gids
+    } // end for overlapping_node_gids
     }); // end RUN
     Kokkos::fence();
 
@@ -1180,39 +1033,38 @@ void cohesive_zones_t::oriented(
     // looping through each cohesive zone pair
     RUN({
     for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
-    double nA_t_buf[3];
-    double rA_t_buf[3];
-    double sA_t_buf[3];
-    double cA_t_buf[3];
-    double nB_t_buf[3];
-    double rB_t_buf[3];
-    double sB_t_buf[3];
-    double cB_t_buf[3];
-    double nA_dt_buf[3];
-    double rA_dt_buf[3];
-    double sA_dt_buf[3];
-    double cA_dt_buf[3];
-    double nB_dt_buf[3];
-    double rB_dt_buf[3];
-    double sB_dt_buf[3];
-    double cB_dt_buf[3];
-    ViewCArrayKokkos<double> nA_t (&nA_t_buf[0], 3);
-    ViewCArrayKokkos<double> rA_t (&rA_t_buf[0], 3);
-    ViewCArrayKokkos<double> sA_t (&sA_t_buf[0], 3);
-    ViewCArrayKokkos<double> cA_t (&cA_t_buf[0], 3);
-    ViewCArrayKokkos<double> nB_t (&nB_t_buf[0], 3);
-    ViewCArrayKokkos<double> rB_t (&rB_t_buf[0], 3);
-    ViewCArrayKokkos<double> sB_t (&sB_t_buf[0], 3);
-    ViewCArrayKokkos<double> cB_t (&cB_t_buf[0], 3);
-    ViewCArrayKokkos<double> nA_dt(&nA_dt_buf[0], 3);
-    ViewCArrayKokkos<double> rA_dt(&rA_dt_buf[0], 3);
-    ViewCArrayKokkos<double> sA_dt(&sA_dt_buf[0], 3);
-    ViewCArrayKokkos<double> cA_dt(&cA_dt_buf[0], 3);
-    ViewCArrayKokkos<double> nB_dt(&nB_dt_buf[0], 3);
-    ViewCArrayKokkos<double> rB_dt(&rB_dt_buf[0], 3);
-    ViewCArrayKokkos<double> sB_dt(&sB_dt_buf[0], 3);
-    ViewCArrayKokkos<double> cB_dt(&cB_dt_buf[0], 3);
-
+        double nA_t_buf[3];
+        double rA_t_buf[3];
+        double sA_t_buf[3];
+        double cA_t_buf[3];
+        double nB_t_buf[3];
+        double rB_t_buf[3];
+        double sB_t_buf[3];
+        double cB_t_buf[3];
+        double nA_dt_buf[3];
+        double rA_dt_buf[3];
+        double sA_dt_buf[3];
+        double cA_dt_buf[3];
+        double nB_dt_buf[3];
+        double rB_dt_buf[3];
+        double sB_dt_buf[3];
+        double cB_dt_buf[3];
+        ViewCArrayKokkos<double> nA_t (&nA_t_buf[0], 3);
+        ViewCArrayKokkos<double> rA_t (&rA_t_buf[0], 3);
+        ViewCArrayKokkos<double> sA_t (&sA_t_buf[0], 3);
+        ViewCArrayKokkos<double> cA_t (&cA_t_buf[0], 3);
+        ViewCArrayKokkos<double> nB_t (&nB_t_buf[0], 3);
+        ViewCArrayKokkos<double> rB_t (&rB_t_buf[0], 3);
+        ViewCArrayKokkos<double> sB_t (&sB_t_buf[0], 3);
+        ViewCArrayKokkos<double> cB_t (&cB_t_buf[0], 3);
+        ViewCArrayKokkos<double> nA_dt(&nA_dt_buf[0], 3);
+        ViewCArrayKokkos<double> rA_dt(&rA_dt_buf[0], 3);
+        ViewCArrayKokkos<double> sA_dt(&sA_dt_buf[0], 3);
+        ViewCArrayKokkos<double> cA_dt(&cA_dt_buf[0], 3);
+        ViewCArrayKokkos<double> nB_dt(&nB_dt_buf[0], 3);
+        ViewCArrayKokkos<double> rB_dt(&rB_dt_buf[0], 3);
+        ViewCArrayKokkos<double> sB_dt(&sB_dt_buf[0], 3);
+        ViewCArrayKokkos<double> cB_dt(&cB_dt_buf[0], 3);
 
         // accumulators for averaving normals of cohesive zone faces
         //double sum_t [3] = {0.0, 0.0, 0.0};
@@ -1240,31 +1092,24 @@ void cohesive_zones_t::oriented(
             }            
         
         
-        // compute A-side normal at t (reference) and t+dt (current)
-        cohesive_zones_t::compute_face_geometry(nodes_in_elem, node_coords,
-                              static_cast<size_t>(fA), static_cast<size_t>(eA),
-                              nA_t, rA_t, sA_t, cA_t);
-        cohesive_zones_t::compute_face_geometry(nodes_in_elem, node_coords,
-                              static_cast<size_t>(fA), static_cast<size_t>(eA),
-                              nA_dt, rA_dt, sA_dt, cA_dt);
+            // compute A-side normal at t (reference) and t+dt (current)
+            cohesive_zones_t::compute_face_geometry(nodes_in_elem, node_coords,
+                                static_cast<size_t>(fA), static_cast<size_t>(eA),
+                                nA_t, rA_t, sA_t, cA_t);
+            cohesive_zones_t::compute_face_geometry(nodes_in_elem, node_coords,
+                                static_cast<size_t>(fA), static_cast<size_t>(eA),
+                                nA_dt, rA_dt, sA_dt, cA_dt);
 
-        // optional: compute B at t for a quick sanity check (opposing normals)            
-        //compute_face_geometry(pos,   mesh, pos,   mesh.nodes_in_elem,
-        //                      static_cast<size_t>(fB), static_cast<size_t>(eB),
-        //                      nB_t, rB_t, sB_t, cB_t);
-
-
-
-        // accumulate normals
-        // reference normal = nA_t (reference)
-        // current normal = nA_dt (current)        
-        sum_t [0] += nA_t (0);  
-        sum_t [1] += nA_t (1);
-        sum_t [2] += nA_t (2);
-        sum_dt[0] += nA_dt(0);  
-        sum_dt[1] += nA_dt(1);  
-        sum_dt[2] += nA_dt(2);
-        cnt += 1;        
+            // accumulate normals
+            // reference normal = nA_t (reference)
+            // current normal = nA_dt (current)        
+            sum_t [0] += nA_t (0);  
+            sum_t [1] += nA_t (1);
+            sum_t [2] += nA_t (2);
+            sum_dt[0] += nA_dt(0);  
+            sum_dt[1] += nA_dt(1);  
+            sum_dt[2] += nA_dt(2);
+            cnt += 1;        
         } // end for j
         
 
@@ -1298,6 +1143,7 @@ void cohesive_zones_t::oriented(
                             current_norm[1] = sum_t [1]/mag_t;  
                             current_norm[2] = sum_t [2]/mag_t; 
         }
+
         if (mag_dt > 0.0) { next_norm[0] = sum_dt[0]/mag_dt;
                             next_norm[1] = sum_dt[1]/mag_dt;
                             next_norm[2] = sum_dt[2]/mag_dt; 
@@ -1482,7 +1328,6 @@ void cohesive_zones_t::ucmap(
 ///        delta_internal_vars(i,4+j) = updated Prony branch variable (stage-advanced sigma_j)
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void cohesive_zones_t::cohesive_zone_var_update(
     const DCArrayKokkos<double>& local_opening,
     const double dt_stage, 
@@ -1653,7 +1498,6 @@ void cohesive_zones_t::cohesive_zone_var_update(
 /// \param pair_area Output (num_pairs): stored effective area per pair (useful for debugging/verification).
 /// \param F_cz Output global force vector (3*num_nodes): cohesive nodal forces accumulated as [Fx,Fy,Fz] per node.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void cohesive_zones_t::cohesive_zone_loads(
     DCArrayKokkos<size_t>& nodes_in_elem,
     const DCArrayKokkos<double> &node_coords,
