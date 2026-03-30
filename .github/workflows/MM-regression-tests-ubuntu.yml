@@ -1,0 +1,81 @@
+name: Micromechanics EVPFFT Regression Tests (Ubuntu)
+
+on:
+  push:
+    branches: [ main, CMake_build ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  regression-tests:
+    name: EVPFFT Regression Tests (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: OpenMP Release
+            build_type: Release
+            cmake_args: -DOPENMP=ON -DUSE_FFTW=ON
+            omp_threads: 2
+          - name: Serial Debug
+            build_type: Debug
+            cmake_args: -DTHREADS=ON -DUSE_FFTW=ON
+            omp_threads: 1
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            build-essential \
+            cmake \
+            python3 \
+            python3-pip \
+            libopenmpi-dev \
+            openmpi-bin \
+            libfftw3-dev \
+            libhdf5-openmpi-dev
+
+      - name: Configure EVPFFT
+        run: |
+          mkdir -p apps/micromechanics/EVPFFT/build
+          cd apps/micromechanics/EVPFFT/build
+          cmake \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            ${{ matrix.cmake_args }} \
+            -DCMAKE_PREFIX_PATH="/usr/lib/x86_64-linux-gnu/hdf5/openmpi" \
+            ../src
+
+      - name: Build EVPFFT
+        run: |
+          cd apps/micromechanics/EVPFFT/build
+          make -j"$(nproc)"
+
+      - name: Run micromechanics regression suite
+        env:
+          OMP_NUM_THREADS: ${{ matrix.omp_threads }}
+        run: |
+          if [ -f apps/micromechanics/regression_tests/run_regression_tests.py ]; then
+            cd apps/micromechanics/regression_tests
+            python3 run_regression_tests.py \
+              --binary ../EVPFFT/build/evpfft \
+              --suite evpfft \
+              --expected-results expected_results/evpfft
+          else
+            echo "Micromechanics regression suite not found yet."
+            echo "Expected path: apps/micromechanics/regression_tests/run_regression_tests.py"
+            echo "Running EVPFFT smoke test instead."
+            cd apps/micromechanics/EVPFFT
+            cp example_input_files/example_evpfft_standalone_inputfile.txt ./ci_evpfft_input.txt
+            sed -i "s|/absolute/path/to/random_microstructure_8x8x8.txt|$PWD/example_input_files/random_microstructure_8x8x8.txt|g" ./ci_evpfft_input.txt
+            sed -i "s|/absolute/path/to/example_plastic_parameters.txt|$PWD/example_input_files/example_plastic_parameters.txt|g" ./ci_evpfft_input.txt
+            sed -i "s|/absolute/path/to/example_elastic_parameters.txt|$PWD/example_input_files/example_elastic_parameters.txt|g" ./ci_evpfft_input.txt
+            ./build/evpfft --infile=./ci_evpfft_input.txt
+          fi
