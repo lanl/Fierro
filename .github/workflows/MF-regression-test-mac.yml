@@ -1,4 +1,4 @@
-name: Regression Tests (Ubuntu)
+name: Multiphysics Regression Tests (macOS)
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 jobs:
   Regression-Tests:
     name: Regression Tests (${{ matrix.name }})
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
@@ -32,23 +32,37 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-        fetch-depth: 1  # Only gets the latest commit, much faster
+        fetch-depth: 1
 
     - name: Install dependencies
       run: |
-        sudo apt-get update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake libopenmpi-dev openmpi-bin libblas-dev liblapack-dev python3
+        brew update
+        brew install cmake openmpi libomp openblas lapack python3 gcc bison@3.8
+        echo "/opt/homebrew/opt/bison@3.8/bin" >> $GITHUB_PATH
 
     - name: Configure CMake
+      env:
+        CC: /usr/bin/cc
+        CXX: /usr/bin/c++
+        FC: gfortran-14
+        LDFLAGS: "-L/opt/homebrew/opt/libomp/lib"
+        CPPFLAGS: "-I/opt/homebrew/opt/libomp/include"
+        OpenMP_ROOT: "/opt/homebrew/opt/libomp"
       run: |
         mkdir -p apps/multiphysics/build
         cd apps/multiphysics/build
-        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_args }} ..
+        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_args }} \
+              -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include" \
+              -DOpenMP_C_LIB_NAMES="omp" \
+              -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include" \
+              -DOpenMP_CXX_LIB_NAMES="omp" \
+              -DOpenMP_omp_LIBRARY="/opt/homebrew/opt/libomp/lib/libomp.dylib" \
+              ..
 
     - name: Build Fierro
       run: |
         cd apps/multiphysics/build
-        make -j$(nproc)
+        make -j1
 
     - name: Run Regression Tests
       env:
