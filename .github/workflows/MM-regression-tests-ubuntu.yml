@@ -16,13 +16,13 @@ jobs:
       matrix:
         include:
           - name: OpenMP Release
-            build_type: Release
-            cmake_args: -DOPENMP=ON -DUSE_FFTW=ON
+            kokkos_build_type: openmp
             omp_threads: 2
-          - name: Serial Debug
-            build_type: Debug
-            cmake_args: -DTHREADS=ON -DUSE_FFTW=ON
+            build_args: --heffte_build_type=fftw --kokkos_build_type=openmp --build_fftw --build_hdf5
+          - name: Serial Release
+            kokkos_build_type: serial
             omp_threads: 1
+            build_args: --heffte_build_type=fftw --kokkos_build_type=serial --build_fftw --build_hdf5
 
     steps:
       - uses: actions/checkout@v4
@@ -36,36 +36,35 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
             build-essential \
             cmake \
+            git \
             python3 \
             python3-pip \
             libopenmpi-dev \
             openmpi-bin \
             libfftw3-dev \
+            libfftw3-mpi-dev \
             libhdf5-openmpi-dev
 
-      - name: Configure EVPFFT
+      - name: Build EVPFFT via project build script
         run: |
-          mkdir -p apps/micromechanics/EVPFFT/build
-          cd apps/micromechanics/EVPFFT/build
-          cmake \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            ${{ matrix.cmake_args }} \
-            -DCMAKE_PREFIX_PATH="/usr/lib/x86_64-linux-gnu/hdf5/openmpi" \
-            ../src
-
-      - name: Build EVPFFT
-        run: |
-          cd apps/micromechanics/EVPFFT/build
-          make -j"$(nproc)"
+          cd apps/micromechanics/EVPFFT
+          chmod +x ./scripts/build_scripts/build_evpfft.sh
+          ./scripts/build_scripts/build_evpfft.sh ${{ matrix.build_args }} --num_jobs=$(nproc)
 
       - name: Run micromechanics regression suite
         env:
           OMP_NUM_THREADS: ${{ matrix.omp_threads }}
         run: |
+          EVPFFT_BINARY="apps/micromechanics/EVPFFT/evpfft_fftw_${{ matrix.kokkos_build_type }}/evpfft"
+          if [ ! -x "$EVPFFT_BINARY" ]; then
+            echo "Expected EVPFFT binary not found: $EVPFFT_BINARY"
+            exit 1
+          fi
+
           if [ -f apps/micromechanics/regression_tests/run_regression_tests.py ]; then
             cd apps/micromechanics/regression_tests
             python3 run_regression_tests.py \
-              --binary ../EVPFFT/build/evpfft \
+              --binary "../EVPFFT/evpfft_fftw_${{ matrix.kokkos_build_type }}/evpfft" \
               --suite evpfft \
               --expected-results expected_results/evpfft
           else
@@ -77,5 +76,5 @@ jobs:
             sed -i "s|/absolute/path/to/random_microstructure_8x8x8.txt|$PWD/example_input_files/random_microstructure_8x8x8.txt|g" ./ci_evpfft_input.txt
             sed -i "s|/absolute/path/to/example_plastic_parameters.txt|$PWD/example_input_files/example_plastic_parameters.txt|g" ./ci_evpfft_input.txt
             sed -i "s|/absolute/path/to/example_elastic_parameters.txt|$PWD/example_input_files/example_elastic_parameters.txt|g" ./ci_evpfft_input.txt
-            ./build/evpfft --infile=./ci_evpfft_input.txt
+            "./evpfft_fftw_${{ matrix.kokkos_build_type }}/evpfft" --infile=./ci_evpfft_input.txt
           fi
