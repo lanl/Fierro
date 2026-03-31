@@ -1,69 +1,121 @@
-#ifndef Fracture_H
-#define Fracture_H
+/**********************************************************************************************
+� 2020. Triad National Security, LLC. All rights reserved.
+This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+Department of Energy/National Nuclear Security Administration. All rights in the program are
+reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+Security Administration. The Government is granted for itself and others acting on its behalf a
+nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+derivative works, distribute copies to the public, perform publicly and display publicly, and
+to permit others to do so.
+This program is open source under the BSD-3 License.
+Redistribution and use in source and binary forms, with or without modification, are permitted
+provided that the following conditions are met:
+1.  Redistributions of source code must retain the above copyright notice, this list of
+conditions and the following disclaimer.
+2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+conditions and the following disclaimer in the documentation and/or other materials
+provided with the distribution.
+3.  Neither the name of the copyright holder nor the names of its contributors may be used
+to endorse or promote products derived from this software without specific prior
+written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**********************************************************************************************/
+
+#ifndef FRACTURE_H
+#define FRACTURE_H
 #include "matar.h"
 #include "mesh_io.hpp"
 #include "state.hpp"
 #include "simulation_parameters.hpp"
 #include "boundary_conditions.hpp"
 
-// struct for fracture cohesive zones
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+/// \struct cohesive_zones_t
+///
+/// \brief Manages cohesive zone fracture modeling including mesh topology,
+///        constitutive response, and nodal force assembly.
+///
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct cohesive_zones_t {
-    // member functions defined in this header file and sized inside of the source file
-    
-    // member variables
-    DCArrayKokkos <size_t> overlapping_node_gids; // node pairs with overlapping coordinates ; // will need to size this inside of a function in the source file 
-    DCArrayKokkos<int> cz_info;
-    size_t max_elem_in_cohesive_zone = 0;
 
-    // fracture BC parameters (set once in initialize; used in function cohesive_zone_var_update)
-    double E_inf = 0.0;
-    double a1 = 0.0;
-    double n_exp = 0.0;
-    double u_n_star = 1.0; // placeholder until fracture BC initialization; protect from div by 0
-    double u_t_star = 1.0; // placeholder until fracture BC initialization; protect from div by 0
-    int num_prony_terms = 0;
+    // =============================================================================================================
+    //                          MEMBER VARIABLES
+    // =============================================================================================================
+
+    // --- mesh topology --- 
+    DCArrayKokkos <size_t> overlapping_node_gids; // node pairs with overlapping coordinates (cohesive zone node pairs)
+    DCArrayKokkos<int> cz_info; // element/face connectivity info per cohesive zone node pair
+    size_t max_elem_in_cohesive_zone = 0; // max number of elements attached to any cohesive zone node pair (used to size cz_info blocks)
+    size_t num_nodes = 0; // total number of nodes in the mesh
+
+    // --- cohesive zone constiutive model parameters ---
+    double E_inf = 0.0; // prony constant term
+    double a1 = 0.0; // internal damage parameter
+    double n_exp = 0.0; // power of damage evolution law
+    double u_n_star = 1.0; // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0)
+    double u_t_star = 1.0; // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0
+    int num_prony_terms = 0; // number of prony series terms
     DCArrayKokkos<double> prony_params;  // (2 * num_prony_terms): [E_j, tau_j] pairs    
 
-    // mesh info
-    size_t num_nodes = 0;
+    // --- inernal state variables for cohesive zone constitutive model ---
+    DCArrayKokkos<double> internal_vars;
+    DCArrayKokkos<double> delta_internal_vars;
+
+    // --- initialization flags ---
     int fracture_bdy_set = -1;
-    bool is_initialized = false;;
+    bool is_initialized = false;
 
-    // reorientation validation mode members
+    // --- fracture reorientation validation mode ---
     bool reorientation_validation_mode = false;
-    double omega_y = 0.0;
-    double omega_z = 0.0;
-    double cz_opening_rate = 0.0;
-    double x_interface = 0.0;
-    CArrayKokkos<double> initial_coords;
-    CArrayKokkos<int> cz_b_side_flag;
+    double omega_y = 0.0; // rotation about x2 axis (rad/time)
+    double omega_z = 0.0; // rotation about x3 axis (rad/time)
+    double cz_opening_rate = 0.0; // constant rate of opening for cohesive zone interface
+    double x_interface = 0.0; // x inferface location for reorientation validation mode
+    CArrayKokkos<double> initial_coords; // initial nodal coordinates of the mesh
+    CArrayKokkos<int> cz_b_side_flag; // flag for nodes on B side of interface for opening 
 
-    // debug output members
-    FILE* cz_debug_fp = nullptr;;
-    bool debug_output_enabled = false;
-    double debug_output_dt = 1e-3;
-    size_t debug_stride = 0;
-    size_t debug_next_cycle = 0;
-    bool debug_stride_initialized = false;
+    // =====================================================================================================================
+    //                          INITIALIZATION AND UPDATE FUNCTIONS
+    // =====================================================================================================================
 
-    // constructor
+    // \brief default constructor
     cohesive_zones_t(); 
 
-    // mesh topology initialization
-    // finds overlapping node pairs (cohesive zone node pairs_ and builds the cz_info array which contains the element and face connectivity for each cohesive zone node pair)
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn initialize
+    ///
+    /// \brief Initialize mesh topology: find overlapping node pairs (cohesive zone node pairs) and build cz_info
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void initialize(swage::Mesh& mesh, State_t& State); 
     
-    // fracture consitiuitive model BC initialization
-    // reads in cohesive zone constitutive parameters from the fractureStressBC entries in BoundaryConditions
-    // and stores them in member variables for later use in the cohesive_zone_var_update function
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn initialize_fracture_bc
+    ///
+    /// \brief Initialize fracture BC: set cohesive zone constitutive parameters from .yaml input
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void initialize_fracture_bc(
         const swage::Mesh& mesh,
         const BoundaryCondition_t& BoundaryConditions,
         int fracture_bdy_set
     );
 
-    // fracture reorientation validation mode initialization
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn initialize_reorientation_mode
+    ///
+    /// \brief Initialize fracture reorientation validation mode (for testing)
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void initialize_reorientation_mode(
         const swage::Mesh& mesh,
         State_t& State,
@@ -71,13 +123,21 @@ struct cohesive_zones_t {
         bool doing_fracture
     );
 
-    // returns true if fracture_BC initialization was successful
+    /// \brief returns true if fracture_BC initialization was successful
     bool is_ready() const;
 
-    // reset delta_internal_vars to zero (call at start of each RK stage)
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn reset_delta_internal_vars
+    ///
+    /// \brief reset delta_internal_vars to zero (call at start of each RK stage)
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void reset_delta_internal_vars();
 
-    // compute cohesive zone nodal forces for this RK stage
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn compute_cohesive_zone_nodal_forces
+    ///
+    /// \brief compute cohesive zone nodal forces for this Rk stage
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
     void compute_cohesive_zone_nodal_forces(
         swage::Mesh& mesh,
         State_t& State,
@@ -88,21 +148,38 @@ struct cohesive_zones_t {
         size_t rk_num_stages,
         CArrayKokkos<double>& F_cz);
 
-    // commit internal variable updates (call only at final RK stage)
-    // final RK stage call keeps consistent with forward euler incrementilization of the cohesive zone
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn commit_internal_vars
+    ///
+    /// \brief commit internal variable updates (call only at final RK stage: constistent with Forward Euler 
+    ///        incrementalization of the cohesive zone)
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     void commit_internal_vars(size_t rk_stage, size_t rk_num_stages);
 
-    // add cohesive zon foces to global nodal force array (State.node.force)
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn add_cohesive_zone_nodal_forces
+    ///
+    /// \brief add cohesive zon foces to global nodal force array (State.node.force)
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     void add_cohesive_zone_nodal_forces(
         DCArrayKokkos<double>& node_force,
         const CArrayKokkos<double>& F_cz,
         size_t num_nodes
     );
 
-    // START OF FRACTURE FUNCTION AND ARRAY DECLARATIONS
+    // =====================================================================================================================
+    //                          FRACTURE PIPELINE FUNCTIONS
+    // =====================================================================================================================
 
-    size_t cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids, const RaggedRightArrayKokkos<size_t>& elems_in_node);
+    /// \brief Count max elements attached to any CZ node pair
+    size_t cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids, 
+        const RaggedRightArrayKokkos<size_t>& elems_in_node);
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn compute_face_geometry
+    ///
+    /// \brief compute face geometry for cohesive zone calculations
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     KOKKOS_FUNCTION
     static void compute_face_geometry(
         const DCArrayKokkos<size_t>& nodes_in_elem,  // just this from mesh
@@ -115,7 +192,12 @@ struct cohesive_zones_t {
         ViewCArrayKokkos<double>& cenface
     );
 
-
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn build_cohesive_zone_info
+    ///
+    /// \brief build cohesive zone connectivity info (cz_info) for each cohesive zone node pair: which elements and faces 
+    ///        are connected to each node in the pair
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     DCArrayKokkos<int> build_cohesive_zone_info(
         RaggedRightArrayKokkos<size_t>& elems_in_node,  // mesh.elems_in_node
         DCArrayKokkos<size_t>& nodes_in_elem,           // mesh.nodes_in_elem
@@ -125,6 +207,11 @@ struct cohesive_zones_t {
         const double tol
     );
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn oriented
+    ///
+    /// \brief compute cohesive zone interface orientation (normal at t and t+dt) for each cohesive zone node pair
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     void oriented(
         DCArrayKokkos<size_t>& nodes_in_elem,
         DCArrayKokkos<double>& node_coords,      // reference  coords (num_nodes x 3) 
@@ -135,6 +222,11 @@ struct cohesive_zones_t {
         DCArrayKokkos<double>& cohesive_zone_orientation       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
     ); 
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn ucmap
+    ///
+    /// \brief map global nodal motion to local cohesive zone openings for each cohesive zone node pair
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     void ucmap(
         const DCArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& vel,
@@ -144,6 +236,11 @@ struct cohesive_zones_t {
         DCArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
     );
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn cohesive_zone_var_update
+    ///
+    /// \brief update cohesive zone variables based on local openings and cohesive zone constitutive parameters
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
     void cohesive_zone_var_update(
         const DCArrayKokkos<double>& local_opening,
         const double dt_stage, 
@@ -151,15 +248,15 @@ struct cohesive_zones_t {
         DCArrayKokkos<size_t>& overlapping_node_gids,
         const double E_inf, const double a1, const double n_exp, const double u_n_star, const double u_t_star, const int num_prony_terms, // cohesive zone parameters
         const DCArrayKokkos<double>& prony_params, // E_j, tau_j pairs
-        //const RaggedRightArrayKokkos<double>& stress_bc_global_vars, // BC parameters per boundary set for fractureStressBC
-        //const int bdy_set,
         const DCArrayKokkos<double>& internal_vars,      // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
         DCArrayKokkos<double>& delta_internal_vars 
     );
 
-    DCArrayKokkos<double> internal_vars;
-    DCArrayKokkos<double> delta_internal_vars;
-
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// \fn cohesive_zone_loads
+    ///
+    /// \brief assemble cohesive zone nodal forces from tractions and effective area for each cohesive zone node pair
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
     void cohesive_zone_loads(
         DCArrayKokkos<size_t>& nodes_in_elem,
         const DCArrayKokkos<double> &node_coords,
@@ -173,22 +270,6 @@ struct cohesive_zones_t {
         CArrayKokkos<double> &F_cz
     ); 
 
-    // END OF FRACTURE FUNCTION AND ARRAY DECLARATIONS
-
-    // FRACTURE DEBUG FUNCTIONS
-    void write_debug_output(
-        DCArrayKokkos<double>& local_opening,
-        double time_value,
-        size_t cycle,
-        size_t rk_stage,
-        size_t rk_num_stages
-    );
-
-    void initialize_debug_output(const std::string& filename, double output_dt);
-
-    void finalize_debug_output();
-
-    void initialize_debug_stride(double dt);
 };
 
 #endif

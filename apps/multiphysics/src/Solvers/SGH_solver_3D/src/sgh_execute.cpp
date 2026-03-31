@@ -33,7 +33,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver_3D.hpp"
-
 #include "simulation_parameters.hpp"
 #include "material.hpp"
 #include "boundary_conditions.hpp"
@@ -45,7 +44,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "fracture_stress_bc.hpp"
 #include "reorientation_kinematics.hpp"
 #include "user_defined_velocity_bc.hpp"
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -91,13 +89,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         );
     }
 
-// FRACTURE DEBUG 
-    // fracture debug output initilization (for validation)
-    if (doing_fracture && cohesive_zones_bank.is_ready()) {
-        cohesive_zones_bank.initialize_debug_output("time_alpha_lambda_traction_outputs.txt", 1e-3);
-    }
-// FRACTURE DEBUG 
-
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;  // 1.e-16
     double tiny  = SimulationParamaters.dynamic_options.tiny;  // 1.e-12
     double small = SimulationParamaters.dynamic_options.small; // 1.e-8
@@ -125,7 +116,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_gauss_in_elem);
     CArrayKokkos <double> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_gauss_in_elem);
     
-
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
@@ -253,12 +243,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         } // end for loop over all mats
 
         dt = min_dt_calc;  // save this dt time step
-
-// FRACTURE DEBUG
-        if (doing_fracture && cohesive_zones_bank.is_ready()) {
-            cohesive_zones_bank.initialize_debug_stride(dt);
-        }
-// FRACTURE DEBUG
 
         if (cycle == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
@@ -630,13 +614,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             break;
         }
     } // end for cycle loop
-
-// FRACTURE DEBUG
-    // finalize debug output file
-    if (doing_fracture) {
-        cohesive_zones_bank.finalize_debug_output();
-    }
-// FRACTURE DEBUG
 
     auto time_2    = std::chrono::high_resolution_clock::now();
     auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_2 - time_1).count();

@@ -45,7 +45,11 @@ namespace ReorientationKinematics
 {
 
 /////////////////////////////////////////////////////////////////////////////
-// Rotation matrix about y-axis (x2)
+///
+/// \fn rotation_matrix_y
+///
+/// \brief Rotation matrix about y-axis (x2)
+///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void rotation_matrix_y(double angle, double R[3][3]) {
@@ -57,7 +61,11 @@ void rotation_matrix_y(double angle, double R[3][3]) {
 }
 
 /////////////////////////////////////////////////////////////////////////////
-// Rotation matrix about z-axis (x3)
+///
+/// \fn rotation_matrix_z
+///
+/// \brief Rotation matrix about z-axis (x3)
+///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void rotation_matrix_z(double angle, double R[3][3]) {
@@ -69,7 +77,11 @@ void rotation_matrix_z(double angle, double R[3][3]) {
 }
 
 /////////////////////////////////////////////////////////////////////////////
-// Multiply two 3x3 matrices: C = A * B
+///
+/// \fn mat_mult_3x3
+///
+/// \brief Multiply two 3x3 matrices: C = A * B; used for computing rotations
+///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void mat_mult_3x3(const double A[3][3], const double B[3][3], double C[3][3]) {
@@ -79,19 +91,6 @@ void mat_mult_3x3(const double A[3][3], const double B[3][3], double C[3][3]) {
             for (int k = 0; k < 3; ++k) {
                 C[i][j] += A[i][k] * B[k][j];
             }
-        }
-    }
-}
-
-/////////////////////////////////////////////////////////////////////////////
-// Apply rotation matrix to a vector: v_out = R * v_in
-/////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
-void rotate_vector(const double R[3][3], const double v_in[3], double v_out[3]) {
-    for (int i = 0; i < 3; ++i) {
-        v_out[i] = 0.0;
-        for (int j = 0; j < 3; ++j) {
-            v_out[i] += R[i][j] * v_in[j];
         }
     }
 }
@@ -168,39 +167,6 @@ inline void prescribe_reorientation_kinematics(
         State.node.vel(node_gid,2) = (ztdt - zt) / dt_stage;
     });
 
-    Kokkos::fence();
-}
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn initialize_b_side_flags
-///
-/// \brief Marks nodes on the B-side of the interface for opening displacement
-///
-/////////////////////////////////////////////////////////////////////////////
-inline void initialize_b_side_flags(
-    const swage::Mesh& mesh,
-    const CArrayKokkos<double>& initial_coords,
-    CArrayKokkos<int>& cz_b_side_flag,
-    double x_interface)
-{
-    const size_t nne = mesh.num_nodes_in_elem;
-
-    FOR_ALL(e, 0, mesh.num_elems, {
-        double xc = 0.0;
-        for (size_t a = 0; a < nne; ++a) {
-            const size_t gid = mesh.nodes_in_elem(e,a);
-            xc += initial_coords(gid,0);
-        }
-        xc /= (double)nne;
-
-        if (xc > x_interface) {
-            for (size_t a = 0; a < nne; ++a) {
-                const size_t gid = mesh.nodes_in_elem(e,a);
-                cz_b_side_flag(gid) = 1;
-            }
-        }
-    });
     Kokkos::fence();
 }
 

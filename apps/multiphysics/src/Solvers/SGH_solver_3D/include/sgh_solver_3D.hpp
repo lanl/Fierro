@@ -142,8 +142,7 @@ class SGH3D : public Solver
 {
 public:
 
-    // cohesive zones bank
-    cohesive_zones_t cohesive_zones_bank; // keeps track of all cohesive zones
+    cohesive_zones_t cohesive_zones_bank; // keeps track of cohesive zone variables
     bool doing_fracture = false; // condition used in SGH::execute
     bool doing_contact = false;  // Condition used in SGH::execute
     bool doing_preload = false;  // Condition used in SGH::execute

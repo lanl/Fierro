@@ -52,11 +52,12 @@ using namespace mtr; // matar namespace
 // initialize fracture BC parameters 
 cohesive_zones_t::cohesive_zones_t() {}
 
-// initialize the identification of cohesive zones (nodes with overlapping coordinates)
-// this is an algorithim for identifying cohesive zones in a mesh
-// it loops over all nodal coordinates and identifies overlapping nodal coordinate pairs
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn initialize
+///
+/// \brief Initialize mesh topology: find overlapping node pairs (cohesive zone node pairs) and build cz_info
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
-    // this is the beginning step to setting up cohesive zones for fracture
                    
     // counting the number of boundary nodes
     size_t num_bdy_nodes = mesh.num_bdy_nodes;
@@ -172,8 +173,11 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
     cz_info.update_host();
 } // end cohesive_zones_t::initialize
 
-// fracture BC initilization function 
-// sets up constitutive parameters
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn initialize_fracture_bc
+///
+/// \brief Initialize fracture BC: set cohesive zone constitutive parameters from .yaml input
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void cohesive_zones_t::initialize_fracture_bc(
     const swage::Mesh& mesh,
     const BoundaryCondition_t& BoundaryConditions,
@@ -286,8 +290,11 @@ void cohesive_zones_t::initialize_fracture_bc(
     }
 }
 
-// initialize_reorientation_mode: detect and setup reorientation validation mode
-// called ONCE before time loop
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn initialize_reorientation_mode
+///
+/// \brief Initialize fracture reorientation validation mode (for testing)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void cohesive_zones_t::initialize_reorientation_mode(
     const swage::Mesh& mesh,
     State_t& State,
@@ -417,117 +424,12 @@ void cohesive_zones_t::reset_delta_internal_vars()
     delta_internal_vars.set_values(0.0);
 }
 
-// FRACTURE DEBUG ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// ============================================================================
-// initialize_debug_output: Open debug file for cohesive zone output
-// ============================================================================
-void cohesive_zones_t::initialize_debug_output(const std::string& filename, double output_dt)
-{
-    cz_debug_fp = fopen(filename.c_str(), "w");
-    if (!cz_debug_fp) {
-        perror("fopen");
-        debug_output_enabled = false;
-        return;
-    }
-
-    // No buffering (writes show up immediately)
-    setvbuf(cz_debug_fp, nullptr, _IONBF, 0);
-
-    // Write header
-    fprintf(cz_debug_fp, "time,alpha,lambda,Tn\n");
-    fflush(cz_debug_fp);
-
-    debug_output_enabled = true;
-    debug_output_dt = output_dt;
-    debug_stride_initialized = false;
-}
-
-// ============================================================================
-// finalize_debug_output: Close debug file
-// ============================================================================
-void cohesive_zones_t::finalize_debug_output()
-{
-    if (cz_debug_fp) {
-        fclose(cz_debug_fp);
-        cz_debug_fp = nullptr;
-    }
-    debug_output_enabled = false;
-}
-
-// ============================================================================
-// initialize_debug_stride: Set stride based on actual dt
-// ============================================================================
-void cohesive_zones_t::initialize_debug_stride(double dt)
-{
-    if (debug_stride_initialized || !debug_output_enabled) {
-        return;
-    }
-
-    debug_stride = (size_t) llround(debug_output_dt / dt);
-    if (debug_stride < 1) debug_stride = 1;
-    debug_next_cycle = 0;
-    debug_stride_initialized = true;
-}
-
-// ============================================================================
-// write_debug_output: Write time, alpha, lambda, Tn to debug file
-// ============================================================================
-void cohesive_zones_t::write_debug_output(
-    DCArrayKokkos<double>& local_opening,
-    double time_value,
-    size_t cycle,
-    size_t rk_stage,
-    size_t rk_num_stages)
-{
-    // Only write at final RK stage and at stride intervals
-    if (!debug_output_enabled || !cz_debug_fp) return;
-    if (rk_stage != rk_num_stages - 1) return;
-    if (cycle != debug_next_cycle) return;
-
-    const size_t npairs = overlapping_node_gids.dims(0);
-    if (npairs == 0) return;
-
-    // Sync data to host for reading
-    local_opening.update_host();
-    internal_vars.update_host();
-    overlapping_node_gids.update_host();
-
-    // Print first cohesive zone node pair values (pair index 0)
-    const size_t p = 0;
-
-    // Read from internal_vars
-    // Column 0: lambda_dot_t (not needed for output)
-    // Column 1: alpha (damage)
-    // Column 2: Tn (normal traction)
-    // Column 3: Tt (tangential traction)
-    const double un_t = local_opening.host(p, 0);
-    const double ut_t = local_opening.host(p, 1);
-
-    double lambda_t = 0.0;
-    if (u_n_star > 0.0 && u_t_star > 0.0) {
-        lambda_t = sqrt(
-            (un_t/u_n_star)*(un_t/u_n_star) +
-            (ut_t/u_t_star)*(ut_t/u_t_star));
-    }
-
-    const double alpha_t = internal_vars.host(p, 1);
-    const double Tn_t = internal_vars.host(p, 2);
-
-    fprintf(cz_debug_fp, "%.9e, %.9e, %.9e, %.9e\n",
-            time_value, alpha_t, lambda_t, fabs(Tn_t));
-
-    debug_next_cycle += debug_stride;
-    fflush(cz_debug_fp);
-}
-// FRACTURE DEBUG ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn cohesive_zone_elem_count
 /// \brief Returns the maximum number of elements connected to any node in the cohesive zone overlapping node pairs
 /// This value is used to size data structures that depend on the maximum connectivity per node
 /// \param overlapping_node_gids 2D array (num_pairs x 2) containing node pairs involved in cohesive zones
 /// \param elems_in_node RaggedRightArray mapping each node to the elements it belongs to
-/// \param mesh Reference to the mesh containing connectivity information
 /// \return Maximum number of elements connected to any node in any cohesive pair
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 size_t cohesive_zones_t::cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids,
@@ -1335,11 +1237,8 @@ void cohesive_zones_t::cohesive_zone_var_update(
     DCArrayKokkos<size_t>& overlapping_node_gids,
     const double E_inf, const double a1, const double n_exp, const double u_n_star, const double u_t_star, const int num_prony_terms, // cohesive zone parameters
     const DCArrayKokkos<double>& prony_params, // E_j, tau_j pairs
-    //const RaggedRightArrayKokkos<double>& stress_bc_global_vars, // BC parameters per boundary set for fractureStressBC
-    //const int bdy_set,
-    const DCArrayKokkos<double>& internal_vars,      // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
+    const DCArrayKokkos<double>& internal_vars, // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
     DCArrayKokkos<double>& delta_internal_vars // (overlapping_node_gids.dims(0), 4 + num_prony_terms) 
-                                                        // lambda_dot_t, d_alpha
 )
 {
     if (!(dt_stage > 0.0)) {
@@ -1786,7 +1685,11 @@ void cohesive_zones_t::cohesive_zone_loads(
     Kokkos::fence();
 }
 
-// calls existing fracture pipeline functionss in sequence 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn compute_cohesive_zone_nodal_forces
+///
+/// \brief compute cohesive zone nodal forces for this Rk stage
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
     swage::Mesh& mesh,
     State_t& State,
@@ -1851,16 +1754,6 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
         internal_vars,
         delta_internal_vars);
 
-// FRACTURE DEBUG
-    write_debug_output(
-        local_opening,
-        time_value,
-        cycle,
-        rk_stage,
-        rk_num_stages
-    );
-// FRACTURE DEBUG
-
     // 4) assemble cohesive zone nodal forces
     CArrayKokkos<double> pair_area(npairs, "cz_pair_area");
     pair_area.set_values(0.0);
@@ -1881,7 +1774,12 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
     Kokkos::fence();
 }
 
-// commit internal_vars only at the last RK stage (to stay consistent with forward euler incrementilization of the cohesive zone)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn commit_internal_vars
+///
+/// \brief commit internal variable updates (call only at final RK stage: constistent with Forward Euler 
+///        incrementalization of the cohesive zone)
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 void cohesive_zones_t::commit_internal_vars(size_t rk_stage, size_t rk_num_stages)
 {
     if (!is_initialized) return;
@@ -1956,7 +1854,11 @@ void cohesive_zones_t::commit_internal_vars(size_t rk_stage, size_t rk_num_stage
     Kokkos::fence();
 }
 
-// add cohesive zone nodal forces to global nodal force array
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn add_cohesive_zone_nodal_forces
+///
+/// \brief add cohesive zon foces to global nodal force array (State.node.force)
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 void cohesive_zones_t::add_cohesive_zone_nodal_forces(
     DCArrayKokkos<double>& node_force,
     const CArrayKokkos<double>& F_cz,
