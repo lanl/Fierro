@@ -10,6 +10,7 @@ Trilinos
 main
 .vscode
 *.swp
+__pycache__
 cmake_uninstall.cmake
 CTestTestfile.cmake
 install
