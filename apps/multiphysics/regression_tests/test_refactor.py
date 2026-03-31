@@ -8,12 +8,12 @@ import glob
 import argparse
 
 # Builds being tested
-builds = ["cuda"]
+builds = ["openmp"]
 
 # Name(s) of the solver being used
 solvers = ["Fierro"]
 
-solver_path = "../build_cuda/app/Fierro"
+solver_path = "../build/app/Fierro"
 
 # Add names of each test
 tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
