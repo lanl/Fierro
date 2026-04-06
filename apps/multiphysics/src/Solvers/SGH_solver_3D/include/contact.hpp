@@ -7,7 +7,7 @@
 using namespace mtr;
 
 // solving options
-static constexpr size_t max_iter = 1000;  // max number of iterations
+static constexpr size_t max_iter = 10;  // max number of iterations
 static constexpr double tol = 1e-15;  // tolerance for the things that are supposed to be zero
 static constexpr double edge_tol = 1e-3;  // tolerance for edge case solutions (see contact_check for more info)
 
@@ -445,7 +445,8 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void distribute_frictionless_force(ViewCArrayKokkos <double> &pair_vars, size_t &contact_id, ViewCArrayKokkos <size_t> &contact_surface_map,
-                                   const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> num_pairs_in_node);
+                                   const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> num_pairs_in_node,
+                                   const double corrector_term);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn should_remove

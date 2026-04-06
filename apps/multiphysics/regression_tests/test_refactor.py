@@ -8,7 +8,7 @@ import glob
 import argparse
 
 # Builds being tested
-builds = ["openmp"]
+builds = ["serial"]
 
 # Name(s) of the solver being used
 solvers = ["Fierro"]
@@ -23,7 +23,8 @@ tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
         "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
         "slanted_block_bounce", "slanted_impact", "SGTM_cooling_cube", \
         "sie_expansion_test", "confined_preload", "unconfined_preload",\
-        "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact"]
+        "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact",\
+        "TaylorAnvil_Contact"]
 #,"SGTM_cooling_cube" currently broken
 
 # Parse command line arguments
@@ -131,7 +132,6 @@ for i in range(len(executables)):
                 for l in range(len(calc)):
                     diff = calc[l] - true[l]
                     # print(diff)
-    
                     if abs(diff) > 1E-8:
                         print(f"{'Calculated Result:':<20} {calc[l]:.10e}")
                         print(f"{'Expected Result:':<20} {true[l]:.10e}")

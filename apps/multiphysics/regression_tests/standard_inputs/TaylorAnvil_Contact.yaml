@@ -1,26 +1,40 @@
 # num_dims: 3
 
 dynamic_options:
-    time_final: 10
+    time_final: 40
     dt_min: 1.e-8
-    dt_max: 1.e-1
+    dt_max: 1.0
     dt_start: 1.e-5
     cycle_stop: 10000000
 
 
 mesh_options:
   source: file
-  file_path: ./standard_inputs/meshes/cylinder_contact.vtk
+  file_path: ./standard_inputs/meshes/TaylorMesh.vtu
   num_dims: 3
-  #scale_x: 1.0
-  #scale_y: 1.0
-  #scale_z: 1.0
+  scale_x: 0.5
+  scale_y: 0.5
+  scale_z: 1.0
 
 output_options:
     timer_output_level: thorough
     output_file_format: state
-    graphics_time_step: 10 #1
+    graphics_time_step: 40.0 #1
     # graphics_iteration_step: 10
+    elem_field_outputs:
+        - den
+        - pres
+        - stress
+        - sie
+        - mass
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+        - volfrac
+    node_field_outputs:
+        - vel
+        - mass
 
 solver_options:
   - solver:
@@ -32,6 +46,30 @@ solver_options:
         #  - blah
 
 boundary_conditions:
+  # Tag y plane
+  - boundary_condition:
+      solver_id: 0
+      surface: 
+          type: y_plane
+          plane_position: 0.0
+      velocity_model: reflected
+      velocity_bc_global_vars:
+          - 0
+          - 1
+          - 0
+
+  # Tag x plane
+  - boundary_condition:
+      solver_id: 0
+      surface: 
+          type: x_plane
+          plane_position: 0.0
+      velocity_model: reflected
+      velocity_bc_global_vars:
+          - 1
+          - 0
+          - 0
+
   # global contact condition (this should be used when it is not clear what the contact surface(s) will be)
   - boundary_condition:
       solver_id: 0
@@ -64,6 +102,7 @@ materials:
         strength_global_vars:
             - 0.4333
             - 0.004
+            #- 10000000000.00
         # ------ArtVisc
         dissipation_model: MARS
         dissipation_global_vars:
@@ -148,12 +187,12 @@ regions:
     - region:
         volume:
             type: box
-            x1: -2
-            x2: 2
-            y1: -2
-            y2: 2
-            z1: 3
-            z2: 7
+            x1: 0.0
+            x2: 1.91
+            y1: 0
+            y2: 1.91
+            z1: 0
+            z2: 7.51
         material_id: 0
         density: 
             type: uniform
@@ -163,9 +202,34 @@ regions:
             value: 1.e-10
         velocity:
             type: cartesian
-            u: 0.0  
+            u: 0.0
             v: 0.0
-            w: -0.01 #-0.0205
+            w: -0.0083 #-0.0205
+        volume_fraction:
+            type: uniform
+            value: 1.0
+
+    - region:
+        volume:
+            type: box
+            x1: 0.0
+            x2: 1.91
+            y1: 0
+            y2: 1.91
+            z1: -8.0
+            z2: -0.49
+        material_id: 0
+        density: 
+            type: uniform
+            value: 8.93
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity:
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0083 #-0.0205
         volume_fraction:
             type: uniform
             value: 1.0
