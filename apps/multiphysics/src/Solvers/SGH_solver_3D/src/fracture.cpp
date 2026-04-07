@@ -304,6 +304,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
     found_reorient.set_values(0); // initialize to zero
     reorient_params.set_values(0.0); // initialize to zero
     found_reorient.update_device();
+    reorient_params.update_device();
 
     // local references for device access, so RUN kernel can read BC data
     auto bc_enums = BoundaryConditions.BoundaryConditionEnums;
