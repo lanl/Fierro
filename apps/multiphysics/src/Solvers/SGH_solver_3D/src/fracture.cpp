@@ -31,23 +31,11 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
-#include <stdio.h>
+
 #include "matar.h"
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <sstream>
-#include <cmath>
-#include <iomanip>
-#include "mesh_io.hpp"
-#include "state.hpp"
 #include "fracture.hpp"
 #include "fracture_stress_bc.hpp"
-#include "ELEMENTS.h"
 #include "user_defined_velocity_bc.hpp"
-
-using namespace mtr; // matar namespace
 
 // initialize fracture BC parameters 
 cohesive_zones_t::cohesive_zones_t() {}
@@ -55,14 +43,16 @@ cohesive_zones_t::cohesive_zones_t() {}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn initialize
 ///
-/// \brief Initialize mesh topology: find overlapping node pairs (cohesive zone node pairs) and build cz_info
+/// \brief Initialize mesh topology: find overlapping node pairs (cohesive zone node pairs) and build cz_info,
+///        computes max_elem_in_cohesive_zone and stores overlapping_node_gids 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
+void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State, const SimulationParameters_t& SimulationParameters){
                    
     // counting the number of boundary nodes
     size_t num_bdy_nodes = mesh.num_bdy_nodes;
     
-    const double tol = 1e-8; //0.000001; //e-3; // adjust as needed; added just in case coordinate pairs are close but not exactly equal
+    // geometric tolerance for determining if nodes are overlapping from dynamic_options.hpp (small = 1e-8)
+    const double geom_tol = SimulationParameters.dynamic_options.small; 
 
     // update device data before accessing in RUN block
     State.node.coords.update_device();
@@ -91,7 +81,7 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
                 bool overlap = true;
                 for (size_t k = 0; k < 3; ++k) {
                     
-                    if (fabs(node_coords(node_i, k) - node_coords(node_j, k)) > tol) {
+                    if (fabs(node_coords(node_i, k) - node_coords(node_j, k)) > geom_tol) {
                         overlap = false;
                         break;
                     }
@@ -136,7 +126,7 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
 
                 bool overlap = true;
                 for (size_t k = 0; k < 3; ++k) {
-                    if (fabs(node_coords(node_i, k) - node_coords(node_j, k)) > tol) {
+                    if (fabs(node_coords(node_i, k) - node_coords(node_j, k)) > geom_tol) {
                         overlap = false;
                         break;
                     }
@@ -157,9 +147,6 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
     // this determines the max size of the cohesive zone neighborhood and thus the size of the cz_info array
     max_elem_in_cohesive_zone = cohesive_zone_elem_count(overlapping_node_gids, mesh.elems_in_node);
 
-    // sync mesh connectivity to device before building cz_info
-    mesh.nodes_in_elem.update_device();
-
     // build cz_info array
     // (num_pairs, 6 * max_elem_in_cohesive_zone)
     cz_info = build_cohesive_zone_info(
@@ -168,7 +155,7 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State){
         State.node.coords,
         overlapping_node_gids,
         max_elem_in_cohesive_zone,
-        tol
+        geom_tol
     );
     cz_info.update_host();
 } // end cohesive_zones_t::initialize
@@ -199,6 +186,9 @@ void cohesive_zones_t::initialize_fracture_bc(
         return;
     }
 
+    // allocate cohesive zone force array
+    F_cz = CArrayKokkos<double>(3 * num_nodes, "cz_nodal_forces");
+    
     // extract BC parameters from device to host
     const auto& BC = BoundaryConditions;
     
@@ -244,15 +234,16 @@ void cohesive_zones_t::initialize_fracture_bc(
 
     // device-accessible Prony parameters (E_j, tau_j pairs)
     if (num_prony_terms > 0) {
-        prony_params = DCArrayKokkos<double>(2 * num_prony_terms, "cz_prony_params");
+        // 2D array: row j contains [E_j, tau_j] for Prony term j
+        prony_params = DCArrayKokkos<double>(num_prony_terms, 2, "cz_prony_params");
         for (int j = 0; j < num_prony_terms; ++j) {
-            prony_params.host(2*j)     = bc_params.host(6 + 2*j);     // E_j
-            prony_params.host(2*j + 1) = bc_params.host(6 + 2*j + 1); // tau_j
+            prony_params.host(j, 0)     = bc_params.host(6 + 2*j);     // E_j
+            prony_params.host(j, 1) = bc_params.host(6 + 2*j + 1); // tau_j
         }
         prony_params.update_device();
     } else {
         // allocate minimal array to avoid null issues (debug aid)
-        prony_params = DCArrayKokkos<double>(1, "cz_prony_params_empty");
+        prony_params = DCArrayKokkos<double>(1, 2, "cz_prony_params_empty");
         prony_params.set_values(0.0);
     }
 
@@ -284,8 +275,8 @@ void cohesive_zones_t::initialize_fracture_bc(
     if (num_prony_terms > 0) {
         printf("  Prony series terms:\n");
         for (int j = 0; j < num_prony_terms; ++j) {
-            printf("    prony_%d_E = %e\n", j, prony_params.host(2*j));
-            printf("    prony_%d_tau = %e\n", j, prony_params.host(2*j + 1));
+            printf("    prony_%d_E = %e\n", j, prony_params.host(j, 0));
+            printf("    prony_%d_tau = %e\n", j, prony_params.host(j, 1));
         }
     }
 }
@@ -306,8 +297,8 @@ void cohesive_zones_t::initialize_reorientation_mode(
     if (!doing_fracture) {
         return;
     }
-
-    // device arrays to hold reorientation parameters
+    
+    // temporary scratch array used to scan BC data for reorientaion mode
     DCArrayKokkos<double> reorient_params(5, "reorient_params");
     DCArrayKokkos<int> found_reorient(1, "found_reorient");
     found_reorient.set_values(0); // initialize to zero
@@ -322,20 +313,19 @@ void cohesive_zones_t::initialize_reorientation_mode(
     RUN({
         // search boundary conditions for user-defined velocity BC with reorientation 
         for (size_t bdy_set = 0; bdy_set < num_bcs; bdy_set++) {
-            // check if this BC has reorientation parameters set (omega_y != 0 or omega_z != 0)
+            // check whether this user-defined velocity BC enables reorientation validation mode
             if (bc_enums(bdy_set).BCVelocityModel
                 != boundary_conditions::userDefinedVelocityBC) {
                 continue; // skip non-user-defined BCs
             }
 
             // read validation mode flag from BC parameter array
-            double mode_flag = vel_bc_vars(
-                bdy_set, UserDefinedVelocityBC::BCVars::reorientation_mode);
+            const bool reorientation_mode =
+                vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::reorientation_mode) > 0.5;
 
             // treat values > 0.5 as true
-            if (mode_flag > 0.5) {
+            if (reorientation_mode) {
                 found_reorient(0) = 1;
-                reorient_params(0) = mode_flag;
                 reorient_params(1) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::omega_y);
                 reorient_params(2) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::omega_z);
                 reorient_params(3) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::cz_opening_rate);
@@ -369,7 +359,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
     printf("  x_interface     = %.4f cm\n", x_interface);
     printf("==============================================\n");
 
-    // allocate storage for reorientation test
+    // allocate reorientation-only storage; this happens only when validation mode is enabled
     initial_coords = CArrayKokkos<double>(mesh.num_nodes, 3, "initial_coords");
     cz_b_side_flag = CArrayKokkos<int>(mesh.num_nodes, "cz_b_side_flag");
     cz_b_side_flag.set_values(0);
@@ -457,8 +447,8 @@ size_t cohesive_zones_t::cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlap
 /// Specifically, it calculates the orthonormal in-plane basis vectors r and s, 
 /// the outward unit normal vector n, and the centroid cenface of the face in physical space
 ///
-/// \param nodes Global nodal coordinates array (num_nodes x 3) from the mesh
-/// \param conn Element-to-node connectivity array (num_elems x nodes_in_elem) from the mesh
+/// \param nodes_in_elem Nodes in an element
+/// \param node_coords Global nodal coordinates array (num_nodes x 3) from the mesh
 /// \param surf Local surface (patch) ID [0-5] corresponding to a face of a hex element 
 ///             (per the face-node ordering in mesh.h) (which face)
 /// \param elem Index of the element from which the surface is extracted (whcihc element)
@@ -472,7 +462,7 @@ size_t cohesive_zones_t::cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlap
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void cohesive_zones_t::compute_face_geometry(
-    const DCArrayKokkos<size_t>& nodes_in_elem,  // just this from mesh
+    const DCArrayKokkos<size_t>& nodes_in_elem,  
     const DCArrayKokkos<double>& node_coords,
     const size_t surf,
     const size_t elem,
@@ -629,12 +619,13 @@ void cohesive_zones_t::compute_face_geometry(
 ///    a tolerance and nearly opposite unit normals). The result is a compact integer table used later to orient and
 ///    apply cohesive-zone physics.
 ///
-/// \param mesh  Reference to the mesh (element-node connectivity and elems_in_node ragged map are consumed).
-/// \param state Reference to the state (node coordinates are used to compute face geometry, normals, and centroids).
+/// \param elems_in_node Elements connected to a given node
+/// \param nodes_in_elem Nodes in an element
+/// \param node_coords Global nodal coordinates array (num_nodes x 3) from the mesh
 /// \param overlapping_node_gids 2D array (num_pairs x 2) of global node IDs, one row per cohesive pair: [A_gid, B_gid].
 /// \param max_elem_in_cohesive_zone Upper bound on the number of elements incident to any node in any pair
 ///                                  (typically from cohesive_zone_elem_count); sizes all per-pair "slot" columns.
-/// \param tol Centroid-coincidence tolerance used when declaring two faces to be a match; normals must also be opposite
+/// \param geom_tol Centroid-coincidence tolerance used when declaring two faces to be a match; normals must also be opposite
 ///            within a dot-product check (dot <= -1 + tol).
 /// \return CArrayKokkos<int> cohesive_zone_info table with shape (num_pairs, 6 * max_elem_in_cohesive_zone).
 ///
@@ -649,7 +640,7 @@ void cohesive_zones_t::compute_face_geometry(
 ///
 /// Internally, for each element-slot we derive up to three candidate faces incident to its local corner (k). The face
 /// IDs use the code's hexahedral face numbering convention {0..5}. For each A-slot we search B-slots to find one
-/// opposing/coincident face pair (centroids within tol; dot(nA,nB) <= -1+tol). When a match is found, we record:
+/// opposing/coincident face pair (centroids within geom_tol; dot(nA,nB) <= -1+geom_tol). When a match is found, we record:
 ///   A-face -> block [2] at the same A-slot, and B-face -> block [3] at the same B-slot.
 /// This allows multiple distinct A-slots (and B-slots) in a pair to record separate matches (e.g., two CZ faces),
 /// while still enforcing "at most one match per slot".
@@ -664,8 +655,8 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
     DCArrayKokkos<double>& node_coords,
     DCArrayKokkos<size_t>& overlapping_node_gids,
     size_t max_elem_in_cohesive_zone,
-    const double tol
-)                     // centroid coincidence tolerance
+    const double geom_tol
+)                 
 {
     // output: (rows = #pairs, cols = 6 * max_elem_in_cohesive_zone)
     // column blocks (each of length max_elem_in_cohesive_zone):
@@ -836,7 +827,7 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
                         // 1) their representative centroids are within tol, AND
                         // 2) their normals are nearly opposite (dot <= -1 + tol)
 
-                        if (dist <= tol && dot <= -1.0 + tol) {
+                        if (dist <= geom_tol && dot <= -1.0 + geom_tol) {
 
                             // record the match in the following slots
                             cohesive_zone_info(i, 2*max_elem_in_cohesive_zone + slotA) = fA; // A-face for A slot
@@ -875,16 +866,16 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 /// populated by build_cohesive_zone_info(). Face geometry (centroid, in-plane directions, and outward unit normal)
 /// is computed on the fly via compute_face_geometry() using pos and pos.
 ///
-/// \param mesh  Mesh object (provides nodes_in_elem and element/face topology used by compute_face_geometry).
-/// \param pos   Node coordinates at reference time t            (num_nodes x 3).
-/// \param pos Node coordinates at current time t + dt         (num_nodes x 3).
+/// \param nodes_in_elem Nodes in an element
+/// \param node_coords Global nodal coordinates array (num_nodes x 3) from the mesh
 /// \param overlapping_node_gids 2D array of cohesive pairs      (num_pairs x 2) with global node IDs [A_gid, B_gid].
 /// \param cz_info Integer table from build_cohesive_zone_info()  (num_pairs x 6*max); blocks are:
 ///                 [0] A-elements per slot, [1] B-elements per slot,
 ///                 [2] matched A-faces per A-slot, [3] matched B-faces per B-slot,
 ///                 [4] kA local corner per A-slot, [5] kB local corner per B-slot.
 /// \param max_elem_in_cohesive_zone Slot count per pair (same value used to size the cz_info blocks).
-/// \param tol Centroid-coincidence tolerance used during matching.
+/// \param geom_tol Centroid-coincidence tolerance used during matching.
+/// \param cohesive_zone_orientation Output array to store the oriented normals (num_pairs x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
 /// \return cohesive_zone_orientation Output (num_pairs x 6): per-pair unit normals at t and t+dt:
 ///                   columns 0..2 --> current_norm (from pos), columns 3..5 --> next_norm (from pos).
 ///
@@ -917,7 +908,7 @@ void cohesive_zones_t::oriented(
     DCArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
     DCArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
     size_t max_elem_in_cohesive_zone,
-    double tol,                 // centroid coincidence tolerance (ABS distance)
+    double geom_tol,                 // centroid coincidence tolerance (ABS distance)
     DCArrayKokkos<double>& cohesive_zone_orientation       // (overlapping_node_gids.dims(0) x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
 ) 
 {
@@ -928,7 +919,7 @@ void cohesive_zones_t::oriented(
     // A-faces are in block [2], B-faces are in block [3]
     // A-elems in block [0], B-elems in block [1]
     // basically, find the first non -1 on each side
-    // find first true A/B face match (abs centroid distance <= tol and opposite normals)
+    // find first true A/B face match (abs centroid distance <= geom_tol and opposite normals)
     // A-side element slots are in block #0; their local corners are in block #4
 
     //mesh.nodes_in_elem.update_host();
@@ -1088,8 +1079,8 @@ void cohesive_zones_t::oriented(
 /// The results are stored in local_opening(i,:) as:
 ///     [un_t, utan_t, un_tdt, utan_tdt] = [u_n(t), ||u_t(t)||, u_n(t+dt_stage), ||u_t(t+dt_stage)||].
 ///
-/// \param pos  Node coordinates at time t (num_nodes x 3). Typically State.node.coords.
-/// \param vel  Node velocities   at time t (num_nodes x 3). Typically State.node.vel.
+/// \param node_coords Global nodal coordinates array (num_nodes x 3) from the mesh
+/// \param vel  Node velocities   at time t (num_nodes x 3). (State.node.vel).
 /// \param cohesive_zone_orientation Per-pair unit normals from oriented() (num_pairs x 6).
 ///        This routine uses columns 0..2 only: n(t) = [nx, ny, nz]. (Columns 3..5 are ignored here.)
 /// \param overlapping_node_gids 2D array of cohesive node pairs (num_pairs x 2) with global node IDs [A_gid, B_gid].
@@ -1215,8 +1206,13 @@ void cohesive_zones_t::ucmap(
 /// \param dt_stage       Stage time step used for rate/increment updates (e.g., RK stage dt).
 /// \param time_value     Current simulation time (debugging aid; not required for the math).
 /// \param overlapping_node_gids 2D array of cohesive pairs (num_pairs x 2) with global node IDs [A_gid, B_gid].
-/// \param stress_bc_global_vars BC parameter table; parameters are read from row bdy_set using fractureStressBC::BCVars.
-/// \param bdy_set        Boundary set index used to select cohesive/viscoelastic parameters from stress_bc_global_vars.
+/// \param E_inf Long-term (equilibrium) modulus of the cohesive zone material [g/cm*us^2] (user input set with the fracture_stress_bc).
+/// \param a1 Damage evolution parameter [dimensionless] (user input set with the fracture_stress_bc).
+/// \param n_exp Damage evolution exponent [dimensionless] (user input set with the fracture_stress_bc).
+/// \param u_n_star Normal characteristic length [cm] (user input set with the fracture_stress_bc).
+/// \param u_t_star Tangential characteristic length [cm] (user input set with the fracture_stress_bc).
+/// \param num_prony_terms Number of Prony series terms for viscoelasticity [filled below: # of E and tau terms] (user input set with the fracture_stress_bc).
+/// \param prony_params  2D array of Prony parameters (2, num_prony_terms): row j contains [E_j, tau_j] for Prony term j (user input set with the fracture_stress_bc).
 /// \param internal_vars  Current (time-t) per-pair internal state (num_pairs x (4 + num_prony_terms)).
 ///        Convention used here:
 ///          internal_vars(i,1) = alpha_t (damage at t)
@@ -1233,7 +1229,7 @@ void cohesive_zones_t::ucmap(
 void cohesive_zones_t::cohesive_zone_var_update(
     const DCArrayKokkos<double>& local_opening,
     const double dt_stage, 
-    const double time_value, // ADDED IN FOR DEBUGGING
+    const double time_value, 
     DCArrayKokkos<size_t>& overlapping_node_gids,
     const double E_inf, const double a1, const double n_exp, const double u_n_star, const double u_t_star, const int num_prony_terms, // cohesive zone parameters
     const DCArrayKokkos<double>& prony_params, // E_j, tau_j pairs
@@ -1252,8 +1248,8 @@ void cohesive_zones_t::cohesive_zone_var_update(
         // stage-effective modulus: E_inf + Prony contribution
         double E_dt = E_inf;
         for (int j = 0; j < num_prony_terms; ++j) {
-            const double E_j  = prony_params(2*j);
-            const double tau_j = prony_params(2*j + 1);
+            const double E_j  = prony_params(j, 0);
+            const double tau_j = prony_params(j, 1);
             const double tau_eff       = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min();
             const double one_minus_exp = 1.0 - exp(-dt_stage / tau_eff);
             E_dt += E_j * tau_eff * (one_minus_exp / dt_stage);
@@ -1297,8 +1293,8 @@ void cohesive_zones_t::cohesive_zone_var_update(
        for (int j = 0; j < num_prony_terms; ++j) {
             //const double E_j     = stress_bc_global_vars(bdy_set, prony_base); // in Gavin's code, this is Eandrhom(j,0)
             //const double tau_j   = stress_bc_global_vars(bdy_set, prony_base + 1); // in Gavin's code, this is Eandrhom(j,1)
-            const double E_j  = prony_params(2*j);
-            const double tau_j = prony_params(2*j + 1);
+            const double E_j  = prony_params(j, 0);
+            const double tau_j = prony_params(j, 1);
             const double tau_eff = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min(); // same logic as Gavin's code to avoid div by zero
             const double a       = exp(-dt_stage / tau_eff);
             delta_internal_vars(i, 4 + j) = a * internal_vars(i, 4 + j) + E_j * tau_eff * lambda_dot_t * (1.0 - a); // prony branch stresses 4 columns 
@@ -1309,7 +1305,7 @@ void cohesive_zones_t::cohesive_zone_var_update(
         double sigma_sum_exp = 0.0;
         for (int j = 0; j < num_prony_terms; ++j) {
             //const double tau_j   = stress_bc_global_vars(bdy_set, prony_base + 1); // in Gavin's code, this is Eandrhom(j,1)
-            const double tau_j = prony_params(2*j + 1);
+            const double tau_j = prony_params(j, 1);
             const double tau_eff = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min(); // same logic as Gavin's code to avoid div by zero
             const double sigma_j = delta_internal_vars(i, 4 + j); // used to update prony stresses
             sigma_sum     += sigma_j;
@@ -1379,8 +1375,8 @@ void cohesive_zones_t::cohesive_zone_var_update(
 /// The effective area is "lumped" to the cohesive node pair by summing 0.25 of each contributing face's integrated
 /// area (one-quarter per face corner) across all matched A-faces recorded for that pair.
 ///
-/// \param mesh  Mesh object providing element-to-node connectivity (nodes_in_elem) and HEX8 topology.
-/// \param pos   Node coordinates at the configuration used for force direction and area integration (num_nodes x 3).
+/// \param nodes_in_elem Nodes in an element
+/// \param node_coords Global nodal coordinates array (num_nodes x 3) from the mesh
 /// \param overlapping_node_gids 2D array of cohesive pairs (num_pairs x 2) with global node IDs [A_gid, B_gid].
 /// \param cohesive_zone_orientation Per-pair normals from oriented() (num_pairs x 6):
 ///        columns 0..2 = n(t), columns 3..5 = n(t+dt_stage). This routine uses columns 3..5.
@@ -1709,18 +1705,18 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
     mesh.nodes_in_elem.update_device();
 
      // 1) cohesive zone interface orientation (normal at t and t+dt)
-    const double tol = 1.0e-8;
     DCArrayKokkos<double> cz_orientation(npairs, 6, "cz_orientation");
     cz_orientation.set_values(0.0);
 
     // calling the function oriented()
+    // computes cohesive zone interface orientation (normal at t and t+dt) for each cohesive zone node pair
     oriented(
         mesh.nodes_in_elem,
         State.node.coords,
         overlapping_node_gids,
         cz_info,
         max_elem_in_cohesive_zone,
-        tol,
+        geom_tol,
         cz_orientation);
 
     // 2) local openings (un_t, utan_t, un_tdt, utan_tdt)
@@ -1729,6 +1725,7 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
     local_opening.set_values(0.0);
 
     // calling the function ucmap()
+    // maps global nodal motion to local cohesive zone openings for each cohesive zone node pair
     ucmap(
         State.node.coords,
         State.node.vel,

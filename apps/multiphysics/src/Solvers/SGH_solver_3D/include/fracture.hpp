@@ -59,19 +59,27 @@ struct cohesive_zones_t {
     DCArrayKokkos<int> cz_info; // element/face connectivity info per cohesive zone node pair
     size_t max_elem_in_cohesive_zone = 0; // max number of elements attached to any cohesive zone node pair (used to size cz_info blocks)
     size_t num_nodes = 0; // total number of nodes in the mesh
+    double geom_tol = 1.0e-8; // default value for geometric tolerance; will be set from SimulationParameters.dynamic_options.small in initialize()
 
     // --- cohesive zone constiutive model parameters ---
+    // Cohesive zone model bacsed on: Allen, D.H. and Searcy, C.R. (2001) 
+    // "A micromechanical model for a viscoelastic cohesive zone"
+    // International Journal of Fracture, 107:159-1765
+    // https://doi.org/10.1023/A:1007693116116
     double E_inf = 0.0; // prony constant term
     double a1 = 0.0; // internal damage parameter
     double n_exp = 0.0; // power of damage evolution law
     double u_n_star = 1.0; // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0)
     double u_t_star = 1.0; // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0
     int num_prony_terms = 0; // number of prony series terms
-    DCArrayKokkos<double> prony_params;  // (2 * num_prony_terms): [E_j, tau_j] pairs    
+    DCArrayKokkos<double> prony_params;  // (num_prony_terms, 2): row j = [E_j, tau_j] 
 
     // --- inernal state variables for cohesive zone constitutive model ---
     DCArrayKokkos<double> internal_vars;
     DCArrayKokkos<double> delta_internal_vars;
+
+    /// --- cohesive zone nodal forces ---
+    CArrayKokkos<double> F_cz; // output global force vector (3*num_nodes): cohesive nodal forces accumulated as [Fx,Fy,Fz] per node
 
     // --- initialization flags ---
     int fracture_bdy_set = -1;
@@ -98,7 +106,7 @@ struct cohesive_zones_t {
     ///
     /// \brief Initialize mesh topology: find overlapping node pairs (cohesive zone node pairs) and build cz_info
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void initialize(swage::Mesh& mesh, State_t& State); 
+    void initialize(swage::Mesh& mesh, State_t& State, const SimulationParameters_t& SimulationParameters); 
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn initialize_fracture_bc
@@ -178,7 +186,12 @@ struct cohesive_zones_t {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn compute_face_geometry
     ///
-    /// \brief compute face geometry for cohesive zone calculations
+    /// \brief establishes the local (n, r, s) coordinate system for a cohesive zone surface
+    /// \param n              [output] unit normal vector to the cohesive zone surface (normal to plane of crack tip)
+    /// \param r              [output] first in-plane tangent vector (orthogonal to plane formed by s and n)
+    /// \param s              [output] second in-plane tangent vector (coincident with cruve of crack tip)
+    /// \param cenface        [output] centroid of the cohesive zone face in physical coordinates;
+    ///                       used for face-matching and area calculations
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     KOKKOS_FUNCTION
     static void compute_face_geometry(
@@ -204,7 +217,7 @@ struct cohesive_zones_t {
         DCArrayKokkos<double>& node_coords,             // state.node.coords
         DCArrayKokkos<size_t>& overlapping_node_gids,
         size_t max_elem_in_cohesive_zone,
-        const double tol
+        const double geom_tol
     );
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -218,7 +231,7 @@ struct cohesive_zones_t {
         DCArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
         DCArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
         size_t max_elem_in_cohesive_zone,
-        double tol,                 // centroid coincidence tolerance (ABS distance)
+        double geom_tol,                 // centroid coincidence tolerance (ABS distance)
         DCArrayKokkos<double>& cohesive_zone_orientation       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
     ); 
 
