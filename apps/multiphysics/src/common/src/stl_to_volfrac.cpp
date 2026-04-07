@@ -67,15 +67,6 @@ using namespace mtr;
 
 const double PI = 3.14159265358979323846;
 
-// -----------------------------------------------
-// inputs:
-
-
-// the bin sizes for finding neighboring points
-const double bin_dx = 0.05; // bins in x
-const double bin_dy = 0.05; // bins in y
-const double bin_dz = 0.05; // bins in z
-
 
 //
 // -----------------------------------------------
@@ -86,7 +77,7 @@ void get_bernstein_basis_fcns(CArrayKokkos <double> &bern_basis,
                               const double xi, 
                               const double eta, 
                               const double mu,
-                              const size_t eval_pnt_lid){
+                              const size_t eval_pnt_rid){
 
     // Output: bern_basis[8] = shape functions
 
@@ -108,7 +99,7 @@ void get_bernstein_basis_fcns(CArrayKokkos <double> &bern_basis,
             for(size_t i=0; i<=1; ++i) {
 
                 // the order of nodes in the elem follows i,j,k ordering
-                bern_basis(eval_pnt_lid, node_rid) = Bx[i] * By[j] * Bz[k];
+                bern_basis(eval_pnt_rid, node_rid) = Bx[i] * By[j] * Bz[k];
                 node_rid++;
 
             } // end for i
@@ -125,9 +116,9 @@ double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
                            const CArrayKokkos <double> &node_basis, 
                            const CArrayKokkos <size_t> &nodes_in_elems,
                            const size_t elem_gid,
-                           const size_t eval_pnt_lid){
+                           const size_t eval_pnt_rid){
 
-    // bern_basis(eval_pnt_lid, num_basis)
+    // bern_basis(eval_pnt_rid, num_basis)
     const size_t num_basis = basis.dims(1);
 
     // the physical location (x,y,z) in the element is vec_pt
@@ -139,7 +130,7 @@ double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
         // get the node index for this node_rid
         size_t node_gid = nodes_in_elems(elem_gid, node_rid);
 
-        scalar_pnt += node_basis(eval_pnt_lid,node_rid)*node_scalar(node_gid);
+        scalar_pnt += node_basis(eval_pnt_rid,node_rid)*node_scalar(node_gid);
 
     } // end for nodes
 
@@ -155,9 +146,9 @@ void calc_vector_in_elem(CArrayKokkos <double> &vec_pnt,
                          const CArrayKokkos <double> &node_basis, 
                          const CArrayKokkos <size_t> &nodes_in_elems,
                          const size_t elem_gid,
-                         const size_t eval_pnt_lid){
+                         const size_t eval_pnt_rid){
 
-    // bern_basis(eval_pnt_lid, num_basis)
+    // bern_basis(eval_pnt_rid, num_basis)
     const size_t num_basis = basis.dims(1);
 
     // the vector value in the element is vec_pnt at this eval pnt
@@ -172,7 +163,7 @@ void calc_vector_in_elem(CArrayKokkos <double> &vec_pnt,
         size_t node_gid = nodes_in_elems(elem_gid, node_rid);
 
         for(size_t dim=0; dim<3; dim++){
-            vec_pnt(dim) += node_basis(eval_pnt_lid,node_rid)*node_vec(node_gid,dim);
+            vec_pnt(dim) += node_basis(eval_pnt_rid,node_rid)*node_vec(node_gid,dim);
         } // end for dim
 
     } // end for nodes
@@ -185,14 +176,14 @@ void calc_vector_in_elem(CArrayKokkos <double> &vec_pnt,
 KOKKOS_INLINE_FUNCTION
 void get_sdf_to_tri(CArrayKokkos<double> &node_sdf,
                     const CArrayKokkos <size_t> &num_tris_in_bin,
-                    const size_t icount, 
-                    const size_t jcount, 
-                    const size_t kcount, 
+                    const size_t i_bin, 
+                    const size_t j_bin, 
+                    const size_t k_bin, 
                     const size_t num_bins_x, 
                     const size_t num_bins_y){
     
     // get bin neighbor gid on this search boundary
-    const size_t neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
+    const size_t neighbor_bin_gid = get_gid(i_bin, j_bin, k_bin, num_bins_x, num_bins_y);
 
     // loop over all the triangles in this bin
     for(size_t tri_lid=0; tri_lid<num_tris_in_bin(neighbor_bin_gid); tri_lid++){
@@ -228,6 +219,7 @@ void get_sdf_to_tri(CArrayKokkos<double> &node_sdf,
     } // end for
 } // end function 
 
+
 ///////////
 
 
@@ -235,10 +227,12 @@ struct bin_keys_t{
     size_t i,j,k;
 };
 
+
 KOKKOS_INLINE_FUNCTION
 size_t get_gid(size_t i, size_t j, size_t k, size_t num_x, size_t num_y){
     return i + (j + k*num_y)*num_x;
 }
+
 
 KOKKOS_INLINE_FUNCTION
 bin_keys_t get_bin_keys(const double x_pt, 
@@ -260,6 +254,7 @@ bin_keys_t get_bin_keys(const double x_pt,
     return bin_keys;
 
 } // end function
+
 
 KOKKOS_INLINE_FUNCTION
 size_t get_bin_gid(const double x_pt, 
@@ -286,9 +281,9 @@ size_t get_bin_gid(const double x_pt,
 
 
 
-void build_3D_zone_nodes(DCArrayKokkos <size_t> &node_lids_in_zone_lids, 
-                         const size_t num_sub_zones_1d,
-                         const size_t num_points_1d){  
+void build_3D_zone_nodes(DCArrayKokkos <size_t> &node_rids_in_zone_lids, 
+                         const size_t num_zones_1d,
+                         const size_t num_nodes_1d){  
 
     // this is 3D
     const size_t num_nodes_in_zone = 8;
@@ -296,26 +291,26 @@ void build_3D_zone_nodes(DCArrayKokkos <size_t> &node_lids_in_zone_lids,
     // running on CPU as there is little parallelism
 
     // loop over i,j,k of the sub-zones
-    FOR_LOOP(k, 0, num_sub_zones_1d,
-             j, 0, num_sub_zones_1d,
-             i, 0, num_sub_zones_1d, {
+    FOR_LOOP(k, 0, num_zones_1d,
+             j, 0, num_zones_1d,
+             i, 0, num_zones_1d, {
                 
                 // get the sub_zone local index
-                const size_t sub_zone_lid = get_gid(i, j, k, num_sub_zones_1d, num_sub_zones_1d);
+                const size_t sub_zone_lid = get_gid(i, j, k, num_zones_1d, num_zones_1d);
 
                 // get node lids for this sub-zone
-                node_lids_in_zone_lids.host(sub_zone_lid,0) = get_gid(i,   j,   k, num_points_1d, num_points_1d); 
-                node_lids_in_zone_lids.host(sub_zone_lid,1) = get_gid(i+1, j,   k, num_points_1d, num_points_1d); 
-                node_lids_in_zone_lids.host(sub_zone_lid,2) = get_gid(i,   j+1, k, num_points_1d, num_points_1d); 
-                node_lids_in_zone_lids.host(sub_zone_lid,3) = get_gid(i+1, j+1, k, num_points_1d, num_points_1d); 
+                node_rids_in_zone_lids.host(sub_zone_lid,0) = get_gid(i,   j,   k, num_nodes_1d, num_nodes_1d); 
+                node_rids_in_zone_lids.host(sub_zone_lid,1) = get_gid(i+1, j,   k, num_nodes_1d, num_nodes_1d); 
+                node_rids_in_zone_lids.host(sub_zone_lid,2) = get_gid(i,   j+1, k, num_nodes_1d, num_nodes_1d); 
+                node_rids_in_zone_lids.host(sub_zone_lid,3) = get_gid(i+1, j+1, k, num_nodes_1d, num_nodes_1d); 
 
-                node_lids_in_zone_lids.host(sub_zone_lid,4) = get_gid(i,   j,   k+1, num_points_1d, num_points_1d); 
-                node_lids_in_zone_lids.host(sub_zone_lid,5) = get_gid(i+1, j,   k+1, num_points_1d, num_points_1d); 
-                node_lids_in_zone_lids.host(sub_zone_lid,6) = get_gid(i,   j+1, k+1, num_points_1d, num_points_1d); 
-                node_lids_in_zone_lids.host(sub_zone_lid,7) = get_gid(i+1, j+1, k+1, num_points_1d, num_points_1d); 
+                node_rids_in_zone_lids.host(sub_zone_lid,4) = get_gid(i,   j,   k+1, num_nodes_1d, num_nodes_1d); 
+                node_rids_in_zone_lids.host(sub_zone_lid,5) = get_gid(i+1, j,   k+1, num_nodes_1d, num_nodes_1d); 
+                node_rids_in_zone_lids.host(sub_zone_lid,6) = get_gid(i,   j+1, k+1, num_nodes_1d, num_nodes_1d); 
+                node_rids_in_zone_lids.host(sub_zone_lid,7) = get_gid(i+1, j+1, k+1, num_nodes_1d, num_nodes_1d); 
 
     }); // end parallel k,j,i
-    node_lids_in_zone_lids.update_device();
+    node_rids_in_zone_lids.update_device();
 
 } // end function
 
@@ -471,7 +466,7 @@ struct triangle_t {
 
 
 
-// cross prodcut
+// cross product
 KOKKOS_INLINE_FUNCTION
 vec_t cross(const vec_t &a, const vec_t &b) {
     return {a.y*b.z - a.z*b.y,
@@ -479,22 +474,27 @@ vec_t cross(const vec_t &a, const vec_t &b) {
             a.x*b.y - a.y*b.x};
 }
 
+// dot product
 KOKKOS_INLINE_FUNCTION
 double dot(const vec_t &a, const vec_t &b) {
     return a.x*b.x + a.y*b.y + a.z*b.z;
 }
 
+// magnitude of vector
 KOKKOS_INLINE_FUNCTION
-double magnitude(const vect_t &a){
+double magnitude(const vec_t &a){
     return sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
 }
 
+// magnitude of difference between two vectors
 KOKKOS_INLINE_FUNCTION
-double distance(const vect_t &a, , const vec_t &b){
+double distance(const vec_t &a, , const vec_t &b){
     return sqrt((a.x-b.x)*(a.x-b.x) + 
                 (a.y-b.y)*(a.y-b.y) + 
                 (a.z-b.z)*(a.z-b.z));
 }
+
+
 
 //---------------------------------------------------------
 //
@@ -951,16 +951,16 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
     // --------------------------------------------
 
     // build details on the element
-    const size_t num_sub_zones_1d = Pn_order;
-    const size_t num_points_1d = Pn_order+1;
-    const size_t num_nodes_in_elem = num_points_1d*num_points_1d*num_points_1d; 
+    const size_t num_zones_1d = Pn_order;
+    const size_t num_nodes_1d = Pn_order+1;
+    const size_t num_nodes_in_elem = num_nodes_1d*num_nodes_1d*num_nodes_1d; 
 
     // PLIC (using SDF) can be applied on the zones in the element
     //const size_t num_sub_zones_in_elem = Pn_order*Pn_order*Pn_order; // if using PLIC
 
     // storage for the local ids of the nodes in the sub zone, needed for PLIC
     //DCArrayKokkos <size_t> node_lids_in_zone_lids(num_sub_zones_in_elem,8); // nodes of the sub zones in an element
-    //build_3D_zone_nodes(node_lids_in_zone_lids, num_sub_zones_1d, num_points_1d);
+    //build_3D_zone_nodes(node_lids_in_zone_lids, num_zones_1d, num_nodes_1d);
     
     const size_t num_eval_pnts = 9;  
     const double ref_pnts_1D[9]={0.0, 0.125, 0.24, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0};
@@ -978,11 +978,11 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
         const double eta = ref_pnts_1D[j];
         const double mu  = ref_pnts_1D[k];
 
-        // get the eval_lid
-        const size_t eval_pnt_lid = get_gid(i, j, k, num_eval_pnts, num_eval_pnts);
+        // get the eval ref elem local id
+        const size_t eval_pnt_rid = get_gid(i, j, k, num_eval_pnts, num_eval_pnts);
 
         // get bern basis (WARNING: update to use ELEMENTS library arbitrary order library)
-        get_bernstein_basis_fcns(bern_basis, xi, eta, mu, eval_pnt_lid);
+        get_bernstein_basis_fcns(bern_basis, xi, eta, mu, eval_pnt_rid);
 
     }); // end for all
 
@@ -998,7 +998,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
                 for(size_t i=0; i<num_eval_pnts; i++){
 
                     // evaluate SDF at this point
-                    const double sdf_val = calc_scalar_in_elem(node_sdf, bern_basis, nodes_in_elems, elem_gid, eval_pnt_lid);
+                    const double sdf_val = calc_scalar_in_elem(node_sdf, bern_basis, nodes_in_elems, elem_gid, eval_pnt_rid);
 
                     if(sdf_val<0){
                         // we are inside the part
@@ -1064,10 +1064,10 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
     }
 
     
-    printf("Finished \n\n");
+    printf("Finished STL to Volfrac Calculation \n\n");
 
 
 
-    return 0;
+    return 1;
     
 } // end main
