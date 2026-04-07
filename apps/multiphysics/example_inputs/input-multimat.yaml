@@ -1,6 +1,17 @@
 # num_dims: 3
-# UNITS: g, cm, micro second, MegaBar
+# UNITS (input scaling, used consistently below)
+# - Mass: grams (g)
+# - Length: centimeters (cm)
+# - Time: micro second (microsecond)
+# - Pressure / stress: MegaBar
+#
+# Derived units / expectations
+# - Velocity: cm / micro second
+# - Density: g / cm^3
 
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
 dynamic_options:
     time_final: 10.0
     dt_min: 1.e-8
@@ -8,17 +19,26 @@ dynamic_options:
     dt_start: 1.e-5
     cycle_stop: 10000
 
+# ---------------------------------------------------------------------------
+# Mesh options (single element)
+# ---------------------------------------------------------------------------
 mesh_options:
     source: generate
     num_dims: 3
     type: box
+    # Box dimensions in cm.
     origin: [0.0, 0.0, 0.0]
     length: [1.0, 1.0, 2.0] 
+    # Use 1x1x1 element so the whole simulation is one mixed cell.
     num_elems: [1, 1, 1]
 
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
 output_options:
     timer_output_level: thorough
     output_file_format: viz # only options are viz or viz_and_state
+    # Visualization cadence in micro seconds.
     graphics_time_step: 0.025
     # graphics_iteration_step: 10
     elem_field_outputs:
@@ -36,17 +56,37 @@ output_options:
         - vel
         - mass
 
+# ---------------------------------------------------------------------------
+# Solver configuration
+# ---------------------------------------------------------------------------
 solver_options:
   - solver:
         method: dynx_FE
         id: 0
+        # `dynx_FE` is the 3D hydro/dynamics solver.
         # solver_vars:
         #  - blah
         #  - blah
         #  - blah
 
+# ---------------------------------------------------------------------------
+# Boundary conditions (velocity BCs drive the compression)
+# ---------------------------------------------------------------------------
 boundary_conditions:
-    # Tag -X plane
+    # Velocity model meaning
+    # - `reflected`: removes the velocity component in the direction given by
+    #   `velocity_bc_global_vars` (used like a symmetry plane normal).
+    # - `fixed`: sets velocity to zero in all directions.
+    #
+    # `velocity_bc_global_vars` is a 3-component direction vector defining
+    # which velocity component the model acts on (values are used as a
+    # direction; they do not represent a magnitude).
+    #
+    # Geometry for this example (mesh z-length = 2 cm):
+    # - Symmetry/reflective planes at x=0, x=1, y=0, y=1, and z=0.
+    # - A fixed (zero velocity) wall at z=2 cm.
+    # Together, this produces predominantly uniaxial compression along +z.
+    # Tag -X plane (symmetry / reflective plane at x = 0 cm)
     - boundary_condition:
         solver_id: 0
         surface:
@@ -59,7 +99,7 @@ boundary_conditions:
             - 0 # y
             - 0 # z
             
-#    # Tag +X plane
+#    # Tag +X plane (symmetry / reflective plane at x = 1 cm)
     - boundary_condition:
         solver_id: 0
         surface:
@@ -72,7 +112,7 @@ boundary_conditions:
             - 0 # y
             - 0 # z
 
-    # Tag -Y plane
+    # Tag -Y plane (symmetry / reflective plane at y = 0 cm)
     - boundary_condition:
         solver_id: 0
         surface:
@@ -84,7 +124,7 @@ boundary_conditions:
             - 1 # y
             - 0 # z
 
-#    # Tag +Y plane
+#    # Tag +Y plane (symmetry / reflective plane at y = 1 cm)
     - boundary_condition:
         solver_id: 0
         surface:
@@ -96,7 +136,7 @@ boundary_conditions:
             - 1 # y
             - 0 # z
 
-    # Tag +z plane
+    # Tag +z plane (fixed top wall at z = 2 cm)
     - boundary_condition:
         solver_id: 0
         surface:
@@ -108,7 +148,7 @@ boundary_conditions:
             - 0 # y
             - 1 # z
             
-#    # Tag -z plane
+#    # Tag -z plane (symmetry / reflective plane at z = 0 cm)
     - boundary_condition:
         solver_id: 0
         surface:
@@ -121,17 +161,29 @@ boundary_conditions:
             - 1 # z
 
   
+# ---------------------------------------------------------------------------
+# Materials
+# ---------------------------------------------------------------------------
 materials:
     - material:
         id: 0
+        # Gamma-law gas EOS, decoupled from strength models.
         eos_model_type: decoupled
         eos_model: gamma_law_gas
+        # `eos_global_vars` ordering for `gamma_law_gas`:
+        #   0: gamma (ratio of specific heats)
+        #   1: min_sound_speed (sound-speed floor)
+        #   2: c_v (specific heat at constant volume)
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-4
             - 1.0
-        # strength_model: none
+        # strength_model is commented out, so this example behaves as a
+        # hydro-like material (no strength update).
         dissipation_model: MARS
+        # MARS artificial viscosity parameters for `dissipation_global_vars`
+        # ordering:
+        #   q1, q1ex, q2, q2ex, phi_min, pin_curl_min
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex
@@ -142,8 +194,11 @@ materials:
 
     - material:
         id: 1
+        # Second material with different gamma (used to demonstrate
+        # multimaterial coupling during compression).
         eos_model_type: decoupled
         eos_model: gamma_law_gas
+        # See `material id: 0` for `eos_global_vars` meaning/order.
         eos_global_vars:
             - 10 #1.666666666666667
             - 1.0E-4
@@ -160,53 +215,71 @@ materials:
 
 
 multimaterial_options:
+    # Mixed-material element configuration.
     max_num_mats_per_element: 3 # allow for up to 3 materials in an element during setup and for reverse map
 
+    # Tipton pressure equilibration between materials, with a limiter on
+    # volume-fraction change.
     mat_equilibration_model: tipton #no_equilibration #tipton
+    # `mat_equilibration_global_vars` ordering for `tipton`:
+    #   0: max volume fraction change (limiter, bounded to [0,1])
+    #   1: pressure relax coefficient (delta P) / coef
     mat_equilibration_global_vars:
         - 0.01   # max volume fraction change
         - 1.0 # pressure relax coeff (delta P)/coef
 
+# ---------------------------------------------------------------------------
+# Regions: initial conditions and material assignment
+# ---------------------------------------------------------------------------
 regions:
-    # gas
+    # gas-like material (material id 0)
     - region:
         volume:
             type: global
         solver_id: 0
         material_id: 0
         density:
+            # Initial density (g / cm^3).
             type: uniform
             value: 1.14
         specific_internal_energy:
+            # Initial specific internal energy.
+            # For `gamma_law_gas`: pressure = (gamma - 1) * sie * den.
             type: uniform
             value: 1.e-10
         velocity:
+            # Initial velocity (cm / micro second).
             type: cartesian
             u: 0.0
             v: 0.0
             w: 0.0
         volume_fraction:
+            # Initial volume fraction of this material in each element.
             type: uniform
             value: 0.5
 
-    # notional metal
+    # notional metal-like material (material id 1)
     - region:
         volume:
             type: global
         solver_id: 0
         material_id: 1
         density:
+            # Initial density (g / cm^3).
             type: uniform
             value: 2.7
         specific_internal_energy:
+            # Initial specific internal energy.
             type: uniform
             value: 0.2
         velocity:
+            # Initial velocity (cm / micro second).
             type: cartesian
             u: 0.0
             v: 0.0
             w: 0.0
         volume_fraction:
+            # Initial volume fraction in each element.
             type: uniform
             value: 0.5
             

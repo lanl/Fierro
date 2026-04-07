@@ -100,16 +100,18 @@ struct Table_t{
 
     // Verify that the table is valid and the data in at least one column is sorted in ascending order.
     void verify_data(size_t sorted_column_idx) {
-        assert(data.host.extent(0) == num_rows && data.host.extent(1) == num_columns && "Data dimensions do not match the table dimensions in Table_t::verify_data");
-        for (size_t row = 0; row < num_rows - 1; row++) {
-            assert(data.host(row, sorted_column_idx) <= data.host(row + 1, sorted_column_idx) && "Data in column " + std::to_string(sorted_column_idx) + " is not sorted in ascending order in Table_t::verify_data");
+        assert(sorted_column_idx < num_columns && "Sorted column index is out of bounds in Table_t::verify_data");
+        assert(data.host.dims(0) == num_rows && data.host.dims(1) == num_columns && "Data dimensions do not match the table dimensions in Table_t::verify_data");
+        for (size_t row = 0; row + 1 < num_rows; row++) {
+            assert(data.host(row, sorted_column_idx) <= data.host(row + 1, sorted_column_idx) &&
+                   "Data in sorted column is not ascending in Table_t::verify_data");
         }
 
         // Check for NaN in each element; throw assertion if found
         for (size_t row = 0; row < num_rows; ++row) {
             for (size_t col = 0; col < num_columns; ++col) {
                 assert(!std::isnan(data.host(row, col)) &&
-                    "NaN detected in Table_t::verify_data at row " + std::to_string(row) + ", column " + std::to_string(col));
+                       "NaN detected in Table_t::verify_data");
             }
         }
     }

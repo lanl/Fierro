@@ -9,17 +9,24 @@ on:
 
 jobs:
   Regression-Tests:
+    name: Regression Tests (${{ matrix.name }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: Serial
+            build_type: Release
             cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
             omp_threads: 1
           - name: OpenMP
+            build_type: Release
             cmake_args: -DFIERRO_ENABLE_OPENMP=ON
             omp_threads: 2
+          - name: Serial Debug
+            build_type: Debug
+            cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
+            omp_threads: 1
 
     steps:
     - uses: actions/checkout@v4
@@ -36,7 +43,7 @@ jobs:
       run: |
         mkdir -p apps/multiphysics/build
         cd apps/multiphysics/build
-        cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} ..
+        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_args }} ..
 
     - name: Build Fierro
       run: |

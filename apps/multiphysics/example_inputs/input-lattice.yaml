@@ -1,52 +1,119 @@
-# num_dims: 3
+# ---------------------------------------------------------------------------
+# Example Fierro input: lattice impact / loading (voxel-based geometry).
+#
+# This example:
+# - Builds a generated box mesh (`mesh_options: source: generate`).
+# - Uses two materials:
+#   - `material_id: 0`: `gamma_law_gas` fluid-like background.
+#   - `material_id: 1`: `linear_elastic_eos` + `hypo_plasticity_strength`
+#     for the lattice solid.
+# - Reads the lattice solid geometry from a voxelized VTK file via:
+#   `regions[].volume.type: voxel_file` and `file_path`.
+# - Applies an additional `box` region on the top surface to impose an
+#   initial downward velocity (`w: -0.05`).
+# - Uses reflective velocity boundary conditions on the x/y/z planes at
+#   `plane_position = 0.0`.
+#
+# Assumed units (documentation only; Fierro uses your input scaling):
+# - Length / coordinates: centimeters (cm)
+# - Time: milliseconds (ms)
+# - Density: kg/cm^3 (if using SI mass units)
+# - Specific internal energy: J/kg
+# - Velocity: cm/ms
+# - EOS-derived pressure / stress: Pa
+#
+# Key idea: IDs are cross-referenced:
+# - `solver_options[].solver.id` is referenced by:
+#   `boundary_conditions[].solver_id` and `regions[].solver_id`.
+# - `materials[].material.id` is referenced by `regions[].material_id`.
+#
+# See `apps/multiphysics/README.md` for the full option documentation.
+# ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Time integration / stepping control
+# ---------------------------------------------------------------------------
 dynamic_options:
+    # Final simulation time (ms).
     time_final: 0.1
+    # Minimum adaptive timestep bound (ms).
     dt_min: 1.e-8
+    # Maximum adaptive timestep bound (ms).
     dt_max: 1.e-2
+    # Initial timestep guess (ms).
     dt_start: 1.e-5
+    # Hard stop after this many cycles.
     cycle_stop: 300000
 
 
+# ---------------------------------------------------------------------------
+# Mesh options
+# ---------------------------------------------------------------------------
 mesh_options:
     source: generate
     num_dims: 3
     type: box
+    # Box origin in x,y,z (cm).
     origin: [0.0, 0.0, 0.0]
+    # Box side lengths in x,y,z (cm).
     length: [0.5, 0.5, 1]
+    # Element counts [nx, ny, nz].
     num_elems: [40, 40, 80]
 
 
+# ---------------------------------------------------------------------------
+# Output / visualization controls
+# ---------------------------------------------------------------------------
 output_options:
+    # Verbosity level for timing/performance reporting.
     timer_output_level: thorough
+    # Output format for results (depends on build).
     output_file_format: viz
+    # Amount of simulated time between visualization dumps (ms).
     graphics_time_step: 0.01
     # graphics_iteration_step: 10
+    # Element-centered fields written to output.
     elem_field_outputs:
         - den
         - pres
         - stress
         - sie
         - mass
+    # Material-point fields written to output.
     mat_pt_field_outputs:
         - den
         - pres
         - sie
         - volfrac
+    # Node-centered fields written to output.
     node_field_outputs:
         - vel
         - mass
 
+# ---------------------------------------------------------------------------
+# Physics solver configuration
+# ---------------------------------------------------------------------------
 solver_options:
   - solver:
+        # 3D hydro solver.
         method: dynx_FE
+        # Solver ID referenced by boundary conditions and regions.
         id: 0
         # solver_vars:
         #  - blah
         #  - blah
         #  - blah
 
+# ---------------------------------------------------------------------------
+# Boundary conditions configuration
+# ---------------------------------------------------------------------------
 boundary_conditions:
+    # -----------------------------------------------------------------------
+    # Reflective velocity BCs on planes at `plane_position = 0.0`.
+    #
+    # `velocity_model: reflected` removes the velocity component along the
+    # direction given by `velocity_bc_global_vars` (normalized internally).
+    # -----------------------------------------------------------------------
     # Tag X plane
     - boundary_condition:
         solver_id: 0
@@ -85,13 +152,19 @@ boundary_conditions:
             - 1   # z
    
   
+# ---------------------------------------------------------------------------
+# Materials (constitutive models)
+# ---------------------------------------------------------------------------
 materials:
     - material:
+        # material_id: 0 = fluid background (gamma-law gas)
         id: 0
         eos_model_type: decoupled
         eos_model: gamma_law_gas
-        # strength_model: none
+        # strength_model intentionally omitted => no strength model.
         dissipation_model: MARS
+        # MARS dissipation coefficients (3D).
+        # Ordering: [q1, q1ex, q2, q2ex, phi_min, phi_curl_min]
         dissipation_global_vars:
             - 1.0   # q1
             - 1.0   # q1ex
@@ -99,6 +172,12 @@ materials:
             - 1.333 # q2ex
             - 0.1   # phi_min
             - 1.0   # phi_curl_min
+        # gamma-law EOS global variables (ordering per EOS enum):
+        #   0: gamma
+        #   1: minimum sound speed (cs_min)
+        #   2: c_v
+        #   3: reference temperature (ref_temp)
+        # Additional entries may be present in other configs.
         eos_global_vars:
             - 1.666666666666667
             - 1.0E-15
@@ -106,28 +185,33 @@ materials:
             - 0.001
 
     - material:
-        id: 1  # metal: Copper
-        #-----EOS
+        # material_id: 1 = lattice solid (linear elastic + hypo-plasticity)
+        id: 1
+        # EOS: linear_elastic_eos
+        # eos_global_vars ordering for this model:
+        #   0: bulk modulus B
+        #   1: shear modulus G
+        #   2: reference density rho0
+        #   3: minimum sound speed cs_min
         eos_model_type: decoupled
         eos_model: linear_elastic_eos  
-        # bulk modulus
-        # shear modulus
-        # refernce den
-        # cs min
         eos_global_vars:
             - 1.30 # B from Azo materials online
             - 0.44 # G from Azo materials online
             - 8.93 # ref density from Azo materials online (g/cm^3)
             - 0.001 
-        #------Strength
+        # Strength: hypo_plasticity_strength (increment_based)
+        # strength_global_vars ordering:
+        #   0: shear modulus term (G_stress)
+        #   1: yield strength (Y_stress)
         strength_model_type: increment_based
         strength_model: hypo_plasticity_strength
-        # shear modulus of copper
-        # yield strength of copper
         strength_global_vars:
             - 0.44 
             - 0.0021  # from Azo materials online
-        # ------ArtVisc
+        # Artificial viscosity: MARS (3D)
+        # dissipation_global_vars ordering:
+        #   [q1, q1ex, q2, q2ex, phi_floor, phi_curl_floor]
         dissipation_model: MARS
         dissipation_global_vars:
             - 1.0   # q1
@@ -137,19 +221,26 @@ materials:
             - 0.05   # min limiter
             - 1.0
 
+# ---------------------------------------------------------------------------
+# Regions (initial conditions)
+# ---------------------------------------------------------------------------
 regions:
     - region:
+        # Global fill: material_id 0 across the entire computational domain.
         volume:
             type: global
         material_id: 0
         solver_id: 0
         density: 
+            # Background density.
             type: uniform
             value: 0.001
         specific_internal_energy: 
+            # Background specific internal energy.
             type: uniform
             value: 1.e-12
         velocity: 
+            # Initial velocity (u,v,w) in Cartesian components.
             type: cartesian
             u: 0.0
             v: 0.0
@@ -157,8 +248,19 @@ regions:
 
     
     - region:
+        # Voxelized lattice solid region read from a VTK file.
+        #
+        # `voxel_file` loads geometry and paints material_id=1 into elements
+        # based on the voxelization contained in the file.
+        #
+        # Scaling is applied to the voxel geometry coordinates:
+        # - `scale_x`, `scale_y`, `scale_z`
+        #
+        # The `origin` shifts the voxel coordinates into the mesh coordinate
+        # system.
         volume:
             type: voxel_file
+            # Note: this must be absolute path (for now)
             file_path: /home/jacobmoore/Desktop/repos/Fierro/apps/multiphysics/example_inputs/meshes/VTK_Geometry_lattice.vtk
             scale_x: 0.02
             scale_y: 0.02
@@ -180,6 +282,9 @@ regions:
 
     # top block initial velocity conditions
     - region:
+        # Overlay region: imposes an initial downward velocity on a top
+        # sub-block (material_id=1). This region's velocity overrides the
+        # voxel_file region's velocity in the overlap.
         volume:
             type: box
             origin: [0.0, 0.0, 0.0]
@@ -201,6 +306,7 @@ regions:
             type: cartesian
             u: 0.0
             v: 0.0
+            # Downward initial velocity applied to the top block.
             w: -0.05
 
 

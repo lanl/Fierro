@@ -9,7 +9,7 @@ dynamic_options:
 
 mesh_options:
     source: file
-    file_path: standard_inputs/meshes/mesh_Sedov_16.geo
+    file_path: ./meshes/mesh_Sedov_16.geo
     num_dims: 3
 
 
