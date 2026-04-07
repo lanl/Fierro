@@ -124,6 +124,7 @@ KOKKOS_INLINE_FUNCTION
 double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
                            const CArrayKokkos <double> &node_basis, 
                            const CArrayKokkos <size_t> &nodes_in_elems,
+                           const size_t elem_gid,
                            const size_t eval_pnt_lid){
 
     // bern_basis(eval_pnt_lid, num_basis)
@@ -153,6 +154,7 @@ void calc_vector_in_elem(CArrayKokkos <double> &vec_pnt,
                          const CArrayKokkos <double> &node_vec,
                          const CArrayKokkos <double> &node_basis, 
                          const CArrayKokkos <size_t> &nodes_in_elems,
+                         const size_t elem_gid,
                          const size_t eval_pnt_lid){
 
     // bern_basis(eval_pnt_lid, num_basis)
@@ -499,7 +501,7 @@ double distance(const vect_t &a, , const vec_t &b){
 // Function that takes a stl file and paints it on a mesh 
 //
 //---------------------------------------------------------
-int paint_stl_on_mesh(DCArrayKokkos <double> &elem_signed_distance_fcn, 
+int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac, 
                       const DCArrayKokkos <double> &node_coords,
                       const DCArrayKokkos <size_t> &nodes_in_elems,
                       const size_t Pn_order,
@@ -556,9 +558,9 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_signed_distance_fcn,
     FOR_ALL(tri, 0, num_inp_triangles, {
 
         // point on surface
-        tri_coords(tri, 0) =  1.0/3.0*((double)v1X(tri) + (double)v2X(tri) + (double)v3X(tri));
-        tri_coords(tri, 1) =  1.0/3.0*((double)v1Y(tri) + (double)v2Y(tri) + (double)v3Y(tri));
-        tri_coords(tri, 2) =  1.0/3.0*((double)v1Z(tri) + (double)v2Z(tri) + (double)v3Z(tri));
+        tri_coords(tri, 0) =  1.0/3.0*(v1X(tri) + v2X(tri) + v3X(tri));
+        tri_coords(tri, 1) =  1.0/3.0*(v1Y(tri) + v2Y(tri) + v3Y(tri));
+        tri_coords(tri, 2) =  1.0/3.0*(v1Z(tri) + v2Z(tri) + v3Z(tri));
 
     }); // end parallel for tri's in the file
 
@@ -587,9 +589,9 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_signed_distance_fcn,
 
     
     // the number of nodes in the bin mesh
-    size_t num_bins_x = (size_t)( round( (xmax - xmin)/bin_dx) + 1 );  
-    size_t num_bins_y = (size_t)( round( (ymax - ymin)/bin_dy) + 1 );  
-    size_t num_bins_z = (size_t)( round( (zmax - zmin)/bin_dz) + 1 );  
+    size_t num_bins_x = 20;//(size_t)( round( (xmax - xmin)/bin_dx) + 1 );  
+    size_t num_bins_y = 20;//(size_t)( round( (ymax - ymin)/bin_dy) + 1 );  
+    size_t num_bins_z = 20;//(size_t)( round( (zmax - zmin)/bin_dz) + 1 );  
 
     size_t num_bins = num_bins_x*num_bins_y*num_bins_z;
     printf("num bins x=%zu, y=%zu, z=%zu \n", num_bins_x, num_bins_y, num_bins_z);
@@ -726,12 +728,15 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_signed_distance_fcn,
         // establish the stencil size to find at least 1 triangle
         for(size_t stencil=1; stencil<1000000; stencil++){
 
+            // i-1:i+1
             const size_t imin = MAX(0, i-stencil);
             const size_t imax = MIN(num_bins_x-1, i+stencil);
 
+            // j-1:j+1
             const size_t jmin = MAX(0, j-stencil);
             const size_t jmax = MIN(num_bins_y-1, j+stencil);
 
+            // k-1:k+1
             const size_t kmin = MAX(0, k-stencil);
             const size_t kmax = MIN(num_bins_z-1, k+stencil);
 
@@ -983,7 +988,9 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_signed_distance_fcn,
 
 
     // evaluate SDF at this eval point
-    FOR_ALL(elem, 0, num_elems, {
+    FOR_ALL(elem_gid, 0, num_elems, {
+
+        double num_inside_part = 0;
 
         // loop over the eval points in this element
         for(size_t k=0; k<num_eval_pnts; k++){
@@ -991,11 +998,20 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_signed_distance_fcn,
                 for(size_t i=0; i<num_eval_pnts; i++){
 
                     // evaluate SDF at this point
-                    calc_scalar_in_elem(node_sdf, bern_basis, nodes_in_elems, eval_pnt_lid);
+                    const double sdf_val = calc_scalar_in_elem(node_sdf, bern_basis, nodes_in_elems, elem_gid, eval_pnt_lid);
+
+                    if(sdf_val<0){
+                        // we are inside the part
+                        num_inside_part++
+                    } // end if
 
                 } // end for i
             } // end for j
         } // end for k
+
+
+        //  The ratio of hits to number of points is vol frac
+        elem_vol_frac(elem_gid) = num_inside_part/(num_eval_pnts*num_eval_pnts*num_eval_pnts); // coded for 3D
 
     }); // end parallel for
         
@@ -1003,72 +1019,52 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_signed_distance_fcn,
         
 
 
+    // end timer
+    auto time_4 = std::chrono::high_resolution_clock::now();
 
-
-
-        //////////////
-        //////////////
-        // Above HERE
-        //////////////
-        //////////////
-
-
-        //---------
-
-        //////////////
-        //////////////
-        // Above HERE
-        //////////////
-        //////////////
-        
-
-
-        // end timer
-        auto time_4 = std::chrono::high_resolution_clock::now();
-
-        printf("done building neighbor point list \n");
+    printf("done calculating volume fraction in elements \n");
 
 
 
 
-        // -----------------
-        //  Timers
-        // -----------------
-        printf("\n");
-        std::chrono::duration <double, std::milli> ms = time_2 - time_1;
-        std::cout << "runtime to create bins = " << ms.count() << "ms\n\n";
+    // -----------------
+    //  Timers
+    // -----------------
+    printf("\n");
+    std::chrono::duration <double, std::milli> ms = time_2 - time_1;
+    std::cout << "runtime to create bins = " << ms.count() << "ms\n\n";
 
-        ms = time_4 - time_3;
-        std::cout << "runtime to find and save neighbors = " << ms.count() << "ms\n\n";
+    ms = time_4 - time_3;
+    std::cout << "runtime to find and save neighbors = " << ms.count() << "ms\n\n";
 
 
 
 
 
-        printf("Writing VTK Graphics File \n\n");
+    printf("Writing VTK Graphics File \n\n");
 
-        std::ofstream out("cloud.vtk");
+    std::ofstream out("cloud.vtk");
 
-        out << "# vtk DataFile Version 3.0\n";
-        out << "3D point cloud\n";
-        out << "ASCII\n";
-        out << "DATASET POLYDATA\n";
-        out << "POINTS " << num_points << " float\n";
-        for (size_t tri_gid = 0; tri_gid < num_points; ++tri_gid) {
-            out << tri_coords.host(tri_gid,0) << " " 
-                << tri_coords.host(tri_gid,1) << " " 
-                << tri_coords.host(tri_gid,2) << "\n";
-        }
+    out << "# vtk DataFile Version 3.0\n";
+    out << "3D point cloud\n";
+    out << "ASCII\n";
+    out << "DATASET POLYDATA\n";
+    out << "POINTS " << num_points << " float\n";
+    for (size_t tri_gid = 0; tri_gid < num_points; ++tri_gid) {
+        out << tri_coords.host(tri_gid,0) << " " 
+            << tri_coords.host(tri_gid,1) << " " 
+            << tri_coords.host(tri_gid,2) << "\n";
+    }
 
-        out << "\nPOINT_DATA " << num_points << "\n";
-        out << "SCALARS lvlset float 1\n";
-        out << "LOOKUP_TABLE default\n";
-        for (size_t tri_gid = 0; tri_gid < num_points; ++tri_gid) {
-            out << 0 << "\n";
-        }
+    out << "\nPOINT_DATA " << num_points << "\n";
+    out << "SCALARS lvlset float 1\n";
+    out << "LOOKUP_TABLE default\n";
+    for (size_t tri_gid = 0; tri_gid < num_points; ++tri_gid) {
+        out << 0 << "\n";
+    }
 
-       
-        printf("Finished \n\n");
+    
+    printf("Finished \n\n");
 
 
 
