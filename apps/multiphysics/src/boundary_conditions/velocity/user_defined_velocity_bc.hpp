@@ -84,9 +84,11 @@ static void velocity(const swage::Mesh& mesh,
 
     // for fracture reorientation validation mode, kinematics are presribed
     // check if reorientation mode is active
-    const double mode_flag = vel_bc_global_vars(bdy_set, BCVars::reorientation_mode);
+    // since UserDefinedVelocityBC data type is RaggedRight <double>,
+    // interpret reorienation_mode parameter as true if > 0.5, false otherwise
+    const bool reorientation_mode = vel_bc_global_vars(bdy_set, BCVars::reorientation_mode) > 0.5; // interpret as bool 
 
-    if (mode_flag > 0.5) {
+    if (reorientation_mode) {
         // do nothing - kinematics handled in the solver
     }
     return;
