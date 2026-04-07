@@ -2141,7 +2141,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
         // ****************************************
         RUN(
         {
-            for (int j = 0; j < num_active.host(0); j++) {
+            for (int j = 0; j < num_active(0); j++) {
             size_t contact_id = active_set(j);
             for (int k = 0; k < node_patch_pairs.stride(contact_id); k++) {
                 if (node_patch_pairs(contact_id,k) != num_patches) {
