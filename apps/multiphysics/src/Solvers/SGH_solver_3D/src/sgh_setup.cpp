@@ -123,7 +123,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
         // calling initialize for the cohesive zones bank
         printf("Calling initialize()...\n");
         //cohesive_zones_t cohesive_zones_bank;
-        this->cohesive_zones_bank.initialize(mesh, State);
+        this->cohesive_zones_bank.initialize(mesh, State, SimulationParamaters);
 
         // done calling initialize
         printf("Done calling initialize()...\n");

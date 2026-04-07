@@ -80,6 +80,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     }
 
     // fracture reorientation validation mode initialization
+    // scans user-defined velocity BC parameters for the reorientation mode flag
+    // if enabled, stores the reorientation parameters and allocated validation-mode data needed
     if (doing_fracture) {
         cohesive_zones_bank.initialize_reorientation_mode(
             mesh,
@@ -342,64 +344,61 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             dt,
                             rk_alpha);
 
-                if (Materials.MaterialEnums.host(mat_id).StrengthType == model::incrementBased) {
-                    update_stress(Materials,
-                                  mesh,
-                                  State.GaussPoints.vol,
-                                  State.node.coords,
-                                  State.node.vel,
-                                  State.GaussPoints.vel_grad,
-                                  State.MaterialPoints.den,
-                                  State.MaterialPoints.sie,
-                                  State.MaterialPoints.pres,
-                                  State.MaterialPoints.stress,
-                                  State.MaterialPoints.stress_n0,
-                                  State.MaterialPoints.sspd,
-                                  State.MaterialPoints.eos_state_vars,
-                                  State.MaterialPoints.strength_state_vars,
-                                  State.MaterialPoints.shear_modulii,
-                                  State.MaterialToMeshMaps.elem_in_mat_elem,
-                                  State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
-                                  mat_id,
-                                  fuzz,
-                                  small,
-                                  time_value,
-                                  dt,
-                                  rk_alpha,
-                                  cycle);
-                } // end if on increment
+                    if (Materials.MaterialEnums.host(mat_id).StrengthType == model::incrementBased) {
+                        update_stress(Materials,
+                                      mesh,
+                                      State.GaussPoints.vol,
+                                      State.node.coords,
+                                      State.node.vel,
+                                      State.GaussPoints.vel_grad,
+                                      State.MaterialPoints.den,
+                                      State.MaterialPoints.sie,
+                                      State.MaterialPoints.pres,
+                                      State.MaterialPoints.stress,
+                                      State.MaterialPoints.stress_n0,
+                                      State.MaterialPoints.sspd,
+                                      State.MaterialPoints.eos_state_vars,
+                                      State.MaterialPoints.strength_state_vars,
+                                      State.MaterialPoints.shear_modulii,
+                                      State.MaterialToMeshMaps.elem_in_mat_elem,
+                                      State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
+                                      mat_id,
+                                      fuzz,
+                                      small,
+                                      time_value,
+                                      dt,
+                                      rk_alpha,
+                                      cycle);
+                    } // end if on increment
+                } // end for mat_id
 
-            } // end for mat_id
 
+                // ---- Calculate boundary and body forces ---- //
+                // setting nodal force to zero here, 
+                // the node force stores the BCs supplied forces and body forces
+                State.node.force.set_values(0.0);
 
-            // ---- Calculate boundary and body forces ---- //
-            // setting nodal force to zero here, 
-            // the node force stores the BCs supplied forces and body forces
-            State.node.force.set_values(0.0);
+                // call stress BC's routine
+                boundary_stress(mesh, 
+                                BoundaryConditions, 
+                                State.node.force, 
+                                State.node.coords,
+                                time_value);
 
-            // call stress BC's routine
-            boundary_stress(mesh, 
-                            BoundaryConditions, 
-                            State.node.force, 
-                            State.node.coords,
-                            time_value);
-
-        } else {
-        // kinematics-only: start forces at zero (you can still add cohesive forces below)
-        State.node.force.set_values(0.0);
-        set_corner_force_zero(mesh, State.corner.force);
-        }                        
+            } else {
+                // kinematics-only: start forces at zero (you can still add cohesive forces below)
+                State.node.force.set_values(0.0);
+                set_corner_force_zero(mesh, State.corner.force);
+            }                        
         
-        // apply cohesive zone nodal forces (fracture)
+            // apply cohesive zone nodal forces (fracture)
             if (doing_fracture && cohesive_zones_bank.is_ready()) {
                 
                 // reset delta internal vars to zero
                 cohesive_zones_bank.reset_delta_internal_vars();
                 
-                // allocate force array for this stage
-                const size_t num_nodes = mesh.num_nodes;
-                CArrayKokkos<double> F_cz(3 * num_nodes, "cz_nodal_forces");
-                F_cz.set_values(0.0);
+                // reset F_cz for this stage
+                cohesive_zones_bank.F_cz.set_values(0.0);
                 
                 // Compute cohesive forces (orientation, openings, constitutive, loads)
                 cohesive_zones_bank.compute_cohesive_zone_nodal_forces(
@@ -410,7 +409,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     cycle,
                     rk_stage,
                     rk_num_stages,
-                    F_cz
+                    cohesive_zones_bank.F_cz
                 );
 
                 // commit internal variable updates at final RK stage only
@@ -420,8 +419,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 // add cohesive zone nodal forces to global nodal force array (State.node.force)
                 cohesive_zones_bank.add_cohesive_zone_nodal_forces(
                     State.node.force,
-                    F_cz,
-                    num_nodes
+                    cohesive_zones_bank.F_cz,
+                    mesh.num_nodes
                 );
             }        
 
