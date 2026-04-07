@@ -114,39 +114,58 @@ inline void prescribe_reorientation_kinematics(
     double omega_z,
     double cz_opening_rate)
 {
+    // compute scalar values on host
     const double angle_y_t   = omega_y * time_value;
     const double angle_z_t   = omega_z * time_value;
     const double angle_y_tdt = omega_y * (time_value + dt_stage);
     const double angle_z_tdt = omega_z * (time_value + dt_stage);
-
     const double s_t   = cz_opening_rate * time_value;
     const double s_tdt = cz_opening_rate * (time_value + dt_stage);
 
-    double Ry_t[3][3], Rz_t[3][3], R_t[3][3];
-    double Ry_tdt[3][3], Rz_tdt[3][3], R_tdt[3][3];
-
-    rotation_matrix_y(angle_y_t,   Ry_t);
-    rotation_matrix_z(angle_z_t,   Rz_t);
-    mat_mult_3x3(Rz_t, Ry_t, R_t);
-
-    rotation_matrix_y(angle_y_tdt, Ry_tdt);
-    rotation_matrix_z(angle_z_tdt, Rz_tdt);
-    mat_mult_3x3(Rz_tdt, Ry_tdt, R_tdt);
-
-    // n(t) = R(t)*[1,0,0] => column 0
-    const double n_t[3]   = { R_t[0][0],   R_t[1][0],   R_t[2][0]   };
-    const double n_tdt[3] = { R_tdt[0][0], R_tdt[1][0], R_tdt[2][0] };
-
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        // declare rotation matrices as thread local storage
+        double Ry_t[3][3];
+        double Rz_t[3][3];
+        double R_t[3][3];
+        double Ry_tdt[3][3];
+        double Rz_tdt[3][3];
+        double R_tdt[3][3];
+
+        // compute rotation matrices at time t
+        rotation_matrix_y(angle_y_t,   Ry_t);
+        rotation_matrix_z(angle_z_t,   Rz_t);
+        mat_mult_3x3(Rz_t, Ry_t, R_t);
+
+        // compute rotation matrices at time t+dt
+        rotation_matrix_y(angle_y_tdt, Ry_tdt);
+        rotation_matrix_z(angle_z_tdt, Rz_tdt);
+        mat_mult_3x3(Rz_tdt, Ry_tdt, R_tdt);
+
+        // normal vector n(t) (defines the cohesive zone normal direction in the current configuration)
+        // n(t) = R(t)*[1,0,0] => column 0
+        double n_t[3];
+        n_t[0] = R_t[0][0];
+        n_t[1] = R_t[1][0];
+        n_t[2] = R_t[2][0];
+
+        // normal vector n(t+dt)
+        double n_tdt[3];
+        n_tdt[0] = R_tdt[0][0];
+        n_tdt[1] = R_tdt[1][0];
+        n_tdt[2] = R_tdt[2][0];
+
+        // initial (reference) coordinates for this node
         const double Xx = initial_coords(node_gid,0);
         const double Xy = initial_coords(node_gid,1);
         const double Xz = initial_coords(node_gid,2);
 
+        // compute current position 
         // x(t) = R(t)*X0
         double xt   = R_t[0][0]*Xx + R_t[0][1]*Xy + R_t[0][2]*Xz;
         double yt   = R_t[1][0]*Xx + R_t[1][1]*Xy + R_t[1][2]*Xz;
         double zt   = R_t[2][0]*Xx + R_t[2][1]*Xy + R_t[2][2]*Xz;
 
+        // compute position at t+dt
         // x(t+dt_stage) = R(t+dt_stage)*X0
         double xtdt = R_tdt[0][0]*Xx + R_tdt[0][1]*Xy + R_tdt[0][2]*Xz;
         double ytdt = R_tdt[1][0]*Xx + R_tdt[1][1]*Xy + R_tdt[1][2]*Xz;
@@ -154,18 +173,25 @@ inline void prescribe_reorientation_kinematics(
 
         // Add opening displacement for B-side nodes
         if (cz_b_side_flag(node_gid)) {
-            xt   += s_t   * n_t[0];   yt   += s_t   * n_t[1];   zt   += s_t   * n_t[2];
-            xtdt += s_tdt * n_tdt[0]; ytdt += s_tdt * n_tdt[1]; ztdt += s_tdt * n_tdt[2];
+            xt   += s_t   * n_t[0];
+            yt   += s_t   * n_t[1];
+            zt   += s_t   * n_t[2];
+            xtdt += s_tdt * n_tdt[0];
+            ytdt += s_tdt * n_tdt[1]; 
+            ztdt += s_tdt * n_tdt[2];
         }
 
+        // update nodal coordinates
         State.node.coords(node_gid,0) = xt;
         State.node.coords(node_gid,1) = yt;
         State.node.coords(node_gid,2) = zt;
 
+        // compute velocity via finite difference 
+        // v = (x(t+dt) - x(t)) / dt_stage
         State.node.vel(node_gid,0) = (xtdt - xt) / dt_stage;
         State.node.vel(node_gid,1) = (ytdt - yt) / dt_stage;
         State.node.vel(node_gid,2) = (ztdt - zt) / dt_stage;
-    });
+    }); // end FOR_ALL
 
     Kokkos::fence();
 }
