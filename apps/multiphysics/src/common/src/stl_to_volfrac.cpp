@@ -182,7 +182,7 @@ double distance(const vec_t &a, const vec_t &b){
 
 
 KOKKOS_INLINE_FUNCTION
-void get_bernstein_basis_fcns(CArrayKokkos <double> &bern_basis,
+void get_bernstein_basis_fcns(const CArrayKokkos <double> &bern_basis,
                               const double xi, 
                               const double eta, 
                               const double mu,
@@ -250,7 +250,7 @@ double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
 
 
 KOKKOS_INLINE_FUNCTION
-void calc_vector_in_elem(CArrayKokkos <double> &vec_pnt,
+void calc_vector_in_elem(const CArrayKokkos <double> &vec_pnt,
                          const CArrayKokkos <double> &node_vec,
                          const CArrayKokkos <double> &node_basis, 
                          const CArrayKokkos <size_t> &nodes_in_elems,
@@ -283,9 +283,9 @@ void calc_vector_in_elem(CArrayKokkos <double> &vec_pnt,
 
 
 KOKKOS_INLINE_FUNCTION
-void get_sdf_to_tri(CArrayKokkos<double> &node_sdf,
-                    const CArrayKokkos <double> &tri_coords,
-                    const CArrayKokkos <size_t> &num_tris_in_bin,
+void get_sdf_to_tri(const CArrayKokkos<double> &node_sdf,
+                    const DCArrayKokkos <double> &tri_coords,
+                    const DCArrayKokkos <size_t> &num_tris_in_bin,
                     const DRaggedRightArrayKokkos <size_t> &tris_in_bin,
                     const DViewCArrayKokkos <double> &normal,
                     const double x_pt,
@@ -528,7 +528,7 @@ binary_stl_reader(const std::string& path)
 //------------------------------------------------------------------------
 int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac, 
                       const DCArrayKokkos <double> &node_coords,
-                      const DCArrayKokkos <size_t> &nodes_in_elems,
+                      const CArrayKokkos <size_t> &nodes_in_elems,
                       const size_t Pn_order,
                       const std::string &filename)
 {
@@ -1063,7 +1063,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
     const double ref_pnts_1D[9]={0.0, 0.125, 0.24, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0};
 
     // build the reference element
-    CArrayKokkos <size_t> bern_basis(num_eval_pnts,num_nodes_in_elem);
+    CArrayKokkos <double> bern_basis(num_eval_pnts,num_nodes_in_elem);
 
     // loop over the eval reference element
     FOR_ALL(k, 0, num_eval_pnts,
@@ -1084,6 +1084,8 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
     }); // end for all
 
 
+    const size_t num_elems = nodes_in_elems.dims(0); // nodes_in_elems(num_elems, num_nodes_in_elem) 
+
     // evaluate SDF at this eval point
     FOR_ALL(elem_gid, 0, num_elems, {
 
@@ -1094,12 +1096,21 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
             for(size_t j=0; j<num_eval_pnts; j++){
                 for(size_t i=0; i<num_eval_pnts; i++){
 
+                    // get the eval ref elem local id
+                    const size_t eval_pnt_rid = get_gid(i, j, k, num_eval_pnts, num_eval_pnts);
+
                     // evaluate SDF at this point
                     const double sdf_val = calc_scalar_in_elem(node_sdf, bern_basis, nodes_in_elems, elem_gid, eval_pnt_rid);
+                           
+                           //double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
+                           //const CArrayKokkos <double> &node_basis, 
+                           //const CArrayKokkos <size_t> &nodes_in_elems,
+                           //const size_t elem_gid,
+                           //const size_t eval_pnt_rid)
 
                     if(sdf_val<0){
                         // we are inside the part
-                        num_inside_part++
+                        num_inside_part++;
                     } // end if
 
                 } // end for i
