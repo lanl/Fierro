@@ -496,11 +496,19 @@ double distance(const vec_t &a, , const vec_t &b){
 
 
 
-//---------------------------------------------------------
+//------------------------------------------------------------------------
 //
 // Function that takes a stl file and paints it on a mesh 
 //
-//---------------------------------------------------------
+// This function works as follows here:
+//  * read in an STL file, calculating geo-center of triangles
+//  * build a bin mesh that lives under the dimensions of the STL file
+//  * save triangle index to bins, creating a map from bins to STL array
+//  * find the closest bin (perhaps itself) that have triangles.
+//    Note, if the bin is itself, I also include i+1, j+1, and k+1
+//  * 
+//
+//------------------------------------------------------------------------
 int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac, 
                       const DCArrayKokkos <double> &node_coords,
                       const DCArrayKokkos <size_t> &nodes_in_elems,
@@ -711,22 +719,19 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
 
         // get bin gid at i,j,k
         size_t num_tris_found = num_tris_in_bin(bin_gid);
-
-        // commenting this out to remove thread divergence
-        // if (num_tris_found > 0){
-        //     // Once I find at least 1 triangle, I can exit as this is the closest one found
-
-        //     bin_tri_stencil(bin_gid,0) = i; //imin
-        //     bin_tri_stencil(bin_gid,1) = i; //imax
-        //     bin_tri_stencil(bin_gid,2) = j; //jmin
-        //     bin_tri_stencil(bin_gid,3) = j; //jmax
-        //     bin_tri_stencil(bin_gid,4) = k; //kmin
-        //     bin_tri_stencil(bin_gid,5) = k; //kmax
-
-        // } else 
+        size_t max_stencil = 1000000;
+        if(num_tris_found>0){
+            imin=i;
+            imax=i;
+            jmin=j;
+            jmax=j;
+            kmin=k;
+            kmax=k;
+            max_stencil = 0;
+        }
 
         // establish the stencil size to find at least 1 triangle
-        for(size_t stencil=1; stencil<1000000; stencil++){
+        for(size_t stencil=1; stencil<max_stencil; stencil++){
 
             // i-1:i+1
             const size_t imin = MAX(0, i-stencil);
@@ -794,7 +799,6 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
 
             // Once I find at least 1 triangle, I can exit as this is the closest one found
             if (num_tris_found > 0){
-
                 bin_tri_stencil(bin_gid,0) = imin;
                 bin_tri_stencil(bin_gid,1) = imax;
                 bin_tri_stencil(bin_gid,2) = jmin;
