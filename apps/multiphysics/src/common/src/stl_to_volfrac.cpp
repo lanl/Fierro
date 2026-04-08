@@ -48,15 +48,10 @@
 #include <stdio.h>
 #include <cmath>
 
-#include <cstdlib> // For rand() and srand()
-
 
 #include "matar.h"
 
-#include "lu_solver.hpp"
-
-
-#include <set> // for unorded map testing 
+ 
 
 
 
@@ -68,8 +63,122 @@ using namespace mtr;
 const double PI = 3.14159265358979323846;
 
 
+// -----------------------------------------------
+// types
+// -----------------------------------------------
+
+struct bin_keys_t{
+    size_t i,j,k;
+};
+
+// a vector type with 3 components
+struct vec_t{
+    double x;
+    double y;
+    double z;
+    
+    // default constructor
+    KOKKOS_INLINE_FUNCTION
+    vec_t (){};
+    
+    // overloaded constructor
+    KOKKOS_INLINE_FUNCTION
+    vec_t(const double x_in, const double y_in, const double z_in){
+        x = x_in;
+        y = y_in;
+        z = z_in;
+    };
+    
+}; // end vec_t
+
+
+// a triangle data type
+struct triangle_t {
+    
+    vec_t normal; // surface normal
+    
+    vec_t p[3];   // three nodes with x,y,z coords
+    
+    // default constructor
+    KOKKOS_INLINE_FUNCTION
+    triangle_t(){};
+    
+    // overloaded constructor to accept 3 vectors
+    KOKKOS_INLINE_FUNCTION
+    triangle_t (const vec_t p_in[3])
+    {
+        // store the coords
+        p[0]=p_in[0]; 
+        p[1]=p_in[1]; 
+        p[2]=p_in[2];
+
+        // calculate the normal to this surface
+
+        //A = p1 - p0;
+        //B = p2 - p0;
+        vec_t A;
+        A.x = p[1].x - p[0].x;
+        A.y = p[1].y - p[0].y;
+        A.z = p[1].z - p[0].z;
+        
+        vec_t B;
+        B.x = p[2].x - p[0].x;
+        B.y = p[2].y - p[0].y;
+        B.z = p[2].z - p[0].z;
+        
+        normal.x = A.y * B.z - A.z * B.y;
+        normal.y = A.z * B.x - A.x * B.z;
+        normal.z = A.x * B.y - A.y * B.x;
+        
+        const double mag = sqrt(normal.x*normal.x + normal.y*normal.y + normal.z*normal.z);
+        
+        // save the unit normal
+        normal.x /= mag;
+        normal.y /= mag;
+        normal.z /= mag;
+    };
+    
+}; // end triangle_t
+
+
 //
 // -----------------------------------------------
+
+KOKKOS_INLINE_FUNCTION
+size_t get_gid(size_t i, size_t j, size_t k, size_t num_x, size_t num_y){
+    return i + (j + k*num_y)*num_x;
+}
+
+
+// cross product
+KOKKOS_INLINE_FUNCTION
+vec_t cross(const vec_t &a, const vec_t &b) {
+    return {a.y*b.z - a.z*b.y,
+            a.z*b.x - a.x*b.z,
+            a.x*b.y - a.y*b.x};
+}
+
+// dot product
+KOKKOS_INLINE_FUNCTION
+double dot(const vec_t &a, const vec_t &b) {
+    return a.x*b.x + a.y*b.y + a.z*b.z;
+}
+
+// magnitude of vector
+KOKKOS_INLINE_FUNCTION
+double magnitude(const vec_t &a){
+    return sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
+}
+
+// magnitude of difference between two vectors
+KOKKOS_INLINE_FUNCTION
+double distance(const vec_t &a, const vec_t &b){
+    return sqrt((a.x-b.x)*(a.x-b.x) + 
+                (a.y-b.y)*(a.y-b.y) + 
+                (a.z-b.z)*(a.z-b.z));
+}
+
+
 
 
 KOKKOS_INLINE_FUNCTION
@@ -81,15 +190,15 @@ void get_bernstein_basis_fcns(CArrayKokkos <double> &bern_basis,
 
     // Output: bern_basis[8] = shape functions
 
-    const double Bx[2];
+    double Bx[2];
     Bx[0] = 1.0 - xi;
     Bx[1] = xi;
 
-    const double By[2];
+    double By[2];
     By[0] = 1.0 - eta;
     By[1] = eta;
 
-    const double Bz[2];
+    double Bz[2];
     Bz[0] = 1.0 - mu;
     Bz[1] = mu;
 
@@ -119,7 +228,7 @@ double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
                            const size_t eval_pnt_rid){
 
     // bern_basis(eval_pnt_rid, num_basis)
-    const size_t num_basis = basis.dims(1);
+    const size_t num_basis = node_basis.dims(1);
 
     // the physical location (x,y,z) in the element is vec_pt
     double scalar_pnt = 0;
@@ -149,7 +258,7 @@ void calc_vector_in_elem(CArrayKokkos <double> &vec_pnt,
                          const size_t eval_pnt_rid){
 
     // bern_basis(eval_pnt_rid, num_basis)
-    const size_t num_basis = basis.dims(1);
+    const size_t num_basis = node_basis.dims(1);
 
     // the vector value in the element is vec_pnt at this eval pnt
     vec_pnt(0) = 0;
@@ -175,7 +284,14 @@ void calc_vector_in_elem(CArrayKokkos <double> &vec_pnt,
 
 KOKKOS_INLINE_FUNCTION
 void get_sdf_to_tri(CArrayKokkos<double> &node_sdf,
+                    const CArrayKokkos <double> &tri_coords,
                     const CArrayKokkos <size_t> &num_tris_in_bin,
+                    const DRaggedRightArrayKokkos <size_t> &tris_in_bin,
+                    const DViewCArrayKokkos <double> &normal,
+                    const double x_pt,
+                    const double y_pt,
+                    const double z_pt,
+                    const size_t node_gid,
                     const size_t i_bin, 
                     const size_t j_bin, 
                     const size_t k_bin, 
@@ -199,18 +315,21 @@ void get_sdf_to_tri(CArrayKokkos<double> &node_sdf,
         // store tri coords in a vector
         vec_t vec_of_tri_coords(x_tri, y_tri, z_tri);
 
-        // create the triangle object
-        triangle_t triangle(vec_of_tri_coords);
-
         // distance from node position to the triangular facet
         const double dx_tri_pt = x_tri-x_pt;
         const double dy_tri_pt = y_tri-y_pt;
         const double dz_tri_pt = z_tri-z_pt;
         vec_t distance_vec_to_tri(dx_tri_pt, dy_tri_pt, dz_tri_pt);
 
+        // normal vector
+        vec_t normal_vec;
+        normal_vec.x = normal(tri_gid,0);
+        normal_vec.y = normal(tri_gid,1);
+        normal_vec.z = normal(tri_gid,2);
+
         // get the signed distance for this triangle
         double tri_distance = magnitude(distance_vec_to_tri);
-        double sign = dot(triangle.normal, distance_vec_to_tri);
+        double sign = dot(normal_vec, distance_vec_to_tri);
 
         if(fabs(tri_distance) < fabs(node_sdf(node_gid))){
             node_sdf(node_gid) = fabs(tri_distance)*sign;
@@ -220,29 +339,22 @@ void get_sdf_to_tri(CArrayKokkos<double> &node_sdf,
 } // end function 
 
 
-///////////
-
-
-struct bin_keys_t{
-    size_t i,j,k;
-};
-
-
-KOKKOS_INLINE_FUNCTION
-size_t get_gid(size_t i, size_t j, size_t k, size_t num_x, size_t num_y){
-    return i + (j + k*num_y)*num_x;
-}
-
 
 KOKKOS_INLINE_FUNCTION
 bin_keys_t get_bin_keys(const double x_pt, 
                         const double y_pt, 
-                        const double z_pt){
+                        const double z_pt,
+                        const double xmin,
+                        const double ymin,
+                        const double zmin,
+                        const double bin_dx,
+                        const double bin_dy,
+                        const double bin_dz){
             
 
-    double i_dbl = fmax(0, round((x_pt - X0 - bin_dx*0.5)/bin_dx - 1.0e-10)); // x = ih + X0 + dx_bin*0.5
-    double j_dbl = fmax(0, round((y_pt - Y0 - bin_dy*0.5)/bin_dy - 1.0e-10));
-    double k_dbl = fmax(0, round((z_pt - Z0 - bin_dz*0.5)/bin_dz - 1.0e-10));
+    double i_dbl = fmax(0, round((x_pt - xmin - bin_dx*0.5)/bin_dx - 1.0e-10)); // x = ih + Xmin + dx_bin*0.5
+    double j_dbl = fmax(0, round((y_pt - ymin - bin_dy*0.5)/bin_dy - 1.0e-10));
+    double k_dbl = fmax(0, round((z_pt - zmin - bin_dz*0.5)/bin_dz - 1.0e-10));
 
     bin_keys_t bin_keys; // save i,j,k to the bin keys
 
@@ -260,14 +372,20 @@ KOKKOS_INLINE_FUNCTION
 size_t get_bin_gid(const double x_pt, 
                    const double y_pt, 
                    const double z_pt, 
+                   const double xmin,
+                   const double ymin,
+                   const double zmin,
+                   const double bin_dx,
+                   const double bin_dy,
+                   const double bin_dz,
                    const size_t num_bins_x,
                    const size_t num_bins_y,
                    const size_t num_bins_z){
             
 
-    double i_dbl = fmin(num_bins_x-1, fmax(0.0, round((x_pt - X0)/bin_dx - 1.0e-8))); // x = ih + X0
-    double j_dbl = fmin(num_bins_y-1, fmax(0.0, round((y_pt - Y0)/bin_dy - 1.0e-8)));
-    double k_dbl = fmin(num_bins_z-1, fmax(0.0, round((z_pt - Z0)/bin_dz - 1.0e-8)));
+    double i_dbl = fmin(num_bins_x-1, fmax(0.0, round((x_pt - xmin)/bin_dx - 1.0e-8))); // x = ih + Xmin
+    double j_dbl = fmin(num_bins_y-1, fmax(0.0, round((y_pt - ymin)/bin_dy - 1.0e-8)));
+    double k_dbl = fmin(num_bins_z-1, fmax(0.0, round((z_pt - zmin)/bin_dz - 1.0e-8)));
 
     // get the integers for the bins
     size_t i = (size_t)i_dbl;
@@ -395,107 +513,6 @@ binary_stl_reader(const std::string& path)
 
 
 
-// a vector type with 3 components
-struct vec_t{
-    double x;
-    double y;
-    double z;
-    
-    // default constructor
-    KOKKOS_INLINE_FUNCTION
-    vec_t (){};
-    
-    // overloaded constructor
-    KOKKOS_INLINE_FUNCTION
-    vec_t(const double x_in, const double y_in, const double z_in){
-        x = x_in;
-        y = y_in;
-        z = z_in;
-    };
-    
-}; // end vec_t
-
-
-// a triangle data type
-struct triangle_t {
-    
-    vec_t normal; // surface normal
-    
-    vec_t p[3];   // three nodes with x,y,z coords
-    
-    // default constructor
-    KOKKOS_INLINE_FUNCTION
-    triangle_t(){};
-    
-    // overloaded constructor
-    KOKKOS_INLINE_FUNCTION
-    triangle_t (const vec_t p_in[3])
-    {
-        // store the coords
-        p[0]=p_in[0];
-        p[1]=p_in[1];
-        p[2]=p_in[2];
-
-        // calculate the normal to this surface
-
-        //A = p1 - p0;
-        //B = p2 - p0;
-        vec_t A;
-        A.x = p[1].x - p[0].x;
-        A.y = p[1].y - p[0].y;
-        A.z = p[1].z - p[0].z;
-        
-        vec_t B;
-        B.x = p[2].x - p[0].x;
-        B.y = p[2].y - p[0].y;
-        B.z = p[2].z - p[0].z;
-        
-        normal.x = A.y * B.z - A.z * B.y;
-        normal.y = A.z * B.x - A.x * B.z;
-        normal.z = A.x * B.y - A.y * B.x;
-        
-        const double mag = sqrt(normal.x*normal.x + normal.y*normal.y + normal.z*normal.z);
-        
-        // save the unit normal
-        normal.x /= mag;
-        normal.y /= mag;
-        normal.z /= mag;
-    };
-    
-}; // end triangle_t
-
-
-
-// cross product
-KOKKOS_INLINE_FUNCTION
-vec_t cross(const vec_t &a, const vec_t &b) {
-    return {a.y*b.z - a.z*b.y,
-            a.z*b.x - a.x*b.z,
-            a.x*b.y - a.y*b.x};
-}
-
-// dot product
-KOKKOS_INLINE_FUNCTION
-double dot(const vec_t &a, const vec_t &b) {
-    return a.x*b.x + a.y*b.y + a.z*b.z;
-}
-
-// magnitude of vector
-KOKKOS_INLINE_FUNCTION
-double magnitude(const vec_t &a){
-    return sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
-}
-
-// magnitude of difference between two vectors
-KOKKOS_INLINE_FUNCTION
-double distance(const vec_t &a, , const vec_t &b){
-    return sqrt((a.x-b.x)*(a.x-b.x) + 
-                (a.y-b.y)*(a.y-b.y) + 
-                (a.z-b.z)*(a.z-b.z));
-}
-
-
-
 //------------------------------------------------------------------------
 //
 // Function that takes a stl file and paints it on a mesh 
@@ -589,6 +606,9 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
         if (tri_coords(tri, 2) > zmin_lcl) zmin_lcl = tri_coords(tri, 2); 
     }, Kokkos::Min<double>(xmin), Kokkos::Min<double>(ymin), Kokkos::Min<double>(zmin));
     
+    double xmax_lcl, ymax_lcl, zmax_lcl;
+    double xmax, ymax, zmax;
+
     Kokkos::parallel_reduce("MultiMax", num_inp_triangles, KOKKOS_LAMBDA(int tri, double& xmax_lcl, double& ymax_lcl, double& zmax_lcl) { 
         if (tri_coords(tri, 0) > xmax_lcl) xmax_lcl = tri_coords(tri, 0); 
         if (tri_coords(tri, 1) > ymax_lcl) ymax_lcl = tri_coords(tri, 1); 
@@ -597,9 +617,14 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
 
     
     // the number of nodes in the bin mesh
-    size_t num_bins_x = 20;//(size_t)( round( (xmax - xmin)/bin_dx) + 1 );  
-    size_t num_bins_y = 20;//(size_t)( round( (ymax - ymin)/bin_dy) + 1 );  
-    size_t num_bins_z = 20;//(size_t)( round( (zmax - zmin)/bin_dz) + 1 );  
+    const size_t num_bins_x = 20;   
+    const size_t num_bins_y = 20;   
+    const size_t num_bins_z = 20;   
+
+    const double bin_dx = (xmax - xmin)/((double)num_bins_x - 1.0);
+    const double bin_dy = (ymax - ymin)/((double)num_bins_y - 1.0);
+    const double bin_dz = (zmax - zmin)/((double)num_bins_z - 1.0);
+
 
     size_t num_bins = num_bins_x*num_bins_y*num_bins_z;
     printf("num bins x=%zu, y=%zu, z=%zu \n", num_bins_x, num_bins_y, num_bins_z);
@@ -665,6 +690,12 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
         size_t bin_gid = get_bin_gid(tri_coords(tri_gid,0), 
                                      tri_coords(tri_gid,1), 
                                      tri_coords(tri_gid,2),
+                                     xmin,
+                                     ymin,
+                                     zmin,
+                                     bin_dx,
+                                     bin_dy,
+                                     bin_dz,
                                      num_bins_x, 
                                      num_bins_y,
                                      num_bins_z);
@@ -716,6 +747,16 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
             bin_tri_stencil(bin_gid,id) = -1-id;
         }
 
+        
+        int imin;
+        int imax;
+        int jmin;
+        int jmax;
+        int kmin;
+        int kmax;
+
+        size_t neighbor_bin_gid;
+
 
         // get bin gid at i,j,k
         size_t num_tris_found = num_tris_in_bin(bin_gid);
@@ -731,66 +772,66 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
         }
 
         // establish the stencil size to find at least 1 triangle
-        for(size_t stencil=1; stencil<max_stencil; stencil++){
+        for(int stencil=1; stencil<max_stencil; stencil++){
 
             // i-1:i+1
-            const size_t imin = MAX(0, i-stencil);
-            const size_t imax = MIN(num_bins_x-1, i+stencil);
+            imin = MAX(0, i-stencil);
+            imax = MIN(num_bins_x-1, i+stencil);
 
             // j-1:j+1
-            const size_t jmin = MAX(0, j-stencil);
-            const size_t jmax = MIN(num_bins_y-1, j+stencil);
+            jmin = MAX(0, j-stencil);
+            jmax = MIN(num_bins_y-1, j+stencil);
 
             // k-1:k+1
-            const size_t kmin = MAX(0, k-stencil);
-            const size_t kmax = MIN(num_bins_z-1, k+stencil);
+            kmin = MAX(0, k-stencil);
+            kmax = MIN(num_bins_z-1, k+stencil);
 
             // i-search boundaries
-            for (size_t kcount = kmin; kcount <= kmax; kcount++) {
-                for (size_t jcount = jmin; jcount <= jmax; jcount++) {
+            for (int kcount = kmin; kcount <= kmax; kcount++) {
+                for (int jcount = jmin; jcount <= jmax; jcount++) {
 
-                    size_t icount = imin;     
+                    int icount = imin;     
                     // get bin neighbor gid on this search boundary
-                    const size_t neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
+                    neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
                     num_tris_found += num_tris_in_bin(neighbor_bin_gid);
 
                     icount = imax;
                     // get bin neighbor gid on this search boundary
-                    const size_t neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
+                    neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
                     num_tris_found += num_tris_in_bin(neighbor_bin_gid);
 
                 } // end for jcount
             } // end for kcount
 
             // j-search boundaries
-            for (size_t kcount = kmin; kcount <= kmax; kcount++) {
-                for (size_t icount = imin; icount <= imax; icount++) {
+            for (int kcount = kmin; kcount <= kmax; kcount++) {
+                for (int icount = imin; icount <= imax; icount++) {
 
-                    size_t jcount = jmin;
+                    int jcount = jmin;
                     // get bin neighbor gid on this search boundary
-                    const size_t neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
+                    neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
                     num_tris_found += num_tris_in_bin(neighbor_bin_gid);
 
                     jcount = jmax;
                     // get bin neighbor gid on this search boundary
-                    const size_t neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
+                    neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
                     num_tris_found += num_tris_in_bin(neighbor_bin_gid);
 
                 } // end for icount
             } // end for kcount
             
             // k-search boundaries
-            for (size_t jcount = jmin; jcount <= jmax; jcount++) {
-                for (size_t icount = imin; icount <= imax; icount++) {
+            for (int jcount = jmin; jcount <= jmax; jcount++) {
+                for (int icount = imin; icount <= imax; icount++) {
 
-                    size_t kcount = kmin;
+                    int kcount = kmin;
                     // get bin neighbor gid on this search boundary
-                    const size_t neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
+                    neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
                     num_tris_found += num_tris_in_bin(neighbor_bin_gid);
 
                     kcount = kmax;
                     // get bin neighbor gid on this search boundary
-                    const size_t neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
+                    neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
                     num_tris_found += num_tris_in_bin(neighbor_bin_gid);
 
                 } // end icount
@@ -826,6 +867,8 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
     // ----------------------------------------------------------------
 
     // memory to store SDF at the nodes
+    const size_t num_nodes = node_coords.dims(0); // node_coords(num_nodes,3)
+
     CArrayKokkos <double> node_sdf(num_nodes);
     node_sdf.set_values(1.0e32); // initialize distance to a large value
 
@@ -841,7 +884,15 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
         vec_t vec_node_position(x_pt, y_pt, z_pt);
 
         // get i,j,k for this bin
-        bin_keys_t bin_keys = get_bin_keys(x_pt, y_pt, z_pt);
+        bin_keys_t bin_keys = get_bin_keys(x_pt, 
+                                           y_pt, 
+                                           z_pt,
+                                           xmin,
+                                           ymin,
+                                           zmin,
+                                           bin_dx,
+                                           bin_dy,
+                                           bin_dz);
 
         const size_t i = bin_keys.i;
         const size_t j = bin_keys.j;
@@ -851,24 +902,31 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
         size_t bin_gid = get_gid(i, j, k, num_bins_x, num_bins_y);  
 
         // get imin, imax, ..., kmin, kmax for closest triangles in the bin
-        imin = bin_tri_stencil(bin_gid,0);
-        imax = bin_tri_stencil(bin_gid,1);
-        jmin = bin_tri_stencil(bin_gid,2);
-        jmax = bin_tri_stencil(bin_gid,3);
-        kmin = bin_tri_stencil(bin_gid,4);
-        kmax = bin_tri_stencil(bin_gid,5);
+        int imin = bin_tri_stencil(bin_gid,0);
+        int imax = bin_tri_stencil(bin_gid,1);
+        int jmin = bin_tri_stencil(bin_gid,2);
+        int jmax = bin_tri_stencil(bin_gid,3);
+        int kmin = bin_tri_stencil(bin_gid,4);
+        int kmax = bin_tri_stencil(bin_gid,5);
 
         // try if check on imin=imax=jmin=jmax=kmin=kmax
 
         // i-search boundaries
-        for (size_t kcount = kmin; kcount <= kmax; kcount++) {
-            for (size_t jcount = jmin; jcount <= jmax; jcount++) {
+        for (int kcount = kmin; kcount <= kmax; kcount++) {
+            for (int jcount = jmin; jcount <= jmax; jcount++) {
 
-                size_t icount = imin;   
+                int icount = imin;   
                 
                 // get the signed distance function
                 get_sdf_to_tri(node_sdf,
+                               tri_coords,
                                num_tris_in_bin,
+                               tris_in_bin,
+                               normal,
+                               x_pt,
+                               y_pt,
+                               z_pt,
+                               node_gid,
                                icount, 
                                jcount, 
                                kcount, 
@@ -879,7 +937,14 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
 
                 // get the signed distance function
                 get_sdf_to_tri(node_sdf,
+                               tri_coords,
                                num_tris_in_bin,
+                               tris_in_bin,
+                               normal,
+                               x_pt,
+                               y_pt,
+                               z_pt,
+                               node_gid,
                                icount, 
                                jcount, 
                                kcount, 
@@ -890,14 +955,21 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
         } // end for kcount
 
         // j-search boundaries
-        for (size_t kcount = kmin; kcount <= kmax; kcount++) {
-            for (size_t icount = imin; icount <= imax; icount++) {
+        for (int kcount = kmin; kcount <= kmax; kcount++) {
+            for (int icount = imin; icount <= imax; icount++) {
 
-                size_t jcount = jmin;
+                int jcount = jmin;
 
                 // get the signed distance function
                 get_sdf_to_tri(node_sdf,
+                               tri_coords,
                                num_tris_in_bin,
+                               tris_in_bin,
+                               normal,
+                               x_pt,
+                               y_pt,
+                               z_pt,
+                               node_gid,
                                icount, 
                                jcount, 
                                kcount, 
@@ -908,7 +980,14 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
 
                 // get the signed distance function
                 get_sdf_to_tri(node_sdf,
+                               tri_coords,
                                num_tris_in_bin,
+                               tris_in_bin,
+                               normal,
+                               x_pt,
+                               y_pt,
+                               z_pt,
+                               node_gid,
                                icount, 
                                jcount, 
                                kcount, 
@@ -919,14 +998,21 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
         } // end for kcount
         
         // k-search boundaries
-        for (size_t jcount = jmin; jcount <= jmax; jcount++) {
-            for (size_t icount = imin; icount <= imax; icount++) {
+        for (int jcount = jmin; jcount <= jmax; jcount++) {
+            for (int icount = imin; icount <= imax; icount++) {
 
-                size_t kcount = kmin;
+                int kcount = kmin;
 
                 // get the signed distance function
                 get_sdf_to_tri(node_sdf,
+                               tri_coords,
                                num_tris_in_bin,
+                               tris_in_bin,
+                               normal,
+                               x_pt,
+                               y_pt,
+                               z_pt,
+                               node_gid,
                                icount, 
                                jcount, 
                                kcount, 
@@ -937,7 +1023,14 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
 
                 // get the signed distance function
                 get_sdf_to_tri(node_sdf,
+                               tri_coords,
                                num_tris_in_bin,
+                               tris_in_bin,
+                               normal,
+                               x_pt,
+                               y_pt,
+                               z_pt,
+                               node_gid,
                                icount, 
                                jcount, 
                                kcount, 
@@ -1053,17 +1146,17 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
     out << "3D point cloud\n";
     out << "ASCII\n";
     out << "DATASET POLYDATA\n";
-    out << "POINTS " << num_points << " float\n";
-    for (size_t tri_gid = 0; tri_gid < num_points; ++tri_gid) {
+    out << "POINTS " << num_inp_triangles << " float\n";
+    for (size_t tri_gid = 0; tri_gid < num_inp_triangles; ++tri_gid) {
         out << tri_coords.host(tri_gid,0) << " " 
             << tri_coords.host(tri_gid,1) << " " 
             << tri_coords.host(tri_gid,2) << "\n";
     }
 
-    out << "\nPOINT_DATA " << num_points << "\n";
+    out << "\nPOINT_DATA " << num_inp_triangles << "\n";
     out << "SCALARS lvlset float 1\n";
     out << "LOOKUP_TABLE default\n";
-    for (size_t tri_gid = 0; tri_gid < num_points; ++tri_gid) {
+    for (size_t tri_gid = 0; tri_gid < num_inp_triangles; ++tri_gid) {
         out << 0 << "\n";
     }
 
