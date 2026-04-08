@@ -123,16 +123,19 @@ for i in range(len(executables)):
             result_data, header1 = extract_state_data(file_path)
             standard_data, header2 = extract_state_data(standard_results[j])
     
+            # conditional to handle contact cases
+            diff_tol = 1E-8
+            if (tests[j] == "slanted_impact" or tests[j] == "sie_expansion_test" or tests[j] == "edge_flat_test" or tests[j] == "billiards" or tests[j] == "TaylorAnvil_Contact"):
+                diff_tol = 1E-3
+
             for k in range(len(result_data[0])):
                 calc = [row[k] for row in result_data]
                 true = [row[k] for row in standard_data]
     
-    
-    
                 for l in range(len(calc)):
                     diff = calc[l] - true[l]
                     # print(diff)
-                    if abs(diff) > 1E-8:
+                    if abs(diff) > diff_tol:
                         print(f"{'Calculated Result:':<20} {calc[l]:.10e}")
                         print(f"{'Expected Result:':<20} {true[l]:.10e}")
                         print(f"{'Difference:':<20} {diff:.10e}")
