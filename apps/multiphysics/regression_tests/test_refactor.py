@@ -134,7 +134,7 @@ for i in range(len(executables)):
     
                 for l in range(len(calc)):
                     diff = calc[l] - true[l]
-                    diff_rel = abs(calc[l] - true[l])/true[l] * 100
+                    diff_rel = abs(calc[l] - (true[l]+1E-8))/(true[l]+1E-8) * 100
                     # print(diff)
                     if abs(diff) > diff_tol and diff_rel > 0.01:
                         print(f"{'Calculated Result:':<20} {calc[l]:.10e}")
