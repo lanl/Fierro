@@ -42,6 +42,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "string_utils.hpp"
 #include "geometry_new.hpp"
 
+#include "stl_to_volfrac.hpp"
+
 #include <stdio.h>
 #include <fstream>
 
@@ -90,9 +92,6 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
     // Remember, the solver is initialized prior to this function, creating nodal state
 
-    // a local array for reading the values on a voxel mesh file, it's allocated in the mesh file read
-    DCArrayKokkos <size_t> voxel_elem_mat_id; // 1 or 0 if material exist, or it is the material_id
-
 
     // ---------------------------------------------
     // fill guass point state (den, sie, ...) and nodal state (velocity, temperature, ...) on the mesh
@@ -117,7 +116,6 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  fillElemState.geo_volfrac,
                  State.MeshtoMaterialMaps.mats_in_elem,
                  State.MeshtoMaterialMaps.num_mats_in_elem,
-                 voxel_elem_mat_id,
                  SimulationParamaters.mesh_input.object_ids,
                  SimulationParamaters.region_setups.region_fills,
                  SimulationParamaters.region_setups.region_fills_host,
@@ -238,7 +236,6 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 /// \param elem_volfrac is volume fraction at the GaussPoints on the mesh
 /// \param elem_mat_id is the material id in an element
 /// \param num_mats_saved_in_elem is the number of material with volfrac<1 saved to the element
-/// \param voxel_elem_mat_id are the voxel values on a structured i,j,k mesh
 /// \param object_ids are the object ids in the vtu file
 /// \param region_fills are the instructures to paint state on the mesh
 /// \param region_fills_host are the instructures on the host side to paint state on the mesh
@@ -267,7 +264,6 @@ void fill_regions(
         DCArrayKokkos <double>& elem_geo_volfrac,
         DCArrayKokkos <size_t>& elem_mat_id,
         DCArrayKokkos <size_t>& elem_num_mats_saved_in_elem,
-        DCArrayKokkos <size_t>& voxel_elem_mat_id,
         const DCArrayKokkos <int>& object_ids,
         const CArrayKokkos <RegionFill_t>& region_fills,
         const CArray <RegionFill_host_t>& region_fills_host,
@@ -286,24 +282,35 @@ void fill_regions(
     DCArrayKokkos<double> elem_coords(mesh.num_elems, 3); // aways 3D
     CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems, max_num_mats_per_elem);  // 2nd dim is max mats per elem
 
+    // a local array for reading the values on a voxel mesh file, it's allocated in the mesh file read
+    DCArrayKokkos <size_t> voxel_elem_mat_id; // 1 or 0 if material exist, or it is the material_id
+
     // Important:
     //  Remember that num_fills_saved_in_elem = num_mats_saved_in_elem
     
     // ---------------------------------------------
-    // copy to host, enum to read a voxel file
+    // copy to host, enum to read a voxel or stl file
     // ---------------------------------------------
     DCArrayKokkos<size_t> read_voxel_file(num_fills_total, "read_voxel_file"); // check to see if readVoxelFile
+    DCArrayKokkos<size_t> read_stl_file(num_fills_total, "read_stl_file"); // check to see if readVoxelFile
 
     FOR_ALL(fill_id, 0, num_fills_total, {
+
         if (region_fills(fill_id).volume == region::readVoxelFile) {
             read_voxel_file(fill_id) = region::readVoxelFile;  // read the  voxel file
+        }
+        else if (region_fills(fill_id).volume == region::readSTLFile){
+            read_stl_file(fill_id) = region::readSTLFile;  // read the STL file
         }
         // add other mesh voxel files
         else{
             read_voxel_file(fill_id) = 0;
+            read_stl_file(fill_id) = 0;
         }
+
     }); // end parallel for
-    read_voxel_file.update_host(); // copy to CPU if code is to read a file
+    read_voxel_file.update_host(); // copy to CPU if code is to read a voxel file
+    read_stl_file.update_host();   // copy to CPU if code is to read a stl file
     Kokkos::fence();
     // ---------------------------------------------
 
@@ -333,7 +340,16 @@ void fill_regions(
             // copy values read from file to device
             voxel_elem_mat_id.update_device();
         } // endif
-          // add else if for other mesh reads including STL-2-voxel
+        
+        // ----
+        // STL file mesh setup
+        if (read_stl_file.host(fill_id) == region::readSTLFile) {
+
+
+            // copy values read from file to device
+            voxel_elem_mat_id.update_device();
+        } // endif
+        
 
         // parallel loop over elements in mesh
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -1331,7 +1347,6 @@ size_t fill_geometric_region(const swage::Mesh& mesh,
                 }
                 break;
             }
-
         case region::readVoxelFile:
             {
 
@@ -1361,6 +1376,11 @@ size_t fill_geometric_region(const swage::Mesh& mesh,
                 break;
 
             } // end case
+        case region::readSTLFile:
+        {
+
+            break;
+        }
         case region::readVTUFile:
             {
                 // if the part id in .vtu file matches the specified id, then fill it

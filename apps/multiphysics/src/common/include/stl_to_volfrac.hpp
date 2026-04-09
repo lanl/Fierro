@@ -34,6 +34,84 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef STL_TO_VOLFRAC_H
 #define STL_TO_VOLFRAC_H
 
+#include "matar.h"
+
+// -----------------------------------------------
+// types
+// -----------------------------------------------
+
+struct bin_keys_t{
+    size_t i,j,k;
+};
+
+// a vector type with 3 components
+struct vec_t{
+    double x;
+    double y;
+    double z;
+    
+    // default constructor
+    KOKKOS_INLINE_FUNCTION
+    vec_t (){};
+    
+    // overloaded constructor
+    KOKKOS_INLINE_FUNCTION
+    vec_t(const double x_in, const double y_in, const double z_in){
+        x = x_in;
+        y = y_in;
+        z = z_in;
+    };
+    
+}; // end vec_t
+
+
+// a triangle data type
+struct triangle_t {
+    
+    vec_t normal; // surface normal
+    
+    vec_t p[3];   // three nodes with x,y,z coords
+    
+    // default constructor
+    KOKKOS_INLINE_FUNCTION
+    triangle_t(){};
+    
+    // overloaded constructor to accept 3 vectors
+    KOKKOS_INLINE_FUNCTION
+    triangle_t (const vec_t p_in[3])
+    {
+        // store the coords
+        p[0]=p_in[0]; 
+        p[1]=p_in[1]; 
+        p[2]=p_in[2];
+
+        // calculate the normal to this surface
+
+        //A = p1 - p0;
+        //B = p2 - p0;
+        vec_t A;
+        A.x = p[1].x - p[0].x;
+        A.y = p[1].y - p[0].y;
+        A.z = p[1].z - p[0].z;
+        
+        vec_t B;
+        B.x = p[2].x - p[0].x;
+        B.y = p[2].y - p[0].y;
+        B.z = p[2].z - p[0].z;
+        
+        normal.x = A.y * B.z - A.z * B.y;
+        normal.y = A.z * B.x - A.x * B.z;
+        normal.z = A.x * B.y - A.y * B.x;
+        
+        const double mag = sqrt(normal.x*normal.x + normal.y*normal.y + normal.z*normal.z);
+        
+        // save the unit normal
+        normal.x /= mag;
+        normal.y /= mag;
+        normal.z /= mag;
+    };
+    
+}; // end triangle_t
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -213,7 +291,7 @@ double magnitude(const vec_t &a);
 ///
 ///////////////////////////////////////////////////////////////////////////// 
 KOKKOS_INLINE_FUNCTION
-double distance(const vec_t &a, , const vec_t &b);
+double distance(const vec_t &a, const vec_t &b);
 
 
 /////////////////////////////////////////////////////////////////////////////

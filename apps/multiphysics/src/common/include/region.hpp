@@ -71,6 +71,7 @@ static std::map<std::string, region::vol_tag> region_type_map
     { "sphere", region::sphere },
     { "cylinder", region::cylinder },
     { "voxel_file", region::readVoxelFile },
+    { "stl", region::readSTLFile },
     { "vtu_file", region::readVTUFile}
 };
 
