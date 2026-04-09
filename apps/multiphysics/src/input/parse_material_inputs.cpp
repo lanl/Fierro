@@ -499,6 +499,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                         // add other elastic plastic models here, e.g., Johnson-Cook strength etc.
                         // ....
 #ifdef DECOUPLED_STRENGTH_H
+
                         // call elastic plastic model
                         case model::hypoElasticPlasticStrength:
 

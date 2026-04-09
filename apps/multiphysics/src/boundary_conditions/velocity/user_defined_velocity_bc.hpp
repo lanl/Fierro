@@ -59,6 +59,16 @@ namespace UserDefinedVelocityBC
 {
 // add an enum for boundary statevars and global vars
 
+// parameters for fracture reorientation validation test case
+enum BCVars {
+    reorientation_mode = 0, // flag to turn on/off reorientation testing (1.0 = enabled; 0.0 = disabled)
+    omega_y = 1, // rotation about x2
+    omega_z = 2, // rotation about x3
+    cz_opening_rate = 3, // constant opening rate for cohesive zone nodes
+    x_interface = 4, // for B side flagging
+    num_bc_vars = 5 // total number of parameters
+};
+
 KOKKOS_FUNCTION
 static void velocity(const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
@@ -72,6 +82,15 @@ static void velocity(const swage::Mesh& mesh,
 {
     // add user coding here
 
+    // for fracture reorientation validation mode, kinematics are presribed
+    // check if reorientation mode is active
+    // since UserDefinedVelocityBC data type is RaggedRight <double>,
+    // interpret reorienation_mode parameter as true if > 0.5, false otherwise
+    const bool reorientation_mode = vel_bc_global_vars(bdy_set, BCVars::reorientation_mode) > 0.5; // interpret as bool 
+
+    if (reorientation_mode) {
+        // do nothing - kinematics handled in the solver
+    }
     return;
 } // end func
 } // end namespace

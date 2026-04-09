@@ -22,6 +22,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/src/boundary.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/contact.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/energy_sgh.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/force_sgh.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/fracture.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/position.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/momentum.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/properties.cpp
