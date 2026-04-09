@@ -87,7 +87,7 @@ To build with CUDA support for NVIDIA GPU execution:
 cd apps/multiphysics
 mkdir build_cuda
 cd build_cuda
-cmake -DFIERRO_ENABLE_CUDA=ON -DFIERRO_ENABLE_SERIAL=OFF ..
+cmake -DFIERRO_ENABLE_CUDA=ON ..
 make -j$(nproc)
 ```
 
