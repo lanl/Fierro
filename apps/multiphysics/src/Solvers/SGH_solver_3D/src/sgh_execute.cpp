@@ -33,7 +33,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver_3D.hpp"
-
 #include "simulation_parameters.hpp"
 #include "material.hpp"
 #include "boundary_conditions.hpp"
@@ -54,6 +53,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
+
 void SGH3D::execute(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
@@ -119,7 +119,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_gauss_in_elem);
     CArrayKokkos <double> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_gauss_in_elem);
     
-
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
