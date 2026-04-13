@@ -110,6 +110,28 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                    State.node.mass,
                    State.corner.mass);
 
+    // setting up fracture
+    for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
+        // if fracture is allowed, then set up the fracture bank
+        // note, allow_fracture is set in the parse_bdy_conds_inputs.cpp file and boundary_conditions.h file
+        // checking if fracture is allowed... if = 0 then fracture is not enabled; if = 1, then fracture is enabled:
+        printf("Boundary.allow_fracture = %d\n", Boundary.allow_fracture);
+        if (Boundary.allow_fracture) {
+            printf("Setting up global fracture (cohesive zones)\n");
+            doing_fracture = true;
+        
+        // calling initialize for the cohesive zones bank
+        printf("Calling initialize()...\n");
+        //cohesive_zones_t cohesive_zones_bank;
+        this->cohesive_zones_bank.initialize(mesh, State, SimulationParamaters);
+
+        // done calling initialize
+        printf("Done calling initialize()...\n");
+        break; 
+        }
+    }
+    // end setting up fracture
+    
     // Setting up contact
     // todo: should this be handled inside of src/boundary_conditions/stress/global_contact ?
     for (size_t i = 0; i < mesh.num_bdy_sets; i++) {

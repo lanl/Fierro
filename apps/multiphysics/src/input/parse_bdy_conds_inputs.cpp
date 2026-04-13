@@ -78,7 +78,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "no_stress_bc.hpp"
 #include "time_varying_stress_bc.hpp"
 #include "user_defined_stress_bc.hpp"
-
+#include "fracture_stress_bc.hpp"
 
 
 
@@ -431,6 +431,24 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             std::cout << "Setting preload contact bc " << std::endl;
                             BoundaryConditions.allow_preload = true;
                             BoundaryConditions.allow_contact = true;
+                            break;
+
+                        case boundary_conditions::fractureStressBC:                                  // case of setting up global fracture stress bc
+                            std::cout << "Setting global fracture stress bc " << std::endl;
+                            BoundaryConditions.allow_fracture = true;
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::fractureStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).stress = &fractureStressBC::stress;
+                            });
+
+                            // remember the fracture stress bc id for debugging 
+                            if (BoundaryConditions.fracture_bc_id >= 0) {
+                                std::cout << "WARNING: multiple fracture BCs specified; "
+                                             "overwriting previous fracture_bc_id="
+                                          << BoundaryConditions.fracture_bc_id
+                                          << " with bc_id=" << bc_id << std::endl;
+                            }
+                            BoundaryConditions.fracture_bc_id = static_cast<int>(bc_id);
                             break;
                       
                         default:

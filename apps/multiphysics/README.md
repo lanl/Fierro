@@ -263,7 +263,7 @@ Defines boundary conditions (BCs) applied to surfaces. This is a list of BC bloc
         *   `origin`: Origin of the surface `[x, y, z]` (list of doubles).
     *   `velocity_model`: Velocity BC type. Options: `<constant>`, `<fixed>`, `<none>`, `<piston>`, `<reflected>`, `<time_varying>`, `<user_defined>`.
     *   `velocity_bc_global_vars`: Parameters for the velocity model (list of doubles/ints).
-    *   `stress_model`: Stress/Pressure BC type. Options: `<constant>`, `<global_contact>`, `<none>`, `<preload_contact>`, `<time_varying>`, `<user_defined>`.
+    *   `stress_model`: Stress/Pressure BC type. Options: `<constant>`, `<global_contact>`, `<none>`, `<preload_contact>`, `<time_varying>`, `<user_defined>`, `<fracture>`.
     *   `stress_bc_global_vars`: Parameters for the stress model (list of doubles/ints).
     *   `temperature_model`: Temperature BC type. Options: `<constant>`, `<convection>`, `<none>`, `<radiation>`.
     *   `temperature_bc_global_vars`: Parameters for the temperature model (list of doubles/ints).

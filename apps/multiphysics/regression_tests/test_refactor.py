@@ -13,7 +13,7 @@ builds = ["serial"]
 # Name(s) of the solver being used
 solvers = ["Fierro"]
 
-solver_path = "../build/app/Fierro"
+solver_path = "../build_sync_fracture/app/Fierro"
 
 # Add names of each test
 tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
@@ -24,7 +24,8 @@ tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
         "slanted_block_bounce", "slanted_impact", "SGTM_cooling_cube", \
         "sie_expansion_test", "confined_preload", "unconfined_preload",\
         "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact",\
-        "TaylorAnvil_Contact"]
+        "TaylorAnvil_Contact", "fracture_mode_1", "fracture_mode_2", \
+        "fracture_reorientation"]
 #,"SGTM_cooling_cube" currently broken
 
 # Parse command line arguments

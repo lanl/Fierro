@@ -32,49 +32,55 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_VEL_USER_DEFINED_H
-#define BOUNDARY_VEL_USER_DEFINED_H
+#ifndef BOUNDARY_STRESS_FRACTURE_H
+#define BOUNDARY_STRESS_FRACTURE_H
 
 #include "boundary_conditions.hpp"
+#include "mesh_io.hpp"
 
 struct BoundaryConditionEnums_t;
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn Boundary velocity is user defined
+/// \fn Boundary stress is user defined
 ///
-/// \brief This is a function to set the velocity based on user implementation
+/// \brief This is a function to set the stress based on user implementation
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
 /// \param Boundary condition global variables array
 /// \param Boundary condition state variables array
-/// \param Node velocity
+/// \param Node boundary force
 /// \param Time of the simulation
 /// \param Boundary global index for the surface node
 /// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace UserDefinedVelocityBC
+namespace fractureStressBC
 {
-// add an enum for boundary statevars and global vars
-
-// parameters for fracture reorientation validation test case
-enum BCVars {
-    reorientation_mode = 0, // flag to turn on/off reorientation testing (1.0 = enabled; 0.0 = disabled)
-    omega_y = 1, // rotation about x2
-    omega_z = 2, // rotation about x3
-    cz_opening_rate = 3, // constant opening rate for cohesive zone nodes
-    x_interface = 4, // for B side flagging
-    num_bc_vars = 5 // total number of parameters
+// cohesive zone variables:
+ enum BCVars {
+     E_inf               = 0, // Long-term (equilibrium) modulus of the cohesive zone material [g/cm*us^2]
+     a1                  = 1, // Damage evolution parameter [dimensionless]
+     n_exp               = 2, // Damage evolution exponent [dimensionless]
+     u_n_star            = 3, // Normal characteristic length [cm]
+     u_t_star            = 4, // Tangential characteristic length [cm]
+     num_prony_terms     = 5, // Number of Prony series terms for viscoelasticity [filled below: # of E and tau terms]
+     prony_base          = 6, // starting index for the prony terms: will auto populate based on num_prony_terms
+     // prony_0_E             // Prony series modulus [g/cm*us^2]
+     // prony_0_tau           // Prony series relaxation time [us]
+                              // per prony term, two variables: prony_0_E, prony_0_tau, prony_1_E, prony_1_tau, ...
 };
 
+// add an enum for boundary statevars and global vars
+
 KOKKOS_FUNCTION
-static void velocity(const swage::Mesh& mesh,
+static void stress(const swage::Mesh& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
+    const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,
-    const DCArrayKokkos<double>& node_vel,
+    const ViewCArrayKokkos <double>& corner_surf_force,
+    const ViewCArrayKokkos <double>& corner_surf_normal,
     const double time_value,
     const size_t rk_stage,
     const size_t bdy_node_gid,
@@ -82,15 +88,6 @@ static void velocity(const swage::Mesh& mesh,
 {
     // add user coding here
 
-    // for fracture reorientation validation mode, kinematics are presribed
-    // check if reorientation mode is active
-    // since UserDefinedVelocityBC data type is RaggedRight <double>,
-    // interpret reorienation_mode parameter as true if > 0.5, false otherwise
-    const bool reorientation_mode = vel_bc_global_vars(bdy_set, BCVars::reorientation_mode) > 0.5; // interpret as bool 
-
-    if (reorientation_mode) {
-        // do nothing - kinematics handled in the solver
-    }
     return;
 } // end func
 } // end namespace
