@@ -13,7 +13,7 @@ builds = ["serial"]
 # Name(s) of the solver being used
 solvers = ["Fierro"]
 
-solver_path = "../build_sync_fracture/app/Fierro"
+solver_path = "../build/app/Fierro"
 
 # Add names of each test
 tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
