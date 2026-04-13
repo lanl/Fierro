@@ -23,7 +23,8 @@ tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
         "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
         "slanted_block_bounce", "slanted_impact", "SGTM_cooling_cube", \
         "sie_expansion_test", "confined_preload", "unconfined_preload",\
-        "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact"]
+        "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact", "fracture_mode_1",
+        "fracture_mode_2", "fracture_reorientation"]
 #,"SGTM_cooling_cube" currently broken
 
 # Parse command line arguments

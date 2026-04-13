@@ -38,6 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "solver.hpp"
 #include "state.hpp"
 #include "contact.hpp"
+#include "fracture.hpp"
 
 // Forward declare structs
 struct SimulationParameters_t;
@@ -141,6 +142,8 @@ class SGH3D : public Solver
 {
 public:
 
+    cohesive_zones_t cohesive_zones_bank; // keeps track of cohesive zone variables
+    bool doing_fracture = false; // condition used in SGH::execute
     bool doing_contact = false;  // Condition used in SGH::execute
     bool doing_preload = false;  // Condition used in SGH::execute
 
