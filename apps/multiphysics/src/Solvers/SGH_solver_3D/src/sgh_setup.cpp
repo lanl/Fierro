@@ -110,7 +110,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                    State.node.mass,
                    State.corner.mass);
 
-// setting up fracture
+    // setting up fracture
     for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
         // if fracture is allowed, then set up the fracture bank
         // note, allow_fracture is set in the parse_bdy_conds_inputs.cpp file and boundary_conditions.h file
@@ -131,7 +131,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
         }
     }
     // end setting up fracture
- 
+    
     // Setting up contact
     // todo: should this be handled inside of src/boundary_conditions/stress/global_contact ?
     for (size_t i = 0; i < mesh.num_bdy_sets; i++) {

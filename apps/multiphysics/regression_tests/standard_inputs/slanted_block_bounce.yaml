@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: meshes/slanted_block_bounce.vtk
+  file_path: ./meshes/slanted_block_bounce.vtk
   num_dims: 3
 
 #mesh_options:

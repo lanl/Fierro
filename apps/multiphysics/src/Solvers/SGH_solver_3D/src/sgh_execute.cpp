@@ -45,6 +45,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "reorientation_kinematics.hpp"
 #include "user_defined_velocity_bc.hpp"
 
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn solve
@@ -304,9 +305,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             }
 
             // if not in reorientation mode, proceed with normal SGH evolution
-            if (!reorient_mode){  
+            if (!reorient_mode){
 
-                // ---- Calculate velocity gradient for the element ---- 
+                // ---- Calculate velocity gradient for the element ----
+
                 get_velgrad(State.GaussPoints.vel_grad,
                             mesh,
                             State.node.coords,
@@ -346,30 +348,31 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
                     if (Materials.MaterialEnums.host(mat_id).StrengthType == model::incrementBased) {
                         update_stress(Materials,
-                                      mesh,
-                                      State.GaussPoints.vol,
-                                      State.node.coords,
-                                      State.node.vel,
-                                      State.GaussPoints.vel_grad,
-                                      State.MaterialPoints.den,
-                                      State.MaterialPoints.sie,
-                                      State.MaterialPoints.pres,
-                                      State.MaterialPoints.stress,
-                                      State.MaterialPoints.stress_n0,
-                                      State.MaterialPoints.sspd,
-                                      State.MaterialPoints.eos_state_vars,
-                                      State.MaterialPoints.strength_state_vars,
-                                      State.MaterialPoints.shear_modulii,
-                                      State.MaterialToMeshMaps.elem_in_mat_elem,
-                                      State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
-                                      mat_id,
-                                      fuzz,
-                                      small,
-                                      time_value,
-                                      dt,
-                                      rk_alpha,
-                                      cycle);
+                                    mesh,
+                                    State.GaussPoints.vol,
+                                    State.node.coords,
+                                    State.node.vel,
+                                    State.GaussPoints.vel_grad,
+                                    State.MaterialPoints.den,
+                                    State.MaterialPoints.sie,
+                                    State.MaterialPoints.pres,
+                                    State.MaterialPoints.stress,
+                                    State.MaterialPoints.stress_n0,
+                                    State.MaterialPoints.sspd,
+                                    State.MaterialPoints.eos_state_vars,
+                                    State.MaterialPoints.strength_state_vars,
+                                    State.MaterialPoints.shear_modulii,
+                                    State.MaterialToMeshMaps.elem_in_mat_elem,
+                                    State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
+                                    mat_id,
+                                    fuzz,
+                                    small,
+                                    time_value,
+                                    dt,
+                                    rk_alpha,
+                                    cycle);
                     } // end if on increment
+
                 } // end for mat_id
 
 
@@ -389,8 +392,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 // kinematics-only: start forces at zero (you can still add cohesive forces below)
                 State.node.force.set_values(0.0);
                 set_corner_force_zero(mesh, State.corner.force);
-            }                        
-        
+            }
+
             // apply cohesive zone nodal forces (fracture)
             if (doing_fracture && cohesive_zones_bank.is_ready()) {
                 
@@ -430,7 +433,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             }
 
             // apply contact forces to boundary patches
-            if (doing_contact) 
+            if (doing_contact && rk_stage == rk_num_stages-1) 
             {
                 //contact_bank.update_nodes(mesh, State);
                 Contact_State.contact_forces.set_values(0);
@@ -444,7 +447,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                         boundary_contact_force(State, mesh, 5*dt*rk_alpha, Contact_State);
                     }
                 } else {
-                    boundary_contact_force(State, mesh, 5*dt*rk_alpha, Contact_State);
+                    //boundary_contact_force(State, mesh, 5*dt*rk_alpha, Contact_State);
+                    boundary_contact_force(State, mesh, dt, Contact_State);
                 }
             }
 

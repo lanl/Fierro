@@ -83,7 +83,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-
 // ==============================================================================
 //   Function Definitions
 // ==============================================================================
@@ -433,11 +432,11 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             BoundaryConditions.allow_preload = true;
                             BoundaryConditions.allow_contact = true;
                             break;
-                      
+
                         case boundary_conditions::fractureStressBC:                                  // case of setting up global fracture stress bc
                             std::cout << "Setting global fracture stress bc " << std::endl;
                             BoundaryConditions.allow_fracture = true;
-                             RUN({
+                            RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::fractureStressBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).stress = &fractureStressBC::stress;
                             });
@@ -451,7 +450,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             }
                             BoundaryConditions.fracture_bc_id = static_cast<int>(bc_id);
                             break;
-
+                      
                         default:
                             
                             std::cout << "ERROR: invalid stress boundary condition input: " << stress_model << std::endl;
