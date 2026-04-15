@@ -875,6 +875,66 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
         pair_vars(0) = sol[0];
         pair_vars(1) = sol[1];
         pair_vars(6) = sol[2];
+
+        // updating normal direction for next iteration
+        // Get the derivative arrays
+        d_phi_d_xi(d_phi_d_xi_arr, sol[0], sol[1], xi, eta);
+        d_phi_d_eta(d_phi_d_eta_arr, sol[0], sol[1], xi, eta);
+
+        // get the next patch locations
+        double next_A[3][4];
+        for (int j = 0; j < 3; j++) {
+            for (int k = 0; k < 4; k++) {
+                size_t node_gid = bdy_nodes(contact_surface_map(k));
+                ak = -pair_vars(6)*pair_vars(j+3)*phi_k[k];
+                ak += contact_forces(contact_surface_map(k),j);
+                for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
+                {
+                    ak += corner_force(corners_in_node(node_gid, corner_lid), j);
+                }
+                ak /= mass(node_gid);
+                A[j][k] = coords(node_gid,j) + vel(node_gid,j)*del_t + 0.5*ak*del_t*del_t;
+            }
+        }
+
+        // Get dr_dxi and dr_deta by performing the matrix multiplication A*d_phi_d_xi and A*d_phi_d_eta
+        double dr_dxi[3];
+        dr_dxi[0] = 0;
+        dr_dxi[1] = 0;
+        dr_dxi[2] = 0;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 4; j++) {
+                dr_dxi[i] += A[i][j]*d_phi_d_xi_arr[j];
+            }
+        }
+
+        double dr_deta[3];
+        dr_deta[0] = 0;
+        dr_deta[1] = 0;
+        dr_deta[2] = 0;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 4; j++) {
+                dr_deta[i] += A[i][j]*d_phi_d_eta_arr[j];
+            }
+        }
+
+        // normal is the cross product of the isoparametric derivatives
+        double next_normal[3];
+        next_normal[0] = dr_dxi[1]*dr_deta[2] - dr_dxi[2]*dr_deta[1];
+        next_normal[1] = dr_dxi[2]*dr_deta[0] - dr_dxi[0]*dr_deta[2];
+        next_normal[2] = dr_dxi[0]*dr_deta[1] - dr_dxi[1]*dr_deta[0];
+
+        // Make the normal a unit vector
+        double norm_val = sqrt(pow(next_normal[0],2) + pow(next_normal[1],2) + pow(next_normal[2],2));
+        next_normal[0] /= norm_val;
+        next_normal[1] /= norm_val;
+        next_normal[2] /= norm_val;
+
+        // update for next iteration
+        pair_vars(3) = next_normal[0];
+        pair_vars(4) = next_normal[1];
+        pair_vars(5) = next_normal[2];
+        
     }
     if (!converged) {
         printf("NOT CONVERGED\n");
