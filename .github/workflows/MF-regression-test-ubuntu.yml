@@ -16,11 +16,11 @@ jobs:
       matrix:
         include:
           - name: Serial
-            build_type: Release
+            build_type: RelWithDebInfo
             cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
             omp_threads: 1
           - name: OpenMP
-            build_type: Release
+            build_type: RelWithDebInfo
             cmake_args: -DFIERRO_ENABLE_OPENMP=ON
             omp_threads: 2
           - name: Serial Debug

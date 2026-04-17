@@ -51,7 +51,7 @@ jobs:
       run: |
         mkdir -p apps/multiphysics/build
         cd apps/multiphysics/build
-        cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} ..
+        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{ matrix.cmake_args }} ..
 
     - name: Build Fierro
       shell: bash -l {0}

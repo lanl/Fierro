@@ -35,6 +35,7 @@ struct contact_state_t
     CArrayKokkos <size_t> node_penetrations; // for use in find_penetrating_nodes
     CArrayKokkos <double> f_c_incs; // stores contact force increments for checking convergence
     CArrayKokkos <double> contact_force; // stores contact forces in gid locations
+    CArrayKokkos <size_t> num_pairs_in_node; // stores number of pairs a particular node is part of for force weighting
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -444,7 +445,8 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void distribute_frictionless_force(ViewCArrayKokkos <double> &pair_vars, size_t &contact_id, ViewCArrayKokkos <size_t> &contact_surface_map,
-                                   const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, CArrayKokkos <double> contact_forces);
+                                   const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> num_pairs_in_node,
+                                   const double corrector_term);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn should_remove
@@ -664,7 +666,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
                       CArrayKokkos <double> &contact_forces, DCArrayKokkos <double> &corner_force, DCArrayKokkos <double> &vel,
                       RaggedRightArrayKokkos <size_t> corners_in_node, CArrayKokkos <size_t> num_corners_in_node,
                       const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, const double &del_t, CArrayKokkos <double> &contact_force, size_t num_bdy_nodes,
-                      size_t num_patches);
+                      size_t num_patches, CArrayKokkos <size_t> &num_pairs_in_node);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn remove_pairs

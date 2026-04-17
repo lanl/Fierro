@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: meshes/slanted_impact.vtk
+  file_path: ./meshes/slanted_impact.vtk
   num_dims: 3
 
 #mesh_options:
