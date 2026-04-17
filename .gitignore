@@ -14,5 +14,5 @@ main
 __pycache__
 cmake_uninstall.cmake
 CTestTestfile.cmake
-install*.zip
+install*
 
