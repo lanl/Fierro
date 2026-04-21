@@ -7,7 +7,7 @@
 using namespace mtr;
 
 // solving options
-static constexpr size_t max_iter = 10;  // max number of iterations
+static constexpr size_t max_iter = 100;  // max number of iterations
 static constexpr double tol = 1e-15;  // tolerance for the things that are supposed to be zero
 static constexpr double edge_tol = 1e-3;  // tolerance for edge case solutions (see contact_check for more info)
 
@@ -340,6 +340,21 @@ void get_normal(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_
 KOKKOS_FUNCTION
 void get_penetration_normal(const DCArrayKokkos <double> &coords, const double &xi_val, const double &eta_val,
                             double normal[3], const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, size_t node_gids[4]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn get_normal_derivatives
+///
+/// \brief Computes the derivatives of the normal vector of the patch/surface at the given xi and eta values
+///
+/// \param xi_val xi value
+/// \param eta_val eta value
+/// \param del_t time step to compute the normal at
+/// \param normal kokkos view that will be changed in place
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void get_normal_derivatives(const DCArrayKokkos <double> &coords, const double &xi_val, const double &eta_val,
+                            double d_n_d_xi[3], double d_n_d_eta[3], double d_phi_d_xi[4], double d_phi_d_eta[4],
+                            size_t node_gids[4]);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn get_contact_point

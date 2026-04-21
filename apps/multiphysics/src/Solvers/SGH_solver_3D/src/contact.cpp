@@ -266,6 +266,72 @@ void get_penetration_normal(const DCArrayKokkos <double> &coords, const double &
     normal[2] /= norm_val;
 }
 
+KOKKOS_FUNCTION
+void get_normal_derivatives(const DCArrayKokkos <double> &coords, const double &xi_val, const double &eta_val,
+                            double d_n_d_xi[3], double d_n_d_eta[3], double d_phi_d_xi[4], double d_phi_d_eta[4],
+                            size_t node_gids[4])
+{
+    // allocate intermediate vectors and scalar
+    double d_S_d_xi[3];
+    double d_S_d_eta[3];
+    double dxi_cross_deta[3];
+    double mag_cross;
+    double cross_derivative[3];
+    double dxi_cross_dxideta[3];
+    double dxideta_cross_deta[3];
+    double dxi_cross_deta_dot_dxi_cross_dxideta;
+    double dxi_cross_deta_dot_dxideta_cross_deta;
+
+    // initialize memory that sees +=
+    for (int i = 0; i < 3; i++) {
+        d_S_d_xi[i] = 0;
+        d_S_d_eta[i] = 0;
+    }
+
+    // calculate S derivatices
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 4; j++) {
+            d_S_d_xi[i] += coords(node_gids[j],i) * d_phi_d_xi[j];
+            d_S_d_eta[i] += coords(node_gids[j],i) * d_phi_d_eta[j];
+        }
+    }
+
+    // calculate cross product of S derivatives
+    dxi_cross_deta[0] = d_S_d_xi[1]*d_S_d_eta[2] - d_S_d_xi[2]*d_S_d_eta[1];
+    dxi_cross_deta[1] = d_S_d_xi[2]*d_S_d_eta[0] - d_S_d_xi[0]*d_S_d_eta[2];
+    dxi_cross_deta[2] = d_S_d_xi[0]*d_S_d_eta[1] - d_S_d_xi[1]*d_S_d_eta[0];
+
+    // get magnitude of the cross product of S derivatives
+    mag_cross = sqrt(pow(dxi_cross_deta[0],2) + pow(dxi_cross_deta[1],2) + pow(dxi_cross_deta[2],2));
+
+    // get the cross derivative of S
+    for (int i = 0; i < 3; i++) {
+        cross_derivative[i] = 0.25*coords(node_gids[0],i) - 0.25*coords(node_gids[1],i) - 0.25*coords(node_gids[2],i) + 0.25*coords(node_gids[3],i);
+    }
+
+    // cross(d_S_d_xi, cross_derivative)
+    dxi_cross_dxideta[0] = d_S_d_xi[1]*cross_derivative[2] - d_S_d_xi[2]*cross_derivative[1];
+    dxi_cross_dxideta[1] = d_S_d_xi[2]*cross_derivative[0] - d_S_d_xi[0]*cross_derivative[2];
+    dxi_cross_dxideta[2] = d_S_d_xi[0]*cross_derivative[1] - d_S_d_xi[1]*cross_derivative[0];
+
+    // cross(cross_derivative, d_S_d_eta)
+    dxideta_cross_deta[0] = cross_derivative[1]*d_S_d_eta[2] - cross_derivative[2]*d_S_d_eta[1];
+    dxideta_cross_deta[1] = cross_derivative[2]*d_S_d_eta[0] - cross_derivative[0]*d_S_d_eta[2];
+    dxideta_cross_deta[2] = cross_derivative[0]*d_S_d_eta[1] - cross_derivative[1]*d_S_d_eta[0];
+
+    // get the dot products
+    dxi_cross_deta_dot_dxi_cross_dxideta = dxi_cross_deta[0]*dxi_cross_dxideta[0] + dxi_cross_deta[1]*dxi_cross_dxideta[1] + dxi_cross_deta[2]*dxi_cross_dxideta[2];
+    dxi_cross_deta_dot_dxideta_cross_deta = dxi_cross_deta[0]*dxideta_cross_deta[0] + dxi_cross_deta[1]*dxideta_cross_deta[1] + dxi_cross_deta[2]*dxideta_cross_deta[2];
+
+    // calculating derivatives of normal vector
+    for (int i = 0; i < 3; i++) {
+        d_n_d_xi[i] = (dxi_cross_dxideta[i]*mag_cross - dxi_cross_deta[i]*dxi_cross_deta_dot_dxi_cross_dxideta/mag_cross) / pow(mag_cross,2);
+        d_n_d_eta[i] = (dxideta_cross_deta[i]*mag_cross - dxi_cross_deta[i]*dxi_cross_deta_dot_dxideta_cross_deta/mag_cross) / pow(mag_cross,2);
+    }
+
+
+} // end get_normal_derivatives
+
 KOKKOS_FUNCTION  // will be called inside a macro
 bool get_contact_point(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
                        CArrayKokkos <double> &contact_forces, CArrayKokkos <size_t> &contact_surface_map,
@@ -659,6 +725,13 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
 
     double J_inv[3][3];  // inverse of jacobian
 
+    size_t node_gids[4]; // for use in normal derivatives call
+    for (int i = 0; i < 4; i++) {
+        node_gids[i] = bdy_nodes(contact_surface_map(i));
+    }
+    double d_n_d_xi[3]; // derivative of normal wrt xi (gets set with = in function call)
+    double d_n_d_eta[3]; // derivative of normal wrt eta (gets set with = in function call)
+
     double J_det;  // determinant of jacobian
     double sol[3];
     sol[0] = pair_vars(0); // xi
@@ -696,7 +769,8 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
 
     bool converged = false;
 
-    for (int i = 0; i < max_iter; i++)
+    //for (int i = 0; i < max_iter; i++)
+    for (int i = 0; i < 500; i++)
     {
         phi(phi_k, pair_vars(0), pair_vars(1), xi, eta);
         // construct A
@@ -839,6 +913,43 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
             J[j][1] = J1[j];
             J[j][2] = J2[j];
         }
+
+        // **********************************************
+        // adding large deformation terms to the jacobian
+        // **********************************************
+
+        // get derivatives of normal vector
+        get_normal_derivatives(coords, sol[0], sol[1], d_n_d_xi, d_n_d_eta, d_phi_d_xi_arr, d_phi_d_eta_arr, node_gids);
+
+        // first column
+        // vector term
+        J[0][0] += pair_vars(6)*del_t*del_t/(2*mass(bdy_nodes(contact_id)))*d_n_d_xi[0];
+        J[1][0] += pair_vars(6)*del_t*del_t/(2*mass(bdy_nodes(contact_id)))*d_n_d_xi[1];
+        J[2][0] += pair_vars(6)*del_t*del_t/(2*mass(bdy_nodes(contact_id)))*d_n_d_xi[2];
+
+        // matrix/vector of outer product with phi term
+        for (int j = 0; j < 4; j++) {
+            J[0][0] += (pair_vars(6)*del_t*del_t/2)*(d_n_d_xi[0]*phi_k[j]/mass(node_gids[j]))*phi_k[j];
+            J[1][0] += (pair_vars(6)*del_t*del_t/2)*(d_n_d_xi[1]*phi_k[j]/mass(node_gids[j]))*phi_k[j];
+            J[2][0] += (pair_vars(6)*del_t*del_t/2)*(d_n_d_xi[2]*phi_k[j]/mass(node_gids[j]))*phi_k[j];
+        }
+
+        // second column
+        // vector term
+        J[0][1] += pair_vars(6)*del_t*del_t/(2*mass(bdy_nodes(contact_id)))*d_n_d_xi[0];
+        J[1][1] += pair_vars(6)*del_t*del_t/(2*mass(bdy_nodes(contact_id)))*d_n_d_xi[1];
+        J[2][1] += pair_vars(6)*del_t*del_t/(2*mass(bdy_nodes(contact_id)))*d_n_d_xi[2];
+
+        // matrix/vector of outer prodcut with phi term
+        for (int j = 0; j < 4; j++) {
+            J[0][0] += (pair_vars(6)*del_t*del_t/2)*(d_n_d_eta[0]*phi_k[j]/mass(node_gids[j]))*phi_k[j];
+            J[1][0] += (pair_vars(6)*del_t*del_t/2)*(d_n_d_eta[1]*phi_k[j]/mass(node_gids[j]))*phi_k[j];
+            J[2][0] += (pair_vars(6)*del_t*del_t/2)*(d_n_d_eta[2]*phi_k[j]/mass(node_gids[j]))*phi_k[j];
+        }
+
+        // **********************************************
+        // end of large deformation jacobian terms
+        // **********************************************
 
         J_det = J[0][0]*(J[1][1]*J[2][2] - J[1][2]*J[2][1]) - J[0][1]*(J[1][0]*J[2][2] - J[1][2]*J[2][0]) +
                 J[0][2]*(J[1][0]*J[2][1] - J[1][1]*J[2][0]);  // there should be no singularities in this calculation
