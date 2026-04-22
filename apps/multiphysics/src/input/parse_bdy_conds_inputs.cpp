@@ -662,7 +662,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 size_t num_global_vars = stress_bc_global_vars_yaml.Size();
 
                 if(num_global_vars>100){
-                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 velocity global vars in the input file ****");
+                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 stress global vars in the input file ****");
                 } // end check on num_global_vars
 
                 RUN({ 
@@ -681,6 +681,21 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 } // end loop over global vars
             } // end else if on stress_bc_global_vars
+
+            // set contact ieration variables
+            else if (a_word.compare("contact_bc_vars") == 0) {
+                
+                Yaml::Node & contact_bc_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+
+                size_t num_global_vars = contact_bc_vars_yaml.Size();
+
+                if(num_global_vars != 2){
+                    throw std::runtime_error("**** The code only supports 2 contact global vars in the input file ****");
+                } // end check on num_global_vars
+
+                BoundaryConditions.contact_max_local_iter = bc_yaml[bc_id]["boundary_condition"]["contact_bc_vars"][0].As<size_t>();
+                BoundaryConditions.contact_max_global_iter = bc_yaml[bc_id]["boundary_condition"]["contact_bc_vars"][1].As<size_t>();
+            } // end else if on contact_bc_global_vars
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;

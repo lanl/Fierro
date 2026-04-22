@@ -19,7 +19,7 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     output_file_format: state
-    graphics_time_step: 10 #1
+    graphics_time_step: 10
     # graphics_iteration_step: 10
 
 solver_options:
@@ -38,6 +38,9 @@ boundary_conditions:
       surface:
           type: global
       stress_model: global_contact
+      contact_bc_vars:
+        - 10 # local iter max
+        - 1 # global iter max
 
   
 materials:

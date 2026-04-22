@@ -7,7 +7,7 @@
 using namespace mtr;
 
 // solving options
-static constexpr size_t max_iter = 100;  // max number of iterations
+static constexpr size_t max_iter = 100;
 static constexpr double tol = 1e-15;  // tolerance for the things that are supposed to be zero
 static constexpr double edge_tol = 1e-3;  // tolerance for edge case solutions (see contact_check for more info)
 
@@ -37,6 +37,9 @@ struct contact_state_t
     CArrayKokkos <double> contact_force; // stores contact forces in gid locations
     CArrayKokkos <size_t> num_pairs_in_node; // stores number of pairs a particular node is part of for force weighting
 
+    size_t max_local_iter; // max iterations for pair newton solve, defaults to 500
+    size_t max_global_iter; // max iterations for global jacobi solve, defaults to 100
+
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn initialize
@@ -51,7 +54,7 @@ struct contact_state_t
                     size_t num_bdy_nodes, size_t num_bdy_patches, CArrayKokkos <size_t> &patches_in_elem,
                     CArrayKokkos <size_t> &elems_in_patch, DCArrayKokkos <size_t> &nodes_in_elem,
                     CArrayKokkos <size_t> &nodes_in_patch, CArrayKokkos <size_t> &bdy_nodes, size_t num_patches,
-                    size_t num_nodes, DCArrayKokkos <double> &coords);
+                    size_t num_nodes, DCArrayKokkos <double> &coords, const size_t contact_max_local_iter, const size_t contact_max_global_iter);
 
     /*
      * Here is a description of each array below:
@@ -439,7 +442,7 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
                             DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes, ViewCArrayKokkos <size_t> &contact_surface_map,
                             DCArrayKokkos <double> mass, CArrayKokkos <double> contact_forces, DCArrayKokkos <double> corner_force,
                             DCArrayKokkos <double> vel, RaggedRightArrayKokkos <size_t> corners_in_node,
-                            CArrayKokkos <size_t> num_corners_in_node);
+                            CArrayKokkos <size_t> num_corners_in_node, const size_t max_local_iter);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn distribute_frictionless_force
@@ -681,7 +684,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
                       CArrayKokkos <double> &contact_forces, DCArrayKokkos <double> &corner_force, DCArrayKokkos <double> &vel,
                       RaggedRightArrayKokkos <size_t> corners_in_node, CArrayKokkos <size_t> num_corners_in_node,
                       const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, const double &del_t, CArrayKokkos <double> &contact_force, size_t num_bdy_nodes,
-                      size_t num_patches, CArrayKokkos <size_t> &num_pairs_in_node);
+                      size_t num_patches, CArrayKokkos <size_t> &num_pairs_in_node, const size_t max_local_iter, const size_t max_global_iter);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn remove_pairs

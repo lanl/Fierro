@@ -665,7 +665,7 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
                             DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes, ViewCArrayKokkos <size_t> &contact_surface_map,
                             DCArrayKokkos <double> mass, CArrayKokkos <double> contact_forces, DCArrayKokkos <double> corner_force,
                             DCArrayKokkos <double> vel, RaggedRightArrayKokkos <size_t> corners_in_node,
-                            CArrayKokkos <size_t> num_corners_in_node)
+                            CArrayKokkos <size_t> num_corners_in_node, const size_t max_local_iter)
 {
     // In order to understand this, just see this PDF:
     // https://github.com/gabemorris12/contact_surfaces/blob/master/Finding%20the%20Contact%20Force.pdf
@@ -769,8 +769,7 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
 
     bool converged = false;
 
-    //for (int i = 0; i < max_iter; i++)
-    for (int i = 0; i < 500; i++)
+    for (int i = 0; i < max_local_iter; i++)
     {
         phi(phi_k, pair_vars(0), pair_vars(1), xi, eta);
         // construct A
@@ -2221,7 +2220,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
                       CArrayKokkos <double> &contact_forces, DCArrayKokkos <double> &corner_force, DCArrayKokkos <double> &vel,
                       RaggedRightArrayKokkos <size_t> corners_in_node, CArrayKokkos <size_t> num_corners_in_node,
                       const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, const double &del_t, CArrayKokkos <double> &contact_force, size_t num_bdy_nodes,
-                      size_t num_patches, CArrayKokkos <size_t> &num_pairs_in_node)
+                      size_t num_patches, CArrayKokkos <size_t> &num_pairs_in_node, const size_t max_local_iter, const size_t max_global_iter)
 {
     f_c_incs.set_values(0);
     DCArrayKokkos <double> norm_incs(1);
@@ -2247,7 +2246,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
         }
     }); */
 
-    for (int i = 0; i < max_iter; i++)
+    for (int i = 0; i < max_global_iter; i++)
     {
         f_c_incs.set_values(0);
         Kokkos::fence();
@@ -2262,7 +2261,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
                     ViewCArrayKokkos <double> pair(&pair_vars(contact_id,8*k), 8);
                     
                     frictionless_increment(pair, contact_id, xi, eta, del_t, coords, bdy_nodes, surface_map, mass,
-                                        contact_forces, corner_force, vel, corners_in_node, num_corners_in_node);
+                                        contact_forces, corner_force, vel, corners_in_node, num_corners_in_node, max_local_iter);
                     incs_view(j) += pair_vars(contact_id, 8*k + 6);
                 }
             }    
@@ -2576,7 +2575,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
                                  size_t num_bdy_nodes, size_t num_bdy_patches, CArrayKokkos <size_t> &patches_in_elem,
                                  CArrayKokkos <size_t> &elems_in_patch, DCArrayKokkos <size_t> &nodes_in_elem,
                                  CArrayKokkos <size_t> &nodes_in_patch, CArrayKokkos <size_t> &bdy_nodes, size_t num_patches,
-                                 size_t num_nodes, DCArrayKokkos <double> &coords)
+                                 size_t num_nodes, DCArrayKokkos <double> &coords, const size_t contact_max_local_iter, const size_t contact_max_global_iter)
 {
     // Contact is only supported in 3D
     if (num_dims != 3)
@@ -2590,6 +2589,10 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     }
     
     // WARNING: assuming first order hexes
+
+    // setting iteration parameters
+    max_local_iter = contact_max_local_iter;
+    max_global_iter = contact_max_global_iter;
 
     // populating xi and eta
     xi = CArrayKokkos<double>(4);

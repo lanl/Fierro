@@ -278,6 +278,9 @@ struct BoundaryCondition_t
     // boolean for whether contact should occur
     bool allow_contact = false;
     bool allow_preload = false;
+    // contact iteration variables
+    size_t contact_max_local_iter = 500;
+    size_t contact_max_global_iter = 100;
 
     // making a psuedo dual ragged right
     DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver_id, bc_lid)
@@ -332,6 +335,7 @@ static std::vector<std::string> str_bc_inps
     "velocity_bc_global_vars",
     "stress_model",
     "stress_bc_global_vars",
+    "contact_bc_vars",
     "temperature_model",
     "temperature_bc_global_vars",
     "heat_flux_model",
