@@ -78,7 +78,7 @@ boundary_conditions:
       stress_model: global_contact
       contact_bc_vars:
         - 10 # local iter max
-        - 1 # global iter max
+        - 10 # global iter max
 
   
 materials:
