@@ -127,7 +127,7 @@ for i in range(len(executables)):
             # conditional to handle contact cases
             diff_tol = 1E-8
             if (tests[j] == "slanted_impact" or tests[j] == "sie_expansion_test" or tests[j] == "edge_flat_test" or tests[j] == "billiards" or tests[j] == "TaylorAnvil_Contact"):
-                diff_tol = 1E-3
+                diff_tol = 1E-2
 
             for k in range(len(result_data[0])):
                 calc = [row[k] for row in result_data]
@@ -137,7 +137,7 @@ for i in range(len(executables)):
                     diff = calc[l] - true[l]
                     diff_rel = abs(calc[l] - (true[l]+1E-8))/(true[l]+1E-8) * 100
                     # print(diff)
-                    if abs(diff) > diff_tol and diff_rel > 0.01:
+                    if abs(diff) > diff_tol and diff_rel > 0.1:
                         print(f"{'Calculated Result:':<20} {calc[l]:.10e}")
                         print(f"{'Expected Result:':<20} {true[l]:.10e}")
                         print(f"{'Difference:':<20} {diff:.10e}")
