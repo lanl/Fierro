@@ -1231,25 +1231,21 @@ public:
     ///
     /// \brief Build a mesh for Fierro based on the input instructions
     ///
-    /// \param Simulation mesh that is built
-    /// \param Element state data
-    /// \param Node state data
-    /// \param Corner state data
-    /// \param Simulation parameters
+    /// \param mesh Simulation mesh to be built
+    /// \param node_coords Node coordinates
+    /// \param SimulationParamaters Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_mesh(swage::Mesh& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParamaters)
+                    MPICArrayKokkos<double>& node_coords,
+                    SimulationParameters_t& SimulationParamaters)
     {
         if (SimulationParamaters.mesh_input.num_dims == 2) {
             if (SimulationParamaters.mesh_input.type == mesh_input::Polar) {
-                build_2d_polar(mesh, GaussPoints, node, corner, SimulationParamaters);
+                build_2d_polar(mesh, node_coords, SimulationParamaters);
             }
             else if (SimulationParamaters.mesh_input.type == mesh_input::Box) {
-                build_2d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+                build_2d_box(mesh, node_coords, SimulationParamaters);
             }
             else{
                 std::cout << "**** 2D MESH TYPE NOT SUPPORTED **** " << std::endl;
@@ -1262,11 +1258,15 @@ public:
             }
         }
         else if (SimulationParamaters.mesh_input.num_dims == 3) {
-            build_3d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+            build_3d_box(mesh, node_coords, SimulationParamaters);
         }
         else{
             throw std::runtime_error("**** ONLY 2D RZ OR 3D MESHES ARE SUPPORTED ****");
         }
+
+        int num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
+        mesh.initialize_corners(num_corners);
+        mesh.build_connectivity();
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1283,10 +1283,8 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_2d_box(swage::Mesh& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+                      MPICArrayKokkos<double>& node_coords,
+                      SimulationParameters_t& SimulationParamaters) const
     {
         printf("Creating a 2D box mesh \n");
 
@@ -1330,9 +1328,7 @@ public:
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
 
-        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dim, required_node_state);
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dim, "node_coordinates_in_mesh_io");
 
         // --- Build nodes ---
 
@@ -1343,13 +1339,13 @@ public:
                 int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
 
                 // store the point coordinates
-                node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+                node_coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+                node_coords.host(node_gid, 1) = origin[1] + (double)j * dy;
             } // end for i
         } // end for j
 
 
-        node.coords.update_device();
+        node_coords.update_device();
 
         // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
@@ -1385,14 +1381,6 @@ public:
 
         // update device side
         mesh.nodes_in_elem.update_device();
-
-        // intialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
-
-        // Build connectivity
-        mesh.build_connectivity();
     } // end build_2d_box
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1409,10 +1397,8 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_2d_polar(swage::Mesh& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+                        MPICArrayKokkos<double>& node_coords,
+                        SimulationParameters_t& SimulationParamaters) const
     {
         printf("Creating a 2D polar mesh \n");
 
@@ -1458,10 +1444,7 @@ public:
 
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
-
-        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dim, required_node_state);
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dim, "node_coordinates_in_mesh_io");
 
         // populate the point data structures
         for (int j = 0; j < num_points_j; j++) {
@@ -1473,10 +1456,10 @@ public:
                 double theta_j = start_angle + (double)j * dy;
 
                 // store the point coordinates
-                node.coords.host(node_gid, 0) = origin[0] + r_i * cos(theta_j);
-                node.coords.host(node_gid, 1) = origin[1] + r_i * sin(theta_j);
+                node_coords.host(node_gid, 0) = origin[0] + r_i * cos(theta_j);
+                node_coords.host(node_gid, 1) = origin[1] + r_i * sin(theta_j);
 
-                if(node.coords.host(node_gid, 0) < 0.0){
+                if(node_coords.host(node_gid, 0) < 0.0){
                     throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
                 }
 
@@ -1484,7 +1467,7 @@ public:
         } // end for j
 
 
-        node.coords.update_device();
+        node_coords.update_device();
 
         // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
@@ -1520,14 +1503,6 @@ public:
 
         // update device side
         mesh.nodes_in_elem.update_device();
-
-        // intialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
-
-        // Build connectivity
-        mesh.build_connectivity();
     } // end build_2d_box
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1544,10 +1519,8 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_3d_box(swage::Mesh& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+                      MPICArrayKokkos<double>& node_coords,
+                      SimulationParameters_t& SimulationParamaters) const
     {
         printf("Creating a 3D box mesh \n");
 
@@ -1588,10 +1561,7 @@ public:
 
         // initialize mesh node variables
         mesh.initialize_nodes(num_nodes);
-
-         // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dim, required_node_state);
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dim, "node_coordinates_in_mesh_io");
 
         // --- Build nodes ---
 
@@ -1603,15 +1573,15 @@ public:
                     int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
                     // store the point coordinates
-                    node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
+                    node_coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+                    node_coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+                    node_coords.host(node_gid, 2) = origin[2] + (double)k * dz;
                 } // end for i
             } // end for j
         } // end for k
 
 
-        node.coords.update_device();
+        node_coords.update_device();
 
         // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
@@ -1653,14 +1623,6 @@ public:
 
         // update device side
         mesh.nodes_in_elem.update_device();
-
-        // initialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
-
-        // Build connectivity
-        mesh.build_connectivity();
     } // end build_3d_box
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1677,10 +1639,8 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_3d_HexN_box(swage::Mesh& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+                           MPICArrayKokkos<double>& node_coords,
+                           SimulationParameters_t& SimulationParamaters) const
     {
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
         const int num_dim = 3;
@@ -1740,17 +1700,13 @@ public:
         
         // --- point ---
         int num_points = num_points_i * num_points_j * num_points_k;
-        auto pt_coords = CArray <double> (num_points, num_dim);
 
 
-        // --- Build nodes ---
-        
         // initialize node variables
         mesh.initialize_nodes(num_points);
 
-        // 
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_points, num_dim, required_node_state);
+        node_coords = MPICArrayKokkos<double>(num_points, num_dim, "node_coordinates_in_mesh_io");
+
         // populate the point data structures
         for (int k = 0; k < num_points_k; k++){
             for (int j = 0; j < num_points_j; j++){
@@ -1824,15 +1780,6 @@ public:
 
         // update device side
         mesh.nodes_in_elem.update_device();
-
-        // initialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
-
-        // Build connectivity
-        mesh.build_connectivity();
-
     }
 };
 
