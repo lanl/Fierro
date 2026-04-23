@@ -1717,16 +1717,16 @@ public:
                     int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
                     // store the point coordinates
-                    node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
+                    node_coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+                    node_coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+                    node_coords.host(node_gid, 2) = origin[2] + (double)k * dz;
                     
                 } // end for k
             } // end for i
         } // end for j
 
 
-        node.coords.update_device();
+        node_coords.update_device();
 
 
         // initialize elem variables

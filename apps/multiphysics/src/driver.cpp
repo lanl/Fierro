@@ -73,6 +73,12 @@ void Driver::initialize()
     MPICArrayKokkos<double> initial_node_coords;
     MPICArrayKokkos<double> final_node_coords;
 
+    // Create communication plans
+    CommunicationPlan element_communication_plan;
+    element_communication_plan.initialize(MPI_COMM_WORLD);
+    CommunicationPlan node_communication_plan;
+    node_communication_plan.initialize(MPI_COMM_WORLD);
+
     if (SimulationParamaters.mesh_input.source == mesh_input::file) {
 
         // Create and/or read mesh on rank 0
@@ -104,9 +110,7 @@ void Driver::initialize()
         // Build mesh on rank 0
         if (rank == 0) {
             mesh_builder.build_mesh(mesh, 
-                                    State.GaussPoints, 
-                                    State.node, 
-                                    State.corner, 
+                                    initial_node_coords,
                                     SimulationParamaters);
         } // end if rank == 0
     }
@@ -120,11 +124,12 @@ void Driver::initialize()
     if(world_size != 1) { // pass through the partitioning function if not a single rank
         elements::partition_mesh(initial_mesh, mesh, initial_node_coords, final_node_coords, element_communication_plan, node_communication_plan, world_size, rank);   
     } else {
-        final_mesh = initial_mesh;
-        final_mesh.num_owned_elems = initial_mesh.num_elems;
-        final_mesh.num_owned_nodes = initial_mesh.num_nodes;
+        mesh = initial_mesh;
+        mesh.num_owned_elems = initial_mesh.num_elems;
+        mesh.num_owned_nodes = initial_mesh.num_nodes;
         final_node_coords = initial_node_coords;
     }
+    MPI_Barrier(MPI_COMM_WORLD);
 
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;
