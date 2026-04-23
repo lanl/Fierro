@@ -59,7 +59,7 @@ public:
     MeshReader  mesh_reader;
     MeshBuilder mesh_builder;
 
-    SimulationParameters_t SimulationParamaters; ///< the input simulation parameters
+    SimulationParameters_t SimulationParamaters; ///< the input simulation parameters (WARNING, Misspelled, correct in following PR)
 
     // ---------------------------------------------------------------------
     //    Material and Boundary declarations
