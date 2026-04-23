@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 
 
         // Create driver
-        Driver* driver = new Driver(argv[1]);
+        Driver* driver = new Driver(argv[1], rank, world_size);
 
 
         // Timing data for each step

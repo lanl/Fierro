@@ -39,16 +39,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "geometry_new.hpp"
 
-// // Headers for solver classes
-// #include "sgh_solver_3D.hpp"
-// #include "sgh_solver_rz.hpp"
-// #include "sgtm_solver_3D.hpp"
-
-
 // Physical state data
 #include "state.hpp"
-
-
 
 
 class Driver
@@ -58,10 +50,12 @@ public:
     char* mesh_file;
     char* yaml_file;
 
+    // MPI rank and world size
+    int rank;
+    int world_size;
     // ---------------------------------------------------------------------
-    //    input type declarations
+    //    Menshing and Simulation Parameters
     // ---------------------------------------------------------------------
-
     MeshReader  mesh_reader;
     MeshBuilder mesh_builder;
 
@@ -91,9 +85,11 @@ public:
     // set of enabled solvers
     std::vector<Solver*> solvers;
 
-    Driver(char* YAML)
+    Driver(char* YAML, int rank, int world_size)
     {
         yaml_file = YAML;
+        this->rank = rank;
+        this->world_size = world_size;
     };
     ~Driver() {};
 
