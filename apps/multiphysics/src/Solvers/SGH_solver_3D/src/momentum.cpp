@@ -51,8 +51,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGH3D::update_velocity(double rk_alpha,
     double dt,
     const swage::Mesh& mesh,
-    DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& node_vel_n0,
+    MPICArrayKokkos<double>& node_vel,
+    MPICArrayKokkos<double>& node_vel_n0,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& node_force,
     const DCArrayKokkos<double>& corner_force,
@@ -114,7 +114,7 @@ void SGH3D::update_velocity(double rk_alpha,
 void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
     const swage::Mesh& mesh,
     const MPICArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
+    const MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
 {
     const size_t num_nodes_in_elem = 8;
@@ -219,7 +219,7 @@ void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
 void SGH3D::get_divergence(DCArrayKokkos<double>& elem_div,
     const swage::Mesh& mesh,
     const MPICArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
+    const MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---

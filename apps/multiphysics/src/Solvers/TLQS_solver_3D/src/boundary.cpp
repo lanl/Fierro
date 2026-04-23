@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void TLQS3D::boundary_position(const swage::Mesh& mesh,
     const BoundaryCondition_t& BoundaryConditions,
-    DCArrayKokkos<double>& node_vel,
+    MPICArrayKokkos<double>& node_vel,
     const double time_value) const
 {
     // size_t num_pos_bdy_sets = BoundaryConditions.num_pos_bdy_sets_in_solver.host(this->solver_id);

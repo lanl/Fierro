@@ -53,8 +53,8 @@ void SGHRZ::update_velocity_rz(
     double rk_alpha,
     double dt,
     const swage::Mesh& mesh,
-    DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_vel_n0,
+    MPICArrayKokkos<double>& node_vel,
+    const MPICArrayKokkos<double>& node_vel_n0,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& corner_force) const
 {
@@ -106,7 +106,7 @@ void SGHRZ::get_velgrad_rz(
     DCArrayKokkos<double>& elem_vel_grad,
     const swage::Mesh mesh,
     const MPICArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
+    const MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---
@@ -178,7 +178,7 @@ void SGHRZ::get_velgrad_rz(
 KOKKOS_FUNCTION
 void SGHRZ::get_velgrad_rz(ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<size_t>& elem_node_gids,
-    const DCArrayKokkos<double>&    node_vel,
+    const MPICArrayKokkos<double>&    node_vel,
     const ViewCArrayKokkos<double>& b_matrix,
     const double elem_vol,
     const double elem_area,
@@ -249,7 +249,7 @@ void SGHRZ::get_velgrad_rz(ViewCArrayKokkos<double>& vel_grad,
 void SGHRZ::get_divergence_rz(DCArrayKokkos<double>& elem_div,
     const swage::Mesh mesh,
     const MPICArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
+    const MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---

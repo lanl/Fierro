@@ -1113,7 +1113,7 @@ void cohesive_zones_t::oriented(
 
 void cohesive_zones_t::ucmap(
     const MPICArrayKokkos<double>& node_coords, // State.node.coords // rename as pos
-    const DCArrayKokkos<double>& vel, // State.node.vel //rename as vel
+    const MPICArrayKokkos<double>& vel, // State.node.vel //rename as vel
     const DCArrayKokkos<double>& cohesive_zone_orientation,
     DCArrayKokkos<size_t>& overlapping_node_gids,
     const double dt_stage, 

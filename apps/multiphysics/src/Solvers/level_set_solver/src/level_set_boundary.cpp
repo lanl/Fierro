@@ -50,7 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::boundary_velocity(const swage::Mesh&      mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
-                                 DCArrayKokkos<double>& node_level_set_vel,
+                                 MPICArrayKokkos<double>& node_level_set_vel,
                                  const double time_value,
                                  const double small) const
 {

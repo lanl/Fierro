@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGTM3D::update_velocity(double rk_alpha,
     double dt,
     const swage::Mesh& mesh,
-    DCArrayKokkos<double>& node_vel,
+    MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& corner_force) const
 {

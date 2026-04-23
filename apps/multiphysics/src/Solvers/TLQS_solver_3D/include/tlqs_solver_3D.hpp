@@ -226,15 +226,15 @@ public:
     // **** Functions defined in boundary.cpp **** //
     void boundary_position(const swage::Mesh& mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        DCArrayKokkos<double>& node_vel,
+        MPICArrayKokkos<double>& node_vel,
         const double time_value) const;
 
     // **** Functions defined in time_integration.cpp **** //
     void timestep_init(
         MPICArrayKokkos<double>& node_coords,
         MPICArrayKokkos<double>& node_coords_n0,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_vel_n0,
+        MPICArrayKokkos<double>& node_vel,
+        MPICArrayKokkos<double>& node_vel_n0,
         DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
         DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
         DRaggedRightArrayKokkos<double>& MaterialPoints_stress,

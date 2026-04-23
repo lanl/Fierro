@@ -95,7 +95,7 @@ namespace UserDefinedStrengthModel {
     static void calc_stress(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
         const MPICArrayKokkos<double> &node_coords,
-        const DCArrayKokkos <double> &node_vel,
+        const MPICArrayKokkos <double> &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
@@ -200,7 +200,7 @@ namespace NotionalStrengthModel {
     static void calc_stress(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
         const MPICArrayKokkos <double> &node_coords,
-        const DCArrayKokkos <double> &node_vel,
+        const MPICArrayKokkos <double> &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,

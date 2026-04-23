@@ -70,7 +70,7 @@ void fill_regions(
         const Material_t& Materials,
         const swage::Mesh& mesh,
         const MPICArrayKokkos<double>& node_coords,
-        DCArrayKokkos <double>& node_vel,
+        MPICArrayKokkos <double>& node_vel,
         DCArrayKokkos <double>& node_temp,
         DCArrayKokkos <double>& gauss_den,
         DCArrayKokkos <double>& gauss_sie,
@@ -275,7 +275,7 @@ void paint_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_vector(const DCArrayKokkos<double>& vector_field,
+void paint_vector(const MPICArrayKokkos<double>& vector_field,
                   const ViewCArrayKokkos <double>& mesh_coords,
                   const double u,
                   const double v,

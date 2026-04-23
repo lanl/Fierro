@@ -178,7 +178,7 @@ public:
     void nodal_gradient(
         const swage::Mesh mesh,
         const MPICArrayKokkos<double>& Node_coords,
-        const DCArrayKokkos<double>& node_level_set_vel,
+        const MPICArrayKokkos<double>& node_level_set_vel,
         const DCArrayKokkos<double>& Node_grad_level_set,
         const DCArrayKokkos<double>& Corner_normal,
         const DCArrayKokkos<double>& Corner_volume,
@@ -190,7 +190,7 @@ public:
     void update_level_set(
             const swage::Mesh& mesh,
             const Material_t& Materials,
-            const DCArrayKokkos<double>& node_level_set_vel,
+            const MPICArrayKokkos<double>& node_level_set_vel,
             const DCArrayKokkos<double>& Node_grad_level_set,
             const DCArrayKokkos<double>& GaussPoints_level_set,
             const DCArrayKokkos<double>& GaussPoints_level_set_n,
@@ -259,7 +259,7 @@ public:
     void boundary_velocity(
         const swage::Mesh&  mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        DCArrayKokkos<double>& node_vel,
+        MPICArrayKokkos<double>& node_level_set_vel,
         const double time_value,
         const double small) const;
 

@@ -262,8 +262,8 @@ public:
     //    const double rk_alpha,
     //    const double dt,
     //    const swage::Mesh& mesh,
-    //    const DCArrayKokkos<double>& node_vel,
-    //    const DCArrayKokkos<double>& node_vel_n0,
+    //    const MPICArrayKokkos<double>& node_vel,
+    //    const MPICArrayKokkos<double>& node_vel_n0,
     //    const MPICArrayKokkos<double>& node_coords,
     //    const MPICArrayKokkos<double>& node_coords_n0,
     //    const DCArrayKokkos<double>& MaterialPoints_sie,
@@ -332,8 +332,8 @@ public:
         const size_t num_nodes,
         MPICArrayKokkos<double>& node_coords,
         const MPICArrayKokkos<double>& node_coords_n0,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_vel_n0) const;
+        const MPICArrayKokkos<double>& node_vel,
+        const MPICArrayKokkos<double>& node_vel_n0) const;
 
 
     // **** Functions defined in momentum.cpp **** //
@@ -341,7 +341,7 @@ public:
         double rk_alpha,
         double dt,
         const swage::Mesh& mesh,
-        DCArrayKokkos<double>& node_vel,
+        MPICArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_force) const;
 
@@ -362,8 +362,8 @@ public:
     void rk_init(
         MPICArrayKokkos<double>& node_coords,
         MPICArrayKokkos<double>& node_coords_n0,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_vel_n0,
+        MPICArrayKokkos<double>& node_vel,
+        MPICArrayKokkos<double>& node_vel_n0,
         DCArrayKokkos<double>& node_temp,
         DCArrayKokkos<double>& node_temp_n0,
         DCArrayKokkos<double>& node_q_flux,
@@ -376,7 +376,7 @@ public:
     void get_timestep(
         swage::Mesh& mesh,
         MPICArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
+        MPICArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
         DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,

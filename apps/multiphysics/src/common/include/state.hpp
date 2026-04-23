@@ -271,8 +271,8 @@ struct node_t
 {
     MPICArrayKokkos<double> coords;     ///< Nodal coordinates
     MPICArrayKokkos<double> coords_n0;  ///< Nodal coordinates at tn=0 of time integration
-    DCArrayKokkos<double> vel;        ///< Nodal velocity
-    DCArrayKokkos<double> vel_n0;     ///< Nodal velocity at tn=0 of time integration
+    MPICArrayKokkos<double> vel;        ///< Nodal velocity
+    MPICArrayKokkos<double> vel_n0;     ///< Nodal velocity at tn=0 of time integration
     DCArrayKokkos<double> mass;       ///< Nodal mass
     DCArrayKokkos<double> force;      ///< Nodal force
     DCArrayKokkos<double> temp;       ///< Nodal temperature
@@ -290,8 +290,8 @@ struct node_t
                     if (coords_n0.size() == 0) this->coords_n0 = MPICArrayKokkos<double>(num_nodes, num_dims, "node_coordinates_n0");
                     break;
                 case node_state::velocity:
-                    if (vel.size() == 0) this->vel = DCArrayKokkos<double>(num_nodes, num_dims, "node_velocity");
-                    if (vel_n0.size() == 0) this->vel_n0 = DCArrayKokkos<double>(num_nodes, num_dims, "node_velocity_n0");
+                    if (vel.size() == 0) this->vel = MPICArrayKokkos<double>(num_nodes, num_dims, "node_velocity");
+                    if (vel_n0.size() == 0) this->vel_n0 = MPICArrayKokkos<double>(num_nodes, num_dims, "node_velocity_n0");
                     break;
                 case node_state::force:
                     if (force.size() == 0) this->force = DCArrayKokkos<double>(num_nodes, num_dims, "node_force");

@@ -242,7 +242,7 @@ struct cohesive_zones_t {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     void ucmap(
         const MPICArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& vel,
+        const MPICArrayKokkos<double>& vel,
         const DCArrayKokkos<double>& cohesive_zone_orientation,
         DCArrayKokkos<size_t>& overlapping_node_gids,
         const double dt_stage, 

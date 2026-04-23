@@ -549,7 +549,7 @@ double sum_domain_internal_energy_rz(const DRaggedRightArrayKokkos<double>& Mate
 } // end function 
 
 double sum_domain_kinetic_energy_rz(const swage::Mesh& mesh,
-                                    const DCArrayKokkos<double>& node_vel,
+                                    const MPICArrayKokkos<double>& node_vel,
                                     const CArrayKokkos<double>& node_extensive_mass)
 {
     // extensive KE

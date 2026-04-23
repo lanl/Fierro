@@ -53,8 +53,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGTM3D::rk_init(
     MPICArrayKokkos<double>& node_coords,
     MPICArrayKokkos<double>& node_coords_n0,
-    DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& node_vel_n0,
+    MPICArrayKokkos<double>& node_vel,
+    MPICArrayKokkos<double>& node_vel_n0,
     DCArrayKokkos<double>& node_temp,
     DCArrayKokkos<double>& node_temp_n0,
     DCArrayKokkos<double>& node_q_flux,
@@ -99,7 +99,7 @@ void SGTM3D::rk_init(
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::get_timestep(swage::Mesh& mesh,
                        MPICArrayKokkos<double>& node_coords,
-                       DCArrayKokkos<double>& node_vel,
+                       MPICArrayKokkos<double>& node_vel,
                        DCArrayKokkos<double>& GaussPoints_vol,
                        DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                        DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
