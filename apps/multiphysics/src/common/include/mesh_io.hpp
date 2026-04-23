@@ -334,9 +334,9 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_mesh(swage::Mesh& mesh,
-                   State_t& State,
+                   MPICArrayKokkos<double>& node_coords,
                    mesh_input_t& mesh_inps,
-                   int      num_dims)
+                   int           num_dims)
     {
         if (mesh_file_ == NULL) {
             throw std::runtime_error("**** No mesh path given for read_mesh ****");
@@ -365,20 +365,32 @@ public:
         std::cout << "File extension is: " << extension << std::endl;
 
         if(extension == "geo"){ // Ensight meshfile extension
-            read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            read_ensight_mesh(mesh, node_coords, mesh_inps, num_dims);
         }
         else if(extension == "inp"){ // Abaqus meshfile extension
-            read_Abaqus_mesh(mesh, State, num_dims);
+            read_Abaqus_mesh(mesh, node_coords, mesh_inps, num_dims);
         }
         else if(extension == "vtk"){ // vtk file format
-            read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            read_vtk_mesh(mesh, node_coords, mesh_inps, num_dims);
         }
         else if(extension == "vtu"){ // vtu file format
-            read_vtu_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            read_vtu_mesh(mesh, node_coords, mesh_inps, num_dims);
         }
         else{
             throw std::runtime_error("**** Mesh file extension not understood ****");
         }
+
+        // Initialize/create connectivity
+
+        int num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
+        mesh.initialize_corners(num_corners);
+        mesh.build_connectivity();
+        // corner.initialize(num_corners, num_dims);
+
+
+        // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
+        // std::vector<node_state> required_node_state = { node_state::coords };
+        // node.initialize(mesh.num_nodes, num_dims, required_node_state);
 
     }
 
@@ -396,9 +408,7 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_ensight_mesh(swage::Mesh& mesh,
-                           GaussPoint_t& GaussPoints,
-                           node_t&   node,
-                           corner_t& corner,
+                           MPICArrayKokkos<double>& node_coords,
                            mesh_input_t& mesh_inps,
                            int num_dims)
     {
@@ -428,31 +438,26 @@ public:
         fscanf(in, "%lu", &num_nodes);
         printf("Number of nodes read in %lu\n", num_nodes);
 
-        
-        mesh.initialize_nodes(num_nodes);
-
-        // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dims, required_node_state);
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
 
         // read the initial mesh coordinates
         // x-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            fscanf(in, "%le", &node.coords.host(node_id, 0));
-            node.coords.host(node_id, 0)*= mesh_inps.scale_x;
+            fscanf(in, "%le", &node_coords.host(node_id, 0));
+            node_coords.host(node_id, 0)*= mesh_inps.scale_x;
         }
 
         // y-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            fscanf(in, "%le", &node.coords.host(node_id, 1));
-            node.coords.host(node_id, 1)*= mesh_inps.scale_y;
+            fscanf(in, "%le", &node_coords.host(node_id, 1));
+            node_coords.host(node_id, 1)*= mesh_inps.scale_y;
         }
 
         // z-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
             if (num_dims == 3) {
-                fscanf(in, "%le", &node.coords.host(node_id, 2));
-                node.coords.host(node_id, 2)*= mesh_inps.scale_z;
+                fscanf(in, "%le", &node_coords.host(node_id, 2));
+                node_coords.host(node_id, 2)*= mesh_inps.scale_z;
             }
             else{
                 double dummy;
@@ -462,7 +467,7 @@ public:
 
 
         // Update device nodal positions
-        node.coords.update_device();
+        node_coords.update_device();
 
         ch = (char)fgetc(in);
 
@@ -520,16 +525,8 @@ public:
         // update device side
         mesh.nodes_in_elem.update_device();
 
-        // initialize corner variables
-        int num_corners = num_elem * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dims);
-
         // Close mesh input file
         fclose(in);
-
-        // Build connectivity
-        mesh.build_connectivity();
 
         return;
     } // end read ensight mesh
@@ -541,13 +538,13 @@ public:
     /// \brief Read .inp mesh file
     ///
     /// \param Simulation mesh
-    /// \param Simulation state
-    /// \param Node state struct
+    /// \param Node coordinates
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_Abaqus_mesh(swage::Mesh& mesh,
-                          State_t& State,
+                          MPICArrayKokkos<double>& node_coords,
+                          mesh_input_t& mesh_inps,
                           int num_dims)
     {
 
@@ -643,26 +640,22 @@ public:
 
         size_t num_nodes = nodes.size();
 
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
+
         printf("Number of nodes read in %lu\n", num_nodes);
 
         // initialize node variables
         mesh.initialize_nodes(num_nodes);
 
-        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-
-        State.node.initialize(num_nodes, num_dims, required_node_state);
-
-
         // Copy nodes to mesh
         for(int node_gid = 0; node_gid < num_nodes; node_gid++){
-            State.node.coords.host(node_gid, 0) = nodes[node_gid].x;
-            State.node.coords.host(node_gid, 1) = nodes[node_gid].y;
-            State.node.coords.host(node_gid, 2) = nodes[node_gid].z;
+            node_coords.host(node_gid, 0) = nodes[node_gid].x * mesh_inps.scale_x;
+            node_coords.host(node_gid, 1) = nodes[node_gid].y * mesh_inps.scale_y;
+            node_coords.host(node_gid, 2) = nodes[node_gid].z * mesh_inps.scale_z;
         }
 
         // Update device nodal positions
-        State.node.coords.update_device();
+        node_coords.update_device();
 
 
         // --- read in the elements in the mesh ---
@@ -685,14 +678,6 @@ public:
 
         // update device side
         mesh.nodes_in_elem.update_device();
-
-        // initialize corner variables
-        int num_corners = num_elem * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // State.corner.initialize(num_corners, num_dims);
-
-        // Build connectivity
-        mesh.build_connectivity();
     } // end read abaqus mesh
 
 
@@ -709,25 +694,22 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_vtk_mesh(swage::Mesh& mesh,
-                    GaussPoint_t& GaussPoints,
-                    node_t&   node,
-                    corner_t& corner,
-                    mesh_input_t& mesh_inps,
-                    int num_dims)
+                       MPICArrayKokkos<double>& node_coords,
+                       mesh_input_t& mesh_inps,
+                       int num_dims)
     {
 
         std::cout<<"Reading VTK mesh"<<std::endl;
     
         int i;           // used for writing information to file
-        int node_gid;    // the global id for the point
-        int elem_gid;     // the global id for the elem
+        int node_gid = 0;    // the global id for the point
+        int elem_gid = 0;     // the global id for the elem
 
         size_t num_nodes_in_elem = 1;
         for (int dim = 0; dim < num_dims; dim++) {
             num_nodes_in_elem *= 2;
         }
         
-
         std::string token;
         
         bool found = false;
@@ -735,7 +717,6 @@ public:
         std::ifstream in;  // FILE *in;
         in.open(mesh_file_);
         
-
         // look for POINTS
         i = 0;
         while (found==false) {
@@ -751,8 +732,8 @@ public:
                 printf("Number of nodes read in %zu\n", num_nodes);
                 mesh.initialize_nodes(num_nodes);
 
-                std::vector<node_state> required_node_state = { node_state::coords };
-                node.initialize(num_nodes, num_dims, required_node_state);
+                // std::vector<node_state> required_node_state = { node_state::coords };
+                // node.initialize(num_nodes, num_dims, required_node_state);
                 
                 found=true;
             } // end if
@@ -765,9 +746,11 @@ public:
             
             i++;
         } // end while
+
+        node_coords = MPICArrayKokkos<double>(mesh.num_nodes, num_dims, "Node_coordinates_in_mesh_io");
         
         // read the node coordinates
-        for (node_gid=0; node_gid<mesh.num_nodes; node_gid++){
+        for (node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
             
             std::string str;
             std::getline(in, str);
@@ -776,25 +759,25 @@ public:
             std::vector<std::string> v = split (str, delimiter);
             
             // save the nodal coordinates
-            node.coords.host(node_gid, 0) = mesh_inps.scale_x*std::stod(v[0]); // double
-            node.coords.host(node_gid, 1) = mesh_inps.scale_y*std::stod(v[1]); // double
-            if(num_dims==3){
-                node.coords.host(node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
+            node_coords.host(node_gid, 0) = mesh_inps.scale_x*std::stod(v[0]); // double
+            node_coords.host(node_gid, 1) = mesh_inps.scale_y*std::stod(v[1]); // double
+            if(num_dims == 3){
+                node_coords.host(node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
             }
             
         } // end for nodes
 
 
         // Update device nodal positions
-        node.coords.update_device();
+        node_coords.update_device();
         
 
-        found=false;
+        found = false;
 
         // look for CELLS
         i = 0;
         size_t num_elem = 0;
-        while (found==false) {
+        while (found == false) {
             std::string str;
             std::getline(in, str);
             
@@ -815,7 +798,7 @@ public:
             } // end if
             
             
-            if (i>1000){
+            if (i>10000){
                 printf("ERROR: Failed to find CELLS \n");
                 break;
             } // end if
@@ -825,7 +808,7 @@ public:
         
         
         // read the node ids in the element
-        for (elem_gid=0; elem_gid<num_elem; elem_gid++) {
+        for (elem_gid = 0; elem_gid < num_elem; elem_gid++) {
             
             std::string str;
             std::getline(in, str);
@@ -834,7 +817,7 @@ public:
             std::vector<std::string> v = split (str, delimiter);
             num_nodes_in_elem = std::stoi(v[0]);
             
-            for (size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
+            for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
                 mesh.nodes_in_elem.host(elem_gid, node_lid) = std::stod(v[node_lid+1]);
                 //printf(" %zu ", elem_point_list(elem_gid,node_lid) ); // printing
             }
@@ -866,16 +849,6 @@ public:
         }
         // update device side
         mesh.nodes_in_elem.update_device();
-
-
-        // initialize corner variables
-        size_t num_corners = num_elem * num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-
-
-        // Build connectivity
-        mesh.build_connectivity();
-
 
         found=false;
 
@@ -915,7 +888,7 @@ public:
         found=false;
         
         
-        if(num_nodes_in_elem==8 & elem_type != 12) {
+        if(num_nodes_in_elem == 8 && elem_type != 12) {
             printf("Wrong element type of %zu \n", elem_type);
             std::cerr << "ERROR: incorrect element type in VTK file" << std::endl;
         }
@@ -931,25 +904,23 @@ public:
     ///
     /// \brief Read ASCII .vtu mesh file
     ///
-    /// \param Simulation mesh
-    /// \param Simulation state
-    /// \param Node state struct
-    /// \param Number of dimensions
+    /// \param mesh Simulation mesh
+    /// \param node_coords Node coordinates
+    /// \param mesh_inps Mesh input parameters
+    /// \param num_dims Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_vtu_mesh(swage::Mesh& mesh,
-                    GaussPoint_t& GaussPoints,
-                    node_t&   node,
-                    corner_t& corner,
-                    mesh_input_t& mesh_inps,
-                    int num_dims)
+                       MPICArrayKokkos<double>& node_coords,
+                       mesh_input_t& mesh_inps,
+                       int num_dims)
     {
 
         std::cout<<"Reading VTU file in a multiblock VTK mesh"<<std::endl;
     
-        int i;           // used for writing information to file
-        int node_gid;    // the global id for the point
-        int elem_gid;    // the global id for the elem
+        // int i;           // used for writing information to file
+        int node_gid = 0;    // the global id for the point
+        int elem_gid = 0;    // the global id for the elem
 
 
         //
@@ -971,7 +942,7 @@ public:
         found = extract_num_points_and_cells_xml(num_nodes,
                                                  num_elems,
                                                  in);
-        if(found==false){
+        if(found == false){
             throw std::runtime_error("ERROR: number of points and/or cells not found in the XML file!");
             //std::cout << "ERROR: number of points and cells not found in the XML file!" << std::endl;
         }
@@ -983,10 +954,6 @@ public:
         mesh.initialize_nodes(num_nodes);
         mesh.initialize_elems(num_elems, num_dims);
 
-        //------------------------------------
-        // allocate node coordinate state
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dims, required_node_state);
 
         //------------------------------------
         // allocate the elem object id array
@@ -1003,9 +970,11 @@ public:
         // ------------------------
         
         // temporary arrays
-        DCArrayKokkos<double> node_coords(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
+        DCArrayKokkos<double> node_coords_vtu(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
         DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem, "connectivity_vtu_file");
         DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
+
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
 
 
         // for all fields, we stop recording when we get to "<"
@@ -1043,7 +1012,7 @@ public:
         // coordinates of the node
         // array dims are (num_nodes,dims)
         // must use the quotes around Points to read the point values
-        found = extract_values_xml(node_coords.host.pointer(),
+        found = extract_values_xml(node_coords_vtu.host.pointer(),
                                 "\"Points\"",
                                 stop,
                                 in,
@@ -1056,7 +1025,7 @@ public:
             throw std::runtime_error("ERROR: failed to read all the mesh nodes!");
             //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
         }
-        node_coords.update_device();
+        node_coords_vtu.update_device();
 
         // dimensional scaling of the mesh
         const double scl_x = mesh_inps.scale_x;
@@ -1067,14 +1036,14 @@ public:
         FOR_ALL(node_gid, 0, mesh.num_nodes, {
             
             // save the nodal coordinates
-            node.coords(node_gid, 0) = scl_x*node_coords(node_gid, 0); // double
-            node.coords(node_gid, 1) = scl_y*node_coords(node_gid, 1); // double
-            if(num_dims==3){
-                node.coords(node_gid, 2) = scl_z*node_coords(node_gid, 2); // double
+            node_coords(node_gid, 0) = scl_x*node_coords_vtu(node_gid, 0); // double
+            node_coords(node_gid, 1) = scl_y*node_coords_vtu(node_gid, 1); // double
+            if(num_dims == 3){
+                node_coords(node_gid, 2) = scl_z*node_coords_vtu(node_gid, 2); // double
             }
 
         }); // end for parallel nodes
-        node.coords.update_host();
+        node_coords.update_host();
 
 
         // ---
@@ -1227,16 +1196,6 @@ public:
 
         } // end switch
         mesh.nodes_in_elem.update_host();
-
-
-        // initialize corner variables
-        size_t num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-
-
-        // Build connectivity
-        mesh.build_connectivity();
-
 
         in.close();
             
