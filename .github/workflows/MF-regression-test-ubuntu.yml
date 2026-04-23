@@ -1,4 +1,4 @@
-name: Regression Tests (macOS Conda)
+name: Multiphysics Regression Tests (Ubuntu)
 
 on:
   push:
@@ -9,58 +9,48 @@ on:
 
 jobs:
   Regression-Tests:
-    runs-on: macos-latest
+    name: Regression Tests (${{ matrix.name }})
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: Serial
+            build_type: RelWithDebInfo
             cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
             omp_threads: 1
           - name: OpenMP
+            build_type: RelWithDebInfo
             cmake_args: -DFIERRO_ENABLE_OPENMP=ON
             omp_threads: 2
+          - name: Serial Debug
+            build_type: Debug
+            cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
+            omp_threads: 1
 
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-        fetch-depth: 1
-
-    - name: Set up Miniconda
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        auto-update-conda: true
-        python-version: 3.9
-
-    - name: Configure Conda
-      shell: bash -l {0}
-      run: |
-        conda config --set remote_read_timeout_secs 600.0
-        conda config --set remote_connect_timeout_secs 600.0
-        conda config --set remote_max_retries 10
-        conda clean --all --yes
+        fetch-depth: 1  # Only gets the latest commit, much faster
 
     - name: Install dependencies
-      shell: bash -l {0}
       run: |
-        conda install -c conda-forge -y cmake openmpi llvm-openmp openblas lapack python bison flex compilers
+        sudo apt-get update
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake libopenmpi-dev openmpi-bin libblas-dev liblapack-dev python3
 
     - name: Configure CMake
-      shell: bash -l {0}
       run: |
         mkdir -p apps/multiphysics/build
         cd apps/multiphysics/build
-        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{ matrix.cmake_args }} ..
+        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_args }} ..
 
     - name: Build Fierro
-      shell: bash -l {0}
       run: |
         cd apps/multiphysics/build
-        make -j$(sysctl -n hw.ncpu)
+        make -j$(nproc)
 
     - name: Run Regression Tests
-      shell: bash -l {0}
       env:
         OMP_NUM_THREADS: ${{ matrix.omp_threads }}
       run: |

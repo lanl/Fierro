@@ -1,0 +1,81 @@
+num_dims: 3
+
+dynamic_options:
+  rk_num_stages: 1
+  time_final: 1.08e-04 #1.5e-04  #[s]
+  dt_min: 1.e-11  #[s]
+  dt_max: 1.e-3  #[s]
+  dt_start: 1.e-10  #[s]
+  dt_cfl: 0.01
+  cycle_stop: 200000000
+
+input_options:
+    mesh_file_format: ensight
+    mesh_file_name: /lustre/scratch4/turquoise/cyenusah/github/Fierro/Explicit-Lagrange/meshes/mesh_z_taylorAnvil.geo
+    element_type: hex8
+
+output_options:
+  timer_output_level: thorough
+  output_file_format: vtk
+  graphics_step: 2.4e-6 #1.2e-6 #6.0e-07  #[s]
+  max_num_user_output_vars: 5
+  include_default_output_fields: false
+  output_fields:
+    - velocity
+    #- processor_id
+    #- element_id
+    #- stress
+    - user_vars
+
+fea_module_parameters:
+  - type: SGH
+    material_id: 0
+    boundary_conditions:
+      # Tag X plane
+      - surface: 
+          type: x_plane
+          plane_position: 0.0
+        type: reflected
+                
+        # Tag Y plane
+      - surface: 
+          type: y_plane
+          plane_position: 0.0
+        type: reflected
+                
+        # Tag Z plane
+      - surface: 
+          type: z_plane
+          plane_position: 0.0
+        type: reflected
+
+materials:
+  - id: 0
+    eos_model: constant
+    eos_run_location: device
+    strength_model: evpfft
+    strength_type: hypo
+    strength_run_location: host
+    q1: 0.01 # 0.01 to 0.1
+    q2: 0.5 # 0.5  q2/4
+    q1ex: 0.01 # 0.01 to 0.1
+    q2ex: 0.0
+    maximum_limiter: true
+    # num_strength_state_vars: 5
+    eos_global_vars: # for constant eos model specify sound_speed and pressure
+      - 2400000 #[mm/s] ref sound speed
+      - 0.0 #[N/mm2] pressure
+    strength_global_vars: # evpfft only uses one strength_global_vars
+      - 0.0001 #udotAccTh
+
+regions:
+  - volume:
+      type: global
+    material_id: 0
+    den: 1.669e-8 #[tonne/mm3]
+    sie: 1.0e-12  #[mJ]
+        
+    velocity: cartesian
+    u: 0.0
+    v: 0.0
+    w: -175000.0  #[mm/s]

@@ -2,6 +2,7 @@ bin
 _deps
 build
 build-*
+build_*
 CMakeFiles
 Makefile
 CMakeCache.txt
@@ -10,7 +11,8 @@ Trilinos
 main
 .vscode
 *.swp
+__pycache__
 cmake_uninstall.cmake
 CTestTestfile.cmake
-install*.zip
+install*
 

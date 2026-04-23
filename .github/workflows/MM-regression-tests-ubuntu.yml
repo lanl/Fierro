@@ -1,0 +1,74 @@
+name: Micromechanics EVPFFT Regression Tests (Ubuntu)
+
+on:
+  push:
+    branches: [ main, CMake_build ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  regression-tests:
+    name: EVPFFT Regression Tests (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: OpenMP Release
+            kokkos_build_type: openmp
+            omp_threads: 2
+            build_args: --heffte_build_type=fftw --kokkos_build_type=openmp --build_fftw --build_hdf5
+          - name: Serial Release
+            kokkos_build_type: serial
+            omp_threads: 1
+            build_args: --heffte_build_type=fftw --kokkos_build_type=serial --build_fftw --build_hdf5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            build-essential \
+            cmake \
+            git \
+            python3 \
+            python3-pip \
+            libopenmpi-dev \
+            openmpi-bin \
+            libfftw3-dev \
+            libfftw3-mpi-dev \
+            libhdf5-openmpi-dev
+
+      - name: Build EVPFFT via project build script
+        run: |
+          cd apps/micromechanics/EVPFFT
+          chmod +x ./scripts/build_scripts/build_evpfft.sh
+          ./scripts/build_scripts/build_evpfft.sh ${{ matrix.build_args }} --num_jobs=$(nproc)
+
+      - name: Run micromechanics regression suite
+        env:
+          OMP_NUM_THREADS: ${{ matrix.omp_threads }}
+        run: |
+          EVPFFT_BINARY="apps/micromechanics/EVPFFT/evpfft_fftw_${{ matrix.kokkos_build_type }}/evpfft"
+          REGRESSION_SCRIPT="apps/micromechanics/regression_tests/regression_tests.py"
+
+          if [ ! -x "$EVPFFT_BINARY" ]; then
+            echo "Expected EVPFFT binary not found: $EVPFFT_BINARY"
+            exit 1
+          fi
+
+          if [ ! -f "$REGRESSION_SCRIPT" ]; then
+            echo "Required regression suite script not found: $REGRESSION_SCRIPT"
+            exit 1
+          fi
+
+          cd apps/micromechanics/regression_tests
+          python3 regression_tests.py \
+            --solver evpfft \
+            --evpfft-binary "../EVPFFT/evpfft_fftw_${{ matrix.kokkos_build_type }}/evpfft"
