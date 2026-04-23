@@ -105,7 +105,7 @@ void SGHRZ::update_velocity_rz(
 void SGHRZ::get_velgrad_rz(
     DCArrayKokkos<double>& elem_vel_grad,
     const swage::Mesh mesh,
-    const DCArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
 {
@@ -248,7 +248,7 @@ void SGHRZ::get_velgrad_rz(ViewCArrayKokkos<double>& vel_grad,
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::get_divergence_rz(DCArrayKokkos<double>& elem_div,
     const swage::Mesh mesh,
-    const DCArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
 {

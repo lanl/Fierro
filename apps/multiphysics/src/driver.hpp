@@ -53,6 +53,10 @@ public:
     // MPI rank and world size
     int rank;
     int world_size;
+
+    // Communication plans
+    CommunicationPlan element_communication_plan;
+    CommunicationPlan node_communication_plan;
     // ---------------------------------------------------------------------
     //    Menshing and Simulation Parameters
     // ---------------------------------------------------------------------

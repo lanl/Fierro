@@ -154,7 +154,7 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass_rz(const Material_t& Materials,
                          const swage::Mesh& mesh,
-                         const DCArrayKokkos<double>& node_coords,
+                         const MPICArrayKokkos<double>& node_coords,
                          const DCArrayKokkos<double>& node_mass,
                          const DCArrayKokkos<double>& corner_mass,
                          const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
@@ -203,7 +203,7 @@ void calc_corner_mass_rz(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_mass_rz(const swage::Mesh& mesh,
-                    const DCArrayKokkos<double>& node_coords,
+                    const MPICArrayKokkos<double>& node_coords,
                     const DCArrayKokkos<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass)
 {

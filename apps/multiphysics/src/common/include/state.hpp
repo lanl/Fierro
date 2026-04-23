@@ -269,8 +269,8 @@ enum class node_state
 /////////////////////////////////////////////////////////////////////////////
 struct node_t
 {
-    DCArrayKokkos<double> coords;     ///< Nodal coordinates
-    DCArrayKokkos<double> coords_n0;  ///< Nodal coordinates at tn=0 of time integration
+    MPICArrayKokkos<double> coords;     ///< Nodal coordinates
+    MPICArrayKokkos<double> coords_n0;  ///< Nodal coordinates at tn=0 of time integration
     DCArrayKokkos<double> vel;        ///< Nodal velocity
     DCArrayKokkos<double> vel_n0;     ///< Nodal velocity at tn=0 of time integration
     DCArrayKokkos<double> mass;       ///< Nodal mass
@@ -286,8 +286,8 @@ struct node_t
         for (auto field : node_states){
             switch(field){
                 case node_state::coords:
-                    if (coords.size() == 0) this->coords = DCArrayKokkos<double>(num_nodes, num_dims, "node_coordinates");
-                    if (coords_n0.size() == 0) this->coords_n0 = DCArrayKokkos<double>(num_nodes, num_dims, "node_coordinates_n0");
+                    if (coords.size() == 0) this->coords = MPICArrayKokkos<double>(num_nodes, num_dims, "node_coordinates");
+                    if (coords_n0.size() == 0) this->coords_n0 = MPICArrayKokkos<double>(num_nodes, num_dims, "node_coordinates_n0");
                     break;
                 case node_state::velocity:
                     if (vel.size() == 0) this->vel = DCArrayKokkos<double>(num_nodes, num_dims, "node_velocity");
@@ -311,6 +311,39 @@ struct node_t
                     break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
+                    throw std::runtime_error("**** Error in State Field Name ****");
+            }
+        }
+    }; // end method
+
+    // initialization method with communication plan (num_nodes, num_dims, state to allocate)
+    void initialize(size_t num_nodes, size_t num_dims, std::vector<node_state> node_states, CommunicationPlan& comm_plan)
+    {
+        for (auto field : node_states){
+            switch(field){
+                case node_state::coords:
+                    if (coords.size() == 0){
+                        this->coords = MPICArrayKokkos<double>(num_nodes, num_dims, "node_coordinates");
+                        this->coords.initialize_comm_plan(comm_plan);
+                    }
+                    if (coords_n0.size() == 0){
+                        this->coords_n0 = MPICArrayKokkos<double>(num_nodes, num_dims, "node_coordinates_n0");
+                        this->coords_n0.initialize_comm_plan(comm_plan);
+                    }
+                    break;
+
+                case node_state::velocity:
+                    if (vel.size() == 0){
+                        this->vel = MPICArrayKokkos<double>(num_nodes, num_dims, "node_velocity");
+                        this->vel.initialize_comm_plan(comm_plan);
+                    } 
+                    if (vel_n0.size() == 0){
+                        this->vel_n0 = MPICArrayKokkos<double>(num_nodes, num_dims, "node_velocity_n0");
+                        this->vel_n0.initialize_comm_plan(comm_plan);
+                    }
+                    break;
+                default:
+                    std::cout<<"Desired node state not understood in node_t initialize with communication plan"<<std::endl;
                     throw std::runtime_error("**** Error in State Field Name ****");
             }
         }

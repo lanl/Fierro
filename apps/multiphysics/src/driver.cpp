@@ -73,10 +73,9 @@ void Driver::initialize()
     MPICArrayKokkos<double> initial_node_coords;
     MPICArrayKokkos<double> final_node_coords;
 
-    // Create communication plans
-    CommunicationPlan element_communication_plan;
+    // Initialize communication plans
+    // These are set up by elements::partition_mesh
     element_communication_plan.initialize(MPI_COMM_WORLD);
-    CommunicationPlan node_communication_plan;
     node_communication_plan.initialize(MPI_COMM_WORLD);
 
     if (SimulationParamaters.mesh_input.source == mesh_input::file) {
@@ -100,7 +99,7 @@ void Driver::initialize()
             // Create and/or read mesh
             std::cout << "Mesh file path: " << SimulationParamaters.mesh_input.file_path << std::endl;
             mesh_reader.set_mesh_file(SimulationParamaters.mesh_input.file_path.data());
-            mesh_reader.read_mesh(mesh, 
+            mesh_reader.read_mesh(initial_mesh, 
                                   initial_node_coords,
                                   SimulationParamaters.mesh_input, 
                                   num_dims);
@@ -109,7 +108,7 @@ void Driver::initialize()
     else if (SimulationParamaters.mesh_input.source == mesh_input::generate) {
         // Build mesh on rank 0
         if (rank == 0) {
-            mesh_builder.build_mesh(mesh, 
+            mesh_builder.build_mesh(initial_mesh, 
                                     initial_node_coords,
                                     SimulationParamaters);
         } // end if rank == 0
@@ -120,11 +119,18 @@ void Driver::initialize()
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
+    
     // Partition the mesh to all ranks
     if(world_size != 1) { // pass through the partitioning function if not a single rank
         elements::partition_mesh(initial_mesh, mesh, initial_node_coords, final_node_coords, element_communication_plan, node_communication_plan, world_size, rank);   
+        // Verify communication plans
+        element_communication_plan.verify_graph_communicator();
+        node_communication_plan.verify_graph_communicator();
+        MPI_Barrier(MPI_COMM_WORLD);
     } else {
         mesh = initial_mesh;
+        mesh.num_elems = initial_mesh.num_elems;
+        mesh.num_nodes = initial_mesh.num_nodes;
         mesh.num_owned_elems = initial_mesh.num_elems;
         mesh.num_owned_nodes = initial_mesh.num_nodes;
         final_node_coords = initial_node_coords;
@@ -133,6 +139,19 @@ void Driver::initialize()
 
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;
+
+    
+
+    // Initialize node state
+    std::vector<node_state> required_node_state = { node_state::coords };
+    State.node.initialize(mesh.num_nodes, num_dims, required_node_state, node_communication_plan);
+
+    // Copy the partitioned node coordinates to the state
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        for (size_t dim = 0; dim < num_dims; dim++) {
+            State.node.coords(node_gid, dim) = final_node_coords(node_gid, dim);
+        }
+    });
 
     // --- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);

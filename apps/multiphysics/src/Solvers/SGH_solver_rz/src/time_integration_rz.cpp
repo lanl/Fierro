@@ -52,8 +52,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::rk_init_rz(
-    DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& node_coords_n0,
+    MPICArrayKokkos<double>& node_coords,
+    MPICArrayKokkos<double>& node_coords_n0,
     DCArrayKokkos<double>& node_vel,
     DCArrayKokkos<double>& node_vel_n0,
     DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
@@ -111,7 +111,7 @@ void SGHRZ::rk_init_rz(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::get_timestep_rz(swage::Mesh& mesh,
-                            DCArrayKokkos<double>& node_coords,
+                            MPICArrayKokkos<double>& node_coords,
                             DCArrayKokkos<double>& node_vel,
                             DCArrayKokkos<double>& GaussPoints_vol,
                             DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,

@@ -67,7 +67,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGHRZ::update_state_rz(
     const Material_t& Materials,
     const swage::Mesh& mesh,
-    const DCArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& GuassPoints_vel_grad,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
@@ -308,7 +308,7 @@ void SGHRZ::update_state_rz(
 void SGHRZ::update_stress(const Material_t& Materials,
                           const swage::Mesh& mesh,
                           const DCArrayKokkos<double>& GaussPoints_vol,
-                          const DCArrayKokkos<double>& node_coords,
+                          const MPICArrayKokkos<double>& node_coords,
                           const DCArrayKokkos<double>& node_vel,
                           const DCArrayKokkos<double>& GuassPoints_vel_grad,
                           const DRaggedRightArrayKokkos<double>& MaterialPoints_den,

@@ -626,7 +626,7 @@ double sum_domain_node_mass_rz(const CArrayKokkos<double>& node_extensive_mass,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_extensive_mass_rz(const CArrayKokkos<double>& node_extensive_mass,
-                                 const DCArrayKokkos<double>& node_coords,
+                                 const MPICArrayKokkos<double>& node_coords,
                                  const DCArrayKokkos<double>& node_mass,
                                  double num_nodes)
 {
@@ -655,7 +655,7 @@ void calc_node_extensive_mass_rz(const CArrayKokkos<double>& node_extensive_mass
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_areal_mass_rz(const swage::Mesh& mesh,
-                             const DCArrayKokkos<double>& node_coords,
+                             const MPICArrayKokkos<double>& node_coords,
                              const DCArrayKokkos<double>& node_mass,
                              const CArrayKokkos<double> node_extensive_mass,
                              double tiny)

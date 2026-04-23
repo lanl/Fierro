@@ -161,7 +161,7 @@ void SGH3D:: boundary_contact_force(State_t& State, const swage::Mesh &mesh, con
 void SGH3D::boundary_stress(const swage::Mesh&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
                               DCArrayKokkos<double>& node_bdy_force,
-                              DCArrayKokkos<double>& node_coords,
+                              MPICArrayKokkos<double>& node_coords,
                               const double time_value) const
 {
 

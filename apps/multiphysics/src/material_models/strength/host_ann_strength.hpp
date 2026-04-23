@@ -219,7 +219,7 @@ namespace HostANNStrengthModel {
     // this model is launched from the CPU, coding inside is run on GPUS
     static void calc_stress(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
-        const DCArrayKokkos <double> &node_coords,
+        const MPICArrayKokkos<double> &node_coords,
         const DCArrayKokkos <double> &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,

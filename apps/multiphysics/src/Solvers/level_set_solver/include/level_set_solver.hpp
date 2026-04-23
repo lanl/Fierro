@@ -177,7 +177,7 @@ public:
     // **** Functions defined in solver_functions.cpp **** //
     void nodal_gradient(
         const swage::Mesh mesh,
-        const DCArrayKokkos<double>& Node_coords,
+        const MPICArrayKokkos<double>& Node_coords,
         const DCArrayKokkos<double>& node_level_set_vel,
         const DCArrayKokkos<double>& Node_grad_level_set,
         const DCArrayKokkos<double>& Corner_normal,
@@ -220,7 +220,7 @@ public:
     void get_timestep(
         const swage::Mesh& mesh,
         const Material_t& Materials,
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
@@ -238,7 +238,7 @@ public:
     void get_timestep_2D(
         const swage::Mesh& mesh,
         const Material_t& Materials,
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,

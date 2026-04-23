@@ -196,7 +196,7 @@ struct cohesive_zones_t {
     KOKKOS_FUNCTION
     static void compute_face_geometry(
         const DCArrayKokkos<size_t>& nodes_in_elem,  // just this from mesh
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const size_t surf,
         const size_t elem,
         ViewCArrayKokkos<double>& n,
@@ -214,7 +214,7 @@ struct cohesive_zones_t {
     DCArrayKokkos<int> build_cohesive_zone_info(
         RaggedRightArrayKokkos<size_t>& elems_in_node,  // mesh.elems_in_node
         DCArrayKokkos<size_t>& nodes_in_elem,           // mesh.nodes_in_elem
-        DCArrayKokkos<double>& node_coords,             // state.node.coords
+        MPICArrayKokkos<double>& node_coords,             // state.node.coords
         DCArrayKokkos<size_t>& overlapping_node_gids,
         size_t max_elem_in_cohesive_zone,
         const double geom_tol
@@ -227,7 +227,7 @@ struct cohesive_zones_t {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     void oriented(
         DCArrayKokkos<size_t>& nodes_in_elem,
-        DCArrayKokkos<double>& node_coords,      // reference  coords (num_nodes x 3) 
+        MPICArrayKokkos<double>& node_coords,      // reference  coords (num_nodes x 3) 
         DCArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
         DCArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
         size_t max_elem_in_cohesive_zone,
@@ -241,7 +241,7 @@ struct cohesive_zones_t {
     /// \brief map global nodal motion to local cohesive zone openings for each cohesive zone node pair
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
     void ucmap(
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& vel,
         const DCArrayKokkos<double>& cohesive_zone_orientation,
         DCArrayKokkos<size_t>& overlapping_node_gids,
@@ -272,7 +272,7 @@ struct cohesive_zones_t {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
     void cohesive_zone_loads(
         DCArrayKokkos<size_t>& nodes_in_elem,
-        const DCArrayKokkos<double> &node_coords,
+        const MPICArrayKokkos<double> &node_coords,
         DCArrayKokkos<size_t> &overlapping_node_gids,
         const DCArrayKokkos<double> &cohesive_zone_orientation,
         DCArrayKokkos<int> &cz_info,

@@ -52,8 +52,8 @@ void SGHRZ::update_position_rz(
     double dt,
     const size_t num_dims,
     const size_t num_nodes,
-    DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_coords_n0,
+    MPICArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& node_coords_n0,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_vel_n0) const
 {

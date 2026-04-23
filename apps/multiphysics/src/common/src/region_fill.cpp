@@ -249,7 +249,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 void fill_regions(
         const Material_t& Materials,
         const swage::Mesh& mesh,
-        const DCArrayKokkos <double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         DCArrayKokkos <double>& node_vel,
         DCArrayKokkos <double>& node_temp,
         DCArrayKokkos <double>& gauss_den,
@@ -1995,7 +1995,7 @@ KOKKOS_FUNCTION
 void paint_node_scalar(const double scalar,
                        const CArrayKokkos<RegionFill_t>& region_fills,
                        const DCArrayKokkos<double>& node_scalar,
-                       const DCArrayKokkos<double>& node_coords,
+                       const MPICArrayKokkos<double>& node_coords,
                        const double node_gid,
                        const double num_dims,
                        const size_t f_id)
@@ -2263,7 +2263,7 @@ void init_press_sspd_stress(const Material_t& Materials,
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass(const Material_t& Materials,
                       const swage::Mesh& mesh,
-                      const DCArrayKokkos<double>& node_coords,
+                      const MPICArrayKokkos<double>& node_coords,
                       const DCArrayKokkos<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
@@ -2309,7 +2309,7 @@ void calc_corner_mass(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_mass(const swage::Mesh& mesh,
-                    const DCArrayKokkos<double>& node_coords,
+                    const MPICArrayKokkos<double>& node_coords,
                     const DCArrayKokkos<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass)
 {

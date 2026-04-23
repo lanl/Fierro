@@ -239,7 +239,7 @@ public:
         const BoundaryCondition_t& BoundaryConditions,
         const DCArrayKokkos<double>& node_temp,
         const DCArrayKokkos<double>& node_flux,
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const double time_value) const;
 
 
@@ -248,7 +248,7 @@ public:
         const BoundaryCondition_t& BoundaryConditions,
         const DCArrayKokkos<double>& node_temp,
         const DCArrayKokkos<double>& node_flux,
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const double time_value) const;
 
     void boundary_heat_flux(
@@ -264,8 +264,8 @@ public:
     //    const swage::Mesh& mesh,
     //    const DCArrayKokkos<double>& node_vel,
     //    const DCArrayKokkos<double>& node_vel_n0,
-    //    const DCArrayKokkos<double>& node_coords,
-    //    const DCArrayKokkos<double>& node_coords_n0,
+    //    const MPICArrayKokkos<double>& node_coords,
+    //    const MPICArrayKokkos<double>& node_coords_n0,
     //    const DCArrayKokkos<double>& MaterialPoints_sie,
     //    const DCArrayKokkos<double>& MaterialPoints_sie_n0,
     //    const DCArrayKokkos<double>& MaterialPoints_mass,
@@ -291,7 +291,7 @@ public:
         const Material_t& Materials,
         const swage::Mesh& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& node_temp,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_q_flux,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
@@ -311,7 +311,7 @@ public:
         const Material_t& Materials,
         const swage::Mesh& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& corner_q_flux,
         const DCArrayKokkos<double>& sphere_position,
         const corners_in_mat_t corners_in_mat_elem,
@@ -330,8 +330,8 @@ public:
         double dt,
         const size_t num_dims,
         const size_t num_nodes,
-        DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_coords_n0,
+        MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords_n0,
         const DCArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_vel_n0) const;
 
@@ -360,8 +360,8 @@ public:
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
     void rk_init(
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_coords_n0,
+        MPICArrayKokkos<double>& node_coords,
+        MPICArrayKokkos<double>& node_coords_n0,
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& node_vel_n0,
         DCArrayKokkos<double>& node_temp,
@@ -375,7 +375,7 @@ public:
 
     void get_timestep(
         swage::Mesh& mesh,
-        DCArrayKokkos<double>& node_coords,
+        MPICArrayKokkos<double>& node_coords,
         DCArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
         DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,

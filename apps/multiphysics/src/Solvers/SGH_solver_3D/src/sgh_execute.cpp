@@ -792,7 +792,7 @@ double sum_domain_internal_energy(
 double sum_domain_kinetic_energy(
     const swage::Mesh& mesh,
     const DCArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_mass)
 {
     // extensive KE
@@ -848,7 +848,7 @@ double sum_domain_material_mass(
 ///
 /////////////////////////////////////////////////////////////////////////////
 double sum_domain_node_mass(const swage::Mesh& mesh,
-    const DCArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_mass)
 {
     double mass_domain = 0.0;

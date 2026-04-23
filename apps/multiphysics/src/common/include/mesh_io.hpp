@@ -4495,7 +4495,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void build_material_elem_node_lists(
         const swage::Mesh& mesh,
-        const DCArrayKokkos<double>& state_node_coords,
+        const MPICArrayKokkos<double>& state_node_coords,
         DCArrayKokkos<double>& mat_node_coords,
         DCArrayKokkos <size_t>& mat_nodes_in_mat_elem,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,

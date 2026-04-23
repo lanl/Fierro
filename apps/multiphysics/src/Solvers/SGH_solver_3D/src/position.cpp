@@ -51,8 +51,8 @@ void SGH3D::update_position(double rk_alpha,
     double dt,
     const size_t num_dims,
     const size_t num_nodes,
-    DCArrayKokkos<double>& node_coords,
-    DCArrayKokkos<double>& node_coords_n0,
+    MPICArrayKokkos<double>& node_coords,
+    MPICArrayKokkos<double>& node_coords_n0,
     const DCArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_vel_n0) const
 {
