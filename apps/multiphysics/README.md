@@ -265,6 +265,7 @@ Defines boundary conditions (BCs) applied to surfaces. This is a list of BC bloc
     *   `velocity_bc_global_vars`: Parameters for the velocity model (list of doubles/ints).
     *   `stress_model`: Stress/Pressure BC type. Options: `<constant>`, `<global_contact>`, `<none>`, `<preload_contact>`, `<time_varying>`, `<user_defined>`, `<fracture>`.
     *   `stress_bc_global_vars`: Parameters for the stress model (list of doubles/ints).
+    *   `contact_bc_global_vars`: Parameters for the global contact model (2 ints, first is max iterations for pair solve and second is max iterations for global solve).
     *   `temperature_model`: Temperature BC type. Options: `<constant>`, `<convection>`, `<none>`, `<radiation>`.
     *   `temperature_bc_global_vars`: Parameters for the temperature model (list of doubles/ints).
     *   `heat_flux_model`: Heat flux BC type (string).
