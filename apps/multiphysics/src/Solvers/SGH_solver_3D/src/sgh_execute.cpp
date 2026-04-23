@@ -65,8 +65,12 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     if (doing_contact) {
         Contact_State.initialize(mesh.num_dims, mesh.num_nodes_in_patch, mesh.bdy_patches, mesh.num_bdy_nodes, mesh.num_bdy_patches,
                                  mesh.patches_in_elem, mesh.elems_in_patch, mesh.nodes_in_elem, mesh.nodes_in_patch,
-                                 mesh.bdy_nodes, mesh.num_patches, mesh.num_nodes, State.node.coords);
+                                 mesh.bdy_nodes, mesh.num_patches, mesh.num_nodes, State.node.coords,
+                                 BoundaryConditions.contact_max_local_iter, BoundaryConditions.contact_max_global_iter);
+        printf("MAX ITERATIONS PER CONTACT PAIR: %zu\n", Contact_State.max_local_iter);
+        printf("MAX ITERATIONS FOR GLOBAL CONTACT: %zu\n", Contact_State.max_global_iter);
     }
+    
 
     // cohesive zone initialization for fracture
     if (doing_fracture) {

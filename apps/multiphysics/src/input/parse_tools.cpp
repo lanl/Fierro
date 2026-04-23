@@ -279,6 +279,11 @@ void print_inputs()
             std::cout << "             #...as many values as you need... \n";
             std::cout << "             - double/int \n";
         }
+        else if(contains_word(field, "contact_bc_")){
+            std::cout << "          " << field <<":\n";
+            std::cout << "             - int: max number of iterations per contact pair \n";
+            std::cout << "             - int: max number of global contact iterations \n";
+        }
         else {
             std::cout << "          "<< field << ":\n";
         }

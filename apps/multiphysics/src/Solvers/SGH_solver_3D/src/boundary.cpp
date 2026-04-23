@@ -135,7 +135,8 @@ void SGH3D:: boundary_contact_force(State_t& State, const swage::Mesh &mesh, con
                      Contact_State.node_patch_pairs, Contact_State.pair_vars, Contact_State.contact_surface_map,
                      State.node.coords, mesh.bdy_nodes, State.node.mass, Contact_State.contact_forces,
                      State.corner.force, State.node.vel, mesh.corners_in_node, mesh.num_corners_in_node,
-                     Contact_State.xi, Contact_State.eta, del_t, Contact_State.contact_force, mesh.num_bdy_nodes, mesh.num_patches, Contact_State.num_pairs_in_node);
+                     Contact_State.xi, Contact_State.eta, del_t, Contact_State.contact_force, mesh.num_bdy_nodes, mesh.num_patches, Contact_State.num_pairs_in_node,
+                     Contact_State.max_local_iter, Contact_State.max_global_iter);
 
     remove_pairs(Contact_State.num_active, Contact_State.active_set, Contact_State.pair_vars,
                  Contact_State.node_patch_pairs, mesh.nodes_in_patch, mesh.bdy_patches, Contact_State.contact_forces,
