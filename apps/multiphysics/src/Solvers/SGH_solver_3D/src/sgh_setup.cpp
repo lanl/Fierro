@@ -58,14 +58,33 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                 State_t& State)
 {
     // add a flag on whether SGH was set up, if(SGH_setup_already==false)
-    
-    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
-    
-    MPI_Barrier(MPI_COMM_WORLD);
-    std::cout.flush();
-    MPI_Barrier(MPI_COMM_WORLD);
 
-    std::cout << "Setting up SGH solver, state vars and sspd stress" << std::endl;
+    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
+
+    // Example host-side Logger usage: non-collective, rank-local appends into
+    // a buffer that is flushed (collectively) by the Driver at phase
+    // boundaries. Safe even inside rank-varying loops because the Logger does
+    // NOT touch MPI in the hot path.
+    if (log) log->info("Setting up SGH solver, state vars and sspd stress (num_mats=%zu)\n", num_mats);
+
+    // One example per severity (host). Trace/Debug do not appear in the file
+    // when the Driver logger's minimum level is Info (default): those calls
+    // return before formatting. Use log->set_level(fierro::LogLevel::Trace) to
+    // see them.
+    if (log) log->trace("This is a trace message\n");
+    if (log) log->debug("This is a debug message\n");
+    if (log) log->info("This is an info message\n");
+    if (log) log->warn("This is a warn message\n");
+    if (log) log->error("This is an error message\n");
+
+    // POD view for FOR_ALL: one line via Solver::log_handle() (see solver.hpp).
+    const auto log_dev = log_handle();
+    FOR_ALL(node_gid, 0, 10, {
+        if (log_dev) log_dev.info("FOR_ALL logger example (node_gid=%zu)\n", node_gid);
+    });
+    Kokkos::fence();
+
+
     // calculate pressure, sound speed, and stress for each material
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
@@ -96,11 +115,27 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     // set corner and node masses to zero
     init_corner_node_masses_zero(mesh, State.node.mass, State.corner.mass);
 
-    std::cout << "Calculating corner and node masses" << std::endl;
-    // calculate corner and node masses on the mesh
+    if (log) log->info("Calculating corner and node masses\n");
+    // calculate corner and node masses on the mesh. Each rank sees a
+    // rank-local num_mats that may differ; the Logger tolerates this because
+    // appends are non-collective.
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
-        std::cout << "Calculating corner mass for material " << mat_id << std::endl;
+        if (log) log->info("Calculating corner mass for material %d\n", mat_id);
+
+        // Example of capturing a Logger::Handle by value into a kernel.
+        // Obtain `lh` on the host, then pass/capture it into the FOR_ALL.
+        // See region_fill.cpp :: log_mat_elem_probe for the actual FOR_ALL
+        // using `lh.info(...)` and `FLOG_DEV(lh, INFO, ...)`.
+        if (log && mat_id == 0) {
+            auto lh = log->handle();
+            log_mat_elem_probe(lh,
+                               State.MaterialToMeshMaps.elem_in_mat_elem,
+                               State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
+                               static_cast<size_t>(mat_id),
+                               /* probe_gid = */ 0);
+        }
+
         calc_corner_mass(Materials,
                          mesh,
                          State.node.coords,
@@ -111,21 +146,15 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                          State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                          mat_id);
     } // end for mat_id
-    
-    MPI_Barrier(MPI_COMM_WORLD);
-    std::cout << "Calculating node mass" << std::endl;
-    std::cout.flush();
-    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (log) log->info("Calculating node mass\n");
 
     calc_node_mass(mesh,
                    State.node.coords,
                    State.node.mass,
                    State.corner.mass);
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    std::cout << "Done calculating node mass" << std::endl;
-    std::cout.flush();
-    MPI_Barrier(MPI_COMM_WORLD);
+    if (log) log->info("Done calculating node mass\n");
 
     // std::cout << "Setting up fracture" << std::endl;
     // setting up fracture
@@ -151,17 +180,17 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     // end setting up fracture
     
     // Setting up contact
-    std::cout << "Setting up contact" << std::endl;
+    if (log) log->info("Setting up contact\n");
     // todo: should this be handled inside of src/boundary_conditions/stress/global_contact ?
     for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
         if (Boundary.allow_preload) {
-            std::cout << "Setting up preload contact" << std::endl;
+            if (log) log->info("Setting up preload contact\n");
             doing_preload = true;
             doing_contact = true;
             break;
         }
         if (Boundary.allow_contact) {
-            std::cout << "Setting up global contact" << std::endl;
+            if (log) log->info("Setting up global contact\n");
             doing_contact = true;
             break;
         }

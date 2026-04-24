@@ -2346,3 +2346,50 @@ void init_corner_node_masses_zero(const swage::Mesh& mesh,
     });  // end parallel over corners
 } // end setting masses equal to zero
 
+
+/////////////////////////////////////////////////////////////////////////////
+// log_mat_elem_probe -- reference example of in-kernel logging.
+//
+// Both idioms in one place: the Handle level-sugar methods (two Kokkos::printf
+// per emission, runtime level snapshot carried by the Handle) and the
+// FLOG_DEV macro (single fused Kokkos::printf, zero interleaving).
+//
+// The Handle `lh` is captured BY VALUE into the kernel body -- it's a POD
+// view of the owning Logger's buffers, trivially copyable to every Kokkos
+// backend. The owning Logger (on the host) is NOT captured, and MUST NOT be
+// captured (it is non-copyable).
+//
+// Printing inside a FOR_ALL is unordered across threads. Use sparsely; the
+// intended uses are (a) error/probe emissions on very rare guard conditions,
+// and (b) bring-up diagnostics that are removed once the kernel is verified.
+/////////////////////////////////////////////////////////////////////////////
+void log_mat_elem_probe(const fierro::Logger::Handle& lh,
+                        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
+                        const size_t num_mat_elems,
+                        const size_t mat_id,
+                        const size_t probe_gid)
+{
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+        // Only a single probed element logs, so the demo produces one line
+        // per rank regardless of num_mat_elems.
+        if (mat_elem_sid == probe_gid) {
+            size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+
+            // Idiom 1: level-sugar method on the Handle. On device, compiles
+            // out below FIERRO_LOG_DEVICE_MAX_LEVEL via `if constexpr` and
+            // emits two Kokkos::printf calls (tag then body) otherwise.
+            lh.info("probe: mat_id=%lu mat_elem_sid=%lu elem_gid=%lu\n",
+                    (unsigned long)mat_id,
+                    (unsigned long)mat_elem_sid,
+                    (unsigned long)elem_gid);
+
+            // Idiom 2: fused FLOG_DEV -- single Kokkos::printf with the
+            // "[rank N][LEVEL] " tag concatenated into the format literal by
+            // the preprocessor. No cross-thread interleaving between the
+            // tag and the user body.
+            FLOG_DEV(lh, INFO, "probe: fused elem_gid=%lu\n",
+                     (unsigned long)elem_gid);
+        }
+    });
+    Kokkos::fence();
+}

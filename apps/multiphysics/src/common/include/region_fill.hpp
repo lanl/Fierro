@@ -43,6 +43,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.hpp"
 
 #include "geometry_new.hpp"
+#include "logger.hpp"   // fierro::Logger::Handle for in-kernel logging examples
 
 struct SimulationParamaters_t;
 struct Material_t;
@@ -421,5 +422,44 @@ void init_corner_node_masses_zero(
         const swage::Mesh& mesh,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_mass);
+
+
+/////////////////////////////////////////////////////////////////////////////
+/// @fn    log_mat_elem_probe
+/// @brief Reference example: MPI- and GPU-safe in-kernel logging.
+///
+/// Demonstrates two idioms on GPU-portable code paths:
+///
+///   1) `handle.LEVEL(fmt, ...)` inside FOR_ALL / KOKKOS_LAMBDA. Two
+///      Kokkos::printf calls per emission (one for the "[rank N][LEVEL] "
+///      tag, one for the user body) but zero runtime cost at call sites
+///      compiled out by FIERRO_LOG_DEVICE_MAX_LEVEL.
+///
+///   2) FLOG_DEV(handle, LEVEL, fmt, ...) inside FOR_ALL / KOKKOS_LAMBDA.
+///      One fused Kokkos::printf with the tag concatenated into the format
+///      literal -- no cross-thread interleaving between tag and body, and
+///      slightly cheaper than the two-call form.
+///
+/// Safe to call with a stale Handle -- the Handle's `level` is a snapshot
+/// from Logger::handle() time. Refresh via `log.handle()` after any
+/// Logger::set_level().
+///
+/// @param  lh              Trivially-copyable Handle captured by value into
+///                         the kernel. Obtain as `auto lh = log->handle();`
+///                         on the host immediately before calling this.
+/// @param  elem_in_mat_elem  Mapping mat_elem_sid -> elem_gid.
+/// @param  num_mat_elems   Iteration count for the demo FOR_ALL.
+/// @param  mat_id          Material id being probed.
+/// @param  probe_gid       Only mat_elem_sid values == probe_gid emit a
+///                         line, to keep the demo from spamming stdout.
+///
+/// @note Non-collective. Each append is rank-local; the Driver's next
+///       flush() dumps all ranks' buffers in order.
+/////////////////////////////////////////////////////////////////////////////
+void log_mat_elem_probe(const fierro::Logger::Handle& lh,
+                        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
+                        const size_t num_mat_elems,
+                        const size_t mat_id,
+                        const size_t probe_gid);
 
 #endif

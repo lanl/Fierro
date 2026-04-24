@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Will be parsed from YAML input
 void Driver::initialize()
 {
-	std::cout << "Initializing Driver" << std::endl;
+    log_.info("Initializing Driver\n");
     Yaml::Node root;
     try
     {
@@ -59,13 +59,14 @@ void Driver::initialize()
     }
     catch (const Yaml::Exception e)
     {
-        std::cout << "Exception " << e.Type() << ": " << e.what() << std::endl;
+        log_.error("YAML parse exception %d: %s\n", (int)e.Type(), e.what());
+        log_.flush();
         exit(0);
     }
 
     // Read the YAML input file
     parse_yaml(root, SimulationParamaters, Materials, BoundaryConditions);
-    std::cout << "Finished  parsing YAML file" << std::endl;
+    log_.info("Finished parsing YAML file\n");
 
 
     // Create initial mesh on rank 0
@@ -97,7 +98,7 @@ void Driver::initialize()
             }
 
             // Create and/or read mesh
-            std::cout << "Mesh file path: " << SimulationParamaters.mesh_input.file_path << std::endl;
+            log_.info("Mesh file path: %s\n", SimulationParamaters.mesh_input.file_path.c_str());
             mesh_reader.set_mesh_file(SimulationParamaters.mesh_input.file_path.data());
             mesh_reader.read_mesh(initial_mesh, 
                                   initial_node_coords,
@@ -142,28 +143,19 @@ void Driver::initialize()
     // corner_mass(corner_gid) write becomes an out-of-bounds / heap-corrupting
     // store. There is one corner per node-in-element pair.
     mesh.num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
-    std::cout.flush();
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Serially print mesh information on each rank
-    for (int r = 0; r < world_size; ++r) {
-        if (rank == r) {
-            size_t num_ghost_nodes = mesh.num_nodes > mesh.num_owned_nodes ? mesh.num_nodes - mesh.num_owned_nodes : 0;
-            size_t num_ghost_elems = mesh.num_elems > mesh.num_owned_elems ? mesh.num_elems - mesh.num_owned_elems : 0;
-
-            std::cout << "Rank " << rank 
-                      << ": num_nodes=" << mesh.num_nodes 
-                      << " (owned=" << mesh.num_owned_nodes
-                      << ", ghost=" << num_ghost_nodes << ")"
-                      << ", num_elems=" << mesh.num_elems 
-                      << " (owned=" << mesh.num_owned_elems
-                      << ", ghost=" << num_ghost_elems << ")"
-                      << std::endl;
-            std::cout.flush();
-        }
-        MPI_Barrier(MPI_COMM_WORLD);
+    // Report per-rank mesh information. With the Logger we no longer need a
+    // serialized-by-barriers print loop: every rank appends to its own buffer
+    // (non-collective), and the collective flush() below dumps them to stdout
+    // in rank order AND to each rank's per-rank file (Fierro_log_<rank>).
+    {
+        size_t num_ghost_nodes = mesh.num_nodes > mesh.num_owned_nodes ? mesh.num_nodes - mesh.num_owned_nodes : 0;
+        size_t num_ghost_elems = mesh.num_elems > mesh.num_owned_elems ? mesh.num_elems - mesh.num_owned_elems : 0;
+        log_.info("num_nodes=%zu (owned=%zu, ghost=%zu), num_elems=%zu (owned=%zu, ghost=%zu)\n",
+                  mesh.num_nodes, mesh.num_owned_nodes, num_ghost_nodes,
+                  mesh.num_elems, mesh.num_owned_elems, num_ghost_elems);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
     
     // For totals, root rank gathers and prints
     size_t local_nodes = mesh.num_nodes;
@@ -181,15 +173,9 @@ void Driver::initialize()
     if (rank == 0) {
         size_t total_ghost_nodes = total_nodes > total_owned_nodes ? total_nodes - total_owned_nodes : 0;
         size_t total_ghost_elems = total_elems > total_owned_elems ? total_elems - total_owned_elems : 0;
-        std::cout << "Totals across all ranks: "
-                  << "num_nodes=" << total_nodes
-                  << " (owned=" << total_owned_nodes
-                  << ", ghost=" << total_ghost_nodes << ")"
-                  << ", num_elems=" << total_elems
-                  << " (owned=" << total_owned_elems
-                  << ", ghost=" << total_ghost_elems << ")"
-                  << std::endl;
-        std::cout.flush();
+        log_.info("Totals across all ranks: num_nodes=%zu (owned=%zu, ghost=%zu), num_elems=%zu (owned=%zu, ghost=%zu)\n",
+                  total_nodes, total_owned_nodes, total_ghost_nodes,
+                  total_elems, total_owned_elems, total_ghost_elems);
     }
 
     // Build boundary conditions
@@ -221,8 +207,9 @@ void Driver::initialize()
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
 
-            std::cout << "Initializing dynx_FE solver" << std::endl;
+            log_.info("Initializing dynx_FE solver\n");
             SGH3D* sgh_solver = new SGH3D(); 
+            sgh_solver->set_logger(log_);
 
             sgh_solver->initialize(SimulationParamaters, 
                                    Materials, 
@@ -240,8 +227,9 @@ void Driver::initialize()
         } // end if SGH solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGHRZ) {
 
-            std::cout << "Initializing dynx_FE_RZ solver" << std::endl;
+            log_.info("Initializing dynx_FE_RZ solver\n");
             SGHRZ* sgh_solver_rz = new SGHRZ(); 
+            sgh_solver_rz->set_logger(log_);
 
             sgh_solver_rz->initialize(SimulationParamaters, 
                                    Materials, 
@@ -257,8 +245,9 @@ void Driver::initialize()
         } // end if SGHRZ solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
 
-            std::cout << "Initializing thrmex_FE solver" << std::endl;
+            log_.info("Initializing thrmex_FE solver\n");
             SGTM3D* sgtm_solver_3d = new SGTM3D(); 
+            sgtm_solver_3d->set_logger(log_);
         
             sgtm_solver_3d->initialize(SimulationParamaters, 
                                        Materials, 
@@ -275,8 +264,9 @@ void Driver::initialize()
         } // end if SGTM solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::levelSet) {
 
-            std::cout << "Initializing level set solver" << std::endl;
+            log_.info("Initializing level set solver\n");
             LevelSet* level_set_solver = new LevelSet(); 
+            level_set_solver->set_logger(log_);
         
             level_set_solver->initialize(SimulationParamaters, 
                                          Materials, 
@@ -292,8 +282,9 @@ void Driver::initialize()
 
         } // end if level set solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::TLQS3D) {
-            std::cout << "Initializing TLQS solver" << std::endl;
+            log_.info("Initializing TLQS solver\n");
             TLQS3D* tlqs_solver = new TLQS3D(); 
+            tlqs_solver->set_logger(log_);
 
             tlqs_solver->initialize(SimulationParamaters, 
                                     Materials, 
@@ -306,7 +297,7 @@ void Driver::initialize()
 
             solvers.push_back(tlqs_solver);
 
-            std::cout << "TLQS solver added to solvers vector \n";
+            log_.info("TLQS solver added to solvers vector\n");
 
         } // end if TLQS solver
         else {
@@ -323,7 +314,7 @@ void Driver::initialize()
     fillGaussState_t fillGaussState;
     fillElemState_t  fillElemState;
 
-    std::cout << "Applying fills to the mesh" << std::endl;
+    log_.info("Applying fills to the mesh\n");
 
     simulation_setup(SimulationParamaters, 
                      Materials, 
@@ -333,7 +324,7 @@ void Driver::initialize()
                      fillGaussState,
                      fillElemState);
 
-    std::cout << "Fills applied to the mesh" << std::endl;
+    log_.info("Fills applied to the mesh\n");
     // Allocate material state
     for (auto& solver : solvers) {
         solver->initialize_material_state(SimulationParamaters, 
@@ -345,7 +336,7 @@ void Driver::initialize()
 
 
     // populate the material point state
-    std::cout << "Populating the material point state" << std::endl;
+    log_.info("Populating the material point state\n");
     material_state_setup(SimulationParamaters, 
                          Materials, 
                          mesh, 
@@ -353,9 +344,14 @@ void Driver::initialize()
                          State,
                          fillGaussState,
                          fillElemState);
-    std::cout << "Material point state populated" << std::endl;
+    log_.info("Material point state populated\n");
 
-    std::cout << "Driver initialization complete" << std::endl;
+    log_.info("Driver initialization complete\n");
+
+    // Collective dump of the full initialization transcript to stdout (in rank
+    // order) and to per-rank log files (Fierro_log_<rank>). Safe: every rank
+    // reaches this point exactly once.
+    log_.flush();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -367,7 +363,7 @@ void Driver::initialize()
 /////////////////////////////////////////////////////////////////////////////
 void Driver::setup()
 {
-    std::cout << "Inside driver setup" << std::endl;
+    log_.info("Inside driver setup\n");
 
     // allocate state, setup models, and apply fill instructions
     for (auto& solver : solvers) {
@@ -377,6 +373,10 @@ void Driver::setup()
                       BoundaryConditions,
                       State);
     } // end for over solvers
+
+    // Collective: dump buffered output. Every rank reaches this after all
+    // solvers have returned from setup().
+    log_.flush();
 
 } // end setup function of driver
 
@@ -390,7 +390,7 @@ void Driver::setup()
 /////////////////////////////////////////////////////////////////////////////
 void Driver::execute()
 {
-    std::cout << "Inside driver execute" << std::endl;
+    log_.info("Inside driver execute\n");
     for (auto& solver : solvers) {
         solver->execute(SimulationParamaters, 
                         Materials, 
@@ -398,6 +398,11 @@ void Driver::execute()
                         mesh, 
                         State);
     } // loop over solvers
+
+    // Collective: dump any remaining buffered output from the run. Solvers
+    // are free to call log_.flush() at their own cycle boundaries; this
+    // catches anything they didn't.
+    log_.flush();
 }
 
 
@@ -412,7 +417,7 @@ void Driver::execute()
 /////////////////////////////////////////////////////////////////////////////
 void Driver::finalize()
 {
-    std::cout << "Inside driver finalize" << std::endl;
+    log_.info("Inside driver finalize\n");
     for (auto& solver : solvers) {
         if (solver->finalize_flag) {
             solver->finalize(SimulationParamaters, 
@@ -422,9 +427,14 @@ void Driver::finalize()
     }
     // destroy FEA modules
     for (auto& solver : solvers) {
-        std::cout << "Deleting solver" << std::endl;
+        log_.info("Deleting solver\n");
         delete solver;
     }
+
+    // Last collective flush before Driver destruction. ~Logger will also
+    // flush if MPI is still initialized, but doing it here keeps the
+    // observable output ordered next to the finalize phase.
+    log_.flush();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -496,7 +506,8 @@ void Driver::setup_solver_vars(T& a_solver,
         
     } // end if solver=0
 
-    std::cout << "Solver " << solver_id << " start time = " << a_solver->time_start << ", ending time = " << a_solver->time_end << "\n";
+    log_.info("Solver %zu start time = %g, ending time = %g\n",
+              solver_id, a_solver->time_start, a_solver->time_end);
 
     return;
 } // end setup solver vars function

@@ -27,7 +27,7 @@
 # ---------------------------------------------------------------------------
 dynamic_options:
 
-    time_final: 100.0 # Final simulation time (microseconds).
+    time_final: 1.0 # Final simulation time (microseconds). (100)
     dt_min: 1.e-8 # Minimum adaptive timestep bound (microseconds).
     dt_max: 1.e-2 # Maximum adaptive timestep bound (microseconds).
     dt_start: 1.e-5 # Initial timestep guess (microseconds).
@@ -44,8 +44,8 @@ mesh_options:
     origin: [0.0, 0.0, 0.0]
     # Box side lengths in x,y,z (cm).
     length: [1.2, 1.2, 1.2]
-    # Element counts [nx, ny, nz].
-    num_elems: [30, 30, 30]
+    # Element counts [nx, ny, nz]. (30,30,30)
+    num_elems: [5, 5, 5]
 
 
 # ---------------------------------------------------------------------------
