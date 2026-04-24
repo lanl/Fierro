@@ -482,7 +482,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // ---- apply contact boundary conditions to the boundary patches----
             boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);
 
-            State.node.vel.communicate();
+            // State.node.vel.communicate();
 
             for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
                 // ---- Update specific internal energy in the elements ----

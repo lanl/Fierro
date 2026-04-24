@@ -2589,14 +2589,15 @@ public:
                 }
             }
 
-            // ELEMENTS-style owned VTU: first num_owned_nodes coords and first num_owned_elems rows of
-            // mesh.nodes_in_elem; owned element connectivity uses local node ids in [0, num_owned_nodes).
-            const size_t n_owned_nodes = mesh.num_owned_nodes;
+            // Per-rank VTU: write owned elements only (rows 0..num_owned_elems-1 of nodes_in_elem), but
+            // Points must list all local nodes (0..num_nodes-1). Connectivity is full local indexing;
+            // boundary elements reference ghost nodes — truncating coords to num_owned_nodes (the prior
+            // bug) misaligned indices and produced inverted/wrong cells in ParaView.
             const size_t n_owned_elems = mesh.num_owned_elems;
 
             const std::string elem_fields_name = "fields";
 
-            ViewCArray<double> node_coords_host(&State.node.coords.host(0, 0), n_owned_nodes, num_dims);
+            ViewCArray<double> node_coords_host(&State.node.coords.host(0, 0), num_nodes, num_dims);
             ViewCArray<size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0, 0), n_owned_elems, num_nodes_in_elem);
 
             // VTK diagnostics (optional CellData / PointData in write_vtu): host-side scratch arrays,
@@ -2612,7 +2613,7 @@ public:
             const double*       p_glob_elem = nullptr;
             const double*       p_glob_node = nullptr;
 
-            if (n_owned_elems > 0 && n_owned_nodes > 0) {
+            if (n_owned_elems > 0 && num_nodes > 0) {
                 diag_mpi_rank_elem.assign(n_owned_elems, static_cast<double>(mpi_rank));
                 p_rank_elem = diag_mpi_rank_elem.data();
 
@@ -2631,16 +2632,16 @@ public:
                 }
                 p_glob_elem = diag_global_elem.data();
 
-                diag_global_node.resize(n_owned_nodes);
+                diag_global_node.resize(num_nodes);
                 if (mpi_size > 1 || mesh.num_nodes > mesh.num_owned_nodes) {
                     mesh.local_to_global_node_mapping.update_host();
-                    for (size_t n = 0; n < n_owned_nodes; n++) {
+                    for (size_t n = 0; n < num_nodes; n++) {
                         diag_global_node[n] =
                             static_cast<double>(mesh.local_to_global_node_mapping.host(n));
                     }
                 }
                 else {
-                    for (size_t n = 0; n < n_owned_nodes; n++) {
+                    for (size_t n = 0; n < num_nodes; n++) {
                         diag_global_node[n] = static_cast<double>(n);
                     }
                 }
@@ -2658,7 +2659,7 @@ public:
                           node_vector_var_names,
                           elem_fields_name,
                           graphics_id,
-                          n_owned_nodes,
+                          num_nodes,
                           n_owned_elems,
                           num_nodes_in_elem,
                           Pn_order,

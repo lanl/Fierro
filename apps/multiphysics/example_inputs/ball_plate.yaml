@@ -1,0 +1,129 @@
+# Setup for a simulation of a copper ball hitting a copper plate.
+dynamic_options:
+    time_final: 10
+    dt_min: 1.e-8
+    dt_max: 1.0
+    dt_start: 1.e-5
+    cycle_stop: 10000000
+
+
+mesh_options:
+    source: file
+    file_path: ball_plate.vtu
+    num_dims: 3
+
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: viz
+    graphics_time_step: 0.1  #1
+    # graphics_iteration_step: 10
+    elem_field_outputs:
+        - den
+        - pres
+        - stress
+        - sie
+        - mass
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+        - volfrac
+    node_field_outputs:
+        - vel
+        - mass
+
+solver_options:
+  - solver:
+        method: dynx_FE
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+boundary_conditions:
+  # global contact condition (this should be used when it is not clear what the contact surface(s) will be)
+  - boundary_condition:
+      solver_id: 0
+      surface:
+          type: global
+      stress_model: global_contact
+      contact_bc_vars:
+        - 500 # local iter max
+        - 100 # global iter max
+
+  
+materials:
+    - material:
+        id: 0  # metal: Copper
+        #-----EOS
+        eos_model_type: decoupled
+        eos_model: linear_elastic_eos  
+        # bulk modulus
+        # shear modulus
+        # refernce den
+        # cs min
+        eos_global_vars:
+            - 1.30 # B from Azo materials online
+            - 0.4333 # G from Azo materials online
+            - 8.93 # ref density from Azo materials online
+            - 0.001 
+        #------Strength
+        strength_model_type: increment_based
+        strength_model: hypo_plasticity_strength
+        # shear modulus of copper
+        # yield strength of copper
+        strength_global_vars:
+            - 0.4333
+            - 0.004
+        # ------ArtVisc
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.333 # q1ex
+            - 1.0   # q2
+            - 1.333 # q2ex
+            - 0.05   # min limiter
+            - 1.0
+
+regions:
+    # fill with copper
+    - region:
+        volume:
+            type: global
+        material_id: 0
+        density: 
+            type: uniform
+            value: 8.93
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity:
+            type: cartesian
+            u: 0.0  
+            v: 0.0
+            w: 0.0 #-0.0205
+        volume_fraction:
+            type: uniform
+            value: 1.0
+    # Give the ball an initial velocity
+    - region:
+        volume:
+            type: sphere
+            origin: [-1.14, 0.0, 0.0] #center
+            radius1: 0.0
+            radius2: 1.05
+        material_id: 0
+        solver_id: 0
+        density: 
+            type: uniform
+            value: 8.93
+        specific_internal_energy: 
+            type: uniform
+            value: 1.0e-6
+        velocity: 
+            type: cartesian
+            u: 0.03 # projectile x-velocity
+            v: 0.0
+            w: 0.0
