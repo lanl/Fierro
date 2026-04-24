@@ -186,7 +186,6 @@ void Driver::initialize()
     // Initialize node state
     std::vector<node_state> required_node_state = { node_state::coords };
     State.node.initialize(mesh.num_nodes, num_dims, required_node_state, node_communication_plan);
-    State.node.initialize(mesh.num_nodes, num_dims, required_node_state);
 
     // Copy the partitioned node coordinates to the state
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
@@ -307,6 +306,14 @@ void Driver::initialize()
 
     } // end for loop over solvers
 
+    // Solvers allocate nodal velocity with node_t::initialize(..., states) without a comm plan.
+    // MPICArrayKokkos::communicate() requires initialize_comm_plan(node_communication_plan).
+    if (State.node.vel.size() > 0) {
+        State.node.vel.initialize_comm_plan(node_communication_plan);
+    }
+    if (State.node.vel_n0.size() > 0) {
+        State.node.vel_n0.initialize_comm_plan(node_communication_plan);
+    }
 
     // ----
     // setup the simulation by applying all the fills to the mesh

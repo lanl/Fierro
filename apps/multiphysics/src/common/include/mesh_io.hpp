@@ -51,7 +51,23 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sstream>
 #include <vector>
 #include <string>
+#include <mpi.h>
 
+namespace mesh_io_mpi_detail {
+
+/// @brief Returns (0,1) if MPI is not initialized (e.g. some unit paths).
+inline void query_world_rank_size(int& rank, int& world_size) noexcept
+{
+    rank        = 0;
+    world_size  = 1;
+    int init = 0;
+    if (MPI_Initialized(&init) == MPI_SUCCESS && init) {
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    }
+}
+
+} // namespace mesh_io_mpi_detail
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2543,77 +2559,122 @@ public:
         if (SimulationParamaters.output_options.format == output_options::viz ||
             SimulationParamaters.output_options.format == output_options::viz_and_state) {
 
-            // create the folder structure if it does not exist
+            int mpi_rank = 0;
+            int mpi_size = 1;
+            mesh_io_mpi_detail::query_world_rank_size(mpi_rank, mpi_size);
+
+            MPI_Barrier(MPI_COMM_WORLD);
+
+            if (mpi_rank == 0 && solver_id == 0 && graphics_id == 0) {
+                struct stat st_rm;
+                if (stat("vtk", &st_rm) == 0) {
+                    (void)system("rm -f vtk/Fierro*");
+                }
+                if (stat("vtk/data", &st_rm) == 0) {
+                    (void)system("rm -f vtk/data/Fierro*");
+                }
+            }
+
+            MPI_Barrier(MPI_COMM_WORLD);
+
             struct stat st;
-
             if (stat("vtk", &st) != 0) {
-                int returnCode = system("mkdir vtk");
-
-                if (returnCode == 1) {
+                if (system("mkdir vtk") == 1) {
                     std::cout << "Unable to make vtk directory" << std::endl;
                 }
             }
-            else{
-                if(solver_id==0 && graphics_id==0){
-                    // delete the existing files inside
-                    int returnCode = system("rm vtk/Fierro*");
-                    if (returnCode == 1) {
-                        std::cout << "Unable to clear vtk/Fierro directory" << std::endl;
-                    }
-                }
-            }
-
             if (stat("vtk/data", &st) != 0) {
-                int returnCode = system("mkdir vtk/data");
-                if (returnCode == 1) {
+                if (system("mkdir vtk/data") == 1) {
                     std::cout << "Unable to make vtk/data directory" << std::endl;
                 }
             }
-            else{
-                if(solver_id==0 && graphics_id==0){
-                    // delete the existing files inside the folder
-                    int returnCode = system("rm vtk/data/Fierro*");
-                    if (returnCode == 1) {
-                        std::cout << "Unable to clear vtk/data directory" << std::endl;
+
+            // ELEMENTS-style owned VTU: first num_owned_nodes coords and first num_owned_elems rows of
+            // mesh.nodes_in_elem; owned element connectivity uses local node ids in [0, num_owned_nodes).
+            const size_t n_owned_nodes = mesh.num_owned_nodes;
+            const size_t n_owned_elems = mesh.num_owned_elems;
+
+            const std::string elem_fields_name = "fields";
+
+            ViewCArray<double> node_coords_host(&State.node.coords.host(0, 0), n_owned_nodes, num_dims);
+            ViewCArray<size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0, 0), n_owned_elems, num_nodes_in_elem);
+
+            // VTK diagnostics (optional CellData / PointData in write_vtu): host-side scratch arrays,
+            // then const pointers so write_vtu can emit one value per owned cell or per owned node.
+            //   diag_mpi_rank_elem — CellData "mpi_rank" (which MPI rank owns each exported element).
+            //   diag_global_elem   — CellData "global_elem_id" from mesh.local_to_global_elem_mapping (or local e).
+            //   diag_global_node   — PointData "global_node_id" from mesh.local_to_global_node_mapping (or local n).
+            //   p_*                — nullptr until filled; passed to write_vtu (nullptr disables that array).
+            std::vector<double> diag_mpi_rank_elem;
+            std::vector<double> diag_global_elem;
+            std::vector<double> diag_global_node;
+            const double*       p_rank_elem = nullptr;
+            const double*       p_glob_elem = nullptr;
+            const double*       p_glob_node = nullptr;
+
+            if (n_owned_elems > 0 && n_owned_nodes > 0) {
+                diag_mpi_rank_elem.assign(n_owned_elems, static_cast<double>(mpi_rank));
+                p_rank_elem = diag_mpi_rank_elem.data();
+
+                diag_global_elem.resize(n_owned_elems);
+                if (mpi_size > 1 || mesh.num_elems > mesh.num_owned_elems) {
+                    mesh.local_to_global_elem_mapping.update_host();
+                    for (size_t e = 0; e < n_owned_elems; e++) {
+                        diag_global_elem[e] =
+                            static_cast<double>(mesh.local_to_global_elem_mapping.host(e));
                     }
                 }
+                else {
+                    for (size_t e = 0; e < n_owned_elems; e++) {
+                        diag_global_elem[e] = static_cast<double>(e);
+                    }
+                }
+                p_glob_elem = diag_global_elem.data();
+
+                diag_global_node.resize(n_owned_nodes);
+                if (mpi_size > 1 || mesh.num_nodes > mesh.num_owned_nodes) {
+                    mesh.local_to_global_node_mapping.update_host();
+                    for (size_t n = 0; n < n_owned_nodes; n++) {
+                        diag_global_node[n] =
+                            static_cast<double>(mesh.local_to_global_node_mapping.host(n));
+                    }
+                }
+                else {
+                    for (size_t n = 0; n < n_owned_nodes; n++) {
+                        diag_global_node[n] = static_cast<double>(n);
+                    }
+                }
+                p_glob_node = diag_global_node.data();
+
+                write_vtu(node_coords_host,
+                          nodes_in_elem_host,
+                          elem_scalar_fields,
+                          elem_tensor_fields,
+                          node_scalar_fields,
+                          node_vector_fields,
+                          elem_scalar_var_names,
+                          elem_tensor_var_names,
+                          node_scalar_var_names,
+                          node_vector_var_names,
+                          elem_fields_name,
+                          graphics_id,
+                          n_owned_nodes,
+                          n_owned_elems,
+                          num_nodes_in_elem,
+                          Pn_order,
+                          num_dims,
+                          solver_id,
+                          mpi_rank,
+                          mpi_size,
+                          p_rank_elem,
+                          p_glob_elem,
+                          p_glob_node);
             }
-            
-            // call the .vtu writer for element fields
-            std::string elem_fields_name = "fields";
-
-            // make a view of node coords for passing into functions
-            ViewCArray <double> node_coords_host(&State.node.coords.host(0,0), num_nodes, num_dims);
-            ViewCArray <size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0,0), num_elems, num_nodes_in_elem);
-
-
-            write_vtu(node_coords_host,
-                      nodes_in_elem_host,
-                      elem_scalar_fields,
-                      elem_tensor_fields,
-                      node_scalar_fields,
-                      node_vector_fields,
-                      elem_scalar_var_names,
-                      elem_tensor_var_names,
-                      node_scalar_var_names,
-                      node_vector_var_names,
-                      elem_fields_name,
-                      graphics_id,
-                      num_nodes,
-                      num_elems,
-                      num_nodes_in_elem,
-                      Pn_order,
-                      num_dims,
-                      solver_id);
-
 
             // ********************************
             //  Build and write the mat fields 
             // ********************************
 
-
-            // note: the file path and folder was created in the elem and node outputs
-            size_t num_mat_files_written = 0;
             if(num_mat_pt_scalar_vars > 0 || num_mat_pt_tensor_vars >0){
 
                 for (int mat_id = 0; mat_id < num_mats; mat_id++) {
@@ -2682,7 +2743,7 @@ public:
                         ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
                         ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
                         
-                        // write out a vtu file this 
+                        // write out a vtu file this
                         write_vtu(mat_node_coords_host,
                                   mat_nodes_in_elem_host,
                                   mat_elem_scalar_fields,
@@ -2700,10 +2761,12 @@ public:
                                   num_nodes_in_elem,
                                   Pn_order,
                                   num_dims,
-                                  solver_id);
-
-
-                        num_mat_files_written++;
+                                  solver_id,
+                                  mpi_rank,
+                                  mpi_size,
+                                  nullptr,
+                                  nullptr,
+                                  nullptr);
 
                     } // end for mat_id
 
@@ -2718,6 +2781,38 @@ public:
 
             // save the graphics time
             graphics_times(graphics_id) = time_value;
+
+            std::vector<unsigned long long> local_mat_counts(num_mats, 0ULL);
+            for (size_t mi = 0; mi < num_mats; mi++) {
+                local_mat_counts[mi] =
+                    static_cast<unsigned long long>(State.MaterialToMeshMaps.num_mat_elems.host(mi));
+            }
+            std::vector<unsigned long long> gathered_mat_elems;
+            if (mpi_rank == 0) {
+                gathered_mat_elems.assign(static_cast<size_t>(mpi_size) * num_mats, 0ULL);
+            }
+            MPI_Gather(local_mat_counts.data(),
+                       static_cast<int>(num_mats),
+                       MPI_UNSIGNED_LONG_LONG,
+                       mpi_rank == 0 ? gathered_mat_elems.data() : nullptr,
+                       static_cast<int>(num_mats),
+                       MPI_UNSIGNED_LONG_LONG,
+                       0,
+                       MPI_COMM_WORLD);
+
+            const unsigned long long      local_owned_elems_ull = static_cast<unsigned long long>(n_owned_elems);
+            std::vector<unsigned long long> gathered_owned_elems;
+            if (mpi_rank == 0) {
+                gathered_owned_elems.assign(static_cast<size_t>(mpi_size), 0ULL);
+            }
+            MPI_Gather(&local_owned_elems_ull,
+                       1,
+                       MPI_UNSIGNED_LONG_LONG,
+                       mpi_rank == 0 ? gathered_owned_elems.data() : nullptr,
+                       1,
+                       MPI_UNSIGNED_LONG_LONG,
+                       0,
+                       MPI_COMM_WORLD);
 
             // check to see if an mesh state was written 
             bool write_mesh_state = false;
@@ -2737,24 +2832,31 @@ public:
                  write_mat_pt_state = true;
             }
 
-            // call the vtm file writer
-            std::string mat_fields_name = "mat";
-            write_vtm(graphics_times,
-                      elem_fields_name,
-                      mat_fields_name,
-                      time_value,
-                      graphics_id,
-                      num_mat_files_written,
-                      write_mesh_state,
-                      write_mat_pt_state,
-                      solver_id);
+            MPI_Barrier(MPI_COMM_WORLD);
 
-            // call the pvd file writer
-            write_pvd(graphics_times,
-                      time_value,
-                      graphics_id,
-                      solver_id);
+            if (mpi_rank == 0) {
+                const std::string mat_fields_name = "mat";
+                write_vtm(graphics_times,
+                          elem_fields_name,
+                          mat_fields_name,
+                          time_value,
+                          graphics_id,
+                          num_mats,
+                          write_mesh_state,
+                          write_mat_pt_state,
+                          solver_id,
+                          mpi_size,
+                          gathered_owned_elems.empty() ? nullptr : gathered_owned_elems.data(),
+                          gathered_mat_elems.empty() ? nullptr : gathered_mat_elems.data());
 
+                write_pvd(graphics_times,
+                          time_value,
+                          graphics_id,
+                          solver_id,
+                          mpi_rank);
+            }
+
+            MPI_Barrier(MPI_COMM_WORLD);
 
             // increment graphics id counter
             graphics_id++; // this is private variable in the class
@@ -4097,12 +4199,16 @@ public:
         const size_t num_nodes_in_elem,
         const int Pn_order,
         const size_t num_dims,
-        const size_t solver_id
-        )
+        const size_t solver_id,
+        int mpi_rank,
+        int mpi_size,
+        const double* diag_mpi_rank_per_elem,
+        const double* diag_global_elem_id,
+        const double* diag_global_node_id)
     {
-        FILE* out[20];   // the output files that are written to
-        char  filename[100]; // char string
-        int   max_len = sizeof filename;
+        FILE* out[20];
+        char  filename[512];
+        int   max_len = static_cast<int>(sizeof filename);
         int   str_output_len;
 
         const size_t num_elem_scalar_vars = elem_scalar_var_names.size();
@@ -4111,15 +4217,31 @@ public:
         const size_t num_node_scalar_vars = node_scalar_var_names.size();
         const size_t num_node_vector_vars = node_vector_var_names.size();
 
-
-        // create filename
-        str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%s.%05d.vtu", 
-                                                                 solver_id, partname.c_str(), graphics_id);
+        if (mpi_size > 1) {
+            str_output_len = snprintf(filename,
+                                        static_cast<size_t>(max_len),
+                                        "vtk/data/Fierro.solver%zu.%s.%05d_r%04d.vtu",
+                                        solver_id,
+                                        partname.c_str(),
+                                        graphics_id,
+                                        mpi_rank);
+        }
+        else {
+            str_output_len = snprintf(filename,
+                                        static_cast<size_t>(max_len),
+                                        "vtk/data/Fierro.solver%zu.%s.%05d.vtu",
+                                        solver_id,
+                                        partname.c_str(),
+                                        graphics_id);
+        }
 
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-        // mesh file
-        
+
         out[0] = fopen(filename, "w");
+        if (!out[0]) {
+            std::cerr << "[MeshWriter] Failed to open VTU file: " << filename << std::endl;
+            return;
+        }
 
         fprintf(out[0], "<?xml version=\"1.0\"?>\n");  
         fprintf(out[0], "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\">\n"); 
@@ -4252,11 +4374,10 @@ public:
         // vtk vector vars = (position, velocity)
         fprintf(out[0], "\n");
         fprintf(out[0], "      <!-- Define the node vector data -->\n");
-        if(num_node_vector_vars >0 || num_node_scalar_vars>0){
+        if (num_node_vector_vars > 0 || num_node_scalar_vars > 0 || diag_global_node_id != nullptr) {
 
             fprintf(out[0], "      <PointData>\n");
 
-            // node vectors
             for (int a_var = 0; a_var < num_node_vector_vars; a_var++) {
                 fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" NumberOfComponents=\"3\" format=\"ascii\">\n", node_vector_var_names[a_var].c_str());
                
@@ -4265,20 +4386,25 @@ public:
                             node_vector_fields.host(a_var, node_gid, 0),
                             node_vector_fields.host(a_var, node_gid, 1),
                             node_vector_fields.host(a_var, node_gid, 2));
-                } // end for nodes
+                }
                 fprintf(out[0], "        </DataArray>\n");
+            }
 
-            } // end for vec_vars
-
-
-            // node scalar vars
             for (int a_var = 0; a_var < num_node_scalar_vars; a_var++) {
                 fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" format=\"ascii\">\n", node_scalar_var_names[a_var].c_str());
                 for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
                     fprintf(out[0], "          %.15e\n", node_scalar_fields.host(a_var, node_gid));
-                } // end for nodes
+                }
                 fprintf(out[0], "        </DataArray>\n");
-            } // end for vec_vars
+            }
+
+            if (diag_global_node_id != nullptr) {
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"global_node_id\" format=\"ascii\">\n");
+                for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
+                    fprintf(out[0], "          %.15e\n", diag_global_node_id[node_gid]);
+                }
+                fprintf(out[0], "        </DataArray>\n");
+            }
 
             fprintf(out[0], "      </PointData>\n");
 
@@ -4291,37 +4417,49 @@ public:
         */
         fprintf(out[0], "\n");
         fprintf(out[0], "      <!-- Define the cell data -->\n");
-        if(num_elem_scalar_vars >0 || num_elem_tensor_vars>0){
+        if (num_elem_scalar_vars > 0 || num_elem_tensor_vars > 0 || diag_mpi_rank_per_elem != nullptr ||
+            diag_global_elem_id != nullptr) {
 
             fprintf(out[0], "      <CellData>\n");
 
             for (int a_var = 0; a_var < num_elem_scalar_vars; a_var++) {
 
-                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" format=\"ascii\">\n", elem_scalar_var_names[a_var].c_str()); // the 1 is number of scalar components [1:4]
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" format=\"ascii\">\n", elem_scalar_var_names[a_var].c_str());
 
                 for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
                     fprintf(out[0], "          %.15e\n", elem_scalar_fields.host(a_var, elem_gid));
-                } // end for elem
+                }
                 fprintf(out[0], "        </DataArray>\n");
-            } // end for elem scalar_vars
+            }
 
-
-            // tensors
             for (int a_var = 0; a_var < num_elem_tensor_vars; a_var++) {
-                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" NumberOfComponents=\"9\" format=\"ascii\">\n", elem_tensor_var_names[a_var].c_str()); // the 1 is number of scalar components [1:4]
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" NumberOfComponents=\"9\" format=\"ascii\">\n", elem_tensor_var_names[a_var].c_str());
                 
                 for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-                    // note: paraview is row-major, CArray convention
-                    // Txx  Txy  Txz  Tyx  Tyy  Tyz  Tzx  Tzy  Tzz
-                    for (size_t i=0; i<3; i++){
-                        for(size_t j=0; j<3; j++){
+                    for (size_t i = 0; i < 3; i++) {
+                        for (size_t j = 0; j < 3; j++) {
                             fprintf(out[0], "          %.15e ", elem_tensor_fields.host(a_var, elem_gid, i, j));
-                        } // end j
-                    } // end i
-                } // end for elem
+                        }
+                    }
+                }
                 fprintf(out[0], "\n");
                 fprintf(out[0], "        </DataArray>\n");
-            } // end for elem scalar_vars
+            }
+
+            if (diag_mpi_rank_per_elem != nullptr) {
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"mpi_rank\" format=\"ascii\">\n");
+                for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+                    fprintf(out[0], "          %.15e\n", diag_mpi_rank_per_elem[elem_gid]);
+                }
+                fprintf(out[0], "        </DataArray>\n");
+            }
+            if (diag_global_elem_id != nullptr) {
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"global_elem_id\" format=\"ascii\">\n");
+                for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+                    fprintf(out[0], "          %.15e\n", diag_global_elem_id[elem_gid]);
+                }
+                fprintf(out[0], "        </DataArray>\n");
+            }
 
             fprintf(out[0], "      </CellData>\n");
         } // end if
@@ -4354,18 +4492,21 @@ public:
     void write_pvd(CArray<double>& graphics_times,
                    double time_value,
                    int graphics_id,
-                   const size_t solver_id){
+                   const size_t solver_id,
+                   int mpi_rank)
+    {
+        if (mpi_rank != 0) {
+            return;
+        }
 
-        FILE* out[20];   // the output files that are written to
-        char  filename[100]; // char string
-        int   max_len = sizeof filename;
+        FILE* out[20];
+        char  filename[512];
+        int   max_len = static_cast<int>(sizeof filename);
         int   str_output_len;
 
-        // Write time series metadata
-        str_output_len = snprintf(filename, max_len, "vtk/Fierro.solver%zu.pvd", solver_id); 
+        str_output_len = snprintf(filename, static_cast<size_t>(max_len), "vtk/Fierro.solver%zu.pvd", solver_id);
 
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-        // mesh file
 
         out[0] = fopen(filename, "w");
  
@@ -4401,73 +4542,160 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_vtm(CArray<double>& graphics_times,
-                   const  std::string& elem_part_name,
-                   const  std::string& mat_part_name,
+                   const std::string& elem_part_name,
+                   const std::string& mat_part_name,
                    double time_value,
                    int graphics_id,
-                   int num_mats,
+                   size_t num_mats_global,
                    bool write_mesh_state,
                    bool write_mat_pt_state,
-                   const size_t solver_id)
+                   const size_t solver_id,
+                   int mpi_size,
+                   const unsigned long long* owned_elems_by_rank,
+                   const unsigned long long* mat_elem_counts_by_rank)
     {
-        // loop over all the files that were written 
-        for(int file_id=0; file_id<=graphics_id; file_id++){
+        for (int file_id = 0; file_id <= graphics_id; file_id++) {
 
-            FILE* out[20];   // the output files that are written to
-            char  filename[100]; // char string
-            int   max_len = sizeof filename;
+            FILE* out[20];
+            char  filename[512];
+            int   max_len = static_cast<int>(sizeof filename);
             int   str_output_len;
 
-
-            // Write time series metadata to the data file
-            str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%05d.vtm", solver_id, file_id); 
+            str_output_len =
+                snprintf(filename, static_cast<size_t>(max_len), "vtk/data/Fierro.solver%zu.%05d.vtm", solver_id, file_id);
 
             if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-            // mesh file
 
             out[0] = fopen(filename, "w");
-    
+            if (!out[0]) {
+                std::cerr << "[MeshWriter] Failed to open VTM file: " << filename << std::endl;
+                continue;
+            }
+
             fprintf(out[0], "<?xml version=\"1.0\"?>\n");
             fprintf(out[0], "<VTKFile type=\"vtkMultiBlockDataSet\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
             fprintf(out[0], "  <vtkMultiBlockDataSet>\n");
 
-            
-            // Average mesh fields -- node and elem state written
-            size_t block_id = 0;  // this will need to be incremented based on the number of mesh fields written
-            if (write_mesh_state){
-                fprintf(out[0], "    <Block index=\"%zu\" name=\"Mesh\">\n", block_id);
-                {
-                    block_id++;  // increment block id for material outputs that follow the element avg block
-
-                    // elem and nodal fields are in this file
-                    fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
-                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s.%05d.vtu\" time= \"%12.5e\" />\n", 
-                                                              file_id, solver_id, elem_part_name.c_str(), file_id, graphics_times(file_id) );
-                    fprintf(out[0], "      </Piece>\n");
-
-                    // add other Mesh average output Pieces here
+            size_t block_id = 0;
+            if (write_mesh_state) {
+                int mesh_pieces = 0;
+                if (mpi_size > 1 && owned_elems_by_rank != nullptr) {
+                    for (int r = 0; r < mpi_size; r++) {
+                        if (owned_elems_by_rank[static_cast<size_t>(r)] > 0ULL) {
+                            mesh_pieces++;
+                        }
+                    }
                 }
-                fprintf(out[0], "    </Block>\n");
-            } // end if write elem and node state is true
+                else if (owned_elems_by_rank != nullptr && owned_elems_by_rank[0] > 0ULL) {
+                    mesh_pieces = 1;
+                }
+                else if (owned_elems_by_rank == nullptr) {
+                    mesh_pieces = 1;
+                }
 
-            // note: the block_id was incremented if an element average field output was made
-            if (write_mat_pt_state){
-                fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
-                for (size_t mat_id=0; mat_id<num_mats; mat_id++){
-                    
-                    // output the material specific fields
-                    fprintf(out[0], "      <Piece index=\"%zu\" name=\"Mat%zu\">\n", mat_id, mat_id);
-                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n", 
-                                                               file_id, solver_id, mat_part_name.c_str(), mat_id, file_id, graphics_times(file_id) );
-                    fprintf(out[0], "      </Piece>\n");
+                if (mesh_pieces > 0) {
+                    fprintf(out[0], "    <Block index=\"%zu\" name=\"Mesh\">\n", block_id);
+                    {
+                        block_id++;
+                        int piece_index = 0;
+                        if (mpi_size > 1 && owned_elems_by_rank != nullptr) {
+                            for (int r = 0; r < mpi_size; r++) {
+                                if (owned_elems_by_rank[static_cast<size_t>(r)] == 0ULL) {
+                                    continue;
+                                }
+                                fprintf(out[0], "      <Piece index=\"%d\" name=\"Field_r%04d\">\n", piece_index, r);
+                                fprintf(out[0],
+                                        "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s.%05d_r%04d.vtu\" "
+                                        "time= \"%12.5e\" />\n",
+                                        file_id,
+                                        solver_id,
+                                        elem_part_name.c_str(),
+                                        file_id,
+                                        r,
+                                        graphics_times(file_id));
+                                fprintf(out[0], "      </Piece>\n");
+                                piece_index++;
+                            }
+                        }
+                        else {
+                            fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
+                            fprintf(out[0],
+                                    "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s.%05d.vtu\" time= \"%12.5e\" />\n",
+                                    file_id,
+                                    solver_id,
+                                    elem_part_name.c_str(),
+                                    file_id,
+                                    graphics_times(file_id));
+                            fprintf(out[0], "      </Piece>\n");
+                        }
+                    }
+                    fprintf(out[0], "    </Block>\n");
+                }
+            }
 
-                } // end for loop mat_id
-                fprintf(out[0], "    </Block>\n");
-            } // end if write mat satte is true
+            if (write_mat_pt_state && mat_elem_counts_by_rank != nullptr && num_mats_global > 0) {
+                int mat_pieces = 0;
+                for (size_t mat_id = 0; mat_id < num_mats_global; mat_id++) {
+                    if (mpi_size > 1) {
+                        for (int r = 0; r < mpi_size; r++) {
+                            if (mat_elem_counts_by_rank[static_cast<size_t>(r) * num_mats_global + mat_id] > 0ULL) {
+                                mat_pieces++;
+                            }
+                        }
+                    }
+                    else if (mat_elem_counts_by_rank[mat_id] > 0ULL) {
+                        mat_pieces++;
+                    }
+                }
+                if (mat_pieces > 0) {
+                    fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
+                    for (size_t mat_id = 0; mat_id < num_mats_global; mat_id++) {
+                        int piece_index = 0;
+                        if (mpi_size > 1) {
+                            for (int r = 0; r < mpi_size; r++) {
+                                const unsigned long long nm =
+                                    mat_elem_counts_by_rank[static_cast<size_t>(r) * num_mats_global + mat_id];
+                                if (nm == 0ULL) {
+                                    continue;
+                                }
+                                fprintf(out[0], "      <Piece index=\"%d\" name=\"Mat%zu_r%04d\">\n", piece_index, mat_id, r);
+                                fprintf(out[0],
+                                        "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s%zu.%05d_r%04d.vtu\" "
+                                        "time= \"%12.5e\" />\n",
+                                        file_id,
+                                        solver_id,
+                                        mat_part_name.c_str(),
+                                        mat_id,
+                                        file_id,
+                                        r,
+                                        graphics_times(file_id));
+                                fprintf(out[0], "      </Piece>\n");
+                                piece_index++;
+                            }
+                        }
+                        else {
+                            const unsigned long long nm = mat_elem_counts_by_rank[mat_id];
+                            if (nm == 0ULL) {
+                                continue;
+                            }
+                            fprintf(out[0], "      <Piece index=\"0\" name=\"Mat%zu\">\n", mat_id);
+                            fprintf(out[0],
+                                    "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n",
+                                    file_id,
+                                    solver_id,
+                                    mat_part_name.c_str(),
+                                    mat_id,
+                                    file_id,
+                                    graphics_times(file_id));
+                            fprintf(out[0], "      </Piece>\n");
+                        }
+                    }
+                    fprintf(out[0], "    </Block>\n");
+                }
+            }
 
-            // done writing the files to be read by the vtm file
             fprintf(out[0], "  </vtkMultiBlockDataSet>\n");
-            fprintf(out[0], "</VTKFile>"); 
+            fprintf(out[0], "</VTKFile>");
 
             fclose(out[0]);
 

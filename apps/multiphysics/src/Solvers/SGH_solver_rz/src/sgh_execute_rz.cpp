@@ -220,6 +220,13 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
         dt = min_dt_calc;  // save this dt time step
 
+        // Global minimum dt across MPI ranks (each rank's CFL limit is local to its partition).
+        {
+            int init = 0;
+            if (MPI_Initialized(&init) == MPI_SUCCESS && init) {
+                MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            }
+        }
 
         if (cycle == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);

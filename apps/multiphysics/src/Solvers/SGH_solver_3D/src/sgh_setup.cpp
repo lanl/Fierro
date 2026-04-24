@@ -67,24 +67,6 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     // NOT touch MPI in the hot path.
     if (log) log->info("Setting up SGH solver, state vars and sspd stress (num_mats=%zu)\n", num_mats);
 
-    // One example per severity (host). Trace/Debug do not appear in the file
-    // when the Driver logger's minimum level is Info (default): those calls
-    // return before formatting. Use log->set_level(fierro::LogLevel::Trace) to
-    // see them.
-    if (log) log->trace("This is a trace message\n");
-    if (log) log->debug("This is a debug message\n");
-    if (log) log->info("This is an info message\n");
-    if (log) log->warn("This is a warn message\n");
-    if (log) log->error("This is an error message\n");
-
-    // POD view for FOR_ALL: one line via Solver::log_handle() (see solver.hpp).
-    const auto log_dev = log_handle();
-    FOR_ALL(node_gid, 0, 10, {
-        if (log_dev) log_dev.info("FOR_ALL logger example (node_gid=%zu)\n", node_gid);
-    });
-    Kokkos::fence();
-
-
     // calculate pressure, sound speed, and stress for each material
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 

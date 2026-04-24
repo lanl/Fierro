@@ -251,6 +251,14 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         dt = min_dt_calc;  // save this dt time step
 
+        // Global minimum dt across MPI ranks (each rank's CFL limit is local to its partition).
+        {
+            int init = 0;
+            if (MPI_Initialized(&init) == MPI_SUCCESS && init) {
+                MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            }
+        }
+
         if (cycle == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         }
@@ -474,7 +482,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // ---- apply contact boundary conditions to the boundary patches----
             boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);
 
-            // mpi_coms();
+            State.node.vel.communicate();
 
             for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
                 // ---- Update specific internal energy in the elements ----
