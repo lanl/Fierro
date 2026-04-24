@@ -123,7 +123,7 @@ void Driver::initialize()
     // Partition the mesh to all ranks
     if(world_size != 1) { // pass through the partitioning function if not a single rank
         elements::partition_mesh(initial_mesh, mesh, initial_node_coords, final_node_coords, element_communication_plan, node_communication_plan, world_size, rank);   
-        // Verify communication plans
+        // Verify communication plans (matches ELEMENTS decomp_example pattern)
         element_communication_plan.verify_graph_communicator();
         node_communication_plan.verify_graph_communicator();
         MPI_Barrier(MPI_COMM_WORLD);
@@ -135,7 +135,62 @@ void Driver::initialize()
         mesh.num_owned_nodes = initial_mesh.num_nodes;
         final_node_coords = initial_node_coords;
     }
+
+    // partition_mesh() builds corner connectivity (corners_in_elem, corners_in_node)
+    // but does not set the scalar counter mesh.num_corners. Many solvers size
+    // State.corner.* using mesh.num_corners, so if it is left at 0 any
+    // corner_mass(corner_gid) write becomes an out-of-bounds / heap-corrupting
+    // store. There is one corner per node-in-element pair.
+    mesh.num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
+    std::cout.flush();
     MPI_Barrier(MPI_COMM_WORLD);
+
+    // Serially print mesh information on each rank
+    for (int r = 0; r < world_size; ++r) {
+        if (rank == r) {
+            size_t num_ghost_nodes = mesh.num_nodes > mesh.num_owned_nodes ? mesh.num_nodes - mesh.num_owned_nodes : 0;
+            size_t num_ghost_elems = mesh.num_elems > mesh.num_owned_elems ? mesh.num_elems - mesh.num_owned_elems : 0;
+
+            std::cout << "Rank " << rank 
+                      << ": num_nodes=" << mesh.num_nodes 
+                      << " (owned=" << mesh.num_owned_nodes
+                      << ", ghost=" << num_ghost_nodes << ")"
+                      << ", num_elems=" << mesh.num_elems 
+                      << " (owned=" << mesh.num_owned_elems
+                      << ", ghost=" << num_ghost_elems << ")"
+                      << std::endl;
+            std::cout.flush();
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    
+    // For totals, root rank gathers and prints
+    size_t local_nodes = mesh.num_nodes;
+    size_t local_elems = mesh.num_elems;
+    size_t local_owned_nodes = mesh.num_owned_nodes;
+    size_t local_owned_elems = mesh.num_owned_elems;
+
+    size_t total_nodes = 0, total_elems = 0, total_owned_nodes = 0, total_owned_elems = 0;
+
+    MPI_Reduce(&local_nodes, &total_nodes, 1, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_elems, &total_elems, 1, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_owned_nodes, &total_owned_nodes, 1, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_owned_elems, &total_owned_elems, 1, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        size_t total_ghost_nodes = total_nodes > total_owned_nodes ? total_nodes - total_owned_nodes : 0;
+        size_t total_ghost_elems = total_elems > total_owned_elems ? total_elems - total_owned_elems : 0;
+        std::cout << "Totals across all ranks: "
+                  << "num_nodes=" << total_nodes
+                  << " (owned=" << total_owned_nodes
+                  << ", ghost=" << total_ghost_nodes << ")"
+                  << ", num_elems=" << total_elems
+                  << " (owned=" << total_owned_elems
+                  << ", ghost=" << total_ghost_elems << ")"
+                  << std::endl;
+        std::cout.flush();
+    }
 
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;
@@ -145,6 +200,7 @@ void Driver::initialize()
     // Initialize node state
     std::vector<node_state> required_node_state = { node_state::coords };
     State.node.initialize(mesh.num_nodes, num_dims, required_node_state, node_communication_plan);
+    State.node.initialize(mesh.num_nodes, num_dims, required_node_state);
 
     // Copy the partitioned node coordinates to the state
     FOR_ALL(node_gid, 0, mesh.num_nodes, {

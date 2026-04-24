@@ -43,19 +43,19 @@
                         swage::Mesh& mesh, 
                         BoundaryCondition_t& Boundary,
                         State_t& State) const
- {
-     const size_t num_nodes = mesh.num_nodes;
-     const size_t num_gauss_pts = mesh.num_elems;
-     const size_t num_corners = mesh.num_corners;
-     const size_t num_dims = mesh.num_dims;
+{
+    const size_t num_nodes = mesh.num_nodes;
+    const size_t num_gauss_pts = mesh.num_elems;
+    const size_t num_corners = mesh.num_corners;
+    const size_t num_dims = mesh.num_dims;
 
- 
-     // mesh state
-     State.node.initialize(num_nodes, num_dims, LevelSet_State::required_node_state);
-     State.GaussPoints.initialize(num_gauss_pts, num_dims, LevelSet_State::required_gauss_pt_state);
-     State.corner.initialize(num_corners, num_dims, LevelSet_State::required_corner_state);
- 
- } // end solver initialization
+
+    // mesh state
+    State.node.initialize(num_nodes, num_dims, LevelSet_State::required_node_state);
+    State.GaussPoints.initialize(num_gauss_pts, num_dims, LevelSet_State::required_gauss_pt_state);
+    State.corner.initialize(num_corners, num_dims, LevelSet_State::required_corner_state);
+
+} // end solver initialization
  
  
  

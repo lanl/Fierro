@@ -2271,25 +2271,19 @@ void calc_corner_mass(const Material_t& Materials,
                       const size_t num_mat_elems,
                       const size_t mat_id)
 {
-
-
     FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
-        // get elem gid
-        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);  
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
-        // calculate the fraction of matpt mass to scatter to each corner
         double corner_frac = 1.0/((double)mesh.num_nodes_in_elem);  // =1/8
-        
-        // partion the mass to the corners
+
         for(size_t corner_lid=0; corner_lid<mesh.num_nodes_in_elem; corner_lid++){
             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
             corner_mass(corner_gid) += corner_frac*MaterialPoints_mass(mat_id, mat_elem_sid);
         } // end for
 
     }); // end parallel for over mat elem local ids
-
-
+    Kokkos::fence();
 } // end function calculate corner mass
 
 

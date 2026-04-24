@@ -60,7 +60,12 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     // add a flag on whether SGH was set up, if(SGH_setup_already==false)
     
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    std::cout.flush();
+    MPI_Barrier(MPI_COMM_WORLD);
 
+    std::cout << "Setting up SGH solver, state vars and sspd stress" << std::endl;
     // calculate pressure, sound speed, and stress for each material
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
@@ -91,9 +96,11 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     // set corner and node masses to zero
     init_corner_node_masses_zero(mesh, State.node.mass, State.corner.mass);
 
+    std::cout << "Calculating corner and node masses" << std::endl;
     // calculate corner and node masses on the mesh
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
+        std::cout << "Calculating corner mass for material " << mat_id << std::endl;
         calc_corner_mass(Materials,
                          mesh,
                          State.node.coords,
@@ -104,35 +111,47 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                          State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                          mat_id);
     } // end for mat_id
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    std::cout << "Calculating node mass" << std::endl;
+    std::cout.flush();
+    MPI_Barrier(MPI_COMM_WORLD);
 
     calc_node_mass(mesh,
                    State.node.coords,
                    State.node.mass,
                    State.corner.mass);
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    std::cout << "Done calculating node mass" << std::endl;
+    std::cout.flush();
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // std::cout << "Setting up fracture" << std::endl;
     // setting up fracture
     for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
         // if fracture is allowed, then set up the fracture bank
         // note, allow_fracture is set in the parse_bdy_conds_inputs.cpp file and boundary_conditions.h file
         // checking if fracture is allowed... if = 0 then fracture is not enabled; if = 1, then fracture is enabled:
-        printf("Boundary.allow_fracture = %d\n", Boundary.allow_fracture);
+        // printf("Boundary.allow_fracture = %d\n", Boundary.allow_fracture);
         if (Boundary.allow_fracture) {
-            printf("Setting up global fracture (cohesive zones)\n");
+            // printf("Setting up global fracture (cohesive zones)\n");
             doing_fracture = true;
         
-        // calling initialize for the cohesive zones bank
-        printf("Calling initialize()...\n");
-        //cohesive_zones_t cohesive_zones_bank;
-        this->cohesive_zones_bank.initialize(mesh, State, SimulationParamaters);
+            // calling initialize for the cohesive zones bank
+            //printf("Calling initialize()...\n");
+            //cohesive_zones_t cohesive_zones_bank;
+            this->cohesive_zones_bank.initialize(mesh, State, SimulationParamaters);
 
-        // done calling initialize
-        printf("Done calling initialize()...\n");
-        break; 
+            // done calling initialize
+            // printf("Done calling initialize()...\n");
+            break; 
         }
     }
     // end setting up fracture
     
     // Setting up contact
+    std::cout << "Setting up contact" << std::endl;
     // todo: should this be handled inside of src/boundary_conditions/stress/global_contact ?
     for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
         if (Boundary.allow_preload) {
