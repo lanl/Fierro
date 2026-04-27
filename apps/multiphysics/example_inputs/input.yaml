@@ -27,11 +27,11 @@
 # ---------------------------------------------------------------------------
 dynamic_options:
 
-    time_final: 2.0 # Final simulation time (microseconds). (100)
+    time_final: 10.0 # Final simulation time (microseconds).
     dt_min: 1.e-8 # Minimum adaptive timestep bound (microseconds).
     dt_max: 1.e-2 # Maximum adaptive timestep bound (microseconds).
     dt_start: 1.e-5 # Initial timestep guess (microseconds).
-    cycle_stop: 1 # Hard stop after this many cycles.
+    cycle_stop: 300000 # Hard stop after this many cycles.
 
 # ---------------------------------------------------------------------------
 # Mesh options (3D box)
@@ -41,11 +41,11 @@ mesh_options:
     num_dims: 3
     type: box
     # Box origin in x,y,z (cm).
-    origin: [0.0, -4.0, -4.0]
+    origin: [0.0, 0.0, 0.0]
     # Box side lengths in x,y,z (cm).
-    length: [1.0, 8.0, 8.0]
-    # Element counts [nx, ny, nz]. (30,30,30)
-    num_elems: [5, 30, 30]
+    length: [1.2, 1.2, 1.2]
+    # Element counts [nx, ny, nz].
+    num_elems: [30, 30, 30]
 
 
 # ---------------------------------------------------------------------------
@@ -56,8 +56,8 @@ output_options:
     # Output format for visualization.
     output_file_format: viz # only options are viz or viz_and_state
     # Amount of simulated time between visualization dumps (microseconds).
-    graphics_time_step: 0.05
-    graphics_iteration_step: 1
+    graphics_time_step: 0.5
+    # graphics_iteration_step: 10
     elem_field_outputs:
         - den
         - pres
@@ -216,7 +216,7 @@ regions:
             # radius1 is the inner radius (0.0 means a solid sphere).
             radius1: 0.0
             # radius2 is the outer radius (cm); the sphere injects internal energy.
-            radius2: 0.06 #0.04
+            radius2: 0.04
         # Apply the Sedov "blast" only to this localized region.
         solver_id: 0
         material_id: 0
