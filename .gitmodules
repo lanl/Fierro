@@ -1,7 +1,7 @@
 [submodule "lib/Elements"]
 	path = lib/Elements
 	url = https://github.com/lanl/ELEMENTS.git
-    branch = master
+    branch = main
 [submodule "dev-utils/uncrustify"]
 	path = dev-utils/uncrustify
 	url = https://github.com/uncrustify/uncrustify.git
