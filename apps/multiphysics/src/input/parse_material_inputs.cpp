@@ -73,6 +73,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "host_user_defined_strength.hpp"
 #include "host_ann_strength.hpp"
 #include "decoupled_plasticity.hpp"
+#include "QS_iso_lin_elastic.hpp"
 
 // ----
 #if __has_include("decoupled_strength.hpp")
@@ -496,6 +497,26 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
                             break;  
 
+                        case model::QSIsotropicLinearElastic:
+
+                            if(num_dims == 2){
+                                std::cout << "ERROR: specified 2D but this is a 3D strength model: " << strength_model << std::endl;
+                                throw std::runtime_error("**** Strength model is not valid in 2D ****");
+                            }
+                            
+                            // set the stress function
+                            RUN({
+                                Materials.MaterialFunctions(mat_id).calc_stress = &QSIsotropicLinearElastic::calc_stress;
+                                Materials.MaterialFunctions(mat_id).fill_C_matrix = &QSIsotropicLinearElastic::fill_C_matrix;
+                            });
+                            // note: default run location for strength is device
+
+                            // set the strength initialization function
+                            Materials.MaterialFunctions.host(mat_id).init_strength_state_vars = &QSIsotropicLinearElastic::init_strength_state_vars;
+                            // note: default run location for initialization is always host
+
+                            break;
+                            
                         // add other elastic plastic models here, e.g., Johnson-Cook strength etc.
                         // ....
 #ifdef DECOUPLED_STRENGTH_H

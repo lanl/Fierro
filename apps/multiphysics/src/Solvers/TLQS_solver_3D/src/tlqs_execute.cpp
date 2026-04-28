@@ -77,6 +77,23 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     double time_value = this->time_start;  // was 0.0
     double dt = dt_start;
 
+    // *******************************
+    // local variables for this solver
+    // *******************************
+    
+    // element stiffness and force arrays
+    CArrayKokkos <double> K_elem(mesh.num_elems,3*mesh.num_nodes,3*mesh.num_nodes); /// K1 + K2
+    CArrayKokkos <double> F_elem(mesh.num_elems,3*mesh.num_nodes); /// F02 - F01
+
+    // conjugate gradient method vectors
+    CArrayKokkos <double> p(3*mesh.num_nodes);
+    CArrayKokkos <double> rk(3*mesh.num_nodes);
+    CArrayKokkos <double> rkp1(3*mesh.num_nodes);
+
+    // Picard iteration vectors
+    CArrayKokkos <double> displacement_step(3*mesh.num_nodes); /// tally vector for iterations
+    CArrayKokkos <double> displacement_iter(3*mesh.num_nodes); /// iteration vector solved for via conjugate gradient method
+
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
@@ -85,11 +102,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     graphics_times(0) = this->time_start; // was zero
     double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
 
-
     /// WARNING WARNING WARNING: REMOVE BEFORE BUILDING SOLVER, THIS IS A PLACEHOLDER FOR THE TLQS SOLVER
     std::cout << "Sucessfully called the TLQS execute function" << std::endl;
     return; 
-
    
     // Apply initial boundary conditions
 
@@ -158,7 +173,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     
         } // end for loop over all mats
-
         
         // Print the initial time step and time value
         if (cycle == 0) {

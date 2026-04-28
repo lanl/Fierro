@@ -579,7 +579,7 @@ void fill_regions(
 
                 // paint the displacement onto the nodes of the mesh
                 if(node_disp.size()>0){
-                    paint_vector(node_vel,
+                    paint_vector(node_disp,
                                  a_node_coords,
                                  region_fills(fill_id).ux,
                                  region_fills(fill_id).uy,

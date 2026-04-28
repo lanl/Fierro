@@ -61,6 +61,7 @@ namespace model
         hostANNStrength = 4,
         hypoElasticPlasticStrength = 5,
         hypoElasticPlasticStrengthRZ = 6,
+        QSIsotropicLinearElastic = 7,
     };
 
     // EOS model types
@@ -172,6 +173,7 @@ static std::map<std::string, model::StrengthModels> strength_models_map
     { "hypo_elastic_plastic_strength", model::hypoElasticPlasticStrength },
     { "hypo_elastic_plastic_strength_rz", model::hypoElasticPlasticStrengthRZ },
     { "host_ann_strength", model::hostANNStrength },
+    { "QS_iso_lin_elastic", model::QSIsotropicLinearElastic}
 };
 
 
@@ -383,6 +385,11 @@ struct MaterialFunctions_t
         const size_t num_material_points,
         const size_t mat_id) = NULL;
 
+
+    void (*fill_C_matrix) (
+        const RaggedRightArrayKokkos <double> &strength_global_vars,
+        double C[6][6],
+        const size_t mat_id) = NULL;
 
     // -- Erosion --
 

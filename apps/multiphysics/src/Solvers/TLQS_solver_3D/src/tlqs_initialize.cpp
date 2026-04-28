@@ -71,7 +71,7 @@ void TLQS3D::initialize(SimulationParameters_t& SimulationParamaters,
     
     if (filled_nodal_state == false){
         std::cout <<" Missing required nodal state in the fill instructions for the TLQS solver \n";
-        std::cout <<" The nodal velocity must be specified. \n" << std::endl;
+        std::cout <<" The nodal displacement must be specified. \n" << std::endl;
         throw std::runtime_error("**** Provide fill instructions for all required nodal variables ****");
     }
 
