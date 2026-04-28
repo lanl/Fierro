@@ -234,6 +234,9 @@ namespace MARSDissipationModel {
                               //   (1=nominal, and n_coeff > 1 oscillatory)
 
         // loop over the neighboring cells
+        // WARNING: Replace this with loop over the nodal velocity gradient
+        // r_min calculation becomes loop over nodes in the element
+        // Communicate nodal velocity divergence
         for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++) {
             // Get global index for neighboring cell
             size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);

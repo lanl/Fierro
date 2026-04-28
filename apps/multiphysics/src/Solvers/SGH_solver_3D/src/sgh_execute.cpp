@@ -481,8 +481,13 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // ---- apply contact boundary conditions to the boundary patches----
             boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);
+            
+            MPI_Barrier(MPI_COMM_WORLD);
 
             State.node.vel.communicate();
+            State.node.vel_n0.communicate();
+
+            MPI_Barrier(MPI_COMM_WORLD);
 
             for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
                 // ---- Update specific internal energy in the elements ----

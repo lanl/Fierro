@@ -2593,7 +2593,8 @@ public:
             // Points must list all local nodes (0..num_nodes-1). Connectivity is full local indexing;
             // boundary elements reference ghost nodes — truncating coords to num_owned_nodes (the prior
             // bug) misaligned indices and produced inverted/wrong cells in ParaView.
-            const size_t n_owned_elems = mesh.num_owned_elems;
+            const size_t n_owned_elems = num_elems; //mesh.num_owned_elems;
+ 
 
             const std::string elem_fields_name = "fields";
 
