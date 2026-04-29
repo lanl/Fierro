@@ -1207,7 +1207,7 @@ void cohesive_zones_t::ucmap(
 /// \param dt_stage       Stage time step used for rate/increment updates (e.g., RK stage dt).
 /// \param time_value     Current simulation time (debugging aid; not required for the math).
 /// \param overlapping_node_gids 2D array of cohesive pairs (num_pairs x 2) with global node IDs [A_gid, B_gid].
-/// \param E_inf Long-term (equilibrium) modulus of the cohesive zone material [g/cm*us^2] (user input set with the fracture_stress_bc).
+/// \param E_inf Long-term (equilibrium) modulus of the cohesive zone material [Mbar] (user input set with the fracture_stress_bc).
 /// \param a1 Damage evolution parameter [dimensionless] (user input set with the fracture_stress_bc).
 /// \param n_exp Damage evolution exponent [dimensionless] (user input set with the fracture_stress_bc).
 /// \param u_n_star Normal characteristic length [cm] (user input set with the fracture_stress_bc).
@@ -1242,9 +1242,11 @@ void cohesive_zones_t::cohesive_zone_var_update(
         return;
     }
 
-    // loop over each cohesive zone node pair
-    RUN({
-    for (size_t i = 0; i < overlapping_node_gids.dims(0); i++){
+    // capture loop bound on host so it's a part of the FOR_ALL signature
+    const size_t npairs = overlapping_node_gids.dims(0);
+
+    // paralll loop over each cohesive zone node pair
+    FOR_ALL(i, 0, npairs, {
 
         // stage-effective modulus: E_inf + Prony contribution
         double E_dt = E_inf;
@@ -1274,7 +1276,7 @@ void cohesive_zones_t::cohesive_zone_var_update(
             for (int j = 0; j < num_prony_terms; ++j) {
                 delta_internal_vars(i, 4 + j) = internal_vars(i, 4 + j);
             }
-            continue;
+            return;
         }
         const double lambda_dot_t = (lambda_tdt - lambda_t) / dt_stage;
         delta_internal_vars(i,0) = lambda_dot_t; // lambda rate at t
@@ -1352,8 +1354,8 @@ void cohesive_zones_t::cohesive_zone_var_update(
         // delta_internal_vars(i,2) : normal traction increment
         // delta_internal_vars(i,3) : tangential traction increment
         // delta_internal_vars(i, 4 + j) : prony internal variables 
-    }
-    }); // end RUN
+    
+    }); // end FOR_ALL
     Kokkos::fence();
 }      
 
