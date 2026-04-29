@@ -60,6 +60,19 @@ void TLQS3D::setup(SimulationParameters_t& SimulationParamaters,
     
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
+    // calculate pressure, sound speed, and stress for each material
+    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+        // call the initialization function for state vars
+        init_state_vars(Materials,
+                        mesh,
+                        State.MaterialPoints.eos_state_vars,
+                        State.MaterialPoints.strength_state_vars,
+                        State.MaterialToMeshMaps.elem_in_mat_elem,
+                        State.MaterialPoints.num_material_points.host(mat_id),
+                        mat_id);
+
+    } // for loop over mat_id
 
     std::cout << "TLQS solver setup \n";
     return;

@@ -82,8 +82,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // *******************************
     
     // element stiffness and force arrays
-    CArrayKokkos <double> K_elem(mesh.num_elems,3*mesh.num_nodes,3*mesh.num_nodes); /// K1 + K2
-    CArrayKokkos <double> F_elem(mesh.num_elems,3*mesh.num_nodes); /// F02 - F01
+    CArrayKokkos <double> K_elem(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem); /// K1 + K2
+    CArrayKokkos <double> F_elem(mesh.num_elems,3*mesh.num_nodes_in_elem); /// F02 - F01
 
     // conjugate gradient method vectors
     CArrayKokkos <double> p(3*mesh.num_nodes);

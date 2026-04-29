@@ -253,7 +253,7 @@ public:
         const size_t elem_id,
         DCArrayKokkos <double>& coords_t0,
         DCArrayKokkos <double>& displacement,
-        CArrayKokkos <double>& gauss_point_grad_basis,
+        ViewCArrayKokkos <double>& gauss_point_grad_basis,
         double grad_u[3][3],
         double inv_J[3][3],
         double det_J,
@@ -267,7 +267,8 @@ public:
         const double material_matrix[6][6],
         const double grad_u[3][3],
         const double inv_J[3][3],
-        CArrayKokkos <double>& gauss_point_grad_basis,
+        ViewCArrayKokkos <double>& gauss_point_grad_basis,
+        double gauss_point_weight,
         const double PK2_curr_config[6],
         ViewCArrayKokkos <double> Kel,
         ViewCArrayKokkos <double>& Fel
