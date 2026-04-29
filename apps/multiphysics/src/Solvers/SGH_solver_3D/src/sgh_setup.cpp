@@ -114,8 +114,6 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
         // if fracture is allowed, then set up the fracture bank
         // note, allow_fracture is set in the parse_bdy_conds_inputs.cpp file and boundary_conditions.h file
-        // checking if fracture is allowed... if = 0 then fracture is not enabled; if = 1, then fracture is enabled:
-        printf("Boundary.allow_fracture = %d\n", Boundary.allow_fracture);
         if (Boundary.allow_fracture) {
             printf("Setting up global fracture (cohesive zones)\n");
             doing_fracture = true;

@@ -1,12 +1,11 @@
-# num_dims: 3
-
 dynamic_options:
-  time_final: 4.0
-  dt_min: 1e-6
-  dt_max: 0.001
+  time_final: 38.5
+  dt_min: 1e-8
+  dt_max: 1e-2
   dt_start: 1.e-5
-  cycle_stop: 300000
-
+  dt_cfl: 0.8
+  rk_num_stages: 2
+  cycle_stop: 10000
 
 mesh_options:
   source: file
@@ -16,17 +15,12 @@ mesh_options:
 output_options:
   timer_output_level: thorough
   output_file_format: state
-  graphics_time_step: 2.0
-  # graphics_iteration_step: 10
+  graphics_time_step: 38.5
 
 solver_options:
   - solver:
       method: dynx_FE
       id: 0
-      # solver_vars:
-      #  - blah
-      #  - blah
-      #  - blah
 
 boundary_conditions:
   # fracture stress boundary condition
@@ -36,16 +30,16 @@ boundary_conditions:
         type: global
       stress_model: fracture
       stress_bc_global_vars:
-        - 2.0e-3   #g/cm*us^2 #E_inf (Prony constant term)
-        - 0.025    #a1 (Damage evolution coefficient) dimensionless
-        - 0.25        #n_exp (Damage evolution exponent) dimensionless
-        - 1.0e-1   #cm  #u_n_star (uns: Characteristic length normal) larger = less sensitive to normal opening
-        - 1.0e-2   #cm   #u_t_star (uts: Characteristic length tangential)
-        - 1        #num_prony_terms (Filled below: E and tau temrs) dimensionless
-        - 1.8e-2   #g/cm*us^2   #prony_0_E
-        - 2.0      #g/cm*us^3    #prony_0_tau p
-                   #prony_1_E
-                   #prony_1_tau
+        - 2.0e-3   # E_inf (Prony constant term) [Mbar]
+        - 0.025    # a1 (Damage evolution coefficient) [dimensionless]
+        - 0.25     # n_exp (Damage evolution exponent) [dimensionless]
+        - 1.0e-2   # u_n_star (uns: Characteristic length normal) [cm]
+        - 1.0e-2   # u_t_star (uts: Characteristic length tangential) [cm]
+        - 1        # num_prony_terms (Filled below: # E and tau temrs)
+        - 1.8e-2   # prony_0_E [Mbar]
+        - 2.0      # prony_0_tau [us]
+                   # prony_1_E (set by num_prony_terms)
+                   # prony_1_tau (set by num_prony_terms)
 
   # Tag y plane (restrain poisson effect)
   - boundary_condition:
@@ -64,7 +58,7 @@ boundary_conditions:
       solver_id: 0
       surface: 
           type: y_plane
-          plane_position: 1.0
+          plane_position: 0.1
       velocity_model: reflected
       velocity_bc_global_vars:
           - 0
@@ -76,7 +70,7 @@ boundary_conditions:
       solver_id: 0
       surface: 
           type: z_plane
-          plane_position: 1.0 # at crack interface
+          plane_position: 0.1 # at crack interface
       velocity_model: reflected
       velocity_bc_global_vars:
           - 0
@@ -94,28 +88,28 @@ boundary_conditions:
         - 1 # x
         - 0 # y
         - 0 # z
-        - -1.0e-1 # hydro_bc_vel_0 
+        - -5.0e-4 #  hydro_bc_vel_0 
         - 0.0 # hydro_bc_vel_1 
         - 0.0 # hydro_bc_vel_2 
         - 0.0 # t_start
-        - 4.0 # t_end
+        - 38.5 # t_end
 
-  # Tag z plane (top surface z=2 velocity in +x direction)
+  # Tag z plane (top surface z=0.2 velocity in +x direction)
   - boundary_condition:
       solver_id: 0
       surface:
         type: z_plane
-        plane_position: 2.0
+        plane_position: 0.2
       velocity_model: piston
       velocity_bc_global_vars:
         - 1 # x
         - 0 # y
         - 0 # z
-        - 1.0e-1 # hydro_bc_vel_0 
+        - 5.0e-4 # hydro_bc_vel_0 
         - 0.0 # hydro_bc_vel_1 
         - 0.0 # hydro_bc_vel_2 
         - 0.0 # t_start 
-        - 4.0    # t_end
+        - 38.5    # t_end
 
 materials:
   - material:
@@ -139,32 +133,59 @@ materials:
 
       dissipation_model: MARS
       dissipation_global_vars:
-          - 5.0   # q1
+          - 3.0   # q1
           - 1.0   # q1ex
           - 3.0 # q2 shear dissipation
           - 1.333 # q2ex
           - 0.1     # phi_min
           - 1.0   # phi_curl
-      eos_global_vars:
-          - 10 #1.666666666666667
-          - 1.0E-14
-          - 1.0
 
 regions:
+  # Bottom element: z=[0,0.1], sliding in -x at piston speed
   - region:
-        volume:
-            type: global
-        material_id: 0
-        solver_id: 0
-        density: 
-            type: uniform
-            value: 1
-        specific_internal_energy: 
-            type: uniform
-            value: 1.0e-10
-        velocity: 
-            type: cartesian
-            u: 0.0
-            v: 0.0
-            w: 0.0
+      volume:
+        type: box
+        x1: -10.0
+        x2: 10.0
+        y1: -10.0
+        y2: 10.0
+        z1: -10.0
+        z2: 0.1
+      material_id: 0
+      solver_id: 0
+      density:
+        type: uniform
+        value: 1.0
+      specific_internal_energy:
+        type: uniform
+        value: 1.0e-10
+      velocity:
+        type: cartesian
+        u: -5.0e-4
+        v: 0.0
+        w: 0.0
+
+  # Top element: z=[0.1,0.2], sliding in +x at piston speed
+  - region:
+      volume:
+        type: box
+        x1: -10.0
+        x2: 10.0
+        y1: -10.0
+        y2: 10.0
+        z1: 0.1
+        z2: 10.0
+      material_id: 0
+      solver_id: 0
+      density:
+        type: uniform
+        value: 1.0
+      specific_internal_energy:
+        type: uniform
+        value: 1.0e-10
+      velocity:
+        type: cartesian
+        u: 5.0e-4
+        v: 0.0
+        w: 0.0
 

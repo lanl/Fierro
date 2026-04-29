@@ -42,11 +42,11 @@ boundary_conditions:
         type: global
       velocity_model: user_defined
       velocity_bc_global_vars:
-        - 1.0 # reorientation mode flag : 1.0 = enabled; 0.0 = disabled
+        - 1.0          # reorientation mode flag : 1.0 = enabled; 0.0 = disabled
         - 0.3171443868 # omega_y (rotation about x2 axis)
         - 0.3171443868 # omega_z (rotation about x3 axis)
-        - 4.0e-5 # cz opening rate (constant rate of opening for cohesive zone node pairs)
-        - 0.5 # x interface (cm) (x location of interface)
+        - 4.0e-5       # cz opening rate (constant rate of opening for cohesive zone node pairs) [cm/us]
+        - 0.5          # x interface (x location of interface) [cm]
           
   # fracture stress boundary condition
   - boundary_condition:
@@ -55,25 +55,24 @@ boundary_conditions:
         type: global
       stress_model: fracture
       stress_bc_global_vars:
-        - 2.0e-3   #g/cm*us^2 #E_inf (Prony constant term)
-        - 0.1    #a1 (Damage evolution coefficient) dimensionless
-        - 0.25        #n_exp (Damage evolution exponent) dimensionless
-        - 5.0e-3   #cm  #u_n_star (uns: Characteristic length normal)
-        - 5.0e-3   #cm   #u_t_star (uts: Characteristic length tangential)
-        - 1        #num_prony_terms (Filled below: E and tau temrs) dimensionless
-        - 1.8e-2   #g/cm*us^2   #prony_0_E
-        - 2.0      #g/cm*us^3    #prony_0_tau p
-                   #prony_1_E
-                   #prony_1_tau
-
+        - 2.0e-3   # E_inf (Prony constant term) [Mbar]
+        - 0.1      # a1 (Damage evolution coefficient) [dimensionless]
+        - 0.25     # n_exp (Damage evolution exponent) [dimensionless]
+        - 5.0e-3   # u_n_star (uns: Characteristic length normal) [cm]
+        - 5.0e-3   # u_t_star (uts: Characteristic length tangential) [cm]
+        - 1        # num_prony_terms (Filled below: # E and tau temrs)
+        - 1.8e-2   # prony_0_E [Mbar]
+        - 2.0      # prony_0_tau [us]
+                   # prony_1_E (set by num_prony_terms)
+                   # prony_1_tau (set by num_prony_terms)
 materials:
   - material:
       id: 0
       eos_model_type: decoupled
       eos_model: linear_elastic_eos
       eos_global_vars:
-          - 1.4 #  B Bulk modulus g/cm*us^2
-          - 0.4333 # G Shear modulus g/cm*us^2
+          - 1.4 #  B Bulk modulus
+          - 0.4333 # G Shear modulus
           - 1.0 # ref density from Azo materials online
           - 0.001
         #------Strength
