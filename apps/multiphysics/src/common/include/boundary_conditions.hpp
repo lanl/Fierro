@@ -69,6 +69,17 @@ enum BCVelocityModels
     pistonVelocityBC = 6
 };
 
+enum BCDisplacementModels
+{
+    noDisplacementBC = 0,
+    constantDisplacementBC = 1,
+    timeVaryingDisplacementBC = 2,
+    reflectedDisplacementBC = 3,
+    zeroDisplacementBC = 4,
+    userDefinedDisplacementBC = 5,
+    pistonDisplacementBC = 6
+};
+
 // types of temperature boundary conditions
 enum BCTemperatureModels
 {
@@ -131,6 +142,18 @@ static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_
     { "piston", boundary_conditions::pistonVelocityBC }
 };
 
+// Displacement models
+static std::map<std::string, boundary_conditions::BCDisplacementModels> bc_displacement_model_map
+{
+    { "none", boundary_conditions::noDisplacementBC },
+    { "constant", boundary_conditions::constantDisplacementBC },
+    { "time_varying", boundary_conditions::timeVaryingDisplacementBC },
+    { "reflected", boundary_conditions::reflectedDisplacementBC },
+    { "fixed", boundary_conditions::zeroDisplacementBC },
+    { "user_defined", boundary_conditions::userDefinedDisplacementBC },
+    { "piston", boundary_conditions::pistonDisplacementBC }
+};
+
 
 // Temperature models
 static std::map<std::string, boundary_conditions::BCTemperatureModels> bc_temperature_model_map
@@ -191,6 +214,9 @@ struct BoundaryConditionEnums_t
     // BC model for velocity
     boundary_conditions::BCVelocityModels BCVelocityModel = boundary_conditions::noVelocityBC;    ///< Type of velocity boundary condition
 
+    // BC model for Displacement
+    boundary_conditions::BCDisplacementModels BCDisplacementModel = boundary_conditions::noDisplacementBC;    ///< Type of displacement boundary condition
+
     // BC model for temperature
     boundary_conditions::BCTemperatureModels BCTemperatureModel = boundary_conditions::noTemperatureBC;    ///< Type of temperature boundary condition
     
@@ -215,6 +241,17 @@ struct BoundaryConditionFunctions_t
         const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
         const DCArrayKokkos<double>& node_vel,
+        const double time_value,
+        const size_t rk_stage,
+        const size_t bdy_node_gid,
+        const size_t bdy_set) = NULL;
+
+    // function pointer for displacement BC's
+    void (*displacement) (const swage::Mesh& mesh,
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const RaggedRightArrayKokkos<double>& disp_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const DCArrayKokkos<double>& node_disp,
         const double time_value,
         const size_t rk_stage,
         const size_t bdy_node_gid,
@@ -246,7 +283,7 @@ struct BoundaryConditionFunctions_t
     // function pointer for stress BC's
     void (*stress) (const swage::Mesh& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-        const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
+        const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
         const ViewCArrayKokkos <double>& corner_surf_force,
         const ViewCArrayKokkos <double>& corner_surf_normal,
@@ -279,6 +316,10 @@ struct BoundaryCondition_t
     DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver_id, bc_lid)
     DCArrayKokkos<size_t> num_vel_bdy_sets_in_solver; // (solver_id)
 
+    // making a psuedo dual ragged right
+    DCArrayKokkos<size_t> disp_bdy_sets_in_solver;     // (solver_id, bc_lid)
+    DCArrayKokkos<size_t> num_disp_bdy_sets_in_solver; // (solver_id)
+
     DCArrayKokkos<size_t> stress_bdy_sets_in_solver;     // (solver_id, bc_lid)
     DCArrayKokkos<size_t> num_stress_bdy_sets_in_solver; // (solver_id)
 
@@ -300,7 +341,11 @@ struct BoundaryCondition_t
 
     // global variables for velocity boundary condition models
     RaggedRightArrayKokkos<double> velocity_bc_global_vars;  // (bc_id, vars...)
-    CArrayKokkos<size_t> num_velocity_bc_global_vars;        
+    CArrayKokkos<size_t> num_velocity_bc_global_vars;       
+    
+    // global variables for displacement boundary condition models
+    RaggedRightArrayKokkos<double> displacement_bc_global_vars;  // (bc_id, vars...)
+    CArrayKokkos<size_t> num_displacement_bc_global_vars;     
 
     // global variables for stress boundary condition models
     RaggedRightArrayKokkos<double> stress_bc_global_vars;  // (bc_id, vars...)
@@ -323,6 +368,8 @@ static std::vector<std::string> str_bc_inps
     "surface",
     "velocity_model",
     "velocity_bc_global_vars",
+    "displacement_model",
+    "displacement_bc_global_vars",
     "stress_model",
     "stress_bc_global_vars",
     "temperature_model",

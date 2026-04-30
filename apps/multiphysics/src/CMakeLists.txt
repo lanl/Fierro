@@ -74,6 +74,7 @@ add_subdirectory(material_models/tabular)
 # Boundary conditions
 message("\n ****** ADDING BOUNDARY CONDITIONS ******** \n ")
 include_directories(boundary_conditions/velocity)
+include_directories(boundary_conditions/displacement)
 include_directories(boundary_conditions/temperature)
 include_directories(boundary_conditions/stress)
 

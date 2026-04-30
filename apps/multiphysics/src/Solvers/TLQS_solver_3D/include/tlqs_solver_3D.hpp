@@ -222,9 +222,9 @@ public:
 
 
     // **** Functions defined in boundary.cpp **** //
-    void boundary_position(const swage::Mesh& mesh,
+    void boundary_displacement(const swage::Mesh& mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        DCArrayKokkos<double>& node_vel,
+        DCArrayKokkos<double>& node_disp,
         const double time_value) const;
 
     // **** Functions defined in time_integration.cpp **** //

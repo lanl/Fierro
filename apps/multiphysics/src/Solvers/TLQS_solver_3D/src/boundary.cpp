@@ -41,44 +41,44 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /// \fn boundary_position
 ///
-/// \brief Evolves the boundary according to a given velocity
+/// \brief Evolves the boundary according to a given displacement
 ///
 /// \param mesh The simulation mesh
 /// \param BoundaryConditions Boundary contains arrays of information about BCs
-/// \param node_vel The nodal velocity array
+/// \param node_disp The nodal displacement array
 /// \param time_value The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void TLQS3D::boundary_position(const swage::Mesh& mesh,
+void TLQS3D::boundary_displacement(const swage::Mesh& mesh,
     const BoundaryCondition_t& BoundaryConditions,
-    DCArrayKokkos<double>& node_vel,
+    DCArrayKokkos<double>& node_disp,
     const double time_value) const
 {
-    // size_t num_pos_bdy_sets = BoundaryConditions.num_pos_bdy_sets_in_solver.host(this->solver_id);
+    size_t num_disp_bdy_sets = BoundaryConditions.num_disp_bdy_sets_in_solver.host(this->solver_id);
 
-    // // Loop over the velocity boundary sets
-    // for (size_t bc_lid = 0; bc_lid < num_pos_bdy_sets; bc_lid++) {
+    // Loop over the displacement boundary sets
+    for (size_t bc_lid = 0; bc_lid < num_disp_bdy_sets; bc_lid++) {
+        
+        size_t bdy_set = BoundaryConditions.disp_bdy_sets_in_solver.host(this->solver_id, bc_lid);
 
-    //     size_t bdy_set = BoundaryConditions.vel_bdy_sets_in_solver.host(this->solver_id, bc_lid);
+        // Loop over boundary nodes in a boundary set
+        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
+            // get the global index for this node on the boundary
+            size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
-    //     // Loop over boundary nodes in a boundary set
-    //     FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
-    //         // get the global index for this node on the boundary
-    //         size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
-
-    //         // evaluate velocity on this boundary node
-    //         BoundaryConditions.BoundaryConditionFunctions(bdy_set).position(
-    //             mesh,
-    //             BoundaryConditions.BoundaryConditionEnums,
-    //             BoundaryConditions.velocity_bc_global_vars,
-    //             BoundaryConditions.bc_state_vars,
-    //             node_vel,
-    //             time_value,
-    //             1, // rk_stage isn't used
-    //             bdy_node_gid,
-    //             bdy_set);
-    //     }); // end for bdy_node_lid
-    // } // end for bdy_set
+            // evaluate displacement on this boundary node
+            BoundaryConditions.BoundaryConditionFunctions(bdy_set).displacement(
+                mesh,
+                BoundaryConditions.BoundaryConditionEnums,
+                BoundaryConditions.displacement_bc_global_vars,
+                BoundaryConditions.bc_state_vars,
+                node_disp,
+                time_value,
+                1, // rk_stage isn't used
+                bdy_node_gid,
+                bdy_set);
+        }); // end for bdy_node_lid
+    } // end for bdy_set
 
     return;
-} // end boundary_position function
+} // end boundary_displacement function

@@ -69,6 +69,15 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "user_defined_velocity_bc.hpp"
 #include "zero_velocity_bc.hpp"
 
+// displacement bc files
+#include "constant_displacement_bc.hpp"
+#include "no_displacement_bc.hpp"
+#include "piston_displacement_bc.hpp"
+#include "reflected_displacement_bc.hpp"
+#include "time_varying_displacement_bc.hpp"
+#include "user_defined_displacement_bc.hpp"
+#include "zero_displacement_bc.hpp"
+
 
 // temperature bc files
 #include "constant_temp_bc.hpp"
@@ -113,18 +122,21 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
     // --- BC velocity ---
     // stores the velocity bdy node lists per solver, in the future, this needs to be a DualRaggedRight
-    BoundaryConditions.vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "vel_bdy_sets_in_solver");  
+    BoundaryConditions.vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "vel_bdy_sets_in_solver");
+    BoundaryConditions.disp_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "disp_bdy_sets_in_solver");  
     BoundaryConditions.temperature_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "temperature_bdy_sets_in_solver");
     // this stores the number of bdy sets for a solver
    
 
     // this stores the number of vel bdy sets for a solver
-    BoundaryConditions.num_vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_vel_bdy_sets_in_solver");   
+    BoundaryConditions.num_vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_vel_bdy_sets_in_solver");
+    BoundaryConditions.num_disp_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_disp_bdy_sets_in_solver");   
     BoundaryConditions.num_temperature_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_temperature_bdy_sets_in_solver");
     
     // set the storage counter to zero
     for(size_t solver_id=0; solver_id<num_solvers; solver_id++){
         BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id) = 0;
+        BoundaryConditions.num_disp_bdy_sets_in_solver.host(solver_id) = 0;
         BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id) = 0;
     } // end for
 
@@ -141,12 +153,14 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
     // temporary arrays for boundary condition variables
     DCArrayKokkos<double> tempVelocityBCGlobalVars (num_bcs, 100, "temporary_velocity_bc_global_values");
+    DCArrayKokkos<double> tempDisplacementBCGlobalVars (num_bcs, 100, "temporary_displacement_bc_global_values");
 
     DCArrayKokkos<double> tempTemperatureBCGlobalVars (num_bcs, 100, "temporary_temperature_bc_global_values");
     DCArrayKokkos<double> tempStressBCGlobalVars (num_bcs, 100, "temporary_stress_bc_global_values");
     // DCArrayKokkos<double> tempHeatFluxBCGlobalVars (num_bcs, 100, "temporary_heat_flux_bc_global_values");
     
-    BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars"); 
+    BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars");
+    BoundaryConditions.num_displacement_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_displacement_bc_global_vars"); 
     BoundaryConditions.num_temperature_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_temperature_bc_global_vars");
     BoundaryConditions.num_stress_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_stress_bc_global_vars");
     // BoundaryConditions.num_heat_flux_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_heat_flux_bc_global_vars"); 
@@ -158,6 +172,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     // initialize the num of global vars to 0 for all models
     FOR_ALL(bc_id, 0, num_bcs, {
         BoundaryConditions.num_velocity_bc_global_vars(bc_id) = 0;
+        BoundaryConditions.num_displacement_bc_global_vars(bc_id) = 0;
 
         BoundaryConditions.num_temperature_bc_global_vars(bc_id) = 0;
         BoundaryConditions.num_stress_bc_global_vars(bc_id) = 0;
@@ -309,6 +324,98 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     }
 
                     throw std::runtime_error("**** Boundary Condition Velocity Model Not Understood ****");
+                } // end if
+            } // type
+
+            else if (a_word.compare("displacement_model") == 0) {
+                
+                // Note: solver_id was retrieved at the top of the bc_id loop
+
+                // find out how many displacement bdy sets have been saved 
+                size_t num_saved = BoundaryConditions.num_disp_bdy_sets_in_solver.host(solver_id);
+                BoundaryConditions.disp_bdy_sets_in_solver.host(solver_id, num_saved) = bc_id;
+                BoundaryConditions.num_disp_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
+
+                std::string displacement_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+
+                auto map = bc_displacement_model_map; 
+
+                // set the displacement_model
+                if (map.find(displacement_model) != map.end()) {
+                    auto bc_displacement_model = map[displacement_model];
+
+                    // bc_displacement_model_map[displacement_model] returns enum value, e.g., boundary_conditions::displacement_constant
+                    switch(map[displacement_model]){
+
+                        case boundary_conditions::constantDisplacementBC :
+                            std::cout << "Setting constant displacement bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::constantDisplacementBC ;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &ConstantDisplacementBC::displacement;
+                            });
+                            break;
+
+                        case boundary_conditions::timeVaryingDisplacementBC:
+                            std::cout << "Setting time varying displacement bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::timeVaryingDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &TimeVaryingDisplacementBC::displacement;
+                            });
+                            break;
+                        
+                        case boundary_conditions::reflectedDisplacementBC:
+                            std::cout << "Setting reflected displacement bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::reflectedDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &ReflectedDisplacementBC::displacement;
+                            });
+                            break;
+
+                        case boundary_conditions::zeroDisplacementBC:
+                            std::cout << "Setting zero displacement bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::zeroDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &ZeroDisplacementBC::displacement;
+                            });
+                            break;
+                        case boundary_conditions::userDefinedDisplacementBC:
+                            std::cout << "Setting user defined displacement bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::userDefinedDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &UserDefinedDisplacementBC::displacement;
+                            });
+                            break;
+                        case boundary_conditions::pistonDisplacementBC:
+                            std::cout << "Setting piston displacement bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::pistonDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &PistonDisplacementBC::displacement;
+                            });
+                            break;                        
+                        default:
+                            
+                            std::cout << "ERROR: invalid displacement boundary condition input: " << displacement_model << std::endl;
+                            throw std::runtime_error("**** Displacement BC model Not Understood ****");
+                            break;
+                        
+                    } // end switch
+
+                }
+                else{
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << displacement_model << std::endl;
+                    std::cout << "Valid options are: " << std::endl;
+
+                    for (const auto& pair : map) {
+                        std::cout << "\t" << pair.first << std::endl;
+                    }
+
+                    throw std::runtime_error("**** Boundary Condition Displacement Model Not Understood ****");
                 } // end if
             } // type
 
@@ -608,6 +715,32 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 } // end loop over global vars
             } // end else if on velocity_bc_global_vars
 
+
+            // Set the global variables for displacement boundary condition models
+            else if (a_word.compare("displacement_bc_global_vars") == 0) {
+                Yaml::Node & disp_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+
+                size_t num_global_vars = disp_bc_global_vars_yaml.Size();
+
+                if(num_global_vars > 100){
+                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 displacement global vars in the input file ****");
+                } // end check on num_global_vars
+
+                RUN({ 
+                    BoundaryConditions.num_displacement_bc_global_vars(bc_id) = num_global_vars;
+                });
+
+                // store the global eos model parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double displacement_bc_var = bc_yaml[bc_id]["boundary_condition"]["displacement_bc_global_vars"][global_var_id].As<double>();
+                    
+                    RUN({
+                        tempDisplacementBCGlobalVars(bc_id, global_var_id) = displacement_bc_var;
+                    });
+
+                } // end loop over global vars
+            } // end else if on displacement_bc_global_vars
+
             
             // Set the global variables for temperature boundary condition models
             else if (a_word.compare("temperature_bc_global_vars") == 0) {
@@ -644,7 +777,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 size_t num_global_vars = stress_bc_global_vars_yaml.Size();
 
                 if(num_global_vars>100){
-                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 velocity global vars in the input file ****");
+                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 stress global vars in the input file ****");
                 } // end check on num_global_vars
 
                 RUN({ 
@@ -684,6 +817,8 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
      // allocate ragged right memory to hold the model global variables
     BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
 
+    BoundaryConditions.displacement_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_displacement_bc_global_vars, "BoundaryConditions.displacement_bc_global_vars");
+
     BoundaryConditions.temperature_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_temperature_bc_global_vars, "BoundaryConditions.temperature_bc_global_vars");
 
     BoundaryConditions.stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_stress_bc_global_vars, "BoundaryConditions.stress_bc_global_vars");
@@ -696,6 +831,10 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
         for (size_t var_lid = 0; var_lid < BoundaryConditions.num_velocity_bc_global_vars(bc_id); var_lid++){
             BoundaryConditions.velocity_bc_global_vars(bc_id, var_lid) = tempVelocityBCGlobalVars(bc_id, var_lid);
+        } // end for eos var_lid
+
+        for (size_t var_lid = 0; var_lid < BoundaryConditions.num_displacement_bc_global_vars(bc_id); var_lid++){
+            BoundaryConditions.displacement_bc_global_vars(bc_id, var_lid) = tempDisplacementBCGlobalVars(bc_id, var_lid);
         } // end for eos var_lid
 
         for (size_t var_lid = 0; var_lid < BoundaryConditions.num_temperature_bc_global_vars(bc_id); var_lid++){

@@ -102,6 +102,15 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     graphics_times(0) = this->time_start; // was zero
     double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
 
+    boundary_displacement(mesh, BoundaryConditions, State.node.displacement, time_value); // Time value = 0.0;
+    // TESTING DELETE THIS
+    for (int i = 0; i < State.node.displacement.dims(0); i++) {
+        for (int j = 0; j < State.node.displacement.dims(1); j++) {
+            std::cout << State.node.displacement(i,j) << "    ";
+        }
+        std::cout << std::endl;
+    } 
+
     /// WARNING WARNING WARNING: REMOVE BEFORE BUILDING SOLVER, THIS IS A PLACEHOLDER FOR THE TLQS SOLVER
     std::cout << "Sucessfully called the TLQS execute function" << std::endl;
     return; 
