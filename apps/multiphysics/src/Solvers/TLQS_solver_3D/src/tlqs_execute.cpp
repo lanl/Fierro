@@ -166,7 +166,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // getting element arrays
             // looping through materials
-            for (int mat_id; mat_id < num_mats; mat_id++) {
+            for (int mat_id = 0; mat_id < num_mats; mat_id++) {
                 
                 // parallel loop through elements
                 FOR_ALL(elem, 0, State.MaterialToMeshMaps.num_mat_elems.host(mat_id), {
@@ -183,7 +183,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     ViewCArrayKokkos<double> curr_F_elem(&F_elem(elem_id),3*mesh.num_nodes_in_elem);
 
                     // looping through material points
-                    for (int mat_pt; mat_pt < mesh.num_gauss_in_elem; mat_pt++) {
+                    for (int mat_pt = 0; mat_pt < mesh.num_gauss_in_elem; mat_pt++) {
                         // setting up view and getting material matrix
                         ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.gauss_point_grad_basis(mat_pt),ref_elem.num_basis, mesh.num_dims);
                         Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
