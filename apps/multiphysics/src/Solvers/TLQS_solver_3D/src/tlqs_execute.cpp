@@ -65,12 +65,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // double time_initial = SimulationParamaters.dynamic_options.time_initial;
     double time_final   = this->time_end; //SimulationParamaters.dynamic_options.time_final;
-    double dt_min   = SimulationParamaters.dynamic_options.dt_min;
-    double dt_max   = SimulationParamaters.dynamic_options.dt_max;
     double dt_start = SimulationParamaters.dynamic_options.dt_start;
-    double dt_cfl   = SimulationParamaters.dynamic_options.dt_cfl;
 
-    int rk_num_stages = SimulationParamaters.dynamic_options.rk_num_stages;
     int cycle_stop    = SimulationParamaters.dynamic_options.cycle_stop;
 
     // initialize time, time_step, and cycles
@@ -102,18 +98,11 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     graphics_times(0) = this->time_start; // was zero
     double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
 
-    boundary_displacement(mesh, BoundaryConditions, State.node.displacement, time_value); // Time value = 0.0;
-    // TESTING DELETE THIS
-    for (int i = 0; i < State.node.displacement.dims(0); i++) {
-        for (int j = 0; j < State.node.displacement.dims(1); j++) {
-            std::cout << State.node.displacement(i,j) << "    ";
-        }
-        std::cout << std::endl;
-    } 
-
-    /// WARNING WARNING WARNING: REMOVE BEFORE BUILDING SOLVER, THIS IS A PLACEHOLDER FOR THE TLQS SOLVER
+    // *****************************************************************************************************
+    /* /// WARNING WARNING WARNING: REMOVE BEFORE BUILDING SOLVER, THIS IS A PLACEHOLDER FOR THE TLQS SOLVER
     std::cout << "Sucessfully called the TLQS execute function" << std::endl;
-    return; 
+    return;  */
+    // *****************************************************************************************************
    
     // Apply initial boundary conditions
 
@@ -148,7 +137,12 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     graphics_time = time_value + graphics_dt_ival;
 
-    // loop over the max number of time integration cycles
+    // ******************************************************************************************************
+    // setting max_iter, need to figure out either a good general number or make it a user set with a default
+    // ******************************************************************************************************
+    int max_iter = 500;
+
+    // loop over the max number of load steps
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
         // stop calculation if flag
         if (stop_calc == 1) {
@@ -156,32 +150,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         }
 
         cached_pregraphics_dt = dt;
-
-        // the smallest time step across all materials
-        double min_dt_calc = dt_max;
-
-        // calculating time step per material
-        for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-
-            // initialize the material dt
-            double dt_mat = dt;
-
-            // Initialize timestep 
-            timestep_init(State.node.coords,
-                        State.node.coords_n0,
-                        State.node.vel,
-                        State.node.vel_n0,
-                        State.MaterialPoints.sie,
-                        State.MaterialPoints.sie_n0,
-                        State.MaterialPoints.stress,
-                        State.MaterialPoints.stress_n0,
-                        mesh.num_dims, 
-                        mesh.num_elems, 
-                        mesh.num_nodes, 
-                        mat_id);
-
-    
-        } // end for loop over all mats
         
         // Print the initial time step and time value
         if (cycle == 0) {
@@ -193,11 +161,43 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         } // end if
 
 
-        // ---------------------------------------------------------------------
-        //  integrate the solution forward 
-        // ---------------------------------------------------------------------
+        // start Picard iteration loop
+        for (int iter = 0; iter < max_iter; iter++) {
 
-       
+            // getting element arrays
+            // looping through materials
+            for (int mat_id; mat_id < num_mats; mat_id++) {
+                
+                // parallel loop through elements
+                FOR_ALL(elem, 0, State.MaterialToMeshMaps.num_mat_elems.host(mat_id), {
+
+                    // setting up views and temp memory
+                    const size_t elem_id = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
+                    ViewCArrayKokkos<size_t> nodes_in_curr_elem(&mesh.nodes_in_elem(elem_id),mesh.num_nodes_in_elem);
+                    double grad_u[3][3];
+                    double inv_J[3][3];
+                    double det_J;
+                    double PK2_curr_config[6];
+                    double material_matrix[6][6];
+                    ViewCArrayKokkos<double> curr_K_elem(&K_elem(elem_id),3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
+                    ViewCArrayKokkos<double> curr_F_elem(&F_elem(elem_id),3*mesh.num_nodes_in_elem);
+
+                    // looping through material points
+                    for (int mat_pt; mat_pt < mesh.num_gauss_in_elem; mat_pt++) {
+                        // setting up view and getting material matrix
+                        ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.gauss_point_grad_basis(mat_pt),ref_elem.num_basis, mesh.num_dims);
+                        Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
+
+                        // tallying to element array
+                        get_gradients(material_matrix, nodes_in_curr_elem, elem_id, State.node.coords_t0, State.node.displacement, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
+                        tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, ref_elem.gauss_point_weights(mat_pt), PK2_curr_config, curr_K_elem, curr_F_elem);
+                    }
+
+                });
+
+            }
+
+        } // end Picard iteration loop
 
         // increment the time
         time_value += dt;
