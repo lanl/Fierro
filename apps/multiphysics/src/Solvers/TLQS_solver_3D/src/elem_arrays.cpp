@@ -36,7 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 KOKKOS_FUNCTION
-void get_gradients(
+void TLQS3D::get_gradients(
     const double material_matrix[6][6],
     ViewCArrayKokkos <size_t>& nodes_in_elem,
     const size_t elem_id,
@@ -131,7 +131,7 @@ void get_gradients(
 }
 
 KOKKOS_FUNCTION
-void tally_elem_arrays(
+void TLQS3D::tally_elem_arrays(
     const double material_matrix[6][6],
     const double grad_u[3][3],
     const double inv_J[3][3],

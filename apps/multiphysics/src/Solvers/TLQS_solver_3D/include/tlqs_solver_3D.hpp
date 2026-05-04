@@ -270,7 +270,7 @@ public:
         ViewCArrayKokkos <double>& gauss_point_grad_basis,
         double gauss_point_weight,
         const double PK2_curr_config[6],
-        ViewCArrayKokkos <double> Kel,
+        ViewCArrayKokkos <double>& Kel,
         ViewCArrayKokkos <double>& Fel
     );
         

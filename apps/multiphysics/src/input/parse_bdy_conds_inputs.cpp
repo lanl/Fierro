@@ -70,13 +70,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "zero_velocity_bc.hpp"
 
 // displacement bc files
-#include "constant_displacement_bc.hpp"
+#include "total_displacement_bc.hpp"
 #include "no_displacement_bc.hpp"
 #include "piston_displacement_bc.hpp"
 #include "reflected_displacement_bc.hpp"
-#include "time_varying_displacement_bc.hpp"
 #include "user_defined_displacement_bc.hpp"
-#include "zero_displacement_bc.hpp"
+#include "fixed_displacement_bc.hpp"
 
 
 // temperature bc files
@@ -305,6 +304,14 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::pistonVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &PistonVelocityBC::velocity;
                             });
+                            break;    
+                        case boundary_conditions::rollerVelocityBC:
+                            std::cout << "Setting piston velocity bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::reflectedVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ReflectedVelocityBC::velocity;
+                            });
                             break;                        
                         default:
                             
@@ -347,24 +354,15 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     // bc_displacement_model_map[displacement_model] returns enum value, e.g., boundary_conditions::displacement_constant
                     switch(map[displacement_model]){
 
-                        case boundary_conditions::constantDisplacementBC :
+                        case boundary_conditions::totalDisplacementBC :
                             std::cout << "Setting constant displacement bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::constantDisplacementBC ;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &ConstantDisplacementBC::displacement;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::totalDisplacementBC ;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &TotalDisplacementBC::displacement;
                             });
                             break;
 
-                        case boundary_conditions::timeVaryingDisplacementBC:
-                            std::cout << "Setting time varying displacement bc " << std::endl;
-                            
-                            RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::timeVaryingDisplacementBC;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &TimeVaryingDisplacementBC::displacement;
-                            });
-                            break;
-                        
                         case boundary_conditions::reflectedDisplacementBC:
                             std::cout << "Setting reflected displacement bc " << std::endl;
                             
@@ -374,12 +372,12 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             });
                             break;
 
-                        case boundary_conditions::zeroDisplacementBC:
+                        case boundary_conditions::fixedDisplacementBC:
                             std::cout << "Setting zero displacement bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::zeroDisplacementBC;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &ZeroDisplacementBC::displacement;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::fixedDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &FixedDisplacementBC::displacement;
                             });
                             break;
                         case boundary_conditions::userDefinedDisplacementBC:
@@ -397,7 +395,15 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::pistonDisplacementBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &PistonDisplacementBC::displacement;
                             });
-                            break;                        
+                            break;
+                        case boundary_conditions::rollerDisplacementBC:
+                            std::cout << "Setting reflected displacement bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::reflectedDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &ReflectedDisplacementBC::displacement;
+                            });
+                            break;                   
                         default:
                             
                             std::cout << "ERROR: invalid displacement boundary condition input: " << displacement_model << std::endl;

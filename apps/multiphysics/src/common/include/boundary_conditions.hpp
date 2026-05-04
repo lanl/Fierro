@@ -66,18 +66,19 @@ enum BCVelocityModels
     reflectedVelocityBC = 3,
     zeroVelocityBC = 4,
     userDefinedVelocityBC = 5,
-    pistonVelocityBC = 6
+    pistonVelocityBC = 6,
+    rollerVelocityBC = 7
 };
 
 enum BCDisplacementModels
 {
     noDisplacementBC = 0,
-    constantDisplacementBC = 1,
-    timeVaryingDisplacementBC = 2,
-    reflectedDisplacementBC = 3,
-    zeroDisplacementBC = 4,
-    userDefinedDisplacementBC = 5,
-    pistonDisplacementBC = 6
+    totalDisplacementBC = 1,
+    reflectedDisplacementBC = 2,
+    fixedDisplacementBC = 3,
+    userDefinedDisplacementBC = 4,
+    pistonDisplacementBC = 5,
+    rollerDisplacementBC = 6
 };
 
 // types of temperature boundary conditions
@@ -139,19 +140,20 @@ static std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_
     { "reflected", boundary_conditions::reflectedVelocityBC },
     { "fixed", boundary_conditions::zeroVelocityBC },
     { "user_defined", boundary_conditions::userDefinedVelocityBC },
-    { "piston", boundary_conditions::pistonVelocityBC }
+    { "piston", boundary_conditions::pistonVelocityBC },
+    { "roller", boundary_conditions::rollerVelocityBC }
 };
 
 // Displacement models
 static std::map<std::string, boundary_conditions::BCDisplacementModels> bc_displacement_model_map
 {
     { "none", boundary_conditions::noDisplacementBC },
-    { "constant", boundary_conditions::constantDisplacementBC },
-    { "time_varying", boundary_conditions::timeVaryingDisplacementBC },
+    { "total", boundary_conditions::totalDisplacementBC },
     { "reflected", boundary_conditions::reflectedDisplacementBC },
-    { "fixed", boundary_conditions::zeroDisplacementBC },
+    { "fixed", boundary_conditions::fixedDisplacementBC },
     { "user_defined", boundary_conditions::userDefinedDisplacementBC },
-    { "piston", boundary_conditions::pistonDisplacementBC }
+    { "piston", boundary_conditions::pistonDisplacementBC },
+    { "roller", boundary_conditions::rollerDisplacementBC }
 };
 
 

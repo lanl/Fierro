@@ -39,7 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct BoundaryConditionEnums_t;
 
-namespace ConstantDisplacementBC
+namespace TotalDisplacementBC
 {
 /////////////////////////////////////////////////////////////////////////////
 ///

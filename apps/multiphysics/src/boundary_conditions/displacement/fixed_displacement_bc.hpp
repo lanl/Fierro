@@ -55,7 +55,7 @@ struct BoundaryConditionEnums_t;
 /// \param Boundary set local id
 ///
 /////////////////////////////////////////////////////////////////////////////
-namespace ZeroDisplacementBC
+namespace FixedDisplacementBC
 {
 // add an enum for boundary statevars and global vars
 
