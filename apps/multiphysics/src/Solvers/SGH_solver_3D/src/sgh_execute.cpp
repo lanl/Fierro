@@ -245,6 +245,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                          tiny,
                          mat_id);
 
+            // NOTE: We need to use this same sort of pattern to calculate the max sounds speed (and minimum phi) for the 
+
             // save the smallest dt of all materials
             min_dt_calc = fmin(dt_mat, min_dt_calc);
         } // end for loop over all mats
@@ -326,6 +328,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             State.node.coords,
                             State.node.vel,
                             State.GaussPoints.vol);
+
+                // WARNING: Add a kernel to compute phi (shock_detector), and add MPI comms here based on the element communication plan to 
+                // (call the function). We want to add the shock detector function under material models. 
 
                 set_corner_force_zero(mesh, State.corner.force);
 
@@ -481,13 +486,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // ---- apply contact boundary conditions to the boundary patches----
             boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);
-            
-            MPI_Barrier(MPI_COMM_WORLD);
 
+            // ----- Communication of the nodal velocity -----
             State.node.vel.communicate();
-            State.node.vel_n0.communicate();
-
-            MPI_Barrier(MPI_COMM_WORLD);
 
             for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
                 // ---- Update specific internal energy in the elements ----
@@ -810,9 +811,10 @@ double sum_domain_kinetic_energy(
 {
     // extensive KE
     double KE_sum = 0.0;
-    double KE_loc_sum;
+    double KE_loc_sum = 0.0;
+    double KE_global_sum = 0.0;
 
-    FOR_REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
+    FOR_REDUCE_SUM(node_gid, 0, mesh.num_owned_nodes, KE_loc_sum, {
         double ke = 0;
 
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
@@ -824,7 +826,9 @@ double sum_domain_kinetic_energy(
     }, KE_sum);
     Kokkos::fence();
 
-    return 0.5 * KE_sum;
+    MPI_Allreduce(&KE_sum, &KE_global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    return 0.5 * KE_global_sum;
 } // end function
 
 // a function to tally the material point masses

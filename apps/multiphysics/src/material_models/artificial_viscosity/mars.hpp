@@ -212,6 +212,8 @@ namespace MARSDissipationModel {
             }
         } // end if
 
+
+        // WARNING: This needs to be its own kernel pulled out of here (from here to 282 (include curl limiter()))
         // ---- Calculate the shock detector for the Riemann-solver ----
         //
         // The dissipation from the Riemann problem is limited by phi
@@ -276,6 +278,8 @@ namespace MARSDissipationModel {
 
         // if phi_floor>0, ensure a small amount of dissipation is present
         phi = fmax(phi_floor, phi);
+
+        // WARNING: phi needs to be a guass point array stored on the ELEMENT field)
 
 
         // loop over the each corner in the element

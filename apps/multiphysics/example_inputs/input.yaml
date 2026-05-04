@@ -27,7 +27,7 @@
 # ---------------------------------------------------------------------------
 dynamic_options:
 
-    time_final: 0.5 # Final simulation time (microseconds).
+    time_final: 10.0 # Final simulation time (microseconds).
     dt_min: 1.e-8 # Minimum adaptive timestep bound (microseconds).
     dt_max: 1.e-2 # Maximum adaptive timestep bound (microseconds).
     dt_start: 1.e-5 # Initial timestep guess (microseconds).
@@ -43,13 +43,9 @@ mesh_options:
     # Box origin in x,y,z (cm).
     origin: [0.0, 0.0, 0.0]
     # Box side lengths in x,y,z (cm).
-    # length: [1.2, 0.04, 0.04] # x
-    # length: [0.04, 1.2, 0.04] # y
-    length: [0.04, 0.04, 1.2] # z
+    length: [1.2, 1.2, 1.2]
     # Element counts [nx, ny, nz].
-    #num_elems: [60, 1, 1]
-    #num_elems: [1, 60, 1]
-    num_elems: [1, 1, 60]
+    num_elems: [30, 30, 30]
 
 
 # ---------------------------------------------------------------------------
@@ -60,7 +56,7 @@ output_options:
     # Output format for visualization.
     output_file_format: viz # only options are viz or viz_and_state
     # Amount of simulated time between visualization dumps (microseconds).
-    graphics_time_step: 0.01
+    graphics_time_step: 0.5
     # graphics_iteration_step: 10
     elem_field_outputs:
         - den
@@ -139,60 +135,6 @@ boundary_conditions:
             type: z_plane
             # Location of the symmetry plane (cm).
             plane_position: 0.0
-            # Tolerance used to match nodes to the specified plane.
-            tolerance: 1.e-5
-        # Reflect velocity about the z=0 plane.
-        velocity_model: reflected
-        velocity_bc_global_vars:
-            # z-plane normal is (+z).
-            - 0   # x
-            - 0   # y
-            - 1   # z
-
-
-    # Tag X plane
-    - boundary_condition:
-        solver_id: 0
-        surface: 
-            type: x_plane
-            # Location of the symmetry plane (cm).
-            plane_position: 0.04
-            # Tolerance used to match nodes to the specified plane.
-            tolerance: 1.e-5
-        # SGH reflective BC: remove the normal component of velocity along
-        # the specified direction and reflect about the plane.
-        velocity_model: reflected
-        velocity_bc_global_vars:
-            # Direction defining the plane normal (unit vector recommended):
-            # x-plane normal is (+x).
-            - 1   # x
-            - 0   # y
-            - 0   # z
-
-    # Tag Y plane
-    - boundary_condition:
-        solver_id: 0
-        surface: 
-            type: y_plane
-            # Location of the symmetry plane (cm).
-            plane_position: 0.04
-            # Tolerance used to match nodes to the specified plane.
-            tolerance: 1.e-5
-        # Reflect velocity about the y=0 plane.
-        velocity_model: reflected
-        velocity_bc_global_vars:
-            # y-plane normal is (+y).
-            - 0   # x
-            - 1   # y
-            - 0   # z
-
-    # Tag z plane
-    - boundary_condition:
-        solver_id: 0
-        surface: 
-            type: z_plane
-            # Location of the symmetry plane (cm).
-            plane_position: 1.2
             # Tolerance used to match nodes to the specified plane.
             tolerance: 1.e-5
         # Reflect velocity about the z=0 plane.
@@ -297,4 +239,3 @@ regions:
             # Single-material case: 1 everywhere.
             type: uniform
             value: 1.0
-

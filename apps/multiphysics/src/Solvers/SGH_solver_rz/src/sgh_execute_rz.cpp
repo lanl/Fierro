@@ -686,7 +686,9 @@ void calc_node_areal_mass_rz(const swage::Mesh& mesh,
 
         if (node_coords(node_gid, 1) < tiny) {
             // node is on the axis
-
+            // WARNING WARNING WARNING: MPI PAIN HERE, COME BACK TO THIS
+            // We have to communicate node_mass (which is actually the areal mass)
+            // To get the real mass you have to multiply by the radius.
             for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_node(node_gid); node_lid++) {
                 size_t node_neighbor_gid = mesh.nodes_in_node(node_gid, node_lid);
 

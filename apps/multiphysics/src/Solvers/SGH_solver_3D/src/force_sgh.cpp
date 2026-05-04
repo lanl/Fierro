@@ -101,6 +101,9 @@ void SGH3D::get_force(const Material_t& Materials,
         // get elem gid
         size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
+        // WARNING: We need to calculate phi (limiter) as a gauss point quantity (instead of a material point quantity) and communicated
+        // and passed into the dissipation model by the elem_gid. We need to also rename the variable to (dissipation limiter)
+
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_sid = mat_elem_sid;
 
