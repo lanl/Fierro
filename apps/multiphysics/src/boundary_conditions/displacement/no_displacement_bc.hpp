@@ -59,14 +59,16 @@ namespace NoDisplacementBC
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 static void displacement(const swage::Mesh& mesh,
-    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& disp_bc_global_vars,
-    const DCArrayKokkos<double>& bc_state_vars,
-    const DCArrayKokkos<double>& node_disp,
-    const double time_value,
-    const size_t rk_stage,
-    const size_t bdy_node_gid,
-    const size_t bdy_set)
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const RaggedRightArrayKokkos<double>& disp_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<double>& F_elem,
+        const double time_value,
+        const double time_start,
+        const double time_end,
+        const size_t bdy_node_gid,
+        const size_t bdy_set)
 {
     // this is a blank function by design
     return;

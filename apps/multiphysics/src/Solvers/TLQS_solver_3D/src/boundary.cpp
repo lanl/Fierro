@@ -51,8 +51,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void TLQS3D::boundary_displacement(const swage::Mesh& mesh,
     const BoundaryCondition_t& BoundaryConditions,
-    DCArrayKokkos<double>& node_disp,
-    const double time_value) const
+    const CArrayKokkos<double>& K_elem,
+    const CArrayKokkos<double>& F_elem,
+    const double time_value,
+    const double time_start,
+    const double time_end) const
 {
     size_t num_disp_bdy_sets = BoundaryConditions.num_disp_bdy_sets_in_solver.host(this->solver_id);
 
@@ -72,9 +75,11 @@ void TLQS3D::boundary_displacement(const swage::Mesh& mesh,
                 BoundaryConditions.BoundaryConditionEnums,
                 BoundaryConditions.displacement_bc_global_vars,
                 BoundaryConditions.bc_state_vars,
-                node_disp,
+                K_elem,
+                F_elem,
                 time_value,
-                1, // rk_stage isn't used
+                time_start,
+                time_end,
                 bdy_node_gid,
                 bdy_set);
         }); // end for bdy_node_lid

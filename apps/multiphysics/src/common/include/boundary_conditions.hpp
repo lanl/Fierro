@@ -253,9 +253,11 @@ struct BoundaryConditionFunctions_t
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& disp_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
-        const DCArrayKokkos<double>& node_disp,
+        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<double>& F_elem,
         const double time_value,
-        const size_t rk_stage,
+        const double time_start,
+        const double time_end,
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
 

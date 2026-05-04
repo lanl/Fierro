@@ -223,9 +223,12 @@ public:
 
     // **** Functions defined in boundary.cpp **** //
     void boundary_displacement(const swage::Mesh& mesh,
-        const BoundaryCondition_t& BoundaryConditions,
-        DCArrayKokkos<double>& node_disp,
-        const double time_value) const;
+    const BoundaryCondition_t& BoundaryConditions,
+    const CArrayKokkos<double>& K_elem,
+    const CArrayKokkos<double>& F_elem,
+    const double time_value,
+    const double time_start,
+    const double time_end) const;
 
     // **** Functions defined in time_integration.cpp **** //
     void timestep_init(

@@ -70,9 +70,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "zero_velocity_bc.hpp"
 
 // displacement bc files
-#include "total_displacement_bc.hpp"
 #include "no_displacement_bc.hpp"
-#include "piston_displacement_bc.hpp"
 #include "reflected_displacement_bc.hpp"
 #include "user_defined_displacement_bc.hpp"
 #include "fixed_displacement_bc.hpp"
@@ -358,8 +356,8 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             std::cout << "Setting constant displacement bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::totalDisplacementBC ;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &TotalDisplacementBC::displacement;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::fixedDisplacementBC ;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &FixedDisplacementBC::displacement;
                             });
                             break;
 
@@ -392,8 +390,8 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             std::cout << "Setting piston displacement bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::pistonDisplacementBC;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &PistonDisplacementBC::displacement;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::reflectedDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &ReflectedDisplacementBC::displacement;
                             });
                             break;
                         case boundary_conditions::rollerDisplacementBC:

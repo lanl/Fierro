@@ -61,23 +61,41 @@ namespace ReflectedDisplacementBC
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 static void displacement(const swage::Mesh& mesh,
-    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& disp_bc_global_vars,
-    const DCArrayKokkos<double>& bc_state_vars,
-    const DCArrayKokkos<double>& node_disp,
-    const double time_value,
-    const size_t rk_stage,
-    const size_t bdy_node_gid,
-    const size_t bdy_set)
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const RaggedRightArrayKokkos<double>& disp_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<double>& F_elem,
+        const double time_value,
+        const double time_start,
+        const double time_end,
+        const size_t bdy_node_gid,
+        const size_t bdy_set)
 {
-    double mag = 0.0;
-    for (size_t dim = 0; dim<mesh.num_dims; dim++){
-        mag += disp_bc_global_vars(bdy_set,dim)*disp_bc_global_vars(bdy_set,dim);
-    } // will make sure it's a unit vector
+    const size_t constrained_dir  = static_cast<size_t>(disp_bc_global_vars(bdy_set, 0));
+    const size_t num_elems_in_node = mesh.elems_in_node.stride(bdy_node_gid);
+    const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
+    const size_t num_dof_in_elem   = 3 * num_nodes_in_elem;
 
-    // Remove the displacement in the specified direction
-    for (size_t dim = 0; dim<mesh.num_dims; dim++){
-        node_disp(bdy_node_gid, dim) -= node_disp(bdy_node_gid, dim)*disp_bc_global_vars(bdy_set,dim)/mag;
+    for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
+        const size_t elem_gid = mesh.elems_in_node(bdy_node_gid, elem_lid);
+
+        // Find the local node index for bdy_node_gid within this element
+        size_t local_node_lid = num_nodes_in_elem; // sentinel
+        for (size_t a = 0; a < num_nodes_in_elem; a++) {
+            if (mesh.nodes_in_elem(elem_gid, a) == bdy_node_gid) {
+                local_node_lid = a;
+                break;
+            }
+        }
+
+        const size_t constrained_dof = 3 * local_node_lid + constrained_dir;
+
+        for (size_t col = 0; col < num_dof_in_elem; col++)
+            K_elem(elem_gid, constrained_dof, col) = 0.0;
+
+        for (size_t row = 0; row < num_dof_in_elem; row++)
+            K_elem(elem_gid, row, constrained_dof) = 0.0;
     }
 
     return;
