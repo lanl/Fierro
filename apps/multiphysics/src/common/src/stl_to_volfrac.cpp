@@ -270,7 +270,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac,
     // read .STL file
 
 
-    printf("Reading STL file \n\n");
+    printf("Reading STL file \n");
 
     auto [normal_host, 
             v0X_host, v0Y_host, v0Z_host, 

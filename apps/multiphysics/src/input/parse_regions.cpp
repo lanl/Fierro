@@ -1412,6 +1412,14 @@ void parse_regions(Yaml::Node& root,
                                         region_fills(reg_id).volume = region::readVoxelFile;
                                     });
                                     break;
+                                
+                                case region::readSTLFile:
+                                    std::cout << "Setting volume fill type to readSTLFile " << std::endl;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::readSTLFile;
+                                    });
+                                    break;
+
                                 case region::readVTUFile:
                                     std::cout << "Setting volume fill type to readVTUFile " << std::endl;
                                     RUN({
@@ -1524,13 +1532,24 @@ void parse_regions(Yaml::Node& root,
                                     "When using a file to initialize a region, a file_path must be set to point to the mesh file\n"
                                     "********************************************************************************************\n");
                 }
+                
+                // if the following is true, stop simulation; must add all mesh read options
+                if (region_fills(reg_id).volume == region::readSTLFile) {
+                    Kokkos::abort("\n********************************************************************************************\n"
+                                    "ERROR: \n"
+                                    "When using a file to initialize a region, a file_path must be set to point to the mesh file\n"
+                                    "********************************************************************************************\n");
+                }
+
             });
         } // end if check
 
         // check to see if a file path was set
         if(region_fills_host(reg_id).file_path.size()>0){
+
             RUN({
-                if (region_fills(reg_id).volume != region::readVoxelFile){  
+                if (region_fills(reg_id).volume != region::readVoxelFile &&
+                    region_fills(reg_id).volume != region::readSTLFile){  
                     // this means it is a geometric definition of the region
                     Kokkos::abort("\n********************************************************************************************\n"
                                     "ERROR: \n"
