@@ -160,13 +160,15 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         } // end if
 
-
+        displacement_step.set_values(0);
         // start Picard iteration loop
         for (int iter = 0; iter < max_iter; iter++) {
 
             // ***************************************************
             // get element arrays
             // ***************************************************
+            K_elem.set_values(0);
+            F_elem.set_values(0);
 
             // looping through materials
             for (int mat_id = 0; mat_id < num_mats; mat_id++) {
@@ -192,7 +194,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
 
                         // tallying to element array
-                        get_gradients(material_matrix, nodes_in_curr_elem, elem_id, State.node.coords_t0, State.node.displacement, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
+                        get_gradients(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, displacement_step, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
                         tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, ref_elem.gauss_point_weights(mat_pt), PK2_curr_config, curr_K_elem, curr_F_elem);
                     } // end mat_pt
 
@@ -211,10 +213,79 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // neumann (traction) type
 
             // dirichlet (displacement) type
-            displacement_step.set_values(0);
+            boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
 
             // ***************************************************
             // end boundary conditions
+            // ***************************************************
+
+            // ***************************************************
+            // begin conjugate gradient solve
+            // ***************************************************
+
+            displacement_iter.set_values(0);
+            rk.set_values(0);
+
+            // getting r0 = (02F - 01F) - K * displacement_iter
+            get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter, rk);
+
+            // p0 = r0
+            FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                p(i) = rk(i);
+            });
+
+            // start of iteration loop
+            for (int cgm_iter = 0; cgm_iter < max_iter; cgm_iter++) {
+
+                // calculating this here to avoid calculating it twice
+                // r_k^T * r_k
+                double rktrk = 0.0;
+                double loc_rktrk = 0.0;
+                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rktrk, {
+                    loc_rktrk += rk(i) * rk(i);
+                }, rktrk);
+
+                // get scalar: alpha_k = (r_k^T * r_k) / (p_k^T * K * p_k)
+                double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rktrk, p);
+
+                // get vector: displacement_iter_k+1 = displacement_iter_k + alpha_k * p_k
+                FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                    displacement_iter(i) += alpha_k * p(i);
+                });
+
+                // get vector: r_k+1 = r_k - alpha_k * K * p_k
+                get_rkp1(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p, alpha_k, rkp1);
+
+                // r_k+1^T * r_k+1
+                double rkp1trkp1 = 0.0;
+                double loc_rkp1trkp1 = 0.0;
+                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1trkp1, {
+                    loc_rkp1trkp1 += rkp1(i) * rkp1(i);
+                }, rkp1trkp1);
+
+                // check convergence
+                double norm = sqrt(rkp1trkp1);
+                if (norm < 1E-8) {
+                    break;
+                }
+
+                // get scalar: beta_k = (r_k+1^T * r_k+1) / (r_k^T * r_k)
+                double beta_k = rkp1trkp1 / rktrk;
+
+                // get vector: p_k+1 = r_k+1 + beta_k * p_k
+                FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                    p(i) = rkp1(i) + beta_k * p(i);
+                });
+
+                // update rk for next iteration
+                FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                    rk(i) = rkp1(i);
+                });
+
+            } // end iteration loop
+
+            // ***************************************************
+            // end conjugate gradient solve
             // ***************************************************
 
         } // end Picard iteration loop

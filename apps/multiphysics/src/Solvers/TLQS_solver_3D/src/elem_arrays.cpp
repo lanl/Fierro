@@ -39,9 +39,9 @@ KOKKOS_FUNCTION
 void TLQS3D::get_gradients(
     const double material_matrix[6][6],
     ViewCArrayKokkos <size_t>& nodes_in_elem,
-    const size_t elem_id,
     const DCArrayKokkos <double>& coords_t0,
     const DCArrayKokkos <double>& displacement,
+    const CArrayKokkos <double>& displacement_step,
     ViewCArrayKokkos <double>& gauss_point_grad_basis,
     double grad_u[3][3],
     double inv_J[3][3],
@@ -60,7 +60,7 @@ void TLQS3D::get_gradients(
     for (int k = 0; k < gauss_point_grad_basis.dims(0); k++) {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                J[i][j] += coords_t0(nodes_in_elem(elem_id,k), j) * gauss_point_grad_basis(k, i);
+                J[i][j] += coords_t0(nodes_in_elem(k), j) * gauss_point_grad_basis(k, i);
             }
         }
     }
@@ -93,14 +93,17 @@ void TLQS3D::get_gradients(
     }
 
     for (int k = 0; k < gauss_point_grad_basis.dims(0); k++) {
+        const size_t node_gid = nodes_in_elem(k);
+
         const double dpsig_k0 = inv_J[0][0]*gauss_point_grad_basis(k,0) + inv_J[0][1]*gauss_point_grad_basis(k,1) + inv_J[0][2]*gauss_point_grad_basis(k,2);
         const double dpsig_k1 = inv_J[1][0]*gauss_point_grad_basis(k,0) + inv_J[1][1]*gauss_point_grad_basis(k,1) + inv_J[1][2]*gauss_point_grad_basis(k,2);
         const double dpsig_k2 = inv_J[2][0]*gauss_point_grad_basis(k,0) + inv_J[2][1]*gauss_point_grad_basis(k,1) + inv_J[2][2]*gauss_point_grad_basis(k,2);
 
         for (int j = 0; j < 3; j++) {
-            grad_u[0][j] += displacement(nodes_in_elem(elem_id,k),j) * dpsig_k0;
-            grad_u[1][j] += displacement(nodes_in_elem(elem_id,k),j) * dpsig_k1;
-            grad_u[2][j] += displacement(nodes_in_elem(elem_id,k),j) * dpsig_k2;
+            const double u_total = displacement(node_gid, j) + displacement_step(3*node_gid + j);
+            grad_u[0][j] += u_total * dpsig_k0;
+            grad_u[1][j] += u_total * dpsig_k1;
+            grad_u[2][j] += u_total * dpsig_k2;
         }
     }
 
@@ -128,7 +131,7 @@ void TLQS3D::get_gradients(
     PK2_curr_config[4] = material_matrix[4][4] * current_strain[4]; // Sxz
     PK2_curr_config[5] = material_matrix[5][5] * current_strain[5]; // Sxy
 
-}
+} // end get_gradients
 
 KOKKOS_FUNCTION
 void TLQS3D::tally_elem_arrays(
@@ -291,4 +294,4 @@ void TLQS3D::tally_elem_arrays(
 
     }
 
-}
+} // end tally_elem_arrays

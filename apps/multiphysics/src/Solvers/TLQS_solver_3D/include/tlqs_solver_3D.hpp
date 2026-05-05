@@ -255,9 +255,9 @@ public:
     void get_gradients(
         const double material_matrix[6][6],
         ViewCArrayKokkos <size_t>& nodes_in_elem,
-        const size_t elem_id,
         const DCArrayKokkos <double>& coords_t0,
         const DCArrayKokkos <double>& displacement,
+        const CArrayKokkos <double>& displacement_step,
         ViewCArrayKokkos <double>& gauss_point_grad_basis,
         double grad_u[3][3],
         double inv_J[3][3],
@@ -277,6 +277,42 @@ public:
         const double PK2_curr_config[6],
         ViewCArrayKokkos <double>& Kel,
         ViewCArrayKokkos <double>& Fel
+    );
+
+    // inputs: mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter
+    // outputs: initial cgm residual: r0
+    void get_r0(
+        const size_t num_nodes,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const CArrayKokkos<double>& F_elem,
+        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<double>& displacement_iter,
+        const CArrayKokkos<double>& r0
+    );
+
+    // inputs: mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p
+    // outputs: alpha for cgm
+    double get_alpha(
+        const size_t num_nodes,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const CArrayKokkos<double>& K_elem,
+        const double rktrk,
+        const CArrayKokkos<double>& p
+    );
+
+    void get_rkp1(
+        const size_t num_nodes,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<double>& rk,
+        const CArrayKokkos<double>& p,
+        const double alpha,
+        const CArrayKokkos<double>& rkp1
     );
         
 };
