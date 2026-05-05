@@ -7,10 +7,15 @@ dynamic_options:
     dt_start: 1.e-5
     cycle_stop: 100000
 
+
+# mesh_options:
+#     source: file
+#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
+
 mesh_options:
     source: file
     num_dims: 3
-    file_path: meshes/cylinder.vtu
+    file_path: ./meshes/cylinder.vtu
     scale_x: 0.1 # scale the mesh to be in cm units
     scale_y: 0.1
     scale_z: 0.1

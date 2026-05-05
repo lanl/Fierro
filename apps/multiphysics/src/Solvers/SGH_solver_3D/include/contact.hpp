@@ -7,7 +7,7 @@
 using namespace mtr;
 
 // solving options
-static constexpr size_t max_iter = 10;  // max number of iterations
+static constexpr size_t max_iter = 100;
 static constexpr double tol = 1e-15;  // tolerance for the things that are supposed to be zero
 static constexpr double edge_tol = 1e-3;  // tolerance for edge case solutions (see contact_check for more info)
 
@@ -35,6 +35,10 @@ struct contact_state_t
     CArrayKokkos <size_t> node_penetrations; // for use in find_penetrating_nodes
     CArrayKokkos <double> f_c_incs; // stores contact force increments for checking convergence
     CArrayKokkos <double> contact_force; // stores contact forces in gid locations
+    CArrayKokkos <size_t> num_pairs_in_node; // stores number of pairs a particular node is part of for force weighting
+
+    size_t max_local_iter; // max iterations for pair newton solve, defaults to 500
+    size_t max_global_iter; // max iterations for global jacobi solve, defaults to 100
 
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -50,7 +54,7 @@ struct contact_state_t
                     size_t num_bdy_nodes, size_t num_bdy_patches, CArrayKokkos <size_t> &patches_in_elem,
                     CArrayKokkos <size_t> &elems_in_patch, DCArrayKokkos <size_t> &nodes_in_elem,
                     CArrayKokkos <size_t> &nodes_in_patch, CArrayKokkos <size_t> &bdy_nodes, size_t num_patches,
-                    size_t num_nodes, DCArrayKokkos <double> &coords);
+                    size_t num_nodes, DCArrayKokkos <double> &coords, const size_t contact_max_local_iter, const size_t contact_max_global_iter);
 
     /*
      * Here is a description of each array below:
@@ -341,6 +345,21 @@ void get_penetration_normal(const DCArrayKokkos <double> &coords, const double &
                             double normal[3], const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, size_t node_gids[4]);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn get_normal_derivatives
+///
+/// \brief Computes the derivatives of the normal vector of the patch/surface at the given xi and eta values
+///
+/// \param xi_val xi value
+/// \param eta_val eta value
+/// \param del_t time step to compute the normal at
+/// \param normal kokkos view that will be changed in place
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void get_normal_derivatives(const DCArrayKokkos <double> &coords, const double &xi_val, const double &eta_val,
+                            double d_n_d_xi[3], double d_n_d_eta[3], double d_phi_d_xi[4], double d_phi_d_eta[4],
+                            size_t node_gids[4]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn get_contact_point
 ///
 /// \brief Finds the contact point in the reference space with the given contact node
@@ -423,7 +442,7 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
                             DCArrayKokkos <double> coords, CArrayKokkos <size_t> bdy_nodes, ViewCArrayKokkos <size_t> &contact_surface_map,
                             DCArrayKokkos <double> mass, CArrayKokkos <double> contact_forces, DCArrayKokkos <double> corner_force,
                             DCArrayKokkos <double> vel, RaggedRightArrayKokkos <size_t> corners_in_node,
-                            CArrayKokkos <size_t> num_corners_in_node);
+                            CArrayKokkos <size_t> num_corners_in_node, const size_t max_local_iter);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn distribute_frictionless_force
@@ -444,7 +463,8 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void distribute_frictionless_force(ViewCArrayKokkos <double> &pair_vars, size_t &contact_id, ViewCArrayKokkos <size_t> &contact_surface_map,
-                                   const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, CArrayKokkos <double> contact_forces);
+                                   const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> num_pairs_in_node,
+                                   const double corrector_term);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn should_remove
@@ -664,7 +684,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
                       CArrayKokkos <double> &contact_forces, DCArrayKokkos <double> &corner_force, DCArrayKokkos <double> &vel,
                       RaggedRightArrayKokkos <size_t> corners_in_node, CArrayKokkos <size_t> num_corners_in_node,
                       const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, const double &del_t, CArrayKokkos <double> &contact_force, size_t num_bdy_nodes,
-                      size_t num_patches);
+                      size_t num_patches, CArrayKokkos <size_t> &num_pairs_in_node, const size_t max_local_iter, const size_t max_global_iter);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn remove_pairs

@@ -33,7 +33,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgh_solver_3D.hpp"
-
 #include "simulation_parameters.hpp"
 #include "material.hpp"
 #include "boundary_conditions.hpp"
@@ -42,6 +41,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "geometry_new.hpp"
 #include "mesh_io.hpp"
 #include "tipton_equilibration.hpp"
+#include "fracture_stress_bc.hpp"
+#include "reorientation_kinematics.hpp"
+#include "user_defined_velocity_bc.hpp"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -51,6 +53,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// Evolve the state according to the SGH method
 ///
 /////////////////////////////////////////////////////////////////////////////
+
 void SGH3D::execute(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
@@ -62,7 +65,35 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     if (doing_contact) {
         Contact_State.initialize(mesh.num_dims, mesh.num_nodes_in_patch, mesh.bdy_patches, mesh.num_bdy_nodes, mesh.num_bdy_patches,
                                  mesh.patches_in_elem, mesh.elems_in_patch, mesh.nodes_in_elem, mesh.nodes_in_patch,
-                                 mesh.bdy_nodes, mesh.num_patches, mesh.num_nodes, State.node.coords);
+                                 mesh.bdy_nodes, mesh.num_patches, mesh.num_nodes, State.node.coords,
+                                 BoundaryConditions.contact_max_local_iter, BoundaryConditions.contact_max_global_iter);
+        printf("MAX ITERATIONS PER CONTACT PAIR: %zu\n", Contact_State.max_local_iter);
+        printf("MAX ITERATIONS FOR GLOBAL CONTACT: %zu\n", Contact_State.max_global_iter);
+    }
+    
+
+    // cohesive zone initialization for fracture
+    if (doing_fracture) {
+        const int fracture_bdy_set = BoundaryConditions.fracture_bc_id;
+        if (fracture_bdy_set >= 0) {
+            cohesive_zones_bank.initialize_fracture_bc(
+            mesh,
+            BoundaryConditions,
+            fracture_bdy_set
+            );
+        }
+    }
+
+    // fracture reorientation validation mode initialization
+    // scans user-defined velocity BC parameters for the reorientation mode flag
+    // if enabled, stores the reorientation parameters and allocated validation-mode data needed
+    if (doing_fracture) {
+        cohesive_zones_bank.initialize_reorientation_mode(
+            mesh,
+            State,
+            BoundaryConditions,
+            doing_fracture
+        );
     }
 
     double fuzz  = SimulationParamaters.dynamic_options.fuzz;  // 1.e-16
@@ -92,7 +123,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_gauss_in_elem);
     CArrayKokkos <double> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_gauss_in_elem);
     
-
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
@@ -256,93 +286,158 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // ---- RK coefficient ----
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
-            // ---- Calculate velocity gradient for the element ----
+            // dt_stage is the effective stage time increment used inside the cohesive
+            // zone predictor/update so that the Forward-Euler-style incrementilization
+            // stage increment is consistent with the RK stage 
+            double dt_stage = rk_alpha * dt;
+        
+            // check if reorientation validation mode testing is on
+            const bool reorient_mode = (doing_fracture && cohesive_zones_bank.reorientation_validation_mode);
 
-            get_velgrad(State.GaussPoints.vel_grad,
-                        mesh,
-                        State.node.coords,
-                        State.node.vel,
-                        State.GaussPoints.vol);
+            if (reorient_mode) {
+                // prescribe reorientation kinematics to all nodes (skip over normal SGH evolution)
+                ReorientationKinematics::prescribe_reorientation_kinematics(
+                    mesh, State,
+                    cohesive_zones_bank.initial_coords,
+                    cohesive_zones_bank.cz_b_side_flag,
+                    time_value,
+                    dt_stage,
+                    cohesive_zones_bank.omega_y, 
+                    cohesive_zones_bank.omega_z,
+                    cohesive_zones_bank.cz_opening_rate
+                );
+            }
 
-            set_corner_force_zero(mesh, State.corner.force);
+            // if not in reorientation mode, proceed with normal SGH evolution
+            if (!reorient_mode){
 
+                // ---- Calculate velocity gradient for the element ----
 
-            // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
-            for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-
-                get_force(Materials,
-                          mesh,
-                          State.GaussPoints.vol,
-                          State.GaussPoints.vel_grad,
-                          State.MaterialPoints.eroded,
-                          State.corner.force,
-                          State.node.coords,
-                          State.node.vel,
-                          State.MaterialPoints.den,
-                          State.MaterialPoints.sie,
-                          State.MaterialPoints.pres,
-                          State.MaterialPoints.stress,
-                          State.MaterialPoints.sspd,
-                          State.MaterialCorners.force,
-                          State.MaterialPoints.volfrac,
-                          State.MaterialPoints.geo_volfrac,
-                          State.corners_in_mat_elem,
-                          State.MaterialToMeshMaps.elem_in_mat_elem,
-                          State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
-                          mat_id,
-                          fuzz,
-                          small,
-                          dt,
-                          rk_alpha);
-
-                if (Materials.MaterialEnums.host(mat_id).StrengthType == model::incrementBased) {
-                    update_stress(Materials,
-                                  mesh,
-                                  State.GaussPoints.vol,
-                                  State.node.coords,
-                                  State.node.vel,
-                                  State.GaussPoints.vel_grad,
-                                  State.MaterialPoints.den,
-                                  State.MaterialPoints.sie,
-                                  State.MaterialPoints.pres,
-                                  State.MaterialPoints.stress,
-                                  State.MaterialPoints.stress_n0,
-                                  State.MaterialPoints.sspd,
-                                  State.MaterialPoints.eos_state_vars,
-                                  State.MaterialPoints.strength_state_vars,
-                                  State.MaterialPoints.shear_modulii,
-                                  State.MaterialToMeshMaps.elem_in_mat_elem,
-                                  State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
-                                  mat_id,
-                                  fuzz,
-                                  small,
-                                  time_value,
-                                  dt,
-                                  rk_alpha,
-                                  cycle);
-                } // end if on increment
-
-            } // end for mat_id
-
-
-            // ---- Calculate boundary and body forces ---- //
-            // setting nodal force to zero here, 
-            // the node force stores the BCs supplied forces and body forces
-            State.node.force.set_values(0.0);
-
-            // call stress BC's routine
-            boundary_stress(mesh, 
-                            BoundaryConditions, 
-                            State.node.force, 
+                get_velgrad(State.GaussPoints.vel_grad,
+                            mesh,
                             State.node.coords,
-                            time_value);
+                            State.node.vel,
+                            State.GaussPoints.vol);
+
+                set_corner_force_zero(mesh, State.corner.force);
 
 
+                // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
+                for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-            // call body forces routine
+                    get_force(Materials,
+                            mesh,
+                            State.GaussPoints.vol,
+                            State.GaussPoints.vel_grad,
+                            State.MaterialPoints.eroded,
+                            State.corner.force,
+                            State.node.coords,
+                            State.node.vel,
+                            State.MaterialPoints.den,
+                            State.MaterialPoints.sie,
+                            State.MaterialPoints.pres,
+                            State.MaterialPoints.stress,
+                            State.MaterialPoints.sspd,
+                            State.MaterialCorners.force,
+                            State.MaterialPoints.volfrac,
+                            State.MaterialPoints.geo_volfrac,
+                            State.corners_in_mat_elem,
+                            State.MaterialToMeshMaps.elem_in_mat_elem,
+                            State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
+                            mat_id,
+                            fuzz,
+                            small,
+                            dt,
+                            rk_alpha);
+
+                    if (Materials.MaterialEnums.host(mat_id).StrengthType == model::incrementBased) {
+                        update_stress(Materials,
+                                    mesh,
+                                    State.GaussPoints.vol,
+                                    State.node.coords,
+                                    State.node.vel,
+                                    State.GaussPoints.vel_grad,
+                                    State.MaterialPoints.den,
+                                    State.MaterialPoints.sie,
+                                    State.MaterialPoints.pres,
+                                    State.MaterialPoints.stress,
+                                    State.MaterialPoints.stress_n0,
+                                    State.MaterialPoints.sspd,
+                                    State.MaterialPoints.eos_state_vars,
+                                    State.MaterialPoints.strength_state_vars,
+                                    State.MaterialPoints.shear_modulii,
+                                    State.MaterialToMeshMaps.elem_in_mat_elem,
+                                    State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
+                                    mat_id,
+                                    fuzz,
+                                    small,
+                                    time_value,
+                                    dt,
+                                    rk_alpha,
+                                    cycle);
+                    } // end if on increment
+
+                } // end for mat_id
+
+
+                // ---- Calculate boundary and body forces ---- //
+                // setting nodal force to zero here, 
+                // the node force stores the BCs supplied forces and body forces
+                State.node.force.set_values(0.0);
+
+                // call stress BC's routine
+                boundary_stress(mesh, 
+                                BoundaryConditions, 
+                                State.node.force, 
+                                State.node.coords,
+                                time_value);
+
+            } else {
+                // kinematics-only: start forces at zero (you can still add cohesive forces below)
+                State.node.force.set_values(0.0);
+                set_corner_force_zero(mesh, State.corner.force);
+            }
+
+            // apply cohesive zone nodal forces (fracture)
+            if (doing_fracture && cohesive_zones_bank.is_ready()) {
+                
+                // reset delta internal vars to zero
+                cohesive_zones_bank.reset_delta_internal_vars();
+                
+                // reset F_cz for this stage
+                cohesive_zones_bank.F_cz.set_values(0.0);
+                
+                // Compute cohesive forces (orientation, openings, constitutive, loads)
+                cohesive_zones_bank.compute_cohesive_zone_nodal_forces(
+                    mesh,
+                    State,
+                    dt_stage,
+                    time_value,
+                    cycle,
+                    rk_stage,
+                    rk_num_stages,
+                    cohesive_zones_bank.F_cz
+                );
+
+                // commit internal variable updates at final RK stage only
+                // consistent with forward euler incrementalization of the cohesive zone evolution
+                cohesive_zones_bank.commit_internal_vars(rk_stage, rk_num_stages);
+                
+                // add cohesive zone nodal forces to global nodal force array (State.node.force)
+                cohesive_zones_bank.add_cohesive_zone_nodal_forces(
+                    State.node.force,
+                    cohesive_zones_bank.F_cz,
+                    mesh.num_nodes
+                );
+            }        
+
+            // SKIP SGH SOLVER EVOLUTION (REORIENTATION TESTING MODE)
+            if (reorient_mode) {
+                continue; // skip update velocity, boundary vel, contact, energy, position, etc.
+            }
 
             // apply contact forces to boundary patches
-            if (doing_contact) 
+            if (doing_contact && rk_stage == rk_num_stages-1) 
             {
                 //contact_bank.update_nodes(mesh, State);
                 Contact_State.contact_forces.set_values(0);
@@ -356,7 +451,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                         boundary_contact_force(State, mesh, 5*dt*rk_alpha, Contact_State);
                     }
                 } else {
-                    boundary_contact_force(State, mesh, 5*dt*rk_alpha, Contact_State);
+                    //boundary_contact_force(State, mesh, 5*dt*rk_alpha, Contact_State);
+                    boundary_contact_force(State, mesh, dt, Contact_State);
                 }
             }
 

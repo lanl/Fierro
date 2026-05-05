@@ -1,0 +1,72 @@
+name: Multiphysics Regression Tests (macOS)
+
+on:
+  push:
+    branches: [ main, CMake_build ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  Regression-Tests:
+    name: Regression Tests (${{ matrix.name }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Serial
+            build_type: RelWithDebInfo
+            cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
+            omp_threads: 1
+          - name: OpenMP
+            build_type: RelWithDebInfo
+            cmake_args: -DFIERRO_ENABLE_OPENMP=ON
+            omp_threads: 2
+          - name: Serial Debug
+            build_type: Debug
+            cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
+            omp_threads: 1
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 1
+
+    - name: Install dependencies
+      run: |
+        brew update
+        brew install cmake openmpi libomp openblas lapack python3 gcc bison@3.8
+        echo "/opt/homebrew/opt/bison@3.8/bin" >> $GITHUB_PATH
+
+    - name: Configure CMake
+      env:
+        CC: /usr/bin/cc
+        CXX: /usr/bin/c++
+        FC: gfortran-14
+        LDFLAGS: "-L/opt/homebrew/opt/libomp/lib"
+        CPPFLAGS: "-I/opt/homebrew/opt/libomp/include"
+        OpenMP_ROOT: "/opt/homebrew/opt/libomp"
+      run: |
+        mkdir -p apps/multiphysics/build
+        cd apps/multiphysics/build
+        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_args }} \
+              -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include" \
+              -DOpenMP_C_LIB_NAMES="omp" \
+              -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include" \
+              -DOpenMP_CXX_LIB_NAMES="omp" \
+              -DOpenMP_omp_LIBRARY="/opt/homebrew/opt/libomp/lib/libomp.dylib" \
+              ..
+
+    - name: Build Fierro
+      run: |
+        cd apps/multiphysics/build
+        make -j1
+
+    - name: Run Regression Tests
+      env:
+        OMP_NUM_THREADS: ${{ matrix.omp_threads }}
+      run: |
+        cd apps/multiphysics/regression_tests
+        python3 test_refactor.py

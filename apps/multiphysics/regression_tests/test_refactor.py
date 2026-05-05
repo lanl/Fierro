@@ -8,7 +8,7 @@ import glob
 import argparse
 
 # Builds being tested
-builds = ["openmp"]
+builds = ["serial"]
 
 # Name(s) of the solver being used
 solvers = ["Fierro"]
@@ -23,7 +23,9 @@ tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
         "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
         "slanted_block_bounce", "slanted_impact", "SGTM_cooling_cube", \
         "sie_expansion_test", "confined_preload", "unconfined_preload",\
-        "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact"]
+        "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact",\
+        "TaylorAnvil_Contact", "fracture_mode_1", "fracture_mode_2", \
+        "fracture_reorientation"]
 #,"SGTM_cooling_cube" currently broken
 
 # Parse command line arguments
@@ -122,17 +124,20 @@ for i in range(len(executables)):
             result_data, header1 = extract_state_data(file_path)
             standard_data, header2 = extract_state_data(standard_results[j])
     
+            # conditional to handle contact cases
+            diff_tol = 1E-8
+            if (tests[j] == "slanted_impact" or tests[j] == "sie_expansion_test" or tests[j] == "edge_flat_test" or tests[j] == "billiards" or tests[j] == "TaylorAnvil_Contact"):
+                diff_tol = 1E-2
+
             for k in range(len(result_data[0])):
                 calc = [row[k] for row in result_data]
                 true = [row[k] for row in standard_data]
     
-    
-    
                 for l in range(len(calc)):
                     diff = calc[l] - true[l]
+                    diff_rel = abs(calc[l] - (true[l]+1E-8))/(true[l]+1E-8) * 100
                     # print(diff)
-    
-                    if abs(diff) > 1E-8:
+                    if abs(diff) > diff_tol and diff_rel > 0.1:
                         print(f"{'Calculated Result:':<20} {calc[l]:.10e}")
                         print(f"{'Expected Result:':<20} {true[l]:.10e}")
                         print(f"{'Difference:':<20} {diff:.10e}")

@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: meshes/billiards.vtk
+  file_path: ./meshes/billiards.vtk
   num_dims: 3
 
 #mesh_options:
@@ -69,6 +69,9 @@ boundary_conditions:
       surface:
           type: global
       stress_model: global_contact
+      contact_bc_vars:
+        - 10 # local iter max
+        - 1 # global iter max
 
 materials:
   - material:

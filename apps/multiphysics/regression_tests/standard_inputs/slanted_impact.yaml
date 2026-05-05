@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: meshes/slanted_impact.vtk
+  file_path: ./meshes/slanted_impact.vtk
   num_dims: 3
 
 #mesh_options:
@@ -45,6 +45,9 @@ boundary_conditions:
       surface:
           type: global
       stress_model: global_contact
+      contact_bc_vars:
+        - 10 # local iter max
+        - 10 # global iter max
 
   # Tag Z plane
   - boundary_condition:

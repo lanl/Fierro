@@ -52,7 +52,7 @@ enum BdyTag
     zPlane = 2,     // tag an z-plane
     cylinder = 3,   // tag an cylindrical surface
     sphere = 4,     // tag a spherical surface
-    global = 5      // tag the full boundary for contact
+    global = 5      // tag the full boundary (used by contact or fracture)
 };
 // future options
 //     read_file = 5   // read from a file currently unsupported
@@ -89,6 +89,7 @@ enum BCStressModels
     userDefinedStressBC = 3,
     globalContact = 4,
     preloadContact = 5,
+    fractureStressBC = 6
 };
 // future model options:
 //    displacementBC                            
@@ -152,6 +153,7 @@ static std::map<std::string, boundary_conditions::BCStressModels> bc_stress_mode
     { "user_defined", boundary_conditions::userDefinedStressBC },
     { "global_contact", boundary_conditions::globalContact },
     { "preload_contact", boundary_conditions::preloadContact},
+    { "fracture", boundary_conditions::fractureStressBC }
 };
 
 
@@ -271,9 +273,14 @@ struct BoundaryCondition_t
 {
     size_t num_bcs; // the number of boundary conditions
 
+    // boolean for whether fracture should occur
+    bool allow_fracture = false; 
     // boolean for whether contact should occur
     bool allow_contact = false;
     bool allow_preload = false;
+    // contact iteration variables
+    size_t contact_max_local_iter = 500;
+    size_t contact_max_global_iter = 100;
 
     // making a psuedo dual ragged right
     DCArrayKokkos<size_t> vel_bdy_sets_in_solver;     // (solver_id, bc_lid)
@@ -312,6 +319,9 @@ struct BoundaryCondition_t
 
     // state variables for boundary conditions
     DCArrayKokkos<double> bc_state_vars;
+
+    // the boundary condition id for the fracture stress BC, -1 if none set (debugging aid)
+    int fracture_bc_id = -1; 
 }; // end boundary conditions
 
 // -------------------------------------
@@ -325,6 +335,7 @@ static std::vector<std::string> str_bc_inps
     "velocity_bc_global_vars",
     "stress_model",
     "stress_bc_global_vars",
+    "contact_bc_vars",
     "temperature_model",
     "temperature_bc_global_vars",
     "heat_flux_model",

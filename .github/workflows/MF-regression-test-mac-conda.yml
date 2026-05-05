@@ -1,4 +1,4 @@
-name: Regression Tests (macOS)
+name: Multiphysics Regression Tests (macOS Conda)
 
 on:
   push:
@@ -27,37 +27,40 @@ jobs:
         submodules: recursive
         fetch-depth: 1
 
-    - name: Install dependencies
+    - name: Set up Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: true
+        python-version: 3.9
+
+    - name: Configure Conda
+      shell: bash -l {0}
       run: |
-        brew update
-        brew install cmake openmpi libomp openblas lapack python3 gcc bison@3.8
-        echo "/opt/homebrew/opt/bison@3.8/bin" >> $GITHUB_PATH
+        conda config --set remote_read_timeout_secs 600.0
+        conda config --set remote_connect_timeout_secs 600.0
+        conda config --set remote_max_retries 10
+        conda clean --all --yes
+
+    - name: Install dependencies
+      shell: bash -l {0}
+      run: |
+        conda install -c conda-forge -y cmake openmpi llvm-openmp openblas lapack python bison flex compilers
 
     - name: Configure CMake
-      env:
-        CC: /usr/bin/cc
-        CXX: /usr/bin/c++
-        FC: gfortran-14
-        LDFLAGS: "-L/opt/homebrew/opt/libomp/lib"
-        CPPFLAGS: "-I/opt/homebrew/opt/libomp/include"
-        OpenMP_ROOT: "/opt/homebrew/opt/libomp"
+      shell: bash -l {0}
       run: |
         mkdir -p apps/multiphysics/build
         cd apps/multiphysics/build
-        cmake -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }} \
-              -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include" \
-              -DOpenMP_C_LIB_NAMES="omp" \
-              -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include" \
-              -DOpenMP_CXX_LIB_NAMES="omp" \
-              -DOpenMP_omp_LIBRARY="/opt/homebrew/opt/libomp/lib/libomp.dylib" \
-              ..
+        cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ${{ matrix.cmake_args }} ..
 
     - name: Build Fierro
+      shell: bash -l {0}
       run: |
         cd apps/multiphysics/build
-        make -j1
+        make -j$(sysctl -n hw.ncpu)
 
     - name: Run Regression Tests
+      shell: bash -l {0}
       env:
         OMP_NUM_THREADS: ${{ matrix.omp_threads }}
       run: |

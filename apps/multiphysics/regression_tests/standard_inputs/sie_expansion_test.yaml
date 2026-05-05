@@ -1,7 +1,7 @@
 # num_dims: 3
 
 dynamic_options:
-  time_final: 3.0
+  time_final: 0.75
   dt_min: 1.e-6
   dt_max: 0.02
   dt_start: 1.e-5
@@ -10,7 +10,7 @@ dynamic_options:
 
 mesh_options:
   source: file
-  file_path: meshes/sie_expansion_test.vtk
+  file_path: ./meshes/sie_expansion_test.vtk
   num_dims: 3
 
 #mesh_options:
@@ -25,7 +25,7 @@ mesh_options:
 output_options:
   timer_output_level: thorough
   output_file_format: state
-  graphics_time_step: 3.0
+  graphics_time_step: 0.75
   # graphics_iteration_step: 10
 
 solver_options:
@@ -57,6 +57,9 @@ boundary_conditions:
       surface:
           type: global
       stress_model: global_contact
+      contact_bc_vars:
+        - 10 # local iter max
+        - 1 # global iter max
 
 materials:
   - material:
