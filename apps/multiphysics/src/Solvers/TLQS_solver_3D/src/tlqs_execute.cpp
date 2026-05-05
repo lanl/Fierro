@@ -164,7 +164,10 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         // start Picard iteration loop
         for (int iter = 0; iter < max_iter; iter++) {
 
-            // getting element arrays
+            // ***************************************************
+            // get element arrays
+            // ***************************************************
+
             // looping through materials
             for (int mat_id = 0; mat_id < num_mats; mat_id++) {
                 
@@ -191,11 +194,28 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         // tallying to element array
                         get_gradients(material_matrix, nodes_in_curr_elem, elem_id, State.node.coords_t0, State.node.displacement, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
                         tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, ref_elem.gauss_point_weights(mat_pt), PK2_curr_config, curr_K_elem, curr_F_elem);
-                    }
+                    } // end mat_pt
 
-                });
+                }); // end elem
 
-            }
+            } // end mat_id
+
+            // ***************************************************
+            // end element arrays
+            // ***************************************************
+
+            // ***************************************************
+            // apply boundary conditions
+            // ***************************************************
+
+            // neumann (traction) type
+
+            // dirichlet (displacement) type
+            displacement_step.set_values(0);
+
+            // ***************************************************
+            // end boundary conditions
+            // ***************************************************
 
         } // end Picard iteration loop
 

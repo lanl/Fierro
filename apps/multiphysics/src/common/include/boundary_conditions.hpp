@@ -78,7 +78,8 @@ enum BCDisplacementModels
     fixedDisplacementBC = 3,
     userDefinedDisplacementBC = 4,
     pistonDisplacementBC = 5,
-    rollerDisplacementBC = 6
+    rollerDisplacementBC = 6,
+    cyclicDisplacementBC = 7
 };
 
 // types of temperature boundary conditions
@@ -153,7 +154,8 @@ static std::map<std::string, boundary_conditions::BCDisplacementModels> bc_displ
     { "fixed", boundary_conditions::fixedDisplacementBC },
     { "user_defined", boundary_conditions::userDefinedDisplacementBC },
     { "piston", boundary_conditions::pistonDisplacementBC },
-    { "roller", boundary_conditions::rollerDisplacementBC }
+    { "roller", boundary_conditions::rollerDisplacementBC },
+    { "cyclic", boundary_conditions::cyclicDisplacementBC }
 };
 
 
@@ -255,6 +257,8 @@ struct BoundaryConditionFunctions_t
         const DCArrayKokkos<double>& bc_state_vars,
         const CArrayKokkos<double>& K_elem,
         const CArrayKokkos<double>& F_elem,
+        const CArrayKokkos<double>& displacement_step,
+        const double dt,
         const double time_value,
         const double time_start,
         const double time_end,

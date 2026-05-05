@@ -32,14 +32,14 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_DISP_REFLECTED_H
-#define BOUNDARY_DISP_REFLECTED_H
+#ifndef BOUNDARY_DISP_PISTON_H
+#define BOUNDARY_DISP_PISTON_H
 
 #include "boundary_conditions.hpp"
 
 struct BoundaryConditionEnums_t;
 
-namespace ReflectedDisplacementBC
+namespace PistonDisplacementBC
 {
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -75,12 +75,15 @@ static void displacement(const swage::Mesh& mesh,
         const size_t bdy_set)
 {
 
-    // disp bc global vars col 0: direction
+    // disp bc global vars col 0: final u
+    // disp bc global vars col 1: direction
 
-    const size_t constrained_dir  = static_cast<size_t>(disp_bc_global_vars(bdy_set, 0));
+    const size_t constrained_dir  = static_cast<size_t>(disp_bc_global_vars(bdy_set, 1));
     const size_t num_elems_in_node = mesh.elems_in_node.stride(bdy_node_gid);
     const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
     const size_t num_dof_in_elem   = 3 * num_nodes_in_elem;
+
+    displacement_step(3 * bdy_node_gid + constrained_dir) = disp_bc_global_vars(bdy_set,0)*(dt/(time_end-time_start));
 
     for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
         const size_t elem_gid = mesh.elems_in_node(bdy_node_gid, elem_lid);

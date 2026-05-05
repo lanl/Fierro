@@ -74,7 +74,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "reflected_displacement_bc.hpp"
 #include "user_defined_displacement_bc.hpp"
 #include "fixed_displacement_bc.hpp"
-
+#include "total_displacement_bc.hpp"
+#include "piston_displacement_bc.hpp"
+#include "cyclic_displacement_bc.hpp"
 
 // temperature bc files
 #include "constant_temp_bc.hpp"
@@ -353,11 +355,11 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     switch(map[displacement_model]){
 
                         case boundary_conditions::totalDisplacementBC :
-                            std::cout << "Setting constant displacement bc " << std::endl;
+                            std::cout << "Setting total displacement bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::fixedDisplacementBC ;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &FixedDisplacementBC::displacement;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::totalDisplacementBC ;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &TotalDisplacementBC::displacement;
                             });
                             break;
 
@@ -371,7 +373,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::fixedDisplacementBC:
-                            std::cout << "Setting zero displacement bc " << std::endl;
+                            std::cout << "Setting fixed displacement bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::fixedDisplacementBC;
@@ -390,16 +392,24 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             std::cout << "Setting piston displacement bc " << std::endl;
                             
                             RUN({
-                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::reflectedDisplacementBC;
-                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &ReflectedDisplacementBC::displacement;
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::pistonDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &PistonDisplacementBC::displacement;
                             });
                             break;
                         case boundary_conditions::rollerDisplacementBC:
-                            std::cout << "Setting reflected displacement bc " << std::endl;
+                            std::cout << "Setting roller displacement bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::reflectedDisplacementBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &ReflectedDisplacementBC::displacement;
+                            });
+                            break;
+                        case boundary_conditions::cyclicDisplacementBC:
+                            std::cout << "Setting cyclic displacement bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::cyclicDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &CyclicDisplacementBC::displacement;
                             });
                             break;                   
                         default:

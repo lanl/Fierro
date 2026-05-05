@@ -226,6 +226,8 @@ public:
     const BoundaryCondition_t& BoundaryConditions,
     const CArrayKokkos<double>& K_elem,
     const CArrayKokkos<double>& F_elem,
+    const CArrayKokkos<double>& displacement_step,
+    const double dt,
     const double time_value,
     const double time_start,
     const double time_end) const;
