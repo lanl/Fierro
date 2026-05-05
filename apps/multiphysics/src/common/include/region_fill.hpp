@@ -415,10 +415,24 @@ void calc_node_mass(const swage::Mesh& mesh,
 
 
 
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_corner_node_masses_zero
+///
+/// \brief a function to initialize corner and node masses to zero
+///
+/// \param mesh is the simulation mesh
+/// \param node_mass is the node mass
+/// \param corner_mass is the corner mass
+///
+/////////////////////////////////////////////////////////////////////////////
 void init_corner_node_masses_zero(
         const swage::Mesh& mesh,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_mass);
+
+
+
+
 
 #endif

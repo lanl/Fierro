@@ -285,6 +285,9 @@ void fill_regions(
     // a local array for reading the values on a voxel mesh file, it's allocated in the mesh file read
     DCArrayKokkos <size_t> voxel_elem_mat_id; // 1 or 0 if material exist, or it is the material_id
 
+    // a local array to store element volume fractions 
+    DCArrayKokkos <double> elem_vol_frac; // it is in the range of 0:1 and allocated later
+
     // Important:
     //  Remember that num_fills_saved_in_elem = num_mats_saved_in_elem
     
@@ -312,13 +315,23 @@ void fill_regions(
     read_voxel_file.update_host(); // copy to CPU if code is to read a voxel file
     read_stl_file.update_host();   // copy to CPU if code is to read a stl file
     Kokkos::fence();
+
+    
+    for (size_t fill_id = 0; fill_id < num_fills_total; fill_id++) {
+        if (read_stl_file.host(fill_id) == region::readSTLFile) {
+            elem_vol_frac = DCArrayKokkos <double> (mesh.num_elems);
+            break;
+        }
+    } // end fill loop
+
+
     // ---------------------------------------------
 
 
     // loop over all fill instructions 
     for (size_t fill_id = 0; fill_id < num_fills_total; fill_id++) {
 
-        // ----
+        // --------------------
         // voxel mesh setup
         if (read_voxel_file.host(fill_id) == region::readVoxelFile) {
             // read voxel mesh to get the values in the fcn interface
@@ -341,14 +354,18 @@ void fill_regions(
             voxel_elem_mat_id.update_device();
         } // endif
         
-        // ----
+        // --------------------
         // STL file mesh setup
         if (read_stl_file.host(fill_id) == region::readSTLFile) {
 
+            // read .STL file and paint vol fractions on mesh
+            int paint_sucessful = paint_stl_on_mesh(elem_geo_volfrac, 
+                                                    node_coords,
+                                                    mesh.nodes_in_elem,
+                                                    mesh.num_nodes,
+                                                    region_fills_host(fill_id).file_path);
 
-            // copy values read from file to device
-            voxel_elem_mat_id.update_device();
-        } // endif
+        } // end if read STL file
         
 
         // parallel loop over elements in mesh
@@ -2370,5 +2387,89 @@ void init_corner_node_masses_zero(const swage::Mesh& mesh,
     FOR_ALL(corner_gid, 0, mesh.num_corners, {
         corner_mass(corner_gid) = 0.0;
     });  // end parallel over corners
+
 } // end setting masses equal to zero
 
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn binary_stl_reader
+///
+/// \brief a function to read a binary STL file, exporting triangular 
+//         facet coordinates of the surface and the number of facets.
+///
+/// \param filepath to the STL file
+///
+/////////////////////////////////////////////////////////////////////////////
+std::tuple<
+    CArray<double>,   // normal
+    CArray<double>, CArray<double>, CArray<double>,   // v1X, v1Y, v1Z
+    CArray<double>, CArray<double>, CArray<double>,   // v2X, v2Y, v2Z
+    CArray<double>, CArray<double>, CArray<double>,   // v3X, v3Y, v3Z
+    size_t // n_facets
+>
+binary_stl_reader(const std::string& path){
+    std::ifstream in(path, std::ios::binary | std::ios::ate);
+    if (!in) { std::perror("open"); std::exit(EXIT_FAILURE); }
+
+    const std::streamoff filesize = in.tellg();
+    if (filesize < 100) {
+        std::cerr << "ERROR: File too small to be a valid STL\n";
+        std::exit(EXIT_FAILURE);
+    }
+    in.seekg(0);
+
+    // ---- check if ASCII -------------------------------------------------
+    char magic[6] = { 0 };
+    in.read(magic, 5);          // read first 5 chars
+    in.seekg(0);               // rewind
+    if (std::strncmp(magic, "solid", 5) == 0) {
+        std::cerr
+            << "ERROR: \"" << path
+            << "\" looks like an **ASCII** STL (starts with \"solid\").\n"
+            << "Re‑export it as *binary* or implement an ASCII parser.\n";
+        std::exit(EXIT_FAILURE);        // or call ascii_stl_reader();
+    }
+
+    // ---- read 80‑byte header + nominal facet count ----------------------
+    char header[80];                in.read(header, 80);
+    size_t n_facets_nominal;  in.read(reinterpret_cast<char*>(&n_facets_nominal), 4);
+
+    // ---- compute expected count from file size to sanity‑check ----------
+    // binary facet record = 50 bytes (12×4 + 12×4 + 12×4 + 2)
+    const size_t n_facets_from_size =
+        static_cast<size_t>((filesize - 84) / 50);
+
+    size_t n_facets = n_facets_nominal;
+    if (n_facets_nominal != n_facets_from_size) {
+        std::cout << "WARNING: facet count in header (" << n_facets_nominal
+            << ") disagrees with file size (" << n_facets_from_size
+            << ").  Using size‑derived value.\n";
+        n_facets = n_facets_from_size;
+    }
+    std::cout << "STL facets: " << n_facets << '\n';
+
+    // ---- allocate MATAR arrays -----------------------------------------
+    CArray<double> normal(n_facets, 3);
+    CArray<double> v1X(n_facets), v1Y(n_facets), v1Z(n_facets);
+    CArray<double> v2X(n_facets), v2Y(n_facets), v2Z(n_facets);
+    CArray<double> v3X(n_facets), v3Y(n_facets), v3Z(n_facets);
+
+    // ---- read facet records --------------------------------------------
+    double nrm[3], v1[3], v2[3], v3[3];
+    for (unsigned int i = 0; i < n_facets; ++i) {
+        in.read(reinterpret_cast<char*>(nrm), 12);
+        in.read(reinterpret_cast<char*>(v1), 12);
+        in.read(reinterpret_cast<char*>(v2), 12);
+        in.read(reinterpret_cast<char*>(v3), 12);
+        in.ignore(2);                        // attribute byte count
+
+        for (int d = 0; d < 3; ++d) normal(i, d) = nrm[d];
+        v1X(i) = v1[0]; v1Y(i) = v1[1]; v1Z(i) = v1[2];
+        v2X(i) = v2[0]; v2Y(i) = v2[1]; v2Z(i) = v2[2];
+        v3X(i) = v3[0]; v3Y(i) = v3[1]; v3Z(i) = v3[2];
+    }
+
+    return { normal,v1X,v1Y,v1Z,v2X,v2Y,v2Z,v3X,v3Y,v3Z,n_facets };
+
+} // end of function to read STL file

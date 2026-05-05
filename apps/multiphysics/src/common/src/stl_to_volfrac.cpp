@@ -35,10 +35,6 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  **********************************************************************************************/
 
-// -----------------------------------------------
-// pointcloud reproducing kernels in C++
-//  Nathaniel Morgan
-// -----------------------------------------------
 
 #include <chrono>   // for timing
 
@@ -46,62 +42,25 @@
 #include <iostream>
 #include <string>
 #include <stdio.h>
-#include <cmath>
 
+#include "stl_utils.hpp"
 #include "stl_to_volfrac.hpp"
 
-
-
- 
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 using namespace mtr;
 
 const double PI = 3.14159265358979323846;
 
 
-
-
-
 //
 // -----------------------------------------------
+//
 
+
+// This function is for seriallizing the integation locations in the reference element
 KOKKOS_INLINE_FUNCTION
-size_t get_gid(size_t i, size_t j, size_t k, size_t num_x, size_t num_y){
+size_t get_id_of_ijk(size_t i, size_t j, size_t k, size_t num_x, size_t num_y){
     return i + (j + k*num_y)*num_x;
-}
-
-
-// cross product
-KOKKOS_INLINE_FUNCTION
-vec_t cross(const vec_t &a, const vec_t &b) {
-    return {a.y*b.z - a.z*b.y,
-            a.z*b.x - a.x*b.z,
-            a.x*b.y - a.y*b.x};
-}
-
-
-// dot product
-KOKKOS_INLINE_FUNCTION
-double dot(const vec_t &a, const vec_t &b) {
-    return a.x*b.x + a.y*b.y + a.z*b.z;
-}
-
-
-// magnitude of vector
-KOKKOS_INLINE_FUNCTION
-double magnitude(const vec_t &a){
-    return sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
-}
-
-
-// magnitude of difference between two vectors
-KOKKOS_INLINE_FUNCTION
-double distance(const vec_t &a, const vec_t &b){
-    return sqrt((a.x-b.x)*(a.x-b.x) + 
-                (a.y-b.y)*(a.y-b.y) + 
-                (a.z-b.z)*(a.z-b.z));
 }
 
 
@@ -147,7 +106,7 @@ void get_bernstein_basis_fcns(const CArrayKokkos <double> &bern_basis,
 KOKKOS_INLINE_FUNCTION
 double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
                            const CArrayKokkos <double> &node_basis, 
-                           const CArrayKokkos <size_t> &nodes_in_elems,
+                           const DCArrayKokkos <size_t> &nodes_in_elem,
                            const size_t elem_gid,
                            const size_t eval_pnt_rid){
 
@@ -161,7 +120,7 @@ double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
     for(size_t node_rid=0; node_rid<num_basis; node_rid++) {
 
         // get the node index for this node_rid
-        size_t node_gid = nodes_in_elems(elem_gid, node_rid);
+        size_t node_gid = nodes_in_elem(elem_gid, node_rid);
 
         scalar_pnt += node_basis(eval_pnt_rid,node_rid)*node_scalar(node_gid);
 
@@ -176,7 +135,7 @@ KOKKOS_INLINE_FUNCTION
 void calc_vector_in_elem(const CArrayKokkos <double> &vec_pnt,
                          const CArrayKokkos <double> &node_vec,
                          const CArrayKokkos <double> &node_basis, 
-                         const CArrayKokkos <size_t> &nodes_in_elems,
+                         const CArrayKokkos <size_t> &nodes_in_elem,
                          const size_t elem_gid,
                          const size_t eval_pnt_rid){
 
@@ -192,7 +151,7 @@ void calc_vector_in_elem(const CArrayKokkos <double> &vec_pnt,
     for(size_t node_rid=0; node_rid<num_basis; node_rid++) {
 
         // get the node index for this node_rid
-        size_t node_gid = nodes_in_elems(elem_gid, node_rid);
+        size_t node_gid = nodes_in_elem(elem_gid, node_rid);
 
         for(size_t dim=0; dim<3; dim++){
             vec_pnt(dim) += node_basis(eval_pnt_rid,node_rid)*node_vec(node_gid,dim);
@@ -205,164 +164,16 @@ void calc_vector_in_elem(const CArrayKokkos <double> &vec_pnt,
 } // end function
 
 
-KOKKOS_INLINE_FUNCTION
-void get_sdf_to_tri(const CArrayKokkos<double> &node_sdf,
-                    const DCArrayKokkos <double> &tri_coords,
-                    const DCArrayKokkos <size_t> &num_tris_in_bin,
-                    const DRaggedRightArrayKokkos <size_t> &tris_in_bin,
-                    const DViewCArrayKokkos <double> &normal,
-                    const double x_pt,
-                    const double y_pt,
-                    const double z_pt,
-                    const size_t node_gid,
-                    const size_t i_bin, 
-                    const size_t j_bin, 
-                    const size_t k_bin, 
-                    const size_t num_bins_x, 
-                    const size_t num_bins_y){
-    
-    // get bin neighbor gid on this search boundary
-    const size_t neighbor_bin_gid = get_gid(i_bin, j_bin, k_bin, num_bins_x, num_bins_y);
-
-    // loop over all the triangles in this bin
-    for(size_t tri_lid=0; tri_lid<num_tris_in_bin(neighbor_bin_gid); tri_lid++){
-
-        // get the triangle index
-        const size_t tri_gid = tris_in_bin(neighbor_bin_gid,tri_lid);
-
-        // get the x,y,z position of the triangle 
-        const double x_tri = tri_coords(tri_gid, 0);
-        const double y_tri = tri_coords(tri_gid, 1);
-        const double z_tri = tri_coords(tri_gid, 2);
-
-        // store tri coords in a vector
-        vec_t vec_of_tri_coords(x_tri, y_tri, z_tri);
-
-        // distance from node position to the triangular facet
-        const double dx_tri_pt = x_tri-x_pt;
-        const double dy_tri_pt = y_tri-y_pt;
-        const double dz_tri_pt = z_tri-z_pt;
-        vec_t distance_vec_to_tri(dx_tri_pt, dy_tri_pt, dz_tri_pt);
-
-        // normal vector
-        vec_t normal_vec;
-        normal_vec.x = normal(tri_gid,0);
-        normal_vec.y = normal(tri_gid,1);
-        normal_vec.z = normal(tri_gid,2);
-
-        // get the signed distance for this triangle
-        double tri_distance = magnitude(distance_vec_to_tri);
-        double sign = dot(normal_vec, distance_vec_to_tri);
-
-        if(fabs(tri_distance) < fabs(node_sdf(node_gid))){
-            node_sdf(node_gid) = fabs(tri_distance)*sign;
-        }
-
-    } // end for
-} // end function 
-
-
-KOKKOS_INLINE_FUNCTION
-bin_keys_t get_bin_keys(const double x_pt, 
-                        const double y_pt, 
-                        const double z_pt,
-                        const double xmin,
-                        const double ymin,
-                        const double zmin,
-                        const double bin_dx,
-                        const double bin_dy,
-                        const double bin_dz){
-            
-
-    double i_dbl = fmax(0, round((x_pt - xmin - bin_dx*0.5)/bin_dx - 1.0e-10)); // x = ih + Xmin + dx_bin*0.5
-    double j_dbl = fmax(0, round((y_pt - ymin - bin_dy*0.5)/bin_dy - 1.0e-10));
-    double k_dbl = fmax(0, round((z_pt - zmin - bin_dz*0.5)/bin_dz - 1.0e-10));
-
-    bin_keys_t bin_keys; // save i,j,k to the bin keys
-
-    // get the integer for the bins
-    bin_keys.i = (size_t)i_dbl;
-    bin_keys.j = (size_t)j_dbl;
-    bin_keys.k = (size_t)k_dbl;
-
-    return bin_keys;
-
-} // end function
-
-
-KOKKOS_INLINE_FUNCTION
-size_t get_bin_gid(const double x_pt, 
-                   const double y_pt, 
-                   const double z_pt, 
-                   const double xmin,
-                   const double ymin,
-                   const double zmin,
-                   const double bin_dx,
-                   const double bin_dy,
-                   const double bin_dz,
-                   const size_t num_bins_x,
-                   const size_t num_bins_y,
-                   const size_t num_bins_z){
-            
-
-    double i_dbl = fmin(num_bins_x-1, fmax(0.0, round((x_pt - xmin)/bin_dx - 1.0e-8))); // x = ih + Xmin
-    double j_dbl = fmin(num_bins_y-1, fmax(0.0, round((y_pt - ymin)/bin_dy - 1.0e-8)));
-    double k_dbl = fmin(num_bins_z-1, fmax(0.0, round((z_pt - zmin)/bin_dz - 1.0e-8)));
-
-    // get the integers for the bins
-    size_t i = (size_t)i_dbl;
-    size_t j = (size_t)j_dbl;
-    size_t k = (size_t)k_dbl;
-    
-    // get the 1D index for this bin                               
-    return get_gid(i, j, k, num_bins_x, num_bins_y);
-
-} // end function
-
-
-void build_3D_zone_nodes(DCArrayKokkos <size_t> &node_rids_in_zone_lids, 
-                         const size_t num_zones_1d,
-                         const size_t num_nodes_1d){  
-
-    // this is 3D
-    const size_t num_nodes_in_zone = 8;
-
-    // running on CPU as there is little parallelism
-
-    // loop over i,j,k of the sub-zones
-    FOR_LOOP(k, 0, num_zones_1d,
-             j, 0, num_zones_1d,
-             i, 0, num_zones_1d, {
-                
-                // get the sub_zone local index
-                const size_t sub_zone_lid = get_gid(i, j, k, num_zones_1d, num_zones_1d);
-
-                // get node lids for this sub-zone
-                node_rids_in_zone_lids.host(sub_zone_lid,0) = get_gid(i,   j,   k, num_nodes_1d, num_nodes_1d); 
-                node_rids_in_zone_lids.host(sub_zone_lid,1) = get_gid(i+1, j,   k, num_nodes_1d, num_nodes_1d); 
-                node_rids_in_zone_lids.host(sub_zone_lid,2) = get_gid(i,   j+1, k, num_nodes_1d, num_nodes_1d); 
-                node_rids_in_zone_lids.host(sub_zone_lid,3) = get_gid(i+1, j+1, k, num_nodes_1d, num_nodes_1d); 
-
-                node_rids_in_zone_lids.host(sub_zone_lid,4) = get_gid(i,   j,   k+1, num_nodes_1d, num_nodes_1d); 
-                node_rids_in_zone_lids.host(sub_zone_lid,5) = get_gid(i+1, j,   k+1, num_nodes_1d, num_nodes_1d); 
-                node_rids_in_zone_lids.host(sub_zone_lid,6) = get_gid(i,   j+1, k+1, num_nodes_1d, num_nodes_1d); 
-                node_rids_in_zone_lids.host(sub_zone_lid,7) = get_gid(i+1, j+1, k+1, num_nodes_1d, num_nodes_1d); 
-
-    }); // end parallel k,j,i
-    node_rids_in_zone_lids.update_device();
-
-} // end function
-
-
 //
 // -----------------------------------------------
+//
 
 
 std::tuple<
     CArray<double>,   // normal
+    CArray<double>, CArray<double>, CArray<double>,   // v0X, v0Y, v0Z 
     CArray<double>, CArray<double>, CArray<double>,   // v1X, v1Y, v1Z
     CArray<double>, CArray<double>, CArray<double>,   // v2X, v2Y, v2Z
-    CArray<double>, CArray<double>, CArray<double>,   // v3X, v3Y, v3Z
     size_t // n_facets
 >
 binary_stl_reader(const std::string& path)
@@ -409,26 +220,31 @@ binary_stl_reader(const std::string& path)
 
     // ---- allocate MATAR arrays -----------------------------------------
     CArray<double> normal(n_facets, 3);
+    CArray<double> v0X(n_facets), v0Y(n_facets), v0Z(n_facets);
     CArray<double> v1X(n_facets), v1Y(n_facets), v1Z(n_facets);
     CArray<double> v2X(n_facets), v2Y(n_facets), v2Z(n_facets);
-    CArray<double> v3X(n_facets), v3Y(n_facets), v3Z(n_facets);
 
     // ---- read facet records --------------------------------------------
-    double nrm[3], v1[3], v2[3], v3[3];
-    for (unsigned int i = 0; i < n_facets; ++i) {
+    double nrm[3], v0[3], v1[3], v2[3];
+    for (size_t i = 0; i < n_facets; ++i) {
         in.read(reinterpret_cast<char*>(nrm), 12);
+        in.read(reinterpret_cast<char*>(v0), 12);
         in.read(reinterpret_cast<char*>(v1), 12);
         in.read(reinterpret_cast<char*>(v2), 12);
-        in.read(reinterpret_cast<char*>(v3), 12);
         in.ignore(2);                        // attribute byte count
 
-        for (int d = 0; d < 3; ++d) normal(i, d) = nrm[d];
+        for (int dim = 0; dim < 3; ++dim){ 
+            normal(i, dim) = nrm[dim]; 
+        } // end for
+
+
+        v0X(i) = v0[0]; v0Y(i) = v0[1]; v0Z(i) = v0[2];
         v1X(i) = v1[0]; v1Y(i) = v1[1]; v1Z(i) = v1[2];
         v2X(i) = v2[0]; v2Y(i) = v2[1]; v2Z(i) = v2[2];
-        v3X(i) = v3[0]; v3Y(i) = v3[1]; v3Z(i) = v3[2];
-    }
+        
+    } // end for facet
 
-    return { normal,v1X,v1Y,v1Z,v2X,v2Y,v2Z,v3X,v3Y,v3Z,n_facets };
+    return { normal,v0X,v0Y,v0Z,v1X,v1Y,v1Z,v2X,v2Y,v2Z,n_facets };
 
 } // end of function to read STL file
 
@@ -438,41 +254,29 @@ binary_stl_reader(const std::string& path)
 // Function that takes a stl file and paints it on a mesh 
 //
 // This function works as follows here:
-//  1) Read in an STL file, calculating geo-center of triangles
-//  2) Build a bin mesh that lives under the dimensions of the STL file
-//  3) Save triangle index to bins, creating a map from bins to STL array
-//  4) Find the bin range (perhaps itself) to the closest bins with triangles
-//     (imin,imax), (jmin,jmax), and (kmin,kmax).  Max and min functions
-//     are used to ensure the inidices are within the bin mesh.  It is 
-//     possible to have multiple bins with triangles within the same range.
-//     For this reason, I use an index range and not the first bin found.
-//  5) For a node on the mesh, I access the bin under me and then search over 
-//     (imin-1:imin) , (imax:imax+1), 
-//     (jmin-1:jmin) , (jmax:jmax+1), and 
-//     (kmin-1:kmin) , (kmax:kmax+1)
-//     I extend the range by 1 in all directions (using max and min functions)
-//     to ensure we find the the closests triangle in the normal direction. 
+//  1) Read in an STL file
+//  2) loop over the nodes in the FE mesh then calculate the signed distance
+//     function to the surface
 //
 //------------------------------------------------------------------------
-int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac, 
+int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac, 
                       const DCArrayKokkos <double> &node_coords,
-                      const CArrayKokkos <size_t> &nodes_in_elems,
-                      const size_t Pn_order,
-                      const std::string &filename)
+                      const DCArrayKokkos <size_t> &nodes_in_elem,
+                      const size_t num_nodes,
+                      const std::string &file_path)
 {
-
 
     // -----------------
     // read .STL file
-    // -----------------
+
 
     printf("Reading STL file \n\n");
 
     auto [normal_host, 
+            v0X_host, v0Y_host, v0Z_host, 
             v1X_host, v1Y_host, v1Z_host, 
             v2X_host, v2Y_host, v2Z_host, 
-            v3X_host, v3Y_host, v3Z_host, 
-            num_inp_triangles_host] = binary_stl_reader(filename);
+            num_inp_triangles_host] = binary_stl_reader(file_path);
     
     // Warning on C++ support:
     // At this time with C++, the contents from a tuple cannot 
@@ -482,525 +286,75 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
     // a MATAR dual view) allowing the data to be used in parallel.
     const size_t num_inp_triangles = num_inp_triangles_host;
     DViewCArrayKokkos <double> normal(&normal_host(0,0), num_inp_triangles, 3);
+    DViewCArrayKokkos <double> v0X(&v0X_host(0),num_inp_triangles); 
+    DViewCArrayKokkos <double> v0Y(&v0Y_host(0),num_inp_triangles); 
+    DViewCArrayKokkos <double> v0Z(&v0Z_host(0),num_inp_triangles);
     DViewCArrayKokkos <double> v1X(&v1X_host(0),num_inp_triangles); 
     DViewCArrayKokkos <double> v1Y(&v1Y_host(0),num_inp_triangles); 
     DViewCArrayKokkos <double> v1Z(&v1Z_host(0),num_inp_triangles); 
     DViewCArrayKokkos <double> v2X(&v2X_host(0),num_inp_triangles); 
     DViewCArrayKokkos <double> v2Y(&v2Y_host(0),num_inp_triangles); 
     DViewCArrayKokkos <double> v2Z(&v2Z_host(0),num_inp_triangles); 
-    DViewCArrayKokkos <double> v3X(&v3X_host(0),num_inp_triangles); 
-    DViewCArrayKokkos <double> v3Y(&v3Y_host(0),num_inp_triangles); 
-    DViewCArrayKokkos <double> v3Z(&v3Z_host(0),num_inp_triangles);
+
 
     normal.update_device(); 
+    v0X.update_device(); 
+    v0Y.update_device(); 
+    v0Z.update_device();
     v1X.update_device(); 
     v1Y.update_device(); 
     v1Z.update_device(); 
     v2X.update_device(); 
     v2Y.update_device(); 
     v2Z.update_device(); 
-    v3X.update_device(); 
-    v3Y.update_device(); 
-    v3Z.update_device();
-
-    
-    // array storing the geo-center of triangles
-    DCArrayKokkos <double> tri_coords(num_inp_triangles, 3, "tri_coords");
-
-    // point values are the geo-center of triangles
-    FOR_ALL(tri, 0, num_inp_triangles, {
-
-        // point on surface
-        tri_coords(tri, 0) =  1.0/3.0*(v1X(tri) + v2X(tri) + v3X(tri));
-        tri_coords(tri, 1) =  1.0/3.0*(v1Y(tri) + v2Y(tri) + v3Y(tri));
-        tri_coords(tri, 2) =  1.0/3.0*(v1Z(tri) + v2Z(tri) + v3Z(tri));
-
-    }); // end parallel for tri's in the file
 
 
     // -----------------
-    // create bin mesh
-    // -----------------
+    // Getting SDF at the mesh nodes
 
-    printf("making bins \n");
+    CArrayKokkos <double> node_sdf(num_nodes,  "node_sdf");
 
-    // find (xmin, ymin, zmin) and (xmax, ymax, zmax) for building bin mesh
-    double xmin_lcl, ymin_lcl, zmin_lcl;
-    double xmin, ymin, zmin;
-
-    Kokkos::parallel_reduce("MultiMin", num_inp_triangles, KOKKOS_LAMBDA(int tri, double& xmin_lcl, double& ymin_lcl, double& zmin_lcl) { 
-        if (tri_coords(tri, 0) > xmin_lcl) xmin_lcl = tri_coords(tri, 0); 
-        if (tri_coords(tri, 1) > ymin_lcl) ymin_lcl = tri_coords(tri, 1); 
-        if (tri_coords(tri, 2) > zmin_lcl) zmin_lcl = tri_coords(tri, 2); 
-    }, Kokkos::Min<double>(xmin), Kokkos::Min<double>(ymin), Kokkos::Min<double>(zmin));
-    
-    double xmax_lcl, ymax_lcl, zmax_lcl;
-    double xmax, ymax, zmax;
-
-    Kokkos::parallel_reduce("MultiMax", num_inp_triangles, KOKKOS_LAMBDA(int tri, double& xmax_lcl, double& ymax_lcl, double& zmax_lcl) { 
-        if (tri_coords(tri, 0) > xmax_lcl) xmax_lcl = tri_coords(tri, 0); 
-        if (tri_coords(tri, 1) > ymax_lcl) ymax_lcl = tri_coords(tri, 1); 
-        if (tri_coords(tri, 2) > zmax_lcl) zmax_lcl = tri_coords(tri, 2); 
-    }, Kokkos::Max<double>(xmax), Kokkos::Max<double>(ymax), Kokkos::Max<double>(zmax));
-
-    
-    // the number of nodes in the bin mesh
-    const size_t num_bins_x = 20;   
-    const size_t num_bins_y = 20;   
-    const size_t num_bins_z = 20;   
-
-    const double bin_dx = (xmax - xmin)/((double)num_bins_x - 1.0);
-    const double bin_dy = (ymax - ymin)/((double)num_bins_y - 1.0);
-    const double bin_dz = (zmax - zmin)/((double)num_bins_z - 1.0);
-
-
-    size_t num_bins = num_bins_x*num_bins_y*num_bins_z;
-    printf("num bins x=%zu, y=%zu, z=%zu \n", num_bins_x, num_bins_y, num_bins_z);
-
-    // bins and their connectivity to each other and points
-    DCArrayKokkos <bin_keys_t> keys_in_bin(num_bins, "keys_in_bin"); // mapping from gid to (i,j,k)
-    DCArrayKokkos <size_t> num_tris_in_bin(num_bins, "num_bins");
-    num_tris_in_bin.set_values(0);
-    DRaggedRightArrayKokkos <size_t> tris_in_bin; // allocated later
-
-    // connectivity from points to bins
-    DCArrayKokkos <size_t> tri_bin_gid(num_inp_triangles, "points_in_gid");
-    CArrayKokkos <size_t>  tri_bin_lid_storage(num_inp_triangles, "bin_lid_storage");  // only used to create storage
-    DCArrayKokkos <int> bin_tri_stencil(num_bins, 6, "bin_tri_stencil");   // how imin,imax,jmin,jmax,kmin,kmax range for bins in stencil
-
-        
-    printf("Starting timers \n\n");
-
-
-    // -------------
-    // start timer
-    auto time_1 = std::chrono::high_resolution_clock::now();
-
-    // build reverse mapping between gid and i,j,k
-    FOR_ALL(i, 0, num_bins_x,
-            j, 0, num_bins_y,
-            k, 0, num_bins_z, {
-        
-
-        // get bin gid for this i,j,k
-        size_t bin_gid = get_gid(i, j, k, num_bins_x, num_bins_y);
-
-        // the i,j,k for this bin
-        bin_keys_t bin_keys;
-        bin_keys.i = i;
-        bin_keys.j = j;
-        bin_keys.k = k;
-
-        // save mapping from bin_gid to bin_keys i,j,k
-        keys_in_bin(bin_gid) = bin_keys;
-
-    });
-    Kokkos::fence();
-    keys_in_bin.update_host();
-
-    // end timer
-    auto time_2 = std::chrono::high_resolution_clock::now();
-
-
-    // -------------------------------------------------------------------
-    // below here, making dual maps between bins and triangles
-    // -------------------------------------------------------------------
-
-    // start timer
-    auto time_3 = std::chrono::high_resolution_clock::now();
-
-    printf("building maps between triangles and bins \n");
-
-    // save bin id to triangles
-    FOR_ALL(tri_gid, 0, num_inp_triangles, {
-
-        // get the 1D index for this bin
-        size_t bin_gid = get_bin_gid(tri_coords(tri_gid,0), 
-                                     tri_coords(tri_gid,1), 
-                                     tri_coords(tri_gid,2),
-                                     xmin,
-                                     ymin,
-                                     zmin,
-                                     bin_dx,
-                                     bin_dy,
-                                     bin_dz,
-                                     num_bins_x, 
-                                     num_bins_y,
-                                     num_bins_z);
-
-        size_t storage_lid = Kokkos::atomic_fetch_add(&num_tris_in_bin(bin_gid), 1);
-        tri_bin_gid(tri_gid) = bin_gid; // the id of the bin
-        tri_bin_lid_storage(tri_gid) = storage_lid; // the storage place in the bin
-
-    }); // end for all
-    Kokkos::fence();
-    tri_bin_gid.update_host();
-    num_tris_in_bin.update_host();
-
-
-    // allocate tris in bin connectivity
-    tris_in_bin = DRaggedRightArrayKokkos <size_t> (num_tris_in_bin, "num_tris_in_bin");
-
-    // save tris in bin
-    FOR_ALL(tri_gid, 0, num_inp_triangles, {
-
-        // get bin gid
-        size_t bin_gid = tri_bin_gid(tri_gid);
-
-        // get it's storage location in the ragged right compressed storage
-        size_t storage_lid = tri_bin_lid_storage(tri_gid);
-
-        // save the point to this bin
-        tris_in_bin(bin_gid, storage_lid) = tri_gid;
-
-    }); // end for all
-
-
-    // ------------------------------------------------
-    // Find the closest tri neighbors on the bin mesh
-    // ------------------------------------------------
-    
-    FOR_ALL(i, 0, num_bins_x,
-            j, 0, num_bins_y,
-            k, 0, num_bins_z, {
-
-        
-        // get bin gid for this i,j,k
-        size_t bin_gid = get_gid(i, j, k, num_bins_x, num_bins_y);  
-        
-
-        // initialize imin stencil to -1, used for knowing if CAD was in range of bin mesh
-        for(int id=0; id<6; id++){
-            bin_tri_stencil(bin_gid,id) = -1-id;
-        }
-
-        // the search range to find the closests triangle
-        int imin;
-        int imax;
-        int jmin;
-        int jmax;
-        int kmin;
-        int kmax;
-
-        size_t neighbor_bin_gid;
-
-        size_t num_tris_found = num_tris_in_bin(bin_gid);
-        size_t max_stencil = 1000000;
-        if(num_tris_found>0){
-            imin=i;
-            imax=i;
-            jmin=j;
-            jmax=j;
-            kmin=k;
-            kmax=k;
-            max_stencil = 0;
-        }
-
-        // establish the stencil size to find at least 1 triangle
-        for(int stencil=1; stencil<max_stencil; stencil++){
-
-            // i-1:i+1
-            imin = MAX(0, i-stencil);
-            imax = MIN(num_bins_x-1, i+stencil);
-
-            // j-1:j+1
-            jmin = MAX(0, j-stencil);
-            jmax = MIN(num_bins_y-1, j+stencil);
-
-            // k-1:k+1
-            kmin = MAX(0, k-stencil);
-            kmax = MIN(num_bins_z-1, k+stencil);
-
-            // i-search boundaries
-            for (int kcount = kmin; kcount <= kmax; kcount++) {
-                for (int jcount = jmin; jcount <= jmax; jcount++) {
-
-                    int icount = imin;     
-                    // get bin neighbor gid on this search boundary
-                    neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
-                    num_tris_found += num_tris_in_bin(neighbor_bin_gid);
-
-                    icount = imax;
-                    // get bin neighbor gid on this search boundary
-                    neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
-                    num_tris_found += num_tris_in_bin(neighbor_bin_gid);
-
-                } // end for jcount
-            } // end for kcount
-
-            // j-search boundaries
-            for (int kcount = kmin; kcount <= kmax; kcount++) {
-                for (int icount = imin; icount <= imax; icount++) {
-
-                    int jcount = jmin;
-                    // get bin neighbor gid on this search boundary
-                    neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
-                    num_tris_found += num_tris_in_bin(neighbor_bin_gid);
-
-                    jcount = jmax;
-                    // get bin neighbor gid on this search boundary
-                    neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
-                    num_tris_found += num_tris_in_bin(neighbor_bin_gid);
-
-                } // end for icount
-            } // end for kcount
-            
-            // k-search boundaries
-            for (int jcount = jmin; jcount <= jmax; jcount++) {
-                for (int icount = imin; icount <= imax; icount++) {
-
-                    int kcount = kmin;
-                    // get bin neighbor gid on this search boundary
-                    neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
-                    num_tris_found += num_tris_in_bin(neighbor_bin_gid);
-
-                    kcount = kmax;
-                    // get bin neighbor gid on this search boundary
-                    neighbor_bin_gid = get_gid(icount, jcount, kcount, num_bins_x, num_bins_y);
-                    num_tris_found += num_tris_in_bin(neighbor_bin_gid);
-
-                } // end icount
-            } // end jcount
-                
-
-            // Once I find at least 1 triangle, I can exit as this is the closest one found
-            if (num_tris_found > 0){
-                bin_tri_stencil(bin_gid,0) = imin;
-                bin_tri_stencil(bin_gid,1) = imax;
-                bin_tri_stencil(bin_gid,2) = jmin;
-                bin_tri_stencil(bin_gid,3) = jmax;
-                bin_tri_stencil(bin_gid,4) = kmin;
-                bin_tri_stencil(bin_gid,5) = kmax;
-
-                break;
-            }
-            // else increase stencil size, the for loop interator increases stencil range
-
-        } // end for stencil 
-
-    }); // end for all
-    Kokkos::fence();
-    bin_tri_stencil.update_host();
-
-    // Remember: the search range that follow here will be larger by 1, going 
-    // from (imin-1:imax+1) , (jmin-1:jmax+1) , (kmin-1:jmax+1)
-    // A range is used to ensure the closest surface is found.  It is possible
-    // to have multiple bins with triangles within the same range.
-     
-    printf("building signed distance function using maps and the bins \n");
-
-
-    // ----------------------------------------------------------------
-    // calculating the signed distance function (SDF) at element nodes
-    // ----------------------------------------------------------------
-
-    // memory to store SDF at the nodes
-    const size_t num_nodes = node_coords.dims(0); // node_coords(num_nodes,3)
-
-    CArrayKokkos <double> node_sdf(num_nodes);
-    node_sdf.set_values(1.0e32); // initialize distance to a large value
-
-    // find closest triangles (using bins) to each node and save SDF
+    // loop over the nodes and calculate signed distance function (sdf)
     FOR_ALL(node_gid, 0, num_nodes, {
 
-        // get physical position for this node
-        const double x_pt = node_coords(node_gid,0);
-        const double y_pt = node_coords(node_gid,1);
-        const double z_pt = node_coords(node_gid,2);
-
-        // make vector of node coords
-        vec_t vec_node_position(x_pt, y_pt, z_pt);
-
-        // get i,j,k for this bin
-        bin_keys_t bin_keys = get_bin_keys(x_pt, 
-                                           y_pt, 
-                                           z_pt,
-                                           xmin,
-                                           ymin,
-                                           zmin,
-                                           bin_dx,
-                                           bin_dy,
-                                           bin_dz);
-
-        const size_t i = bin_keys.i;
-        const size_t j = bin_keys.j;
-        const size_t k = bin_keys.k;
-
-        // get bin gid for this i,j,k
-        size_t bin_gid = get_gid(i, j, k, num_bins_x, num_bins_y);  
-
-        // get imin, imax, ..., kmin, kmax for closest triangles in the bin
-        int imin = bin_tri_stencil(bin_gid,0);
-        int imax = bin_tri_stencil(bin_gid,1);
-        int jmin = bin_tri_stencil(bin_gid,2);
-        int jmax = bin_tri_stencil(bin_gid,3);
-        int kmin = bin_tri_stencil(bin_gid,4);
-        int kmax = bin_tri_stencil(bin_gid,5);
-
-        // try if check on imin=imax=jmin=jmax=kmin=kmax
-
-        // i-boundaries
-        for (int kcount = kmin; kcount <= kmax; kcount++) {
-            for (int jcount = jmin; jcount <= jmax; jcount++) {
-                for(int stencil=0; stencil<2; stencil++){
-
-                    // imin:imin-1
-                    int icount = MAX(0, imin-stencil);
-
-                    // get the signed distance function
-                    get_sdf_to_tri(node_sdf,
-                                tri_coords,
-                                num_tris_in_bin,
-                                tris_in_bin,
-                                normal,
-                                x_pt,
-                                y_pt,
-                                z_pt,
-                                node_gid,
-                                icount, 
-                                jcount, 
-                                kcount, 
-                                num_bins_x, 
-                                num_bins_y);
-
-                    // imax:imax+1
-                    icount = MIN(num_bins_x-1, imax+stencil);
-
-                    // get the signed distance function
-                    get_sdf_to_tri(node_sdf,
-                                tri_coords,
-                                num_tris_in_bin,
-                                tris_in_bin,
-                                normal,
-                                x_pt,
-                                y_pt,
-                                z_pt,
-                                node_gid,
-                                icount, 
-                                jcount, 
-                                kcount, 
-                                num_bins_x, 
-                                num_bins_y);
-
-                } // stencil
-            } // end for jcount
-        } // end for kcount
-
-        // j-boundaries (exclude i edges)
-        for (int kcount = kmin; kcount <= kmax; kcount++) {
-            for (int icount = imin+2; icount <= imax-2; icount++) {
-                for(int stencil=0; stencil<2; stencil++){
-
-                    // jmin:jmin-1
-                    int jcount = MAX(0, jmin-stencil);
-
-                    // get the signed distance function
-                    get_sdf_to_tri(node_sdf,
-                                tri_coords,
-                                num_tris_in_bin,
-                                tris_in_bin,
-                                normal,
-                                x_pt,
-                                y_pt,
-                                z_pt,
-                                node_gid,
-                                icount, 
-                                jcount, 
-                                kcount, 
-                                num_bins_x, 
-                                num_bins_y);
-
-                    // jmax:jmax+1
-                    jcount = MIN(num_bins_y-1, jmax+stencil);
-
-                    // get the signed distance function
-                    get_sdf_to_tri(node_sdf,
-                                tri_coords,
-                                num_tris_in_bin,
-                                tris_in_bin,
-                                normal,
-                                x_pt,
-                                y_pt,
-                                z_pt,
-                                node_gid,
-                                icount, 
-                                jcount, 
-                                kcount, 
-                                num_bins_x, 
-                                num_bins_y);
-
-                } // end for jcount
-            } // end for icount
-        } // end for kcount
+        // initialize to a big value
+        node_sdf(node_gid) = 1.e32;
         
-        // k-boundaries (exclude i AND j edges)
-        for (int jcount = jmin+2; jcount <= jmax-2; jcount++) {
-            for (int icount = imin+2; icount <= imax-2; icount++) {
-                for(int stencil=0; stencil<2; stencil++){
+        // loop over all triangles in the file
+        // Note: future work should make this an oct-tree search
+        for(size_t tri=0; tri<num_inp_triangles; tri++){
 
-                    // kmin:kmin-1
-                    int kcount = MAX(0, kmin-stencil);
+            // node vec
+            vec_t node_p(node_coords(node_gid,0), node_coords(node_gid,1), node_coords(node_gid,2));
 
-                    // get the signed distance function
-                    get_sdf_to_tri(node_sdf,
-                                tri_coords,
-                                num_tris_in_bin,
-                                tris_in_bin,
-                                normal,
-                                x_pt,
-                                y_pt,
-                                z_pt,
-                                node_gid,
-                                icount, 
-                                jcount, 
-                                kcount, 
-                                num_bins_x, 
-                                num_bins_y);
+            // points defining the triangular facet
+            const vec_t tri_v0(v0X(tri), v0Y(tri), v0Z(tri));
+            const vec_t tri_v1(v1X(tri), v1Y(tri), v1Z(tri));
+            const vec_t tri_v2(v2X(tri), v2Y(tri), v2Z(tri));
 
-                    // kmax:kmax+1
-                    kcount = MIN(num_bins_z-1, kmax+stencil);
+            double sdf_lcl = signed_distance_to_triangle(node_p, 
+                                                         tri_v0, 
+                                                         tri_v1, 
+                                                         tri_v2);
 
-                    // get the signed distance function
-                    get_sdf_to_tri(node_sdf,
-                                tri_coords,
-                                num_tris_in_bin,
-                                tris_in_bin,
-                                normal,
-                                x_pt,
-                                y_pt,
-                                z_pt,
-                                node_gid,
-                                icount, 
-                                jcount, 
-                                kcount, 
-                                num_bins_x, 
-                                num_bins_y);
+            // check to see if this triangle is closer to the point
+            if(fabs(sdf_lcl) < fabs(node_sdf(node_gid))){
+                node_sdf(node_gid) = sdf_lcl;
+            } // end if
 
-                } // end stencil
-            } // end icount
-        } // end jcount
+        } // end for tri in STL file
 
-    }); // end parallel for nodes in mesh
+    }); // end parallel for 
 
 
-    // --------------------------------------------
-    // calculating SDF in subzones using nodal SDF
-    // --------------------------------------------
+    // -----------------
+    // reference element integration
+    // WARNING: move to Element routines, this is a place-holder
 
-    // build details on the element
-    const size_t num_zones_1d = Pn_order;
-    const size_t num_nodes_1d = Pn_order+1;
-    const size_t num_nodes_in_elem = num_nodes_1d*num_nodes_1d*num_nodes_1d; 
-
-    // PLIC (using SDF) can be applied on the zones in the element
-    //const size_t num_sub_zones_in_elem = Pn_order*Pn_order*Pn_order; // if using PLIC
-
-    // storage for the local ids of the nodes in the sub zone, needed for PLIC
-    //DCArrayKokkos <size_t> node_lids_in_zone_lids(num_sub_zones_in_elem,8); // nodes of the sub zones in an element
-    //build_3D_zone_nodes(node_lids_in_zone_lids, num_zones_1d, num_nodes_1d);
-    
     const size_t num_eval_pnts = 9;  
     const double ref_pnts_1D[9]={0.0, 0.125, 0.24, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0};
+
+    const size_t num_nodes_in_elem = 8; // WARNING WARNING WARNING
 
     // build the reference element
     CArrayKokkos <double> bern_basis(num_eval_pnts,num_nodes_in_elem);
@@ -1016,7 +370,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
         const double mu  = ref_pnts_1D[k];
 
         // get the eval ref elem local id
-        const size_t eval_pnt_rid = get_gid(i, j, k, num_eval_pnts, num_eval_pnts);
+        const size_t eval_pnt_rid = get_id_of_ijk(i, j, k, num_eval_pnts, num_eval_pnts);
 
         // get bern basis (WARNING: update to use ELEMENTS library arbitrary order library)
         get_bernstein_basis_fcns(bern_basis, xi, eta, mu, eval_pnt_rid);
@@ -1024,7 +378,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
     }); // end for all
 
 
-    const size_t num_elems = nodes_in_elems.dims(0); // nodes_in_elems(num_elems, num_nodes_in_elem) 
+    const size_t num_elems = nodes_in_elem.dims(0); // nodes_in_elem(num_elems, num_nodes_in_elem) 
 
     // evaluate SDF at this eval point
     FOR_ALL(elem_gid, 0, num_elems, {
@@ -1037,16 +391,10 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
                 for(size_t i=0; i<num_eval_pnts; i++){
 
                     // get the eval ref elem local id
-                    const size_t eval_pnt_rid = get_gid(i, j, k, num_eval_pnts, num_eval_pnts);
+                    const size_t eval_pnt_rid = get_id_of_ijk(i, j, k, num_eval_pnts, num_eval_pnts);
 
                     // evaluate SDF at this point
-                    const double sdf_val = calc_scalar_in_elem(node_sdf, bern_basis, nodes_in_elems, elem_gid, eval_pnt_rid);
-                           
-                           //double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
-                           //const CArrayKokkos <double> &node_basis, 
-                           //const CArrayKokkos <size_t> &nodes_in_elems,
-                           //const size_t elem_gid,
-                           //const size_t eval_pnt_rid)
+                    const double sdf_val = calc_scalar_in_elem(node_sdf, bern_basis, nodes_in_elem, elem_gid, eval_pnt_rid);
 
                     if(sdf_val<0){
                         // we are inside the part
@@ -1059,60 +407,17 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_vol_frac,
 
 
         //  The ratio of hits to number of points is vol frac
-        elem_vol_frac(elem_gid) = num_inside_part/(num_eval_pnts*num_eval_pnts*num_eval_pnts); // coded for 3D
+        elem_geo_volfrac(elem_gid) = num_inside_part/(num_eval_pnts*num_eval_pnts*num_eval_pnts); // coded for 3D
 
     }); // end parallel for
-        
 
-    // end timer
-    auto time_4 = std::chrono::high_resolution_clock::now();
-
-    printf("done calculating volume fraction in elements \n");
-
-
-    // -----------------
-    //  Timers
-    // -----------------
-    printf("\n");
-    std::chrono::duration <double, std::milli> ms = time_2 - time_1;
-    std::cout << "runtime to create bins = " << ms.count() << "ms\n\n";
-
-    ms = time_4 - time_3;
-    std::cout << "runtime to find and save neighbors = " << ms.count() << "ms\n\n";
-
-
-
-
-    // -----------------
-    //  Viz for checking
-    // -----------------
-    printf("Writing VTK Graphics File \n\n");
-
-    std::ofstream out("cloud.vtk");
-
-    out << "# vtk DataFile Version 3.0\n";
-    out << "3D point cloud\n";
-    out << "ASCII\n";
-    out << "DATASET POLYDATA\n";
-    out << "POINTS " << num_inp_triangles << " float\n";
-    for (size_t tri_gid = 0; tri_gid < num_inp_triangles; ++tri_gid) {
-        out << tri_coords.host(tri_gid,0) << " " 
-            << tri_coords.host(tri_gid,1) << " " 
-            << tri_coords.host(tri_gid,2) << "\n";
-    }
-
-    out << "\nPOINT_DATA " << num_inp_triangles << "\n";
-    out << "SCALARS lvlset float 1\n";
-    out << "LOOKUP_TABLE default\n";
-    for (size_t tri_gid = 0; tri_gid < num_inp_triangles; ++tri_gid) {
-        out << 0 << "\n";
-    }
 
     
     printf("Finished STL to Volfrac Calculation \n\n");
 
 
-
     return 1;
-    
-} // end main
+
+} // end function
+
+
