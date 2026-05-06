@@ -121,7 +121,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // Write initial state at t=0
     printf("Writing outputs to file at %f \n", graphics_time);
-    mesh_writer.write_mesh(
+    /* mesh_writer.write_mesh(
         mesh, 
         State, 
         SimulationParamaters,
@@ -131,7 +131,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         TLQS3D_State::required_node_state,
         TLQS3D_State::required_gauss_pt_state,
         TLQS3D_State::required_material_pt_state,
-        this->solver_id);
+        this->solver_id); */
     
 
 
@@ -214,6 +214,10 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // dirichlet (displacement) type
             boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
+            /* for (int i = 0; i < 3*mesh.num_nodes; i++) {
+                std::cout << displacement_step(i) << std::endl;
+            }
+            std::cout << std::endl << std::endl; */
 
             // ***************************************************
             // end boundary conditions
@@ -228,6 +232,10 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // getting r0 = (02F - 01F) - K * displacement_iter
             get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter, rk);
+            /* for (int i = 0; i < 3*mesh.num_nodes; i++) {
+                std::cout << rk(i) << std::endl;
+            }
+            std::cout << std::endl << std::endl; */
 
             // p0 = r0
             FOR_ALL(i, 0, 3*mesh.num_nodes, {
@@ -244,14 +252,20 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rktrk, {
                     loc_rktrk += rk(i) * rk(i);
                 }, rktrk);
+                //std::cout << "RKTRK: " << rktrk << std::endl;
 
                 // get scalar: alpha_k = (r_k^T * r_k) / (p_k^T * K * p_k)
                 double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rktrk, p);
+                //std::cout << "ALPHA: " << alpha_k << std::endl;
 
                 // get vector: displacement_iter_k+1 = displacement_iter_k + alpha_k * p_k
                 FOR_ALL(i, 0, 3*mesh.num_nodes, {
                     displacement_iter(i) += alpha_k * p(i);
                 });
+                /* for (int i = 0; i < 3*mesh.num_nodes; i++) {
+                    std::cout << displacement_iter(i) << std::endl;
+                }
+                std::cout << std::endl << std::endl; */
 
                 // get vector: r_k+1 = r_k - alpha_k * K * p_k
                 get_rkp1(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p, alpha_k, rkp1);
@@ -265,7 +279,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 // check convergence
                 double norm = sqrt(rkp1trkp1);
-                if (norm < 1E-8) {
+                if (norm < 1E-10) {
                     break;
                 }
 
@@ -288,7 +302,44 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // end conjugate gradient solve
             // ***************************************************
 
+            // update displacement step vector for convergence check and next iteration
+            FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                displacement_step(i) += displacement_iter(i);
+            });
+
+            // convergence check
+            double norm_num = 0.0;
+            double loc_norm_num = 0.0;
+            FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_norm_num, {
+                loc_norm_num += displacement_iter(i) * displacement_iter(i);
+            }, norm_num);
+
+            double norm_den = 0.0;
+            double loc_norm_den = 0.0;
+            FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_norm_den, {
+                loc_norm_den += displacement_step(i) * displacement_step(i);
+            }, norm_den);
+
+            double norm = sqrt(norm_num / norm_den);
+            if (norm < 1E-10) {
+                break;
+            }
+
         } // end Picard iteration loop
+
+        // updating total displacement for next load step
+        FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                j, 0, 3, {
+                    State.node.displacement(i,j) += displacement_step(3*i + j);
+        });
+
+        for (int i = 0; i < mesh.num_nodes; i++) {
+            for (int j = 0; j < 3; j++) {
+                std::cout << State.node.displacement(i,j) << "   ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;
 
         // increment the time
         time_value += dt;
@@ -309,7 +360,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         }
 
         // write outputs
-        if (write == 1) {
+        /* if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
             mesh_writer.write_mesh(mesh,
                                    State,
@@ -325,7 +376,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             graphics_time = time_value + graphics_dt_ival;
 
             dt = cached_pregraphics_dt;
-        } // end if
+        } // end if */
 
         // end of calculation
         if (time_value >= time_final) {

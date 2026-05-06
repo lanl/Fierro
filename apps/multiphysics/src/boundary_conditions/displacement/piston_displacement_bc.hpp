@@ -83,7 +83,15 @@ static void displacement(const swage::Mesh& mesh,
     const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
     const size_t num_dof_in_elem   = 3 * num_nodes_in_elem;
 
-    displacement_step(3 * bdy_node_gid + constrained_dir) = disp_bc_global_vars(bdy_set,0)*(dt/(time_end-time_start));
+    //displacement_step(3 * bdy_node_gid + constrained_dir) = disp_bc_global_vars(bdy_set,0)*(dt/(time_end-time_start));
+    // 1. Calculate the total target for this load step
+    const double total_step_target = disp_bc_global_vars(bdy_set, 0) * (dt / (time_end - time_start));
+
+    // 2. Calculate the 'gap' remaining to reach that target
+    // In the first Picard iteration, displacement_step is 0, so gap = total_step_target.
+    // In later iterations, this ensures the solver only moves what's left to move.
+    const double current_step_val = displacement_step(3 * bdy_node_gid + constrained_dir);
+    const double gap = total_step_target - current_step_val;
 
     for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
         const size_t elem_gid = mesh.elems_in_node(bdy_node_gid, elem_lid);
@@ -104,6 +112,10 @@ static void displacement(const swage::Mesh& mesh,
 
         for (size_t row = 0; row < num_dof_in_elem; row++)
             K_elem(elem_gid, row, constrained_dof) = 0.0;
+
+        K_elem(elem_gid, constrained_dof, constrained_dof) = 1.0;
+        //F_elem(elem_gid, constrained_dof) = 0;
+        F_elem(elem_gid, constrained_dof) = gap / static_cast<double>(num_elems_in_node);;
     }
 
     return;

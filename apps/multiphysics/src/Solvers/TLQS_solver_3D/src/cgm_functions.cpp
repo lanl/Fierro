@@ -123,8 +123,9 @@ double TLQS3D::get_alpha(
             }
         }
     }, ptkp);
+    //std::cout << "PTKP: " << ptkp << std::endl;
 
-    return rktrk / ptkp;
+    return rktrk / (ptkp+1E-16);
 } // end get_alpha
 
 void TLQS3D::get_rkp1(
