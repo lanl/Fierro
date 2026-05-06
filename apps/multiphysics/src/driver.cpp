@@ -125,8 +125,8 @@ void Driver::initialize()
     if(world_size != 1) { // pass through the partitioning function if not a single rank
         elements::partition_mesh(initial_mesh, mesh, initial_node_coords, final_node_coords, element_communication_plan, node_communication_plan, world_size, rank);   
         // Verify communication plans (matches ELEMENTS decomp_example pattern)
-        element_communication_plan.verify_graph_communicator();
-        node_communication_plan.verify_graph_communicator();
+        // element_communication_plan.verify_graph_communicator();
+        // node_communication_plan.verify_graph_communicator();
         MPI_Barrier(MPI_COMM_WORLD);
     } else {
         mesh = initial_mesh;

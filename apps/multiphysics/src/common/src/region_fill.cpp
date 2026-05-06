@@ -849,15 +849,6 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     } // end serial for loop over all elements
     State.MaterialToMeshMaps.elem_in_mat_elem.update_device();
 
-
-    // copy the state to the device
-    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-
-        std::cout << "Number of elements = " << 
-            State.MaterialToMeshMaps.num_mat_elems.host(mat_id) << " for material " << mat_id << "\n";
-    
-    } // end for loop over mats
-
     State.MaterialPoints.volfrac.update_device();
     State.MaterialPoints.geo_volfrac.update_device();
 

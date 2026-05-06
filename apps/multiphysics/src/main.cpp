@@ -52,17 +52,17 @@
 /////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[])
 {
-    
-    
+
     MPI_Init(&argc, &argv);
+
+    int world_size;
+    int rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    
     MATAR_INITIALIZE(argc, argv);
     { // MATAR scope
-    
-        int world_size;
-        int rank;
-        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    
+
         // check to see of an input file was supplied when running the code
         if (argc == 1) {
             std::cout << "\n\n**********************************\n\n";
@@ -93,20 +93,20 @@ int main(int argc, char* argv[])
         
         auto time_now = std::chrono::high_resolution_clock::now();
         auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_init).count();
-        printf("\n**** Total time to initialize driver in seconds  %f ****\n\n", calc_time * 1e-9);
+        if (rank == 0) printf("\n**** Total time to initialize driver in seconds  %f ****\n\n", calc_time * 1e-9);
 
         auto time_setup = std::chrono::high_resolution_clock::now();
         driver->setup();
         time_now = std::chrono::high_resolution_clock::now();
         calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_setup).count();
-        printf("\n**** Total time to setup driver in seconds  %f ****\n\n", calc_time * 1e-9);
+        if (rank == 0) printf("\n**** Total time to setup driver in seconds  %f ****\n\n", calc_time * 1e-9);
         
 
         auto time_run = std::chrono::high_resolution_clock::now();
         driver->execute();
         time_now = std::chrono::high_resolution_clock::now();
         calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_setup).count();
-        printf("\n**** Total time to execute driver in seconds  %f ****\n\n", calc_time * 1e-9);
+        if (rank == 0) printf("\n**** Total time to execute driver in seconds  %f ****\n\n", calc_time * 1e-9);
 
 
         driver->finalize();
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
         time_now = std::chrono::high_resolution_clock::now();
         calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_now - time_start).count();
 
-        printf("\n**** Total time to run simulation in seconds  %f ****\n\n", calc_time * 1e-9);
+        if (rank == 0) printf("\n**** Total time to run simulation in seconds  %f ****\n\n", calc_time * 1e-9);
 
         // Delete driver
         delete driver;
@@ -124,6 +124,6 @@ int main(int argc, char* argv[])
     MATAR_FINALIZE();
     MPI_Finalize();
 
-    std::cout << "**** Simulations completed **** " << std::endl;
+    if (rank == 0) std::cout << "**** Simulations completed **** " << std::endl;
     return 0;
 }

@@ -458,10 +458,10 @@ public:
 };
 
 double sum_domain_internal_energy(
+    const swage::Mesh& mesh,
+    const MeshtoMaterialMap_t& MeshtoMaterialMaps,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-    const size_t num_mat_points,
-    const size_t mat_id);
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_sie);
 
 double sum_domain_kinetic_energy(
     const swage::Mesh& mesh,
@@ -470,9 +470,9 @@ double sum_domain_kinetic_energy(
     const DCArrayKokkos<double>& node_mass);
 
 double sum_domain_material_mass(
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-    const size_t num_mat_points,
-    const size_t mat_id);
+    const swage::Mesh& mesh,
+    const MeshtoMaterialMap_t& MeshtoMaterialMaps,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass);
 
 double sum_domain_node_mass(const swage::Mesh& mesh,
     const MPICArrayKokkos<double>& node_coords,

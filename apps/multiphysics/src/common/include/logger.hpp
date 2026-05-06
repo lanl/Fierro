@@ -20,6 +20,9 @@ This program is open source under the BSD-3 License.
 ///
 ///   fierro::Logger        -- owning, non-copyable, one-per-Driver log sink.
 ///                            Host-only. Not capturable into kernels.
+///   fierro::Logger::rank / Logger::all_ranks -- host-only tags for the stdout
+///                            pool; default logging only sends rank 0 lines to
+///                            the terminal after flush().
 ///   fierro::Logger::Handle -- trivially-copyable POD view of a Logger, safe to
 ///                            capture by value into FOR_ALL / KOKKOS_LAMBDA on
 ///                            every Kokkos backend (Serial/OpenMP/CUDA/HIP/SYCL).
@@ -36,6 +39,12 @@ This program is open source under the BSD-3 License.
 ///  1) Host side: call   log.info("rank-local msg %d\n", x);
 ///                anywhere on the host, including inside loops whose iteration
 ///                count varies across MPI ranks. These calls do NOT touch MPI.
+///                Buffered host lines go to this rank's log file on flush().
+///                By default only MPI rank 0 contributes the same lines to the
+///                terminal (stdout) stream; use log.info(Logger::all_ranks(),
+///                ...) or log.info(Logger::rank(k), ...) to change which rank(s)
+///                duplicate that line into the stdout buffer. Total ctor
+///                capacity_bytes is split ~50/50 between file and stdout pools.
 ///
 ///  2) Device side: obtain a POD view with   auto lh = log.handle();
 ///                then capture `lh` by value into your FOR_ALL / KOKKOS_LAMBDA
@@ -62,9 +71,10 @@ This program is open source under the BSD-3 License.
 /// ============================================================================
 ///
 ///   The Logger's state uses only Kokkos-portable primitives:
-///     - Kokkos::View<char*,   Kokkos::HostSpace>  (the rank-local buffer)
-///     - Kokkos::View<size_t,  Kokkos::HostSpace>  (atomic byte counter)
-///     - Kokkos::View<size_t,  Kokkos::HostSpace>  (atomic drop counter)
+///     - Kokkos::View<char*,   Kokkos::HostSpace>  (rank-local bytes: file +
+///       stdout regions in one allocation)
+///     - Kokkos::View<size_t,  Kokkos::HostSpace>  (atomic byte counters x2)
+///     - Kokkos::View<size_t,  Kokkos::HostSpace>  (atomic drop counters x2)
 ///     - Kokkos::atomic_fetch_add                  (replaces std::mutex)
 ///     - raw char*, size_t*, int, LogLevel, FILE*, MPI_Comm        (POD)
 ///
@@ -73,10 +83,14 @@ This program is open source under the BSD-3 License.
 ///   temporaries are Kokkos::View<..., Kokkos::HostSpace>.
 ///
 /// ============================================================================
-/// OUTPUT FORMAT (both stdout and per-rank files)
+/// OUTPUT FORMAT (terminal vs per-rank files)
 /// ============================================================================
 ///
-///   Every line is tagged with rank and 5-char padded level:
+///   Every line is tagged with rank and 5-char padded level. Buffered host
+///   lines always go to this rank's log file on flush(). The terminal (stdout)
+///   stream receives only lines selected for the stdout pool: by default MPI
+///   rank 0 only; use log.info(Logger::all_ranks(), ...) for every rank, or
+///   log.info(Logger::rank(k), ...) for a single rank.
 ///
 ///       [rank 0][INFO ] Starting SGH3D setup
 ///       [rank 0][TRACE] entering calc_corner_mass
@@ -93,7 +107,8 @@ This program is open source under the BSD-3 License.
 ///   set_file_prefix(). Pass nullptr to disable file output.
 ///
 ///   File I/O in flush() uses std::fwrite on the rank's own FILE*, so it never
-///   involves MPI and is unaffected by rank-varying loop bounds.
+///   involves MPI and is unaffected by rank-varying loop bounds. Terminal
+///   output uses a separate rank-local stdout buffer gathered to rank 0.
 
 #ifndef FIERRO_LOGGER_H
 #define FIERRO_LOGGER_H
@@ -159,6 +174,12 @@ constexpr const char* level_tag(LogLevel l) {
     return "?????";
 }
 
+/// @brief Selects which MPI rank(s) copy a host log line into the stdout pool
+///        (gathered on flush). File output always receives every line from every
+///        rank. Use Logger::rank(k) or Logger::all_ranks().
+struct StdoutTarget {
+    int rank; ///< -1 = all ranks; else only this MPI rank copies the line to the stdout pool.
+};
 
 // ============================================================================
 //  Logger  (declaration + inline definitions)
@@ -166,6 +187,13 @@ constexpr const char* level_tag(LogLevel l) {
 
 class Logger {
 public:
+    /// @brief Only this MPI rank's line is copied into the stdout buffer.
+    static constexpr StdoutTarget rank(int mpi_rank) noexcept {
+        return StdoutTarget{mpi_rank};
+    }
+    /// @brief Every rank copies the line into its stdout buffer (legacy terminal behavior).
+    static constexpr StdoutTarget all_ranks() noexcept { return StdoutTarget{-1}; }
+
     // ------------------------------------------------------------------------
     //  Handle -- trivially-copyable POD view suitable for kernel capture.
     // ------------------------------------------------------------------------
@@ -184,12 +212,16 @@ public:
     ///          not affect that kernel's filtering. Refresh with
     ///          `log.handle()` after any set_level call.
     struct Handle {
-        char*    buf_ptr  = nullptr;              ///< Host buffer, never deref'd on device
-        size_t*  used     = nullptr;              ///< Atomic byte counter (host)
-        size_t*  dropped  = nullptr;              ///< Atomic overflow counter (host)
-        size_t   cap      = 0;                    ///< Buffer capacity in bytes
-        int      rank     = 0;                    ///< MPI rank in Logger::comm()
-        LogLevel level    = LogLevel::Info;       ///< Minimum level (snapshot)
+        char*    buf_ptr  = nullptr;              ///< File ring base (host)
+        size_t*  used     = nullptr;              ///< Atomic byte counter (file)
+        size_t*  dropped  = nullptr;            ///< Atomic overflow counter (file)
+        size_t   cap      = 0;                    ///< File ring capacity in bytes
+        char*    stdout_buf_ptr = nullptr;       ///< Stdout ring base (host)
+        size_t*  stdout_used    = nullptr;      ///< Atomic byte counter (stdout)
+        size_t*  stdout_dropped  = nullptr;      ///< Atomic overflow counter (stdout)
+        size_t   stdout_cap     = 0;            ///< Stdout ring capacity in bytes
+        int      rank     = 0;                  ///< MPI rank in Logger::comm()
+        LogLevel level    = LogLevel::Info;     ///< Minimum level (snapshot)
 
         /// @brief Append one printf-style log line. Unified host/device.
         ///
@@ -239,7 +271,24 @@ public:
             ))
             KOKKOS_IF_ON_HOST((
                 if (static_cast<int>(lvl) < static_cast<int>(level)) return;
-                append_host_(lvl, fmt, args...);
+                append_host_filtered_(StdoutTarget{0}, lvl, fmt, args...);
+            ))
+        }
+
+        /// @brief Same as log(...) but selects which rank(s) copy into the stdout
+        ///        pool (device ignores \p out).
+        template<typename... Args>
+        KOKKOS_INLINE_FUNCTION
+        void log(StdoutTarget out, LogLevel lvl, const char* fmt, Args... args) const {
+            KOKKOS_IF_ON_DEVICE((
+                (void)out;
+                if (cap == 0u) return;
+                Kokkos::printf("[rank %d][%s] ", rank, level_tag(lvl));
+                Kokkos::printf(fmt, args...);
+            ))
+            KOKKOS_IF_ON_HOST((
+                if (static_cast<int>(lvl) < static_cast<int>(level)) return;
+                append_host_filtered_(out, lvl, fmt, args...);
             ))
         }
 
@@ -252,11 +301,23 @@ public:
             leveled_<LogLevel::Trace>(fmt, args...);
         }
 
+        template<typename... Args>
+        KOKKOS_INLINE_FUNCTION
+        void trace(StdoutTarget out, const char* fmt, Args... args) const {
+            leveled_<LogLevel::Trace>(out, fmt, args...);
+        }
+
         /// @brief Sugar for log(Debug, ...). Compile-time-gated on device.
         template<typename... Args>
         KOKKOS_INLINE_FUNCTION
         void debug(const char* fmt, Args... args) const {
             leveled_<LogLevel::Debug>(fmt, args...);
+        }
+
+        template<typename... Args>
+        KOKKOS_INLINE_FUNCTION
+        void debug(StdoutTarget out, const char* fmt, Args... args) const {
+            leveled_<LogLevel::Debug>(out, fmt, args...);
         }
 
         /// @brief Sugar for log(Info, ...). Compile-time-gated on device.
@@ -266,6 +327,12 @@ public:
             leveled_<LogLevel::Info>(fmt, args...);
         }
 
+        template<typename... Args>
+        KOKKOS_INLINE_FUNCTION
+        void info(StdoutTarget out, const char* fmt, Args... args) const {
+            leveled_<LogLevel::Info>(out, fmt, args...);
+        }
+
         /// @brief Sugar for log(Warn, ...). Compile-time-gated on device.
         template<typename... Args>
         KOKKOS_INLINE_FUNCTION
@@ -273,11 +340,23 @@ public:
             leveled_<LogLevel::Warn>(fmt, args...);
         }
 
+        template<typename... Args>
+        KOKKOS_INLINE_FUNCTION
+        void warn(StdoutTarget out, const char* fmt, Args... args) const {
+            leveled_<LogLevel::Warn>(out, fmt, args...);
+        }
+
         /// @brief Sugar for log(Error, ...). Compile-time-gated on device.
         template<typename... Args>
         KOKKOS_INLINE_FUNCTION
         void error(const char* fmt, Args... args) const {
             leveled_<LogLevel::Error>(fmt, args...);
+        }
+
+        template<typename... Args>
+        KOKKOS_INLINE_FUNCTION
+        void error(StdoutTarget out, const char* fmt, Args... args) const {
+            leveled_<LogLevel::Error>(out, fmt, args...);
         }
 
         /// @brief False for a default-constructed handle (e.g. no logger attached).
@@ -288,14 +367,23 @@ public:
         }
 
     private:
-        /// @brief Compile-time-typed shim used by info/warn/error/debug/trace.
-        ///        Enables zero-cost device stripping via `if constexpr` against
-        ///        FIERRO_LOG_DEVICE_MAX_LEVEL. On host, still runtime-filtered
-        ///        against Logger::level() via the generic log() path.
         template<LogLevel Lvl, typename... Args>
         KOKKOS_INLINE_FUNCTION
         void leveled_(const char* fmt, Args... args) const {
+            leveled_impl_<Lvl>(StdoutTarget{0}, fmt, args...);
+        }
+
+        template<LogLevel Lvl, typename... Args>
+        KOKKOS_INLINE_FUNCTION
+        void leveled_(StdoutTarget out, const char* fmt, Args... args) const {
+            leveled_impl_<Lvl>(out, fmt, args...);
+        }
+
+        template<LogLevel Lvl, typename... Args>
+        KOKKOS_INLINE_FUNCTION
+        void leveled_impl_(StdoutTarget out, const char* fmt, Args... args) const {
             KOKKOS_IF_ON_DEVICE((
+                (void)out;
                 if (cap == 0u) return;
                 if constexpr (static_cast<int>(Lvl) >=
                               static_cast<int>(FIERRO_LOG_DEVICE_MAX_LEVEL)) {
@@ -305,14 +393,17 @@ public:
             ))
             KOKKOS_IF_ON_HOST((
                 if (static_cast<int>(Lvl) < static_cast<int>(level)) return;
-                append_host_(Lvl, fmt, args...);
+                append_host_filtered_(out, Lvl, fmt, args...);
             ))
         }
 
-        /// @brief Host-only append: format once, reserve atomically, memcpy.
-        ///        Overflow is counted, not stored (no rollback).
+        /// @brief Host-only append: format once; copy to file ring; optionally
+        ///        copy to stdout ring per `out`.
         template<typename... Args>
-        inline void append_host_(LogLevel lvl, const char* fmt, Args... args) const {
+        inline void append_host_filtered_(StdoutTarget   out,
+                                          LogLevel       lvl,
+                                          const char*    fmt,
+                                          Args...        args) const {
             KOKKOS_IF_ON_HOST((
                 if (buf_ptr == nullptr || used == nullptr || dropped == nullptr ||
                     cap == 0u) {
@@ -329,15 +420,23 @@ public:
                 size_t want = static_cast<size_t>(pfx) + static_cast<size_t>(msg);
                 if (want > sizeof(stack_buf)) want = sizeof(stack_buf);
 
-                // Monotonically grow `used` via atomic reservation. Writes
-                // only happen when the reservation fits in `cap`; otherwise
-                // the message is dropped (no rollback -- rollback races with
-                // other reservers).
                 size_t off = Kokkos::atomic_fetch_add(used, want);
                 if (off + want <= cap) {
                     std::memcpy(buf_ptr + off, stack_buf, want);
                 } else {
                     Kokkos::atomic_fetch_add(dropped, static_cast<size_t>(1));
+                }
+
+                const bool to_stdout =
+                    (out.rank < 0) || (out.rank == rank);
+                if (to_stdout && stdout_buf_ptr != nullptr && stdout_used != nullptr &&
+                    stdout_dropped != nullptr && stdout_cap > 0u) {
+                    off = Kokkos::atomic_fetch_add(stdout_used, want);
+                    if (off + want <= stdout_cap) {
+                        std::memcpy(stdout_buf_ptr + off, stack_buf, want);
+                    } else {
+                        Kokkos::atomic_fetch_add(stdout_dropped, static_cast<size_t>(1));
+                    }
                 }
             ))
         }
@@ -367,14 +466,15 @@ public:
     ///                        file. The file opened is "<file_prefix><rank>"
     ///                        (mode "w", truncating). Pass nullptr to skip
     ///                        file output entirely. Default "Fierro_log_".
-    /// @param capacity_bytes  Size of the rank-local buffer, in bytes.
-    ///                        Default 1 MiB. Messages past this capacity
-    ///                        between flushes are dropped (and counted).
+    /// @param capacity_bytes  Total rank-local storage in bytes (default 1 MiB),
+    ///                        split approximately half for the per-rank log file
+    ///                        ring and half for the stdout gather ring. Messages
+    ///                        past either pool between flushes are dropped (and counted).
     ///
     /// @note Host-only. Every rank must construct with the same `comm`; no
     ///       MPI calls are issued inside the ctor itself.
-    /// @note Allocates three Kokkos::View<..., Kokkos::HostSpace> objects and
-    ///       opens one FILE*.
+    /// @note Allocates five Kokkos::View<..., Kokkos::HostSpace> objects (one
+    ///       char buffer plus four scalars) and opens one FILE*.
     ///
     /// @code
     ///     fierro::Logger log(MPI_COMM_WORLD, fierro::LogLevel::Info, "Fierro_log_");
@@ -392,22 +492,32 @@ public:
         MPI_Comm_size(comm_, &sz);
         size_ = sz;
 
-        // Allocate Kokkos-backed storage. The Views own the memory; the
-        // Handle exposes raw pointers into them for kernel capture. The
-        // Kokkos runtime must be initialized before the Logger ctor runs
-        // (MATAR_INITIALIZE covers this in Fierro's main).
-        buf_view_     = Kokkos::View<char*  , Kokkos::HostSpace>("fierro.logger.buf", capacity_bytes);
-        used_view_    = Kokkos::View<size_t , Kokkos::HostSpace>("fierro.logger.used");
-        dropped_view_ = Kokkos::View<size_t , Kokkos::HostSpace>("fierro.logger.dropped");
-        *used_view_.data()    = 0;
-        *dropped_view_.data() = 0;
+        const size_t cap_eff    = (capacity_bytes < 2u) ? 2u : capacity_bytes;
+        const size_t file_cap   = cap_eff / 2;
+        const size_t stdout_cap = cap_eff - file_cap;
 
-        h_.buf_ptr = buf_view_.data();
-        h_.used    = used_view_.data();
-        h_.dropped = dropped_view_.data();
-        h_.cap     = capacity_bytes;
-        h_.rank    = r;
-        h_.level   = level;
+        buf_view_ = Kokkos::View<char*, Kokkos::HostSpace>("fierro.logger.buf", cap_eff);
+        used_view_         = Kokkos::View<size_t, Kokkos::HostSpace>("fierro.logger.used");
+        dropped_view_      = Kokkos::View<size_t, Kokkos::HostSpace>("fierro.logger.dropped");
+        stdout_used_view_  = Kokkos::View<size_t, Kokkos::HostSpace>("fierro.logger.stdout_used");
+        stdout_dropped_view_ =
+            Kokkos::View<size_t, Kokkos::HostSpace>("fierro.logger.stdout_dropped");
+        *used_view_.data()           = 0;
+        *dropped_view_.data()         = 0;
+        *stdout_used_view_.data()    = 0;
+        *stdout_dropped_view_.data() = 0;
+
+        char* const base = buf_view_.data();
+        h_.buf_ptr         = base;
+        h_.used            = used_view_.data();
+        h_.dropped         = dropped_view_.data();
+        h_.cap             = file_cap;
+        h_.stdout_buf_ptr  = base + file_cap;
+        h_.stdout_used     = stdout_used_view_.data();
+        h_.stdout_dropped  = stdout_dropped_view_.data();
+        h_.stdout_cap      = stdout_cap;
+        h_.rank            = r;
+        h_.level           = level;
 
         if (file_prefix != nullptr) {
             open_file_for_rank_(file_prefix);
@@ -416,8 +526,8 @@ public:
 
     /// @brief Best-effort destructor. If MPI is still initialized it calls
     ///        flush() (collective!) so no messages are lost; then closes the
-    ///        file. If MPI has already been finalized, only the rank-local
-    ///        buffer is written to the file and the stdout gather is skipped.
+    ///        file. If MPI has already been finalized, both rank-local rings
+    ///        are written to the per-rank log file and the stdout gather is skipped.
     ///
     /// @warning Because ~Logger is collective when MPI is live, every rank
     ///          must destroy its Logger at the same program point. The
@@ -458,25 +568,55 @@ public:
         h_.log(lvl, fmt, args...);
     }
 
+    template<typename... Args>
+    inline void log(StdoutTarget out, LogLevel lvl, const char* fmt, Args... args) const {
+        h_.log(out, lvl, fmt, args...);
+    }
+
     /// @brief Host-side convenience for Trace. Non-collective. Host-thread-safe.
     template<typename... Args>
     inline void trace(const char* fmt, Args... args) const { h_.trace(fmt, args...); }
+
+    template<typename... Args>
+    inline void trace(StdoutTarget out, const char* fmt, Args... args) const {
+        h_.trace(out, fmt, args...);
+    }
 
     /// @brief Host-side convenience for Debug. Non-collective. Host-thread-safe.
     template<typename... Args>
     inline void debug(const char* fmt, Args... args) const { h_.debug(fmt, args...); }
 
+    template<typename... Args>
+    inline void debug(StdoutTarget out, const char* fmt, Args... args) const {
+        h_.debug(out, fmt, args...);
+    }
+
     /// @brief Host-side convenience for Info. Non-collective. Host-thread-safe.
     template<typename... Args>
     inline void info(const char* fmt, Args... args) const { h_.info(fmt, args...); }
+
+    template<typename... Args>
+    inline void info(StdoutTarget out, const char* fmt, Args... args) const {
+        h_.info(out, fmt, args...);
+    }
 
     /// @brief Host-side convenience for Warn. Non-collective. Host-thread-safe.
     template<typename... Args>
     inline void warn(const char* fmt, Args... args) const { h_.warn(fmt, args...); }
 
+    template<typename... Args>
+    inline void warn(StdoutTarget out, const char* fmt, Args... args) const {
+        h_.warn(out, fmt, args...);
+    }
+
     /// @brief Host-side convenience for Error. Non-collective. Host-thread-safe.
     template<typename... Args>
     inline void error(const char* fmt, Args... args) const { h_.error(fmt, args...); }
+
+    template<typename... Args>
+    inline void error(StdoutTarget out, const char* fmt, Args... args) const {
+        h_.error(out, fmt, args...);
+    }
 
     // ------------------------------------------------------------------------
     //  Handle access for kernel capture
@@ -484,8 +624,8 @@ public:
 
     /// @brief Produce a POD view suitable for capturing by value into a kernel.
     ///
-    /// @return A trivially-copyable Handle struct (40 bytes). Cheap: copies
-    ///         pointers + counters + scalars.
+    /// @return A trivially-copyable Handle struct. Cheap: copies pointers +
+    ///         counters + scalars.
     ///
     /// @note Host-only.
     /// @note The returned Handle captures the CURRENT values of rank/level.
@@ -531,10 +671,10 @@ public:
     //  The one collective: flush()
     // ------------------------------------------------------------------------
 
-    /// @brief Drain the rank-local buffer. Writes to the rank's own file (no
-    ///        MPI) and to rank-0 stdout (via one MPI_Gather + one
-    ///        MPI_Gatherv<MPI_CHAR>) in strict rank order. Resets both the
-    ///        byte and drop counters to zero.
+    /// @brief Drain the rank-local rings. Writes the **file** ring to this
+    ///        rank's own FILE* (no MPI). Gathers the **stdout** ring to rank 0
+    ///        and prints it in rank order (MPI_Gather + MPI_Gatherv). Resets
+    ///        byte and drop counters for both rings.
     ///
     /// @note COLLECTIVE over the Logger's communicator. Must be reached by
     ///       every rank the same number of times. Call at phase boundaries
@@ -546,9 +686,9 @@ public:
     ///       flush resets the counters concurrently with potential appends.
     ///       Call flush from a single host thread.
     ///
-    /// @note If the overflow counter is nonzero, a single "[rank N][WARN ]
-    ///       logger: <N> messages dropped (buffer overflow)\n" line is
-    ///       emitted on both the file and stdout, then reset.
+    /// @note If an overflow counter is nonzero, a single "[rank N][WARN ]"
+    ///       line is emitted for that pool on the file and (for rank 0) on
+    ///       stdout where applicable, then reset.
     ///
     /// @code
     ///     // inside Driver::execute(), at each phase boundary:
@@ -558,57 +698,85 @@ public:
         const int rank = h_.rank;
         const int nr   = size_;
 
-        // `used` is allowed to exceed cap (overflow is counted, not stored).
-        // Clamp to the actual bytes written.
-        const size_t used_now = *h_.used;
-        const int    n        = static_cast<int>(used_now < h_.cap ? used_now : h_.cap);
+        // stdout ring -> rank 0 terminal (MPI gather)
+        {
+            const size_t used_stdout = *h_.stdout_used;
+            const int    n_out       = static_cast<int>(
+                used_stdout < h_.stdout_cap ? used_stdout : h_.stdout_cap);
 
-        Kokkos::View<int*, Kokkos::HostSpace> counts, displs;
-        if (rank == 0) {
-            counts = Kokkos::View<int*, Kokkos::HostSpace>("fierro.logger.counts", nr);
-            displs = Kokkos::View<int*, Kokkos::HostSpace>("fierro.logger.displs", nr);
-        }
-        MPI_Gather(&n, 1, MPI_INT,
-                   rank == 0 ? counts.data() : nullptr, 1, MPI_INT,
-                   0, comm_);
+            Kokkos::View<int*, Kokkos::HostSpace> counts, displs;
+            if (rank == 0) {
+                counts = Kokkos::View<int*, Kokkos::HostSpace>("fierro.logger.sout_counts", nr);
+                displs = Kokkos::View<int*, Kokkos::HostSpace>("fierro.logger.sout_displs", nr);
+            }
+            MPI_Gather(&n_out, 1, MPI_INT,
+                       rank == 0 ? counts.data() : nullptr, 1, MPI_INT,
+                       0, comm_);
 
-        int total = 0;
-        if (rank == 0) {
-            for (int i = 0; i < nr; ++i) {
-                displs(i) = total;
-                total    += counts(i);
+            int total = 0;
+            if (rank == 0) {
+                for (int i = 0; i < nr; ++i) {
+                    displs(i) = total;
+                    total    += counts(i);
+                }
+            }
+
+            Kokkos::View<char*, Kokkos::HostSpace> gathered(
+                "fierro.logger.stdout_gathered",
+                rank == 0 ? static_cast<size_t>(total) : static_cast<size_t>(0));
+
+            MPI_Gatherv(h_.stdout_buf_ptr, n_out, MPI_CHAR,
+                        rank == 0 ? gathered.data() : nullptr,
+                        rank == 0 ? counts.data()   : nullptr,
+                        rank == 0 ? displs.data()   : nullptr,
+                        MPI_CHAR, 0, comm_);
+
+            if (rank == 0 && total > 0) {
+                std::fwrite(gathered.data(), 1, static_cast<size_t>(total), stdout);
+                std::fflush(stdout);
             }
         }
 
-        Kokkos::View<char*, Kokkos::HostSpace> gathered(
-            "fierro.logger.gathered",
-            rank == 0 ? static_cast<size_t>(total) : static_cast<size_t>(0));
+        // file ring -> this rank's log file (local only)
+        {
+            const size_t used_now = *h_.used;
+            const int    n      = static_cast<int>(used_now < h_.cap ? used_now : h_.cap);
+            if (file_ != nullptr && n > 0) {
+                std::fwrite(h_.buf_ptr, 1, static_cast<size_t>(n), file_);
+                std::fflush(file_);
+            }
 
-        MPI_Gatherv(h_.buf_ptr, n, MPI_CHAR,
-                    rank == 0 ? gathered.data() : nullptr,
-                    rank == 0 ? counts.data()   : nullptr,
-                    rank == 0 ? displs.data()   : nullptr,
-                    MPI_CHAR, 0, comm_);
-
-        if (rank == 0 && total > 0) {
-            std::fwrite(gathered.data(), 1, static_cast<size_t>(total), stdout);
-            std::fflush(stdout);
+            const size_t nd = *h_.dropped;
+            if (nd > 0) {
+                char warn_line[200];
+                int w = std::snprintf(
+                    warn_line, sizeof(warn_line),
+                    "[rank %d][WARN ] logger (file pool): %zu messages dropped "
+                    "(buffer overflow)\n",
+                    rank, nd);
+                if (w > 0) {
+                    if (file_ != nullptr) {
+                        std::fwrite(warn_line, 1, static_cast<size_t>(w), file_);
+                        std::fflush(file_);
+                    }
+                    if (rank == 0) {
+                        std::fwrite(warn_line, 1, static_cast<size_t>(w), stdout);
+                        std::fflush(stdout);
+                    }
+                }
+                *h_.dropped = 0;
+            }
+            *h_.used = 0;
         }
 
-        // Every rank: append its own buffer to its own file (no MPI).
-        if (file_ != nullptr && n > 0) {
-            std::fwrite(h_.buf_ptr, 1, static_cast<size_t>(n), file_);
-            std::fflush(file_);
-        }
-
-        // Emit a single "dropped" warning line if any messages overflowed.
-        const size_t nd = *h_.dropped;
-        if (nd > 0) {
-            char warn_line[160];
+        const size_t nsd = *h_.stdout_dropped;
+        if (nsd > 0) {
+            char warn_line[200];
             int w = std::snprintf(
                 warn_line, sizeof(warn_line),
-                "[rank %d][WARN ] logger: %zu messages dropped (buffer overflow)\n",
-                rank, nd);
+                "[rank %d][WARN ] logger (stdout pool): %zu messages dropped "
+                "(buffer overflow)\n",
+                rank, nsd);
             if (w > 0) {
                 if (file_ != nullptr) {
                     std::fwrite(warn_line, 1, static_cast<size_t>(w), file_);
@@ -619,10 +787,9 @@ public:
                     std::fflush(stdout);
                 }
             }
-            *h_.dropped = 0;
+            *h_.stdout_dropped = 0;
         }
-
-        *h_.used = 0;
+        *h_.stdout_used = 0;
     }
 
     // ------------------------------------------------------------------------
@@ -669,30 +836,52 @@ private:
         }
     }
 
-    /// @brief Dtor fallback when MPI has already been finalized. Writes the
-    ///        rank-local buffer to the file (and a drop-count line, if any),
-    ///        then resets counters. Never touches MPI or stdout.
+    /// @brief Dtor fallback when MPI has already been finalized. Writes both
+    ///        rings to the per-rank log file (stdout gather skipped). Never
+    ///        touches MPI or stdout.
     inline void drain_local_only_() {
-        const size_t used_now = *h_.used;
-        const size_t n        = used_now < h_.cap ? used_now : h_.cap;
-        if (file_ != nullptr && n > 0) {
-            std::fwrite(h_.buf_ptr, 1, n, file_);
+        const size_t used_file = *h_.used;
+        const size_t n_file    = used_file < h_.cap ? used_file : h_.cap;
+        if (file_ != nullptr && n_file > 0) {
+            std::fwrite(h_.buf_ptr, 1, n_file, file_);
+            std::fflush(file_);
+        }
+        const size_t used_out = *h_.stdout_used;
+        const size_t n_out    = used_out < h_.stdout_cap ? used_out : h_.stdout_cap;
+        if (file_ != nullptr && n_out > 0 && h_.stdout_buf_ptr != nullptr) {
+            std::fwrite(h_.stdout_buf_ptr, 1, n_out, file_);
             std::fflush(file_);
         }
         const size_t nd = *h_.dropped;
         if (nd > 0 && file_ != nullptr) {
-            char warn_line[160];
+            char warn_line[200];
             int w = std::snprintf(
                 warn_line, sizeof(warn_line),
-                "[rank %d][WARN ] logger: %zu messages dropped (buffer overflow)\n",
+                "[rank %d][WARN ] logger (file pool): %zu messages dropped "
+                "(buffer overflow)\n",
                 h_.rank, nd);
             if (w > 0) {
                 std::fwrite(warn_line, 1, static_cast<size_t>(w), file_);
                 std::fflush(file_);
             }
         }
-        *h_.used    = 0;
-        *h_.dropped = 0;
+        const size_t nsd = *h_.stdout_dropped;
+        if (nsd > 0 && file_ != nullptr) {
+            char warn_line[200];
+            int w = std::snprintf(
+                warn_line, sizeof(warn_line),
+                "[rank %d][WARN ] logger (stdout pool): %zu messages dropped "
+                "(buffer overflow)\n",
+                h_.rank, nsd);
+            if (w > 0) {
+                std::fwrite(warn_line, 1, static_cast<size_t>(w), file_);
+                std::fflush(file_);
+            }
+        }
+        *h_.used            = 0;
+        *h_.dropped         = 0;
+        *h_.stdout_used     = 0;
+        *h_.stdout_dropped  = 0;
     }
 
     // ------------------------------------------------------------------------
@@ -700,9 +889,11 @@ private:
     // ------------------------------------------------------------------------
 
     Handle                                   h_{};             ///< View into owned storage
-    Kokkos::View<char*  , Kokkos::HostSpace> buf_view_;        ///< Owns the buffer bytes
-    Kokkos::View<size_t , Kokkos::HostSpace> used_view_;       ///< Owns the byte counter
-    Kokkos::View<size_t , Kokkos::HostSpace> dropped_view_;    ///< Owns the overflow counter
+    Kokkos::View<char*  , Kokkos::HostSpace> buf_view_;        ///< Owns file+stdout bytes
+    Kokkos::View<size_t , Kokkos::HostSpace> used_view_;       ///< File pool byte counter
+    Kokkos::View<size_t , Kokkos::HostSpace> dropped_view_;    ///< File pool overflow counter
+    Kokkos::View<size_t , Kokkos::HostSpace> stdout_used_view_;   ///< Stdout pool byte counter
+    Kokkos::View<size_t , Kokkos::HostSpace> stdout_dropped_view_; ///< Stdout pool overflow
     int                                      size_ = 1;        ///< MPI comm size
     MPI_Comm                                 comm_ = MPI_COMM_WORLD;
     FILE*                                    file_ = nullptr;  ///< Per-rank log file (nullable)

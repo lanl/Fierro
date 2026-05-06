@@ -701,7 +701,6 @@ struct MaterialCorner_t
     DCArrayKokkos<size_t>num_material_corners_buffer;   ///< the number of material corners plus a buffer
 
     DRaggedRightArrayKokkos<double> force;   ///< Corner force for the material
-
     DRaggedRightArrayKokkos<double> q_transfer;  ///< Corner heat tranfer per material
 
     
