@@ -141,8 +141,9 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-size_t fill_geometric_region(const swage::Mesh& mesh,
+double fill_geometric_region(const swage::Mesh& mesh,
                              const DCArrayKokkos<size_t>& voxel_elem_mat_id,
+                             const DCArrayKokkos<double>& elem_geo_volfrac_fill,
                              const DCArrayKokkos<int>& object_ids,
                              const CArrayKokkos<RegionFill_t>& region_fills,
                              const ViewCArrayKokkos <double>& mesh_coords,

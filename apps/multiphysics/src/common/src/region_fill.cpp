@@ -285,8 +285,8 @@ void fill_regions(
     // a local array for reading the values on a voxel mesh file, it's allocated in the mesh file read
     DCArrayKokkos <size_t> voxel_elem_mat_id; // 1 or 0 if material exist, or it is the material_id
 
-    // a local array to store element volume fractions 
-    DCArrayKokkos <double> elem_vol_frac; // it is in the range of 0:1 and allocated later
+    // a local array to store geometric element volume fractions for each fill
+    DCArrayKokkos <double> elem_geo_volfrac_fill; // it is in the range of 0:1 and allocated later for STL files
 
     // Important:
     //  Remember that num_fills_saved_in_elem = num_mats_saved_in_elem
@@ -319,7 +319,7 @@ void fill_regions(
     
     for (size_t fill_id = 0; fill_id < num_fills_total; fill_id++) {
         if (read_stl_file.host(fill_id) == region::readSTLFile) {
-            elem_vol_frac = DCArrayKokkos <double> (mesh.num_elems);
+            elem_geo_volfrac_fill = DCArrayKokkos <double> (mesh.num_elems);
             break;
         }
     } // end fill loop
@@ -335,6 +335,7 @@ void fill_regions(
         // voxel mesh setup
         if (read_voxel_file.host(fill_id) == region::readVoxelFile) {
             // read voxel mesh to get the values in the fcn interface
+            // voxel_elem_mat_id is read here
             user_voxel_init(voxel_elem_mat_id,
                             voxel_dx,
                             voxel_dy,
@@ -359,7 +360,7 @@ void fill_regions(
         if (read_stl_file.host(fill_id) == region::readSTLFile) {
 
             // read .STL file and paint vol fractions on mesh
-            int paint_sucessful = paint_stl_on_mesh(elem_geo_volfrac, 
+            int paint_sucessful = paint_stl_on_mesh(elem_geo_volfrac_fill, 
                                                     node_coords,
                                                     mesh.nodes_in_elem,
                                                     mesh.num_nodes,
@@ -394,8 +395,9 @@ void fill_regions(
             ViewCArrayKokkos <double> coords(&elem_coords(elem_gid,0), 3);
 
             // calc if we are to fill this element
-            size_t fill_this = fill_geometric_region(mesh,
+            double geo_volfrac = fill_geometric_region(mesh,
                                                      voxel_elem_mat_id,
+                                                     elem_geo_volfrac_fill,
                                                      object_ids,
                                                      region_fills,
                                                      coords,
@@ -411,13 +413,10 @@ void fill_regions(
                                                      fill_id,
                                                      elem_gid);
 
-            // paint the material state on the element if fill_this=1
-            if (fill_this == 1) {
+            // paint the material state on the element if geo_volfrac>0
+            if (geo_volfrac > 1.e-8) {
                 
-                // calculate volume fraction of the region intersecting the element
-                double geo_volfrac = 1.0; 
-             
-                // get the volfrac for the region
+                // get the material volfrac for the region
                 double vfrac = get_region_scalar(coords,
                                                  region_fills(fill_id).volfrac,
                                                  region_fills(fill_id).volfrac_slope,
@@ -1268,9 +1267,9 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 /// \fn fill_geometric_region
 ///
 /// \brief a function to calculate whether to fill this element based on the 
-/// input instructions.  The output is
-///  = 0 then no, do not fill this element
-///  = 1 then yes, fill this element
+/// input geometries fill types.  The output is
+///  = 0 then no, do not fill this element, it has zero volume fraction
+///  >0 and >=1, then yes, fill this element
 ///
 /// \param mesh is the simulation mesh
 /// \param node_coords is the nodal position array
@@ -1280,8 +1279,9 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-size_t fill_geometric_region(const swage::Mesh& mesh,
+double fill_geometric_region(const swage::Mesh& mesh,
                              const DCArrayKokkos<size_t>& voxel_elem_mat_id,
+                             const DCArrayKokkos<double>& elem_geo_volfrac_fill,
                              const DCArrayKokkos<int>& object_ids,
                              const CArrayKokkos<RegionFill_t>& region_fills,
                              const ViewCArrayKokkos <double>& mesh_coords,
@@ -1299,7 +1299,7 @@ size_t fill_geometric_region(const swage::Mesh& mesh,
 {
 
     // default is not to fill the element
-    size_t fill_this = 0;
+    double geo_volfrac = 0.0;
 
 
     // for shapes with an origin (e.g., sphere and circle), accounting for the origin
@@ -1321,7 +1321,7 @@ size_t fill_geometric_region(const swage::Mesh& mesh,
     switch (region_fills(f_id).volume) {
         case region::global:
             {
-                fill_this = 1;
+                geo_volfrac = 1;
                 break;
             }
         case region::box:
@@ -1340,7 +1340,7 @@ size_t fill_geometric_region(const swage::Mesh& mesh,
                 if (mesh_coords(0) >= x_lower_bound && mesh_coords(0) <= x_upper_bound &&
                     mesh_coords(1) >= y_lower_bound && mesh_coords(1) <= y_upper_bound &&
                     mesh_coords(2) >= z_lower_bound && mesh_coords(2) <= z_upper_bound) {
-                    fill_this = 1;
+                    geo_volfrac = 1.0;
                 }
                 break;
             }
@@ -1352,7 +1352,7 @@ size_t fill_geometric_region(const swage::Mesh& mesh,
                 if (radius_cyl >= region_fills(f_id).radius1 && 
                     radius_cyl <= region_fills(f_id).radius2 &&
                     mesh_coords(2) >= z_lower_bound && mesh_coords(2) <= z_upper_bound) {
-                    fill_this = 1;
+                    geo_volfrac = 1.0;
                 }
                 break;
             }
@@ -1360,14 +1360,14 @@ size_t fill_geometric_region(const swage::Mesh& mesh,
             {
                 if (radius >= region_fills(f_id).radius1
                     && radius <= region_fills(f_id).radius2) {
-                    fill_this = 1;
+                    geo_volfrac = 1.0;
                 }
                 break;
             }
         case region::readVoxelFile:
             {
 
-                fill_this = 0; // default is no, don't fill it
+                geo_volfrac = 0; // default is no, don't fill it
 
                 // find the closest element in the voxel mesh to this element
                 double i0_real = (mesh_coords(0) - orig_x - region_fills(f_id).origin[0]) / (voxel_dx);
@@ -1386,7 +1386,7 @@ size_t fill_geometric_region(const swage::Mesh& mesh,
                     i0 >= 0 && j0 >= 0 && k0 >= 0 &&
                     i0 < voxel_num_i && j0 < voxel_num_j && k0 < voxel_num_k) {
                     // voxel mesh elem values = 0 or 1
-                    fill_this = voxel_elem_mat_id(elem_id0); // values from file
+                    geo_volfrac = (double)voxel_elem_mat_id(elem_id0); // values from file
 
                 } // end if
 
@@ -1395,26 +1395,26 @@ size_t fill_geometric_region(const swage::Mesh& mesh,
             } // end case
         case region::readSTLFile:
         {
-
+            geo_volfrac = elem_geo_volfrac_fill(elem_gid);
             break;
         }
         case region::readVTUFile:
             {
                 // if the part id in .vtu file matches the specified id, then fill it
                 if(object_ids(elem_gid) == region_fills(f_id).part_id){
-                    fill_this = 1;
+                    geo_volfrac = 1.0;
                 }
                 break;
             }
         case region::no_volume:
             {
-                fill_this = 0; // default is no, don't fill it
+                geo_volfrac = 0.0; // default is no, don't fill it
 
                 break;
             }
         default:
             {
-                fill_this = 0; // default is no, don't fill it
+                geo_volfrac = 0; // default is no, don't fill it
 
                 break;
             }
@@ -1422,7 +1422,7 @@ size_t fill_geometric_region(const swage::Mesh& mesh,
     } // end of switch
 
 
-    return fill_this;
+    return geo_volfrac;
 
 } // end function
 

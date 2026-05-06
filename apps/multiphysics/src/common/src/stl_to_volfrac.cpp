@@ -259,7 +259,7 @@ binary_stl_reader(const std::string& path)
 //     function to the surface
 //
 //------------------------------------------------------------------------
-int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac, 
+int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill, 
                       const DCArrayKokkos <double> &node_coords,
                       const DCArrayKokkos <size_t> &nodes_in_elem,
                       const size_t num_nodes,
@@ -311,6 +311,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac,
 
     // -----------------
     // Getting SDF at the mesh nodes
+    printf("Getting SDF at the mesh nodes \n");
 
     CArrayKokkos <double> node_sdf(num_nodes,  "node_sdf");
 
@@ -350,19 +351,21 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac,
     // -----------------
     // reference element integration
     // WARNING: move to Element routines, this is a place-holder
+    printf("building reference element \n");
 
-    const size_t num_eval_pnts = 9;  
+    const size_t num_eval_pnts_1D = 9;  
     const double ref_pnts_1D[9]={0.0, 0.125, 0.24, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0};
 
+    const size_t num_eval_pnts = num_eval_pnts_1D*num_eval_pnts_1D*num_eval_pnts_1D;
     const size_t num_nodes_in_elem = 8; // WARNING WARNING WARNING
 
     // build the reference element
     CArrayKokkos <double> bern_basis(num_eval_pnts,num_nodes_in_elem);
 
     // loop over the eval reference element
-    FOR_ALL(k, 0, num_eval_pnts,
-            j, 0, num_eval_pnts,
-            i, 0, num_eval_pnts, {
+    FOR_ALL(k, 0, num_eval_pnts_1D,
+            j, 0, num_eval_pnts_1D,
+            i, 0, num_eval_pnts_1D, {
 
         // coords
         const double xi  = ref_pnts_1D[i];
@@ -370,7 +373,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac,
         const double mu  = ref_pnts_1D[k];
 
         // get the eval ref elem local id
-        const size_t eval_pnt_rid = get_id_of_ijk(i, j, k, num_eval_pnts, num_eval_pnts);
+        const size_t eval_pnt_rid = get_id_of_ijk(i, j, k, num_eval_pnts_1D, num_eval_pnts_1D);
 
         // get bern basis (WARNING: update to use ELEMENTS library arbitrary order library)
         get_bernstein_basis_fcns(bern_basis, xi, eta, mu, eval_pnt_rid);
@@ -380,18 +383,20 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac,
 
     const size_t num_elems = nodes_in_elem.dims(0); // nodes_in_elem(num_elems, num_nodes_in_elem) 
 
+    printf("calculating volfrac using SDF vals at nodes \n");
+
     // evaluate SDF at this eval point
     FOR_ALL(elem_gid, 0, num_elems, {
 
         double num_inside_part = 0;
 
         // loop over the eval points in this element
-        for(size_t k=0; k<num_eval_pnts; k++){
-            for(size_t j=0; j<num_eval_pnts; j++){
-                for(size_t i=0; i<num_eval_pnts; i++){
+        for(size_t k=0; k<num_eval_pnts_1D; k++){
+            for(size_t j=0; j<num_eval_pnts_1D; j++){
+                for(size_t i=0; i<num_eval_pnts_1D; i++){
 
                     // get the eval ref elem local id
-                    const size_t eval_pnt_rid = get_id_of_ijk(i, j, k, num_eval_pnts, num_eval_pnts);
+                    const size_t eval_pnt_rid = get_id_of_ijk(i, j, k, num_eval_pnts_1D, num_eval_pnts_1D);
 
                     // evaluate SDF at this point
                     const double sdf_val = calc_scalar_in_elem(node_sdf, bern_basis, nodes_in_elem, elem_gid, eval_pnt_rid);
@@ -407,8 +412,9 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac,
 
 
         //  The ratio of hits to number of points is vol frac
-        elem_geo_volfrac(elem_gid) = num_inside_part/(num_eval_pnts*num_eval_pnts*num_eval_pnts); // coded for 3D
+        elem_geo_volfrac_fill(elem_gid) = num_inside_part/(num_eval_pnts*num_eval_pnts*num_eval_pnts); // coded for 3D
 
+        printf("vol frac in elem %d = %f \n", elem_gid, elem_geo_volfrac_fill(elem_gid));
     }); // end parallel for
 
 

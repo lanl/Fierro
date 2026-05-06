@@ -88,13 +88,13 @@ void calc_vector_in_elem(CArrayKokkos <double> &vec_pnt,
 /// \brief paints volume fraction on a mesh based on an interface defined 
 //         by a STL CAD file
 ///
-/// \param elem_vol_frac the element volume fraction
+/// \param elem_geo_volfrac_fill is the element volume fraction for a fill 
 /// \param node_coords the (x,y,z) coordinate values at the mesh nodes
 /// \param nodes_in_elems the nodes in the element
 /// \param filename the file name of the STL file
 ///
 ///////////////////////////////////////////////////////////////////////////// 
-int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac, 
+int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill, 
                       const DCArrayKokkos <double> &node_coords,
                       const DCArrayKokkos <size_t> &nodes_in_elem,
                       const size_t num_nodes,
