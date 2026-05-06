@@ -209,7 +209,7 @@ binary_stl_reader(const std::string& path)
     const size_t n_facets_from_size =
         static_cast<size_t>((filesize - 84) / 50);
 
-    size_t n_facets = n_facets_nominal;
+    uint32_t n_facets = n_facets_nominal;
     if (n_facets_nominal != n_facets_from_size) {
         std::cout << "WARNING: facet count in header (" << n_facets_nominal
             << ") disagrees with file size (" << n_facets_from_size
@@ -225,7 +225,7 @@ binary_stl_reader(const std::string& path)
     CArray<double> v2X(n_facets), v2Y(n_facets), v2Z(n_facets);
 
     // ---- read facet records --------------------------------------------
-    double nrm[3], v0[3], v1[3], v2[3];
+    float nrm[3], v0[3], v1[3], v2[3];
     for (size_t i = 0; i < n_facets; ++i) {
         in.read(reinterpret_cast<char*>(nrm), 12);
         in.read(reinterpret_cast<char*>(v0), 12);
@@ -234,13 +234,21 @@ binary_stl_reader(const std::string& path)
         in.ignore(2);                        // attribute byte count
 
         for (int dim = 0; dim < 3; ++dim){ 
-            normal(i, dim) = nrm[dim]; 
+             normal(i, dim) = (double)nrm[dim]; 
         } // end for
 
 
-        v0X(i) = v0[0]; v0Y(i) = v0[1]; v0Z(i) = v0[2];
-        v1X(i) = v1[0]; v1Y(i) = v1[1]; v1Z(i) = v1[2];
-        v2X(i) = v2[0]; v2Y(i) = v2[1]; v2Z(i) = v2[2];
+        v0X(i) = (double)v0[0]; 
+        v0Y(i) = (double)v0[1]; 
+        v0Z(i) = (double)v0[2];
+
+        v1X(i) = (double)v1[0]; 
+        v1Y(i) = (double)v1[1]; 
+        v1Z(i) = (double)v1[2];
+
+        v2X(i) = (double)v2[0]; 
+        v2Y(i) = (double)v2[1]; 
+        v2Z(i) = (double)v2[2];
         
     } // end for facet
 
@@ -345,7 +353,68 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
 
         } // end for tri in STL file
 
-    }); // end parallel for 
+        printf("node_sdf %d = %f \n", node_gid, node_sdf(node_gid));
+
+    }); // end parallel for  
+
+
+    // ----- testing coding above ------
+
+    // -----------------
+    //  Viz for checking STL reader
+    // -----------------
+    printf("Writing VTK STL Point File \n\n");
+
+    std::ofstream out("tri_points.vtk");
+
+    out << "# vtk DataFile Version 3.0\n";
+    out << "3D point cloud\n";
+    out << "ASCII\n";
+    out << "DATASET POLYDATA\n";
+    out << "POINTS " << num_inp_triangles << " float\n";
+    for (size_t tri_gid = 0; tri_gid < num_inp_triangles; tri_gid++) {
+
+        const double x_tri = (v0X_host(tri_gid) + v1X_host(tri_gid) + v2X_host(tri_gid))/3.0;
+        const double y_tri = (v0Y_host(tri_gid) + v1Y_host(tri_gid) + v2Y_host(tri_gid))/3.0;
+        const double z_tri = (v0Z_host(tri_gid) + v1Z_host(tri_gid) + v2Z_host(tri_gid))/3.0;
+
+        out << x_tri << " " 
+            << y_tri << " " 
+            << z_tri << "\n";
+    }
+
+    out << "\nPOINT_DATA " << num_inp_triangles << "\n";
+    out << "SCALARS lvlset float 1\n";
+    out << "LOOKUP_TABLE default\n";
+    for (size_t tri_gid = 0; tri_gid < num_inp_triangles; ++tri_gid) {
+        out << 0 << "\n";
+    }
+
+    // -----
+
+    printf("Writing VTK SDF File \n\n");
+
+    std::ofstream out_sdf("sdf_nodes.vtk");
+
+    out_sdf << "# vtk DataFile Version 3.0\n";
+    out_sdf << "3D point cloud\n";
+    out_sdf << "ASCII\n";
+    out_sdf << "DATASET POLYDATA\n";
+    out_sdf << "POINTS " << num_nodes << " float\n";
+    for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
+
+        out_sdf << node_coords.host(node_gid,0) << " " 
+                << node_coords.host(node_gid,1) << " " 
+                << node_coords.host(node_gid,2) << "\n";
+
+    }
+
+    out_sdf << "\nPOINT_DATA " << num_nodes << "\n";
+    out_sdf << "SCALARS SDF float 1\n";
+    out_sdf << "LOOKUP_TABLE default\n";
+    for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
+        out_sdf << node_sdf(node_gid) << "\n";
+    }
 
 
     // -----------------
@@ -388,7 +457,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
     // evaluate SDF at this eval point
     FOR_ALL(elem_gid, 0, num_elems, {
 
-        double num_inside_part = 0;
+        double num_inside_part = 0.0;
 
         // loop over the eval points in this element
         for(size_t k=0; k<num_eval_pnts_1D; k++){
@@ -401,9 +470,11 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
                     // evaluate SDF at this point
                     const double sdf_val = calc_scalar_in_elem(node_sdf, bern_basis, nodes_in_elem, elem_gid, eval_pnt_rid);
 
-                    if(sdf_val<0){
+                    if(sdf_val<=0){
                         // we are inside the part
                         num_inside_part++;
+
+                        //printf("elem= %d, sdf = %f \n", elem_gid, sdf_val);
                     } // end if
 
                 } // end for i
@@ -412,7 +483,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
 
 
         //  The ratio of hits to number of points is vol frac
-        elem_geo_volfrac_fill(elem_gid) = num_inside_part/(num_eval_pnts*num_eval_pnts*num_eval_pnts); // coded for 3D
+        elem_geo_volfrac_fill(elem_gid) = num_inside_part/((double)num_eval_pnts); // coded for 3D
 
         printf("vol frac in elem %d = %f \n", elem_gid, elem_geo_volfrac_fill(elem_gid));
     }); // end parallel for
