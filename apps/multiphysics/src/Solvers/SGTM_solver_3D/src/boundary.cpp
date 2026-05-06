@@ -112,6 +112,8 @@ void SGTM3D::boundary_convection(const swage::Mesh& mesh,
         if (BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCTemperatureModel != boundary_conditions::BCTemperatureModels::convectionTemperatureBC) continue;
 
 
+
+
         // ---- Get number of boundary patches associated with this boundary set ---- // NOTE: Messy, find better solution
         DCArrayKokkos<int> num_bdy_patches(1);
         RUN({
@@ -127,9 +129,33 @@ void SGTM3D::boundary_convection(const swage::Mesh& mesh,
             // ---- For each boundary patch, calculate the flux contribution to each node from convection ---- //
 
 
-            // First: Calculate the surface area
+             // First: Calculate the surface area
             // Get the global id for this patch
             size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+
+            // Dirty dirty hack to fix problem 2
+
+
+            // NOTE: Add parsing to the following variables
+            double ref_temp = 293.15; // room temp in Kelvin
+            double h_film = 100.0;
+
+            bool problem2 = false;
+            if(problem2){
+                
+                // get the Z value for a node on this sufrace
+                double z_value = node_coords(mesh.nodes_in_patch(patch_gid, 0), 2);
+
+                // if the Z value is greater than 0, then this is a problem 2 patch
+                if(fabs(z_value) > 1e-10){
+                    ref_temp = 773.0;
+                }
+                else if(fabs(z_value - 32.7) < 1e-10){
+                    ref_temp = 300.0;
+                }
+            }
+
+           
 
 
             // calculate the total area of this patch (decompose into 2 triangles)
@@ -199,9 +225,7 @@ void SGTM3D::boundary_convection(const swage::Mesh& mesh,
             // Partition the total surface area to the corner patches
             double patch_area = surface_area/4.0;
 
-            // NOTE: Add parsing to the following variables
-            double ref_temp = 293.15; // room temp in Kelvin
-            double h_film = 100.0;
+            
 
             // ---- Calculate the flux through each patch ---- //
             for(int node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
