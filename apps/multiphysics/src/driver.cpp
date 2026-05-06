@@ -88,7 +88,9 @@ void Driver::initialize()
     }
 
     if (mesh.elem_kind != mesh_init::linear_simplex_element) {
-        int elem_order = pow(mesh.num_nodes_in_elem,1/3) - 1;
+        int elem_order = (int)pow(static_cast<double>(mesh.num_nodes_in_elem),1.0/3.0) - 1;
+        std::cout << "num_nodes_in_elem: " << pow(static_cast<double>(mesh.num_nodes_in_elem),1.0/3.0) << std::endl;
+        std::cout << "ELEM_ORDER: " << (int)elem_order << std::endl;
         ref_elem.init(elem_order, mesh.num_dims);
     }
 

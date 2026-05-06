@@ -161,6 +161,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         } // end if
 
         displacement_step.set_values(0);
+        //std::cout << "NUM MAT POINTS: " << ref_elem.gauss_point_grad_basis.dims(0) << std::endl;
         // start Picard iteration loop
         for (int iter = 0; iter < max_iter; iter++) {
 
@@ -178,19 +179,19 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                     // setting up views and temp memory
                     const size_t elem_id = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
-                    ViewCArrayKokkos<size_t> nodes_in_curr_elem(&mesh.nodes_in_elem(elem_id),mesh.num_nodes_in_elem);
+                    ViewCArrayKokkos<size_t> nodes_in_curr_elem(&mesh.nodes_in_elem(elem_id,0),mesh.num_nodes_in_elem);
                     double grad_u[3][3];
                     double inv_J[3][3];
                     double det_J;
                     double PK2_curr_config[6];
                     double material_matrix[6][6];
-                    ViewCArrayKokkos<double> curr_K_elem(&K_elem(elem_id),3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
-                    ViewCArrayKokkos<double> curr_F_elem(&F_elem(elem_id),3*mesh.num_nodes_in_elem);
+                    ViewCArrayKokkos<double> curr_K_elem(&K_elem(elem_id,0,0),3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
+                    ViewCArrayKokkos<double> curr_F_elem(&F_elem(elem_id,0),3*mesh.num_nodes_in_elem);
 
                     // looping through material points
-                    for (int mat_pt = 0; mat_pt < mesh.num_gauss_in_elem; mat_pt++) {
+                    for (int mat_pt = 0; mat_pt < ref_elem.gauss_point_grad_basis.dims(0); mat_pt++) {
                         // setting up view and getting material matrix
-                        ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.gauss_point_grad_basis(mat_pt),ref_elem.num_basis, mesh.num_dims);
+                        ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.gauss_point_grad_basis(mat_pt,0,0),ref_elem.num_basis, mesh.num_dims);
                         Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
 
                         // tallying to element array
@@ -232,8 +233,12 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // getting r0 = (02F - 01F) - K * displacement_iter
             get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter, rk);
-            /* for (int i = 0; i < 3*mesh.num_nodes; i++) {
-                std::cout << rk(i) << std::endl;
+            /* for (int i = 0; i < mesh.num_nodes; i++) {
+                for (int j = 0; j < 3; j++) {
+                    //std::cout << rk(3*i + j) << "   ";
+                    //std::cout << State.node.coords_t0(i,j) << "   ";
+                }
+                std::cout << std::endl;
             }
             std::cout << std::endl << std::endl; */
 
