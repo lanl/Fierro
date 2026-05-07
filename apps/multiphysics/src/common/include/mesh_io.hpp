@@ -371,7 +371,12 @@ public:
             read_Abaqus_mesh(mesh, State, num_dims);
         }
         else if(extension == "vtk"){ // vtk file format
-            read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            if (mesh_inps.p_order <= 1) {
+                read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            }
+            else {
+                read_vtk_hexN_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            }
         }
         else if(extension == "vtu"){ // vtu file format
             read_vtu_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
@@ -924,6 +929,193 @@ public:
         
     } // end of VTKread function
 
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn read_vtk_hexN_mesh
+    ///
+    /// \brief Read ASCII .vtk mesh file for arbitrary order hex elements (HexN)
+    ///        using Matar CArrays for internal mapping.
+    ///
+    /// \param Simulation mesh
+    /// \param Simulation state
+    /// \param Node state struct
+    /// \param Number of dimensions
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void read_vtk_hexN_mesh(swage::Mesh& mesh,
+                         GaussPoint_t& GaussPoints,
+                         node_t&   node,
+                         corner_t& corner,
+                         mesh_input_t& mesh_inps,
+                         int num_dims)
+    {
+
+        std::cout << "Reading VTK HexN mesh" << std::endl;
+    
+        int i;           // used for writing information to file
+        int node_gid;    // the global id for the point
+        int elem_gid;    // the global id for the elem
+
+        size_t num_nodes_in_elem = 1;
+        for (int dim = 0; dim < num_dims; dim++) {
+            num_nodes_in_elem *= (mesh_inps.p_order+1);
+        } 
+        std::string token;
+        bool found = false;
+        
+        std::ifstream in;
+        in.open(mesh_file_); // Uses mesh_file_ from the class/scope
+        
+
+        // --- 1. Find and Read POINTS ---
+        i = 0;
+        while (found==false) {
+            std::string str;
+            std::string delimiter = " ";
+            std::getline(in, str);
+            std::vector<std::string> v = split (str, delimiter);
+            
+            if(v[0] == "POINTS"){
+                size_t num_nodes = std::stoi(v[1]);
+                printf("Number of nodes read in %zu\n", num_nodes);
+                
+                mesh.initialize_nodes(num_nodes);
+                std::vector<node_state> required_node_state = { node_state::coords };
+                node.initialize(num_nodes, num_dims, required_node_state);
+                
+                found=true;
+            }
+            
+            if (i > 1000){
+                std::cerr << "ERROR: Failed to find POINTS in file" << std::endl;
+                break;
+            }
+            i++;
+        }
+        
+        // Read node coordinates and apply user scaling
+        for (node_gid=0; node_gid < mesh.num_nodes; node_gid++){
+            std::string str;
+            std::getline(in, str);
+            std::vector<std::string> v = split (str, " ");
+            
+            node.coords.host(node_gid, 0) = mesh_inps.scale_x * std::stod(v[0]);
+            node.coords.host(node_gid, 1) = mesh_inps.scale_y * std::stod(v[1]);
+            if(num_dims == 3){
+                node.coords.host(node_gid, 2) = mesh_inps.scale_z * std::stod(v[2]);
+            }
+        }
+        node.coords.update_device();
+        
+
+        // --- 2. Find and Read CELLS ---
+        found = false;
+        i = 0;
+        size_t num_elem = 0;
+        while (found==false) {
+            std::string str;
+            std::getline(in, str);
+            std::vector<std::string> v = split (str, " ");
+            
+            if(v[0] == "CELLS"){
+                num_elem = std::stoi(v[1]);
+                printf("Number of elements read in %zu\n", num_elem);
+                mesh.initialize_elems_Pn(num_elem, num_dims, mesh_inps.p_order);
+                found = true;
+            }
+            
+            if (i > 1000){
+                printf("ERROR: Failed to find CELLS \n");
+                break;
+            }
+            i++;
+        }
+        
+        // --- 3. Connectivity and Reordering ---
+        CArray <int> convert_vtk_to_fierro;
+        bool map_built = false;
+
+        for (elem_gid=0; elem_gid < num_elem; elem_gid++) {
+            std::string str;
+            std::getline(in, str);
+            std::vector<std::string> v = split (str, " ");
+            num_nodes_in_elem = std::stoi(v[0]);
+
+            CArray <int> convert_vtk_to_fierro(num_nodes_in_elem);
+            
+            // Build the dynamic ordering map based on the polynomial order of the hex
+            if (!map_built) {
+                const int num_1D_points = std::round(std::cbrt(num_nodes_in_elem));
+                const int Pn_order = num_1D_points - 1;
+                
+                
+                
+                int this_point = 0;
+                for (int k=0; k <= Pn_order; k++){
+                    for (int j=0; j <= Pn_order; j++){
+                        for (int i_idx=0; i_idx <= Pn_order; i_idx++){
+                            
+                            int order[3] = {Pn_order, Pn_order, Pn_order};
+                            int this_index = PointIndexFromIJK(i_idx, j, k, order);
+                            
+                            convert_vtk_to_fierro(this_index) = this_point;
+                            this_point++;
+                        }
+                    }
+                }
+                map_built = true;
+            }
+
+            // Map connectivity from VTK to Fierro/Swage mesh structure
+            for (size_t node_lid=0; node_lid < num_nodes_in_elem; node_lid++){
+                int vtk_index = convert_vtk_to_fierro(node_lid); 
+                mesh.nodes_in_elem.host(elem_gid, node_lid) = (size_t)std::stod(v[vtk_index+1]);
+            }
+        }
+        
+        mesh.nodes_in_elem.update_device();
+
+        // Initialize corners based on dynamic nodes-per-element count
+        size_t num_corners = num_elem * num_nodes_in_elem;
+        mesh.initialize_corners(num_corners);
+
+        // Build connectivity (Faces, etc.)
+        mesh.build_connectivity();
+
+
+        // --- 4. Validate CELL_TYPES ---
+        found = false;
+        i = 0;
+        size_t elem_type = 0;
+        while (found==false) {
+            std::string str;
+            std::getline(in, str);
+            std::vector<std::string> v = split (str, " ");
+            
+            if(v[0] == "CELL_TYPES"){
+                std::getline(in, str);
+                elem_type = std::stoi(str);
+                found = true;
+            }
+            
+            if (i > 1000){
+                printf("ERROR: Failed to find CELL_TYPES \n");
+                break;
+            }
+            i++;
+        }
+        
+        printf("Element type read = %zu \n", elem_type);
+        
+        // 12 = Linear Hex, 72 = Lagrange Hex (High Order)
+        if(elem_type != 12 && elem_type != 72) {
+            std::cerr << "WARNING: element type " << elem_type << " may not be a supported Hex type." << std::endl;
+        }
+        
+        in.close();
+        
+    } // end of read_vtk_hexN_mesh
+
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -981,7 +1173,11 @@ public:
         //------------------------------------
         // allocate mesh class nodes and elems
         mesh.initialize_nodes(num_nodes);
-        mesh.initialize_elems(num_elems, num_dims);
+        if(Pn_order > 1){
+            mesh.initialize_elems_Pn(num_elems, num_dims, Pn_order);
+        } else {
+            mesh.initialize_elems(num_elems, num_dims);
+        }
 
         //------------------------------------
         // allocate node coordinate state

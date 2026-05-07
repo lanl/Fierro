@@ -162,6 +162,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
         displacement_step.set_values(0);
         //std::cout << "NUM MAT POINTS: " << ref_elem.gauss_point_grad_basis.dims(0) << std::endl;
+        //std::cout << "NUM MAT ELEMS: " << State.MaterialToMeshMaps.num_mat_elems.host(0) << std::endl;
+        //std::cout << "NUM BDY PATCHES: " << mesh.num_bdy_patches << std::endl;
+        //std::cout << "NUM PATCHES: " << mesh.num_patches << std::endl;
         // start Picard iteration loop
         for (int iter = 0; iter < max_iter; iter++) {
 
@@ -196,13 +199,20 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                         // tallying to element array
                         get_gradients(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, displacement_step, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
-                        tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, ref_elem.gauss_point_weights(mat_pt), PK2_curr_config, curr_K_elem, curr_F_elem);
+                        double weight = ref_elem.gauss_point_weights(mat_pt)*det_J;
+                        tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, weight, PK2_curr_config, curr_K_elem, curr_F_elem);
                     } // end mat_pt
 
                 }); // end elem
 
             } // end mat_id
-
+            /* for (int i = 0; i < 3*mesh.num_nodes_in_elem; i++) {
+                for (int j = 0; j < 3*mesh.num_nodes_in_elem; j++) {
+                    std::cout << K_elem(0,i,j) << "   ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << std::endl << std::endl; */
             // ***************************************************
             // end element arrays
             // ***************************************************
@@ -215,10 +225,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // dirichlet (displacement) type
             boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
-            /* for (int i = 0; i < 3*mesh.num_nodes; i++) {
-                std::cout << displacement_step(i) << std::endl;
-            }
-            std::cout << std::endl << std::endl; */
 
             // ***************************************************
             // end boundary conditions
@@ -235,7 +241,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter, rk);
             /* for (int i = 0; i < mesh.num_nodes; i++) {
                 for (int j = 0; j < 3; j++) {
-                    //std::cout << rk(3*i + j) << "   ";
+                    std::cout << rk(3*i + j) << "   ";
                     //std::cout << State.node.coords_t0(i,j) << "   ";
                 }
                 std::cout << std::endl;

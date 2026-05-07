@@ -44,7 +44,7 @@ void TLQS3D::initialize(SimulationParameters_t& SimulationParamaters,
                 	   State_t& State) const
 {
 	const size_t num_nodes = mesh.num_nodes;
-    const size_t num_gauss_pts = mesh.num_elems;
+    const size_t num_gauss_pts = mesh.num_gauss_in_elem*mesh.num_elems;
     const size_t num_corners = mesh.num_corners;
     const size_t num_dims = mesh.num_dims;
 

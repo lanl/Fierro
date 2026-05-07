@@ -60,12 +60,12 @@ void TLQS3D::boundary_displacement(const swage::Mesh& mesh,
     const double time_end) const
 {
     size_t num_disp_bdy_sets = BoundaryConditions.num_disp_bdy_sets_in_solver.host(this->solver_id);
-
+    //std::cout << "NUM DISP BDY SETS" << num_disp_bdy_sets << std::endl;
     // Loop over the displacement boundary sets
     for (size_t bc_lid = 0; bc_lid < num_disp_bdy_sets; bc_lid++) {
         
         size_t bdy_set = BoundaryConditions.disp_bdy_sets_in_solver.host(this->solver_id, bc_lid);
-
+        //std::cout << "NUM BDY NODES IN SET" << mesh.num_bdy_nodes_in_set.host(bdy_set) << std::endl << std::endl;
         // Loop over boundary nodes in a boundary set
         FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
             // get the global index for this node on the boundary

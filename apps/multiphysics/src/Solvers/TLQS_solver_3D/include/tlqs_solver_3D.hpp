@@ -261,7 +261,7 @@ public:
         ViewCArrayKokkos <double>& gauss_point_grad_basis,
         double grad_u[3][3],
         double inv_J[3][3],
-        double det_J,
+        double& det_J,
         double PK2_curr_config[6]
     );
 
