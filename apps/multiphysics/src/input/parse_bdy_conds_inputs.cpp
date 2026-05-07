@@ -95,14 +95,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const size_t num_solvers)
 {
 
+    bool verbose = false; 
+
     Yaml::Node& bc_yaml = root["boundary_conditions"];
 
     size_t num_bcs = bc_yaml.Size();
 
-    std::cout<<"Number of boundary conditions = " << num_bcs << std::endl;
-
     BoundaryConditions.num_bcs = num_bcs;
-
     BoundaryConditions.BoundaryConditionSetup = CArrayKokkos <BoundaryConditionSetup_t>(num_bcs, "bc_setup_vars");
 
     // device functions
@@ -115,9 +114,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     // stores the velocity bdy node lists per solver, in the future, this needs to be a DualRaggedRight
     BoundaryConditions.vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "vel_bdy_sets_in_solver");  
     BoundaryConditions.temperature_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "temperature_bdy_sets_in_solver");
-    // this stores the number of bdy sets for a solver
    
-
     // this stores the number of vel bdy sets for a solver
     BoundaryConditions.num_vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_vel_bdy_sets_in_solver");   
     BoundaryConditions.num_temperature_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_temperature_bdy_sets_in_solver");
@@ -241,8 +238,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     switch(map[velocity_model]){
 
                         case boundary_conditions::constantVelocityBC :
-                            std::cout << "Setting constant velocity bc " << std::endl;
-                            
+                            if (verbose) std::cout << "Setting constant velocity bc " << std::endl;
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::constantVelocityBC ;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ConstantVelocityBC::velocity;
@@ -250,7 +246,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::timeVaryingVelocityBC:
-                            std::cout << "Setting time varying velocity bc " << std::endl;
+                            if (verbose) std::cout << "Setting time varying velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::timeVaryingVelocityBC;
@@ -259,7 +255,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
                         
                         case boundary_conditions::reflectedVelocityBC:
-                            std::cout << "Setting reflected velocity bc " << std::endl;
+                            if (verbose) std::cout << "Setting reflected velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::reflectedVelocityBC;
@@ -268,7 +264,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::zeroVelocityBC:
-                            std::cout << "Setting zero velocity bc " << std::endl;
+                            if (verbose) std::cout << "Setting zero velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::zeroVelocityBC;
@@ -276,7 +272,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             });
                             break;
                         case boundary_conditions::userDefinedVelocityBC:
-                            std::cout << "Setting user defined velocity bc " << std::endl;
+                            if (verbose) std::cout << "Setting user defined velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::userDefinedVelocityBC;
@@ -284,7 +280,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             });
                             break;
                         case boundary_conditions::pistonVelocityBC:
-                            std::cout << "Setting piston velocity bc " << std::endl;
+                            if (verbose) std::cout << "Setting piston velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::pistonVelocityBC;
@@ -313,17 +309,15 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             } // type
 
             else if (a_word.compare("temperature_model") == 0) {
-                std::cout << "Inside temperature_model check" << std::endl;
+                if (verbose) std::cout << "Inside temperature_model check" << std::endl;
 
                 // Note: solver_id was retrieved at the top of the bc_id loop
 
-                std::cout<<"Solver id = " << solver_id << std::endl;
-                std::cout<<"bc_id = " << bc_id << std::endl;
+                if (verbose) std::cout<<"Solver id = " << solver_id << std::endl;
+                if (verbose) std::cout<<"bc_id = " << bc_id << std::endl;
 
                 // find out how many temperature bdy sets have been saved 
                 size_t num_saved = BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id);
-
-                std::cout<<"num_saved = " << num_saved << std::endl;
 
                 BoundaryConditions.temperature_bdy_sets_in_solver.host(solver_id,num_saved) = bc_id;
                 BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
@@ -331,15 +325,13 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 std::string temperature_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 
                 auto map = bc_temperature_model_map; 
-                std::cout<<"Before map check" << std::endl;
                 // set the temperature_model
                 if (map.find(temperature_model) != map.end()) {
-                    std::cout<<"Inside map check" << std::endl;
                     auto bc_temperature_model = map[temperature_model];
                     
                     switch(map[temperature_model]){
                         case boundary_conditions::constantTemperatureBC:
-                            std::cout << "Setting constant temperature bc " << std::endl;
+                            if (verbose) std::cout << "Setting constant temperature bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCTemperatureModel = boundary_conditions::constantTemperatureBC;
@@ -348,7 +340,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::convectionTemperatureBC:
-                            std::cout << "Setting convection bc " << std::endl;
+                            if (verbose) std::cout << "Setting convection bc " << std::endl;
                             
                             RUN({   
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCTemperatureModel = boundary_conditions::convectionTemperatureBC;
@@ -357,7 +349,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::radiationTemperatureBC:
-                            std::cout << "Setting radiation bc " << std::endl;
+                            if (verbose) std::cout << "Setting radiation bc " << std::endl;
                             
                             RUN({   
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCTemperatureModel = boundary_conditions::radiationTemperatureBC;
@@ -396,7 +388,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     switch(map[stress_model]){
 
                         case boundary_conditions::constantStressBC :
-                            std::cout << "Setting stress bc " << std::endl;
+                            if (verbose) std::cout << "Setting stress bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::constantStressBC ;
@@ -405,7 +397,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::timeVaryingStressBC:
-                            std::cout << "Setting stress bc " << std::endl;
+                            if (verbose) std::cout << "Setting stress bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::timeVaryingStressBC;
@@ -414,7 +406,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::userDefinedStressBC:
-                            std::cout << "Setting stress bc " << std::endl;
+                            if (verbose) std::cout << "Setting stress bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::userDefinedStressBC;
@@ -423,18 +415,18 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::globalContact:
-                            std::cout << "Setting contact bc " << std::endl;
+                            if (verbose) std::cout << "Setting contact bc " << std::endl;
                             BoundaryConditions.allow_contact = true;
                             break;
 
                         case boundary_conditions::preloadContact:
-                            std::cout << "Setting preload contact bc " << std::endl;
+                            if (verbose) std::cout << "Setting preload contact bc " << std::endl;
                             BoundaryConditions.allow_preload = true;
                             BoundaryConditions.allow_contact = true;
                             break;
 
                         case boundary_conditions::fractureStressBC:                                  // case of setting up global fracture stress bc
-                            std::cout << "Setting global fracture stress bc " << std::endl;
+                            if (verbose) std::cout << "Setting global fracture stress bc " << std::endl;
                             BoundaryConditions.allow_fracture = true;
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::fractureStressBC;
@@ -666,7 +658,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 } // end check on num_global_vars
 
                 RUN({ 
-                    printf("num global stress vars = %zu \n", num_global_vars);
+                    if (verbose) printf("num global stress vars = %zu \n", num_global_vars);
                     BoundaryConditions.num_stress_bc_global_vars(bc_id) = num_global_vars;
                 });
 
@@ -746,7 +738,5 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
     // copy the enum values to the host 
     BoundaryConditions.BoundaryConditionEnums.update_host();
-
-
 
 } // end of function to parse bdy conditions

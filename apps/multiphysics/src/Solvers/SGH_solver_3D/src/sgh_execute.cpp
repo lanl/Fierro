@@ -67,7 +67,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
 
-    if (log) log->set_level(fierro::LogLevel::Off);
+    // if (log) log->set_level(fierro::LogLevel::Off);
 
     contact_state_t Contact_State; // keeps track of contact variables
     if (doing_contact) {
@@ -659,10 +659,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // Print communication time and node info in rank order
     for (int print_rank = 0; print_rank < num_ranks; ++print_rank) {
         if (rank == print_rank) {
-            printf("SGH3D execute: rank %d / %d total nodal velocity communication time: %f s\n",
+            if (log) log->info("SGH3D execute: rank %d / %d total nodal velocity communication time: %f s\n",
                    rank, num_ranks, static_cast<double>(comm_time_ns_total) * 1e-9);
 
-            printf("rank %d / %d owned nodes: %zu, ghost nodes: %zu\n",
+            if (log) log->info("rank %d / %d owned nodes: %zu, ghost nodes: %zu\n",
                    rank, num_ranks, mesh.num_owned_nodes, mesh.num_ghost_nodes);
             
             // Also, print the communication volume on each rank for the node communication plan
@@ -672,7 +672,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 CommunicationPlan* node_comm = State.node.vel.comm_plan_;
                 int total_send = node_comm->total_send_count;
                 int total_recv = node_comm->total_recv_count;
-                printf("rank %d node communication volume - send: %d, recv: %d, total: %d\n",
+                if (log) log->info("rank %d node communication volume - send: %d, recv: %d, total: %d\n",
                        rank, total_send, total_recv, total_send + total_recv);
             }
  
@@ -708,7 +708,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     if (log) log->info("Time=0:   KE = %.14f, IE = %.14f, TE = %.14f \n", KE_t0, IE_t0, TE_t0);
     if (log) log->info("Time=End: KE = %.14f, IE = %.14f, TE = %.14f \n", KE_tend, IE_tend, TE_tend);
-    if (log) log->info("total energy change = %.15e \n\n", TE_tend - TE_t0);
+    if (log) log->info("total energy change = %.15e \n", TE_tend - TE_t0);
 
     // domain mass for each material (they are at material points)
     double mass_domain_all_mats_tend = 0.0;

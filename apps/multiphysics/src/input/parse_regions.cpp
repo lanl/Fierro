@@ -69,6 +69,7 @@ void parse_regions(Yaml::Node& root,
                    const size_t num_solvers)
 
 {
+    bool verbose = false; 
     // allocate memory
     num_reg_fills_in_solver = DCArrayKokkos<size_t>(num_solvers, "sim_param.region_setup.num_reg_fills_in_solver");
     num_reg_fills_in_solver.set_values(0);
@@ -194,21 +195,21 @@ void parse_regions(Yaml::Node& root,
                             switch(scalar_ics_type_map[type]){
 
                                 case init_conds::uniform:
-                                    std::cout << "Setting density initial conditions type to uniform " << std::endl;
+                                    if (verbose) std::cout << "Setting density initial conditions type to uniform " << std::endl;
                                     RUN({
                                         region_fills(reg_id).den_field = init_conds::uniform;
                                     });
                                     break;
 
                                 case init_conds::tgVortexScalar:
-                                    std::cout << "Setting density initial conditions type to TG Vortex " << std::endl;
+                                    if (verbose) std::cout << "Setting density initial conditions type to TG Vortex " << std::endl;
                                     RUN({
                                         region_fills(reg_id).den_field = init_conds::tgVortexScalar;
                                     });
                                     break;
 
                                 case init_conds::noICsScalar:
-                                    std::cout << "Setting density initial conditions type to no density" << std::endl;
+                                    if (verbose) std::cout << "Setting density initial conditions type to no density" << std::endl;
                                     RUN({ 
                                         region_fills(reg_id).den_field = init_conds::noICsScalar;
                                     });
@@ -281,7 +282,7 @@ void parse_regions(Yaml::Node& root,
                         // specific_internal_energy value
                         double value = root["regions"][reg_id]["region"]["specific_internal_energy"]["value"].As<double>();
                         RUN({
-                        region_fills(reg_id).sie = value;
+                            region_fills(reg_id).sie = value;
                         });
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
@@ -295,7 +296,7 @@ void parse_regions(Yaml::Node& root,
                             switch(scalar_ics_type_map[type]){
 
                                 case init_conds::uniform:
-                                    std::cout << "Setting specific_internal_energy initial conditions type to uniform " << std::endl;
+                                    if (verbose) std::cout << "Setting specific_internal_energy initial conditions type to uniform " << std::endl;
                                     RUN({
                                         region_fills(reg_id).sie_field = init_conds::uniform;
                                     });
@@ -480,7 +481,7 @@ void parse_regions(Yaml::Node& root,
                         // x-component of specific_heat
                         double value = root["regions"][reg_id]["region"]["specific_heat"]["value"].As<double>();
                         RUN({
-                        region_fills(reg_id).specific_heat = value;
+                            region_fills(reg_id).specific_heat = value;
                         });
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
@@ -494,21 +495,21 @@ void parse_regions(Yaml::Node& root,
                             switch(scalar_ics_type_map[type]){
 
                                 case init_conds::uniform:
-                                    std::cout << "Setting specific_heat initial conditions type to uniform " << std::endl;
+                                    if (verbose) std::cout << "Setting specific_heat initial conditions type to uniform " << std::endl;
                                     RUN({
                                         region_fills(reg_id).specific_heat_field = init_conds::uniform;
                                     });
                                     break;
 
                                 case init_conds::tgVortexScalar:
-                                    std::cout << "Setting specific_heat initial conditions type to TG Vortex " << std::endl;
+                                    if (verbose) std::cout << "Setting specific_heat initial conditions type to TG Vortex " << std::endl;
                                     RUN({
                                         region_fills(reg_id).specific_heat_field = init_conds::tgVortexScalar;
                                     });
                                     break;
 
                                 case init_conds::noICsScalar:
-                                    std::cout << "Setting specific_heat initial conditions type to no specific_heat" << std::endl;
+                                    if (verbose) std::cout << "Setting specific_heat initial conditions type to no specific_heat" << std::endl;
                                     RUN({ 
                                         region_fills(reg_id).specific_heat_field = init_conds::noICsScalar;
                                     });
@@ -595,21 +596,21 @@ void parse_regions(Yaml::Node& root,
                             switch(scalar_ics_type_map[type]){
 
                                 case init_conds::uniform:
-                                    std::cout << "Setting thermal_conductivity initial conditions type to uniform " << std::endl;
+                                    if (verbose) std::cout << "Setting thermal_conductivity initial conditions type to uniform " << std::endl;
                                     RUN({
                                         region_fills(reg_id).thermal_conductivity_field = init_conds::uniform;
                                     });
                                     break;
 
                                 case init_conds::tgVortexScalar:
-                                    std::cout << "Setting thermal_conductivity initial conditions type to TG Vortex " << std::endl;
+                                    if (verbose) std::cout << "Setting thermal_conductivity initial conditions type to TG Vortex " << std::endl;
                                     RUN({
                                         region_fills(reg_id).thermal_conductivity_field = init_conds::tgVortexScalar;
                                     });
                                     break;
 
                                 case init_conds::noICsScalar:
-                                    std::cout << "Setting thermal_conductivity initial conditions type to no thermal_conductivity" << std::endl;
+                                    if (verbose) std::cout << "Setting thermal_conductivity initial conditions type to no thermal_conductivity" << std::endl;
                                     RUN({ 
                                         region_fills(reg_id).thermal_conductivity_field = init_conds::noICsScalar;
                                     });
@@ -722,57 +723,57 @@ void parse_regions(Yaml::Node& root,
                             switch(scalar_ics_type_map[type]){
 
                                 case init_conds::uniform:
-                                    std::cout << "Setting volfrac initial conditions type to uniform " << std::endl;
+                                    if (verbose) std::cout << "Setting volfrac initial conditions type to uniform " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volfrac_field = init_conds::uniform;
                                     });
                                     break;
 
                                 case init_conds::radialScalar:
-                                    std::cout << "Setting volfrac initial conditions type to radial scalar " << std::endl;
+                                    if (verbose) std::cout << "Setting volfrac initial conditions type to radial scalar " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volfrac_field = init_conds::radialScalar;
                                     });
                                     break;
 
                                 case init_conds::sphericalScalar:
-                                    std::cout << "Setting volfrac initial conditions type to spherical scalar " << std::endl;
+                                    if (verbose) std::cout << "Setting volfrac initial conditions type to spherical scalar " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volfrac_field = init_conds::sphericalScalar;
                                     });
                                     break;
 
                                 case init_conds::xlinearScalar:
-                                    std::cout << "Setting volfrac initial conditions type to xlinearScalar " << std::endl;
+                                    if (verbose) std::cout << "Setting volfrac initial conditions type to xlinearScalar " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volfrac_field = init_conds::xlinearScalar;
                                     });
                                     break;
                                 
                                 case init_conds::ylinearScalar:
-                                    std::cout << "Setting volfrac initial conditions type to ylinearScalar " << std::endl;
+                                    if (verbose) std::cout << "Setting volfrac initial conditions type to ylinearScalar " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volfrac_field = init_conds::ylinearScalar;
                                     });
                                     break;
                                 
                                 case init_conds::zlinearScalar:
-                                    std::cout << "Setting volfrac initial conditions type to zlinearScalar " << std::endl;
+                                    if (verbose) std::cout << "Setting volfrac initial conditions type to zlinearScalar " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volfrac_field = init_conds::zlinearScalar;
                                     });
                                     break;
 
                                 case init_conds::tgVortexScalar:
-                                    std::cout << "Setting volfrac initial conditions type to TG Vortex " << std::endl;
+                                    if (verbose) std::cout << "Setting volfrac initial conditions type to TG Vortex " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volfrac_field = init_conds::tgVortexScalar;
                                     });
                                     break;
 
                                 case init_conds::noICsScalar:
-                                    std::cout << "Default Volume Fraction Used:" << std::endl;
-                                    std::cout << "Setting volume fraction to uniform field with a value equal to 1" << std::endl;
+                                    if (verbose) std::cout << "Default Volume Fraction Used:" << std::endl;
+                                    if (verbose) std::cout << "Setting volume fraction to uniform field with a value equal to 1" << std::endl;
                                     RUN({ 
                                         region_fills(reg_id).volfrac_field = init_conds::uniform;
                                     });
@@ -859,21 +860,21 @@ void parse_regions(Yaml::Node& root,
                             switch(scalar_ics_type_map[type]){
 
                                 case init_conds::uniform:
-                                    std::cout << "Setting temperature initial conditions type to uniform " << std::endl;
+                                    if (verbose) std::cout << "Setting temperature initial conditions type to uniform " << std::endl;
                                     RUN({
                                         region_fills(reg_id).temperature_field = init_conds::uniform;
                                     });
                                     break;
 
                                 case init_conds::tgVortexScalar:
-                                    std::cout << "Setting temperature initial conditions type to TG Vortex " << std::endl;
+                                    if (verbose) std::cout << "Setting temperature initial conditions type to TG Vortex " << std::endl;
                                     RUN({
                                         region_fills(reg_id).temperature_field = init_conds::tgVortexScalar;
                                     });
                                     break;
 
                                 case init_conds::noICsScalar:
-                                    std::cout << "Setting temperature initial conditions type to no temperature" << std::endl;
+                                    if (verbose) std::cout << "Setting temperature initial conditions type to no temperature" << std::endl;
                                     RUN({ 
                                         region_fills(reg_id).temperature_field = init_conds::noICsScalar;
                                     });
@@ -994,52 +995,52 @@ void parse_regions(Yaml::Node& root,
                             switch(scalar_ics_type_map[type]){
 
                                 case init_conds::uniform:
-                                    std::cout << "Setting level set initial conditions type to uniform " << std::endl;
+                                    if (verbose) std::cout << "Setting level set initial conditions type to uniform " << std::endl;
                                     RUN({
                                         region_fills(reg_id).level_set_field = init_conds::uniform;
                                     });
                                     break;
                                 case init_conds::radialScalar:
-                                    std::cout << "Setting level set initial conditions type to radial scalar " << std::endl;
+                                    if (verbose) std::cout << "Setting level set initial conditions type to radial scalar " << std::endl;
                                     RUN({
                                         region_fills(reg_id).level_set_field = init_conds::radialScalar;
                                     });
                                     break;
                                 case init_conds::sphericalScalar:
-                                    std::cout << "Setting level set initial conditions type to spherical scalar " << std::endl;
+                                    if (verbose) std::cout << "Setting level set initial conditions type to spherical scalar " << std::endl;
                                     RUN({
                                         region_fills(reg_id).level_set_field = init_conds::sphericalScalar;
                                     });
                                     break;
                                 case init_conds::xlinearScalar:
-                                    std::cout << "Setting volfrac initial conditions type to xlinearScalar " << std::endl;
+                                    if (verbose) std::cout << "Setting volfrac initial conditions type to xlinearScalar " << std::endl;
                                     RUN({
                                         region_fills(reg_id).level_set_field = init_conds::xlinearScalar;
                                     });
                                     break;
                                 
                                 case init_conds::ylinearScalar:
-                                    std::cout << "Setting volfrac initial conditions type to ylinearScalar " << std::endl;
+                                    if (verbose) std::cout << "Setting volfrac initial conditions type to ylinearScalar " << std::endl;
                                     RUN({
                                         region_fills(reg_id).level_set_field = init_conds::ylinearScalar;
                                     });
                                     break;
                                 
                                 case init_conds::zlinearScalar:
-                                    std::cout << "Setting volfrac initial conditions type to zlinearScalar " << std::endl;
+                                    if (verbose) std::cout << "Setting volfrac initial conditions type to zlinearScalar " << std::endl;
                                     RUN({
                                         region_fills(reg_id).level_set_field = init_conds::zlinearScalar;
                                     });
                                     break;
                                 case init_conds::tgVortexScalar:
-                                    std::cout << "Setting level set initial conditions type to TG Vortex " << std::endl;
+                                    if (verbose) std::cout << "Setting level set initial conditions type to TG Vortex " << std::endl;
                                     RUN({
                                         region_fills(reg_id).level_set_field = init_conds::tgVortexScalar;
                                     });
                                     break;
 
                                 case init_conds::noICsScalar:
-                                    std::cout << "Setting level set initial conditions type to no level set" << std::endl;
+                                    if (verbose) std::cout << "Setting level set initial conditions type to no level set" << std::endl;
                                     RUN({ 
                                         region_fills(reg_id).level_set_field = init_conds::noICsScalar;
                                     });
@@ -1150,56 +1151,56 @@ void parse_regions(Yaml::Node& root,
                             switch(vector_ics_type_map[type]){
 
                                 case init_conds::stationary:
-                                    std::cout << "Setting velocity initial conditions type to static " << std::endl;
+                                    if (verbose) std::cout << "Setting velocity initial conditions type to static " << std::endl;
                                     RUN({
                                         region_fills(reg_id).vel_field = init_conds::stationary;
                                     });
                                     break;
 
                                 case init_conds::cartesian:
-                                    std::cout << "Setting velocity initial conditions type to cartesian " << std::endl;
+                                    if (verbose) std::cout << "Setting velocity initial conditions type to cartesian " << std::endl;
                                     RUN({
                                         region_fills(reg_id).vel_field = init_conds::cartesian;
                                     });
                                     break;
 
                                 case init_conds::radialVec:
-                                    std::cout << "Setting velocity initial conditions type to radial " << std::endl;
+                                    if (verbose) std::cout << "Setting velocity initial conditions type to radial " << std::endl;
                                     RUN({
                                         region_fills(reg_id).vel_field = init_conds::radialVec;
                                     });
                                     break;
 
                                 case init_conds::sphericalVec:
-                                    std::cout << "Setting velocity initial conditions type to spherical " << std::endl;
+                                    if (verbose) std::cout << "Setting velocity initial conditions type to spherical " << std::endl;
                                     RUN({
                                         region_fills(reg_id).vel_field = init_conds::sphericalVec;
                                     });
                                     break;
 
                                 case init_conds::radialLinearVec:
-                                    std::cout << "Setting velocity initial conditions type to radial_linear " << std::endl;
+                                    if (verbose) std::cout << "Setting velocity initial conditions type to radial_linear " << std::endl;
                                     RUN({
                                         region_fills(reg_id).vel_field = init_conds::radialLinearVec;
                                     });
                                     break;
 
                                 case init_conds::sphericalLinearVec:
-                                    std::cout << "Setting velocity initial conditions type to spherical_linear " << std::endl;
+                                    if (verbose) std::cout << "Setting velocity initial conditions type to spherical_linear " << std::endl;
                                     RUN({
                                         region_fills(reg_id).vel_field = init_conds::sphericalLinearVec;
                                     });
                                     break;
 
                                 case init_conds::tgVortexVec:
-                                    std::cout << "Setting velocity initial conditions type to tg_vortex " << std::endl;
+                                    if (verbose) std::cout << "Setting velocity initial conditions type to tg_vortex " << std::endl;
                                     RUN({
                                         region_fills(reg_id).vel_field = init_conds::tgVortexVec;
                                     });
                                     break;
 
                                 case init_conds::noICsVec:
-                                    std::cout << "Setting velocity initial conditions type to no velocity" << std::endl;
+                                    if (verbose) std::cout << "Setting velocity initial conditions type to no velocity" << std::endl;
                                     RUN({ 
                                         region_fills(reg_id).vel_field = init_conds::noICsVec;
                                     });
@@ -1379,47 +1380,47 @@ void parse_regions(Yaml::Node& root,
                             switch(region_type_map[type]){
 
                                 case region::global:
-                                    std::cout << "Setting volume fill type to global " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to global " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volume = region::global;
                                     });
                                     break;
 
                                 case region::box:
-                                    std::cout << "Setting volume fill type to box " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to box " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volume = region::box;
                                     });
                                     break;
 
                                 case region::cylinder:
-                                    std::cout << "Setting volume fill type to cylinder " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to cylinder " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volume = region::cylinder;
                                     });
                                     break;
 
                                 case region::sphere:
-                                    std::cout << "Setting volume fill type to sphere " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to sphere " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volume = region::sphere;
                                     });
                                     break;
 
                                 case region::readVoxelFile:
-                                    std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volume = region::readVoxelFile;
                                     });
                                     break;
                                 case region::readVTUFile:
-                                    std::cout << "Setting volume fill type to readVTUFile " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to readVTUFile " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volume = region::readVTUFile;
                                     });
                                     break;
                                 case region::no_volume:
-                                    std::cout << "Setting volume fill type to none " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to none " << std::endl;
                                     RUN({
                                         region_fills(reg_id).volume = region::no_volume;
                                     });
