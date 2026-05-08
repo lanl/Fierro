@@ -2734,10 +2734,10 @@ public:
                     vector_var ++;
                     break;
 
+                // -- not used vars
                 case node_state::coords_t0:
                     break;
 
-                // -- not used vars
                 case node_state::force:
                     break;
 
@@ -4492,14 +4492,39 @@ public:
         for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
             fprintf(out[0], "          ");  // adding indentation before printing nodes in element
             if (num_dims==3 && Pn_order>1){
-                for (int k = 0; k <= Pn_order_z; k++) {
+                CArray<int> convert_fierro_to_vtk((Pn_order+1)*(Pn_order+1)*(Pn_order+1));
+                int this_node_lid = 0;
+                for (int k = 0; k <= Pn_order; k++) {
                     for (int j = 0; j <= Pn_order; j++) {
                         for (int i = 0; i <= Pn_order; i++) {
-                            size_t node_lid = PointIndexFromIJK(i, j, k, order);
-                            fprintf(out[0], "%lu ", nodes_in_elem_host(elem_gid, node_lid));
+                            
+                            // convert this_point index to the FE index convention
+                            size_t vtk_index = PointIndexFromIJK(i, j, k, order);
+                            
+                            // store the points in this elem according the the finite
+                            // element numbering convention
+                            convert_fierro_to_vtk(vtk_index) = this_node_lid;
+                            // increment the point counting index
+                            this_node_lid ++;
+                            
+                        } // end for icount
+                    } // end for jcount
+                }  // end for kcount
+                // Write connectivity: all node IDs for all elements, space-separated
+                for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+                    
+                    int this_node_lid = 0;
+                    for (int k = 0; k <= Pn_order; k++) {
+                        for (int j = 0; j <= Pn_order; j++) {
+                            for (int i = 0; i <= Pn_order; i++) {
+                                // size_t node_lid = PointIndexFromIJK(i, j, k, order);
+                                int node_lid = convert_fierro_to_vtk(this_node_lid);
+                                fprintf(out[0], "%lu ", nodes_in_elem_host(elem_gid, node_lid));
+                                this_node_lid ++;
+                            }
                         }
                     }
-                } // end for
+                }
             }
             else if (num_dims == 3 && Pn_order == 1){
                // 3D linear hexahedral elements

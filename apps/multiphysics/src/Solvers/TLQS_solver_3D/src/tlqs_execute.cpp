@@ -121,7 +121,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // Write initial state at t=0
     printf("Writing outputs to file at %f \n", graphics_time);
-    /* mesh_writer.write_mesh(
+    mesh_writer.write_mesh(
         mesh, 
         State, 
         SimulationParamaters,
@@ -131,7 +131,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         TLQS3D_State::required_node_state,
         TLQS3D_State::required_gauss_pt_state,
         TLQS3D_State::required_material_pt_state,
-        this->solver_id); */
+        this->solver_id);
     
 
 
@@ -304,7 +304,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 // check convergence
                 double norm = sqrt(rkp1trkp1);
-                if (norm < 1E-10) {
+                if (norm < 1E-8) {
                     break;
                 }
 
@@ -346,7 +346,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             }, norm_den);
 
             double norm = sqrt(norm_num / norm_den);
-            if (norm < 1E-10) {
+            //std::cout << "PICARD NORM: " << norm << std::endl;
+            if (norm < 1E-8) {
+                std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }
 
@@ -385,7 +387,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         }
 
         // write outputs
-        /* if (write == 1) {
+        if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
             mesh_writer.write_mesh(mesh,
                                    State,
@@ -401,7 +403,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             graphics_time = time_value + graphics_dt_ival;
 
             dt = cached_pregraphics_dt;
-        } // end if */
+        } // end if
 
         // end of calculation
         if (time_value >= time_final) {
