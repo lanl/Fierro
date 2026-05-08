@@ -371,7 +371,7 @@ public:
             read_Abaqus_mesh(mesh, State, num_dims);
         }
         else if(extension == "vtk"){ // vtk file format
-            if (mesh_inps.p_order <= 0) {
+            if (mesh_inps.p_order <= 1) {
                 read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
             }
             else {
