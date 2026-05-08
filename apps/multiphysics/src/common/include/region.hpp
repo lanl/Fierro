@@ -88,8 +88,11 @@ struct RegionFill_t
     // type
     region::vol_tag volume; ///< Type of volume for this region eg. global, box, sphere, planes, etc.
 
+    // region id
+    size_t id;  ///< the id for this region
+
     // solver id
-    size_t solver_id; ///< solver ID for this region
+    size_t solver_id; ///< solver ID for this region (not used by solvers in Fierro at this time)
 
     // material id
     size_t material_id; ///< Material ID for this region
@@ -105,6 +108,12 @@ struct RegionFill_t
     // radius
     double radius1 = 0.0;   ///< Inner radius to fill for sphere
     double radius2 = 0.0;   ///< Outer radius to fill for sphere
+
+
+    // the volume origin
+    double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region fill, its the volume origin
+
+    int part_id = 1; // object_id in the .vtu file, starts at 1 and goes to N parts
 
     // initial condition for velocity 
     init_conds::init_vector_conds vel_field = init_conds::noICsVec;  ///< ICs for velocity in this region
@@ -166,11 +175,6 @@ struct RegionFill_t
     double thermal_conductivity = 0.0; ///< thermal conductivity
     double thermal_conductivity_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for thermal cond field
 
-
-    // the volume origin
-    double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region fill, its the volume origin
-
-    int part_id = 1; // object_id in the .vtu file, starts at 1 and goes to N parts
 };
 
 /////////////////////////////////////////////////////////////////////////////

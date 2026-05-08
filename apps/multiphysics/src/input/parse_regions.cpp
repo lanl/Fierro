@@ -105,45 +105,93 @@ void parse_regions(Yaml::Node& root,
     region_fills = CArrayKokkos<RegionFill_t>(num_regions , "sim_param.region_setup.region_fills");
     region_fills_host = CArray<RegionFill_host_t>(num_regions); 
 
-    // loop over the fill regions specified
-    for (int reg_id = 0; reg_id < num_regions; reg_id++) {
-        // read the variables names
-        Yaml::Node& inps_yaml = root["regions"][reg_id]["region"];
 
-        // get the material variables names set by the user
+    // a check on region_id not being specified more than once or not at all
+    CArray <bool> check_reg_ids(num_regions);
+    check_reg_ids.set_values(false);
+
+
+    // loop over the fill regions specified in yaml file
+    for (int r_id = 0; r_id < num_regions; r_id++) {
+
+        // read the variables names
+        Yaml::Node& inps_yaml = root["regions"][r_id]["region"];
+
+        // get the region variables names set by the user
         std::vector<std::string> user_str_region_inps;
 
         // extract words from the input file and validate they are correct
         validate_inputs(inps_yaml, user_str_region_inps, str_region_inps, region_required_inps);
 
-        // loop over the words in the material input definition
+
+        // loop over the words in r_id region input definition and find the region id
+        int reg_id = -1;
         for (auto& a_word : user_str_region_inps) {
 
+            if (a_word.compare("id") == 0) {
+                reg_id = root["regions"][r_id]["region"]["id"].As<int>(); // the region id
 
-            Yaml::Node& material_inps_yaml = root["regions"][reg_id]["region"][a_word];
+                if (reg_id<0 || reg_id>=num_regions){
+                    std::cout << "ERROR: invalid region_id specified in the region definition " << std::endl;
+            
+                    throw std::runtime_error("**** region_id is out of bounds ****");
+                } // end check on m_id range
 
-            // set the values
-            if (a_word.compare("solver_id") == 0) {
-                int solver_id = root["regions"][reg_id]["region"][a_word].As<int>();
+                if (check_reg_ids(reg_id) == true){
+                    std::cout << "ERROR: region_id = " << reg_id << " was already specified "<< std::endl;
+                    throw std::runtime_error("**** Multiple regions used the same region_id ****");
+                }
+                else {
+                    check_reg_ids(reg_id) = true;
+                } // end check on reg_id
+
+            } // end if id
+        } // end loop over all region inputs in r_id block
+
+        if (reg_id<0){
+            std::cout << "ERROR: region_id must be specified in each region definition " << std::endl;
+            
+            throw std::runtime_error("**** region_id is missing ****");
+        } // end check on reg_id being specified
+
+
+
+        // loop over the words in the material input definition
+        for (auto& a_word : user_str_region_inps) {
+            
+            
+            if (a_word.compare("id") == 0) {
+                // do nothing
+                // this id was read in an earlier loop
+            }
+            //extract solver id, currently not used by Fierro's solvers
+            else if (a_word.compare("solver_id") == 0) {
+                int solver_id = root["regions"][r_id]["region"][a_word].As<int>();
                 
                 // get the local id for filling this region
                 size_t fill_lid = num_reg_fills_in_solver.host(solver_id);
 
                 // save the fill_id, which is the reg_id
-                reg_fills_in_solver.host(solver_id, fill_lid) = reg_id;
+                reg_fills_in_solver.host(solver_id, fill_lid) = reg_id; 
                 num_reg_fills_in_solver.host(solver_id) ++;
 
                 RUN({
                     region_fills(reg_id).solver_id = solver_id;
                 });
-            } // mat_id
+            } // solver_id
+            // ----- region stuff above here
+            //
+            //
+            //
+            //
+            // --- initial condition definitions here
             else if (a_word.compare("material_id") == 0) {
-                int id = root["regions"][reg_id]["region"][a_word].As<int>();
+                int mat_id = root["regions"][r_id]["region"][a_word].As<int>();
 
                 RUN({
-                    region_fills(reg_id).material_id = id;
+                    region_fills(reg_id).material_id = mat_id;
                 });
-            } // mat_id
+            } // material_id
             else if (a_word.compare("density") == 0) {
 
                 // check to see if density enum was saved
@@ -159,7 +207,7 @@ void parse_regions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under den
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["density"];
+                Yaml::Node& inps_subfields_yaml = root["regions"][r_id]["region"]["density"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_region_den_inputs;
@@ -172,7 +220,7 @@ void parse_regions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // density
-                        double value = root["regions"][reg_id]["region"]["density"]["value"].As<double>();
+                        double value = root["regions"][r_id]["region"]["density"]["value"].As<double>();
 
                         // check for a valid density, and then save it if it is
                         if (value < 0.0) {
@@ -185,7 +233,7 @@ void parse_regions(Yaml::Node& root,
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["regions"][reg_id]["region"]["density"]["type"].As<std::string>();
+                        std::string type = root["regions"][r_id]["region"]["density"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -266,7 +314,7 @@ void parse_regions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under sie
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["specific_internal_energy"];
+                Yaml::Node& inps_subfields_yaml = root["regions"][r_id]["region"]["specific_internal_energy"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_region_sie_inputs;
@@ -279,14 +327,14 @@ void parse_regions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // specific_internal_energy value
-                        double value = root["regions"][reg_id]["region"]["specific_internal_energy"]["value"].As<double>();
+                        double value = root["regions"][r_id]["region"]["specific_internal_energy"]["value"].As<double>();
                         RUN({
                         region_fills(reg_id).sie = value;
                         });
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["regions"][reg_id]["region"]["specific_internal_energy"]["type"].As<std::string>();
+                        std::string type = root["regions"][r_id]["region"]["specific_internal_energy"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -366,7 +414,7 @@ void parse_regions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under internal_energy
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["internal_energy"];
+                Yaml::Node& inps_subfields_yaml = root["regions"][r_id]["region"]["internal_energy"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_region_ie_inputs;
@@ -379,14 +427,14 @@ void parse_regions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // extensive internal_energy
-                        double value = root["regions"][reg_id]["region"]["internal_energy"]["value"].As<double>();
+                        double value = root["regions"][r_id]["region"]["internal_energy"]["value"].As<double>();
                         RUN({
                         region_fills(reg_id).ie = value;
                         });
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["regions"][reg_id]["region"]["internal_energy"]["type"].As<std::string>();
+                        std::string type = root["regions"][r_id]["region"]["internal_energy"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -465,7 +513,7 @@ void parse_regions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under specific_heat
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["specific_heat"];
+                Yaml::Node& inps_subfields_yaml = root["regions"][r_id]["region"]["specific_heat"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_region_specific_heat_inputs;
@@ -478,14 +526,14 @@ void parse_regions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // x-component of specific_heat
-                        double value = root["regions"][reg_id]["region"]["specific_heat"]["value"].As<double>();
+                        double value = root["regions"][r_id]["region"]["specific_heat"]["value"].As<double>();
                         RUN({
                         region_fills(reg_id).specific_heat = value;
                         });
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["regions"][reg_id]["region"]["specific_heat"]["type"].As<std::string>();
+                        std::string type = root["regions"][r_id]["region"]["specific_heat"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -565,7 +613,7 @@ void parse_regions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under thermal_conductivity
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["thermal_conductivity"];
+                Yaml::Node& inps_subfields_yaml = root["regions"][r_id]["region"]["thermal_conductivity"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_region_thermal_conductivity_inputs;
@@ -578,7 +626,7 @@ void parse_regions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // thermal_conductivity
-                        double value = root["regions"][reg_id]["region"]["thermal_conductivity"]["value"].As<double>();
+                        double value = root["regions"][r_id]["region"]["thermal_conductivity"]["value"].As<double>();
 
                         RUN({
                         region_fills(reg_id).thermal_conductivity = value;
@@ -586,7 +634,7 @@ void parse_regions(Yaml::Node& root,
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["regions"][reg_id]["region"]["thermal_conductivity"]["type"].As<std::string>();
+                        std::string type = root["regions"][r_id]["region"]["thermal_conductivity"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -658,7 +706,7 @@ void parse_regions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under volfrac
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["volume_fraction"];
+                Yaml::Node& inps_subfields_yaml = root["regions"][r_id]["region"]["volume_fraction"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_region_volfrac_inputs;
@@ -671,7 +719,7 @@ void parse_regions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // volfrac value or the intercept if linear variation
-                        double value = root["regions"][reg_id]["region"]["volume_fraction"]["value"].As<double>();
+                        double value = root["regions"][r_id]["region"]["volume_fraction"]["value"].As<double>();
       
                         RUN({
                             region_fills(reg_id).volfrac = value;
@@ -679,14 +727,14 @@ void parse_regions(Yaml::Node& root,
                     } // value
                     else if (a_subfield_word.compare("slope") == 0) {
                         // volfrac slope
-                        double slope = root["regions"][reg_id]["region"]["volume_fraction"]["slope"].As<double>();
+                        double slope = root["regions"][r_id]["region"]["volume_fraction"]["slope"].As<double>();
       
                         RUN({
                             region_fills(reg_id).volfrac_slope = slope;
                         });
                     } // slope
                     else if (a_subfield_word.compare("origin") == 0) {
-                        std::string origin = root["regions"][reg_id]["region"]["volume_fraction"]["origin"].As<std::string>();
+                        std::string origin = root["regions"][r_id]["region"]["volume_fraction"]["origin"].As<std::string>();
 
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(origin, ",");
@@ -713,7 +761,7 @@ void parse_regions(Yaml::Node& root,
                     } // origin
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["regions"][reg_id]["region"]["volume_fraction"]["type"].As<std::string>();
+                        std::string type = root["regions"][r_id]["region"]["volume_fraction"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -829,7 +877,7 @@ void parse_regions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under temperature
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["temperature"];
+                Yaml::Node& inps_subfields_yaml = root["regions"][r_id]["region"]["temperature"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_region_temperature_inputs;
@@ -843,14 +891,14 @@ void parse_regions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         //temperature
-                        double value = root["regions"][reg_id]["region"]["temperature"]["value"].As<double>();
+                        double value = root["regions"][r_id]["region"]["temperature"]["value"].As<double>();
                         RUN({
                         region_fills(reg_id).temperature = value;
                         });
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["regions"][reg_id]["region"]["temperature"]["type"].As<std::string>();
+                        std::string type = root["regions"][r_id]["region"]["temperature"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -930,7 +978,7 @@ void parse_regions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under level set
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["level_set"];
+                Yaml::Node& inps_subfields_yaml = root["regions"][r_id]["region"]["level_set"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_region_level_set_inputs;
@@ -943,7 +991,7 @@ void parse_regions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // level set
-                        double value = root["regions"][reg_id]["region"]["level_set"]["value"].As<double>();
+                        double value = root["regions"][r_id]["region"]["level_set"]["value"].As<double>();
 
                         RUN({
                             region_fills(reg_id).level_set = value;
@@ -951,14 +999,14 @@ void parse_regions(Yaml::Node& root,
                     } // value
                     else if (a_subfield_word.compare("slope") == 0) {
                         // volfrac slope
-                        double slope = root["regions"][reg_id]["region"]["level_set"]["slope"].As<double>();
+                        double slope = root["regions"][r_id]["region"]["level_set"]["slope"].As<double>();
         
                         RUN({
                             region_fills(reg_id).level_set_slope = slope;
                         });
                     } // slope
                     else if (a_subfield_word.compare("origin") == 0) {
-                        std::string origin = root["regions"][reg_id]["region"]["level_set"]["origin"].As<std::string>();
+                        std::string origin = root["regions"][r_id]["region"]["level_set"]["origin"].As<std::string>();
 
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(origin, ",");
@@ -985,7 +1033,7 @@ void parse_regions(Yaml::Node& root,
                     } // origin
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["regions"][reg_id]["region"]["level_set"]["type"].As<std::string>();
+                        std::string type = root["regions"][r_id]["region"]["level_set"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -1096,7 +1144,7 @@ void parse_regions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under velocity
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["velocity"];
+                Yaml::Node& inps_subfields_yaml = root["regions"][r_id]["region"]["velocity"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_region_vel_inputs;
@@ -1109,7 +1157,7 @@ void parse_regions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("u") == 0) {
                         // x-component of velocity
-                        double u = root["regions"][reg_id]["region"]["velocity"]["u"].As<double>();
+                        double u = root["regions"][r_id]["region"]["velocity"]["u"].As<double>();
 
                         RUN({
                         region_fills(reg_id).u = u;
@@ -1117,7 +1165,7 @@ void parse_regions(Yaml::Node& root,
                     } // u
                     else if (a_subfield_word.compare("v") == 0) {
                         // y-component of velocity
-                        double v = root["regions"][reg_id]["region"]["velocity"]["v"].As<double>();
+                        double v = root["regions"][r_id]["region"]["velocity"]["v"].As<double>();
 
                         RUN({
                             region_fills(reg_id).v = v;
@@ -1126,14 +1174,14 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("w") == 0) {
                         // z-component of velocity
 
-                        double w = root["regions"][reg_id]["region"]["velocity"]["w"].As<double>();
+                        double w = root["regions"][r_id]["region"]["velocity"]["w"].As<double>();
 
                         RUN({
                             region_fills(reg_id).w = w;
                         });
                     } // w
                     else if (a_subfield_word.compare("speed") == 0) {
-                        double speed = root["regions"][reg_id]["region"]["velocity"]["speed"].As<double>();
+                        double speed = root["regions"][r_id]["region"]["velocity"]["speed"].As<double>();
 
                         RUN({
                             region_fills(reg_id).speed = speed;
@@ -1141,7 +1189,7 @@ void parse_regions(Yaml::Node& root,
                     } // speed
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["regions"][reg_id]["region"]["velocity"]["type"].As<std::string>();
+                        std::string type = root["regions"][r_id]["region"]["velocity"]["type"].As<std::string>();
 
                         // set the volume tag type
                         if (vector_ics_type_map.find(type) != vector_ics_type_map.end()) {
@@ -1240,12 +1288,18 @@ void parse_regions(Yaml::Node& root,
 
                 } // end for loop over text
             } // end if on velocity
+            // -----
+            //
+            //
+            //
+            //
+            // --- region definitions below here
             else if (a_word.compare("volume") == 0) {
 
                 // -----
                 // loop over the sub fields under volume
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["regions"][reg_id]["region"]["volume"];
+                Yaml::Node& inps_subfields_yaml = root["regions"][r_id]["region"]["volume"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_region_volume_inputs;
@@ -1260,7 +1314,7 @@ void parse_regions(Yaml::Node& root,
                     if (a_subfield_word.compare("radius1") == 0) {
                         // inner radius of sphere/cylinder
 
-                        double radius1 = root["regions"][reg_id]["region"]["volume"]["radius1"].As<double>();
+                        double radius1 = root["regions"][r_id]["region"]["volume"]["radius1"].As<double>();
 
                         RUN({
                             region_fills(reg_id).radius1 = radius1;
@@ -1269,7 +1323,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("radius2") == 0) {
                         // outer radius of sphere/cylinder
 
-                        double radius2 = root["regions"][reg_id]["region"]["volume"]["radius2"].As<double>();
+                        double radius2 = root["regions"][r_id]["region"]["volume"]["radius2"].As<double>();
 
                         RUN({
                             region_fills(reg_id).radius2 = radius2;
@@ -1278,7 +1332,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("x1") == 0) {
                         // inner plane
 
-                        double x1 = root["regions"][reg_id]["region"]["volume"]["x1"].As<double>();
+                        double x1 = root["regions"][r_id]["region"]["volume"]["x1"].As<double>();
 
                         RUN({
                             region_fills(reg_id).x1 = x1;
@@ -1287,7 +1341,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("x2") == 0) {
                         // outer plane
 
-                        double x2 = root["regions"][reg_id]["region"]["volume"]["x2"].As<double>();
+                        double x2 = root["regions"][r_id]["region"]["volume"]["x2"].As<double>();
 
                         RUN({
                             region_fills(reg_id).x2 = x2;
@@ -1296,7 +1350,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("y1") == 0) {
                         // inner plane
 
-                        double y1 = root["regions"][reg_id]["region"]["volume"]["y1"].As<double>();
+                        double y1 = root["regions"][r_id]["region"]["volume"]["y1"].As<double>();
 
                         RUN({
                             region_fills(reg_id).y1 = y1;
@@ -1305,7 +1359,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("y2") == 0) {
                         // outer plane
 
-                        double y2 = root["regions"][reg_id]["region"]["volume"]["y2"].As<double>();
+                        double y2 = root["regions"][r_id]["region"]["volume"]["y2"].As<double>();
 
                         RUN({
                             region_fills(reg_id).y2 = y2;
@@ -1314,7 +1368,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("z1") == 0) {
                         // inner plane
 
-                        double z1 = root["regions"][reg_id]["region"]["volume"]["z1"].As<double>();
+                        double z1 = root["regions"][r_id]["region"]["volume"]["z1"].As<double>();
 
                         RUN({
                             region_fills(reg_id).z1 = z1;
@@ -1323,7 +1377,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("z2") == 0) {
                         // outer plane
 
-                        double z2 = root["regions"][reg_id]["region"]["volume"]["z2"].As<double>();
+                        double z2 = root["regions"][r_id]["region"]["volume"]["z2"].As<double>();
 
                         RUN({
                             region_fills(reg_id).z2 = z2;
@@ -1332,7 +1386,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("scale_x") == 0) {
                         // outer plane
 
-                        double scale_x = root["regions"][reg_id]["region"]["volume"]["scale_x"].As<double>();
+                        double scale_x = root["regions"][r_id]["region"]["volume"]["scale_x"].As<double>();
 
                         // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_x = scale_x;
@@ -1341,7 +1395,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("scale_y") == 0) {
                         // outer plane
 
-                        double scale_y = root["regions"][reg_id]["region"]["volume"]["scale_y"].As<double>();
+                        double scale_y = root["regions"][r_id]["region"]["volume"]["scale_y"].As<double>();
 
                         // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_y = scale_y;
@@ -1350,7 +1404,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("scale_z") == 0) {
                         // outer plane
 
-                        double scale_z = root["regions"][reg_id]["region"]["volume"]["scale_z"].As<double>();
+                        double scale_z = root["regions"][r_id]["region"]["volume"]["scale_z"].As<double>();
 
                         // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_z = scale_z;
@@ -1359,7 +1413,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("part_id") == 0) {
                         // part_id in 
 
-                        int part_id = root["regions"][reg_id]["region"]["volume"]["part_id"].As<int>();
+                        int part_id = root["regions"][r_id]["region"]["volume"]["part_id"].As<int>();
 
                         RUN({
                             region_fills(reg_id).part_id = part_id;
@@ -1370,7 +1424,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("type") == 0) {
 
                         // region volume fill type
-                        std::string type = root["regions"][reg_id]["region"]["volume"]["type"].As<std::string>();
+                        std::string type = root["regions"][r_id]["region"]["volume"]["type"].As<std::string>();
 
                         // set the velocity tag type
                         if (region_type_map.find(type) != region_type_map.end()) {
@@ -1454,7 +1508,7 @@ void parse_regions(Yaml::Node& root,
                     // Get mesh file path
                     else if (a_subfield_word.compare("file_path") == 0) {
                         // region volume fill type
-                        std::string path = root["regions"][reg_id]["region"]["volume"]["file_path"].As<std::string>();
+                        std::string path = root["regions"][r_id]["region"]["volume"]["file_path"].As<std::string>();
 
                         // absolute path to file or local to the director where exe is run
                         region_fills_host(reg_id).file_path = path;   // saving the absolute file path
@@ -1463,7 +1517,7 @@ void parse_regions(Yaml::Node& root,
                     } // end file path
                     //
                     else if (a_subfield_word.compare("origin") == 0) {
-                        std::string origin = root["regions"][reg_id]["region"]["volume"]["origin"].As<std::string>();
+                        std::string origin = root["regions"][r_id]["region"]["volume"]["origin"].As<std::string>();
 
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(origin, ",");

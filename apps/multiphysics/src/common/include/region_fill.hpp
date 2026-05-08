@@ -165,23 +165,22 @@ double fill_geometric_region(const swage::Mesh& mesh,
 ///
 /// \brief a function to append fills 
 ///
-/// \param elem_fill_ids is the fill id in an element
-/// \param num_fills_saved_in_elem is the number of fills the element has
-/// \param region_fills are the instructions to paint state on the mesh
+/// \param elem_geo_volfracs is the geometric volume fraction in the element
+/// \param elem_region_ids is the fill id in an element
+/// \param elem_num_region_fills is the number of region fills saved in an element
+/// \param geo_volfrac is the value to be added to the element
 /// \param elem_gid is the element global mesh index
-/// \param fill_id is fill instruction
+/// \param reg_id is fill instruction
+/// \param max_num_mats_per_elem is the max allowed number of materials in an element
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
-                          const DCArrayKokkos <double>& elem_geo_volfracs,
-                          const CArrayKokkos <size_t>& elem_fill_ids,
-                          const DCArrayKokkos <size_t>& num_fills_saved_in_elem,
-                          const CArrayKokkos<RegionFill_t>& region_fills,
-                          const double volfrac,
+void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
+                          const CArrayKokkos <size_t>& elem_region_ids,
+                          const DCArrayKokkos <size_t>& elem_num_region_fills,
                           const double geo_volfrac,
                           const size_t elem_gid,
-                          const size_t fill_id,
+                          const size_t reg_id,
                           const size_t max_num_mats_per_elem);
 
 /////////////////////////////////////////////////////////////////////////////

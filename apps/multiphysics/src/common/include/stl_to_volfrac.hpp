@@ -101,28 +101,6 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
                       const std::string &file_path);
 
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn binary_stl_reader
-///
-/// \brief a function to read a binary STL file, exporting triangular 
-//         facet coordinates of the surface and the number of facets.
-///
-/// \param filepath to the STL file
-///
-/////////////////////////////////////////////////////////////////////////////
-inline
-std::tuple<
-    CArray<double>,   // normal
-    CArray<double>, CArray<double>, CArray<double>,   // v0X, v0Y, v0Z 
-    CArray<double>, CArray<double>, CArray<double>,   // v1X, v1Y, v1Z 
-    CArray<double>, CArray<double>, CArray<double>,   // v2X, v2Y, v2Z
-    size_t // n_facets
->
-binary_stl_reader(const std::string& path);
-
-
-
 
 // end of hpp file
 #endif

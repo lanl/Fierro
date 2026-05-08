@@ -338,6 +338,103 @@ double signed_distance_to_triangle(const vec_t& p,
 } // end function
 
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn binary_stl_reader
+///
+/// \brief a function to read a binary STL file, exporting triangular 
+//         facet coordinates of the surface and the number of facets.
+///
+/// \param filepath to the STL file
+///
+/////////////////////////////////////////////////////////////////////////////
+inline
+std::tuple<
+    CArray<double>,   // normal
+    CArray<double>, CArray<double>, CArray<double>,   // v0X, v0Y, v0Z 
+    CArray<double>, CArray<double>, CArray<double>,   // v1X, v1Y, v1Z
+    CArray<double>, CArray<double>, CArray<double>,   // v2X, v2Y, v2Z
+    size_t // n_facets
+>
+binary_stl_reader(const std::string& path)
+{
+    std::ifstream in(path, std::ios::binary | std::ios::ate);
+    if (!in) { std::perror("open"); std::exit(EXIT_FAILURE); }
+
+    const std::streamoff filesize = in.tellg();
+    if (filesize < 100) {
+        std::cerr << "ERROR: File too small to be a valid STL\n";
+        std::exit(EXIT_FAILURE);
+    }
+    in.seekg(0);
+
+    // ---- check if ASCII -------------------------------------------------
+    char magic[6] = { 0 };
+    in.read(magic, 5);          // read first 5 chars
+    in.seekg(0);               // rewind
+    if (std::strncmp(magic, "solid", 5) == 0) {
+        std::cerr
+            << "ERROR: \"" << path
+            << "\" looks like an **ASCII** STL (starts with \"solid\").\n"
+            << "Re‑export it as *binary* or implement an ASCII parser.\n";
+        std::exit(EXIT_FAILURE);        // or call ascii_stl_reader();
+    }
+
+    // ---- read 80‑byte header + nominal facet count ----------------------
+    char header[80];                in.read(header, 80);
+    size_t n_facets_nominal;  in.read(reinterpret_cast<char*>(&n_facets_nominal), 4);
+
+    // ---- compute expected count from file size to sanity‑check ----------
+    // binary facet record = 50 bytes (12×4 + 12×4 + 12×4 + 2)
+    const size_t n_facets_from_size =
+        static_cast<size_t>((filesize - 84) / 50);
+
+    uint32_t n_facets = n_facets_nominal;
+    if (n_facets_nominal != n_facets_from_size) {
+        std::cout << "WARNING: facet count in header (" << n_facets_nominal
+            << ") disagrees with file size (" << n_facets_from_size
+            << ").  Using size‑derived value.\n";
+        n_facets = n_facets_from_size;
+    }
+    std::cout << "STL facets: " << n_facets << '\n';
+
+    // ---- allocate MATAR arrays -----------------------------------------
+    CArray<double> normal(n_facets, 3);
+    CArray<double> v0X(n_facets), v0Y(n_facets), v0Z(n_facets);
+    CArray<double> v1X(n_facets), v1Y(n_facets), v1Z(n_facets);
+    CArray<double> v2X(n_facets), v2Y(n_facets), v2Z(n_facets);
+
+    // ---- read facet records --------------------------------------------
+    float nrm[3], v0[3], v1[3], v2[3];
+    for (size_t i = 0; i < n_facets; ++i) {
+        in.read(reinterpret_cast<char*>(nrm), 12);
+        in.read(reinterpret_cast<char*>(v0), 12);
+        in.read(reinterpret_cast<char*>(v1), 12);
+        in.read(reinterpret_cast<char*>(v2), 12);
+        in.ignore(2);                        // attribute byte count
+
+        for (int dim = 0; dim < 3; ++dim){ 
+             normal(i, dim) = (double)nrm[dim]; 
+        } // end for
+
+
+        v0X(i) = (double)v0[0]; 
+        v0Y(i) = (double)v0[1]; 
+        v0Z(i) = (double)v0[2];
+
+        v1X(i) = (double)v1[0]; 
+        v1Y(i) = (double)v1[1]; 
+        v1Z(i) = (double)v1[2];
+
+        v2X(i) = (double)v2[0]; 
+        v2Y(i) = (double)v2[1]; 
+        v2Z(i) = (double)v2[2];
+        
+    } // end for facet
+
+    return { normal,v0X,v0Y,v0Z,v1X,v1Y,v1Z,v2X,v2Y,v2Z,n_facets };
+
+} // end of function to read STL file
 
 
 #endif

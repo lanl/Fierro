@@ -233,7 +233,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 /// \param GaussPoint_den is density at the GaussPoints on the mesh
 /// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
 /// \param GaussPoint state ...
-/// \param elem_volfrac is volume fraction at the GaussPoints on the mesh
+/// \param elem_mat_volfrac is volume fraction at the GaussPoints on the mesh
 /// \param elem_mat_id is the material id in an element
 /// \param num_mats_saved_in_elem is the number of material with volfrac<1 saved to the element
 /// \param object_ids are the object ids in the vtu file
@@ -260,7 +260,7 @@ void fill_regions(
         DCArrayKokkos <double>& gauss_shear_modulii,
         DCArrayKokkos <double>& gauss_poisson_ratios,
         DCArrayKokkos <double>& gauss_level_set,
-        DCArrayKokkos <double>& elem_volfrac,
+        DCArrayKokkos <double>& elem_mat_volfrac,
         DCArrayKokkos <double>& elem_geo_volfrac,
         DCArrayKokkos <size_t>& elem_mat_id,
         DCArrayKokkos <size_t>& elem_num_mats_saved_in_elem,
@@ -275,12 +275,13 @@ void fill_regions(
     double orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
     size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
 
-    size_t num_fills_total = region_fills.size();  // the total number of fills in the input file
+    size_t num_region_fills = region_fills.size();  // the total number of region fills in the input file
 
 
     // local variables to this routine
     DCArrayKokkos<double> elem_coords(mesh.num_elems, 3); // aways 3D
-    CArrayKokkos<size_t> elem_fill_ids(mesh.num_elems, max_num_mats_per_elem);  // 2nd dim is max mats per elem
+    CArrayKokkos<size_t> elem_region_ids(mesh.num_elems, max_num_mats_per_elem);  // 2nd dim is max mats per elem
+    DCArrayKokkos<size_t> elem_num_region_fills(mesh.num_elems); 
 
     // a local array for reading the values on a voxel mesh file, it's allocated in the mesh file read
     DCArrayKokkos <size_t> voxel_elem_mat_id; // 1 or 0 if material exist, or it is the material_id
@@ -294,21 +295,21 @@ void fill_regions(
     // ---------------------------------------------
     // copy to host, enum to read a voxel or stl file
     // ---------------------------------------------
-    DCArrayKokkos<size_t> read_voxel_file(num_fills_total, "read_voxel_file"); // check to see if readVoxelFile
-    DCArrayKokkos<size_t> read_stl_file(num_fills_total, "read_stl_file"); // check to see if readVoxelFile
+    DCArrayKokkos<size_t> read_voxel_file(num_region_fills, "read_voxel_file"); // check to see if readVoxelFile
+    DCArrayKokkos<size_t> read_stl_file(num_region_fills, "read_stl_file"); // check to see if readVoxelFile
 
-    FOR_ALL(fill_id, 0, num_fills_total, {
+    FOR_ALL(reg_id, 0, num_region_fills, {
 
-        if (region_fills(fill_id).volume == region::readVoxelFile) {
-            read_voxel_file(fill_id) = region::readVoxelFile;  // read the  voxel file
+        if (region_fills(reg_id).volume == region::readVoxelFile) {
+            read_voxel_file(reg_id) = region::readVoxelFile;  // read the  voxel file
         }
-        else if (region_fills(fill_id).volume == region::readSTLFile){
-            read_stl_file(fill_id) = region::readSTLFile;  // read the STL file
+        else if (region_fills(reg_id).volume == region::readSTLFile){
+            read_stl_file(reg_id) = region::readSTLFile;  // read the STL file
         }
         // add other mesh voxel files
         else{
-            read_voxel_file(fill_id) = 0;
-            read_stl_file(fill_id) = 0;
+            read_voxel_file(reg_id) = 0;
+            read_stl_file(reg_id) = 0;
         }
 
     }); // end parallel for
@@ -317,8 +318,8 @@ void fill_regions(
     Kokkos::fence();
 
     
-    for (size_t fill_id = 0; fill_id < num_fills_total; fill_id++) {
-        if (read_stl_file.host(fill_id) == region::readSTLFile) {
+    for (size_t reg_id = 0; reg_id < num_region_fills; reg_id++) {
+        if (read_stl_file.host(reg_id) == region::readSTLFile) {
             elem_geo_volfrac_fill = DCArrayKokkos <double> (mesh.num_elems);
             break;
         }
@@ -329,11 +330,11 @@ void fill_regions(
 
 
     // loop over all fill instructions 
-    for (size_t fill_id = 0; fill_id < num_fills_total; fill_id++) {
+    for (size_t reg_id = 0; reg_id < num_region_fills; reg_id++) {
 
         // --------------------
         // voxel mesh setup
-        if (read_voxel_file.host(fill_id) == region::readVoxelFile) {
+        if (read_voxel_file.host(reg_id) == region::readVoxelFile) {
             // read voxel mesh to get the values in the fcn interface
             // voxel_elem_mat_id is read here
             user_voxel_init(voxel_elem_mat_id,
@@ -346,10 +347,10 @@ void fill_regions(
                             voxel_num_i,
                             voxel_num_j,
                             voxel_num_k,
-                            region_fills_host(fill_id).scale_x,
-                            region_fills_host(fill_id).scale_y,
-                            region_fills_host(fill_id).scale_z,
-                            region_fills_host(fill_id).file_path);
+                            region_fills_host(reg_id).scale_x,
+                            region_fills_host(reg_id).scale_y,
+                            region_fills_host(reg_id).scale_z,
+                            region_fills_host(reg_id).file_path);
 
             // copy values read from file to device
             voxel_elem_mat_id.update_device();
@@ -357,14 +358,14 @@ void fill_regions(
         
         // --------------------
         // STL file mesh setup
-        if (read_stl_file.host(fill_id) == region::readSTLFile) {
+        if (read_stl_file.host(reg_id) == region::readSTLFile) {
 
             // read .STL file and paint vol fractions on mesh
             int paint_sucessful = paint_stl_on_mesh(elem_geo_volfrac_fill, 
                                                     node_coords,
                                                     mesh.nodes_in_elem,
                                                     mesh.num_nodes,
-                                                    region_fills_host(fill_id).file_path);
+                                                    region_fills_host(reg_id).file_path);
 
         } // end if read STL file
         
@@ -410,57 +411,54 @@ void fill_regions(
                                                      voxel_num_i,
                                                      voxel_num_j,
                                                      voxel_num_k,
-                                                     fill_id,
+                                                     reg_id,
                                                      elem_gid);
 
             // paint the material state on the element if geo_volfrac>0
             if (geo_volfrac > 1.e-8) {
                 
-                // get the material volfrac for the region
-                double vfrac = get_region_scalar(coords,
-                                                 region_fills(fill_id).volfrac,
-                                                 region_fills(fill_id).volfrac_slope,
-                                                 region_fills(fill_id).volfrac_origin,
-                                                 elem_gid,
-                                                 mesh.num_dims,
-                                                 region_fills(fill_id).volfrac_field);
-                vfrac = fmax(0.0, vfrac);
-                vfrac = fmin(1.0, vfrac);
-                
-                // geometric * material volume fraction
-                double combined_volfrac = geo_volfrac*vfrac;
+                // Note: material volume fractions is added to mesh when applying initial conditions
 
-                // if this fill is to add a material to existing ones, do so
-                if (combined_volfrac < 1.0 - 1.0e-8){
 
-                    // append the fill id in this element and
-                    // append the elem_volfrac and elem_geo_volfrac values too
-                    append_fills_in_elem(elem_volfrac,
-                                         elem_geo_volfrac,
-                                         elem_fill_ids,
-                                         elem_num_mats_saved_in_elem,
-                                         region_fills,
-                                         vfrac,
+                // if this fill is to add a geometroy to existing ones, do so
+                if (geo_volfrac < 1.0 - 1.0e-8){
+
+                    // append the region_id and elem_geo_volfrac in this element
+                    append_fills_in_elem(elem_geo_volfrac,
+                                         elem_region_ids,
+                                         elem_num_region_fills,
                                          geo_volfrac,
                                          elem_gid,
-                                         fill_id,
+                                         reg_id,
                                          max_num_mats_per_elem);
 
                 } else {
 
-                    // maybe add a check here if the other material has volfrac=0, then append it?
+                    // this coding fills the entire element so delete all other geometries, if they 
+                    // are present; thus, this coding forces geo_volfrac = 1
 
-                    // --- this logic makes it a single material element with volfrac=1 ---
-
-                    // save and overwrite any prior fills
-                    elem_fill_ids(elem_gid, 0) = fill_id;
+                    // save and overwrite any prior geometric region fills
+                    elem_region_ids(elem_gid, 0) = reg_id;
  
-                    // save volume fraction
-                    elem_volfrac(elem_gid, 0) = 1.0;     // a single material in this element for this part
-                    elem_geo_volfrac(elem_gid, 0) = 1.0; // entire element is a part
+                    // save volume fractions
+                    elem_geo_volfrac(elem_gid, 0) = 1.0; // entire element is a single region
 
-                    elem_num_mats_saved_in_elem(elem_gid) = 1;
-                } // end of 
+                    // only 1 material
+                    elem_num_region_fills(elem_gid) = 1;
+
+                } // end if
+
+                // PLACE HOLDER!!! WARNGING WARNING warning WARNING 
+                double check_unity = 0.0;
+                for(size_t a_fill=0; a_fill<elem_num_region_fills(elem_gid); a_fill++){
+                    elem_mat_volfrac(elem_gid,a_fill) = 1.0;
+
+                    printf("elem_gid=%d, mat_volfrac=%f, geo_volfrac=%f \n", elem_gid, elem_mat_volfrac(elem_gid,a_fill), elem_geo_volfrac(elem_gid, a_fill));
+
+                    check_unity += elem_geo_volfrac(elem_gid, a_fill);
+                }
+                printf("geo_volfrac elem tally =%f \n\n",check_unity);
+
 
             } // end if fill this
         }); // end FOR_ALL node loop
@@ -469,6 +467,12 @@ void fill_regions(
     } // end for loop over fills
 
 
+
+    // loop over initial conditions 
+    for (size_t reg_id = 0; reg_id < num_region_fills; reg_id++) {
+
+    } // 
+
     //---------
     // parallel loop over elements in the mesh and set specified state
     //---------
@@ -476,15 +480,15 @@ void fill_regions(
 
         // verify that all geometric volfracs sum to 1
 
-
+        // ERROR: need to to paint materials so elem_num_mats_saved_in_elem(elem_gid) != 0
         for(size_t bin=0; bin<elem_num_mats_saved_in_elem(elem_gid); bin++){
 
             // get the region fill id
-            size_t fill_id = elem_fill_ids(elem_gid, bin);
+            size_t reg_id = elem_region_ids(elem_gid, bin);
 
 
             // save mat_ids to element, its a uniform field
-            elem_mat_id(elem_gid,bin) = region_fills(fill_id).material_id;
+            elem_mat_id(elem_gid,bin) = region_fills(reg_id).material_id;
 
 
             //---------
@@ -510,26 +514,26 @@ void fill_regions(
                 // paint the den on the gauss pts of the mesh
                 paint_multi_scalar(gauss_den,
                                 coords,
-                                region_fills(fill_id).den,
+                                region_fills(reg_id).den,
                                 0.0,
-                                region_fills(fill_id).den_origin,
+                                region_fills(reg_id).den_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
-                                region_fills(fill_id).den_field);
+                                region_fills(reg_id).den_field);
 
                 // paint the sie on the gauss pts of the mesh
                 paint_multi_scalar(gauss_sie,
                                 coords,
-                                region_fills(fill_id).sie,
+                                region_fills(reg_id).sie,
                                 0.0,
-                                region_fills(fill_id).sie_origin,
+                                region_fills(reg_id).sie_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
-                                region_fills(fill_id).sie_field);
+                                region_fills(reg_id).sie_field);
 
-                if ( region_fills(fill_id).sie_field != init_conds::noICsScalar ){
+                if ( region_fills(reg_id).sie_field != init_conds::noICsScalar ){
                     // for this bin, we are using sie
                     gauss_use_sie(gauss_gid,bin) = true;
                 }
@@ -537,46 +541,46 @@ void fill_regions(
                 // painting extensive ie
                 paint_multi_scalar(gauss_ie,
                                 coords,
-                                region_fills(fill_id).ie,
+                                region_fills(reg_id).ie,
                                 0.0,
-                                region_fills(fill_id).sie_origin,
+                                region_fills(reg_id).sie_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
-                                region_fills(fill_id).ie_field);
+                                region_fills(reg_id).ie_field);
                
                 // painting thermal conductivity
                 paint_multi_scalar(gauss_thermal_conductivity,
                                 coords,
-                                region_fills(fill_id).thermal_conductivity,
+                                region_fills(reg_id).thermal_conductivity,
                                 0.0,
-                                region_fills(fill_id).thermal_conductivity_origin,
+                                region_fills(reg_id).thermal_conductivity_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
-                                region_fills(fill_id).thermal_conductivity_field);
+                                region_fills(reg_id).thermal_conductivity_field);
 
                 // painting specific heat
                 paint_multi_scalar(gauss_specific_heat,
                                 coords,
-                                region_fills(fill_id).specific_heat,
+                                region_fills(reg_id).specific_heat,
                                 0.0,
-                                region_fills(fill_id).specific_heat_origin,
+                                region_fills(reg_id).specific_heat_origin,
                                 gauss_gid,
                                 mesh.num_dims,
                                 bin,
-                                region_fills(fill_id).specific_heat_field);
+                                region_fills(reg_id).specific_heat_field);
           
                 // paint the level set field on the gauss pts of the mesh
                 paint_multi_scalar(gauss_level_set,
                     coords,
-                    region_fills(fill_id).level_set,
-                    region_fills(fill_id).level_set_slope,
-                    region_fills(fill_id).level_set_origin,
+                    region_fills(reg_id).level_set,
+                    region_fills(reg_id).level_set_slope,
+                    region_fills(reg_id).level_set_origin,
                     gauss_gid,
                     mesh.num_dims,
                     bin,
-                    region_fills(fill_id).level_set_field);
+                    region_fills(reg_id).level_set_field);
 
             } // end loop over gauss points
 
@@ -597,13 +601,13 @@ void fill_regions(
                     // if check is needed as solver state might not match fill instructions
                     paint_vector(node_vel,
                                  a_node_coords,
-                                 region_fills(fill_id).u,
-                                 region_fills(fill_id).v,
-                                 region_fills(fill_id).w,
-                                 region_fills(fill_id).speed,
+                                 region_fills(reg_id).u,
+                                 region_fills(reg_id).v,
+                                 region_fills(reg_id).w,
+                                 region_fills(reg_id).speed,
                                  node_gid,
                                  mesh.num_dims,
-                                 region_fills(fill_id).vel_field);
+                                 region_fills(reg_id).vel_field);
                 }
                 
                 // paint nodal temperature
@@ -611,11 +615,11 @@ void fill_regions(
                     // if check is needed as solver state might not match fill instructions
                     paint_scalar(node_temp,
                                  a_node_coords,
-                                 region_fills(fill_id).temperature,
+                                 region_fills(reg_id).temperature,
                                  0.0,
                                  node_gid,
                                  mesh.num_dims,
-                                 region_fills(fill_id).temperature_field);
+                                 region_fills(reg_id).temperature_field);
                 }
 
             } // end loop over the nodes in elem
@@ -629,7 +633,7 @@ void fill_regions(
     // Elem Fill state
     // update host side for elem fill states
     elem_mat_id.update_host();
-    elem_volfrac.update_host();
+    elem_mat_volfrac.update_host();
     elem_geo_volfrac.update_host();
     elem_num_mats_saved_in_elem.update_host();
 
@@ -776,6 +780,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
             // --- mapping from elem to material index space ---
             State.MeshtoMaterialMaps.mat_elems_in_elem.host(elem_gid, a_mat_in_elem) = mat_elem_sid;
             
+
 
             // -----------------------
             // Save MaterialPoints
@@ -1434,72 +1439,104 @@ double fill_geometric_region(const swage::Mesh& mesh,
 ///
 /// \brief a function to append fills 
 ///
-/// \param elem_fill_ids is the fill id in an element
-/// \param num_fills_saved_in_elem is the number of fills the element has
+/// \param elem_geo_volfracs is the geometric volume fraction in the element
+/// \param elem_region_ids is the fill id in an element
+/// \param elem_num_region_fills is the number of region fills saved in an element
 /// \param region_fills are the instructions to paint state on the mesh
+/// \param geo_volfrac is the value to be added to the element
 /// \param elem_gid is the element global mesh index
-/// \param fill_id is fill instruction
+/// \param reg_id is fill instruction
+/// \param max_num_mats_per_elem is the max allowed number of materials in an element
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
-                          const DCArrayKokkos <double>& elem_geo_volfracs,
-                          const CArrayKokkos <size_t>& elem_fill_ids,
-                          const DCArrayKokkos <size_t>& num_fills_saved_in_elem,
-                          const CArrayKokkos<RegionFill_t>& region_fills,
-                          const double volfrac,
+void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
+                          const CArrayKokkos <size_t>& elem_region_ids,
+                          const DCArrayKokkos <size_t>& elem_num_region_fills,
                           const double geo_volfrac,
                           const size_t elem_gid,
-                          const size_t fill_id,
+                          const size_t reg_id,
                           const size_t max_num_mats_per_elem)
 {
 
-    // the number of materials saved to this element, initialized to 0 at start of code
-    size_t fill_storage_lid = num_fills_saved_in_elem(elem_gid);
+
+    // the number of regions saved to this element, initialized to 0 at start of code
+    size_t fill_storage_lid = elem_num_region_fills(elem_gid);
 
     // check on exceeding 3 materials per element
-    if (num_fills_saved_in_elem(elem_gid) > max_num_mats_per_elem-1){
-        Kokkos::abort("ERROR: exceeded max number of materials in an element when painting regions on the mesh \n Set max_num_mats_per_element to a larger value under multimaterial_options \n");
+    if (elem_num_region_fills(elem_gid) > max_num_mats_per_elem-1){
+        Kokkos::abort("ERROR: exceeded max number of regions in an element when painting regions on the mesh \n Set max_num_mats_per_element to a larger value under multimaterial_options \n");
     } // end if check
 
+    // append the reg_id and geometric volfracs in elem
+    elem_region_ids(elem_gid, fill_storage_lid) = reg_id;
+    elem_geo_volfracs(elem_gid, fill_storage_lid) = geo_volfrac;
 
-    // material id assigned to this fill
-    const size_t mat_id = region_fills(fill_id).material_id;
 
+    // add one more region to this elem
+    elem_num_region_fills(elem_gid) += 1;
 
-    // check to see if the material already exists
-    bool check_mat_exists = false;
-    for (size_t a_fill=0; a_fill < num_fills_saved_in_elem(elem_gid); a_fill++){
+    // ----------
+    // Important: make geo volfrac be bounded by 1.0
 
-        // get the mat_id in this fill
-        size_t a_mat_id = region_fills(a_fill).material_id;
-        if(mat_id == a_mat_id){
-            // overwrite the existing material lid with new fill instructions
-            fill_storage_lid = a_fill;  
-            check_mat_exists = true;
-        } // end if check on mat_id existing already
-
+    // Step 1:
+    // checking to see if geo volfrac tally exceeds one, if true, push material out 
+    double total_geo_volfrac = 0.0;
+    for (size_t a_fill=0; a_fill < elem_num_region_fills(elem_gid); a_fill++){
+        total_geo_volfrac += elem_geo_volfracs(elem_gid, a_fill);
     } // end for a_fill
 
 
-    // There will now be at least 1 material so we want
-    // num_fills_saved_in_elem >= 1, and it is intialized at 0 
-    if (check_mat_exists == false){
-        // we are adding a new material, so increment the number of saved
-        num_fills_saved_in_elem(elem_gid) += 1;
-    } // end check if material is a new one
+    // Step 2:
+    // remove all excess material
+    if (total_geo_volfrac>1.0){
+
+        double excess = fmax(0.0, total_geo_volfrac - 1.0);
+
+        // Step 2A:
+        // loop over the fills, remove excess
+        for (size_t a_fill = 0; a_fill < elem_num_region_fills(elem_gid); ++a_fill){
+            
+            if (excess <= 1.e-8) break;
+
+            double subtract = fmin(excess, elem_geo_volfracs(elem_gid, a_fill));
+
+            elem_geo_volfracs(elem_gid, a_fill) -= subtract;
+
+            excess -= subtract;
+
+        } // end for 
+
+        // Step 2B:
+        // compress the data so zero geometric vol fractions are removed from storage
+        size_t write_idx = 0;
+
+        for (size_t read_idx = 0; read_idx < elem_num_region_fills(elem_gid); ++read_idx) {
+
+            if (elem_geo_volfracs(elem_gid, read_idx) > 1.e-8) {
+
+                if (write_idx != read_idx){
+                    elem_region_ids(elem_gid, write_idx) = elem_region_ids(elem_gid, read_idx);
+                    elem_geo_volfracs(elem_gid, write_idx) = elem_geo_volfracs(elem_gid, read_idx);
+                }
+
+                write_idx++;
+
+            } // end if
+
+        } // loop over read_idx
+
+        // update the number of geometric fills in the element
+        elem_num_region_fills(elem_gid) = write_idx;
+
+    } // end check on excess existing
 
 
-    // confirm the volume fractions in each elem tally to 1 later in the code
-
-    // --- append the volfracs and fill ids in elem ---
-    elem_fill_ids(elem_gid, fill_storage_lid) = fill_id;
-    elem_volfracs(elem_gid, fill_storage_lid) = volfrac;
-    elem_geo_volfracs(elem_gid, fill_storage_lid) = geo_volfrac;
+    // Note: must confirm the geometric volume fractions in each elem tally to 1 later in the code
 
     // done with calculating the fill instructions
 
-} // end function painting fill ids
+} // end function painting region fill ids
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2391,85 +2428,3 @@ void init_corner_node_masses_zero(const swage::Mesh& mesh,
 } // end setting masses equal to zero
 
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn binary_stl_reader
-///
-/// \brief a function to read a binary STL file, exporting triangular 
-//         facet coordinates of the surface and the number of facets.
-///
-/// \param filepath to the STL file
-///
-/////////////////////////////////////////////////////////////////////////////
-std::tuple<
-    CArray<double>,   // normal
-    CArray<double>, CArray<double>, CArray<double>,   // v1X, v1Y, v1Z
-    CArray<double>, CArray<double>, CArray<double>,   // v2X, v2Y, v2Z
-    CArray<double>, CArray<double>, CArray<double>,   // v3X, v3Y, v3Z
-    size_t // n_facets
->
-binary_stl_reader(const std::string& path){
-    std::ifstream in(path, std::ios::binary | std::ios::ate);
-    if (!in) { std::perror("open"); std::exit(EXIT_FAILURE); }
-
-    const std::streamoff filesize = in.tellg();
-    if (filesize < 100) {
-        std::cerr << "ERROR: File too small to be a valid STL\n";
-        std::exit(EXIT_FAILURE);
-    }
-    in.seekg(0);
-
-    // ---- check if ASCII -------------------------------------------------
-    char magic[6] = { 0 };
-    in.read(magic, 5);          // read first 5 chars
-    in.seekg(0);               // rewind
-    if (std::strncmp(magic, "solid", 5) == 0) {
-        std::cerr
-            << "ERROR: \"" << path
-            << "\" looks like an **ASCII** STL (starts with \"solid\").\n"
-            << "Re‑export it as *binary* or implement an ASCII parser.\n";
-        std::exit(EXIT_FAILURE);        // or call ascii_stl_reader();
-    }
-
-    // ---- read 80‑byte header + nominal facet count ----------------------
-    char header[80];                in.read(header, 80);
-    size_t n_facets_nominal;  in.read(reinterpret_cast<char*>(&n_facets_nominal), 4);
-
-    // ---- compute expected count from file size to sanity‑check ----------
-    // binary facet record = 50 bytes (12×4 + 12×4 + 12×4 + 2)
-    const size_t n_facets_from_size =
-        static_cast<size_t>((filesize - 84) / 50);
-
-    size_t n_facets = n_facets_nominal;
-    if (n_facets_nominal != n_facets_from_size) {
-        std::cout << "WARNING: facet count in header (" << n_facets_nominal
-            << ") disagrees with file size (" << n_facets_from_size
-            << ").  Using size‑derived value.\n";
-        n_facets = n_facets_from_size;
-    }
-    std::cout << "STL facets: " << n_facets << '\n';
-
-    // ---- allocate MATAR arrays -----------------------------------------
-    CArray<double> normal(n_facets, 3);
-    CArray<double> v1X(n_facets), v1Y(n_facets), v1Z(n_facets);
-    CArray<double> v2X(n_facets), v2Y(n_facets), v2Z(n_facets);
-    CArray<double> v3X(n_facets), v3Y(n_facets), v3Z(n_facets);
-
-    // ---- read facet records --------------------------------------------
-    double nrm[3], v1[3], v2[3], v3[3];
-    for (unsigned int i = 0; i < n_facets; ++i) {
-        in.read(reinterpret_cast<char*>(nrm), 12);
-        in.read(reinterpret_cast<char*>(v1), 12);
-        in.read(reinterpret_cast<char*>(v2), 12);
-        in.read(reinterpret_cast<char*>(v3), 12);
-        in.ignore(2);                        // attribute byte count
-
-        for (int d = 0; d < 3; ++d) normal(i, d) = nrm[d];
-        v1X(i) = v1[0]; v1Y(i) = v1[1]; v1Z(i) = v1[2];
-        v2X(i) = v2[0]; v2Y(i) = v2[1]; v2Z(i) = v2[2];
-        v3X(i) = v3[0]; v3Y(i) = v3[1]; v3Z(i) = v3[2];
-    }
-
-    return { normal,v1X,v1Y,v1Z,v2X,v2Y,v2Z,v3X,v3Y,v3Z,n_facets };
-
-} // end of function to read STL file
