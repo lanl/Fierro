@@ -371,7 +371,7 @@ public:
             read_Abaqus_mesh(mesh, State, num_dims);
         }
         else if(extension == "vtk"){ // vtk file format
-            if (mesh_inps.p_order <= 1) {
+            if (mesh_inps.p_order <= 0) {
                 read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
             }
             else {
@@ -1032,7 +1032,7 @@ public:
         }
         
         // --- 3. Connectivity and Reordering ---
-        CArray <int> convert_vtk_to_fierro;
+        CArray <int> convert_vtk_to_fierro(num_nodes_in_elem);
         bool map_built = false;
 
         for (elem_gid=0; elem_gid < num_elem; elem_gid++) {
@@ -1040,30 +1040,21 @@ public:
             std::getline(in, str);
             std::vector<std::string> v = split (str, " ");
             num_nodes_in_elem = std::stoi(v[0]);
-
-            CArray <int> convert_vtk_to_fierro(num_nodes_in_elem);
+            const int num_1D_points = std::round(std::cbrt(num_nodes_in_elem));
+            const int Pn_order = num_1D_points - 1;
             
-            // Build the dynamic ordering map based on the polynomial order of the hex
-            if (!map_built) {
-                const int num_1D_points = std::round(std::cbrt(num_nodes_in_elem));
-                const int Pn_order = num_1D_points - 1;
-                
-                
-                
-                int this_point = 0;
-                for (int k=0; k <= Pn_order; k++){
-                    for (int j=0; j <= Pn_order; j++){
-                        for (int i_idx=0; i_idx <= Pn_order; i_idx++){
-                            
-                            int order[3] = {Pn_order, Pn_order, Pn_order};
-                            int this_index = PointIndexFromIJK(i_idx, j, k, order);
-                            
-                            convert_vtk_to_fierro(this_index) = this_point;
-                            this_point++;
-                        }
+            int this_point = 0;
+            for (int k=0; k <= Pn_order; k++){
+                for (int j=0; j <= Pn_order; j++){
+                    for (int i_idx=0; i_idx <= Pn_order; i_idx++){
+                        
+                        int order[3] = {Pn_order, Pn_order, Pn_order};
+                        int this_index = PointIndexFromIJK(i_idx, j, k, order);
+                        
+                        convert_vtk_to_fierro(this_point) = this_index;
+                        this_point++;
                     }
                 }
-                map_built = true;
             }
 
             // Map connectivity from VTK to Fierro/Swage mesh structure

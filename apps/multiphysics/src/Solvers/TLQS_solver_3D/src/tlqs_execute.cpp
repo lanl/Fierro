@@ -165,6 +165,20 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         //std::cout << "NUM MAT ELEMS: " << State.MaterialToMeshMaps.num_mat_elems.host(0) << std::endl;
         //std::cout << "NUM BDY PATCHES: " << mesh.num_bdy_patches << std::endl;
         //std::cout << "NUM PATCHES: " << mesh.num_patches << std::endl;
+        /* for (int i = 0; i < mesh.num_nodes; i++) {
+            for (int j = 0; j < 3; j++) {
+                std::cout << State.node.coords_t0(i,j) << "   ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl << std::endl; */
+        /* for (int i = 0; i < mesh.num_elems; i++) {
+            for (int j = 0; j < mesh.num_nodes_in_elem; j++) {
+                std::cout << mesh.nodes_in_elem(i,j) << "   ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl << std::endl; */
         // start Picard iteration loop
         for (int iter = 0; iter < max_iter; iter++) {
 
