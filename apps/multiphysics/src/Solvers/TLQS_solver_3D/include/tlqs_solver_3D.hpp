@@ -74,6 +74,7 @@ namespace TLQS3D_State
     { 
         material_pt_state::density,
         material_pt_state::stress,
+        material_pt_state::strain,
         material_pt_state::mass,
         material_pt_state::volume_fraction,
         material_pt_state::eroded_flag,
@@ -102,20 +103,9 @@ namespace TLQS3D_State
  
      // Material point state that must be filled (setup) for the SGH solver
      // option A
-     static const std::vector<fill_gauss_state> required_optA_fill_material_pt_state = 
+     static const std::vector<fill_gauss_state> required_fill_material_pt_state = 
      { 
-        fill_gauss_state::density,
-     };
-     // option B
-     static const std::vector<fill_gauss_state> required_optB_fill_material_pt_state = 
-     { 
-        fill_gauss_state::density,
-     };
-     // option C
-     static const std::vector<fill_gauss_state> required_optC_fill_material_pt_state = 
-     { 
-        fill_gauss_state::density,
-        fill_gauss_state::stress
+        fill_gauss_state::density
      };
      // -------------------------------------
 
@@ -313,6 +303,17 @@ public:
         const CArrayKokkos<double>& p,
         const double alpha,
         const CArrayKokkos<double>& rkp1
+    );
+
+    // postprocessing function: updates stress and strain material point fields
+    void post_process(
+        const double material_matrix[6][6],
+        ViewCArrayKokkos <size_t>& nodes_in_elem,
+        const DCArrayKokkos <double>& coords_t0,
+        const DCArrayKokkos <double>& displacement,
+        ViewCArrayKokkos <double>& gauss_point_grad_basis,
+        ViewCArrayKokkos <double>& stress,
+        ViewCArrayKokkos <double>& strain
     );
         
 };

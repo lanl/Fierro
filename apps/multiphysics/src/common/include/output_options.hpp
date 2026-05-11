@@ -96,6 +96,7 @@ static std::map<std::string, material_pt_state> mat_pt_outputs_map
     { "den",     material_pt_state::density},
     { "pres",    material_pt_state::pressure},
     { "stress",  material_pt_state::stress},
+    { "strain",  material_pt_state::strain},
     { "sie",     material_pt_state::specific_internal_energy},
     { "sspd",    material_pt_state::sound_speed},
     { "mass",    material_pt_state::mass},

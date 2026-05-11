@@ -2156,6 +2156,10 @@ public:
                 case material_pt_state::stress:
                     State.MaterialPoints.stress.update_host();
                     break;
+
+                case material_pt_state::strain:
+                    State.MaterialPoints.strain.update_host();
+                    break;
                 
                 // additional vars for thermal-mechanical solver
                 case material_pt_state::thermal_conductivity:
@@ -2282,6 +2286,10 @@ public:
                 case material_pt_state::stress:
                     num_mat_pt_tensor_vars ++;
                     break;
+
+                case material_pt_state::strain:
+                    num_mat_pt_tensor_vars ++;
+                    break;
                 
                 // additional vars for thermal-mechanical solver
                 case material_pt_state::thermal_conductivity:
@@ -2335,6 +2343,10 @@ public:
                     break;
                 // tensor vars to write out
                 case material_pt_state::stress:
+                    num_elem_tensor_vars ++;
+                    break;
+
+                case material_pt_state::strain:
                     num_elem_tensor_vars ++;
                     break;
 
@@ -2419,6 +2431,7 @@ public:
         int mat_geo_volfrac_id = -1;  // geometric volume fraction of part
         int mat_eroded_id = -1;
         int mat_stress_id = -1;
+        int mat_strain_id = -1;
 
         int mat_conductivity_id = -1;
         int mat_specific_heat_id = -1;
@@ -2478,6 +2491,12 @@ public:
                     tensor_var++;
                     break;
 
+                case material_pt_state::strain:
+                    mat_elem_tensor_var_names[tensor_var] = "mat_strain";
+                    mat_strain_id = tensor_var;
+                    tensor_var++;
+                    break;
+
     
                 // additional vars for thermal-mechanical solver
                 case material_pt_state::thermal_conductivity:
@@ -2517,6 +2536,7 @@ public:
         int sspd_id = -1;
         int mass_id = -1; 
         int stress_id = -1;
+        int strain_id = -1;
 
         int conductivity_id = -1;
         int specific_heat_id = -1;
@@ -2559,6 +2579,12 @@ public:
                 case material_pt_state::stress:
                     elem_tensor_var_names[tensor_var] = "stress";
                     stress_id = tensor_var;
+                    tensor_var++;
+                    break;
+
+                case material_pt_state::strain:
+                    elem_tensor_var_names[tensor_var] = "strain";
+                    strain_id = tensor_var;
                     tensor_var++;
                     break;
 
@@ -2792,6 +2818,7 @@ public:
                                     sspd_id,
                                     mass_id,
                                     stress_id,
+                                    strain_id,
                                     vol_id,
                                     div_id,
                                     level_set_id,
@@ -2955,6 +2982,7 @@ public:
                                                mat_geo_volfrac_id,  
                                                mat_eroded_id,
                                                mat_stress_id,
+                                               mat_strain_id,
                                                mat_conductivity_id,
                                                mat_specific_heat_id);
                         Kokkos::fence();
@@ -3132,6 +3160,7 @@ public:
         State.MaterialPoints.den.update_host();
         State.MaterialPoints.pres.update_host();
         State.MaterialPoints.stress.update_host();
+        State.MaterialPoints.strain.update_host();
         State.MaterialPoints.sspd.update_host();
         State.MaterialPoints.sie.update_host();
         State.MaterialPoints.mass.update_host();
@@ -3545,6 +3574,7 @@ public:
         State.MaterialPoints.den.update_host();
         State.MaterialPoints.pres.update_host();
         State.MaterialPoints.stress.update_host();
+        State.MaterialPoints.strain.update_host();
         State.MaterialPoints.sspd.update_host();
         State.MaterialPoints.sie.update_host();
         State.MaterialPoints.mass.update_host();
@@ -3888,6 +3918,7 @@ public:
                                  const int sspd_id,
                                  const int mass_id,
                                  const int stress_id,
+                                 const int strain_id,
                                  const int vol_id,
                                  const int div_id,
                                  const int level_set_id,
@@ -3977,6 +4008,28 @@ public:
                                 // stress tensor 
                                 elem_tensor_fields(stress_id, elem_gid, i, j) +=
                                                 MaterialPoints.stress(mat_id, mat_elem_sid,i,j) *
+                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
+                            } // end for
+                        } // end for
+                    });
+                    break;
+
+                case material_pt_state::strain:
+                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+
+                        // get elem gid
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+
+                        // field
+                        // average tensor fields, it is always 3D
+                        // note: paraview is row-major, CArray convention
+                        for (size_t i=0; i<3; i++){
+                            for(size_t j=0; j<3; j++){
+
+                                // strain tensor 
+                                elem_tensor_fields(strain_id, elem_gid, i, j) +=
+                                                MaterialPoints.strain(mat_id, mat_elem_sid,i,j) *
                                                 MaterialPoints.volfrac(mat_id, mat_elem_sid)*
                                                 MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                             } // end for
@@ -4116,6 +4169,7 @@ public:
                                 const int mat_geo_volfrac_id,  
                                 const int mat_eroded_id,
                                 const int mat_stress_id,
+                                const int mat_strain_id,
                                 const int mat_conductivity_id,
                                 const int mat_specific_heat_id)
     {
@@ -4200,6 +4254,23 @@ public:
                                 // stress tensor 
                                 mat_elem_tensor_fields(mat_stress_id, mat_elem_sid, i, j) =
                                                 MaterialPoints.stress(mat_id, mat_elem_sid,i,j);
+                            } // end for
+                        } // end for
+                    });
+                    break;
+
+                case material_pt_state::strain:
+                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+
+                        // field
+                        // average tensor fields, it is always 3D
+                        // note: paraview is row-major, CArray convention
+                        for (size_t i=0; i<3; i++){
+                            for(size_t j=0; j<3; j++){
+
+                                // strain tensor 
+                                mat_elem_tensor_fields(mat_strain_id, mat_elem_sid, i, j) =
+                                                MaterialPoints.strain(mat_id, mat_elem_sid,i,j);
                             } // end for
                         } // end for
                     });
@@ -4957,6 +5028,7 @@ public:
         State.MaterialPoints.den.update_host();
         State.MaterialPoints.pres.update_host();
         State.MaterialPoints.stress.update_host();
+        State.MaterialPoints.strain.update_host();
         State.MaterialPoints.sspd.update_host();
         State.MaterialPoints.sie.update_host();
         State.MaterialPoints.mass.update_host();

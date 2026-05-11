@@ -78,6 +78,7 @@ void fill_regions(
         DCArrayKokkos <bool>& gauss_use_sie,
         DCArrayKokkos <double>& gauss_ie,
         DCArrayKokkos <double>& gauss_stress,
+        DCArrayKokkos <double>& gauss_strain,
         DCArrayKokkos <double>& gauss_conductivity,
         DCArrayKokkos <double>& gauss_specific_heat,
         DCArrayKokkos <double>& gauss_elastic_modulii,

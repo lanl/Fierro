@@ -383,10 +383,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // setting up views and temp memory
                 const size_t elem_id = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
                 ViewCArrayKokkos<size_t> nodes_in_curr_elem(&mesh.nodes_in_elem(elem_id,0),mesh.num_nodes_in_elem);
-                double grad_u[3][3];
-                double inv_J[3][3];
-                double det_J;
-                double PK2_curr_config[6];
                 double material_matrix[6][6];
 
                 // looping through material points
@@ -395,9 +391,13 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.gauss_point_grad_basis(mat_pt,0,0),ref_elem.num_basis, mesh.num_dims);
                     Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
 
+                    // views into stress and strain
+                    ViewCArrayKokkos<double> stress_view(&State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),0,0),3,3);
+                    ViewCArrayKokkos<double> strain_view(&State.MaterialPoints.strain(mat_id, State.points_in_mat_elem(elem,mat_pt),0,0),3,3);
+
                     // tallying to element array
-                    get_gradients(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, displacement_step, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
-                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),0,0) = PK2_curr_config[0];
+                    post_process(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, curr_grad_basis, stress_view, strain_view);
+                    /* State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),0,0) = PK2_curr_config[0];
                     State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),1,1) = PK2_curr_config[1];
                     State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),2,2) = PK2_curr_config[2];
 
@@ -408,7 +408,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),2,0) = PK2_curr_config[4];
 
                     State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),0,1) = PK2_curr_config[5];
-                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),1,0) = PK2_curr_config[5];
+                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),1,0) = PK2_curr_config[5]; */
 
                 } // end mat_pt
 

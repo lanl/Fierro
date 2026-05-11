@@ -108,6 +108,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  fillGaussState.use_sie,
                  fillGaussState.ie,
                  fillGaussState.stress,
+                 fillGaussState.strain,
                  fillGaussState.thermal_conductivity,
                  fillGaussState.specific_heat,
                  fillGaussState.elastic_modulii,
@@ -260,6 +261,7 @@ void fill_regions(
         DCArrayKokkos <bool>&   gauss_use_sie,
         DCArrayKokkos <double>& gauss_ie,
         DCArrayKokkos <double>& gauss_stress,
+        DCArrayKokkos <double>& gauss_strain,
         DCArrayKokkos <double>& gauss_thermal_conductivity,
         DCArrayKokkos <double>& gauss_specific_heat,
         DCArrayKokkos <double>& gauss_elastic_modulii,
@@ -627,6 +629,9 @@ void fill_regions(
                 break;
             case fill_gauss_state::stress:
                 gauss_stress.update_host();
+                break;
+            case fill_gauss_state::strain:
+                gauss_strain.update_host();
                 break;
             case fill_gauss_state::elastic_modulii:
                 gauss_elastic_modulii.update_host();

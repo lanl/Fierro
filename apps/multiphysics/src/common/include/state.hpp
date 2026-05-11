@@ -50,6 +50,7 @@ enum class fill_gauss_state
 {
     density,
     stress,
+    strain,
     specific_internal_energy,
     internal_energy,
     elastic_modulii,
@@ -80,6 +81,8 @@ struct fillGaussState_t
 
     DCArrayKokkos<double> stress; ///< Gauss Point stress
 
+    DCArrayKokkos<double> strain; ///< Gauss Point strain
+
     DCArrayKokkos<double> thermal_conductivity; ///< Thermal conductivity
     DCArrayKokkos<double> specific_heat;        ///< Specific Heat
 
@@ -106,6 +109,9 @@ struct fillGaussState_t
                     break;
                 case fill_gauss_state::stress:
                     if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, num_dims, num_dims, "fill_gauss_point_stress");
+                    break;
+                case fill_gauss_state::strain:
+                    if (strain.size() == 0) this->strain = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, num_dims, num_dims, "fill_gauss_point_strain");
                     break;
                 case fill_gauss_state::elastic_modulii:
                     if (elastic_modulii.size() == 0) this->elastic_modulii = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "fill_gauss_point_elastic_modulii");
@@ -462,6 +468,7 @@ enum class material_pt_state
     density,
     pressure,
     stress,
+    strain,
     sound_speed,
     specific_internal_energy,
     mass,
@@ -491,6 +498,8 @@ struct MaterialPoint_t
 
     DRaggedRightArrayKokkos<double> stress;    ///< MaterialPoint stress
     DRaggedRightArrayKokkos<double> stress_n0; ///< MaterialPoint stress at t=n0 of time integration
+
+    DRaggedRightArrayKokkos<double> strain;    ///< MaterialPoint strain
 
     DRaggedRightArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
     DRaggedRightArrayKokkos<double> sie_n0; ///< coefficients for the sie in strong form at t=n0 of time integration
@@ -552,6 +561,9 @@ struct MaterialPoint_t
                 case material_pt_state::stress:
                     if (stress.size() == 0) this->stress = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, num_dims, "material_point_stress");  
                     if (stress_n0.size() == 0) this->stress_n0 = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, num_dims, "material_point_stress_n0"); 
+                    break;
+                case material_pt_state::strain:
+                    if (strain.size() == 0) this->strain = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, num_dims, "material_point_strain");  
                     break;
                 case material_pt_state::elastic_modulii:
                     if (elastic_modulii.size() == 0) this->elastic_modulii = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, "material_elastic_modulii");
