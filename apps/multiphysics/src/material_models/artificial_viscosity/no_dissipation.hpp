@@ -44,6 +44,7 @@ namespace NoDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
+                                  const DCArrayKokkos<double>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                                   const MPICArrayKokkos<double>& node_vel,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_den,

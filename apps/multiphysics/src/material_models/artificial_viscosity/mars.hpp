@@ -47,6 +47,7 @@ namespace MARSDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
+                                  const DCArrayKokkos<double>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                                   const MPICArrayKokkos<double>& node_vel,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
@@ -89,8 +90,6 @@ namespace MARSDissipationModel {
         // Riemann velocity
         double vel_star_array[3];
         ViewCArrayKokkos<double> vel_star(vel_star_array, num_dims);
-
-
 
         double div = GaussPoints_vel_grad(elem_gid, 0, 0) + 
                      GaussPoints_vel_grad(elem_gid, 1, 1) + 
@@ -370,6 +369,7 @@ namespace DirMARSDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
+                                  const DCArrayKokkos<double>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                                   const MPICArrayKokkos<double>& node_vel,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
@@ -665,6 +665,7 @@ namespace MARSRZDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
+                                  const DCArrayKokkos<double>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                                   const MPICArrayKokkos<double>& node_vel,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
@@ -938,6 +939,7 @@ namespace DirMARSRZDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
+                                  const DCArrayKokkos<double>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                                   const MPICArrayKokkos<double>& node_vel,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_den,

@@ -60,14 +60,16 @@ namespace SGHRZ_State
     { 
         node_state::coords,
         node_state::velocity,
-        node_state::mass
+        node_state::mass,
+        node_state::velocity_div
     };
 
     // Gauss point state to be initialized for the SGH solver
     static const std::vector<gauss_pt_state> required_gauss_pt_state = 
     { 
         gauss_pt_state::volume,
-        gauss_pt_state::gradient_velocity
+        gauss_pt_state::gradient_velocity,
+        gauss_pt_state::shock_detector
     };
 
     // Material point state to be initialized for the SGH solver
@@ -231,6 +233,7 @@ public:
         const swage::Mesh& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
+        const DCArrayKokkos<double>& GaussPoints_shock_detector,
         const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
         const DCArrayKokkos<double>& corner_force,
         const MPICArrayKokkos<double>& node_coords,
