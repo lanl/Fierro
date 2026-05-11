@@ -860,14 +860,15 @@ double sum_domain_kinetic_energy(
     double KE_global_sum = 0.0;
 
     FOR_REDUCE_SUM(node_gid, 0, mesh.num_owned_nodes, KE_loc_sum, {
-        double ke = 0;
+        if(mesh.shared_tally_owned_nodes(node_gid)){
+            double ke = 0;
 
-        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            ke += node_vel(node_gid, dim) * node_vel(node_gid, dim); // 1/2 at end
-        } // end for
+            for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+                ke += node_vel(node_gid, dim) * node_vel(node_gid, dim); // 1/2 at end
+            } // end for
 
-        KE_loc_sum += node_mass(node_gid) * ke;
-
+            KE_loc_sum += node_mass(node_gid) * ke;
+        }
     }, KE_sum);
     Kokkos::fence();
 
@@ -940,18 +941,23 @@ double sum_domain_node_mass(const swage::Mesh& mesh,
 {
     double mass_domain = 0.0;
     double mass_loc_domain;
+    double total_mass = 0.0;
 
     FOR_REDUCE_SUM(node_gid, 0, mesh.num_owned_nodes, mass_loc_domain, {
-        if (mesh.num_dims == 2) {
-            mass_loc_domain += node_mass(node_gid) * node_coords(node_gid, 1);
-        }
-        else{
-            mass_loc_domain += node_mass(node_gid);
+        if(mesh.shared_tally_owned_nodes(node_gid)){
+            if (mesh.num_dims == 2) {
+                mass_loc_domain += node_mass(node_gid) * node_coords(node_gid, 1);
+            }
+            else{
+                mass_loc_domain += node_mass(node_gid);
+            }
         }
     }, mass_domain);
     Kokkos::fence();
 
-    return mass_domain;
+    MPI_Allreduce(&mass_domain, &total_mass, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    return total_mass;
 } // end function
 
 
