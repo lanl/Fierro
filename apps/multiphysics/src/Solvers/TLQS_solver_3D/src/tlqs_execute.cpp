@@ -215,7 +215,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         // tallying to element array
                         get_gradients(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, displacement_step, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
                         double weight = ref_elem.gauss_point_weights(mat_pt)*det_J;
-                        tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, weight, PK2_curr_config, curr_K_elem, curr_F_elem);
+                        double local_mat_vol_frac = State.MaterialPoints.volfrac(mat_id, elem);
+
+                        tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, weight, PK2_curr_config, curr_K_elem, curr_F_elem, local_mat_vol_frac);
                     } // end mat_pt
 
                 }); // end elem
@@ -397,18 +399,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                     // tallying to element array
                     post_process(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, curr_grad_basis, stress_view, strain_view);
-                    /* State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),0,0) = PK2_curr_config[0];
-                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),1,1) = PK2_curr_config[1];
-                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),2,2) = PK2_curr_config[2];
-
-                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),1,2) = PK2_curr_config[3];
-                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),2,1) = PK2_curr_config[3];
-
-                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),0,2) = PK2_curr_config[4];
-                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),2,0) = PK2_curr_config[4];
-
-                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),0,1) = PK2_curr_config[5];
-                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),1,0) = PK2_curr_config[5]; */
 
                 } // end mat_pt
 

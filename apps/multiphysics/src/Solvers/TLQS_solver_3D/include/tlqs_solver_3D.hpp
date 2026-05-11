@@ -266,7 +266,8 @@ public:
         double gauss_point_weight,
         const double PK2_curr_config[6],
         ViewCArrayKokkos <double>& Kel,
-        ViewCArrayKokkos <double>& Fel
+        ViewCArrayKokkos <double>& Fel,
+        const double vol_frac
     );
 
     // inputs: mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter

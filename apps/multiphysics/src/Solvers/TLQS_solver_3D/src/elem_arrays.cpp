@@ -142,7 +142,8 @@ void TLQS3D::tally_elem_arrays(
     double gauss_point_weight,
     const double PK2_curr_config[6],
     ViewCArrayKokkos <double>& Kel,
-    ViewCArrayKokkos <double>& Fel)
+    ViewCArrayKokkos <double>& Fel,
+    const double vol_frac)
 {
     const int num_nodes = gauss_point_grad_basis.dims(0);
 
@@ -239,7 +240,7 @@ void TLQS3D::tally_elem_arrays(
             for (int k = 0; k < 6; k++) {
                 fel_val += B1_a[k][p] * PK2_curr_config[k];
             }
-            Fel(3*a + p) -= gauss_point_weight * fel_val;
+            Fel(3*a + p) -= gauss_point_weight * fel_val * vol_frac;
         }
 
         // Inner loop over b for Kel
@@ -287,7 +288,7 @@ void TLQS3D::tally_elem_arrays(
                         k1_val += CT_matmul_B1_a[m][p] * B1_b[m][q];
                     }
                     const double k2_val = (p == q) ? k2_scalar : 0.0;
-                    Kel(3*a+p, 3*b+q) += gauss_point_weight * (k1_val + k2_val);
+                    Kel(3*a+p, 3*b+q) += gauss_point_weight * (k1_val + k2_val) * vol_frac;
                 }
             }
         }
