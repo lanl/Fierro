@@ -336,7 +336,8 @@ public:
     void read_mesh(swage::Mesh& mesh,
                    State_t& State,
                    mesh_input_t& mesh_inps,
-                   int      num_dims)
+                   int      num_dims,
+                   bool HexN)
     {
         if (mesh_file_ == NULL) {
             throw std::runtime_error("**** No mesh path given for read_mesh ****");
@@ -371,7 +372,7 @@ public:
             read_Abaqus_mesh(mesh, State, num_dims);
         }
         else if(extension == "vtk"){ // vtk file format
-            if (mesh_inps.p_order <= 1) {
+            if (!HexN) {
                 read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
             }
             else {

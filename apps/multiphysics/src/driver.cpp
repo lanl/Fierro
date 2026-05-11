@@ -66,6 +66,14 @@ void Driver::initialize()
     parse_yaml(root, SimulationParamaters, Materials, BoundaryConditions);
     std::cout << "Finished  parsing YAML file" << std::endl;
 
+    // checking if TLQS is active in order to run correct read vtk function
+    bool TLQS_active = false;
+    for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
+        if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::TLQS3D) {
+            TLQS_active = true;
+        }
+    }
+
     if (SimulationParamaters.mesh_input.source == mesh_input::file) {
         // Create and/or read mesh
         std::cout << "Mesh file path: " << SimulationParamaters.mesh_input.file_path << std::endl;
@@ -73,7 +81,8 @@ void Driver::initialize()
         mesh_reader.read_mesh(mesh, 
                               State,
                               SimulationParamaters.mesh_input, 
-                              num_dims);
+                              num_dims,
+                              TLQS_active);
     }
     else if (SimulationParamaters.mesh_input.source == mesh_input::generate) {
         mesh_builder.build_mesh(mesh, 

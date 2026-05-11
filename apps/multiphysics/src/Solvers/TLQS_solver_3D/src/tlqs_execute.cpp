@@ -161,7 +161,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         } // end if
 
         displacement_step.set_values(0);
-        //std::cout << "NUM MAT POINTS: " << ref_elem.gauss_point_grad_basis.dims(0) << std::endl;
+        //std::cout << "NUM MAT POINTS REF ELEM: " << ref_elem.gauss_point_grad_basis.dims(0) << std::endl;
+        //std::cout << "NUM MAT POINTS IN ELEM: " << mesh.num_gauss_in_elem << std::endl;
         //std::cout << "NUM MAT ELEMS: " << State.MaterialToMeshMaps.num_mat_elems.host(0) << std::endl;
         //std::cout << "NUM BDY PATCHES: " << mesh.num_bdy_patches << std::endl;
         //std::cout << "NUM PATCHES: " << mesh.num_patches << std::endl;
@@ -360,13 +361,42 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.node.displacement(i,j) += displacement_step(3*i + j);
         });
 
-        for (int i = 0; i < mesh.num_nodes; i++) {
+        /* for (int i = 0; i < mesh.num_nodes; i++) {
             for (int j = 0; j < 3; j++) {
                 std::cout << State.node.displacement(i,j) << "   ";
             }
             std::cout << std::endl;
         }
-        std::cout << std::endl;
+        std::cout << std::endl; */
+
+        // filling in stress and strain for output
+        for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+            
+            FOR_ALL(elem, 0, State.MaterialToMeshMaps.num_mat_elems.host(mat_id), {
+
+                // setting up views and temp memory
+                const size_t elem_id = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
+                ViewCArrayKokkos<size_t> nodes_in_curr_elem(&mesh.nodes_in_elem(elem_id,0),mesh.num_nodes_in_elem);
+                double grad_u[3][3];
+                double inv_J[3][3];
+                double det_J;
+                double PK2_curr_config[6];
+                double material_matrix[6][6];
+
+                // looping through material points
+                for (int mat_pt = 0; mat_pt < ref_elem.gauss_point_grad_basis.dims(0); mat_pt++) {
+                    // setting up view and getting material matrix
+                    ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.gauss_point_grad_basis(mat_pt,0,0),ref_elem.num_basis, mesh.num_dims);
+                    Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
+
+                    // tallying to element array
+                    get_gradients(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, displacement_step, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
+
+                } // end mat_pt
+
+            }); // end elem
+
+        } // end mat_id
 
         // increment the time
         time_value += dt;
