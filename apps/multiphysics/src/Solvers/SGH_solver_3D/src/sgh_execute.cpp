@@ -333,7 +333,11 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             mesh,
                             State.node.coords,
                             State.node.vel,
+                            State.node.vel_div,
                             State.GaussPoints.vol);
+
+                // Communicate the nodal velocity divergence
+                State.node.vel_div.communicate();
 
                 // WARNING: Add a kernel to compute phi (shock_detector), and add MPI comms here based on the element communication plan to 
                 // (call the function). We want to add the shock detector function under material models. 

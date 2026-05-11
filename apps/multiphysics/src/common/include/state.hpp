@@ -252,6 +252,7 @@ enum class node_state
 {
     coords,
     velocity,
+    velocity_div,
     mass,
     temp,
     heat_transfer,
@@ -273,6 +274,7 @@ struct node_t
     MPICArrayKokkos<double> coords_n0;  ///< Nodal coordinates at tn=0 of time integration
     MPICArrayKokkos<double> vel;        ///< Nodal velocity
     MPICArrayKokkos<double> vel_n0;     ///< Nodal velocity at tn=0 of time integration
+    MPICArrayKokkos<double> vel_div;    ///< Nodal velocity divergence
     DCArrayKokkos<double> mass;       ///< Nodal mass
     DCArrayKokkos<double> force;      ///< Nodal force
     DCArrayKokkos<double> temp;       ///< Nodal temperature
@@ -292,6 +294,9 @@ struct node_t
                 case node_state::velocity:
                     if (vel.size() == 0) this->vel = MPICArrayKokkos<double>(num_nodes, num_dims, "node_velocity");
                     if (vel_n0.size() == 0) this->vel_n0 = MPICArrayKokkos<double>(num_nodes, num_dims, "node_velocity_n0");
+                    break;
+                case node_state::velocity_div:
+                    if (vel_div.size() == 0) this->vel_div = MPICArrayKokkos<double>(num_nodes, "node_velocity_div");
                     break;
                 case node_state::force:
                     if (force.size() == 0) this->force = DCArrayKokkos<double>(num_nodes, num_dims, "node_force");
@@ -342,6 +347,12 @@ struct node_t
                         this->vel_n0.initialize_comm_plan(comm_plan);
                     }
                     break;
+                case node_state::velocity_div:
+                    if (vel_div.size() == 0){
+                        this->vel_div = MPICArrayKokkos<double>(num_nodes, "node_velocity_div");
+                        this->vel_div.initialize_comm_plan(comm_plan);
+                    }
+                    break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize with communication plan"<<std::endl;
                     throw std::runtime_error("**** Error in State Field Name ****");
@@ -358,7 +369,8 @@ enum class gauss_pt_state
     volume,
     divergence_velocity,
     gradient_velocity,
-    level_set
+    level_set,
+    shock_detector
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -378,6 +390,8 @@ struct GaussPoint_t
     DCArrayKokkos<double> level_set;  ///< GaussPoint level set field
     DCArrayKokkos<double> level_set_n0;  ///< GaussPoint level set field
 
+    DCArrayKokkos<double> shock_detector;  ///< GaussPoint shock detector field
+
     // initialization method (num_cells, num_dims)
     void initialize(size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states)
     {
@@ -396,6 +410,9 @@ struct GaussPoint_t
                 case gauss_pt_state::level_set:
                     if (level_set.size() == 0) this->level_set = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set");
                     if (level_set_n0.size() == 0) this->level_set_n0 = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set_n0");
+                    break;
+                case gauss_pt_state::shock_detector:
+                    if (shock_detector.size() == 0) this->shock_detector = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_shock_detector");
                     break;
                 default:
                     std::cout<<"Desired gauss point state not understood in GaussPoint_t initialize"<<std::endl;
