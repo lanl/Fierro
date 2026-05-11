@@ -305,7 +305,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 // check convergence
                 double norm = sqrt(rkp1trkp1);
-                if (norm < 1E-8) {
+                if (norm < 1E-12) {
                     break;
                 }
 
@@ -348,7 +348,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             double norm = sqrt(norm_num / norm_den);
             //std::cout << "PICARD NORM: " << norm << std::endl;
-            if (norm < 1E-8) {
+            if (norm < 1E-12) {
                 std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }
@@ -360,6 +360,12 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 j, 0, 3, {
                     State.node.displacement(i,j) += displacement_step(3*i + j);
         });
+        
+        // ********************************************
+        // REMOVE THIS AFTER ADDING ACTUAL POST PROCESS
+        displacement_step.set_values(0);
+        // REMOVE THIS AFTER ADDING ACTUAL POST PROCESS
+        // ********************************************
 
         /* for (int i = 0; i < mesh.num_nodes; i++) {
             for (int j = 0; j < 3; j++) {
@@ -371,7 +377,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // filling in stress and strain for output
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-            
+
             FOR_ALL(elem, 0, State.MaterialToMeshMaps.num_mat_elems.host(mat_id), {
 
                 // setting up views and temp memory
@@ -391,6 +397,18 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                     // tallying to element array
                     get_gradients(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, displacement_step, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
+                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),0,0) = PK2_curr_config[0];
+                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),1,1) = PK2_curr_config[1];
+                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),2,2) = PK2_curr_config[2];
+
+                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),1,2) = PK2_curr_config[3];
+                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),2,1) = PK2_curr_config[3];
+
+                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),0,2) = PK2_curr_config[4];
+                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),2,0) = PK2_curr_config[4];
+
+                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),0,1) = PK2_curr_config[5];
+                    State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),1,0) = PK2_curr_config[5];
 
                 } // end mat_pt
 
