@@ -115,7 +115,6 @@ void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
     const swage::Mesh& mesh,
     const MPICArrayKokkos<double>& node_coords,
     const MPICArrayKokkos<double>& node_vel,
-    const MPICArrayKokkos<double>& node_vel_div,
     const DCArrayKokkos<double>& elem_vol) const
 {
     const size_t num_nodes_in_elem = 8;
@@ -196,25 +195,14 @@ void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
             + w(2) * b_matrix(2, 2) + w(3) * b_matrix(3, 2)
             + w(4) * b_matrix(4, 2) + w(5) * b_matrix(5, 2)
             + w(6) * b_matrix(6, 2) + w(7) * b_matrix(7, 2)) * inverse_vol;
+
+
+            // Compute the divergence of velocity for each element
+
+
+
     });  // end parallel for over elem_gid
     Kokkos::fence();
-
-    // Compute the divergence of velocity at all nodes
-    // by averaging the divergence of velocity over the elements around the node
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        
-        node_vel_div(node_gid) = 0.0;
-        
-        for(int elem_lid = 0; elem_lid < mesh.num_corners_in_node(node_gid); elem_lid++) {
-            size_t elem_gid = mesh.elems_in_node(node_gid, elem_lid);
-            for (size_t dim = 0; dim < num_dims; dim++) {
-                node_vel_div(node_gid) += vel_grad(elem_gid, dim, dim);
-            } // end for dim
-        } // end for elem_lid
-        
-        node_vel_div(node_gid) /= mesh.num_corners_in_node(node_gid);
-    }); // end for parallel for over nodes
-    
 
 
     return;

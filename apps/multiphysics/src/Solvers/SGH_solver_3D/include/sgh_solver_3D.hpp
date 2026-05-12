@@ -61,8 +61,7 @@ namespace SGH3D_State
         node_state::coords,
         node_state::velocity,
         node_state::mass,
-        node_state::force,
-        node_state::velocity_div,
+        node_state::force
     };
 
     // Gauss point state to be initialized for the SGH solver
@@ -321,7 +320,6 @@ public:
         const swage::Mesh& mesh,
         const MPICArrayKokkos<double>& node_coords,
         const MPICArrayKokkos<double>& node_vel,
-        const MPICArrayKokkos<double>& node_vel_div,
         const DCArrayKokkos<double>& elem_vol) const;
 
     void get_divergence(

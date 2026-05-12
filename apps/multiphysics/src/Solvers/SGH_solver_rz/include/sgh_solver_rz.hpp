@@ -60,15 +60,13 @@ namespace SGHRZ_State
     { 
         node_state::coords,
         node_state::velocity,
-        node_state::mass,
-        node_state::velocity_div
+        node_state::mass
     };
 
     // Gauss point state to be initialized for the SGH solver
     static const std::vector<gauss_pt_state> required_gauss_pt_state = 
     { 
         gauss_pt_state::volume,
-        gauss_pt_state::gradient_velocity,
         gauss_pt_state::shock_detector
     };
 
