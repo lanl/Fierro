@@ -156,6 +156,8 @@ void Driver::initialize()
                   mesh.num_nodes, mesh.num_owned_nodes, num_ghost_nodes,
                   mesh.num_elems, mesh.num_owned_elems, num_ghost_elems);
     }
+
+    printf("Mesh polynomial order: %zu\n", mesh.Pn);
     
     // For totals, root rank gathers and prints
     size_t local_nodes = mesh.num_nodes;
@@ -313,6 +315,9 @@ void Driver::initialize()
     }
     if (State.node.vel_n0.size() > 0) {
         State.node.vel_n0.initialize_comm_plan(node_communication_plan);
+    }
+    if (State.GaussPoints.shock_detector.size() > 0){
+        State.GaussPoints.shock_detector.initialize_comm_plan(element_communication_plan);
     }
 
     // ----

@@ -44,6 +44,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "fracture_stress_bc.hpp"
 #include "reorientation_kinematics.hpp"
 #include "user_defined_velocity_bc.hpp"
+#include "mach_shock.hpp"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -61,11 +62,14 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     State_t& State)
 {
 
+    printf("Inside SGH3D::execute\n");
+
     // Get MPI ranks and num ranks
     int rank;
     int num_ranks;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
+
 
     // if (log) log->set_level(fierro::LogLevel::Off);
 
@@ -134,11 +138,13 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
+    printf("Before applying initial boundary conditions\n");
+
     // --- Graphics vars ----
     CArray<double> graphics_times = CArray<double>(20000);
     graphics_times(0) = this->time_start; // was zero
     double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
-    size_t output_id=0; // the id for the outputs written
+    size_t output_id = 0; // the id for the outputs written
 
     if (log) log->info("Applying initial boundary conditions");
     boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
@@ -152,7 +158,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // the number of materials specified by the user input
     const size_t num_mats = Materials.num_mats;
-    
     // Computing initial conditions for conservation checks
     // extensive IE
     IE_t0 = sum_domain_internal_energy(mesh,
@@ -161,8 +166,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                                        State.MaterialPoints.sie);
 
     if (log) log->info("Extensive IE = %f \n", IE_t0);
-
-
     // extensive KE
     KE_t0 = sum_domain_kinetic_energy(mesh,
                                       State.node.vel,
@@ -177,7 +180,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         State.MeshtoMaterialMaps,
         State.MaterialPoints.mass);
 
-    // node mass of the domain. WARNING: DOUBLE COUNTS SHARED NODES BETWEEN MPI RANKS.
+    // node mass of the domain. 
     double mass_domain_nodes_t0 = 0.0;
     mass_domain_nodes_t0 = sum_domain_node_mass(mesh,
                                                 State.node.coords,
@@ -194,6 +197,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // Write initial state at t=0
     if (log) log->info("Writing outputs to file at %f \n", graphics_time);
+    if (log) log->flush();
+    
+    
     mesh_writer.write_mesh(
         mesh, 
         State, 
@@ -334,18 +340,24 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             State.node.coords,
                             State.node.vel,
                             State.GaussPoints.vol);
-                            
-                // detect_shock(); // compute phi at each quadrature point
 
+                
+                // compute the shock detector at each gauss point for each material
+                State.GaussPoints.shock_detector.set_values(0.0);
+
+                MachShockDetector::detect_shock(mesh,
+                    State.GaussPoints.vel_grad,
+                    State.GaussPoints.shock_detector,
+                    State.GaussPoints.vol,
+                    State.MaterialPoints.sspd,
+                    State.MaterialToMeshMaps.elem_in_mat_elem,
+                    State.MaterialToMeshMaps.num_mat_elems,
+                    fuzz,
+                    small,
+                    num_mats);
+                
                 // Communicate shock detector based on the element communication plan
-
-
-                // compute phi with the velocity divergence at the gauss points, communicate phi
-                // Do not save velocity divergence at the gauss points, only save the shock detector
-                // save the worse phi based on 
-
-                // WARNING: Add a kernel to compute phi (shock_detector), and add MPI comms here based on the element communication plan to 
-                // (call the function). We want to add the shock detector function under material models. 
+                State.GaussPoints.shock_detector.communicate();
 
                 set_corner_force_zero(mesh, State.corner.force);
 

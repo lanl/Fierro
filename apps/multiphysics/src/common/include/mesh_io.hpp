@@ -1930,10 +1930,12 @@ public:
                 case gauss_pt_state::level_set:
                     State.GaussPoints.level_set.update_host();
                     break;      
-
                 // tensor vars to write out
                 case gauss_pt_state::gradient_velocity:
                     State.GaussPoints.vel_grad.update_host();
+                    break;
+                case gauss_pt_state::shock_detector:
+                    State.GaussPoints.shock_detector.update_host();
                     break;
                 default:
                     std::cout<<"Desired Gauss point state not understood in vtk outputs"<<std::endl;
@@ -2111,11 +2113,14 @@ public:
                 case gauss_pt_state::divergence_velocity:
                     num_gauss_pt_scalar_vars ++;
                     break;
-
+                case gauss_pt_state::shock_detector:
+                    num_gauss_pt_scalar_vars ++;
+                    break;
                 // tensor vars to write out
                 case gauss_pt_state::gradient_velocity:
                     num_gauss_pt_tensor_vars ++;
                     break;
+                
                 default:
                     std::cout<<"Desired Gauss point state not understood in vtk outputs"<<std::endl;
 
@@ -2325,7 +2330,7 @@ public:
         int div_id = -1;
         int level_set_id = -1;
         int vel_grad_id = -1;
-        
+        int shock_detector_id = -1;
 
         for (auto field : SimulationParamaters.output_options.output_gauss_pt_state){
             switch(field){
@@ -2344,6 +2349,12 @@ public:
                 case gauss_pt_state::level_set:
                     elem_scalar_var_names[var] = "level_set";
                     level_set_id = var;
+                    var++;
+                    break;
+                
+                case gauss_pt_state::shock_detector:
+                    elem_scalar_var_names[var] = "shock_detector";
+                    shock_detector_id = var;
                     var++;
                     break;
 
@@ -2505,6 +2516,7 @@ public:
                                     stress_id,
                                     vol_id,
                                     div_id,
+                                    shock_detector_id,
                                     level_set_id,
                                     vel_grad_id,
                                     conductivity_id,
@@ -3688,6 +3700,7 @@ public:
                                  const int stress_id,
                                  const int vol_id,
                                  const int div_id,
+                                 const int shock_detector_id,
                                  const int level_set_id,
                                  const int vel_grad_id,
                                  const int conductivity_id,
@@ -3856,6 +3869,12 @@ public:
                         elem_scalar_fields(level_set_id, elem_gid) = GaussPoints.level_set(elem_gid);
                     });
 
+                    break;
+
+                case gauss_pt_state::shock_detector:
+                    FOR_ALL(elem_gid, 0, num_elems, {
+                        elem_scalar_fields(shock_detector_id, elem_gid) = GaussPoints.shock_detector(elem_gid);
+                    });
                     break;
 
                 // tensors
@@ -4308,7 +4327,7 @@ public:
                     }
                 } // end for
             }
-            else if (num_dims == 3 && Pn_order == 1){
+            else if (num_dims == 3 && Pn_order == 0){
                // 3D linear hexahedral elements
                 for (int node_lid = 0; node_lid < 8; node_lid++) {
                     fprintf(out[0], "%lu ", nodes_in_elem_host(elem_gid, node_lid));
@@ -4356,7 +4375,7 @@ public:
             if (num_dims==3 && Pn_order>1){
                 fprintf(out[0], "          %d \n", 72);
             }
-            else if (num_dims == 3 && Pn_order == 1){
+            else if (num_dims == 3 && Pn_order == 0){
                 // 3D linear hex
                 fprintf(out[0], "          %d \n", 11);
             }

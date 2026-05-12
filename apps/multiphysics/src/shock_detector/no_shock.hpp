@@ -35,7 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef NO_SHOCK_H
 #define NO_SHOCK_H
 
-#include "common.hpp"
+#include "matar.h"
 
 namespace NoShockDetector {
 
