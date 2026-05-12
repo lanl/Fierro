@@ -339,9 +339,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 // Communicate shock detector based on the element communication plan
 
-                // Communicate the nodal velocity divergence
-                // State.node.vel_div.communicate();  // NOPE
-                // Move velocity divergence to the Gauss points, 
+
                 // compute phi with the velocity divergence at the gauss points, communicate phi
                 // Do not save velocity divergence at the gauss points, only save the shock detector
                 // save the worse phi based on 
@@ -984,3 +982,5 @@ void set_corner_force_zero(const swage::Mesh& mesh,
         }
     }); // end parallel for corners
 } // end function
+
+
