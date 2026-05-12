@@ -380,7 +380,7 @@ struct GaussPoint_t
     DCArrayKokkos<double> level_set;  ///< GaussPoint level set field
     DCArrayKokkos<double> level_set_n0;  ///< GaussPoint level set field
 
-    DCArrayKokkos<double> shock_detector;  ///< GaussPoint shock detector field
+    MPICArrayKokkos<double> shock_detector;  ///< GaussPoint shock detector field
 
     // initialization method (num_cells, num_dims)
     void initialize(size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states)
@@ -402,10 +402,30 @@ struct GaussPoint_t
                     if (level_set_n0.size() == 0) this->level_set_n0 = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set_n0");
                     break;
                 case gauss_pt_state::shock_detector:
-                    if (shock_detector.size() == 0) this->shock_detector = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_shock_detector");
+                    if (shock_detector.size() == 0) this->shock_detector = MPICArrayKokkos<double>(num_gauss_pnts, "gauss_point_shock_detector");
                     break;
                 default:
                     std::cout<<"Desired gauss point state not understood in GaussPoint_t initialize"<<std::endl;
+                    throw std::runtime_error("**** Error in State Field Name ****");
+            }
+        }
+    }; // end method
+
+
+    // initialization method with communication plan (num_nodes, num_dims, state to allocate)
+    void initialize(size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states, CommunicationPlan& comm_plan)
+    {
+        for (auto field : gauss_pt_states){
+            switch(field){
+                case gauss_pt_state::shock_detector:
+                    if (shock_detector.size() == 0){
+                        this->shock_detector = MPICArrayKokkos<double>(num_gauss_pnts, "gauss_point_shock_detector");
+                        this->shock_detector.initialize_comm_plan(comm_plan);
+                    }
+                    break;
+
+                default:
+                    std::cout<<"Desired MPI distributed Gauss point state not understood in GaussPoint_t initialize with communication plan"<<std::endl;
                     throw std::runtime_error("**** Error in State Field Name ****");
             }
         }
