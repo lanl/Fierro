@@ -113,10 +113,9 @@ void TLQS3D::post_process(
     // WARNING: NEED TO PUT THIS INTO A SEPARATE FUNCTION
     // WARNING: POINTER CALLED CALC QUASI_STATIC STRESS
     // ***************************************************
-    double current_strain[6]; // [Exx Eyy Ezz Eyz Exz Exy]
-    strain(0,0) = grad_u[0][0] + 0.5 * (grad_u[0][0]*grad_u[0][0] + grad_u[1][0]*grad_u[1][0] + grad_u[2][0]*grad_u[2][0]);
-    strain(1,1) = grad_u[1][1] + 0.5 * (grad_u[0][1]*grad_u[0][1] + grad_u[1][1]*grad_u[1][1] + grad_u[2][1]*grad_u[2][1]);
-    strain(2,2) = grad_u[2][2] + 0.5 * (grad_u[0][2]*grad_u[0][2] + grad_u[1][2]*grad_u[1][2] + grad_u[2][2]*grad_u[2][2]);
+    strain(0,0) = grad_u[0][0] + 0.5 * (grad_u[0][0]*grad_u[0][0] + grad_u[0][1]*grad_u[0][1] + grad_u[0][2]*grad_u[0][2]);
+    strain(1,1) = grad_u[1][1] + 0.5 * (grad_u[1][0]*grad_u[1][0] + grad_u[1][1]*grad_u[1][1] + grad_u[1][2]*grad_u[1][2]);
+    strain(2,2) = grad_u[2][2] + 0.5 * (grad_u[2][0]*grad_u[2][0] + grad_u[2][1]*grad_u[2][1] + grad_u[2][2]*grad_u[2][2]);
     strain(1,2) = 0.5 * (grad_u[1][2] + grad_u[2][1] + (grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]));
     strain(2,1) = 0.5 * (grad_u[1][2] + grad_u[2][1] + (grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]));
     strain(0,2) = 0.5 * (grad_u[0][2] + grad_u[2][0] + (grad_u[0][0]*grad_u[0][2] + grad_u[1][0]*grad_u[1][2] + grad_u[2][0]*grad_u[2][2]));
