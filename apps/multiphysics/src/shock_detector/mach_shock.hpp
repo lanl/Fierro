@@ -128,9 +128,9 @@ namespace MachShockDetector {
                     phi = fmax(0.0, fmin(1.0, phi));
 
                     double prev_phi = GaussPoints_shock_detector(gauss_gid); // Phi for previous material in this element
-               
+                    
 
-                    GaussPoints_shock_detector(gauss_gid) = fmin(prev_phi, phi);
+                    GaussPoints_shock_detector(gauss_gid) = fmax(prev_phi, phi);
                 }
             });
             MATAR_FENCE();

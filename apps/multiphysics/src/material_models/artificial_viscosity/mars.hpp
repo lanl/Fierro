@@ -256,7 +256,7 @@ namespace MARSDissipationModel {
         // phi = 1.0 - fmax(0.0, r_min);
         // phi = pow(phi, n_coef);
 
-        //  Mach number shock detector
+        // // ---- Mach number shock detector ----
         // double omega    = 20.0; // 20.0;    // weighting factor on Mach number
         // double third    = 1.0 / 3.0;
         // double c_length = pow(vol, third); // characteristic length
@@ -269,8 +269,12 @@ namespace MARSDissipationModel {
 
         // phi = alpha * phi;
 
+        // size_t gauss_gid = elem_gid;
+
+        // GaussPoints_shock_detector(gauss_gid) = phi;
         size_t gauss_gid = elem_gid;
         double phi = GaussPoints_shock_detector(gauss_gid);
+        
 
         // curl limiter on Q
         double phi_curl = fmin(1.0, 1.0 * fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
@@ -281,7 +285,7 @@ namespace MARSDissipationModel {
         phi = fmax(phi_floor, phi);
 
         GaussPoints_shock_detector(gauss_gid) = phi;
-        
+
         // loop over the each corner in the element
         for (size_t corner_lid = 0; corner_lid < num_nodes_in_elem; corner_lid++) {
 

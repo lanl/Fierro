@@ -4327,7 +4327,7 @@ public:
                     }
                 } // end for
             }
-            else if (num_dims == 3 && Pn_order == 0){
+            else if (num_dims == 3 && Pn_order == 1){
                // 3D linear hexahedral elements
                 for (int node_lid = 0; node_lid < 8; node_lid++) {
                     fprintf(out[0], "%lu ", nodes_in_elem_host(elem_gid, node_lid));
@@ -4375,7 +4375,7 @@ public:
             if (num_dims==3 && Pn_order>1){
                 fprintf(out[0], "          %d \n", 72);
             }
-            else if (num_dims == 3 && Pn_order == 0){
+            else if (num_dims == 3 && Pn_order == 1){
                 // 3D linear hex
                 fprintf(out[0], "          %d \n", 11);
             }

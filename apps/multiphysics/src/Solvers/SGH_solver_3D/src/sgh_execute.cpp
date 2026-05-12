@@ -344,7 +344,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 
                 // compute the shock detector at each gauss point for each material
                 State.GaussPoints.shock_detector.set_values(0.0);
-
+                MATAR_FENCE();
+                
                 MachShockDetector::detect_shock(mesh,
                     State.GaussPoints.vel_grad,
                     State.GaussPoints.shock_detector,
