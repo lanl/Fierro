@@ -114,7 +114,6 @@ static void displacement(const swage::Mesh& mesh,
             K_elem(elem_gid, row, constrained_dof) = 0.0;
 
         K_elem(elem_gid, constrained_dof, constrained_dof) = 1.0;
-        //F_elem(elem_gid, constrained_dof) = 0;
         F_elem(elem_gid, constrained_dof) = gap / static_cast<double>(num_elems_in_node);
 
     }
