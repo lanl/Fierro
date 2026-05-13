@@ -161,6 +161,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         } // end if
 
         displacement_step.set_values(0);
+        Kokkos::fence();
         //std::cout << "NUM MAT POINTS REF ELEM: " << ref_elem.gauss_point_grad_basis.dims(0) << std::endl;
         //std::cout << "NUM MAT POINTS IN ELEM: " << mesh.num_gauss_in_elem << std::endl;
         //std::cout << "NUM MAT ELEMS: " << State.MaterialToMeshMaps.num_mat_elems.host(0) << std::endl;
@@ -188,6 +189,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // ***************************************************
             K_elem.set_values(0);
             F_elem.set_values(0);
+            Kokkos::fence();
 
             // looping through materials
             for (int mat_id = 0; mat_id < num_mats; mat_id++) {
@@ -222,6 +224,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 }); // end elem
 
+                Kokkos::fence();
+
             } // end mat_id
             /* for (int i = 0; i < 3*mesh.num_nodes_in_elem; i++) {
                 for (int j = 0; j < 3*mesh.num_nodes_in_elem; j++) {
@@ -253,6 +257,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             displacement_iter.set_values(0);
             rk.set_values(0);
+            Kokkos::fence();
 
             // getting r0 = (02F - 01F) - K * displacement_iter
             get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter, rk);
@@ -269,6 +274,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             FOR_ALL(i, 0, 3*mesh.num_nodes, {
                 p(i) = rk(i);
             });
+            Kokkos::fence();
 
             // start of iteration loop
             for (int cgm_iter = 0; cgm_iter < max_iter; cgm_iter++) {
@@ -280,6 +286,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rktrk, {
                     loc_rktrk += rk(i) * rk(i);
                 }, rktrk);
+                Kokkos::fence();
                 //std::cout << "RKTRK: " << rktrk << std::endl;
 
                 // get scalar: alpha_k = (r_k^T * r_k) / (p_k^T * K * p_k)
@@ -290,6 +297,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 FOR_ALL(i, 0, 3*mesh.num_nodes, {
                     displacement_iter(i) += alpha_k * p(i);
                 });
+                Kokkos::fence();
                 /* for (int i = 0; i < 3*mesh.num_nodes; i++) {
                     std::cout << displacement_iter(i) << std::endl;
                 }
@@ -304,6 +312,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1trkp1, {
                     loc_rkp1trkp1 += rkp1(i) * rkp1(i);
                 }, rkp1trkp1);
+                Kokkos::fence();
 
                 // check convergence
                 double norm = sqrt(rkp1trkp1);
@@ -323,6 +332,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 FOR_ALL(i, 0, 3*mesh.num_nodes, {
                     rk(i) = rkp1(i);
                 });
+                Kokkos::fence();
 
             } // end iteration loop
 
@@ -334,6 +344,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             FOR_ALL(i, 0, 3*mesh.num_nodes, {
                 displacement_step(i) += displacement_iter(i);
             });
+            Kokkos::fence();
 
             // convergence check
             double norm_num = 0.0;
@@ -362,6 +373,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 j, 0, 3, {
                     State.node.displacement(i,j) += displacement_step(3*i + j);
         });
+        Kokkos::fence();
 
         /* for (int i = 0; i < mesh.num_nodes; i++) {
             for (int j = 0; j < 3; j++) {
@@ -397,6 +409,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 } // end mat_pt
 
             }); // end elem
+            Kokkos::fence();
 
         } // end mat_id
 

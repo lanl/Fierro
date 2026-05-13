@@ -88,6 +88,7 @@ void TLQS3D::get_r0(
             r0(global_dof) = val;
         }
     });
+    Kokkos::fence();
 } // end get_r0
 
 double TLQS3D::get_alpha(
@@ -125,6 +126,7 @@ double TLQS3D::get_alpha(
             }
         }
     }, ptkp);
+    Kokkos::fence();
     //std::cout << "PTKP: " << ptkp << std::endl;
 
     return rktrk / (ptkp+1E-16);
@@ -176,4 +178,5 @@ void TLQS3D::get_rkp1(
             rkp1(global_dof) = rk(global_dof) - alpha * Kp_val;
         }
     });
+    Kokkos::fence();
 } // end get_rkp1
