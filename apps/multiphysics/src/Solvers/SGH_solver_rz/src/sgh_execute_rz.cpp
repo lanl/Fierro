@@ -60,8 +60,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     double tiny  = SimulationParamaters.DynamicOptions.tiny;
     double small = SimulationParamaters.DynamicOptions.small;
 
-    double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
-    int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
+    double graphics_dt_ival  = SimulationParamaters.OutputOptions.graphics_time_step;
+    int    graphics_cyc_ival = SimulationParamaters.OutputOptions.graphics_iteration_step;
 
     // double time_initial = SimulationParamaters.DynamicOptions.time_initial;
     double time_final = this->time_end; //SimulationParamaters.DynamicOptions.time_final;

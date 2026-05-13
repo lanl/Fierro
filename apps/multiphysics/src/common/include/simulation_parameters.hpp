@@ -60,7 +60,7 @@ struct SimulationParameters_t
 {
     mesh_input_t mesh_input;                    ///< Mesh input information
 
-    output_options_t output_options;            ///< Simulation output information
+    OutputOptions_t OutputOptions;            ///< Simulation output information
 
     DynamicOptions_t DynamicOptions;          ///< Simulation timing and dynamic options
 

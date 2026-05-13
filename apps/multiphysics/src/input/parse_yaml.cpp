@@ -61,7 +61,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // simulation parameters contains:
 //   mesh_input
-//   output_options
+//   OutputOptions
 //   DynamicOptions
 //   solver_inputs
 //   RegionSetups
@@ -88,7 +88,7 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
 
     parse_dynamic_options(root, SimulationParamaters.DynamicOptions);
 
-    parse_output_options(root, SimulationParamaters.output_options);
+    parse_output_options(root, SimulationParamaters.OutputOptions);
 
     parse_solver_input(root, SimulationParamaters.solver_inputs);
 

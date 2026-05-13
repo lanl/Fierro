@@ -2058,7 +2058,7 @@ public:
         size_t num_mat_pt_tensor_vars = 0;
             
         // count the number of material point state vars to write out
-        for (auto field : SimulationParamaters.output_options.output_mat_pt_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_mat_pt_state){
             switch(field){
                 // scalar vars to write out
                 case material_pt_state::density:
@@ -2120,7 +2120,7 @@ public:
         size_t num_elem_tensor_vars = 0;
 
         // count the number of element average fields to write out
-        for (auto field : SimulationParamaters.output_options.output_elem_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_elem_state){
             switch(field){
                 // scalar vars to write out
                 case material_pt_state::density:
@@ -2177,7 +2177,7 @@ public:
         size_t num_gauss_pt_tensor_vars = 0;
 
         // gauss point values to ouptput
-        for (auto field : SimulationParamaters.output_options.output_gauss_pt_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_gauss_pt_state){
             switch(field){
                 // scalar vars to write out
                 case gauss_pt_state::volume:
@@ -2234,7 +2234,7 @@ public:
         size_t tensor_var = 0;
 
         // material point state to output
-        for (auto field : SimulationParamaters.output_options.output_mat_pt_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_mat_pt_state){
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
@@ -2332,7 +2332,7 @@ public:
         tensor_var = 0;
 
         // element state to output
-        for (auto field : SimulationParamaters.output_options.output_elem_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_elem_state){
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
@@ -2405,7 +2405,7 @@ public:
         int vel_grad_id = -1;
         
 
-        for (auto field : SimulationParamaters.output_options.output_gauss_pt_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_gauss_pt_state){
             switch(field){
                 // scalars
                 case gauss_pt_state::volume:
@@ -2442,7 +2442,7 @@ public:
         size_t num_node_scalar_vars = 0;
         size_t num_node_vector_vars = 0;
 
-        for (auto field : SimulationParamaters.output_options.output_node_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_node_state){
             switch(field){
                 // --- scalars
                 case node_state::mass:
@@ -2489,7 +2489,7 @@ public:
         vector_var = 0;
         tensor_var = 0;
 
-        for (auto field : SimulationParamaters.output_options.output_node_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_node_state){
             switch(field){
                 // scalars
                 case node_state::mass:
@@ -2570,8 +2570,8 @@ public:
                                     elem_scalar_fields,
                                     elem_tensor_fields,
                                     State.MaterialToMeshMaps.elem_in_mat_elem,
-                                    SimulationParamaters.output_options.output_elem_state,
-                                    SimulationParamaters.output_options.output_gauss_pt_state,
+                                    SimulationParamaters.OutputOptions.output_elem_state,
+                                    SimulationParamaters.OutputOptions.output_gauss_pt_state,
                                     State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                                     mat_id,
                                     num_elems,
@@ -2613,7 +2613,7 @@ public:
         concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
                                  node_vector_fields,
-                                 SimulationParamaters.output_options.output_node_state,
+                                 SimulationParamaters.OutputOptions.output_node_state,
                                  dt,
                                  num_nodes,
                                  num_dims,
@@ -2634,8 +2634,8 @@ public:
         //  Write the nodal and elem fields 
         // ********************************
 
-        if (SimulationParamaters.output_options.format == output_options::viz ||
-            SimulationParamaters.output_options.format == output_options::viz_and_state) {
+        if (SimulationParamaters.OutputOptions.format == output_options::viz ||
+            SimulationParamaters.OutputOptions.format == output_options::viz_and_state) {
 
             // create the folder structure if it does not exist
             struct stat st;
@@ -2731,7 +2731,7 @@ public:
                                                mat_elem_scalar_fields,
                                                mat_elem_tensor_fields,
                                                State.MaterialToMeshMaps.elem_in_mat_elem,
-                                               SimulationParamaters.output_options.output_mat_pt_state,
+                                               SimulationParamaters.OutputOptions.output_mat_pt_state,
                                                num_mat_elems,
                                                mat_id,
                                                mat_den_id,
@@ -2857,8 +2857,8 @@ public:
 
 
         // STATE
-        if (SimulationParamaters.output_options.format == output_options::state ||
-            SimulationParamaters.output_options.format == output_options::viz_and_state) {
+        if (SimulationParamaters.OutputOptions.format == output_options::state ||
+            SimulationParamaters.OutputOptions.format == output_options::viz_and_state) {
 
             write_material_point_state(mesh,
                                        State,
@@ -2873,7 +2873,7 @@ public:
 
 
         // will drop ensight outputs in the near future
-        if (SimulationParamaters.output_options.format == output_options::ensight){
+        if (SimulationParamaters.OutputOptions.format == output_options::ensight){
            write_ensight(mesh,
                          State,
                          SimulationParamaters,

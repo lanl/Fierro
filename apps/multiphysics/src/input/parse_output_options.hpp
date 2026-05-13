@@ -48,12 +48,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-struct output_options_t;
+struct OutputOptions_t;
 
 using namespace mtr;
 
 
 // Parse output options
-void parse_output_options(Yaml::Node& root, output_options_t& output_options);
+void parse_output_options(Yaml::Node& root, OutputOptions_t& OutputOptions);
 
 #endif // end Header Guard

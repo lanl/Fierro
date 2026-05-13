@@ -62,7 +62,7 @@ struct DynamicOptions_t
     int rk_num_stages = 2;      ///< Number of RK stages
 
     // Unparsed internal variables
-}; // output_options_t
+}; // DynamicOptions_t
 
 // ----------------------------------
 // valid inputs for dynamic options

@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // simulation parameters contains:
 //   mesh_input
-//   output_options
+//   OutputOptions
 //   DynamicOptions
 //   solver_inputs
 //   RegionSetups

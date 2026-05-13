@@ -75,7 +75,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //    Parse Output options
 // =================================================================================
 void parse_output_options(Yaml::Node& root, 
-                          output_options_t& output_options)
+                          OutputOptions_t& OutputOptions)
 {
     Yaml::Node& out_opts = root["output_options"];
 
@@ -96,7 +96,7 @@ void parse_output_options(Yaml::Node& root,
 
             // set the output format
             if (map.find(format) != map.end()) {
-                output_options.format = map[format];
+                OutputOptions.format = map[format];
             }
             else{
                 std::cout << "ERROR: invalid output option input in YAML file: " << format << std::endl;
@@ -116,7 +116,7 @@ void parse_output_options(Yaml::Node& root,
 
             // set the timer_output_level
             if (map.find(timer_level) != map.end()) {
-                output_options.timer_level = map[timer_level];
+                OutputOptions.timer_level = map[timer_level];
             }
             else{
                 std::cout << "ERROR: invalid timer output option input in YAML file: " << timer_level << std::endl;
@@ -132,13 +132,13 @@ void parse_output_options(Yaml::Node& root,
         else if (a_word.compare("graphics_time_step") == 0) {
             real_t graphics_time_step = root["output_options"][a_word].As<real_t>();
 
-            output_options.graphics_time_step = graphics_time_step;
+            OutputOptions.graphics_time_step = graphics_time_step;
         } // graphics_time_step
         // Graphics iteration step
         else if (a_word.compare("graphics_iteration_step") == 0) {
             int graphics_iteration_step = root["output_options"][a_word].As<int>();
 
-            output_options.graphics_iteration_step = graphics_iteration_step;
+            OutputOptions.graphics_iteration_step = graphics_iteration_step;
         } // graphics_iteration_step
         else if (a_word.compare("elem_field_outputs") == 0) {
                 Yaml::Node & output_vars_yaml = root["output_options"][a_word];
@@ -153,7 +153,7 @@ void parse_output_options(Yaml::Node& root,
                     if (elem_outputs_map.find(var_name) != elem_outputs_map.end()) {
                         auto field_var = elem_outputs_map[var_name]; // get the enum for this field variabled
                         
-                        output_options.output_elem_state.push_back(field_var);
+                        OutputOptions.output_elem_state.push_back(field_var);
                     }
                     else{
                         throw std::runtime_error("**** Element Field Ouput Variable Name Not Understood ****");
@@ -164,7 +164,7 @@ void parse_output_options(Yaml::Node& root,
                 // check that if elem_sie is specified that mass is also specified
                 bool sie_written = false;
                 bool mass_written = false;
-                for (auto field : output_options.output_elem_state){
+                for (auto field : OutputOptions.output_elem_state){
 
                     if(field == material_pt_state::specific_internal_energy){
                         sie_written = true;
@@ -175,7 +175,7 @@ void parse_output_options(Yaml::Node& root,
                 }
                 if(sie_written == true && mass_written == false){
                     // add mass to the outputs
-                    output_options.output_elem_state.push_back(material_pt_state::mass);
+                    OutputOptions.output_elem_state.push_back(material_pt_state::mass);
                     std::cout << "WARNING: Writing element average specific internal energy requires the material masses. \n";
                     std::cout << "The element mass was added to graphics outputs. \n";
                 }
@@ -195,7 +195,7 @@ void parse_output_options(Yaml::Node& root,
                     if (node_outputs_map.find(var_name) != node_outputs_map.end()) {
                         auto field_var = node_outputs_map[var_name]; // get the enum for this field variabled
                         
-                        output_options.output_node_state.push_back(field_var);
+                        OutputOptions.output_node_state.push_back(field_var);
                     }
                     else{
                         throw std::runtime_error("**** Node Field Ouput Variable Name Not Understood ****");
@@ -216,7 +216,7 @@ void parse_output_options(Yaml::Node& root,
                     if (gauss_pt_outputs_map.find(var_name) != gauss_pt_outputs_map.end()) {
                         auto field_var = gauss_pt_outputs_map[var_name]; // get the enum for this field variabled
                         
-                        output_options.output_gauss_pt_state.push_back(field_var);
+                        OutputOptions.output_gauss_pt_state.push_back(field_var);
                     }
                     else{
                         throw std::runtime_error("**** Gauss Pnt Field Ouput Variable Name Not Understood ****");
@@ -237,7 +237,7 @@ void parse_output_options(Yaml::Node& root,
                     if (mat_pt_outputs_map.find(var_name) != mat_pt_outputs_map.end()) {
                         auto field_var = mat_pt_outputs_map[var_name]; // get the enum for this field variabled
                         
-                        output_options.output_mat_pt_state.push_back(field_var);
+                        OutputOptions.output_mat_pt_state.push_back(field_var);
                     }
                     else{
                         throw std::runtime_error("**** Mat Pnt Field Ouput Variable Name Not Understood ****");

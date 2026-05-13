@@ -95,13 +95,13 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             doing_fracture
         );
     }
-
+ 
     double fuzz  = SimulationParamaters.DynamicOptions.fuzz;  // 1.e-16
     double tiny  = SimulationParamaters.DynamicOptions.tiny;  // 1.e-12
     double small = SimulationParamaters.DynamicOptions.small; // 1.e-8
 
-    double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
-    int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
+    double graphics_dt_ival  = SimulationParamaters.OutputOptions.graphics_time_step;
+    int    graphics_cyc_ival = SimulationParamaters.OutputOptions.graphics_iteration_step;
 
     // double time_initial = SimulationParamaters.DynamicOptions.time_initial;
     double time_final   = this->time_end; //SimulationParamaters.DynamicOptions.time_final;
