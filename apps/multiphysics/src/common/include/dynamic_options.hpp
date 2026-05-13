@@ -39,12 +39,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct dynamic_options_t
+/// \struct DynamicOptions_t
 ///
 /// \brief Stores time and cycle options
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct dynamic_options_t
+struct DynamicOptions_t
 {
     unsigned long cycle_stop = 2000000;
 

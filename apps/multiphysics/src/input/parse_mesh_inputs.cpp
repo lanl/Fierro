@@ -52,9 +52,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // simulation parameters contains:
 //   mesh_input
 //   output_options
-//   dynamic_options
+//   DynamicOptions
 //   solver_inputs
-//   region_setups
+//   RegionSetups
+//   InitialConditions
 #include "simulation_parameters.hpp"
 
 

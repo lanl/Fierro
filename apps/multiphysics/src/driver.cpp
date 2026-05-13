@@ -112,7 +112,7 @@ void Driver::initialize()
 
 
     // Setup the Solvers
-    double time_final = SimulationParamaters.dynamic_options.time_final;
+    double time_final = SimulationParamaters.DynamicOptions.time_final;
     for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
@@ -337,7 +337,7 @@ void Driver::setup_solver_vars(T& a_solver,
 
 
     // the final time of the simulation
-    double time_final = this->SimulationParamaters.dynamic_options.time_final;
+    double time_final = this->SimulationParamaters.DynamicOptions.time_final;
 
     // save the solver_id
     a_solver->solver_id = solver_id;

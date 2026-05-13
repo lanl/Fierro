@@ -62,11 +62,11 @@ struct SimulationParameters_t
 
     output_options_t output_options;            ///< Simulation output information
 
-    dynamic_options_t dynamic_options;          ///< Simulation timing and dynamic options
+    DynamicOptions_t DynamicOptions;          ///< Simulation timing and dynamic options
 
     std::vector<solver_input_t> solver_inputs;  ///< Solvers to use during the simulation
 
-    RegionSetup_t region_setups;                ///< region fills across all solvers
+    RegionSetup_t RegionSetups;                ///< region fills across all solvers
 
     InitialConditionSetup_t InitialConditionSetup;     ///< intial conditions
 

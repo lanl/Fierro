@@ -62,9 +62,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // simulation parameters contains:
 //   mesh_input
 //   output_options
-//   dynamic_options
+//   DynamicOptions
 //   solver_inputs
-//   region_setups
+//   RegionSetups
+//   InitialConditions
 #include "simulation_parameters.hpp"
 
 
@@ -85,7 +86,7 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
 
     parse_mesh_inputs(root, SimulationParamaters.mesh_input);
 
-    parse_dynamic_options(root, SimulationParamaters.dynamic_options);
+    parse_dynamic_options(root, SimulationParamaters.DynamicOptions);
 
     parse_output_options(root, SimulationParamaters.output_options);
 
@@ -98,10 +99,10 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
 
     // parse the region yaml text into a vector of region_fills
     parse_regions(root, 
-                  SimulationParamaters.region_setups.reg_fills_in_solver,
-                  SimulationParamaters.region_setups.num_reg_fills_in_solver,
-                  SimulationParamaters.region_setups.region_fills,
-                  SimulationParamaters.region_setups.region_fills_host,
+                  SimulationParamaters.RegionSetups.reg_fills_in_solver,
+                  SimulationParamaters.RegionSetups.num_reg_fills_in_solver,
+                  SimulationParamaters.RegionSetups.region_fills,
+                  SimulationParamaters.RegionSetups.region_fills_host,
                   num_solvers);
 
 
