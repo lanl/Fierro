@@ -511,7 +511,7 @@ void fill_regions(
                 if (mat_id==a_saved_mat_id){
                     // ERROR, same material is assigned twice to this region
 
-                    printf("ERROR: material id %d is defined twice for region id %d \n", mat_id, reg_id);
+                    printf("ERROR: material id %zu is defined twice for region id %zu \n", mat_id, reg_id);
                     Kokkos::abort("ERROR: material ids must be assigned once to a region. Either delete an \n initial condition or copy a material definition and use a new material index.\n");
                     
                 } // end if
@@ -568,7 +568,7 @@ void fill_regions(
         double check_unity = 0.0;
         for(size_t reg_fill_lid=0; reg_fill_lid<elem_num_region_fills(elem_gid); reg_fill_lid++){
 
-            printf("elem_gid=%d, mat_volfrac=%f, geo_volfrac=%f \n", elem_gid, elem_geo_volfrac(elem_gid, reg_fill_lid));
+            printf("elem_gid=%d, geo_volfrac=%f \n", elem_gid, elem_geo_volfrac(elem_gid, reg_fill_lid));
 
             check_unity += elem_geo_volfrac(elem_gid, reg_fill_lid);
         }
@@ -612,7 +612,7 @@ void fill_regions(
 
                     if (elem_mat_id(elem_gid,a_saved_mat)==elem_mat_id(elem_gid,bin)){
                         // same material is assigned multiple times to this element, send an error message
-                        printf("ERROR: material id %d is painted twice when applying ic %d \n", elem_mat_id(elem_gid,bin), ic_id);
+                        printf("ERROR: material id %zu is painted twice when applying ic %zu \n", elem_mat_id(elem_gid,bin), ic_id);
                         Kokkos::abort("ERROR: Same material assigned multiple times to same element. \n");
                     }
 
@@ -768,145 +768,6 @@ void fill_regions(
 
     }); // end FOR_ALL node loop
     Kokkos::fence();  
-
-/*
-            //---------
-            // for high-order, we loop over gauss points in element
-            // gauss_gid = elem_gid for low-order solvers
-            //---------
-            for (size_t gauss_lid=0; gauss_lid<mesh.num_gauss_in_elem; gauss_lid++){
-
-                // get gauss git using elem and gauss_lid in the element
-                size_t gauss_gid = elem_gid + gauss_lid;
-
-                // HIGH ORDER UPDATE THIS
-                // NOTE: gauss_coords=elem_coords, needs to be updated for high-order elements
-                //       Will need to be the gauss_coords, it is current element coords
-                ViewCArrayKokkos <double> coords(&elem_coords(elem_gid,0), 3);
-
-                //---------
-                // Remember:
-                //   all paints have an if check inside, painting happens only if the user said
-                //   to paint a variable in the yaml input file
-                //---------
-
-                // paint the den on the gauss pts of the mesh
-                paint_multi_scalar(gauss_den,
-                                coords,
-                                region_fills(reg_id).den,
-                                0.0,
-                                region_fills(reg_id).den_origin,
-                                gauss_gid,
-                                mesh.num_dims,
-                                bin,
-                                region_fills(reg_id).den_field);
-
-                // paint the sie on the gauss pts of the mesh
-                paint_multi_scalar(gauss_sie,
-                                coords,
-                                region_fills(reg_id).sie,
-                                0.0,
-                                region_fills(reg_id).sie_origin,
-                                gauss_gid,
-                                mesh.num_dims,
-                                bin,
-                                region_fills(reg_id).sie_field);
-
-                if ( region_fills(reg_id).sie_field != initial_conditions::noICsScalar ){
-                    // for this bin, we are using sie
-                    gauss_use_sie(gauss_gid,bin) = true;
-                }
-
-                // painting extensive ie
-                paint_multi_scalar(gauss_ie,
-                                coords,
-                                region_fills(reg_id).ie,
-                                0.0,
-                                region_fills(reg_id).sie_origin,
-                                gauss_gid,
-                                mesh.num_dims,
-                                bin,
-                                region_fills(reg_id).ie_field);
-               
-                // painting thermal conductivity
-                paint_multi_scalar(gauss_thermal_conductivity,
-                                coords,
-                                region_fills(reg_id).thermal_conductivity,
-                                0.0,
-                                region_fills(reg_id).thermal_conductivity_origin,
-                                gauss_gid,
-                                mesh.num_dims,
-                                bin,
-                                region_fills(reg_id).thermal_conductivity_field);
-
-                // painting specific heat
-                paint_multi_scalar(gauss_specific_heat,
-                                coords,
-                                region_fills(reg_id).specific_heat,
-                                0.0,
-                                region_fills(reg_id).specific_heat_origin,
-                                gauss_gid,
-                                mesh.num_dims,
-                                bin,
-                                region_fills(reg_id).specific_heat_field);
-          
-                // paint the level set field on the gauss pts of the mesh
-                paint_multi_scalar(gauss_level_set,
-                    coords,
-                    region_fills(reg_id).level_set,
-                    region_fills(reg_id).level_set_slope,
-                    region_fills(reg_id).level_set_origin,
-                    gauss_gid,
-                    mesh.num_dims,
-                    bin,
-                    region_fills(reg_id).level_set_field);
-
-            } // end loop over gauss points
-
-
-            // --- painting nodal variables ---  
-
-            // loop over the nodes of this element and apply velocity
-            for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                
-                // get the mesh node index
-                size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
-
-                // node coords(node_gid,dim)
-                ViewCArrayKokkos <double> a_node_coords(&node_coords(node_gid,0), 3);
-
-                // paint the velocity onto the nodes of the mesh
-                if(node_vel.size()>0){
-                    // if check is needed as solver state might not match fill instructions
-                    paint_vector(node_vel,
-                                 a_node_coords,
-                                 region_fills(reg_id).u,
-                                 region_fills(reg_id).v,
-                                 region_fills(reg_id).w,
-                                 region_fills(reg_id).speed,
-                                 node_gid,
-                                 mesh.num_dims,
-                                 region_fills(reg_id).vel_field);
-                }
-                
-                // paint nodal temperature
-                if (node_temp.size()>0){
-                    // if check is needed as solver state might not match fill instructions
-                    paint_scalar(node_temp,
-                                 a_node_coords,
-                                 region_fills(reg_id).temperature,
-                                 0.0,
-                                 node_gid,
-                                 mesh.num_dims,
-                                 region_fills(reg_id).temperature_field);
-                }
-
-            } // end loop over the nodes in elem
-
-        } // loop over the fills in this elem
-
-*/
-
 
 
 

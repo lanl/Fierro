@@ -184,5 +184,21 @@ static std::vector<std::string> str_region_volume_inps
 };
 
 
+// ----------------------------------
+// required inputs for region options
+// ----------------------------------
+static std::vector<std::string> region_required_inps
+{
+    "id",
+    "volume"
+};
+
+// -------------------------------------
+// required inputs for specifying volume
+// -------------------------------------
+static std::vector<std::string> region_volume_required_inps
+{
+    "type"
+};
 
 #endif // end Header Guard

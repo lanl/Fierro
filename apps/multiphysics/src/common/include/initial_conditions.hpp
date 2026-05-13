@@ -328,29 +328,21 @@ static std::vector<std::string> str_ics_mat_volfrac_inps
 };
 
 
-// ----------------------------------
-// required inputs for region options
-// ----------------------------------
-static std::vector<std::string> region_required_inps
-{
-    "material_id",
-    "volume"
-};
 
-
-// -------------------------------------
-// required inputs for specifying volume
-// -------------------------------------
-static std::vector<std::string> region_volume_required_inps
+// ----------------------------------
+// required inputs for ics options
+// ----------------------------------
+static std::vector<std::string> ics_required_inps
 {
-    "type"
+    "region_id",
+    "material_id"
 };
 
 
 // -------------------------------------
 // required inputs for filling velocity
 // -------------------------------------
-static std::vector<std::string> region_vel_required_inps
+static std::vector<std::string> ics_vel_required_inps
 {
     "type"
 };
@@ -359,7 +351,7 @@ static std::vector<std::string> region_vel_required_inps
 // -------------------------------------
 // required inputs for filling density
 // -------------------------------------
-static std::vector<std::string> region_den_required_inps
+static std::vector<std::string> ics_den_required_inps
 {
     "type"
 };
@@ -368,7 +360,7 @@ static std::vector<std::string> region_den_required_inps
 // -------------------------------------
 // required inputs for filling sie
 // -------------------------------------
-static std::vector<std::string> region_sie_required_inps
+static std::vector<std::string> ics_sie_required_inps
 {
     "type"
 };
@@ -377,7 +369,7 @@ static std::vector<std::string> region_sie_required_inps
 // -------------------------------------
 // required inputs for filling ie
 // -------------------------------------
-static std::vector<std::string> region_ie_required_inps
+static std::vector<std::string> ics_ie_required_inps
 {
     "type"
 };
@@ -386,7 +378,7 @@ static std::vector<std::string> region_ie_required_inps
 // -------------------------------------
 // required inputs for filling temperature
 // -------------------------------------
-static std::vector<std::string> region_temperature_required_inps
+static std::vector<std::string> ics_temperature_required_inps
 {
     "type"
 };
@@ -395,7 +387,7 @@ static std::vector<std::string> region_temperature_required_inps
 // -------------------------------------
 // required inputs for filling specific heat
 // -------------------------------------
-static std::vector<std::string> region_specific_heat_required_inps
+static std::vector<std::string> ics_specific_heat_required_inps
 {
     "type"
 };
@@ -404,7 +396,7 @@ static std::vector<std::string> region_specific_heat_required_inps
 // -------------------------------------
 // required inputs for filling thermal conductivity
 // -------------------------------------
-static std::vector<std::string> region_thermal_conductivity_required_inps
+static std::vector<std::string> ics_thermal_conductivity_required_inps
 {
     "type"
 };
@@ -413,7 +405,7 @@ static std::vector<std::string> region_thermal_conductivity_required_inps
 // -------------------------------------
 // required inputs for filling level set
 // -------------------------------------
-static std::vector<std::string> region_level_set_required_inps
+static std::vector<std::string> ics_level_set_required_inps
 {
     "type"
 //    "value",
@@ -424,7 +416,7 @@ static std::vector<std::string> region_level_set_required_inps
 // -------------------------------------
 // required inputs for filling material volume fraction
 // -------------------------------------
-static std::vector<std::string> region_volfrac_required_inps
+static std::vector<std::string> ics_volfrac_required_inps
 {
     "type"
 };
