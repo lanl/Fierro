@@ -1472,7 +1472,8 @@ public:
         GaussPoint_t& GaussPoints,
         node_t&   node,
         corner_t& corner,
-        SimulationParameters_t& SimulationParamaters)
+        SimulationParameters_t& SimulationParamaters,
+        bool HexN)
     {
         if (SimulationParamaters.mesh_input.num_dims == 2) {
             if (SimulationParamaters.mesh_input.type == mesh_input::Polar) {
@@ -1492,7 +1493,12 @@ public:
             }
         }
         else if (SimulationParamaters.mesh_input.num_dims == 3) {
-            build_3d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+            if (!HexN) {
+                build_3d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+            }
+            else {
+                build_3d_HexN_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+            }
         }
         else{
             throw std::runtime_error("**** ONLY 2D RZ OR 3D MESHES ARE SUPPORTED ****");
@@ -2004,7 +2010,7 @@ public:
 
 
         // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+        mesh.initialize_elems_Pn(num_elems, num_dim, Pn_order);
 
         // --- Build elems  ---
         

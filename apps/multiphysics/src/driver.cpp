@@ -89,7 +89,8 @@ void Driver::initialize()
                                 State.GaussPoints, 
                                 State.node, 
                                 State.corner, 
-                                SimulationParamaters);
+                                SimulationParamaters,
+                                TLQS_active);
     }
     else{
         throw std::runtime_error("**** NO MESH INPUT OPTIONS PROVIDED IN YAML ****");
