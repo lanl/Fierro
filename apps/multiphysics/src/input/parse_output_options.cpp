@@ -53,8 +53,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "parse_output_options.hpp"
 
 // simulation parameters contains:
-//   mesh_input
-//   output_options
+//   MeshInput
+//   OutputOptions
 //   DynamicOptions
 //   solver_inputs
 //   RegionSetups

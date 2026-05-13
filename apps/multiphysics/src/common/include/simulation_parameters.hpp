@@ -58,7 +58,7 @@ using namespace mtr;
 /////////////////////////////////////////////////////////////////////////////
 struct SimulationParameters_t
 {
-    mesh_input_t mesh_input;                    ///< Mesh input information
+    MeshInput_t MeshInput;                    ///< Mesh input information
 
     OutputOptions_t OutputOptions;            ///< Simulation output information
 

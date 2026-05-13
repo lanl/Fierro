@@ -335,7 +335,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void read_mesh(swage::Mesh& mesh,
                    State_t& State,
-                   mesh_input_t& mesh_inps,
+                   MeshInput_t& mesh_inps,
                    int      num_dims)
     {
         if (mesh_file_ == NULL) {
@@ -399,7 +399,7 @@ public:
                            GaussPoint_t& GaussPoints,
                            node_t&   node,
                            corner_t& corner,
-                           mesh_input_t& mesh_inps,
+                           MeshInput_t& mesh_inps,
                            int num_dims)
     {
         FILE* in;
@@ -712,7 +712,7 @@ public:
                     GaussPoint_t& GaussPoints,
                     node_t&   node,
                     corner_t& corner,
-                    mesh_input_t& mesh_inps,
+                    MeshInput_t& mesh_inps,
                     int num_dims)
     {
 
@@ -941,7 +941,7 @@ public:
                     GaussPoint_t& GaussPoints,
                     node_t&   node,
                     corner_t& corner,
-                    mesh_input_t& mesh_inps,
+                    MeshInput_t& mesh_inps,
                     int num_dims)
     {
 
@@ -1285,11 +1285,11 @@ public:
         corner_t& corner,
         SimulationParameters_t& SimulationParamaters)
     {
-        if (SimulationParamaters.mesh_input.num_dims == 2) {
-            if (SimulationParamaters.mesh_input.type == mesh_input::Polar) {
+        if (SimulationParamaters.MeshInput.num_dims == 2) {
+            if (SimulationParamaters.MeshInput.type == mesh_input::Polar) {
                 build_2d_polar(mesh, GaussPoints, node, corner, SimulationParamaters);
             }
-            else if (SimulationParamaters.mesh_input.type == mesh_input::Box) {
+            else if (SimulationParamaters.MeshInput.type == mesh_input::Box) {
                 build_2d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
             }
             else{
@@ -1302,7 +1302,7 @@ public:
                 throw std::runtime_error("**** 2D MESH TYPE NOT SUPPORTED ****");
             }
         }
-        else if (SimulationParamaters.mesh_input.num_dims == 3) {
+        else if (SimulationParamaters.MeshInput.num_dims == 3) {
             build_3d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
         }
         else{
@@ -1333,11 +1333,11 @@ public:
 
         const int num_dim = 2;
 
-        const double lx = SimulationParamaters.mesh_input.length[0];
-        const double ly = SimulationParamaters.mesh_input.length[1];
+        const double lx = SimulationParamaters.MeshInput.length[0];
+        const double ly = SimulationParamaters.MeshInput.length[1];
 
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
+        const int num_elems_i = SimulationParamaters.MeshInput.num_elems[0];
+        const int num_elems_j = SimulationParamaters.MeshInput.num_elems[1];
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -1350,8 +1350,8 @@ public:
         const int num_elems = num_elems_i * num_elems_j;
 
         std::vector<double> origin(num_dim);
-        // SimulationParamaters.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+        // SimulationParamaters.MeshInput.origin.update_host();
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.MeshInput.origin[i]; }
 
         // --- 2D parameters ---
         // const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -1459,14 +1459,14 @@ public:
 
         int num_dim     = 2;
 
-        const double inner_radius = SimulationParamaters.mesh_input.inner_radius;
-        const double outer_radius = SimulationParamaters.mesh_input.outer_radius;
+        const double inner_radius = SimulationParamaters.MeshInput.inner_radius;
+        const double outer_radius = SimulationParamaters.MeshInput.outer_radius;
 
-        const double start_angle = PI / 180.0 * SimulationParamaters.mesh_input.starting_angle;
-        const double end_angle   = PI / 180.0 * SimulationParamaters.mesh_input.ending_angle;
+        const double start_angle = PI / 180.0 * SimulationParamaters.MeshInput.starting_angle;
+        const double end_angle   = PI / 180.0 * SimulationParamaters.MeshInput.ending_angle;
 
-        const int num_elems_i = SimulationParamaters.mesh_input.num_radial_elems;
-        const int num_elems_j = SimulationParamaters.mesh_input.num_angular_elems;
+        const int num_elems_i = SimulationParamaters.MeshInput.num_radial_elems;
+        const int num_elems_j = SimulationParamaters.MeshInput.num_angular_elems;
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -1480,7 +1480,7 @@ public:
 
         std::vector<double> origin(num_dim);
 
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.MeshInput.origin[i]; }
 
         // --- 2D parameters ---
         // const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -1594,15 +1594,15 @@ public:
 
         const int num_dim = 3;
 
-        // SimulationParamaters.mesh_input.length.update_host();
-        const double lx = SimulationParamaters.mesh_input.length[0];
-        const double ly = SimulationParamaters.mesh_input.length[1];
-        const double lz = SimulationParamaters.mesh_input.length[2];
+        // SimulationParamaters.MeshInput.length.update_host();
+        const double lx = SimulationParamaters.MeshInput.length[0];
+        const double ly = SimulationParamaters.MeshInput.length[1];
+        const double lz = SimulationParamaters.MeshInput.length[2];
 
-        // SimulationParamaters.mesh_input.num_elems.update_host();
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
-        const int num_elems_k = SimulationParamaters.mesh_input.num_elems[2];
+        // SimulationParamaters.MeshInput.num_elems.update_host();
+        const int num_elems_i = SimulationParamaters.MeshInput.num_elems[0];
+        const int num_elems_j = SimulationParamaters.MeshInput.num_elems[1];
+        const int num_elems_k = SimulationParamaters.MeshInput.num_elems[2];
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -1617,8 +1617,8 @@ public:
         const int num_elems = num_elems_i * num_elems_j * num_elems_k;
 
         std::vector<double> origin(num_dim);
-        // SimulationParamaters.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+        // SimulationParamaters.MeshInput.origin.update_host();
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.MeshInput.origin[i]; }
 
         // --- 3D parameters ---
         // const int num_faces_in_elem  = 6;  // number of faces in elem
@@ -1726,18 +1726,18 @@ public:
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
         const int num_dim = 3;
 
-        // SimulationParamaters.mesh_input.length.update_host();
-        const double lx = SimulationParamaters.mesh_input.length[0];
-        const double ly = SimulationParamaters.mesh_input.length[1];
-        const double lz = SimulationParamaters.mesh_input.length[2];
+        // SimulationParamaters.MeshInput.length.update_host();
+        const double lx = SimulationParamaters.MeshInput.length[0];
+        const double ly = SimulationParamaters.MeshInput.length[1];
+        const double lz = SimulationParamaters.MeshInput.length[2];
 
-        // SimulationParamaters.mesh_input.num_elems.update_host();
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
-        const int num_elems_k = SimulationParamaters.mesh_input.num_elems[2];
+        // SimulationParamaters.MeshInput.num_elems.update_host();
+        const int num_elems_i = SimulationParamaters.MeshInput.num_elems[0];
+        const int num_elems_j = SimulationParamaters.MeshInput.num_elems[1];
+        const int num_elems_k = SimulationParamaters.MeshInput.num_elems[2];
 
         // creating zones for the Pn order
-        const int Pn_order = SimulationParamaters.mesh_input.p_order;
+        const int Pn_order = SimulationParamaters.MeshInput.p_order;
         
         if (Pn_order > 19) {
             printf("Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
@@ -1761,7 +1761,7 @@ public:
         // const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
 
         std::vector<double> origin(num_dim);
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.MeshInput.origin[i]; }
 
         // --- 3D parameters ---
         // const int num_faces_in_zone = 6;   // number of faces in zone

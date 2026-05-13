@@ -49,8 +49,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "matar.h"
 
 // simulation parameters contains:
-//   mesh_input
-//   output_options
+//   MeshInput
+//   OutputOptions
 //   DynamicOptions
 //   solver_inputs
 //   RegionSetups

@@ -50,7 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "parse_dynamic_inputs.hpp"
 
 // simulation parameters contains:
-//   mesh_input
+//   MeshInput
 //   OutputOptions
 //   DynamicOptions
 //   solver_inputs

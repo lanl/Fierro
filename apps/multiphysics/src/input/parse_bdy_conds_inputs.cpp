@@ -50,8 +50,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "parse_bdy_conds_inputs.hpp"
 
 // simulation parameters contains:
-//   mesh_input
-//   output_options
+//   MeshInput
+//   OutputOptions
 //   DynamicOptions
 //   solver_inputs
 //   RegionSetups

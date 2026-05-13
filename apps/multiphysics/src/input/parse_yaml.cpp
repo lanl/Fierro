@@ -60,7 +60,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "parse_output_options.hpp"
 
 // simulation parameters contains:
-//   mesh_input
+//   MeshInput
 //   OutputOptions
 //   DynamicOptions
 //   solver_inputs
@@ -84,7 +84,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary)
 {
 
-    parse_mesh_inputs(root, SimulationParamaters.mesh_input);
+    parse_mesh_inputs(root, SimulationParamaters.MeshInput);
 
     parse_dynamic_options(root, SimulationParamaters.DynamicOptions);
 
@@ -115,7 +115,7 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
 
 
     // parse the material yaml text into a vector of materials
-    parse_materials(root, Materials, SimulationParamaters.mesh_input.num_dims);
+    parse_materials(root, Materials, SimulationParamaters.MeshInput.num_dims);
     parse_multimaterial_options(root, Materials);
 }
 
