@@ -79,6 +79,8 @@ void parse_regions(Yaml::Node& root,
 
     size_t num_regions = region_yaml.Size();
 
+    printf("Number of regions = %zu \n", num_regions);
+
     // reg_fills_in_solver(solver_id, fill_lid) = fill_id
     reg_fills_in_solver = DCArrayKokkos<size_t>(num_solvers, num_regions, "sim_param.region_setup.reg_fills_in_solver");
     region_fills = CArrayKokkos<RegionFill_t>(num_regions , "sim_param.region_setup.region_fills");

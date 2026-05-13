@@ -236,6 +236,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 /// \param GaussPoint_sie is specific internal energy at the GaussPoints on the mesh
 /// \param GaussPoint state ...
 /// \param elem_mat_volfrac is volume fraction at the GaussPoints on the mesh
+/// \param elem_geo_volfrac is geometric (e.g., part) volume fraction at the GaussPoints on the mesh
 /// \param elem_mat_id is the material id in an element
 /// \param num_mats_saved_in_elem is the number of material with volfrac<1 saved to the element
 /// \param object_ids are the object ids in the vtu file
@@ -485,6 +486,10 @@ void fill_regions(
     // array storing all the ids for initial conditions (ic's) applied to a region
     DynamicRaggedRightArrayKokkos <size_t> ics_in_region(num_region_fills, num_region_ics); 
 
+    // DEBUG:
+    printf("num regions = %zu, num_ics = %zu \n", num_region_fills, num_region_ics);
+
+
     // loop over initial conditions and save them to the region fills,
     // this creates a ragged array for all ics in each region
     RUN({
@@ -496,13 +501,26 @@ void fill_regions(
             const size_t reg_id = region_ics(ic_id).region_id;
             const size_t mat_id = region_ics(ic_id).material_id;
 
+
+            // DEBUG: 
+            printf("ic_id = %zu \n", ic_id);
+            printf("reg_id = %zu \n", reg_id);
+            printf("mat_id = %zu \n", mat_id);
+
             // the current stride is the ic storage index, we will push stride back after saving ic
             size_t ic_lid = ics_in_region.stride(reg_id);
+
+            // DEBUG:
+            printf("stride size ic_lid = %zu \n", ic_lid);
 
 
             // Important:
             // We verify that this is a new material initial condition, and if not, exit as it is an error
             for (size_t saved_ic_lid=0; saved_ic_lid<ic_lid; saved_ic_lid++){
+
+
+                // DEBUG:
+                printf("accessors to ics_in_region: reg = %zu, ic_lid = %zu \n", reg_id, ic_lid);
 
                 size_t a_saved_ic = ics_in_region(reg_id,ic_lid);
 
@@ -518,6 +536,9 @@ void fill_regions(
 
             } // end for saved_ic_lid
 
+            // make room to store a value, push back stride, create memory to store value
+            ics_in_region.stride(reg_id)++; // increment because a new value was appended
+
 
             // Important:
             // The number of ics assigned to a region must be less then max number of materials in an element
@@ -525,11 +546,9 @@ void fill_regions(
                 Kokkos::abort("ERROR: the number of material ids assigned to region %zu exceeded maximum \n number of materials per element.  Increase the the maximum number of materials per element \n");
             }
 
-
             // save ic index for each region in an array as it is a new material
             ics_in_region(reg_id,ic_lid) = ic_id; // a map to all ics for this region
-
-            ics_in_region.stride(reg_id)++; // increment because a new value was appended
+   
 
         } // end loop over ic's
 
@@ -550,8 +569,8 @@ void fill_regions(
     //                loop guass in elem:
     //                   save gauss state using ics 
     //--------------------------------------------------------------------
-    FOR_ALL(elem_gid, 0, mesh.num_elems, {
-
+    //FOR_ALL(elem_gid, 0, mesh.num_elems, {
+    for(int elem_gid=0; elem_gid<mesh.num_elems; elem_gid++){
 
         //
         // WARNGING WARNING WARNING
@@ -641,7 +660,7 @@ void fill_regions(
 
                 // Important:
                 // I must make elem_mat_volfrac tally to 1 when summing up to the bin level
-                bool volfrac_compressed = bound_volfracs(elem_mat_volfrac(elem_gid,bin),
+                bool volfrac_compressed = bound_volfracs(elem_mat_volfrac,
                                                          elem_gid,
                                                          bin);
 
@@ -765,8 +784,9 @@ void fill_regions(
             } // end for ic_in_region_lid
 
         } // end for loop over region fills in an element
-
-    }); // end FOR_ALL node loop
+    
+    } //end for
+    //}); // end FOR_ALL node loop
     Kokkos::fence();  
 
 

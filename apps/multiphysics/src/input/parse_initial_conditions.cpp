@@ -91,10 +91,10 @@ void parse_initial_conditions(Yaml::Node& root,
     Yaml::Node& region_yaml = root["initial_conditions"];
 
     size_t num_intial_conditions = region_yaml.Size();
+
+    printf("Number of initial conditions = %zu \n", num_intial_conditions);
    
     region_ics = CArrayKokkos<RegionICs_t>(num_intial_conditions, "sim_param.initial_condition_setup.region_ics");
-
-
 
 
     // loop over the fill ics specified in yaml file
