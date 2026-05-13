@@ -113,7 +113,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
                  fillGaussState.shear_modulii,
                  fillGaussState.poisson_ratios,
                  fillGaussState.level_set,
-                 fillElemState.volfrac,
+                 fillElemState.mat_volfrac,
                  fillElemState.geo_volfrac,
                  State.MeshtoMaterialMaps.mats_in_elem,
                  State.MeshtoMaterialMaps.num_mats_in_elem,
@@ -569,8 +569,7 @@ void fill_regions(
     //                loop guass in elem:
     //                   save gauss state using ics 
     //--------------------------------------------------------------------
-    //FOR_ALL(elem_gid, 0, mesh.num_elems, {
-    for(int elem_gid=0; elem_gid<mesh.num_elems; elem_gid++){
+    FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
         //
         // WARNGING WARNING WARNING
@@ -785,8 +784,7 @@ void fill_regions(
 
         } // end for loop over region fills in an element
     
-    } //end for
-    //}); // end FOR_ALL node loop
+    }); // end FOR_ALL node loop
     Kokkos::fence();  
 
 
@@ -956,11 +954,11 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                 size_t mat_point_sid = mat_elem_sid + gauss_lid; // for more than 1 gauss point, this increments
 
                 // --- volume fraction ---
-                State.MaterialPoints.volfrac.host(mat_id,mat_point_sid) = fillElemState.volfrac.host(elem_gid,a_mat_in_elem);
+                State.MaterialPoints.mat_volfrac.host(mat_id,mat_point_sid) = fillElemState.mat_volfrac.host(elem_gid,a_mat_in_elem);
                 State.MaterialPoints.geo_volfrac.host(mat_id,mat_point_sid) = fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
 
                 const double mat_vol = State.GaussPoints.vol.host(gauss_gid) * 
-                            fillElemState.volfrac.host(elem_gid,a_mat_in_elem)*fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
+                            fillElemState.mat_volfrac.host(elem_gid,a_mat_in_elem)*fillElemState.geo_volfrac.host(elem_gid,a_mat_in_elem);
 
                 // --- density and mass ---
                 if( State.MaterialPoints.den.size()>0 ){
@@ -1057,7 +1055,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     
     } // end for loop over mats
 
-    State.MaterialPoints.volfrac.update_device();
+    State.MaterialPoints.mat_volfrac.update_device();
     State.MaterialPoints.geo_volfrac.update_device();
 
     if (State.MaterialPoints.den.size()>0){

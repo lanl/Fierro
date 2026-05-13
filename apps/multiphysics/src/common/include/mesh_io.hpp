@@ -1957,7 +1957,7 @@ public:
                     State.MaterialPoints.mass.update_host();
                     break;
                 case material_pt_state::volume_fraction:
-                    State.MaterialPoints.volfrac.update_host();
+                    State.MaterialPoints.mat_volfrac.update_host();
                     State.MaterialPoints.geo_volfrac.update_host();
                     break;
                 case material_pt_state::eroded_flag:
@@ -2220,7 +2220,7 @@ public:
         int mat_sie_id = -1;
         int mat_sspd_id = -1;
         int mat_mass_id = -1;
-        int mat_volfrac_id = -1;  
+        int mat_mat_volfrac_id = -1;  
         int mat_geo_volfrac_id = -1;  // geometric volume fraction of part
         int mat_eroded_id = -1;
         int mat_stress_id = -1;
@@ -2263,8 +2263,8 @@ public:
                     var++;
                     break;
                 case material_pt_state::volume_fraction:
-                    mat_elem_scalar_var_names[var] = "mat_volfrac";
-                    mat_volfrac_id = var; 
+                    mat_elem_scalar_var_names[var] = "mat_volfrac";  // mat_mat_volfrac
+                    mat_mat_volfrac_id = var; 
                     var++;
 
                     mat_elem_scalar_var_names[var] = "mat_geo_volfrac";
@@ -2739,7 +2739,7 @@ public:
                                                mat_sie_id,
                                                mat_sspd_id,
                                                mat_mass_id,
-                                               mat_volfrac_id,
+                                               mat_mat_volfrac_id,
                                                mat_geo_volfrac_id,  
                                                mat_eroded_id,
                                                mat_stress_id,
@@ -3697,7 +3697,7 @@ public:
 
                         // field
                         elem_scalar_fields(den_id, elem_gid) += MaterialPoints.den(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                                MaterialPoints.mat_volfrac(mat_id, mat_elem_sid)*
                                                                 MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                     });
                     break;
@@ -3709,7 +3709,7 @@ public:
 
                         // field
                         elem_scalar_fields(pres_id, elem_gid) += MaterialPoints.pres(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                                MaterialPoints.mat_volfrac(mat_id, mat_elem_sid)*
                                                                 MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                     });
                     break;
@@ -3733,7 +3733,7 @@ public:
 
                         // field
                         elem_scalar_fields(sspd_id, elem_gid) += MaterialPoints.sspd(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                                MaterialPoints.mat_volfrac(mat_id, mat_elem_sid)*
                                                                 MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                     });
                     break;
@@ -3765,7 +3765,7 @@ public:
                                 // stress tensor 
                                 elem_tensor_fields(stress_id, elem_gid, i, j) +=
                                                 MaterialPoints.stress(mat_id, mat_elem_sid,i,j) *
-                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                MaterialPoints.mat_volfrac(mat_id, mat_elem_sid)*
                                                 MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                             } // end for
                         } // end for
@@ -3781,7 +3781,7 @@ public:
 
                         // field
                         elem_scalar_fields(conductivity_id, elem_gid) += MaterialPoints.conductivity(mat_id, mat_elem_sid)*
-                                                                             MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                                             MaterialPoints.mat_volfrac(mat_id, mat_elem_sid)*
                                                                              MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                     });
                     break;
@@ -3794,7 +3794,7 @@ public:
 
                         // field
                         elem_scalar_fields(specific_heat_id, elem_gid) += MaterialPoints.specific_heat(mat_id, mat_elem_sid)*
-                                                                              MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                                              MaterialPoints.mat_volfrac(mat_id, mat_elem_sid)*
                                                                               MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                     });
                     break;
@@ -3900,7 +3900,7 @@ public:
                                 const int mat_sie_id,
                                 const int mat_sspd_id,
                                 const int mat_mass_id,
-                                const int mat_volfrac_id,  
+                                const int mat_mat_volfrac_id,  
                                 const int mat_geo_volfrac_id,  
                                 const int mat_eroded_id,
                                 const int mat_stress_id,
@@ -3955,7 +3955,7 @@ public:
 
                         // field
                         // this is the volume fraction of a material within a part
-                        mat_elem_scalar_fields(mat_volfrac_id, mat_elem_sid) = MaterialPoints.volfrac(mat_id, mat_elem_sid);
+                        mat_elem_scalar_fields(mat_mat_volfrac_id, mat_elem_sid) = MaterialPoints.mat_volfrac(mat_id, mat_elem_sid);
                     });
 
                     // geometric volume fraction
