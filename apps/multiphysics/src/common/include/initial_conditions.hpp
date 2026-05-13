@@ -219,7 +219,7 @@ static std::vector<std::string> str_ics_inps
 {
     "region_id",
     "material_id",
-    "volume_fraction",
+    "material_volume_fraction",
     "velocity",
     "temperature",
     "density",

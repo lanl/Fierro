@@ -54,7 +54,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.hpp"
 
 
-
+// remember: 
+//    fill_gauss_state is in state.hpp
+//    fill_node_state is in state.hpp
 
 // =================================================================================
 //    Parse region ICs
@@ -86,7 +88,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
 
 
-    Yaml::Node& region_yaml = root["intial_conditions"];
+    Yaml::Node& region_yaml = root["initial_conditions"];
 
     size_t num_intial_conditions = region_yaml.Size();
    
@@ -99,7 +101,7 @@ void parse_initial_conditions(Yaml::Node& root,
     for (int ic_id = 0; ic_id < num_intial_conditions; ic_id++) {
 
         // read the variables names
-        Yaml::Node& inps_yaml = root["intial_conditions"][ic_id]["intial_condition"];
+        Yaml::Node& inps_yaml = root["initial_conditions"][ic_id]["initial_condition"];
 
         // get the intial condition variables names set by the user
         std::vector<std::string> user_str_ics_inps;
@@ -112,14 +114,14 @@ void parse_initial_conditions(Yaml::Node& root,
         for (auto& a_word : user_str_ics_inps) {
 
             if (a_word.compare("region_id") == 0) {
-                int reg_id = root["intial_conditions"][ic_id]["initial_condition"][a_word].As<int>();
+                int reg_id = root["initial_conditions"][ic_id]["initial_condition"][a_word].As<int>();
 
                 RUN({
                     region_ics(ic_id).region_id = reg_id;
                 });
             } // material_id
             else if (a_word.compare("material_id") == 0) {
-                int mat_id = root["intial_conditions"][ic_id]["initial_condition"][a_word].As<int>();
+                int mat_id = root["initial_conditions"][ic_id]["initial_condition"][a_word].As<int>();
 
                 RUN({
                     region_ics(ic_id).material_id = mat_id;
@@ -140,7 +142,7 @@ void parse_initial_conditions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under den
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["intial_conditions"][ic_id]["initial_condition"]["density"];
+                Yaml::Node& inps_subfields_yaml = root["initial_conditions"][ic_id]["initial_condition"]["density"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_ics_den_inputs;
@@ -153,7 +155,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // density
-                        double value = root["intial_conditions"][ic_id]["initial_condition"]["density"]["value"].As<double>();
+                        double value = root["initial_conditions"][ic_id]["initial_condition"]["density"]["value"].As<double>();
 
                         // check for a valid density, and then save it if it is
                         if (value < 0.0) {
@@ -166,7 +168,7 @@ void parse_initial_conditions(Yaml::Node& root,
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["intial_conditions"][ic_id]["initial_condition"]["density"]["type"].As<std::string>();
+                        std::string type = root["initial_conditions"][ic_id]["initial_condition"]["density"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -225,7 +227,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         for (const auto& element : str_ics_den_inps) {
                             std::cout << element << std::endl;
                         }
-                        throw std::runtime_error("**** Region density Inputs Not Understood ****");
+                        throw std::runtime_error("**** ICS density Inputs Not Understood ****");
                     } // end if on all subfields under density
 
                 } // end for loop over text
@@ -247,7 +249,7 @@ void parse_initial_conditions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under sie
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["intial_conditions"][ic_id]["initial_condition"]["specific_internal_energy"];
+                Yaml::Node& inps_subfields_yaml = root["initial_conditions"][ic_id]["initial_condition"]["specific_internal_energy"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_ics_sie_inputs;
@@ -260,14 +262,14 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // specific_internal_energy value
-                        double value = root["intial_conditions"][ic_id]["initial_condition"]["specific_internal_energy"]["value"].As<double>();
+                        double value = root["initial_conditions"][ic_id]["initial_condition"]["specific_internal_energy"]["value"].As<double>();
                         RUN({
                         region_ics(ic_id).sie = value;
                         });
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["intial_conditions"][ic_id]["initial_condition"]["specific_internal_energy"]["type"].As<std::string>();
+                        std::string type = root["initial_conditions"][ic_id]["initial_condition"]["specific_internal_energy"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -325,7 +327,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         for (const auto& element : str_ics_sie_inps) {
                             std::cout << element << std::endl;
                         }
-                        throw std::runtime_error("**** Region specific_internal_energy Inputs Not Understood ****");
+                        throw std::runtime_error("**** ICS specific_internal_energy Inputs Not Understood ****");
                     } // end if on all subfields under specific_internal_energy
 
                 } // end for loop over text
@@ -347,7 +349,7 @@ void parse_initial_conditions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under internal_energy
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["intial_conditions"][ic_id]["initial_condition"]["internal_energy"];
+                Yaml::Node& inps_subfields_yaml = root["initial_conditions"][ic_id]["initial_condition"]["internal_energy"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_ics_ie_inputs;
@@ -360,14 +362,14 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // extensive internal_energy
-                        double value = root["intial_conditions"][ic_id]["initial_condition"]["internal_energy"]["value"].As<double>();
+                        double value = root["initial_conditions"][ic_id]["initial_condition"]["internal_energy"]["value"].As<double>();
                         RUN({
                         region_ics(ic_id).ie = value;
                         });
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["intial_conditions"][ic_id]["initial_condition"]["internal_energy"]["type"].As<std::string>();
+                        std::string type = root["initial_conditions"][ic_id]["initial_condition"]["internal_energy"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -425,7 +427,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         for (const auto& element : str_ics_ie_inps) {
                             std::cout << element << std::endl;
                         }
-                        throw std::runtime_error("**** Region internal energy Inputs Not Understood ****");
+                        throw std::runtime_error("**** ICS internal energy Inputs Not Understood ****");
                     } // end if on all subfields under internal energy
 
                 } // end for loop over text
@@ -446,7 +448,7 @@ void parse_initial_conditions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under specific_heat
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["intial_conditions"][ic_id]["initial_condition"]["specific_heat"];
+                Yaml::Node& inps_subfields_yaml = root["initial_conditions"][ic_id]["initial_condition"]["specific_heat"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_ics_specific_heat_inputs;
@@ -459,14 +461,14 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // x-component of specific_heat
-                        double value = root["intial_conditions"][ic_id]["initial_condition"]["specific_heat"]["value"].As<double>();
+                        double value = root["initial_conditions"][ic_id]["initial_condition"]["specific_heat"]["value"].As<double>();
                         RUN({
                         region_ics(ic_id).specific_heat = value;
                         });
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["intial_conditions"][ic_id]["initial_condition"]["specific_heat"]["type"].As<std::string>();
+                        std::string type = root["initial_conditions"][ic_id]["initial_condition"]["specific_heat"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -525,7 +527,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         for (const auto& element : str_ics_specific_heat_inps) {
                             std::cout << element << std::endl;
                         }
-                        throw std::runtime_error("**** Region specific_heat Inputs Not Understood ****");
+                        throw std::runtime_error("**** ICS specific_heat Inputs Not Understood ****");
                     } // end if on all subfields under specific_heat
 
                 } // end for loop over text
@@ -546,7 +548,7 @@ void parse_initial_conditions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under thermal_conductivity
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["intial_conditions"][ic_id]["initial_condition"]["thermal_conductivity"];
+                Yaml::Node& inps_subfields_yaml = root["initial_conditions"][ic_id]["initial_condition"]["thermal_conductivity"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_ics_thermal_conductivity_inputs;
@@ -559,7 +561,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // thermal_conductivity
-                        double value = root["intial_conditions"][ic_id]["initial_condition"]["thermal_conductivity"]["value"].As<double>();
+                        double value = root["initial_conditions"][ic_id]["initial_condition"]["thermal_conductivity"]["value"].As<double>();
 
                         RUN({
                         region_ics(ic_id).thermal_conductivity = value;
@@ -567,7 +569,7 @@ void parse_initial_conditions(Yaml::Node& root,
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["intial_conditions"][ic_id]["initial_condition"]["thermal_conductivity"]["type"].As<std::string>();
+                        std::string type = root["initial_conditions"][ic_id]["initial_condition"]["thermal_conductivity"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -626,7 +628,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         for (const auto& element : str_ics_thermal_conductivity_inps) {
                             std::cout << element << std::endl;
                         }
-                        throw std::runtime_error("**** Region thermal_conductivity Inputs Not Understood ****");
+                        throw std::runtime_error("**** ICS thermal_conductivity Inputs Not Understood ****");
                     } // end if on all subfields under thermal_conductivity
 
                 } // end for loop over text
@@ -639,7 +641,7 @@ void parse_initial_conditions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under volfrac
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["intial_conditions"][ic_id]["initial_condition"]["material_volume_fraction"];
+                Yaml::Node& inps_subfields_yaml = root["initial_conditions"][ic_id]["initial_condition"]["material_volume_fraction"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_ics_mat_volfrac_inputs;
@@ -652,7 +654,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // volfrac value or the intercept if linear variation
-                        double value = root["intial_conditions"][ic_id]["initial_condition"]["volume_fraction"]["value"].As<double>();
+                        double value = root["initial_conditions"][ic_id]["initial_condition"]["material_volume_fraction"]["value"].As<double>();
       
                         RUN({
                             region_ics(ic_id).volfrac = value;
@@ -660,14 +662,14 @@ void parse_initial_conditions(Yaml::Node& root,
                     } // value
                     else if (a_subfield_word.compare("slope") == 0) {
                         // volfrac slope
-                        double slope = root["intial_conditions"][ic_id]["initial_condition"]["volume_fraction"]["slope"].As<double>();
+                        double slope = root["initial_conditions"][ic_id]["initial_condition"]["material_volume_fraction"]["slope"].As<double>();
       
                         RUN({
                             region_ics(ic_id).volfrac_slope = slope;
                         });
                     } // slope
                     else if (a_subfield_word.compare("origin") == 0) {
-                        std::string origin = root["intial_conditions"][ic_id]["initial_condition"]["volume_fraction"]["origin"].As<std::string>();
+                        std::string origin = root["initial_conditions"][ic_id]["initial_condition"]["material_volume_fraction"]["origin"].As<std::string>();
 
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(origin, ",");
@@ -694,7 +696,7 @@ void parse_initial_conditions(Yaml::Node& root,
                     } // origin
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["intial_conditions"][ic_id]["initial_condition"]["volume_fraction"]["type"].As<std::string>();
+                        std::string type = root["initial_conditions"][ic_id]["initial_condition"]["material_volume_fraction"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -765,21 +767,21 @@ void parse_initial_conditions(Yaml::Node& root,
                                         region_ics(ic_id).volfrac_field = initial_conditions::noICsScalar;
                                     });
 
-                                    std::cout << "ERROR: No valid volume fraction intial conditions type input " << std::endl;
+                                    std::cout << "ERROR: No valid material volume fraction intial conditions type input " << std::endl;
                                     std::cout << "Valid IC types are: " << std::endl;
                                     
                                     for (const auto& pair : scalar_ics_type_map) {
                                         std::cout << pair.second << std::endl;
                                     }
 
-                                    throw std::runtime_error("**** Volume Fraction Initial Conditions Type Not Understood ****");
+                                    throw std::runtime_error("**** Material Volume Fraction Initial Conditions Type Not Understood ****");
                                     break;
                             } // end switch
 
                         }
                         else{
                             std::cout << "ERROR: invalid input: " << type << std::endl;
-                            throw std::runtime_error("**** Volume Fraction IC Not Understood ****");
+                            throw std::runtime_error("**** Material Volume Fraction IC Not Understood ****");
                         } // end if on Volume Fraction type
                         
                     } // end if on Volume Fraction type
@@ -789,7 +791,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         for (const auto& element : str_ics_mat_volfrac_inps) {
                             std::cout << element << std::endl;
                         }
-                        throw std::runtime_error("**** Region Volume Fraction Inputs Not Understood ****");
+                        throw std::runtime_error("**** ICS Material Volume Fraction Inputs Not Understood ****");
                     } // end if on all subfields under Volume Fraction
 
                 } // end for loop over text
@@ -810,7 +812,7 @@ void parse_initial_conditions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under temperature
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["intial_conditions"][ic_id]["initial_condition"]["temperature"];
+                Yaml::Node& inps_subfields_yaml = root["initial_conditions"][ic_id]["initial_condition"]["temperature"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_ics_temperature_inputs;
@@ -824,14 +826,14 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         //temperature
-                        double value = root["intial_conditions"][ic_id]["initial_condition"]["temperature"]["value"].As<double>();
+                        double value = root["initial_conditions"][ic_id]["initial_condition"]["temperature"]["value"].As<double>();
                         RUN({
                         region_ics(ic_id).temperature = value;
                         });
                     } // value
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["intial_conditions"][ic_id]["initial_condition"]["temperature"]["type"].As<std::string>();
+                        std::string type = root["initial_conditions"][ic_id]["initial_condition"]["temperature"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -890,7 +892,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         for (const auto& element : str_ics_temperature_inps) {
                             std::cout << element << std::endl;
                         }
-                        throw std::runtime_error("**** Region temperature Inputs Not Understood ****");
+                        throw std::runtime_error("**** ICS temperature Inputs Not Understood ****");
                     } // end if on all subfields under temperature
 
                 } // end for loop over text
@@ -911,7 +913,7 @@ void parse_initial_conditions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under level set
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["intial_conditions"][ic_id]["initial_condition"]["level_set"];
+                Yaml::Node& inps_subfields_yaml = root["initial_conditions"][ic_id]["initial_condition"]["level_set"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_ics_level_set_inputs;
@@ -924,7 +926,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // level set
-                        double value = root["intial_conditions"][ic_id]["initial_condition"]["level_set"]["value"].As<double>();
+                        double value = root["initial_conditions"][ic_id]["initial_condition"]["level_set"]["value"].As<double>();
 
                         RUN({
                             region_ics(ic_id).level_set = value;
@@ -932,14 +934,14 @@ void parse_initial_conditions(Yaml::Node& root,
                     } // value
                     else if (a_subfield_word.compare("slope") == 0) {
                         // volfrac slope
-                        double slope = root["intial_conditions"][ic_id]["initial_condition"]["level_set"]["slope"].As<double>();
+                        double slope = root["initial_conditions"][ic_id]["initial_condition"]["level_set"]["slope"].As<double>();
         
                         RUN({
                             region_ics(ic_id).level_set_slope = slope;
                         });
                     } // slope
                     else if (a_subfield_word.compare("origin") == 0) {
-                        std::string origin = root["intial_conditions"][ic_id]["initial_condition"]["level_set"]["origin"].As<std::string>();
+                        std::string origin = root["initial_conditions"][ic_id]["initial_condition"]["level_set"]["origin"].As<std::string>();
 
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(origin, ",");
@@ -966,7 +968,7 @@ void parse_initial_conditions(Yaml::Node& root,
                     } // origin
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["intial_conditions"][ic_id]["initial_condition"]["level_set"]["type"].As<std::string>();
+                        std::string type = root["initial_conditions"][ic_id]["initial_condition"]["level_set"]["type"].As<std::string>();
 
                         // set the IC tag type
                         if (scalar_ics_type_map.find(type) != scalar_ics_type_map.end()) {
@@ -1056,7 +1058,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         for (const auto& element : str_ics_level_set_inps) {
                             std::cout << element << std::endl;
                         }
-                        throw std::runtime_error("**** Region level set Inputs Not Understood ****");
+                        throw std::runtime_error("**** ICS level set Inputs Not Understood ****");
                     } // end if on all subfields under level set
 
                 } // end for loop over text
@@ -1077,7 +1079,7 @@ void parse_initial_conditions(Yaml::Node& root,
                 // -----
                 // loop over the sub fields under velocity
                 // -----
-                Yaml::Node& inps_subfields_yaml = root["intial_conditions"][ic_id]["initial_condition"]["velocity"];
+                Yaml::Node& inps_subfields_yaml = root["initial_conditions"][ic_id]["initial_condition"]["velocity"];
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_ics_vel_inputs;
@@ -1090,7 +1092,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("u") == 0) {
                         // x-component of velocity
-                        double u = root["intial_conditions"][ic_id]["initial_condition"]["velocity"]["u"].As<double>();
+                        double u = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["u"].As<double>();
 
                         RUN({
                         region_ics(ic_id).u = u;
@@ -1098,7 +1100,7 @@ void parse_initial_conditions(Yaml::Node& root,
                     } // u
                     else if (a_subfield_word.compare("v") == 0) {
                         // y-component of velocity
-                        double v = root["intial_conditions"][ic_id]["initial_condition"]["velocity"]["v"].As<double>();
+                        double v = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["v"].As<double>();
 
                         RUN({
                             region_ics(ic_id).v = v;
@@ -1107,14 +1109,14 @@ void parse_initial_conditions(Yaml::Node& root,
                     else if (a_subfield_word.compare("w") == 0) {
                         // z-component of velocity
 
-                        double w = root["intial_conditions"][ic_id]["initial_condition"]["velocity"]["w"].As<double>();
+                        double w = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["w"].As<double>();
 
                         RUN({
                             region_ics(ic_id).w = w;
                         });
                     } // w
                     else if (a_subfield_word.compare("speed") == 0) {
-                        double speed = root["intial_conditions"][ic_id]["initial_condition"]["velocity"]["speed"].As<double>();
+                        double speed = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["speed"].As<double>();
 
                         RUN({
                             region_ics(ic_id).speed = speed;
@@ -1122,7 +1124,7 @@ void parse_initial_conditions(Yaml::Node& root,
                     } // speed
                     else if (a_subfield_word.compare("type") == 0){
 
-                        std::string type = root["intial_conditions"][ic_id]["initial_condition"]["velocity"]["type"].As<std::string>();
+                        std::string type = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["type"].As<std::string>();
 
                         // set the volume tag type
                         if (vector_ics_type_map.find(type) != vector_ics_type_map.end()) {
@@ -1216,7 +1218,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         for (const auto& element : str_ics_vel_inps) {
                             std::cout << element << std::endl;
                         }
-                        throw std::runtime_error("**** Region Velocity Inputs Not Understood ****");
+                        throw std::runtime_error("**** ICS Velocity Inputs Not Understood ****");
                     } // end if on all subfields under velocity
 
                 } // end for loop over text
@@ -1229,7 +1231,7 @@ void parse_initial_conditions(Yaml::Node& root,
                 for (const auto& element : str_ics_inps) {
                     std::cout << element << std::endl;
                 }
-                throw std::runtime_error("**** Region Not Understood ****");
+                throw std::runtime_error("**** ICS Not Understood ****");
             }
         } // end for words in fill region
 
