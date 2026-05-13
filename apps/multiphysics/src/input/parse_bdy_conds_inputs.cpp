@@ -87,6 +87,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "time_varying_stress_bc.hpp"
 #include "user_defined_stress_bc.hpp"
 
+// quasi static stress bc files
+#include "no_quasi_static_stress_bc.hpp"
+#include "uniform_quasi_static_stress_bc.hpp"
+#include "linear_quasi_static_stress_bc.hpp"
+#include "cyclic_quasi_static_stress_bc.hpp"
+#include "user_defined_quasi_static_stress_bc.hpp"
+
 
 
 
@@ -149,6 +156,15 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
         BoundaryConditions.num_stress_bdy_sets_in_solver.host(solver_id) = 0;
     } // end for
 
+    // stores the quasi static stress bdy node lists per solver, in the future, this needs to be a DualRaggedRight
+    BoundaryConditions.qstatx_stress_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "qstatx_stress_bdy_sets_in_solver");  
+    // this stores the number of stess bdy sets for a solver
+    BoundaryConditions.num_qstatx_stress_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_qstatx_stress_bdy_sets_in_solver");   
+    // set the storage counter to zero
+    for(size_t solver_id=0; solver_id<num_solvers; solver_id++){
+        BoundaryConditions.num_qstatx_stress_bdy_sets_in_solver.host(solver_id) = 0;
+    } // end for
+
 
     // temporary arrays for boundary condition variables
     DCArrayKokkos<double> tempVelocityBCGlobalVars (num_bcs, 100, "temporary_velocity_bc_global_values");
@@ -156,12 +172,14 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
     DCArrayKokkos<double> tempTemperatureBCGlobalVars (num_bcs, 100, "temporary_temperature_bc_global_values");
     DCArrayKokkos<double> tempStressBCGlobalVars (num_bcs, 100, "temporary_stress_bc_global_values");
+    DCArrayKokkos<double> tempQstatxStressBCGlobalVars (num_bcs, 100, "temporary_qstatx_stress_bc_global_values");
     // DCArrayKokkos<double> tempHeatFluxBCGlobalVars (num_bcs, 100, "temporary_heat_flux_bc_global_values");
     
     BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars");
     BoundaryConditions.num_displacement_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_displacement_bc_global_vars"); 
     BoundaryConditions.num_temperature_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_temperature_bc_global_vars");
     BoundaryConditions.num_stress_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_stress_bc_global_vars");
+    BoundaryConditions.num_qstatx_stress_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_qstatx_stress_bc_global_vars");
     // BoundaryConditions.num_heat_flux_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_heat_flux_bc_global_vars"); 
 
     
@@ -175,6 +193,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
         BoundaryConditions.num_temperature_bc_global_vars(bc_id) = 0;
         BoundaryConditions.num_stress_bc_global_vars(bc_id) = 0;
+        BoundaryConditions.num_qstatx_stress_bc_global_vars(bc_id) = 0;
         // BoundaryConditions.num_heat_flux_bc_global_vars(bc_id) = 0;
     }); // end parallel for
 
@@ -576,6 +595,92 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 } // end if
             } // type of stress model
 
+            else if (a_word.compare("qstatx_stress_model") == 0) {
+                
+                // Note: solver_id was retrieved at the top of the bc_id loop
+
+                // find out how many stress bdy sets have been saved 
+                size_t num_saved = BoundaryConditions.num_qstatx_stress_bdy_sets_in_solver.host(solver_id);
+                BoundaryConditions.qstatx_stress_bdy_sets_in_solver.host(solver_id, num_saved) = bc_id;
+                BoundaryConditions.num_qstatx_stress_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
+                
+                std::string qstatx_stress_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+
+                auto map = bc_qstatx_stress_model_map; 
+
+                // set the stress_model
+                if (map.find(qstatx_stress_model) != map.end()) {
+                    auto bc_qstatx_stress_model = map[qstatx_stress_model];
+
+                    switch(map[qstatx_stress_model]){
+
+                        case boundary_conditions::noQstatxStressBC :
+                            std::cout << "Setting qstatx stress bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::noQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &NoQstatxStressBC::qstatx_stress;
+                            });
+                            break;
+
+                        case boundary_conditions::uniformQstatxStressBC :
+                            std::cout << "Setting qstatx stress bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::uniformQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &UniformQstatxStressBC::qstatx_stress;
+                            });
+                            break;
+
+                        case boundary_conditions::linearQstatxStressBC:
+                            std::cout << "Setting qstatx stress bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::linearQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &LinearQstatxStressBC::qstatx_stress;
+                            });
+                            break;
+
+                        case boundary_conditions::cyclicQstatxStressBC:
+                            std::cout << "Setting qstatx stress bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::cyclicQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &CyclicQstatxStressBC::qstatx_stress;
+                            });
+                            break;
+
+                        case boundary_conditions::userDefinedQstatxStressBC:
+                            std::cout << "Setting qstatx stress bc " << std::endl;
+                            
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::userDefinedQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &UserDefinedQstatxStressBC::qstatx_stress;
+                            });
+                            break;
+                      
+                        default:
+                            
+                            std::cout << "ERROR: invalid qstatx stress boundary condition input: " << qstatx_stress_model << std::endl;
+                            throw std::runtime_error("**** qstatx stress BC model Not Understood ****");
+                            break;
+                        
+                    } // end switch
+
+                }
+                else{
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << qstatx_stress_model << std::endl;
+                    std::cout << "Valid options are: " << std::endl;
+
+                    for (const auto& pair : map) {
+                        std::cout << "\t" << pair.first << std::endl;
+                    }
+
+
+                    throw std::runtime_error("**** Boundary Condition Qstatx Stress Model Not Understood ****");
+                } // end if
+            } // type of qstatx stress model
+
             // get boundary condition location -- host or device
             else if (a_word.compare("location") == 0) {
                 std::string location = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
@@ -810,6 +915,35 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 } // end loop over global vars
             } // end else if on stress_bc_global_vars
+
+            // set the qstatx stress global values
+            else if (a_word.compare("qstatx_stress_bc_global_vars") == 0) {
+
+                Yaml::Node & qstatx_stress_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+
+                size_t num_global_vars = qstatx_stress_bc_global_vars_yaml.Size();
+
+                if(num_global_vars>100){
+                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 qstatx stress global vars in the input file ****");
+                } // end check on num_global_vars
+
+                RUN({ 
+                    printf("num global qstatx stress vars = %zu \n", num_global_vars);
+                    BoundaryConditions.num_qstatx_stress_bc_global_vars(bc_id) = num_global_vars;
+                });
+
+                // store the qstatx stress  model parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    double qstatx_stress_bc_var = bc_yaml[bc_id]["boundary_condition"]["qstatx_stress_bc_global_vars"][global_var_id].As<double>();
+                    
+
+                    RUN({
+                        tempQstatxStressBCGlobalVars(bc_id, global_var_id) = qstatx_stress_bc_var;
+                    });
+
+                } // end loop over global vars
+            } // end else if on qstax stress_bc_global_vars
+
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;
                 std::cout << "Valid options are: " << std::endl;
@@ -836,6 +970,8 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     BoundaryConditions.temperature_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_temperature_bc_global_vars, "BoundaryConditions.temperature_bc_global_vars");
 
     BoundaryConditions.stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_stress_bc_global_vars, "BoundaryConditions.stress_bc_global_vars");
+
+    BoundaryConditions.qstatx_stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_qstatx_stress_bc_global_vars, "BoundaryConditions.qstatx_stress_bc_global_vars");
    
 
     // ... allocate other bc global vars here
@@ -857,6 +993,10 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
       
         for (size_t var_lid=0; var_lid<BoundaryConditions.num_stress_bc_global_vars(bc_id); var_lid++){
             BoundaryConditions.stress_bc_global_vars(bc_id, var_lid) = tempStressBCGlobalVars(bc_id, var_lid);
+        } // end for eos var_lid
+
+        for (size_t var_lid=0; var_lid<BoundaryConditions.num_qstatx_stress_bc_global_vars(bc_id); var_lid++){
+            BoundaryConditions.qstatx_stress_bc_global_vars(bc_id, var_lid) = tempQstatxStressBCGlobalVars(bc_id, var_lid);
         } // end for eos var_lid
 
 

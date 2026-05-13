@@ -362,12 +362,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 j, 0, 3, {
                     State.node.displacement(i,j) += displacement_step(3*i + j);
         });
-        
-        // ********************************************
-        // REMOVE THIS AFTER ADDING ACTUAL POST PROCESS
-        displacement_step.set_values(0);
-        // REMOVE THIS AFTER ADDING ACTUAL POST PROCESS
-        // ********************************************
 
         /* for (int i = 0; i < mesh.num_nodes; i++) {
             for (int j = 0; j < 3; j++) {

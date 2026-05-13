@@ -77,6 +77,7 @@ include_directories(boundary_conditions/velocity)
 include_directories(boundary_conditions/displacement)
 include_directories(boundary_conditions/temperature)
 include_directories(boundary_conditions/stress)
+include_directories(boundary_conditions/quasi_static_stress)
 
 
 

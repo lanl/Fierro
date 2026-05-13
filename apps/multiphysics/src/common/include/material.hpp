@@ -173,7 +173,7 @@ static std::map<std::string, model::StrengthModels> strength_models_map
     { "hypo_elastic_plastic_strength", model::hypoElasticPlasticStrength },
     { "hypo_elastic_plastic_strength_rz", model::hypoElasticPlasticStrengthRZ },
     { "host_ann_strength", model::hostANNStrength },
-    { "QS_iso_lin_elastic", model::QSIsotropicLinearElastic}
+    { "qstatx_isotropic_linear_elastic", model::QSIsotropicLinearElastic}
 };
 
 

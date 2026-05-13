@@ -103,11 +103,15 @@ enum BCStressModels
     globalContact = 4,
     preloadContact = 5,
 };
-// future model options:
-//    displacementBC                            
-//    temperatureBC           
-//    contactBC               
-
+           
+enum BCQstatxStressModels
+{
+    noQstatxStressBC = 0,
+    uniformQstatxStressBC = 1,
+    linearQstatxStressBC = 2,
+    cyclicQstatxStressBC = 3,
+    userDefinedQstatxStressBC = 4,
+};
 
 
 enum BCFcnLocation
@@ -181,6 +185,15 @@ static std::map<std::string, boundary_conditions::BCStressModels> bc_stress_mode
     { "preload_contact", boundary_conditions::preloadContact},
 };
 
+static std::map<std::string, boundary_conditions::BCQstatxStressModels> bc_qstatx_stress_model_map
+{
+    { "none", boundary_conditions::noQstatxStressBC },
+    { "uniform", boundary_conditions::uniformQstatxStressBC },
+    { "linear", boundary_conditions::linearQstatxStressBC },
+    { "cyclic", boundary_conditions::cyclicQstatxStressBC },
+    { "user_defined", boundary_conditions::userDefinedQstatxStressBC },
+};
+
 
 
 static std::map<std::string, boundary_conditions::BCFcnLocation> bc_location_map
@@ -226,6 +239,9 @@ struct BoundaryConditionEnums_t
     
     // BC model for stress
     boundary_conditions::BCStressModels BCStressModel = boundary_conditions::noStressBC;    ///< Type of stress boundary condition
+
+    // BC model for quasi static stress
+    boundary_conditions::BCQstatxStressModels BCQstatxStressModel = boundary_conditions::noQstatxStressBC;    ///< Type of stress boundary condition
     
     boundary_conditions::BCFcnLocation Location = boundary_conditions::device; // host or device BC function
 }; // end boundary condition enums
@@ -300,6 +316,17 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
 
+    // function pointer for stress BC's
+    void (*qstatx_stress) (const swage::Mesh& mesh,
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const RaggedRightArrayKokkos<double>& qstatx_stress_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        const ViewCArrayKokkos <double>& corner_surf_force,
+        const ViewCArrayKokkos <double>& corner_surf_normal,
+        const double time_value,
+        const size_t bdy_node_gid,
+        const size_t bdy_set) = NULL;
+
 
 }; // end boundary condition fcns
 
@@ -331,6 +358,9 @@ struct BoundaryCondition_t
     DCArrayKokkos<size_t> stress_bdy_sets_in_solver;     // (solver_id, bc_lid)
     DCArrayKokkos<size_t> num_stress_bdy_sets_in_solver; // (solver_id)
 
+    DCArrayKokkos<size_t> qstatx_stress_bdy_sets_in_solver;     // (solver_id, bc_lid)
+    DCArrayKokkos<size_t> num_qstatx_stress_bdy_sets_in_solver; // (solver_id)
+
     // keep adding ragged storage for the other BC models -- temp, displacement, etc.
     DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver_id, lids)
     DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver_id)
@@ -359,6 +389,10 @@ struct BoundaryCondition_t
     RaggedRightArrayKokkos<double> stress_bc_global_vars;  // (bc_id, vars...)
     CArrayKokkos<size_t> num_stress_bc_global_vars;
 
+    // global variables for qstatx stress boundary condition models
+    RaggedRightArrayKokkos<double> qstatx_stress_bc_global_vars;  // (bc_id, vars...)
+    CArrayKokkos<size_t> num_qstatx_stress_bc_global_vars;
+
     // global variables for temperature boundary condition models
     RaggedRightArrayKokkos<double> temperature_bc_global_vars;
     CArrayKokkos<size_t> num_temperature_bc_global_vars;
@@ -380,6 +414,8 @@ static std::vector<std::string> str_bc_inps
     "displacement_bc_global_vars",
     "stress_model",
     "stress_bc_global_vars",
+    "qstatx_stress_model",
+    "qstatx_stress_bc_global_vars",
     "temperature_model",
     "temperature_bc_global_vars",
     "heat_flux_model",
