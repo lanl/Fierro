@@ -62,14 +62,11 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     State_t& State)
 {
 
-    printf("Inside SGH3D::execute\n");
-
     // Get MPI ranks and num ranks
     int rank;
     int num_ranks;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
-
 
     // if (log) log->set_level(fierro::LogLevel::Off);
 
@@ -138,15 +135,13 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
-    printf("Before applying initial boundary conditions\n");
-
     // --- Graphics vars ----
     CArray<double> graphics_times = CArray<double>(20000);
     graphics_times(0) = this->time_start; // was zero
     double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
     size_t output_id = 0; // the id for the outputs written
 
-    if (log) log->info("Applying initial boundary conditions");
+    if (log) log->info("Applying initial boundary conditions\n");
     boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
 
     // extensive energy tallies over the entire mesh
@@ -345,7 +340,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 // compute the shock detector at each gauss point for each material
                 State.GaussPoints.shock_detector.set_values(0.0);
                 MATAR_FENCE();
-                
+
                 MachShockDetector::detect_shock(mesh,
                     State.GaussPoints.vel_grad,
                     State.GaussPoints.shock_detector,

@@ -157,8 +157,6 @@ void Driver::initialize()
                   mesh.num_elems, mesh.num_owned_elems, num_ghost_elems);
     }
 
-    printf("Mesh polynomial order: %zu\n", mesh.Pn);
-    
     // For totals, root rank gathers and prints
     size_t local_nodes = mesh.num_nodes;
     size_t local_elems = mesh.num_elems;
@@ -308,6 +306,8 @@ void Driver::initialize()
 
     } // end for loop over solvers
 
+    MPI_Barrier(MPI_COMM_WORLD);
+
     // Solvers allocate nodal velocity with node_t::initialize(..., states) without a comm plan.
     // MPICArrayKokkos::communicate() requires initialize_comm_plan(node_communication_plan).
     if (State.node.vel.size() > 0) {
@@ -402,8 +402,10 @@ void Driver::setup()
 /////////////////////////////////////////////////////////////////////////////
 void Driver::execute()
 {
+    
     log_.info("Inside driver execute\n");
     for (auto& solver : solvers) {
+        MPI_Barrier(MPI_COMM_WORLD);
         solver->execute(SimulationParamaters, 
                         Materials, 
                         BoundaryConditions, 
@@ -431,6 +433,7 @@ void Driver::finalize()
 {
     log_.info("Inside driver finalize\n");
     for (auto& solver : solvers) {
+        MPI_Barrier(MPI_COMM_WORLD);
         if (solver->finalize_flag) {
             solver->finalize(SimulationParamaters, 
                              Materials, 
