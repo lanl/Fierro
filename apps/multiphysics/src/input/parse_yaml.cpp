@@ -51,6 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "parse_tools.hpp"
 #include "parse_regions.hpp"
+#include "parse_initial_conditions.hpp"
 #include "parse_mesh_inputs.hpp"
 #include "parse_solver_inputs.hpp"
 #include "parse_material_inputs.hpp"
@@ -101,9 +102,16 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
                   SimulationParamaters.region_setups.num_reg_fills_in_solver,
                   SimulationParamaters.region_setups.region_fills,
                   SimulationParamaters.region_setups.region_fills_host,
-                  SimulationParamaters.region_setups.fill_gauss_states,
-                  SimulationParamaters.region_setups.fill_node_states,
                   num_solvers);
+
+
+
+    // parse the initial conditions yaml text into a vector of region_ics
+    parse_initial_conditions(root, 
+                             SimulationParamaters.InitialConditionSetup.region_ics,
+                             SimulationParamaters.InitialConditionSetup.fill_gauss_states,
+                             SimulationParamaters.InitialConditionSetup.fill_node_states);
+
 
     // parse the material yaml text into a vector of materials
     parse_materials(root, Materials, SimulationParamaters.mesh_input.num_dims);

@@ -90,6 +90,7 @@ void fill_regions(
         const DCArrayKokkos <int>& object_ids,
         const CArrayKokkos <RegionFill_t>& region_fills,
         const CArray <RegionFill_host_t>& region_fills_host,
+        const CArrayKokkos <RegionICs_t>& region_ics,
         std::vector <fill_gauss_state>& fill_gauss_states,
         std::vector <fill_node_state>& fill_node_states,
         const size_t num_mats_per_elem);
@@ -183,6 +184,23 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
                           const size_t reg_id,
                           const size_t max_num_mats_per_elem);
 
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn bound_volfracs
+///
+/// \brief a general function to bound volume fraction arrays 
+///
+/// \param volfracs is a volume fraction array(index,bin)
+/// \param index is the index for the location
+/// \param num_bins is the number of bins or fills
+///
+/////////////////////////////////////////////////////////////////////////////
+bool bound_volfracs(const DCArrayKokkos <double>& volfracs,
+                    const size_t index,
+                    const size_t num_bins);
+
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn get_region_scalar
@@ -205,7 +223,7 @@ double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
                          const double orig[3],
                          const size_t mesh_gid,
                          const size_t num_dims,
-                         const init_conds::init_scalar_conds scalarFieldType);
+                         const initial_conditions::ICsScalar scalarFieldType);
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -233,7 +251,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
                         const size_t mesh_gid,
                         const size_t num_dims,
                         const size_t bin,
-                        const init_conds::init_scalar_conds scalarFieldType);
+                        const initial_conditions::ICsScalar scalarFieldType);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -255,7 +273,7 @@ void paint_scalar(const DCArrayKokkos<double>& field_scalar,
                   const double slope,
                   const size_t mesh_gid,
                   const size_t num_dims,
-                  const init_conds::init_scalar_conds scalarFieldType);
+                  const initial_conditions::ICsScalar scalarFieldType);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -282,7 +300,7 @@ void paint_vector(const DCArrayKokkos<double>& vector_field,
                   const double scalar,
                   const size_t mesh_gid,
                   const size_t num_dims,
-                  const init_conds::init_vector_conds vectorFieldType);
+                  const initial_conditions::ICsVector vectorFieldType);
 
 
 
