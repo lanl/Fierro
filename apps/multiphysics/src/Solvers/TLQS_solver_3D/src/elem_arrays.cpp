@@ -49,6 +49,7 @@ void TLQS3D::get_gradients(
     double PK2_curr_config[6])
 {
     // allocate and initialize Jacobian
+    // dX_i / dxi_j
     double J[3][3];
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
@@ -56,11 +57,14 @@ void TLQS3D::get_gradients(
         }
     }
 
-    // get Jacobian at the mat point -> J with indices of [ [dx1dxi1 dx2dxi1 dx3dxi1] [dx1dxi2 dx2dxi2 dx3dxi2] [dx1dxi3 dx2dxi3 dx3dxi3] ]
+    // ***************************************************
+    // FIX THIS TO LOOP CORRECTLY FOR C DATA LAYOUT
+    // ***************************************************
+    // get Jacobian at the mat point
     for (int k = 0; k < gauss_point_grad_basis.dims(0); k++) {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                J[i][j] += coords_t0(nodes_in_elem(k), j) * gauss_point_grad_basis(k, i);
+                J[j][i] += coords_t0(nodes_in_elem(k), j) * gauss_point_grad_basis(k, i);
             }
         }
     }
@@ -86,6 +90,7 @@ void TLQS3D::get_gradients(
     }
 
     // get grad(displacement)
+    // du_i / dX_j
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             grad_u[i][j] = 0.0;
@@ -101,9 +106,9 @@ void TLQS3D::get_gradients(
 
         for (int j = 0; j < 3; j++) {
             const double u_total = displacement(node_gid, j) + displacement_step(3*node_gid + j);
-            grad_u[0][j] += u_total * dpsig_k0;
-            grad_u[1][j] += u_total * dpsig_k1;
-            grad_u[2][j] += u_total * dpsig_k2;
+            grad_u[j][0] += u_total * dpsig_k0;
+            grad_u[j][1] += u_total * dpsig_k1;
+            grad_u[j][2] += u_total * dpsig_k2;
         }
     }
 
@@ -114,12 +119,12 @@ void TLQS3D::get_gradients(
     // WARNING: POINTER CALLED CALC QUASI_STATIC STRESS
     // ***************************************************
     double current_strain[6]; // [Exx Eyy Ezz Eyz Exz Exy]
-    current_strain[0] = grad_u[0][0] + 0.5 * (grad_u[0][0]*grad_u[0][0] + grad_u[0][1]*grad_u[0][1] + grad_u[0][2]*grad_u[0][2]);
-    current_strain[1] = grad_u[1][1] + 0.5 * (grad_u[1][0]*grad_u[1][0] + grad_u[1][1]*grad_u[1][1] + grad_u[1][2]*grad_u[1][2]);
-    current_strain[2] = grad_u[2][2] + 0.5 * (grad_u[2][0]*grad_u[2][0] + grad_u[2][1]*grad_u[2][1] + grad_u[2][2]*grad_u[2][2]);
-    current_strain[3] = 0.5 * (grad_u[1][2] + grad_u[2][1] + (grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]));
-    current_strain[4] = 0.5 * (grad_u[0][2] + grad_u[2][0] + (grad_u[0][0]*grad_u[0][2] + grad_u[1][0]*grad_u[1][2] + grad_u[2][0]*grad_u[2][2]));
-    current_strain[5] = 0.5 * (grad_u[0][1] + grad_u[1][0] + (grad_u[0][0]*grad_u[0][1] + grad_u[1][0]*grad_u[1][1] + grad_u[2][0]*grad_u[2][1]));
+    current_strain[0] = grad_u[0][0] + 0.5 * (grad_u[0][0]*grad_u[0][0] + grad_u[1][0]*grad_u[1][0] + grad_u[2][0]*grad_u[2][0]);
+    current_strain[1] = grad_u[1][1] + 0.5 * (grad_u[0][1]*grad_u[0][1] + grad_u[1][1]*grad_u[1][1] + grad_u[2][1]*grad_u[2][1]);
+    current_strain[2] = grad_u[2][2] + 0.5 * (grad_u[0][2]*grad_u[0][2] + grad_u[1][2]*grad_u[1][2] + grad_u[2][2]*grad_u[2][2]);
+    current_strain[3] = 0.5 * (grad_u[1][2] + grad_u[2][1] + grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]);
+    current_strain[4] = 0.5 * (grad_u[0][2] + grad_u[2][0] + grad_u[0][0]*grad_u[0][2] + grad_u[1][0]*grad_u[1][2] + grad_u[2][0]*grad_u[2][2]);
+    current_strain[5] = 0.5 * (grad_u[0][1] + grad_u[1][0] + grad_u[0][0]*grad_u[0][1] + grad_u[1][0]*grad_u[1][1] + grad_u[2][0]*grad_u[2][1]);
 
     // Normal stresses
     PK2_curr_config[0] = material_matrix[0][0] * current_strain[0] + material_matrix[0][1] * current_strain[1] + material_matrix[0][2] * current_strain[2]; // Sxx
@@ -149,13 +154,13 @@ void TLQS3D::tally_elem_arrays(
 
     // Unpack grad_u for readability
     const double ux = grad_u[0][0];
-    const double uy = grad_u[1][0];
-    const double uz = grad_u[2][0];
-    const double vx = grad_u[0][1];
+    const double uy = grad_u[0][1];
+    const double uz = grad_u[0][2];
+    const double vx = grad_u[1][0];
     const double vy = grad_u[1][1];
-    const double vz = grad_u[2][1];
-    const double wx = grad_u[0][2];
-    const double wy = grad_u[1][2];
+    const double vz = grad_u[1][2];
+    const double wx = grad_u[2][0];
+    const double wy = grad_u[2][1];
     const double wz = grad_u[2][2];
 
     // Build symmetric 3x3 stress tensor for K2 (extracted from Voigt PK2)

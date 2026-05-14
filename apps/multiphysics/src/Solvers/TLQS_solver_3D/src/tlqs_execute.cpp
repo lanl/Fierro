@@ -361,7 +361,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             double norm = sqrt(norm_num / norm_den);
             //std::cout << "PICARD NORM: " << norm << std::endl;
-            if (norm < 1E-12) {
+            if (norm < 1E-12 && iter > 1) {
                 std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }
@@ -390,6 +390,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 // setting up views and temp memory
                 const size_t elem_id = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
+
                 ViewCArrayKokkos<size_t> nodes_in_curr_elem(&mesh.nodes_in_elem(elem_id,0),mesh.num_nodes_in_elem);
                 double material_matrix[6][6];
 
@@ -405,7 +406,13 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                     // tallying to element array
                     post_process(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, curr_grad_basis, stress_view, strain_view);
-
+                    /* for (int i = 0; i < 3; i++) {
+                        for (int j = 0; j < 3; j++) {
+                            std::cout << stress_view(i,j) << "   ";
+                        }
+                        std::cout << std::endl;
+                    }
+                    std::cout << std::endl; */
                 } // end mat_pt
 
             }); // end elem

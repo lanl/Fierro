@@ -46,6 +46,7 @@ void TLQS3D::post_process(
     ViewCArrayKokkos <double>& strain)
 {
     // allocate and initialize Jacobian
+    // dX_i / dxi_j
     double J[3][3];
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
@@ -53,11 +54,14 @@ void TLQS3D::post_process(
         }
     }
 
-    // get Jacobian at the mat point -> J with indices of [ [dx1dxi1 dx2dxi1 dx3dxi1] [dx1dxi2 dx2dxi2 dx3dxi2] [dx1dxi3 dx2dxi3 dx3dxi3] ]
+    // ***************************************************
+    // FIX THIS TO LOOP CORRECTLY FOR C DATA LAYOUT
+    // ***************************************************
+    // get Jacobian at the mat point
     for (int k = 0; k < gauss_point_grad_basis.dims(0); k++) {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                J[i][j] += coords_t0(nodes_in_elem(k), j) * gauss_point_grad_basis(k, i);
+                J[j][i] += coords_t0(nodes_in_elem(k), j) * gauss_point_grad_basis(k, i);
             }
         }
     }
@@ -86,6 +90,7 @@ void TLQS3D::post_process(
 
     double grad_u[3][3];
     // get grad(displacement)
+    // du_i / dX_j
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             grad_u[i][j] = 0.0;
@@ -101,9 +106,9 @@ void TLQS3D::post_process(
 
         for (int j = 0; j < 3; j++) {
             const double u_total = displacement(node_gid, j);
-            grad_u[0][j] += u_total * dpsig_k0;
-            grad_u[1][j] += u_total * dpsig_k1;
-            grad_u[2][j] += u_total * dpsig_k2;
+            grad_u[j][0] += u_total * dpsig_k0;
+            grad_u[j][1] += u_total * dpsig_k1;
+            grad_u[j][2] += u_total * dpsig_k2;
         }
     }
 
@@ -113,15 +118,15 @@ void TLQS3D::post_process(
     // WARNING: NEED TO PUT THIS INTO A SEPARATE FUNCTION
     // WARNING: POINTER CALLED CALC QUASI_STATIC STRESS
     // ***************************************************
-    strain(0,0) = grad_u[0][0] + 0.5 * (grad_u[0][0]*grad_u[0][0] + grad_u[0][1]*grad_u[0][1] + grad_u[0][2]*grad_u[0][2]);
-    strain(1,1) = grad_u[1][1] + 0.5 * (grad_u[1][0]*grad_u[1][0] + grad_u[1][1]*grad_u[1][1] + grad_u[1][2]*grad_u[1][2]);
-    strain(2,2) = grad_u[2][2] + 0.5 * (grad_u[2][0]*grad_u[2][0] + grad_u[2][1]*grad_u[2][1] + grad_u[2][2]*grad_u[2][2]);
-    strain(1,2) = 0.5 * (grad_u[1][2] + grad_u[2][1] + (grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]));
-    strain(2,1) = 0.5 * (grad_u[1][2] + grad_u[2][1] + (grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]));
-    strain(0,2) = 0.5 * (grad_u[0][2] + grad_u[2][0] + (grad_u[0][0]*grad_u[0][2] + grad_u[1][0]*grad_u[1][2] + grad_u[2][0]*grad_u[2][2]));
-    strain(2,0) = 0.5 * (grad_u[0][2] + grad_u[2][0] + (grad_u[0][0]*grad_u[0][2] + grad_u[1][0]*grad_u[1][2] + grad_u[2][0]*grad_u[2][2]));
-    strain(0,1) = 0.5 * (grad_u[0][1] + grad_u[1][0] + (grad_u[0][0]*grad_u[0][1] + grad_u[1][0]*grad_u[1][1] + grad_u[2][0]*grad_u[2][1]));
-    strain(1,0) = 0.5 * (grad_u[0][1] + grad_u[1][0] + (grad_u[0][0]*grad_u[0][1] + grad_u[1][0]*grad_u[1][1] + grad_u[2][0]*grad_u[2][1]));
+    strain(0,0) = grad_u[0][0] + 0.5 * (grad_u[0][0]*grad_u[0][0] + grad_u[1][0]*grad_u[1][0] + grad_u[2][0]*grad_u[2][0]);
+    strain(1,1) = grad_u[1][1] + 0.5 * (grad_u[0][1]*grad_u[0][1] + grad_u[1][1]*grad_u[1][1] + grad_u[2][1]*grad_u[2][1]);
+    strain(2,2) = grad_u[2][2] + 0.5 * (grad_u[0][2]*grad_u[0][2] + grad_u[1][2]*grad_u[1][2] + grad_u[2][2]*grad_u[2][2]);
+    strain(1,2) = 0.5 * (grad_u[1][2] + grad_u[2][1] + grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]);
+    strain(2,1) = strain(1,2);
+    strain(0,2) = 0.5 * (grad_u[0][2] + grad_u[2][0] + grad_u[0][0]*grad_u[0][2] + grad_u[1][0]*grad_u[1][2] + grad_u[2][0]*grad_u[2][2]);
+    strain(2,0) = strain(0,2);
+    strain(0,1) = 0.5 * (grad_u[0][1] + grad_u[1][0] + grad_u[0][0]*grad_u[0][1] + grad_u[1][0]*grad_u[1][1] + grad_u[2][0]*grad_u[2][1]);
+    strain(1,0) = strain(0,1);
 
     // Normal stresses
     stress(0,0) = material_matrix[0][0] * strain(0,0) + material_matrix[0][1] * strain(1,1) + material_matrix[0][2] * strain(2,2); // Sxx
@@ -138,4 +143,4 @@ void TLQS3D::post_process(
     stress(0,1) = material_matrix[5][5] * strain(0,1); // Sxy
     stress(1,0) = material_matrix[5][5] * strain(0,1); // Sxy
 
-} // end get_gradients
+} // end post_process
