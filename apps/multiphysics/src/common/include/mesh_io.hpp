@@ -1306,6 +1306,8 @@ public:
 
         const int num_dim = 2;
 
+        mesh.num_dims = num_dim;
+
         const double lx = SimulationParamaters.mesh_input.length[0];
         const double ly = SimulationParamaters.mesh_input.length[1];
 
@@ -2606,6 +2608,9 @@ public:
             // boundary elements reference ghost nodes — truncating coords to num_owned_nodes (the prior
             // bug) misaligned indices and produced inverted/wrong cells in ParaView.
             const size_t n_owned_elems = mesh.num_owned_elems; // num_elems; 
+
+            printf("Number of owned elements: %zu \n", n_owned_elems);
+            printf("Num dim: %zu \n", num_dims);
  
 
             const std::string elem_fields_name = "fields";
@@ -2619,46 +2624,46 @@ public:
             //   diag_global_elem   — CellData "global_elem_id" from mesh.local_to_global_elem_mapping (or local e).
             //   diag_global_node   — PointData "global_node_id" from mesh.local_to_global_node_mapping (or local n).
             //   p_*                — nullptr until filled; passed to write_vtu (nullptr disables that array).
-            std::vector<double> diag_mpi_rank_elem;
-            std::vector<double> diag_global_elem;
-            std::vector<double> diag_global_node;
-            const double*       p_rank_elem = nullptr;
-            const double*       p_glob_elem = nullptr;
-            const double*       p_glob_node = nullptr;
+            // std::vector<double> diag_mpi_rank_elem;
+            // std::vector<double> diag_global_elem;
+            // std::vector<double> diag_global_node;
+            // const double*       p_rank_elem = nullptr;
+            // const double*       p_glob_elem = nullptr;
+            // const double*       p_glob_node = nullptr;
 
-            if (n_owned_elems > 0 && num_nodes > 0) {
-                diag_mpi_rank_elem.assign(n_owned_elems, static_cast<double>(mpi_rank));
-                p_rank_elem = diag_mpi_rank_elem.data();
+            // if (n_owned_elems > 0 && num_nodes > 0) {
+            //     diag_mpi_rank_elem.assign(n_owned_elems, static_cast<double>(mpi_rank));
+            //     p_rank_elem = diag_mpi_rank_elem.data();
 
-                diag_global_elem.resize(n_owned_elems);
-                if (mpi_size > 1 || mesh.num_elems > mesh.num_owned_elems) {
-                    mesh.local_to_global_elem_mapping.update_host();
-                    for (size_t e = 0; e < n_owned_elems; e++) {
-                        diag_global_elem[e] =
-                            static_cast<double>(mesh.local_to_global_elem_mapping.host(e));
-                    }
-                }
-                else {
-                    for (size_t e = 0; e < n_owned_elems; e++) {
-                        diag_global_elem[e] = static_cast<double>(e);
-                    }
-                }
-                p_glob_elem = diag_global_elem.data();
+            //     diag_global_elem.resize(n_owned_elems);
+            //     if (mpi_size > 1 || mesh.num_elems > mesh.num_owned_elems) {
+            //         mesh.local_to_global_elem_mapping.update_host();
+            //         for (size_t e = 0; e < n_owned_elems; e++) {
+            //             diag_global_elem[e] =
+            //                 static_cast<double>(mesh.local_to_global_elem_mapping.host(e));
+            //         }
+            //     }
+            //     else {
+            //         for (size_t e = 0; e < n_owned_elems; e++) {
+            //             diag_global_elem[e] = static_cast<double>(e);
+            //         }
+            //     }
+            //     p_glob_elem = diag_global_elem.data();
 
-                diag_global_node.resize(num_nodes);
-                if (mpi_size > 1 || mesh.num_nodes > mesh.num_owned_nodes) {
-                    mesh.local_to_global_node_mapping.update_host();
-                    for (size_t n = 0; n < num_nodes; n++) {
-                        diag_global_node[n] =
-                            static_cast<double>(mesh.local_to_global_node_mapping.host(n));
-                    }
-                }
-                else {
-                    for (size_t n = 0; n < num_nodes; n++) {
-                        diag_global_node[n] = static_cast<double>(n);
-                    }
-                }
-                p_glob_node = diag_global_node.data();
+            //     diag_global_node.resize(num_nodes);
+            //     if (mpi_size > 1 || mesh.num_nodes > mesh.num_owned_nodes) {
+            //         mesh.local_to_global_node_mapping.update_host();
+            //         for (size_t n = 0; n < num_nodes; n++) {
+            //             diag_global_node[n] =
+            //                 static_cast<double>(mesh.local_to_global_node_mapping.host(n));
+            //         }
+            //     }
+            //     else {
+            //         for (size_t n = 0; n < num_nodes; n++) {
+            //             diag_global_node[n] = static_cast<double>(n);
+            //         }
+            //     }
+            //     p_glob_node = diag_global_node.data();
 
                 write_vtu(node_coords_host,
                           nodes_in_elem_host,
@@ -2680,10 +2685,10 @@ public:
                           solver_id,
                           mpi_rank,
                           mpi_size,
-                          p_rank_elem,
-                          p_glob_elem,
-                          p_glob_node);
-            }
+                          nullptr,
+                          nullptr,
+                          nullptr);
+           //  }
 
             // ********************************
             //  Build and write the mat fields 
@@ -4856,6 +4861,10 @@ public:
         // This currently assumes the gauss and material point IDs are the same as the element ID
         // This will need to be updated for high order methods
 
+        int mpi_rank = 0;
+        int mpi_size = 1;
+        mesh_io_mpi_detail::query_world_rank_size(mpi_rank, mpi_size);
+
         // Update host data
         // ---- Update host data ----
         size_t num_mats = State.MaterialPoints.num_material_points.size();
@@ -4868,6 +4877,7 @@ public:
         State.MaterialPoints.mass.update_host();
 
         State.GaussPoints.vol.update_host();
+        State.GaussPoints.shock_detector.update_host();
 
         State.node.coords.update_host();
         State.node.vel.update_host();
@@ -4876,10 +4886,13 @@ public:
         Kokkos::fence();
 
         struct stat st;
-
-        if (stat("state", &st) != 0) {
-            system("mkdir state");
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (mpi_rank == 0) {
+            if (stat("state", &st) != 0) {
+                system("mkdir state");
+            }
         }
+        MPI_Barrier(MPI_COMM_WORLD);
 
         size_t num_dims = mesh.num_dims;
 
@@ -4893,7 +4906,7 @@ public:
 
         int max_len = sizeof filename;
 
-        snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e.txt", time_value);
+        snprintf(filename, max_len, "state/mat_pt_state_rank_%d_t_%6.4e.txt", mpi_rank, time_value);
 
         // output files
         out_elem_state = fopen(filename, "w");
@@ -4976,7 +4989,7 @@ public:
         fprintf(out_point_state, "# x  y  z  radius_2D  radius_3D  vel_x  vel_y  vel_z  speed  ||err_v_dot_r|| \n");
 
         // get the coordinates of the node
-        for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
+        for (size_t node_gid = 0; node_gid < mesh.num_owned_nodes; node_gid++) {
 
             double node_coords[3];
 

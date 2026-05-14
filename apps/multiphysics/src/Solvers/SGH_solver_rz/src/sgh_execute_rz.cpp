@@ -41,6 +41,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.hpp"
 #include "geometry_new.hpp"
 #include "mesh_io.hpp"
+#include "mach_shock.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -143,8 +144,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     } // end for
 
     // node mass of the domain
-    mass_domain_nodes_t0 = sum_domain_node_mass_rz(node_extensive_mass,
-                                                   mesh.num_nodes);
+    mass_domain_nodes_t0 = sum_domain_node_mass_rz(node_extensive_mass, mesh.num_nodes);
 
     printf("nodal mass domain = %f \n", mass_domain_nodes_t0);
 
@@ -171,10 +171,11 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
     graphics_time = time_value + graphics_dt_ival;
 
-
+    printf("Finished writing initial state at t=0 \n");
 
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
+        printf("Starting cycle %lu \n", cycle);
         // stop calculation if flag
         if (stop_calc == 1) {
             break;
@@ -192,7 +193,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
             double dt_mat = dt;
 
             // get the step
-
+            printf("Getting time step for material %zu \n", mat_id);
             get_timestep_rz(mesh,
                             State.node.coords,
                             State.node.vel,
@@ -241,6 +242,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
         // ---------------------------------------------------------------------
         for (size_t mat_id=0; mat_id<num_mats; mat_id++){
             // save the values at t_n
+            printf("Initializing state for material %zu \n", mat_id);
             rk_init_rz(State.node.coords,
                        State.node.coords_n0,
                        State.node.vel,
@@ -264,14 +266,32 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
             // ---- Calculate velocity gradient for the element ----
 
+            printf("Calculating velocity gradient for the element \n");
             get_velgrad_rz(State.GaussPoints.vel_grad,
                            mesh,
                            State.node.coords,
                            State.node.vel,
                            State.GaussPoints.vol);
+                           
+            // compute the shock detector at each gauss point for each material
+            // State.GaussPoints.shock_detector.set_values(0.0);
+            MATAR_FENCE();
+
+            // MachShockDetector::detect_shock(mesh,
+            //     State.GaussPoints.vel_grad,
+            //     State.GaussPoints.shock_detector,
+            //     State.GaussPoints.vol,
+            //     State.MaterialPoints.sspd,
+            //     State.MaterialToMeshMaps.elem_in_mat_elem,
+            //     State.MaterialToMeshMaps.num_mat_elems,
+            //     fuzz,
+            //     small,
+            //     num_mats);
             
+            // Communicate shock detector based on the element communication plan
+            // State.GaussPoints.shock_detector.communicate();
 
-
+            printf("Setting corner force to zero \n");
 
             set_corner_force_zero_rz(mesh, State.corner.force);
 
@@ -334,7 +354,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                 } // end if on increment
 
             } // end for mat_id
-
+            printf("Updating nodal velocities \n");
             // ---- Update nodal velocities ---- //
             update_velocity_rz(rk_alpha,
                                dt,
@@ -351,6 +371,10 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
             //boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);
 
             // mpi_coms();
+            // ----- Communication of the nodal velocity -----
+            MPI_Barrier(MPI_COMM_WORLD);
+            State.node.vel.communicate();
+            State.node.vel_n0.communicate();
 
             for(size_t mat_id=0; mat_id<num_mats; mat_id++){
                  
@@ -455,16 +479,16 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
         // write outputs
         if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
-            mesh_writer.write_mesh(mesh, 
-                                   State, 
-                                   SimulationParamaters, 
-                                   dt,
-                                   time_value, 
-                                   graphics_times,
-                                   SGHRZ_State::required_node_state,
-                                   SGHRZ_State::required_gauss_pt_state,
-                                   SGHRZ_State::required_material_pt_state,
-                                   this->solver_id);
+            // mesh_writer.write_mesh(mesh, 
+            //                        State, 
+            //                        SimulationParamaters, 
+            //                        dt,
+            //                        time_value, 
+            //                        graphics_times,
+            //                        SGHRZ_State::required_node_state,
+            //                        SGHRZ_State::required_gauss_pt_state,
+            //                        SGHRZ_State::required_material_pt_state,
+            //                        this->solver_id);
 
             output_id++;
             graphics_time = (double)(output_id) * graphics_dt_ival;

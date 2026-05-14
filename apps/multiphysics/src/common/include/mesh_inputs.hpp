@@ -77,7 +77,7 @@ static std::map<std::string, mesh_input::type> mesh_input_type_map
 /////////////////////////////////////////////////////////////////////////////
 struct mesh_input_t
 {
-    int num_dims = 3;   ///< Number of dimensions for the mesh
+    int num_dims = 0;   ///< Number of dimensions for the mesh
     mesh_input::source source = mesh_input::none;   ///< Source of mesh, file or generate
     std::string file_path     = ""; ///< Absolute path of mesh file
     mesh_input::type type;          ///< Type of mesh to generate if

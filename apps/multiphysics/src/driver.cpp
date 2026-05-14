@@ -103,7 +103,7 @@ void Driver::initialize()
             mesh_reader.read_mesh(initial_mesh, 
                                   initial_node_coords,
                                   SimulationParamaters.mesh_input, 
-                                  num_dims);
+                                  initial_mesh.num_dims);
         } // end if rank == 0
     }
     else if (SimulationParamaters.mesh_input.source == mesh_input::generate) {
@@ -134,9 +134,13 @@ void Driver::initialize()
         mesh.num_nodes = initial_mesh.num_nodes;
         mesh.num_owned_elems = initial_mesh.num_elems;
         mesh.num_owned_nodes = initial_mesh.num_nodes;
+        mesh.num_dims = initial_mesh.num_dims;
         final_node_coords = initial_node_coords;
-    }
 
+        printf("Number of dimensions: %zu \n", initial_mesh.num_dims);
+    }
+    printf("Number of dimensions: %zu \n", mesh.num_dims);
+    // mesh.num_dims = initial_mesh.num_dims;
     // partition_mesh() builds corner connectivity (corners_in_elem, corners_in_node)
     // but does not set the scalar counter mesh.num_corners. Many solvers size
     // State.corner.* using mesh.num_corners, so if it is left at 0 any
@@ -184,12 +188,15 @@ void Driver::initialize()
     
 
     // Initialize node state
+    printf("Initializing node state \n");
+    printf("Number of nodes: %zu \n", mesh.num_nodes);
+    printf("Number of dimensions: %zu \n", mesh.num_dims);
     std::vector<node_state> required_node_state = { node_state::coords };
-    State.node.initialize(mesh.num_nodes, num_dims, required_node_state, node_communication_plan);
+    State.node.initialize(mesh.num_nodes, mesh.num_dims, required_node_state, node_communication_plan);
 
     // Copy the partitioned node coordinates to the state
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        for (size_t dim = 0; dim < num_dims; dim++) {
+        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
             State.node.coords(node_gid, dim) = final_node_coords(node_gid, dim);
         }
     });

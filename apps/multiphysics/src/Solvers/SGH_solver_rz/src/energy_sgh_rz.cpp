@@ -78,10 +78,7 @@ void SGHRZ::update_energy_rz(
 
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_sid = mat_elem_sid;
-
-        
         double MaterialPoints_power = 0.0;
-
 
         // --- tally the contribution from each corner to the element ---
 

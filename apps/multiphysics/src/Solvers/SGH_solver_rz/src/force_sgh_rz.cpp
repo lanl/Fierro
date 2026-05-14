@@ -146,8 +146,6 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 
         geometry::get_area_weights2D(corner_areas, elem_gid, node_coords, elem_node_gids);
 
-
-        
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             for (size_t dim = 0; dim < num_dims; dim++) {
 
@@ -214,8 +212,6 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
             // Get the material corner lid
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_sid, corner_lid);
 
-
-            
             // loop over dimensions and calc corner forces
             if (MaterialPoints_eroded(mat_id, mat_point_sid) == true) { 
                 for (int dim = 0; dim < num_dims; dim++) {

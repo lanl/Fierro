@@ -111,8 +111,6 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
     // set corner and node masses to zero
     init_corner_node_masses_zero_rz(mesh, State.node.mass, State.corner.mass);
 
-
-
     // 2D RZ
     // calculate the corner massess if 2D
 

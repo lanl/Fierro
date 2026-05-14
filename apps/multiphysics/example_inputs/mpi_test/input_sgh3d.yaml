@@ -54,7 +54,7 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     # Output format for visualization.
-    output_file_format: viz # only options are viz or viz_and_state
+    output_file_format: viz_and_state # only options are viz or viz_and_state
     # Amount of simulated time between visualization dumps (microseconds).
     graphics_time_step: 0.5
     # graphics_iteration_step: 10

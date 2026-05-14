@@ -40,7 +40,7 @@ dynamic_options:
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 100000
+    cycle_stop: 1
 
 
 # mesh_options:
@@ -69,10 +69,24 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     # `ensight` output format for this example.
-    output_file_format: ensight
+    output_file_format: viz_and_state
     # Output cadence in time units (microsecond).
     graphics_time_step: 0.25
     #graphics_iteration_step: 2
+    elem_field_outputs:
+        - den
+        - pres
+        - stress
+        - sie
+        - mass
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+        - volfrac
+    node_field_outputs:
+        - vel
+        - mass
 
 # ---------------------------------------------------------------------------
 # Solver configuration
@@ -148,25 +162,25 @@ materials:
             - 1.0E-14
             - 1.0
 
-    - material:
-        id: 1
-        eos_model_type: decoupled
-        eos_model: gamma_law_gas
-        # strength_model: none
-        dissipation_model: MARS_rz
-        # Note: material id 1 is defined but not used in this file’s regions
-        # (only `material_id: 0` appears under `regions`).
-        dissipation_global_vars:
-            - 1.0   # q1
-            - 1.333 # q1ex
-            - 1.0   # q2
-            - 1.333 # q2ex
-            - 0.0   # phi_min
-            - 1.0   # phi_curl_min
-        eos_global_vars:
-            - 1.666666666666667
-            - 1.0E-14
-            - 1.0
+    # - material:
+    #     id: 1
+    #     eos_model_type: decoupled
+    #     eos_model: gamma_law_gas
+    #     # strength_model: none
+    #     dissipation_model: MARS_rz
+    #     # Note: material id 1 is defined but not used in this file’s regions
+    #     # (only `material_id: 0` appears under `regions`).
+    #     dissipation_global_vars:
+    #         - 1.0   # q1
+    #         - 1.333 # q1ex
+    #         - 1.0   # q2
+    #         - 1.333 # q2ex
+    #         - 0.0   # phi_min
+    #         - 1.0   # phi_curl_min
+    #     eos_global_vars:
+    #         - 1.666666666666667
+    #         - 1.0E-14
+    #         - 1.0
 
 
 regions:

@@ -76,7 +76,6 @@ public:
     Material_t Materials;                   ///< Material data for simulation
     BoundaryCondition_t BoundaryConditions; ///< Simulation boundary conditions
 
-    int num_dims = 3;
 
     // ---------------------------------------------------------------------
     //    mesh data type declarations
