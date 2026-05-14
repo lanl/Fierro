@@ -31,7 +31,7 @@ dynamic_options:
     dt_min: 1.e-8 # Minimum adaptive timestep bound (microseconds).
     dt_max: 1.e-2 # Maximum adaptive timestep bound (microseconds).
     dt_start: 1.e-5 # Initial timestep guess (microseconds).
-    cycle_stop: 300000 # Hard stop after this many cycles.
+    cycle_stop: 1 # Hard stop after this many cycles.
 
 # ---------------------------------------------------------------------------
 # Mesh options (3D box)
@@ -43,9 +43,9 @@ mesh_options:
     # Box origin in x,y,z (cm).
     origin: [0.0, 0.0, 0.0]
     # Box side lengths in x,y,z (cm).
-    length: [1.2, 1.2, 1.2]
+    length: [1.0, 1.0, 1.0]
     # Element counts [nx, ny, nz].
-    num_elems: [30, 30, 30]
+    num_elems: [10, 10, 10]
 
 
 # ---------------------------------------------------------------------------
@@ -177,16 +177,58 @@ materials:
             - 0.0   # phi_min
             - 1.0   # pin_curl_min
 
+    - material:
+        id: 1
+        eos_model_type: decoupled
+        # Gamma-law gas EOS.
+        eos_model: gamma_law_gas
+        # For `gamma_law_gas`, `eos_global_vars` are:
+        # - [0] gamma
+        # - [1] minimum sound speed
+        # - [2] c_v (may not be used directly in pressure in current code path)
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0E-14
+            - 1.0
+        # strength_model: none
+        # MARS artificial viscosity for shock capturing.
+        dissipation_model: MARS
+        # For `MARS`, `dissipation_global_vars` are ordered as:
+        # [q1, q1ex, q2, q2ex, phi_min, phi_curl_min].
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.0   # q1ex
+            - 1.333 # q2
+            - 1.333 # q2ex
+            - 0.0   # phi_min
+            - 1.0   # pin_curl_min
 
 # ---------------------------------------------------------------------------
-# Regions (initial fills)
+# Regions (paint geometry on mesh)
 # ---------------------------------------------------------------------------
 regions:
+
     - region:
+        id: 0
         volume:
             type: global
         # Fill the entire domain with ambient (uniform) initial conditions.
-        solver_id: 0
+    
+    # Energy source initial conditions (Sedov blast)
+    - region:
+        id: 1
+        volume:
+            type: stl
+            file_path: ../../icosahedron_bin.stl
+        # Apply the Sedov "blast" only to this localized region.
+
+# ---------------------------------------------------------------------------
+# Initial conditions (they are applied to regions)
+# ---------------------------------------------------------------------------
+initial_conditions:
+
+    - initial_condition:
+        region_id: 0
         material_id: 0
         density: 
             # Ambient density (g/cm^3 with the assumed cm scaling).
@@ -202,20 +244,15 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             # Single-material case: volume fraction is 1 everywhere.
             type: uniform
             value: 1.0
-
-
+    
     # Energy source initial conditions (Sedov blast)
-    - region:
-        volume:
-            type: stl
-            file_path: input-stl-paint.yaml
-        # Apply the Sedov "blast" only to this localized region.
-        solver_id: 0
-        material_id: 0
+    - initial_condition:
+        region_id: 1
+        material_id: 1
         density: 
             # Density fill inside the blast region.
             type: uniform
@@ -231,8 +268,7 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             # Single-material case: 1 everywhere.
             type: uniform
             value: 1.0
-
