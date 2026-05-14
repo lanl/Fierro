@@ -292,44 +292,50 @@ void fill_regions(
     DCArrayKokkos <size_t> voxel_elem_mat_id; // 1 or 0 if material exist, or it is the material_id
 
     // a local array to store geometric element volume fractions for each fill
-    DCArrayKokkos <double> elem_geo_volfrac_fill; // it is in the range of 0:1 and allocated later for STL files
+    DCArrayKokkos <double> elem_geo_volfrac_fill(mesh.num_elems); // it is in the range of 0:1 and allocated later for STL files
 
-    // Important:
-    //  Remember that num_fills_saved_in_elem = num_mats_saved_in_elem
-    
-    // ---------------------------------------------
-    // copy to host, enum to read a voxel or stl file
-    // ---------------------------------------------
-    DCArrayKokkos<size_t> read_voxel_file(num_region_fills, "read_voxel_file"); // check to see if readVoxelFile
-    DCArrayKokkos<size_t> read_stl_file(num_region_fills, "read_stl_file"); // check to see if readVoxelFile
+    // --- map vol tag options to the CPU side ---
+    // an array to store fill types on the host side, copying from device side
+    DCArrayKokkos <region::vol_tag> fill_volume_type(num_region_fills, "fill_volume_type");
 
     FOR_ALL(reg_id, 0, num_region_fills, {
-
-        if (region_fills(reg_id).volume == region::readVoxelFile) {
-            read_voxel_file(reg_id) = region::readVoxelFile;  // read the  voxel file
-        }
-        else if (region_fills(reg_id).volume == region::readSTLFile){
-            read_stl_file(reg_id) = region::readSTLFile;  // read the STL file
-        }
-        // add other mesh voxel files
-        else{
-            read_voxel_file(reg_id) = 0;
-            read_stl_file(reg_id) = 0;
-        }
-
+        fill_volume_type(reg_id) = region_fills(reg_id).volume;
     }); // end parallel for
-    read_voxel_file.update_host(); // copy to CPU if code is to read a voxel file
-    read_stl_file.update_host();   // copy to CPU if code is to read a stl file
+    fill_volume_type.update_host(); // copy to CPU the fill volume type
     Kokkos::fence();
 
     
-    for (size_t reg_id = 0; reg_id < num_region_fills; reg_id++) {
-        if (read_stl_file.host(reg_id) == region::readSTLFile) {
-            elem_geo_volfrac_fill = DCArrayKokkos <double> (mesh.num_elems);
-            break;
-        }
-    } // end fill loop
+    // ----------------------------------------------------------------------------
+    // calculating the element average coordinates for geometric painting and
+    // applying initial conditions
+    //
+    // WARNING WARNING WARNING:
+    // high-order needs to calculate coordinates of guass points, not the element
+    //
+    // parallel loop over elements in mesh
+    FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
+        // calculate the coordinates and radius of the element     
+        elem_coords(elem_gid, 0) = 0.0;
+        elem_coords(elem_gid, 1) = 0.0;
+        elem_coords(elem_gid, 2) = 0.0;
+
+        // get the coordinates of the element center 
+        for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+            elem_coords(elem_gid, 0) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 0);
+            elem_coords(elem_gid, 1) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 1);
+            if (mesh.num_dims == 3) {
+                elem_coords(elem_gid, 2) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 2);
+            }
+            else{
+                elem_coords(elem_gid, 2) = 0.0;
+            }
+        } // end loop over nodes in element
+        elem_coords(elem_gid, 0) = (elem_coords(elem_gid, 0) / mesh.num_nodes_in_elem);
+        elem_coords(elem_gid, 1) = (elem_coords(elem_gid, 1) / mesh.num_nodes_in_elem);
+        elem_coords(elem_gid, 2) = (elem_coords(elem_gid, 2) / mesh.num_nodes_in_elem);
+    });
+    Kokkos::fence();
 
     // -----------------------------------------------------------------
     // We start by painting regions on the mesh, which is done in the 
@@ -352,102 +358,232 @@ void fill_regions(
     // loop over all region fill instructions for the mesh 
     for (size_t reg_id = 0; reg_id < num_region_fills; reg_id++) {
 
-        // --------------------
-        // voxel mesh setup
-        if (read_voxel_file.host(reg_id) == region::readVoxelFile) {
-            // read voxel mesh to get the values in the fcn interface
-            // voxel_elem_mat_id is read here
-            user_voxel_init(voxel_elem_mat_id,
-                            voxel_dx,
-                            voxel_dy,
-                            voxel_dz,
-                            orig_x,
-                            orig_y,
-                            orig_z,
-                            voxel_num_i,
-                            voxel_num_j,
-                            voxel_num_k,
-                            region_fills_host(reg_id).scale_x,
-                            region_fills_host(reg_id).scale_y,
-                            region_fills_host(reg_id).scale_z,
-                            region_fills_host(reg_id).file_path);
+        // check to see if this element should be filled
+        switch (fill_volume_type.host(reg_id)) {
+            case region::global:
+            {
+                elem_geo_volfrac_fill.set_values(1.0);
+                Kokkos::fence();
+                break;
+            } // end case
+            // ---
+            case region::box:
+            {
+                elem_geo_volfrac_fill.set_values(0.0);  // initialized to zero, so no fill
 
-            // copy values read from file to device
-            voxel_elem_mat_id.update_device();
-        } // endif
-        
-        // --------------------
-        // STL file mesh setup
-        if (read_stl_file.host(reg_id) == region::readSTLFile) {
+                const double x_lower_bound = region_fills(reg_id).x1;
+                const double x_upper_bound = region_fills(reg_id).x2;
 
-            // read .STL file and paint vol fractions on mesh
-            int paint_sucessful = paint_stl_on_mesh(elem_geo_volfrac_fill, 
-                                                    node_coords,
-                                                    mesh.nodes_in_elem,
-                                                    mesh.num_nodes,
-                                                    region_fills_host(reg_id).file_path);
+                const double y_lower_bound = region_fills(reg_id).y1;
+                const double y_upper_bound = region_fills(reg_id).y2;
 
-        } // end if read STL file
-        
+                const double z_lower_bound = region_fills(reg_id).z1;
+                const double z_upper_bound = region_fills(reg_id).z2;
 
-        // parallel loop over elements in mesh
+                FOR_ALL(elem_gid, 0, mesh.num_elems, {
+
+                    if (elem_coords(elem_gid,0) >= x_lower_bound && elem_coords(elem_gid,0) <= x_upper_bound &&
+                        elem_coords(elem_gid,1) >= y_lower_bound && elem_coords(elem_gid,1) <= y_upper_bound &&
+                        elem_coords(elem_gid,2) >= z_lower_bound && elem_coords(elem_gid,2) <= z_upper_bound) {
+                        elem_geo_volfrac_fill(elem_gid) = 1.0;
+                    } // end if
+
+                });
+                Kokkos::fence();
+                break;
+            } // end case
+            // ---
+            case region::cylinder:
+            {
+                elem_geo_volfrac_fill.set_values(0.0);  // initialized to zero, so no fill
+                
+                FOR_ALL(elem_gid, 0, mesh.num_elems, {
+
+                    // for shapes with an origin (e.g., sphere and circle), accounting for the origin
+                    const double dist_x = elem_coords(elem_gid,0) - region_fills(reg_id).origin[0];
+                    const double dist_y = elem_coords(elem_gid,1) - region_fills(reg_id).origin[1];
+                    const double dist_z = elem_coords(elem_gid,2) - region_fills(reg_id).origin[2];
+
+                    // spherical radius 
+                    const double radius = sqrt(dist_x * dist_x +
+                                               dist_y * dist_y +
+                                               dist_z * dist_z);
+
+                    // cylindrical radius
+                    const double radius_cyl = sqrt(dist_x * dist_x +
+                                                   dist_y * dist_y);
+
+                    const double z_lower_bound = region_fills(reg_id).z1;
+                    const double z_upper_bound = region_fills(reg_id).z2;
+
+                    if (radius_cyl >= region_fills(reg_id).radius1 && 
+                        radius_cyl <= region_fills(reg_id).radius2 &&
+                        elem_coords(elem_gid,2) >= z_lower_bound && elem_coords(elem_gid,2) <= z_upper_bound) {
+                        elem_geo_volfrac_fill(elem_gid) = 1.0;
+                    } // end if
+
+                });
+                Kokkos::fence();
+
+                break;
+            } // end case
+            // ---
+            case region::sphere:
+            {
+
+                elem_geo_volfrac_fill.set_values(0.0);  // initialized to zero, so no fill
+            
+                FOR_ALL(elem_gid, 0, mesh.num_elems, {
+
+                    // for shapes with an origin (e.g., sphere and circle), accounting for the origin
+                    const double dist_x = elem_coords(elem_gid,0) - region_fills(reg_id).origin[0];
+                    const double dist_y = elem_coords(elem_gid,1) - region_fills(reg_id).origin[1];
+                    const double dist_z = elem_coords(elem_gid,2) - region_fills(reg_id).origin[2];
+
+                    // spherical radius 
+                    const double radius = sqrt(dist_x * dist_x +
+                                               dist_y * dist_y +
+                                               dist_z * dist_z);
+
+                    // cylindrical radius
+                    const double radius_cyl = sqrt(dist_x * dist_x +
+                                                   dist_y * dist_y);
+
+                    if (radius >= region_fills(reg_id).radius1
+                        && radius <= region_fills(reg_id).radius2) {
+                        elem_geo_volfrac_fill(elem_gid) = 1.0;
+                    }
+
+                });
+                Kokkos::fence();
+
+                break;
+            } // end case
+            // ----
+            case region::readVoxelFile:
+            {
+
+                elem_geo_volfrac_fill.set_values(0.0);  // initialized to zero, so no fill
+
+                // read voxel mesh to get the values in the fcn interface
+                // voxel_elem_mat_id is read here
+                user_voxel_init(voxel_elem_mat_id,
+                                voxel_dx,
+                                voxel_dy,
+                                voxel_dz,
+                                orig_x,
+                                orig_y,
+                                orig_z,
+                                voxel_num_i,
+                                voxel_num_j,
+                                voxel_num_k,
+                                region_fills_host(reg_id).scale_x,
+                                region_fills_host(reg_id).scale_y,
+                                region_fills_host(reg_id).scale_z,
+                                region_fills_host(reg_id).file_path);
+
+                // copy values read from file to device
+                voxel_elem_mat_id.update_device();
+
+                FOR_ALL(elem_gid, 0, mesh.num_elems, {
+
+                    // find the closest element in the voxel mesh to this element
+                    const double i0_real = (elem_coords(elem_gid,0) - orig_x - region_fills(reg_id).origin[0]) / (voxel_dx);
+                    const double j0_real = (elem_coords(elem_gid,1) - orig_y - region_fills(reg_id).origin[1]) / (voxel_dy);
+                    const double k0_real = (elem_coords(elem_gid,2) - orig_z - region_fills(reg_id).origin[2]) / (voxel_dz);
+
+                    const int i0 = (int)i0_real;
+                    const int j0 = (int)j0_real;
+                    const int k0 = (int)k0_real;
+
+                    // look for the closest element in the voxel mesh
+                    const int elem_id0 = get_id_device(i0, j0, k0, voxel_num_i, voxel_num_j);
+
+                    // if voxel mesh overlaps this mesh, then fill it if =1
+                    if (elem_id0 < voxel_elem_mat_id.size() && elem_id0 >= 0 &&
+                        i0 >= 0 && j0 >= 0 && k0 >= 0 &&
+                        i0 < voxel_num_i && j0 < voxel_num_j && k0 < voxel_num_k) {
+
+                        // voxel mesh elem values = 0 or 1
+
+                        // if part_id matches the voxel_mat_id here, then fill elem_gid
+                        if(region_fills(reg_id).part_id == voxel_elem_mat_id(elem_id0)){
+                            elem_geo_volfrac_fill(elem_gid) = 1.0;
+                        }
+
+                    } // end if
+                });
+                Kokkos::fence();
+
+                break;
+            } // end case
+            // ---
+            case region::readSTLFile:
+            {
+                elem_geo_volfrac_fill.set_values(0.0);  // initialized to zero, so no fill
+
+                // read .STL file and paint vol fractions on mesh
+                int paint_sucessful = paint_stl_on_mesh(elem_geo_volfrac_fill, 
+                                                        node_coords,
+                                                        mesh.nodes_in_elem,
+                                                        mesh.num_nodes,
+                                                        region_fills_host(reg_id).file_path);
+                
+                if (paint_sucessful==false){
+                    // exit with error message
+
+                }
+
+                break;
+            } // end case
+            // ---
+            case region::readVTUFile:
+            {
+                elem_geo_volfrac_fill.set_values(0.0);  // initialized to zero, so no fill
+
+                FOR_ALL(elem_gid, 0, mesh.num_elems, {
+                    // if the part id in .vtu file matches the specified id, then fill it
+                    if(object_ids(elem_gid) == region_fills(reg_id).part_id){
+                        elem_geo_volfrac_fill(elem_gid) = 1.0;
+                    }
+                });
+
+                break;
+            } // end case
+            // ---
+            case region::no_volume:
+            {
+                elem_geo_volfrac_fill.set_values(0.0);  // default is no, don't fill it
+
+                break;
+            } // end case
+            // ----
+            default:
+            {
+                elem_geo_volfrac_fill.set_values(0.0);  // default is no, don't fill it
+
+                break;
+            } // end case
+
+        } // end of switch
+
+
+        // parallel loop over elements in mesh and fill elements based on geo_volfrac
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
-            // calculate the coordinates and radius of the element     
-            elem_coords(elem_gid, 0) = 0.0;
-            elem_coords(elem_gid, 1) = 0.0;
-            elem_coords(elem_gid, 2) = 0.0;
-
-            // get the coordinates of the element center 
-            for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
-                elem_coords(elem_gid, 0) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 0);
-                elem_coords(elem_gid, 1) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 1);
-                if (mesh.num_dims == 3) {
-                    elem_coords(elem_gid, 2) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 2);
-                }
-                else{
-                    elem_coords(elem_gid, 2) = 0.0;
-                }
-            } // end loop over nodes in element
-            elem_coords(elem_gid, 0) = (elem_coords(elem_gid, 0) / mesh.num_nodes_in_elem);
-            elem_coords(elem_gid, 1) = (elem_coords(elem_gid, 1) / mesh.num_nodes_in_elem);
-            elem_coords(elem_gid, 2) = (elem_coords(elem_gid, 2) / mesh.num_nodes_in_elem);
-
-            ViewCArrayKokkos <double> coords(&elem_coords(elem_gid,0), 3);
-
-            // calc if we are to fill this element
-            double geo_volfrac = fill_geometric_region(mesh,
-                                                     voxel_elem_mat_id,
-                                                     elem_geo_volfrac_fill,
-                                                     object_ids,
-                                                     region_fills,
-                                                     coords,
-                                                     voxel_dx,
-                                                     voxel_dy,
-                                                     voxel_dz,
-                                                     orig_x,
-                                                     orig_y,
-                                                     orig_z,
-                                                     voxel_num_i,
-                                                     voxel_num_j,
-                                                     voxel_num_k,
-                                                     reg_id,
-                                                     elem_gid);
-
             // paint the material state on the element if geo_volfrac>0
-            if (geo_volfrac > 1.e-8) {
+            if (elem_geo_volfrac_fill(elem_gid) > 1.e-8) {
                 
                 // Note: material volume fractions is added to mesh when applying initial conditions
 
-
                 // if this fill is to add a geometroy to existing ones, do so
-                if (geo_volfrac < 1.0 - 1.0e-8){
+                if (elem_geo_volfrac_fill(elem_gid) < 1.0 - 1.0e-8){
 
                     // append the region_id and elem_geo_volfrac in this element
                     append_fills_in_elem(elem_geo_volfrac,
                                          elem_region_ids,
                                          elem_num_region_fills,
-                                         geo_volfrac,
+                                         elem_geo_volfrac_fill(elem_gid),
                                          elem_gid,
                                          reg_id,
                                          max_num_mats_per_elem);
@@ -469,6 +605,7 @@ void fill_regions(
                 } // end if
 
             } // end if fill this
+
         }); // end FOR_ALL node loop
         Kokkos::fence();
 
@@ -543,7 +680,7 @@ void fill_regions(
             // Important:
             // The number of ics assigned to a region must be less then max number of materials in an element
             if(ic_lid >= max_num_mats_per_elem){
-                Kokkos::abort("ERROR: the number of material ids assigned to region %zu exceeded maximum \n number of materials per element.  Increase the the maximum number of materials per element \n");
+                Kokkos::abort("ERROR: the number of material ids assigned to region exceeded maximum \n number of materials per element.  Increase the the maximum number of materials per element \n");
             }
 
             // save ic index for each region in an array as it is a new material
@@ -1618,7 +1755,6 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
                           const size_t reg_id,
                           const size_t max_num_mats_per_elem)
 {
-
 
     // the number of regions saved to this element, initialized to 0 at start of code
     size_t fill_storage_lid = elem_num_region_fills(elem_gid);

@@ -179,7 +179,7 @@ KOKKOS_FUNCTION
 void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
                           const CArrayKokkos <size_t>& elem_region_ids,
                           const DCArrayKokkos <size_t>& elem_num_region_fills,
-                          const double geo_volfrac,
+                          const double geovolfrac,
                           const size_t elem_gid,
                           const size_t reg_id,
                           const size_t max_num_mats_per_elem);
