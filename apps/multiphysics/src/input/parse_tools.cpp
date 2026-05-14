@@ -403,6 +403,7 @@ void print_inputs()
 
     }
     //------
+    //------
     std::cout << "    regions: \n";
     std::cout << "       #...as many regions as you need... \n";
     std::cout << "       - region: \n";
@@ -430,8 +431,15 @@ void print_inputs()
 
             } // end for
         } // end if volume
-        else if(field.compare("volume_fraction") == 0){
-            std::cout << "          volume_fraction: \n";
+    } // end for region
+    //------
+    //------
+    std::cout << "    initial_conditions: \n";
+    std::cout << "       #...as many initial conditions as you need... \n";
+    std::cout << "       - initial_condition: \n";
+    for (auto field : str_ics_inps){
+        if(field.compare("material_volume_fraction") == 0){
+            std::cout << "          material_volume_fraction: \n";
 
             for (auto subfield : str_ics_mat_volfrac_inps){
 

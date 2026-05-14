@@ -155,8 +155,8 @@ struct RegionICs_t
     // initial condition for specific heat distribution
     initial_conditions::ICsScalar specific_heat_field= initial_conditions::noICsScalar;
 
-    // initial condition for volume fraction distribution
-    initial_conditions::ICsScalar volfrac_field = initial_conditions::uniform;
+    // initial condition for material volume fraction distribution
+    initial_conditions::ICsScalar mat_volfrac_field = initial_conditions::uniform;
 
     // velocity coefficients by component
     double u = 0.0; ///< U component of velocity
@@ -181,9 +181,9 @@ struct RegionICs_t
     double level_set_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for level_set field
     
     // note: setup applies min and max fcns, making it [0:1]
-    double volfrac = 1.0; ///< volume fraction of material field
-    double volfrac_slope = 0.0; ///< slope of volume fraction field
-    double volfrac_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for volume fraction field
+    double mat_volfrac = 1.0; ///< volume fraction of material field
+    double mat_volfrac_slope = 0.0; ///< slope of volume fraction field
+    double mat_volfrac_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for volume fraction field
 
     double specific_heat = 0.0; ///< specific heat
     double specific_heat_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for specific heat field
@@ -416,7 +416,7 @@ static std::vector<std::string> ics_level_set_required_inps
 // -------------------------------------
 // required inputs for filling material volume fraction
 // -------------------------------------
-static std::vector<std::string> ics_volfrac_required_inps
+static std::vector<std::string> ics_mat_volfrac_required_inps
 {
     "type"
 };

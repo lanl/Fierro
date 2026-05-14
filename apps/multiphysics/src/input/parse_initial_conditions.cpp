@@ -647,7 +647,7 @@ void parse_initial_conditions(Yaml::Node& root,
                 std::vector<std::string> user_ics_mat_volfrac_inputs;
                 
                 // extract words from the input file and validate they are correct
-                validate_inputs(inps_subfields_yaml, user_ics_mat_volfrac_inputs, str_ics_mat_volfrac_inps, ics_volfrac_required_inps);
+                validate_inputs(inps_subfields_yaml, user_ics_mat_volfrac_inputs, str_ics_mat_volfrac_inps, ics_mat_volfrac_required_inps);
 
                 // loop over the subfield words
                 for(auto& a_subfield_word : user_ics_mat_volfrac_inputs){ 
@@ -657,7 +657,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         double value = root["initial_conditions"][ic_id]["initial_condition"]["material_volume_fraction"]["value"].As<double>();
       
                         RUN({
-                            region_ics(ic_id).volfrac = value;
+                            region_ics(ic_id).mat_volfrac = value;
                         });
                     } // value
                     else if (a_subfield_word.compare("slope") == 0) {
@@ -665,7 +665,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         double slope = root["initial_conditions"][ic_id]["initial_condition"]["material_volume_fraction"]["slope"].As<double>();
       
                         RUN({
-                            region_ics(ic_id).volfrac_slope = slope;
+                            region_ics(ic_id).mat_volfrac_slope = slope;
                         });
                     } // slope
                     else if (a_subfield_word.compare("origin") == 0) {
@@ -689,9 +689,9 @@ void parse_initial_conditions(Yaml::Node& root,
 
                         // storing the origin values as (x1,y1,z1)
                         RUN({
-                            region_ics(ic_id).volfrac_origin[0] = x1;
-                            region_ics(ic_id).volfrac_origin[1] = y1;
-                            region_ics(ic_id).volfrac_origin[2] = z1;
+                            region_ics(ic_id).mat_volfrac_origin[0] = x1;
+                            region_ics(ic_id).mat_volfrac_origin[1] = y1;
+                            region_ics(ic_id).mat_volfrac_origin[2] = z1;
                         });
                     } // origin
                     else if (a_subfield_word.compare("type") == 0){
@@ -707,49 +707,49 @@ void parse_initial_conditions(Yaml::Node& root,
                                 case initial_conditions::uniform:
                                     std::cout << "Setting volfrac initial conditions type to uniform " << std::endl;
                                     RUN({
-                                        region_ics(ic_id).volfrac_field = initial_conditions::uniform;
+                                        region_ics(ic_id).mat_volfrac_field = initial_conditions::uniform;
                                     });
                                     break;
 
                                 case initial_conditions::radialScalar:
                                     std::cout << "Setting volfrac initial conditions type to radial scalar " << std::endl;
                                     RUN({
-                                        region_ics(ic_id).volfrac_field = initial_conditions::radialScalar;
+                                        region_ics(ic_id).mat_volfrac_field = initial_conditions::radialScalar;
                                     });
                                     break;
 
                                 case initial_conditions::sphericalScalar:
                                     std::cout << "Setting volfrac initial conditions type to spherical scalar " << std::endl;
                                     RUN({
-                                        region_ics(ic_id).volfrac_field = initial_conditions::sphericalScalar;
+                                        region_ics(ic_id).mat_volfrac_field = initial_conditions::sphericalScalar;
                                     });
                                     break;
 
                                 case initial_conditions::xlinearScalar:
                                     std::cout << "Setting volfrac initial conditions type to xlinearScalar " << std::endl;
                                     RUN({
-                                        region_ics(ic_id).volfrac_field = initial_conditions::xlinearScalar;
+                                        region_ics(ic_id).mat_volfrac_field = initial_conditions::xlinearScalar;
                                     });
                                     break;
                                 
                                 case initial_conditions::ylinearScalar:
                                     std::cout << "Setting volfrac initial conditions type to ylinearScalar " << std::endl;
                                     RUN({
-                                        region_ics(ic_id).volfrac_field = initial_conditions::ylinearScalar;
+                                        region_ics(ic_id).mat_volfrac_field = initial_conditions::ylinearScalar;
                                     });
                                     break;
                                 
                                 case initial_conditions::zlinearScalar:
                                     std::cout << "Setting volfrac initial conditions type to zlinearScalar " << std::endl;
                                     RUN({
-                                        region_ics(ic_id).volfrac_field = initial_conditions::zlinearScalar;
+                                        region_ics(ic_id).mat_volfrac_field = initial_conditions::zlinearScalar;
                                     });
                                     break;
 
                                 case initial_conditions::tgVortexScalar:
                                     std::cout << "Setting volfrac initial conditions type to TG Vortex " << std::endl;
                                     RUN({
-                                        region_ics(ic_id).volfrac_field = initial_conditions::tgVortexScalar;
+                                        region_ics(ic_id).mat_volfrac_field = initial_conditions::tgVortexScalar;
                                     });
                                     break;
 
@@ -757,14 +757,14 @@ void parse_initial_conditions(Yaml::Node& root,
                                     std::cout << "Default Volume Fraction Used:" << std::endl;
                                     std::cout << "Setting volume fraction to uniform field with a value equal to 1" << std::endl;
                                     RUN({ 
-                                        region_ics(ic_id).volfrac_field = initial_conditions::uniform;
+                                        region_ics(ic_id).mat_volfrac_field = initial_conditions::uniform;
                                     });
                                     break;
 
                                 default:
 
                                     RUN({ 
-                                        region_ics(ic_id).volfrac_field = initial_conditions::noICsScalar;
+                                        region_ics(ic_id).mat_volfrac_field = initial_conditions::noICsScalar;
                                     });
 
                                     std::cout << "ERROR: No valid material volume fraction intial conditions type input " << std::endl;

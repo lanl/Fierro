@@ -782,12 +782,12 @@ void fill_regions(
 
                 // get the mat_volfrac for the region
                 double mat_vfrac = get_region_scalar(coords,
-                                                region_ics(ic_id).volfrac,
-                                                region_ics(ic_id).volfrac_slope,
-                                                region_ics(ic_id).volfrac_origin,
+                                                region_ics(ic_id).mat_volfrac,
+                                                region_ics(ic_id).mat_volfrac_slope,
+                                                region_ics(ic_id).mat_volfrac_origin,
                                                 elem_gid,
                                                 mesh.num_dims,
-                                                region_ics(ic_id).volfrac_field);
+                                                region_ics(ic_id).mat_volfrac_field);
 
                 mat_vfrac = fmax(0.0, mat_vfrac);
                 mat_vfrac = fmin(1.0, mat_vfrac);
