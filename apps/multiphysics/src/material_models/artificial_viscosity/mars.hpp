@@ -887,11 +887,11 @@ namespace MARSRZDissipationModel {
     // phi = fmin(phi, phi_curl);
 
     
-    // // if phi_floor>0, ensure a small amount of dissipation is present
+    // if phi_floor>0, ensure a small amount of dissipation is present
     // phi = fmax(phi_floor, phi);
 
 
-    // GaussPoints_shock_detector(gauss_gid) = phi;
+    // // GaussPoints_shock_detector(gauss_gid) = phi;
     size_t gauss_gid = elem_gid;
     double phi = GaussPoints_shock_detector(gauss_gid);
     

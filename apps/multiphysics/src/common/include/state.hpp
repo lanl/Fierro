@@ -395,7 +395,8 @@ struct GaussPoint_t
                     if (div.size() == 0) this->div = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_div");
                     break;
                 case gauss_pt_state::gradient_velocity:
-                    if (vel_grad.size() == 0) this->vel_grad = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_vel_grad");
+                    // Note: all current solvers treat velocity gradient as a 3d tensor, even the rz solver.
+                    if (vel_grad.size() == 0) this->vel_grad = DCArrayKokkos<double>(num_gauss_pnts, 3, 3, "gauss_point_vel_grad");
                     break;
                 case gauss_pt_state::level_set:
                     if (level_set.size() == 0) this->level_set = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set");

@@ -268,7 +268,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
             State.GaussPoints.shock_detector.set_values(0.0);
             MATAR_FENCE();
 
-            MachShockDetector::detect_shock(mesh,
+            MachShockDetectorRZ::detect_shock(mesh,
                 State.GaussPoints.vel_grad,
                 State.GaussPoints.shock_detector,
                 State.GaussPoints.vol,
@@ -467,6 +467,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
         // write outputs
         if (write == 1) {
             if (log) log->info("Writing outputs to file at %f \n", graphics_time);
+            if (log) log->flush();
             mesh_writer.write_mesh(mesh, 
                                    State, 
                                    SimulationParamaters, 

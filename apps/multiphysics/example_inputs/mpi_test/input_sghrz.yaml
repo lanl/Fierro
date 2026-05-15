@@ -36,7 +36,7 @@
 # Time integration / stepping control
 # ---------------------------------------------------------------------------
 dynamic_options:
-    time_final: 4.0
+    time_final: 0.5
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
@@ -71,7 +71,7 @@ output_options:
     # `ensight` output format for this example.
     output_file_format: viz_and_state
     # Output cadence in time units (microsecond).
-    graphics_time_step: 0.1
+    graphics_time_step: 0.01
     # graphics_iteration_step: 1
     elem_field_outputs:
         - den
@@ -155,7 +155,7 @@ materials:
             - 1.0   # q1ex
             - 1.333 # q2
             - 1.333 # q2ex
-            - 1.0   # phi_min
+            - 0.0   # phi_min
             - 1.0   # phi_curl_min
         # MARS_rz dissipation_global_vars ordering:
         #   q1, q1ex, q2, q2ex, phi_min, phi_curl_min

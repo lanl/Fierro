@@ -136,6 +136,10 @@ void Driver::initialize()
         mesh.num_owned_nodes = initial_mesh.num_nodes;
         mesh.num_dims = initial_mesh.num_dims;
         final_node_coords = initial_node_coords;
+
+
+        mesh.shared_tally_owned_nodes = DCArrayKokkos<bool>(mesh.num_owned_nodes, "shared_tally_owned_nodes");
+        mesh.shared_tally_owned_nodes.set_values(true);
     }
     // mesh.num_dims = initial_mesh.num_dims;
     // partition_mesh() builds corner connectivity (corners_in_elem, corners_in_node)
