@@ -67,7 +67,8 @@ namespace SGHRZ_State
     static const std::vector<gauss_pt_state> required_gauss_pt_state = 
     { 
         gauss_pt_state::volume,
-        gauss_pt_state::shock_detector
+        gauss_pt_state::shock_detector,
+        gauss_pt_state::gradient_velocity
     };
 
     // Material point state to be initialized for the SGH solver
@@ -402,9 +403,9 @@ void calc_corner_mass_rz(const Material_t& Materials,
                          const size_t mat_id);
 
 void calc_node_mass_rz(const swage::Mesh& mesh,
-                    const MPICArrayKokkos<double>& node_coords,
-                    const DCArrayKokkos<double>& node_mass,
-                    const DCArrayKokkos<double>& corner_mass);                         
+                       const MPICArrayKokkos<double>& node_coords,
+                       const DCArrayKokkos<double>& node_mass,
+                       const DCArrayKokkos<double>& corner_mass);                         
 
 void calc_node_areal_mass_rz(const swage::Mesh& mesh,
                              const MPICArrayKokkos<double>& node_coords,
@@ -417,21 +418,20 @@ void calc_node_extensive_mass_rz(const CArrayKokkos<double>& node_extensive_mass
                                  const DCArrayKokkos<double>& node_mass,
                                  double num_nodes);
 
-double sum_domain_internal_energy_rz(const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-                                     const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-                                     const size_t num_mat_points,
-                                     const size_t mat_id);
+double sum_domain_internal_energy_rz(const swage::Mesh& mesh,
+                                     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
+                                     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+                                     const DRaggedRightArrayKokkos<double>& MaterialPoints_sie);
 
 double sum_domain_kinetic_energy_rz(const swage::Mesh& mesh,
                                     const MPICArrayKokkos<double>& node_vel,
                                     const CArrayKokkos<double>& node_extensive_mass);
 
-double sum_domain_material_mass_rz(const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-                                   const size_t num_mat_points,
-                                   const size_t mat_id);
+double sum_domain_material_mass_rz(const swage::Mesh& mesh,
+                                const MeshtoMaterialMap_t& MeshtoMaterialMaps,
+                                const DRaggedRightArrayKokkos<double>& MaterialPoints_mass);
 
-double sum_domain_node_mass_rz(const CArrayKokkos<double>& extensive_node_mass,
-                               const size_t num_nodes);
+double sum_domain_node_mass_rz(const swage::Mesh& mesh,const CArrayKokkos<double>& node_extensive_mass);
 
 void set_corner_force_zero_rz(const swage::Mesh& mesh, 
                               const DCArrayKokkos<double>& corner_force);   

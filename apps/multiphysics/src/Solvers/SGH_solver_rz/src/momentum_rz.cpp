@@ -110,8 +110,6 @@ void SGHRZ::get_velgrad_rz(
     const DCArrayKokkos<double>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---
-    printf("Calculating velocity gradient for the element (inside get_velgrad_rz) \n");
-    printf("Number of elements: %zu \n", mesh.num_elems);
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
         const size_t num_nodes_in_elem = 4;
         const size_t num_dims = 2;
@@ -258,6 +256,7 @@ void SGHRZ::get_divergence_rz(DCArrayKokkos<double>& elem_div,
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
         const size_t num_nodes_in_elem = 4;
         const size_t num_dims = 2;
+        
 
         double u_array[num_nodes_in_elem];
         double v_array[num_nodes_in_elem];

@@ -136,10 +136,7 @@ void Driver::initialize()
         mesh.num_owned_nodes = initial_mesh.num_nodes;
         mesh.num_dims = initial_mesh.num_dims;
         final_node_coords = initial_node_coords;
-
-        printf("Number of dimensions: %zu \n", initial_mesh.num_dims);
     }
-    printf("Number of dimensions: %zu \n", mesh.num_dims);
     // mesh.num_dims = initial_mesh.num_dims;
     // partition_mesh() builds corner connectivity (corners_in_elem, corners_in_node)
     // but does not set the scalar counter mesh.num_corners. Many solvers size
@@ -188,9 +185,6 @@ void Driver::initialize()
     
 
     // Initialize node state
-    printf("Initializing node state \n");
-    printf("Number of nodes: %zu \n", mesh.num_nodes);
-    printf("Number of dimensions: %zu \n", mesh.num_dims);
     std::vector<node_state> required_node_state = { node_state::coords };
     State.node.initialize(mesh.num_nodes, mesh.num_dims, required_node_state, node_communication_plan);
 

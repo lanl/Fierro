@@ -599,8 +599,9 @@ struct MaterialPoint_t
                     if (pres.size() == 0) this->pres = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_pressure");
                     break;
                 case material_pt_state::stress:
-                    if (stress.size() == 0) this->stress = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, num_dims, "material_point_stress");  
-                    if (stress_n0.size() == 0) this->stress_n0 = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, num_dims, "material_point_stress_n0"); 
+                    // Note: all current solvers treat stress as a 3d tensor, even the rz solver.
+                    if (stress.size() == 0) this->stress = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, 3, "material_point_stress");  
+                    if (stress_n0.size() == 0) this->stress_n0 = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, 3, "material_point_stress_n0"); 
                     break;
                 case material_pt_state::elastic_modulii:
                     if (elastic_modulii.size() == 0) this->elastic_modulii = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, "material_elastic_modulii");

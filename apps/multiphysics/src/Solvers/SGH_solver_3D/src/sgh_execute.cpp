@@ -164,7 +164,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // extensive KE
     KE_t0 = sum_domain_kinetic_energy(mesh,
                                       State.node.vel,
-                                      State.node.coords,
                                       State.node.mass);
     // extensive TE
     TE_t0 = IE_t0 + KE_t0;
@@ -719,7 +718,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // extensive KE
     KE_tend = sum_domain_kinetic_energy(mesh,
                                         State.node.vel,
-                                        State.node.coords,
                                         State.node.mass);
     // extensive TE
     TE_tend = IE_tend + KE_tend;
@@ -869,7 +867,6 @@ double sum_domain_internal_energy(
 double sum_domain_kinetic_energy(
     const swage::Mesh& mesh,
     const MPICArrayKokkos<double>& node_vel,
-    const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_mass)
 {
     // extensive KE

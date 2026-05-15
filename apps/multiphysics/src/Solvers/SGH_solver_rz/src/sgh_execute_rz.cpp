@@ -97,8 +97,6 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 State.node.mass,
                                 mesh.num_nodes);
 
-
-    std::cout << "Applying initial boundary conditions" << std::endl;
     boundary_velocity_rz(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
 
 
@@ -115,10 +113,10 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     // extensive IE
     for(size_t mat_id=0; mat_id<num_mats; mat_id++){
 
-        IE_t0 += sum_domain_internal_energy_rz(State.MaterialPoints.mass,
-                                               State.MaterialPoints.sie,
-                                               State.MaterialPoints.num_material_points.host(mat_id),
-                                               mat_id);
+        IE_t0 += sum_domain_internal_energy_rz(mesh,
+                                               State.MeshtoMaterialMaps,
+                                               State.MaterialPoints.mass,
+                                               State.MaterialPoints.sie);
     } // end loop over mat_id
 
     // extensive KE
@@ -135,18 +133,18 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
     for(size_t mat_id=0; mat_id<num_mats; mat_id++){
 
-        double mass_domain_mat = sum_domain_material_mass_rz(State.MaterialPoints.mass,
-                                                             State.MaterialPoints.num_material_points.host(mat_id),
-                                                             mat_id);
+        double mass_domain_mat = sum_domain_material_mass_rz(mesh,
+                                                             State.MeshtoMaterialMaps,
+                                                             State.MaterialPoints.mass);
 
         mass_domain_all_mats_t0 += mass_domain_mat;
-        printf("material %zu mass in domain = %f \n", mat_id, mass_domain_mat);
+        if (log) log->info("material %zu mass in domain = %f \n", mat_id, mass_domain_mat);
     } // end for
 
     // node mass of the domain
-    mass_domain_nodes_t0 = sum_domain_node_mass_rz(node_extensive_mass, mesh.num_nodes);
+    mass_domain_nodes_t0 = sum_domain_node_mass_rz(mesh, node_extensive_mass);
 
-    printf("nodal mass domain = %f \n", mass_domain_nodes_t0);
+    if (log) log->info("nodal mass domain = %f \n", mass_domain_nodes_t0);
 
     // a flag to exit the calculation
     size_t stop_calc = 0;
@@ -154,7 +152,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     auto time_1 = std::chrono::high_resolution_clock::now();
 
     // Write initial state at t=0
-    printf("Writing outputs to file at %f \n", graphics_time);
+    if (log) log->info("Writing outputs to file at %f \n", graphics_time);
     mesh_writer.write_mesh(
         mesh, 
         State, 
@@ -171,11 +169,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
     graphics_time = time_value + graphics_dt_ival;
 
-    printf("Finished writing initial state at t=0 \n");
-
     // loop over the max number of time integration cycles
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
-        printf("Starting cycle %lu \n", cycle);
         // stop calculation if flag
         if (stop_calc == 1) {
             break;
@@ -193,7 +188,6 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
             double dt_mat = dt;
 
             // get the step
-            printf("Getting time step for material %zu \n", mat_id);
             get_timestep_rz(mesh,
                             State.node.coords,
                             State.node.vel,
@@ -230,11 +224,11 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
         }
 
         if (cycle == 0) {
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+            if (log) log->info("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         }
         // print time step every 10 cycles
         else if (cycle % 20 == 0) {
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+            if (log) log->info("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         } // end if
 
         // ---------------------------------------------------------------------
@@ -242,7 +236,6 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
         // ---------------------------------------------------------------------
         for (size_t mat_id=0; mat_id<num_mats; mat_id++){
             // save the values at t_n
-            printf("Initializing state for material %zu \n", mat_id);
             rk_init_rz(State.node.coords,
                        State.node.coords_n0,
                        State.node.vel,
@@ -265,8 +258,6 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
             // ---- Calculate velocity gradient for the element ----
-
-            printf("Calculating velocity gradient for the element \n");
             get_velgrad_rz(State.GaussPoints.vel_grad,
                            mesh,
                            State.node.coords,
@@ -274,28 +265,25 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                            State.GaussPoints.vol);
                            
             // compute the shock detector at each gauss point for each material
-            // State.GaussPoints.shock_detector.set_values(0.0);
+            State.GaussPoints.shock_detector.set_values(0.0);
             MATAR_FENCE();
 
-            // MachShockDetector::detect_shock(mesh,
-            //     State.GaussPoints.vel_grad,
-            //     State.GaussPoints.shock_detector,
-            //     State.GaussPoints.vol,
-            //     State.MaterialPoints.sspd,
-            //     State.MaterialToMeshMaps.elem_in_mat_elem,
-            //     State.MaterialToMeshMaps.num_mat_elems,
-            //     fuzz,
-            //     small,
-            //     num_mats);
+            MachShockDetector::detect_shock(mesh,
+                State.GaussPoints.vel_grad,
+                State.GaussPoints.shock_detector,
+                State.GaussPoints.vol,
+                State.MaterialPoints.sspd,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
+                State.MaterialToMeshMaps.num_mat_elems,
+                fuzz,
+                small,
+                num_mats);
             
             // Communicate shock detector based on the element communication plan
-            // State.GaussPoints.shock_detector.communicate();
-
-            printf("Setting corner force to zero \n");
+            State.GaussPoints.shock_detector.communicate();
 
             set_corner_force_zero_rz(mesh, State.corner.force);
 
-            
             // ---- calculate the forces on the vertices and evolve stress (hypo model) ----
             for(size_t mat_id=0; mat_id<num_mats; mat_id++){
 
@@ -354,7 +342,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                 } // end if on increment
 
             } // end for mat_id
-            printf("Updating nodal velocities \n");
+            
             // ---- Update nodal velocities ---- //
             update_velocity_rz(rk_alpha,
                                dt,
@@ -478,17 +466,17 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
         // write outputs
         if (write == 1) {
-            printf("Writing outputs to file at %f \n", graphics_time);
-            // mesh_writer.write_mesh(mesh, 
-            //                        State, 
-            //                        SimulationParamaters, 
-            //                        dt,
-            //                        time_value, 
-            //                        graphics_times,
-            //                        SGHRZ_State::required_node_state,
-            //                        SGHRZ_State::required_gauss_pt_state,
-            //                        SGHRZ_State::required_material_pt_state,
-            //                        this->solver_id);
+            if (log) log->info("Writing outputs to file at %f \n", graphics_time);
+            mesh_writer.write_mesh(mesh, 
+                                   State, 
+                                   SimulationParamaters, 
+                                   dt,
+                                   time_value, 
+                                   graphics_times,
+                                   SGHRZ_State::required_node_state,
+                                   SGHRZ_State::required_gauss_pt_state,
+                                   SGHRZ_State::required_material_pt_state,
+                                   this->solver_id);
 
             output_id++;
             graphics_time = (double)(output_id) * graphics_dt_ival;
@@ -506,7 +494,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     auto time_2    = std::chrono::high_resolution_clock::now();
     auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_2 - time_1).count();
 
-    printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
+    if (log) log->info("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 
     // ---- Calculate energy tallies ----
     double IE_tend = 0.0;
@@ -516,10 +504,10 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     // extensive IE
     for(size_t mat_id=0; mat_id<num_mats; mat_id++){
 
-        IE_tend += sum_domain_internal_energy_rz(State.MaterialPoints.mass,
-                                                 State.MaterialPoints.sie,
-                                                 State.MaterialPoints.num_material_points.host(mat_id),
-                                                 mat_id);
+        IE_tend += sum_domain_internal_energy_rz(mesh,
+                                                State.MeshtoMaterialMaps,
+                                                State.MaterialPoints.mass,
+                                                State.MaterialPoints.sie);
     } // end loop over mat_id
 
     // extensive KE
@@ -529,31 +517,30 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     // extensive TE
     TE_tend = IE_tend + KE_tend;
 
-    printf("Time=0:   KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
-    printf("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
-    printf("total energy change = %e \n\n", TE_tend - TE_t0);
+    if (log) log->info("Time=0:   KE = %f, IE = %f, TE = %f \n", KE_t0, IE_t0, TE_t0);
+    if (log) log->info("Time=End: KE = %f, IE = %f, TE = %f \n", KE_tend, IE_tend, TE_tend);
+    if (log) log->info("total energy change = %e \n\n", TE_tend - TE_t0);
 
 
     // domain mass for each material (they are at material points)
     double mass_domain_all_mats_tend = 0.0;
     double mass_domain_nodes_tend = 0.0;
 
-    for(size_t mat_id=0; mat_id<num_mats; mat_id++){
+    for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-        double mass_domain_mat = sum_domain_material_mass_rz(State.MaterialPoints.mass,
-                                                             State.MaterialPoints.num_material_points.host(mat_id),
-                                                             mat_id);
+        double mass_domain_mat = sum_domain_material_mass_rz(mesh,
+                                                            State.MeshtoMaterialMaps,
+                                                            State.MaterialPoints.mass);
 
         mass_domain_all_mats_tend += mass_domain_mat;
     } // end for
 
     // node mass of the domain
-    mass_domain_nodes_tend = sum_domain_node_mass_rz(node_extensive_mass,
-                                                     mesh.num_nodes);
+    mass_domain_nodes_tend = sum_domain_node_mass_rz(mesh, node_extensive_mass);
 
-    printf("material mass conservation error = %f \n",mass_domain_all_mats_tend - mass_domain_all_mats_t0);
-    printf("nodal mass conservation error = %f \n",   mass_domain_nodes_tend - mass_domain_nodes_t0);
-    printf("nodal and material mass error = %f \n\n", mass_domain_nodes_tend - mass_domain_all_mats_tend);
+    if (log) log->info("material mass conservation error = %f \n",mass_domain_all_mats_tend - mass_domain_all_mats_t0);
+    if (log) log->info("nodal mass conservation error = %f \n",   mass_domain_nodes_tend - mass_domain_nodes_t0);
+    if (log) log->info("nodal and material mass error = %f \n\n", mass_domain_nodes_tend - mass_domain_all_mats_tend);
 
 } // end of SGH execute
 
@@ -561,85 +548,104 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
 
 // a function to tally the internal energy
-double sum_domain_internal_energy_rz(const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-                                     const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-                                     const size_t num_mat_points,
-                                     const size_t mat_id)
+double sum_domain_internal_energy_rz(
+    const swage::Mesh& mesh,
+    const MeshtoMaterialMap_t& MeshtoMaterialMaps,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_sie)
 {
 
     double IE_sum = 0.0;
-    double IE_loc_sum;
+    double IE_loc_sum = 0.0;
+    double IE_global_sum = 0.0;
 
-    // loop over the material points and tally IE
-    FOR_REDUCE_SUM(matpt_lid, 0, num_mat_points, IE_loc_sum, {
-        IE_loc_sum += MaterialPoints_mass(mat_id, matpt_lid) * MaterialPoints_sie(mat_id, matpt_lid);
-    }, IE_sum);
+    FOR_REDUCE_SUM(elem_gid, 0, mesh.num_owned_elems, IE_sum, {
+        size_t num_materials = MeshtoMaterialMaps.num_mats_in_elem(elem_gid);
+
+        for(size_t mat_lid = 0; mat_lid < num_materials; mat_lid++){
+
+            size_t mat_id = MeshtoMaterialMaps.mats_in_elem(elem_gid, mat_lid);
+            size_t mat_elem_gid = MeshtoMaterialMaps.mat_elems_in_elem(elem_gid, mat_lid);
+
+            IE_sum += MaterialPoints_mass(mat_id, mat_elem_gid) * MaterialPoints_sie(mat_id, mat_elem_gid);
+        }
+    }, IE_loc_sum);
     Kokkos::fence();
-
-
-    return IE_sum;
+    MPI_Allreduce(&IE_loc_sum, &IE_global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    return IE_global_sum;
 } // end function 
 
-double sum_domain_kinetic_energy_rz(const swage::Mesh& mesh,
-                                    const MPICArrayKokkos<double>& node_vel,
-                                    const CArrayKokkos<double>& node_extensive_mass)
+double sum_domain_kinetic_energy_rz(
+    const swage::Mesh& mesh,
+    const MPICArrayKokkos<double>& node_vel,
+    const CArrayKokkos<double>& node_extensive_mass)
 {
     // extensive KE
     double KE_sum = 0.0;
-    double KE_loc_sum;
+    double KE_loc_sum = 0.0;
+    double KE_global_sum = 0.0;
 
-    FOR_REDUCE_SUM(node_gid, 0, mesh.num_nodes, KE_loc_sum, {
-        double ke = 0;
+    FOR_REDUCE_SUM(node_gid, 0, mesh.num_owned_nodes, KE_loc_sum, {
+        if(mesh.shared_tally_owned_nodes(node_gid)){
+            double ke = 0;
 
-        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            ke += node_vel(node_gid, dim) * node_vel(node_gid, dim); // 1/2 at end, in the return
-        } // end for
+            for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+                ke += node_vel(node_gid, dim) * node_vel(node_gid, dim); // 1/2 at end
+            } // end for
 
-        KE_loc_sum += node_extensive_mass(node_gid) * ke;  // 1/2 in the return
-
+            KE_loc_sum += node_extensive_mass(node_gid) * ke;
+        }
     }, KE_sum);
     Kokkos::fence();
 
+    MPI_Allreduce(&KE_sum, &KE_global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-    return 0.5*KE_sum;
+    return 0.5 * KE_global_sum;
 } // end function
 
 
 // a function to tally the material point masses
-double sum_domain_material_mass_rz(const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-                                   const size_t num_mat_points,
-                                   const size_t mat_id)
+double sum_domain_material_mass_rz(
+    const swage::Mesh& mesh,
+    const MeshtoMaterialMap_t& MeshtoMaterialMaps,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass)
 {
+    double mass_loc_sum = 0.0;
+    double sum = 0.0;
+    FOR_REDUCE_SUM(elem_gid, 0, mesh.num_owned_elems, sum, {
+        size_t num_materials = MeshtoMaterialMaps.num_mats_in_elem(elem_gid);
 
-    double mass_domain = 0.0;
-    double mass_loc_domain;
+        for(size_t mat_lid = 0; mat_lid < num_materials; mat_lid++){
 
-    FOR_REDUCE_SUM(matpt_lid, 0, num_mat_points, mass_loc_domain, {
+            size_t mat_id = MeshtoMaterialMaps.mats_in_elem(elem_gid, mat_lid);
+            size_t mat_elem_gid = MeshtoMaterialMaps.mat_elems_in_elem(elem_gid, mat_lid);
 
-            mass_loc_domain += MaterialPoints_mass(mat_id, matpt_lid);
-        
-    }, mass_domain);
+            sum += MaterialPoints_mass(mat_id, mat_elem_gid);
+        }
+    }, mass_loc_sum);
     Kokkos::fence();
+    double mass_sum = 0.0;
+    MPI_Allreduce(&mass_loc_sum, &mass_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    return mass_sum;
+} // end function
 
-    return mass_domain;
-} // end function 
 
-
-double sum_domain_node_mass_rz(const CArrayKokkos<double>& node_extensive_mass,
-                               const size_t num_nodes)
+double sum_domain_node_mass_rz(const swage::Mesh& mesh,
+    const CArrayKokkos<double>& node_extensive_mass)
 {
     double mass_domain = 0.0;
-    double mass_loc_domain;
+    double mass_loc_domain = 0.0;
+    double global_mass = 0.0;
 
-    FOR_REDUCE_SUM(node_gid, 0, num_nodes, mass_loc_domain, {
-
+    FOR_REDUCE_SUM(node_gid, 0, mesh.num_owned_nodes, mass_loc_domain, {
+        if(mesh.shared_tally_owned_nodes(node_gid)){
             mass_loc_domain += node_extensive_mass(node_gid);
-        
+        }
     }, mass_domain);
     Kokkos::fence();
    
-
-    return mass_domain;
+    MPI_Allreduce(&mass_domain, &global_mass, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    return global_mass;
 } // end function
 
 
@@ -653,20 +659,20 @@ double sum_domain_node_mass_rz(const CArrayKokkos<double>& node_extensive_mass,
 ///
 /// \param node_extensive_mass is the true mass of the node
 /// \param node_coords are the nodal coordinates of the mesh
-/// \param node_mass is mass of the node
+/// \param node_areal_mass is the areal mass of the node
 /// \param num_nodes is the number of nodes in the mesh
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_extensive_mass_rz(const CArrayKokkos<double>& node_extensive_mass,
                                  const MPICArrayKokkos<double>& node_coords,
-                                 const DCArrayKokkos<double>& node_mass,
+                                 const DCArrayKokkos<double>& node_areal_mass,
                                  double num_nodes)
 {
-    // save the nodal mass
+    // save the nodal extensive mass
     FOR_ALL(node_gid, 0, num_nodes, {
 
         // includes node radius in the calculation
-        node_extensive_mass(node_gid) = node_mass(node_gid) * node_coords(node_gid, 1);
+        node_extensive_mass(node_gid) = node_areal_mass(node_gid) * node_coords(node_gid, 1);
     }); // end parallel for
 } // end function
 

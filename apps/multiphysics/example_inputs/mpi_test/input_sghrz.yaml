@@ -36,11 +36,11 @@
 # Time integration / stepping control
 # ---------------------------------------------------------------------------
 dynamic_options:
-    time_final: 1.0
+    time_final: 4.0
     dt_min: 1.e-8
     dt_max: 1.e-2
     dt_start: 1.e-5
-    cycle_stop: 1
+    cycle_stop: 10000
 
 
 # mesh_options:
@@ -60,7 +60,7 @@ mesh_options:
     # - `origin[1]` is r = 0 (cm)
     length: [1.2, 1.2]
     # Domain lengths in (z,r) (cm).
-    num_elems: [12, 12]
+    num_elems: [50, 50]
 
 
 # ---------------------------------------------------------------------------
@@ -71,14 +71,16 @@ output_options:
     # `ensight` output format for this example.
     output_file_format: viz_and_state
     # Output cadence in time units (microsecond).
-    graphics_time_step: 0.25
-    #graphics_iteration_step: 2
+    graphics_time_step: 0.1
+    # graphics_iteration_step: 1
     elem_field_outputs:
         - den
         - pres
         - stress
         - sie
         - mass
+    gauss_pt_field_outputs:
+        - shock_detector
     mat_pt_field_outputs:
         - den
         - pres
@@ -153,7 +155,7 @@ materials:
             - 1.0   # q1ex
             - 1.333 # q2
             - 1.333 # q2ex
-            - 0.0   # phi_min
+            - 1.0   # phi_min
             - 1.0   # phi_curl_min
         # MARS_rz dissipation_global_vars ordering:
         #   q1, q1ex, q2, q2ex, phi_min, phi_curl_min
@@ -213,7 +215,7 @@ regions:
             type: sphere
             origin: [0.0, 0.0, 0.0]
             radius1: 0.0
-            radius2: 0.1
+            radius2: 0.03
         solver_id: 0
         material_id: 0
         # Sedov-like energy source:
@@ -228,7 +230,7 @@ regions:
             value: 1.0
         specific_internal_energy: 
             type: uniform
-            value: 78.5254574
+            value: 200 # 78.5254574
         # ie: 0.25833839995946534
         velocity: 
             type: cartesian

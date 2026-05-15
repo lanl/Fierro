@@ -468,7 +468,6 @@ double sum_domain_internal_energy(
 double sum_domain_kinetic_energy(
     const swage::Mesh& mesh,
     const MPICArrayKokkos<double>& node_vel,
-    const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_mass);
 
 double sum_domain_material_mass(

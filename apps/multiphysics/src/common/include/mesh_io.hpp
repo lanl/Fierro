@@ -2608,9 +2608,6 @@ public:
             // boundary elements reference ghost nodes — truncating coords to num_owned_nodes (the prior
             // bug) misaligned indices and produced inverted/wrong cells in ParaView.
             const size_t n_owned_elems = mesh.num_owned_elems; // num_elems; 
-
-            printf("Number of owned elements: %zu \n", n_owned_elems);
-            printf("Num dim: %zu \n", num_dims);
  
 
             const std::string elem_fields_name = "fields";
@@ -2624,46 +2621,46 @@ public:
             //   diag_global_elem   — CellData "global_elem_id" from mesh.local_to_global_elem_mapping (or local e).
             //   diag_global_node   — PointData "global_node_id" from mesh.local_to_global_node_mapping (or local n).
             //   p_*                — nullptr until filled; passed to write_vtu (nullptr disables that array).
-            // std::vector<double> diag_mpi_rank_elem;
-            // std::vector<double> diag_global_elem;
-            // std::vector<double> diag_global_node;
-            // const double*       p_rank_elem = nullptr;
-            // const double*       p_glob_elem = nullptr;
-            // const double*       p_glob_node = nullptr;
+            std::vector<double> diag_mpi_rank_elem;
+            std::vector<double> diag_global_elem;
+            std::vector<double> diag_global_node;
+            const double*       p_rank_elem = nullptr;
+            const double*       p_glob_elem = nullptr;
+            const double*       p_glob_node = nullptr;
 
-            // if (n_owned_elems > 0 && num_nodes > 0) {
-            //     diag_mpi_rank_elem.assign(n_owned_elems, static_cast<double>(mpi_rank));
-            //     p_rank_elem = diag_mpi_rank_elem.data();
+            if (n_owned_elems > 0 && num_nodes > 0) {
+                diag_mpi_rank_elem.assign(n_owned_elems, static_cast<double>(mpi_rank));
+                p_rank_elem = diag_mpi_rank_elem.data();
 
-            //     diag_global_elem.resize(n_owned_elems);
-            //     if (mpi_size > 1 || mesh.num_elems > mesh.num_owned_elems) {
-            //         mesh.local_to_global_elem_mapping.update_host();
-            //         for (size_t e = 0; e < n_owned_elems; e++) {
-            //             diag_global_elem[e] =
-            //                 static_cast<double>(mesh.local_to_global_elem_mapping.host(e));
-            //         }
-            //     }
-            //     else {
-            //         for (size_t e = 0; e < n_owned_elems; e++) {
-            //             diag_global_elem[e] = static_cast<double>(e);
-            //         }
-            //     }
-            //     p_glob_elem = diag_global_elem.data();
+                diag_global_elem.resize(n_owned_elems);
+                if (mpi_size > 1 || mesh.num_elems > mesh.num_owned_elems) {
+                    mesh.local_to_global_elem_mapping.update_host();
+                    for (size_t e = 0; e < n_owned_elems; e++) {
+                        diag_global_elem[e] =
+                            static_cast<double>(mesh.local_to_global_elem_mapping.host(e));
+                    }
+                }
+                else {
+                    for (size_t e = 0; e < n_owned_elems; e++) {
+                        diag_global_elem[e] = static_cast<double>(e);
+                    }
+                }
+                p_glob_elem = diag_global_elem.data();
 
-            //     diag_global_node.resize(num_nodes);
-            //     if (mpi_size > 1 || mesh.num_nodes > mesh.num_owned_nodes) {
-            //         mesh.local_to_global_node_mapping.update_host();
-            //         for (size_t n = 0; n < num_nodes; n++) {
-            //             diag_global_node[n] =
-            //                 static_cast<double>(mesh.local_to_global_node_mapping.host(n));
-            //         }
-            //     }
-            //     else {
-            //         for (size_t n = 0; n < num_nodes; n++) {
-            //             diag_global_node[n] = static_cast<double>(n);
-            //         }
-            //     }
-            //     p_glob_node = diag_global_node.data();
+                diag_global_node.resize(num_nodes);
+                if (mpi_size > 1 || mesh.num_nodes > mesh.num_owned_nodes) {
+                    mesh.local_to_global_node_mapping.update_host();
+                    for (size_t n = 0; n < num_nodes; n++) {
+                        diag_global_node[n] =
+                            static_cast<double>(mesh.local_to_global_node_mapping.host(n));
+                    }
+                }
+                else {
+                    for (size_t n = 0; n < num_nodes; n++) {
+                        diag_global_node[n] = static_cast<double>(n);
+                    }
+                }
+                p_glob_node = diag_global_node.data();
 
                 write_vtu(node_coords_host,
                           nodes_in_elem_host,
@@ -2685,10 +2682,10 @@ public:
                           solver_id,
                           mpi_rank,
                           mpi_size,
-                          nullptr,
-                          nullptr,
-                          nullptr);
-           //  }
+                          p_rank_elem,
+                          p_glob_elem,
+                          p_glob_node);
+            }
 
             // ********************************
             //  Build and write the mat fields 
