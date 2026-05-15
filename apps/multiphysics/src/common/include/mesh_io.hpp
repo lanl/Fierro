@@ -4618,39 +4618,35 @@ public:
                 }
 
                 if (mesh_pieces > 0) {
+                    // vtkMultiBlockDataSet schema: <DataSet> children must be direct
+                    // children of <Block>, not wrapped in <Piece>. Sibling index attrs
+                    // must be unique within the parent.
                     fprintf(out[0], "    <Block index=\"%zu\" name=\"Mesh\">\n", block_id);
                     {
                         block_id++;
-                        int piece_index = 0;
+                        int ds_index = 0;
                         if (mpi_size > 1 && owned_elems_by_rank != nullptr) {
                             for (int r = 0; r < mpi_size; r++) {
                                 if (owned_elems_by_rank[static_cast<size_t>(r)] == 0ULL) {
                                     continue;
                                 }
-                                fprintf(out[0], "      <Piece index=\"%d\" name=\"Field_r%04d\">\n", piece_index, r);
                                 fprintf(out[0],
-                                        "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s.%05d_r%04d.vtu\" "
-                                        "time= \"%12.5e\" />\n",
-                                        file_id,
+                                        "      <DataSet index=\"%d\" name=\"Field_r%04d\" file=\"Fierro.solver%zu.%s.%05d_r%04d.vtu\" />\n",
+                                        ds_index,
+                                        r,
                                         solver_id,
                                         elem_part_name.c_str(),
                                         file_id,
-                                        r,
-                                        graphics_times(file_id));
-                                fprintf(out[0], "      </Piece>\n");
-                                piece_index++;
+                                        r);
+                                ds_index++;
                             }
                         }
                         else {
-                            fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
                             fprintf(out[0],
-                                    "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s.%05d.vtu\" time= \"%12.5e\" />\n",
-                                    file_id,
+                                    "      <DataSet index=\"0\" name=\"Field\" file=\"Fierro.solver%zu.%s.%05d.vtu\" />\n",
                                     solver_id,
                                     elem_part_name.c_str(),
-                                    file_id,
-                                    graphics_times(file_id));
-                            fprintf(out[0], "      </Piece>\n");
+                                    file_id);
                         }
                     }
                     fprintf(out[0], "    </Block>\n");
@@ -4672,9 +4668,33 @@ public:
                     }
                 }
                 if (mat_pieces > 0) {
+                    // Nested layout: <Block name="Mat"> contains one <Block name="MatN"> per
+                    // material that has data, each with per-rank <DataSet> children. This is
+                    // required because the prior flat layout reset piece_index to 0 per
+                    // material, producing duplicate sibling indices (e.g. Mat0_r0000 and
+                    // Mat1_r0001 both at index 0) which ParaView silently collapses, dropping
+                    // the first piece. mat_block_idx is a contiguous counter so sibling
+                    // indices in the outer Mat block remain unique and dense.
                     fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
+                    size_t mat_block_idx = 0;
                     for (size_t mat_id = 0; mat_id < num_mats_global; mat_id++) {
-                        int piece_index = 0;
+                        int pieces_this_mat = 0;
+                        if (mpi_size > 1) {
+                            for (int r = 0; r < mpi_size; r++) {
+                                if (mat_elem_counts_by_rank[static_cast<size_t>(r) * num_mats_global + mat_id] > 0ULL) {
+                                    pieces_this_mat++;
+                                }
+                            }
+                        }
+                        else if (mat_elem_counts_by_rank[mat_id] > 0ULL) {
+                            pieces_this_mat = 1;
+                        }
+                        if (pieces_this_mat == 0) {
+                            continue;
+                        }
+
+                        fprintf(out[0], "      <Block index=\"%zu\" name=\"Mat%zu\">\n", mat_block_idx, mat_id);
+                        int ds_index = 0;
                         if (mpi_size > 1) {
                             for (int r = 0; r < mpi_size; r++) {
                                 const unsigned long long nm =
@@ -4682,37 +4702,32 @@ public:
                                 if (nm == 0ULL) {
                                     continue;
                                 }
-                                fprintf(out[0], "      <Piece index=\"%d\" name=\"Mat%zu_r%04d\">\n", piece_index, mat_id, r);
                                 fprintf(out[0],
-                                        "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s%zu.%05d_r%04d.vtu\" "
-                                        "time= \"%12.5e\" />\n",
-                                        file_id,
+                                        "        <DataSet index=\"%d\" name=\"Mat%zu_r%04d\" "
+                                        "file=\"Fierro.solver%zu.%s%zu.%05d_r%04d.vtu\" />\n",
+                                        ds_index,
+                                        mat_id,
+                                        r,
                                         solver_id,
                                         mat_part_name.c_str(),
                                         mat_id,
                                         file_id,
-                                        r,
-                                        graphics_times(file_id));
-                                fprintf(out[0], "      </Piece>\n");
-                                piece_index++;
+                                        r);
+                                ds_index++;
                             }
                         }
                         else {
-                            const unsigned long long nm = mat_elem_counts_by_rank[mat_id];
-                            if (nm == 0ULL) {
-                                continue;
-                            }
-                            fprintf(out[0], "      <Piece index=\"0\" name=\"Mat%zu\">\n", mat_id);
                             fprintf(out[0],
-                                    "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n",
-                                    file_id,
+                                    "        <DataSet index=\"0\" name=\"Mat%zu\" "
+                                    "file=\"Fierro.solver%zu.%s%zu.%05d.vtu\" />\n",
+                                    mat_id,
                                     solver_id,
                                     mat_part_name.c_str(),
                                     mat_id,
-                                    file_id,
-                                    graphics_times(file_id));
-                            fprintf(out[0], "      </Piece>\n");
+                                    file_id);
                         }
+                        fprintf(out[0], "      </Block>\n");
+                        mat_block_idx++;
                     }
                     fprintf(out[0], "    </Block>\n");
                 }
