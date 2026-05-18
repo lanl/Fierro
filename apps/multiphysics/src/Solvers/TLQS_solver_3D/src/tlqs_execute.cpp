@@ -97,15 +97,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArray<double> graphics_times = CArray<double>(20000);
     graphics_times(0) = this->time_start; // was zero
     double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
-
-    // *****************************************************************************************************
-    /* /// WARNING WARNING WARNING: REMOVE BEFORE BUILDING SOLVER, THIS IS A PLACEHOLDER FOR THE TLQS SOLVER
-    std::cout << "Sucessfully called the TLQS execute function" << std::endl;
-    return;  */
-    // *****************************************************************************************************
-   
-    // Apply initial boundary conditions
-
     
     double cached_pregraphics_dt = fuzz;
 
@@ -121,17 +112,17 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // Write initial state at t=0
     printf("Writing outputs to file at %f \n", graphics_time);
-    mesh_writer.write_mesh(
-        mesh, 
-        State, 
-        SimulationParamaters,
-        dt, 
-        time_value, 
-        graphics_times,
-        TLQS3D_State::required_node_state,
-        TLQS3D_State::required_gauss_pt_state,
-        TLQS3D_State::required_material_pt_state,
-        this->solver_id);
+    mesh_writer.write_mesh_Pn(mesh,
+                              State,
+                              SimulationParamaters,
+                              dt,
+                              time_value,
+                              graphics_times,
+                              TLQS3D_State::required_node_state,
+                              TLQS3D_State::required_gauss_pt_state,
+                              TLQS3D_State::required_material_pt_state,
+                              this->solver_id,
+                              ref_elem);
     
 
 
@@ -360,8 +351,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             }, norm_den);
 
             double norm = sqrt(norm_num / norm_den);
-            //std::cout << "PICARD NORM: " << norm << std::endl;
-            if (norm < 1E-12 && iter > 1) {
+            std::cout << "ITER: " << iter << "   PICARD NORM: " << norm << std::endl;
+            if (norm < 1E-8 && iter > 1) {
                 std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }
@@ -441,7 +432,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         // write outputs
         if (write == 1) {
             printf("Writing outputs to file at %f \n", graphics_time);
-            mesh_writer.write_mesh(mesh,
+            mesh_writer.write_mesh_Pn(mesh,
                                    State,
                                    SimulationParamaters,
                                    dt,
@@ -450,7 +441,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                                    TLQS3D_State::required_node_state,
                                    TLQS3D_State::required_gauss_pt_state,
                                    TLQS3D_State::required_material_pt_state,
-                                   this->solver_id);
+                                   this->solver_id,
+                                   ref_elem);
 
             graphics_time = time_value + graphics_dt_ival;
 
