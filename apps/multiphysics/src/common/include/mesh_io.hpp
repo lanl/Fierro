@@ -5775,12 +5775,12 @@ public:
 
             // call the vtm file writer
             std::string mat_fields_name = "mat";
-            write_vtm(graphics_times,
+            write_vtm_Pn(graphics_times,
                       elem_fields_name,
                       mat_fields_name,
                       time_value,
                       graphics_id,
-                      num_mat_files_written,
+                      num_mats,
                       write_mesh_state,
                       write_mat_pt_state,
                       solver_id);
@@ -5831,35 +5831,19 @@ public:
 
     } // end write_mesh_Pn
 
-    // =============================================================================
-    //
-    // write_vtu_Pn
-    //
-    // Writes a VTK UnstructuredGrid file (.vtu) where every point is a Gauss
-    // (material) point belonging to material `mat_id`.  Each Gauss point becomes
-    // a VTK_VERTEX cell (type = 1) so ParaView sees it as a pure point cloud.
-    //
-    // Physical coordinates are computed on the fly from the isoparametric mapping:
-    //
-    //   x_phys[dim] = Σ_{node_lid}  N_{node_lid}(ξ_gauss) * x_node[dim]
-    //
-    // using ref_elem.gauss_point_basis(mat_pt, node_lid).
-    //
-    // The resulting Dataset B can be loaded alongside the standard element mesh
-    // (Dataset A) in ParaView and interpolated onto it via the
-    // "Point Dataset Interpolator" filter.
-    //
-    // NOTE: This function assumes all relevant DCArrayKokkos arrays have already
-    // had update_host() called (write_mesh does this before calling write_vtu).
-    // The one additional array that must be synced is State.points_in_mat_elem;
-    // write_mesh should call State.points_in_mat_elem.update_host() once before
-    // entering the per-material loop (see the integration snippet at the bottom
-    // of this file).
-    //
-    // Signature mirrors write_vtu so it can be dropped into the same per-material
-    // block inside write_mesh.
-    //
-    // =============================================================================
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn write_vtu_Pn
+    ///
+    /// \brief Writes a vtu ASCII output file for gauss points
+    ///
+    /// \param Simulation mesh
+    /// \param State data
+    /// \param Simulation parameters
+    /// \param current time value
+    /// \param Vector of all graphics output times
+    ///
+    /////////////////////////////////////////////////////////////////////////////
 
     void write_vtu_Pn(
         const swage::Mesh&                   mesh,
@@ -6264,58 +6248,136 @@ public:
 
     } // end write_vtu_Pn
 
-
-    // =============================================================================
-    //
-    //  INTEGRATION  –  changes required in write_mesh
-    //
-    //  1. Add `elements::fe_ref_elem_t& ref_elem` to write_mesh's parameter list
-    //     (and thread it through from whatever calls write_mesh, e.g. execute()).
-    //
-    //  2. Before the per-material loop, add one host-sync for the indexing array:
-    //
-    //       State.points_in_mat_elem.update_host();
-    //       Kokkos::fence();
-    //
-    //  3. Inside the existing block  `if (num_mat_elems > 0) { ... }`,
-    //     immediately after the call to write_vtu for the per-material element
-    //     mesh, add:
-    //
-    //       // --- Dataset B: Gauss-point cloud for ParaView interpolation ---
-    //       if (num_mat_pt_scalar_vars > 0 || num_mat_pt_tensor_vars > 0) {
-    //
-    //           std::string pn_name = "mat" + str_mat_val + "_Pn";
-    //
-    //           write_vtu_Pn(mesh,
-    //                        State,
-    //                        ref_elem,
-    //                        mat_elem_scalar_var_names,
-    //                        mat_elem_tensor_var_names,
-    //                        pn_name,
-    //                        graphics_id,
-    //                        mat_id,
-    //                        num_mat_elems,
-    //                        num_nodes_in_elem,
-    //                        num_dims,
-    //                        solver_id,
-    //                        mat_den_id,
-    //                        mat_pres_id,
-    //                        mat_sie_id,
-    //                        mat_sspd_id,
-    //                        mat_mass_id,
-    //                        mat_volfrac_id,
-    //                        mat_geo_volfrac_id,
-    //                        mat_eroded_id,
-    //                        mat_stress_id,
-    //                        mat_strain_id,
-    //                        mat_conductivity_id,
-    //                        mat_specific_heat_id);
-    //
-    //           num_mat_files_written++;  // increment so write_vtm registers this file
-    //       }
-    //
-    // =============================================================================
-
+    void write_vtm_Pn(
+        CArray<double>&    graphics_times,
+        const std::string& elem_part_name,
+        const std::string& mat_part_name,
+        double             time_value,
+        int                graphics_id,
+        int                num_mats,
+        bool               write_mesh_state,
+        bool               write_mat_pt_state,
+        const size_t       solver_id)
+    {
+        // The _Pn files are named  mat_part_name + mat_id + "_Pn"
+        // e.g.  "mat0_Pn"  →  Fierro.solver0.mat0_Pn.00001.vtu
+        // This matches the partname constructed in write_mesh:
+        //   std::string pn_name = "mat" + str_mat_val + "_Pn";
+    
+        for (int file_id = 0; file_id <= graphics_id; file_id++) {
+    
+            FILE* out[1];
+            char  filename[100];
+            int   max_len = sizeof filename;
+            int   str_output_len;
+    
+            str_output_len = snprintf(filename, max_len,
+                "vtk/data/Fierro.solver%zu.%05d.vtm", solver_id, file_id);
+            if (str_output_len >= max_len) {
+                fputs("Filename length exceeded; string truncated", stderr);
+            }
+    
+            out[0] = fopen(filename, "w");
+    
+            fprintf(out[0], "<?xml version=\"1.0\"?>\n");
+            fprintf(out[0], "<VTKFile type=\"vtkMultiBlockDataSet\" version=\"1.0\" "
+                            "byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
+            fprintf(out[0], "  <vtkMultiBlockDataSet>\n");
+    
+            size_t block_id = 0;
+    
+            // -------------------------------------------------------------------
+            //  Block 0: element-averaged mesh  (node + element state)
+            // -------------------------------------------------------------------
+            if (write_mesh_state) {
+                fprintf(out[0], "    <Block index=\"%zu\" name=\"Mesh\">\n",
+                        block_id);
+                block_id++;
+    
+                fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
+                fprintf(out[0], "        <DataSet timestep=\"%d\" "
+                                "file=\"Fierro.solver%zu.%s.%05d.vtu\" "
+                                "time=\"%12.5e\" />\n",
+                        file_id, solver_id, elem_part_name.c_str(), file_id,
+                        graphics_times(file_id));
+                fprintf(out[0], "      </Piece>\n");
+    
+                fprintf(out[0], "    </Block>\n");
+            }
+    
+            // -------------------------------------------------------------------
+            //  Block 1: per-material data
+            //
+            //  Each material gets its own named sub-block so ParaView shows a
+            //  clean tree.  Inside each sub-block there are up to two Pieces:
+            //    • "Elements"    — element-averaged material fields  (matN.vtu)
+            //    • "GaussPoints" — Gauss-point cloud                 (matN_Pn.vtu)
+            // -------------------------------------------------------------------
+            if (write_mat_pt_state) {
+    
+                fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n",
+                        block_id);
+                block_id++;
+    
+                for (size_t mat_id = 0; mat_id < (size_t)num_mats; mat_id++) {
+    
+                    // Open a sub-block for this material
+                    fprintf(out[0],
+                            "      <Block index=\"%zu\" name=\"Mat%zu\">\n",
+                            mat_id, mat_id);
+    
+                    size_t piece_id = 0;
+    
+                    // Piece 0: element-averaged material fields
+                    if (write_mat_pt_state) {
+                        fprintf(out[0],
+                                "        <Piece index=\"%zu\" "
+                                "name=\"Elements\">\n",
+                                piece_id);
+                        fprintf(out[0],
+                                "          <DataSet timestep=\"%d\" "
+                                "file=\"Fierro.solver%zu.%s%zu.%05d.vtu\" "
+                                "time=\"%12.5e\" />\n",
+                                file_id, solver_id, mat_part_name.c_str(),
+                                mat_id, file_id, graphics_times(file_id));
+                        fprintf(out[0], "        </Piece>\n");
+                        piece_id++;
+                    }
+    
+                    // Piece 1: Gauss-point cloud
+                    if (write_mat_pt_state) {
+                        fprintf(out[0],
+                                "        <Piece index=\"%zu\" "
+                                "name=\"GaussPoints\">\n",
+                                piece_id);
+                        // filename pattern: mat_part_name + mat_id + "_Pn"
+                        // e.g.  Fierro.solver0.mat0_Pn.00001.vtu
+                        fprintf(out[0],
+                                "          <DataSet timestep=\"%d\" "
+                                "file=\"Fierro.solver%zu.%s%zu_Pn.%05d.vtu\" "
+                                "time=\"%12.5e\" />\n",
+                                file_id, solver_id, mat_part_name.c_str(),
+                                mat_id, file_id, graphics_times(file_id));
+                        fprintf(out[0], "        </Piece>\n");
+                        piece_id++;
+                    }
+    
+                    fprintf(out[0], "      </Block>\n");  // close MatN sub-block
+    
+                } // end for mat_id
+    
+                fprintf(out[0], "    </Block>\n");  // close Mat block
+    
+            } // end if any material state
+    
+            fprintf(out[0], "  </vtkMultiBlockDataSet>\n");
+            fprintf(out[0], "</VTKFile>");
+    
+            fclose(out[0]);
+    
+        } // end for file_id
+    
+    } // end write_vtm_Pn
 
     /////////////////////////////////////////////////////////////////////////////
     ///
