@@ -59,9 +59,6 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
     
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
-
-
-    std::cout << "Calculating pressure, sound speed, and stress" << std::endl;
     // calculate pressure, sound speed, and stress for each material
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 

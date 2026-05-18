@@ -72,7 +72,7 @@ void SGTM3D::get_heat_flux(
     const swage::Mesh& mesh,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const MPICArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_temp,
+    const MPICArrayKokkos<double>& node_temp,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_q_flux,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_temp_grad,

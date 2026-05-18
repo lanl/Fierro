@@ -275,8 +275,8 @@ struct node_t
     MPICArrayKokkos<double> vel_n0;     ///< Nodal velocity at tn=0 of time integration
     DCArrayKokkos<double> mass;       ///< Nodal mass
     DCArrayKokkos<double> force;      ///< Nodal force
-    DCArrayKokkos<double> temp;       ///< Nodal temperature
-    DCArrayKokkos<double> temp_n0;    ///< Nodal temperature at tn=0 of time integration
+    MPICArrayKokkos<double> temp;       ///< Nodal temperature
+    MPICArrayKokkos<double> temp_n0;    ///< Nodal temperature at tn=0 of time integration
     DCArrayKokkos<double> q_transfer; ///< Nodal heat flux
     DCArrayKokkos<double> gradient_level_set;   ///< Nodal gradient of the level set function
 
@@ -300,8 +300,8 @@ struct node_t
                     if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_nodes, "node_mass");
                     break;
                 case node_state::temp:
-                    if (temp.size() == 0) this->temp = DCArrayKokkos<double>(num_nodes, "node_temp");
-                    if (temp_n0.size() == 0) this->temp_n0 = DCArrayKokkos<double>(num_nodes, "node_temp_n0");
+                    if (temp.size() == 0) this->temp = MPICArrayKokkos<double>(num_nodes, "node_temp");
+                    if (temp_n0.size() == 0) this->temp_n0 = MPICArrayKokkos<double>(num_nodes, "node_temp_n0");
                     break;
                 case node_state::heat_transfer:
                     if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_nodes, "node_q_transfer");
@@ -342,6 +342,16 @@ struct node_t
                         this->vel_n0.initialize_comm_plan(comm_plan);
                     }
                     break;
+
+                case node_state::temp:
+                    if (temp.size() == 0){
+                        this->temp = MPICArrayKokkos<double>(num_nodes, "node_temp");
+                        this->temp.initialize_comm_plan(comm_plan);
+                    }
+                    if (temp_n0.size() == 0){
+                        this->temp_n0 = MPICArrayKokkos<double>(num_nodes, "node_temp_n0");
+                        this->temp_n0.initialize_comm_plan(comm_plan);
+                    }
 
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize with communication plan"<<std::endl;
@@ -425,14 +435,6 @@ struct GaussPoint_t
                     }
                     break;
                 case gauss_pt_state::level_set:
-                    if (level_set.size() == 0){
-                        this->level_set = MPICArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set");
-                        this->level_set.initialize_comm_plan(comm_plan);
-                    }
-                    if (level_set_n0.size() == 0){
-                        this->level_set_n0 = MPICArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set_n0");
-                        this->level_set_n0.initialize_comm_plan(comm_plan);
-                    }
 
                 default:
                     std::cout<<"Desired MPI distributed Gauss point state not understood in GaussPoint_t initialize with communication plan"<<std::endl;

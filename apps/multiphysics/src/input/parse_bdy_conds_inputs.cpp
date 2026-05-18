@@ -621,7 +621,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             
             // Set the global variables for temperature boundary condition models
             else if (a_word.compare("temperature_bc_global_vars") == 0) {
-                std::cout << "Inside temperature_bc_global_vars" << std::endl;
+                if (verbose) std::cout << "Inside temperature_bc_global_vars" << std::endl;
                 Yaml::Node & temp_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
                 size_t num_global_vars = temp_bc_global_vars_yaml.Size();
@@ -670,7 +670,6 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     RUN({
                         tempStressBCGlobalVars(bc_id, global_var_id) = stress_bc_var;
                     });
-
                 } // end loop over global vars
             } // end else if on stress_bc_global_vars
 

@@ -116,17 +116,17 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // Print the material tables
     for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-        std::cout << "Material " << mat_id << " density table:" << std::endl;
-        Materials.density_table.print_table();
-        std::cout << "Material " << mat_id << " thermal conductivity table:" << std::endl;
-        Materials.thermal_conductivity_table.print_table();
-        std::cout << "Material " << mat_id << " specific heat table:" << std::endl;
-        Materials.specific_heat_table.print_table();
-
+        if (log) log->info("Material %lu density table:\n", mat_id);
+        if (log) Materials.density_table.print_table();
+        if (log) log->info("Material %lu thermal conductivity table:\n", mat_id);
+        if (log) Materials.thermal_conductivity_table.print_table();
+        if (log) log->info("Material %lu specific heat table:\n", mat_id);
+        if (log) Materials.specific_heat_table.print_table();
+        if (log) log->flush();
     } // end for mat_id
 
     // ---- Write initial state at t=0 ---- 
-    printf("Writing outputs to file at %f \n", graphics_time);
+    if (log) log->info("Writing outputs to file at %f \n", graphics_time);
     mesh_writer.write_mesh(
         mesh, 
         State,
@@ -228,12 +228,12 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // ---- Print the initial time step and time value ---- //
         if (cycle == 0) {
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+            if (log) log->info("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         }
         
         // ---- Print time step every 10 cycles ---- // 
         else if (cycle % 20 == 0) {
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+            if (log) log->info("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         } // end if
 
 
@@ -326,6 +326,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                                State.node.q_transfer, 
                                State.node.coords, 
                                time_value);
+
             // ---- Update nodal temperature ---- //
             update_temperature(
                 mesh,
@@ -341,6 +342,9 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // ---- apply temperature boundary conditions to the boundary patches----
             boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value);
+
+            State.node.temp.communicate();
+            State.node.temp_n0.communicate();
 
             // ---- Find the element average temperature ---- //
 
@@ -394,8 +398,9 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---- Write outputs ---- //
         if (write == 1) {
             dt = cached_pregraphics_dt;
-            printf("Writing outputs to file at %f \n", graphics_time);
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+            if (log) log->info("Writing outputs to file at %f \n", graphics_time);
+            if (log) log->info("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+            if (log) log->flush();
             mesh_writer.write_mesh(mesh,
                                    State,
                                    SimulationParamaters,
@@ -420,6 +425,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
     auto time_2    = std::chrono::high_resolution_clock::now();
     auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_2 - time_1).count();
-    printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
+    if (log) log->info("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 
 } // end of SGH execute

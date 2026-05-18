@@ -333,6 +333,12 @@ void Driver::initialize()
     if (State.GaussPoints.level_set_n0.size() > 0){
         State.GaussPoints.level_set_n0.initialize_comm_plan(element_communication_plan);
     }
+    if (State.node.temp.size() > 0){
+        State.node.temp.initialize_comm_plan(node_communication_plan);
+    }
+    if (State.node.temp_n0.size() > 0){
+        State.node.temp_n0.initialize_comm_plan(node_communication_plan);
+    }
 
     // ----
     // setup the simulation by applying all the fills to the mesh
