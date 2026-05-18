@@ -851,7 +851,39 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double displacement_bc_var = bc_yaml[bc_id]["boundary_condition"]["displacement_bc_global_vars"][global_var_id].As<double>();
+                    std::string var_str = bc_yaml[bc_id]["boundary_condition"]["displacement_bc_global_vars"][global_var_id].As<std::string>();
+    
+                    double displacement_bc_var = 0.0;
+
+                    if (var_str == "x" || var_str == "X") {
+                        displacement_bc_var = 0.0;
+                    }
+                    else if (var_str == "y" || var_str == "Y") {
+                        displacement_bc_var = 1.0;
+                    }
+                    else if (var_str == "z" || var_str == "Z") {
+                        displacement_bc_var = 2.0;
+                    }
+                    else {
+                        // 2. If it's not x, y, or z, try to parse it as a number
+                        try {
+                            size_t idx;
+                            displacement_bc_var = std::stod(var_str, &idx);
+                            
+                            // Check for trailing garbage (e.g., "2E-5abc" or "10xyz")
+                            if (idx < var_str.size()) {
+                                throw std::invalid_argument("Trailing characters");
+                            }
+                        }
+                        catch (const std::exception& e) {
+                            // 3. Fall through to an error if std::stod fails or trailing characters exist
+                            std::cerr << "ERROR: Invalid displacement boundary condition variable value '" << var_str << "' encountered.\n"
+                                    << "Allowed values are 'x', 'y', 'z', or any valid number.\n";
+                            
+                            // Crash/exit gracefully depending on your framework's error handling
+                            throw std::runtime_error("Invalid YAML configuration value: " + var_str);
+                        }
+                    }
                     
                     RUN({
                         tempDisplacementBCGlobalVars(bc_id, global_var_id) = displacement_bc_var;
