@@ -182,7 +182,7 @@ public:
         const DCArrayKokkos<double>& Node_grad_level_set,
         const DCArrayKokkos<double>& Corner_normal,
         const DCArrayKokkos<double>& Corner_volume,
-        const DCArrayKokkos<double>& GaussPoints_level_set,
+        const MPICArrayKokkos<double>& GaussPoints_level_set,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const double fuzz) const;                   
 
@@ -192,8 +192,8 @@ public:
             const Material_t& Materials,
             const MPICArrayKokkos<double>& node_level_set_vel,
             const DCArrayKokkos<double>& Node_grad_level_set,
-            const DCArrayKokkos<double>& GaussPoints_level_set,
-            const DCArrayKokkos<double>& GaussPoints_level_set_n,
+            const MPICArrayKokkos<double>& GaussPoints_level_set,
+            const MPICArrayKokkos<double>& GaussPoints_level_set_n,
             const DCArrayKokkos<double>& GaussPoints_vol,
             const DCArrayKokkos<double>& Corner_normal,
             const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
@@ -210,8 +210,8 @@ public:
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
     void rk_init(
-        DCArrayKokkos<double>& GaussPoints_level_set,
-        DCArrayKokkos<double>& GaussPoints_level_set_n0,
+        MPICArrayKokkos<double>& GaussPoints_level_set,
+        MPICArrayKokkos<double>& GaussPoints_level_set_n0,
         DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_dims,
         const size_t num_mat_elems,

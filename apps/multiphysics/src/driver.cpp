@@ -141,6 +141,9 @@ void Driver::initialize()
         mesh.shared_tally_owned_nodes = DCArrayKokkos<bool>(mesh.num_owned_nodes, "shared_tally_owned_nodes");
         mesh.shared_tally_owned_nodes.set_values(true);
     }
+
+    // WARNING: This needs to be moved into the partition mesh function, along with all of the above copies. 
+    // TODO: Add a copy constructor to the mesh class to handle this consistently. 
     // mesh.num_dims = initial_mesh.num_dims;
     // partition_mesh() builds corner connectivity (corners_in_elem, corners_in_node)
     // but does not set the scalar counter mesh.num_corners. Many solvers size
@@ -185,8 +188,6 @@ void Driver::initialize()
 
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;
-
-    
 
     // Initialize node state
     std::vector<node_state> required_node_state = { node_state::coords };
@@ -315,6 +316,8 @@ void Driver::initialize()
 
     // Solvers allocate nodal velocity with node_t::initialize(..., states) without a comm plan.
     // MPICArrayKokkos::communicate() requires initialize_comm_plan(node_communication_plan).
+    // WARNING: Hack here, we need to move this into the solver initialize function by 
+    // passing in the communication plans. Possibly save the communication plans in the solver class.
     if (State.node.vel.size() > 0) {
         State.node.vel.initialize_comm_plan(node_communication_plan);
     }
@@ -323,6 +326,12 @@ void Driver::initialize()
     }
     if (State.GaussPoints.shock_detector.size() > 0){
         State.GaussPoints.shock_detector.initialize_comm_plan(element_communication_plan);
+    }
+    if (State.GaussPoints.level_set.size() > 0){
+        State.GaussPoints.level_set.initialize_comm_plan(element_communication_plan);
+    }
+    if (State.GaussPoints.level_set_n0.size() > 0){
+        State.GaussPoints.level_set_n0.initialize_comm_plan(element_communication_plan);
     }
 
     // ----

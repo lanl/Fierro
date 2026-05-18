@@ -60,10 +60,10 @@
  
  
 void LevelSet::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
-                                    Material_t& Materials, 
-                                    swage::Mesh& mesh, 
-                                    BoundaryCondition_t& Boundary,
-                                    State_t& State) const
+                                         Material_t& Materials, 
+                                         swage::Mesh& mesh, 
+                                         BoundaryCondition_t& Boundary,
+                                         State_t& State) const
 {
 
     // -----

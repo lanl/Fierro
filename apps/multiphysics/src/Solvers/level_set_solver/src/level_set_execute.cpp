@@ -88,7 +88,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
     graphics_times(0) = this->time_start; // was zero
     double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
 
-    std::cout << "Applying initial boundary conditions" << std::endl;
+    if (log) log->info("Applying initial boundary conditions \n");
     //boundary_velocity(mesh, BoundaryConditions, node_level_set_vel, time_value); // Time value = 0.0;
 
     
@@ -105,7 +105,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
     auto time_1 = std::chrono::high_resolution_clock::now();
 
     // Write initial state at t=0
-    printf("Writing outputs to file at %f \n", graphics_time);
+    if (log) log->info("Writing outputs to file at %f \n", graphics_time);
     mesh_writer.write_mesh(
         mesh, 
         State, 
@@ -184,7 +184,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                         tiny);                    
                 }
                 else {
-                    std::cout << "ERROR: level set only works in 2D and 3D \n";
+                    if (log) log->error("ERROR: level set only works in 2D and 3D \n");
                 }
 
             } 
@@ -210,11 +210,11 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
         }
 
         if (cycle == 0) {
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+            if (log) log->info("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         }
         // print time step every 10 cycles
         else if (cycle % 20 == 0) {
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+            if (log) log->info("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         } // end if
 
 
@@ -248,20 +248,22 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
             nodal_gradient(
                 mesh,
                 State.node.coords,
-                node_level_set_vel,
+                State.node.vel, //node_level_set_vel,
                 State.node.gradient_level_set,
                 State.corner.normal,
                 State.corner.volume,
                 State.GaussPoints.level_set,
                 State.GaussPoints.vol,
                 fuzz);
-
+            
+            
+            // State.node.gradient_level_set.communicate();
 
             // ---- apply velocity boundary conditions to the boundary patches----
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
                 if (Materials.MaterialEnums.host(mat_id).levelSetType == model::evolveFront){
-                    boundary_velocity(mesh, BoundaryConditions, node_level_set_vel, time_value, small);
+                    boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value, small); // node_level_set_vel
                 } //
                 else if (Materials.MaterialEnums.host(mat_id).levelSetType == model::advectFront){
                     
@@ -270,7 +272,8 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                 }
 
             } // end for mat_id
-            
+
+            // State.node.vel.communicate();
 
             // update level set field in material regions that have this solver
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
@@ -281,7 +284,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                     update_level_set(
                         mesh,
                         Materials,
-                        node_level_set_vel,
+                        State.node.vel, //node_level_set_vel,
                         State.node.gradient_level_set,
                         State.GaussPoints.level_set,
                         State.GaussPoints.level_set_n0,
@@ -304,6 +307,8 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                 } // end if advecting level set field
 
             } // end for mat_id
+            State.GaussPoints.level_set.communicate();
+            State.GaussPoints.level_set_n0.communicate();
           
 
         } // end of RK loop
@@ -327,7 +332,8 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 
         // write outputs
         if (write == 1) {
-            printf("Writing outputs to file at %f \n", graphics_time);
+            if (log) log->info("Writing outputs to file at %f \n", graphics_time);
+            if (log) log->flush();
             mesh_writer.write_mesh(mesh,
                                    State,
                                    SimulationParamaters,
@@ -353,7 +359,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
     auto time_2    = std::chrono::high_resolution_clock::now();
     auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_2 - time_1).count();
 
-    printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
+    if (log) log->info("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 
 } // end of SGH execute
 

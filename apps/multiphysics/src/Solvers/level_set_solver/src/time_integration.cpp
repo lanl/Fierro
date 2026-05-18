@@ -50,8 +50,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::rk_init(
-    DCArrayKokkos<double>& GaussPoints_level_set,
-    DCArrayKokkos<double>& GaussPoints_level_set_n0,
+    MPICArrayKokkos<double>& GaussPoints_level_set,
+    MPICArrayKokkos<double>& GaussPoints_level_set_n0,
     DRaggedRightArrayKokkos<size_t>& elem_mat_elem,
     const size_t num_dims,
     const size_t num_mat_elems,
