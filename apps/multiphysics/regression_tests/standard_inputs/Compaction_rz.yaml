@@ -163,8 +163,26 @@ multimaterial_options:
 
 regions:
     - region:
+        id: 0
         volume:
             type: global
+
+    # energy source initial conditions
+    - region:
+        id: 1
+        volume:
+            type: box
+            x1: 0
+            x2: 0.05
+            y1: 0
+            y2: 10
+            z1: 0
+            z2: 10
+
+initial_conditions:
+
+    - initial_condition:        
+        region_id: 0
         material_id: 0
         density: 
             type: uniform
@@ -177,13 +195,12 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 0.5
 
-    - region:
-        volume:
-            type: global
+    - initial_condition:        
+        region_id: 0
         material_id: 1
         density: 
             type: uniform
@@ -196,13 +213,12 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 0.25
-
-    - region:
-        volume:
-            type: global
+   
+    - initial_condition:
+        region_id: 0
         material_id: 2
         density: 
             type: uniform
@@ -215,20 +231,13 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 0.25
 
-    # energy source initial conditions
-    - region:
-        volume:
-            type: box
-            x1: 0
-            x2: 0.05
-            y1: 0
-            y2: 10
-            z1: 0
-            z2: 10
+    # energy source        
+    - initial_condition:
+        region_id: 1
         solver_id: 0
         material_id: 0
         density: 
@@ -243,7 +252,7 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
     

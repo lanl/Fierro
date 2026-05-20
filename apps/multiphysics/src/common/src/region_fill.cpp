@@ -908,7 +908,66 @@ void fill_regions(
                         region_ics(ic_id).level_set_field);
 
 
+                        // ------------------------------------------------------------
+                        // Developers:
+                        // ADD other gauss point values here
+                        //
+                        //
+                        // .....
+                        // 
+                        // ------------------------------------------------------------
+
+
                 } // end for gauss_lid
+
+
+                // --- painting nodal variables ---  
+
+                // loop over the nodes of this element and apply velocity
+                for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
+                    
+                    // get the mesh node index
+                    size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+
+                    // node coords(node_gid,dim)
+                    ViewCArrayKokkos <double> a_node_coords(&node_coords(node_gid,0), 3);
+
+                    // paint the velocity onto the nodes of the mesh
+                    if(node_vel.size()>0){
+                        // if check is needed as solver state might not match fill instructions
+                        paint_vector(node_vel,
+                                    a_node_coords,
+                                    region_ics(ic_id).u,
+                                    region_ics(ic_id).v,
+                                    region_ics(ic_id).w,
+                                    region_ics(ic_id).speed,
+                                    node_gid,
+                                    mesh.num_dims,
+                                    region_ics(ic_id).vel_field);
+                    }
+                    
+                    // paint nodal temperature
+                    if (node_temp.size()>0){
+                        // if check is needed as solver state might not match fill instructions
+                        paint_scalar(node_temp,
+                                    a_node_coords,
+                                    region_ics(ic_id).temperature,
+                                    0.0,
+                                    node_gid,
+                                    mesh.num_dims,
+                                    region_ics(ic_id).temperature_field);
+                    }
+
+                    // ------------------------------------------------------------
+                    // Developers:
+                    // ADD other nodal values here
+                    //
+                    //
+                    // .....
+                    // 
+                    // ------------------------------------------------------------
+
+                } // end loop over the nodes in elem
                 
               
                 

@@ -1,4 +1,4 @@
-num_dims: 3
+
 dynamic_options:
   time_final: 0.6
   dt_min: 1.e-8
@@ -6,65 +6,154 @@ dynamic_options:
   dt_start: 1.e-5
   cycle_stop: 2000000
 
-mesh_generation_options:
-  type: box
-  origin: [0, 0, 0]
-  length: [1.0, 1.0, 1.0]
-  num_elems: [10, 10, 10]
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    # Box origin in x,y,z (cm).
+    origin: [0.0, 0.0, 0.0]
+    # Box side lengths in x,y,z (cm).
+    length: [1.0, 1.0, 1.0]
+    # Element counts [nx, ny, nz].
+    num_elems: [10, 10, 10]
 
 output_options:
-  timer_output_level: thorough
-  output_file_format: state
-  graphics_step: 0.6
-  write_initial: false
-  write_final: true
+    timer_output_level: thorough
+    # Output format for visualization.
+    output_file_format: viz_and_state # only options are viz or viz_and_state
+    # Amount of simulated time between visualization dumps (microseconds).
+    graphics_time_step: 0.05
+    # graphics_iteration_step: 10
+    elem_field_outputs:
+        - den
+        - pres
+        - stress
+        - sie
+        - mass
+    mat_pt_field_outputs:
+        - den
+        - pres
+        - sie
+        - volfrac
+    node_field_outputs:
+        - vel
+        - mass
+
   
-  
-fea_module_parameters:
-  - type: SGH3D
-    material_id: 0
-    boundary_conditions:
-      # Tag X plane
-      - surface: 
+solver_options:
+  - solver:
+      # `dynx_FE` corresponds to the SGH3D (3D Cartesian) solver.
+      method: dynx_FE
+      # Solver instance id; used by `regions` and `boundary_conditions`.
+      id: 0
+
+
+boundary_conditions:
+
+  # Tag X plane
+  - boundary_condition:
+      solver_id: 0
+      surface: 
           type: x_plane
+          # Location of the symmetry plane (cm).
           plane_position: 0.0
-        type: reflected
-                
-        # Tag Y plane
-      - surface: 
+          # Tolerance used to match nodes to the specified plane.
+          tolerance: 1.e-5
+      # SGH reflective BC: remove the normal component of velocity along
+      # the specified direction and reflect about the plane.
+      velocity_model: reflected
+      velocity_bc_global_vars:
+          # Direction defining the plane normal (unit vector recommended):
+          # x-plane normal is (+x).
+          - 1   # x
+          - 0   # y
+          - 0   # z
+
+  # Tag Y plane
+  - boundary_condition:
+      solver_id: 0
+      surface: 
           type: y_plane
+          # Location of the symmetry plane (cm).
           plane_position: 0.0
-        type: reflected
-                
-        # Tag Z plane
-      - surface: 
+          # Tolerance used to match nodes to the specified plane.
+          tolerance: 1.e-5
+      # Reflect velocity about the y=0 plane.
+      velocity_model: reflected
+      velocity_bc_global_vars:
+          # y-plane normal is (+y).
+          - 0   # x
+          - 1   # y
+          - 0   # z
+
+  # Tag z plane
+  - boundary_condition:
+      solver_id: 0
+      surface: 
           type: z_plane
+          # Location of the symmetry plane (cm).
           plane_position: 0.0
-        type: reflected
+          # Tolerance used to match nodes to the specified plane.
+          tolerance: 1.e-5
+      # Reflect velocity about the z=0 plane.
+      velocity_model: reflected
+      velocity_bc_global_vars:
+          # z-plane normal is (+z).
+          - 0   # x
+          - 0   # y
+          - 1   # z
                 
 
 materials:
-  - id: 0
-    eos_model: ideal_gas
-    strength_model: none
-    elastic_modulus: 10
-    poisson_ratio: 0.3
-    q1: 1.0
-    q2: 1.333
-    q1ex: 1.0
-    q2ex: 0.0
-    eos_global_vars:
-      - 1.666666666666667
-      - 1.0E-14
-      - 1.0
+  - material:
+      id: 0
+      eos_model_type: decoupled
+      # Gamma-law gas EOS.
+      eos_model: gamma_law_gas
+      # For `gamma_law_gas`, `eos_global_vars` are:
+      # - [0] gamma
+      # - [1] minimum sound speed
+      # - [2] c_v (may not be used directly in pressure in current code path)
+      eos_global_vars:
+          - 1.666666666666667
+          - 1.0E-14
+          - 1.0
+      # strength_model: none
+      # MARS artificial viscosity for shock capturing.
+      dissipation_model: MARS
+      # For `MARS`, `dissipation_global_vars` are ordered as:
+      # [q1, q1ex, q2, q2ex, phi_min, phi_curl_min].
+      dissipation_global_vars:
+          - 1.0   # q1
+          - 1.0   # q1ex
+          - 1.333 # q2
+          - 1.333 # q2ex
+          - 0.0   # phi_min
+          - 1.0   # pin_curl_min
 
 regions:
-  - volume: 
-      type: global
-    solver_id: 0
-    material_id: 0
-    den: 1.0
-    sie: 1.e-10
-    velocity: spherical
-    speed: -1.0
+  - region:
+      id: 0
+      volume: 
+        type: global
+      solver_id: 0
+
+
+initial_conditions:
+  - initial_condition:
+      region_id: 0
+      material_id: 0
+      density: 
+        # Density fill inside the blast region.
+        type: uniform
+        value: 1.0
+      specific_internal_energy: 
+        type: uniform
+        value: 1.e-10
+      velocity: 
+        type: spherical
+        speed: -1.0
+      material_volume_fraction:
+        type: uniform
+        value: 1.0
     

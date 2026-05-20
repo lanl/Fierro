@@ -208,7 +208,7 @@ regions:
             u: 0.0
             v: 0.0
             w: -0.0083 #-0.0205
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
 
@@ -233,6 +233,6 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0083 #-0.0205
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
