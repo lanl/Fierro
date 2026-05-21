@@ -68,12 +68,13 @@ materials:
           - 1.0E-14
           - 1.0
 
+
 regions:
   - region:
-        id: 0
-        volume:
-            type: global
-        solver_id: 0
+      id: 0
+      volume:
+          type: global
+      solver_id: 0
 
   # top block initial velocity conditions
   - region:
@@ -89,10 +90,10 @@ regions:
         z2: 2
       solver_id: 0
 
-initial_conditions:
 
+initial_conditions:
   - initial_condition: 
-      region: 0
+      region_id: 0
       material_id: 0
       density: 
           type: uniform
@@ -107,7 +108,7 @@ initial_conditions:
           w: 0.0
 
   - initial_condition:      
-      region: 1
+      region_id: 1
       material_id: 0
 
       density:

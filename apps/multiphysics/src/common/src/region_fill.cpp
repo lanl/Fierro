@@ -292,7 +292,10 @@ void fill_regions(
     DCArrayKokkos <size_t> voxel_elem_mat_id; // 1 or 0 if material exist, or it is the material_id
 
     // a local array to store geometric element volume fractions for each fill
-    DCArrayKokkos <double> elem_geo_volfrac_fill(mesh.num_elems); // it is in the range of 0:1 and allocated later for STL files
+    DCArrayKokkos <double> elem_geo_volfrac_a_fill(mesh.num_elems);  // the geometric volfracs in elements for a region fill
+    DCArrayKokkos <double> elem_geo_volfrac_region_fills(mesh.num_elems,max_num_mats_per_elem);  // the geo volfracs for all region fills in an element
+    // NOTE: more then one material can be painted on a region, so for instance, elem_geo_volfrac_reg of 2 might apply to 4 materials
+    elem_geo_volfrac_region_fills.set_values(0.0);  // initialized to zero
 
     // --- map vol tag options to the CPU side ---
     // an array to store fill types on the host side, copying from device side
@@ -362,14 +365,14 @@ void fill_regions(
         switch (fill_volume_type.host(reg_id)) {
             case region::global:
             {
-                elem_geo_volfrac_fill.set_values(1.0);
+                elem_geo_volfrac_a_fill.set_values(1.0);
                 Kokkos::fence();
                 break;
             } // end case
             // ---
             case region::box:
             {
-                elem_geo_volfrac_fill.set_values(0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
 
                 const double x_lower_bound = region_fills(reg_id).x1;
                 const double x_upper_bound = region_fills(reg_id).x2;
@@ -385,7 +388,7 @@ void fill_regions(
                     if (elem_coords(elem_gid,0) >= x_lower_bound && elem_coords(elem_gid,0) <= x_upper_bound &&
                         elem_coords(elem_gid,1) >= y_lower_bound && elem_coords(elem_gid,1) <= y_upper_bound &&
                         elem_coords(elem_gid,2) >= z_lower_bound && elem_coords(elem_gid,2) <= z_upper_bound) {
-                        elem_geo_volfrac_fill(elem_gid) = 1.0;
+                        elem_geo_volfrac_a_fill(elem_gid) = 1.0;
                     } // end if
 
                 });
@@ -395,7 +398,7 @@ void fill_regions(
             // ---
             case region::cylinder:
             {
-                elem_geo_volfrac_fill.set_values(0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
                 
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
@@ -419,7 +422,7 @@ void fill_regions(
                     if (radius_cyl >= region_fills(reg_id).radius1 && 
                         radius_cyl <= region_fills(reg_id).radius2 &&
                         elem_coords(elem_gid,2) >= z_lower_bound && elem_coords(elem_gid,2) <= z_upper_bound) {
-                        elem_geo_volfrac_fill(elem_gid) = 1.0;
+                        elem_geo_volfrac_a_fill(elem_gid) = 1.0;
                     } // end if
 
                 });
@@ -431,7 +434,7 @@ void fill_regions(
             case region::sphere:
             {
 
-                elem_geo_volfrac_fill.set_values(0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
             
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
@@ -451,7 +454,7 @@ void fill_regions(
 
                     if (radius >= region_fills(reg_id).radius1
                         && radius <= region_fills(reg_id).radius2) {
-                        elem_geo_volfrac_fill(elem_gid) = 1.0;
+                        elem_geo_volfrac_a_fill(elem_gid) = 1.0;
                     }
 
                 });
@@ -463,7 +466,7 @@ void fill_regions(
             case region::readVoxelFile:
             {
 
-                elem_geo_volfrac_fill.set_values(0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
 
                 // read voxel mesh to get the values in the fcn interface
                 // voxel_elem_mat_id is read here
@@ -508,7 +511,7 @@ void fill_regions(
 
                         // if part_id matches the voxel_mat_id here, then fill elem_gid
                         if(region_fills(reg_id).part_id == voxel_elem_mat_id(elem_id0)){
-                            elem_geo_volfrac_fill(elem_gid) = 1.0;
+                            elem_geo_volfrac_a_fill(elem_gid) = 1.0;
                         }
 
                     } // end if
@@ -520,10 +523,10 @@ void fill_regions(
             // ---
             case region::readSTLFile:
             {
-                elem_geo_volfrac_fill.set_values(0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
 
                 // read .STL file and paint vol fractions on mesh
-                int paint_sucessful = paint_stl_on_mesh(elem_geo_volfrac_fill, 
+                int paint_sucessful = paint_stl_on_mesh(elem_geo_volfrac_a_fill, 
                                                         node_coords,
                                                         mesh.nodes_in_elem,
                                                         mesh.num_nodes,
@@ -539,12 +542,12 @@ void fill_regions(
             // ---
             case region::readVTUFile:
             {
-                elem_geo_volfrac_fill.set_values(0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
 
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
                     // if the part id in .vtu file matches the specified id, then fill it
                     if(object_ids(elem_gid) == region_fills(reg_id).part_id){
-                        elem_geo_volfrac_fill(elem_gid) = 1.0;
+                        elem_geo_volfrac_a_fill(elem_gid) = 1.0;
                     }
                 });
 
@@ -553,14 +556,14 @@ void fill_regions(
             // ---
             case region::no_volume:
             {
-                elem_geo_volfrac_fill.set_values(0.0);  // default is no, don't fill it
+                elem_geo_volfrac_a_fill.set_values(0.0);  // default is no, don't fill it
 
                 break;
             } // end case
             // ----
             default:
             {
-                elem_geo_volfrac_fill.set_values(0.0);  // default is no, don't fill it
+                elem_geo_volfrac_a_fill.set_values(0.0);  // default is no, don't fill it
 
                 break;
             } // end case
@@ -572,18 +575,18 @@ void fill_regions(
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
             // paint the material state on the element if geo_volfrac>0
-            if (elem_geo_volfrac_fill(elem_gid) > 1.e-8) {
+            if (elem_geo_volfrac_a_fill(elem_gid) > 1.e-8) {
                 
                 // Note: material volume fractions is added to mesh when applying initial conditions
 
                 // if this fill is to add a geometroy to existing ones, do so
-                if (elem_geo_volfrac_fill(elem_gid) < 1.0 - 1.0e-8){
+                if (elem_geo_volfrac_a_fill(elem_gid) < 1.0 - 1.0e-8){
 
-                    // append the region_id and elem_geo_volfrac in this element
-                    append_fills_in_elem(elem_geo_volfrac,
+                    // append the region_id and elem_geo_volfrac_region_fills in this element
+                    append_fills_in_elem(elem_geo_volfrac_region_fills,
                                          elem_region_ids,
                                          elem_num_region_fills,
-                                         elem_geo_volfrac_fill(elem_gid),
+                                         elem_geo_volfrac_a_fill(elem_gid),
                                          elem_gid,
                                          reg_id,
                                          max_num_mats_per_elem);
@@ -597,7 +600,8 @@ void fill_regions(
                     elem_region_ids(elem_gid, 0) = reg_id;
  
                     // save volume fractions
-                    elem_geo_volfrac(elem_gid, 0) = 1.0; // entire element is a single region
+                    // ERROR HERE: needs to be elem region volfrac
+                    elem_geo_volfrac_region_fills(elem_gid, 0) = 1.0; // entire element is a single region
 
                     // only 1 material
                     elem_num_region_fills(elem_gid) = 1;
@@ -640,15 +644,15 @@ void fill_regions(
 
 
             // DEBUG: 
-            printf("ic_id = %zu \n", ic_id);
-            printf("reg_id = %zu \n", reg_id);
-            printf("mat_id = %zu \n", mat_id);
+            //printf("ic_id = %zu \n", ic_id);
+            //printf("reg_id = %zu \n", reg_id);
+            //printf("mat_id = %zu \n", mat_id);
 
             // the current stride is the ic storage index, we will push stride back after saving ic
             size_t ic_lid = ics_in_region.stride(reg_id);
 
             // DEBUG:
-            printf("stride size ic_lid = %zu \n", ic_lid);
+            //printf("storage ic_lid = %zu, for reg_id = %zu \n", ic_lid, reg_id);
 
 
             // Important:
@@ -657,9 +661,9 @@ void fill_regions(
 
 
                 // DEBUG:
-                printf("accessors to ics_in_region: reg = %zu, ic_lid = %zu \n", reg_id, ic_lid);
+                //printf("accessors to ics_in_region: reg = %zu, ic_lid = %zu, stride = %zu \n", reg_id, ic_lid, ics_in_region.stride(reg_id));
 
-                size_t a_saved_ic = ics_in_region(reg_id,ic_lid);
+                size_t a_saved_ic = ics_in_region(reg_id,saved_ic_lid);
 
                 const size_t a_saved_mat_id = region_ics(a_saved_ic).material_id;
 
@@ -675,6 +679,9 @@ void fill_regions(
 
             // make room to store a value, push back stride, create memory to store value
             ics_in_region.stride(reg_id)++; // increment because a new value was appended
+
+            // DEBUG:
+            //printf("stride size = %zu \n", ics_in_region.stride(reg_id));
 
 
             // Important:
@@ -694,7 +701,7 @@ void fill_regions(
 
     //---------------------------------------------------------------------
     // The following coding will apply the initial conditions to the mesh.
-    // Remember the elem_geo_volfrac was calculated earlier, and it was
+    // Remember the elem_geo_volfrac_region_fills was calculated earlier, and it was
     // used to determine the region fills in each element.
     //
     // The structure of the coding to apply ics to the mesh is as follows:
@@ -723,11 +730,14 @@ void fill_regions(
         double check_unity = 0.0;
         for(size_t reg_fill_lid=0; reg_fill_lid<elem_num_region_fills(elem_gid); reg_fill_lid++){
 
-            printf("elem_gid=%d, geo_volfrac=%f \n", elem_gid, elem_geo_volfrac(elem_gid, reg_fill_lid));
+            // DEBUG:
+            //printf("elem_gid=%d, geo_volfrac=%f \n", elem_gid, elem_geo_volfrac(elem_gid, reg_fill_lid));
 
-            check_unity += elem_geo_volfrac(elem_gid, reg_fill_lid);
+            check_unity += elem_geo_volfrac_region_fills(elem_gid, reg_fill_lid);
         }
-        printf("geo_volfrac elem tally =%f \n\n",check_unity);
+
+        // DEBUG:
+        //printf("geo_volfrac elem tally =%f \n\n",check_unity);
 
         if(check_unity>1.0+1e-8){
             Kokkos::abort("ERROR: Geometric volfraction exceeds 1. \n");
@@ -758,6 +768,10 @@ void fill_regions(
                     Kokkos::abort("ERROR: The number of materials in the element exceeds the specified \n limit.  Must increase the maximum number of materials per element in yaml input file. \n");
                 }
 
+
+                // ---------------------------------
+                // Paint a material on this element
+
                 // save mat_ids for the element
                 elem_mat_id(elem_gid,bin) = region_ics(ic_id).material_id;
 
@@ -773,12 +787,17 @@ void fill_regions(
 
                 } // end for a_saved_mat
 
-             
 
+                // --------------------------------------------------------------
+                // Paint geometric and material volume fractions on the element
 
                 // NOTE:
-                // element material fraction, in the future, make this a gauss point field
+                // element material fraction, in the future, should be a gauss point field
                 // update coords to be gauss coords
+                // geo volfrac should also be at guass points
+
+                // save the geo_volfrac for this material
+                elem_geo_volfrac(elem_gid,bin) = elem_geo_volfrac_region_fills(elem_gid,reg_fill_lid);  // a reg can have multiple materials with ics
 
                 // get the mat_volfrac for the region
                 double mat_vfrac = get_region_scalar(coords,
@@ -804,7 +823,7 @@ void fill_regions(
 
                 // ------------------------------------------------------------
                 // Developers:
-                // ADD other element material saves here
+                // ADD other element material variables to save here
                 //
                 // elem_var_name1(elem_gid,bin) = region_ics(ic_id).var_name1
                 // elem_var_name2(elem_gid,bin) = region_ics(ic_id).var_name2
@@ -816,7 +835,10 @@ void fill_regions(
                 // add extra elem vars here developers
 
 
+
                 //-------------------------------------------------------------------------------
+                // Paint Gauss point material states
+                //
                 // for high-order, we loop over gauss points in element
                 // gauss_gid = elem_gid for low-order, single quadarture point solvers like SGH
                 //
@@ -921,7 +943,9 @@ void fill_regions(
                 } // end for gauss_lid
 
 
-                // --- painting nodal variables ---  
+
+                // ------------------------
+                // Paint nodal variables
 
                 // loop over the nodes of this element and apply velocity
                 for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
@@ -977,10 +1001,12 @@ void fill_regions(
                 elem_num_mats_saved_in_elem(elem_gid)++;               
 
             } // end for ic_in_region_lid
+            // the above loop applies ics to a region
 
         } // end for loop over region fills in an element
+        // remember, a region have multiple materials where each material has ics
     
-    }); // end FOR_ALL node loop
+    }); // end FOR_ALL elem loop
     Kokkos::fence();  
 
 
@@ -989,11 +1015,12 @@ void fill_regions(
     // Elem Fill state
     // update host side for elem fill states
     elem_mat_id.update_host();
-    elem_mat_volfrac.update_host();
-    elem_geo_volfrac.update_host();
+    elem_mat_volfrac.update_host();  // make this a gauss point field in the future
+    elem_geo_volfrac.update_host();  // make this a gauss point field in the future
     elem_num_mats_saved_in_elem.update_host();
 
-    //---------
+
+    //-------------------
     // Gauss Fill state
     // update the host side for gauss states, if the variable was set on the mesh
     for (auto field : fill_gauss_states){
@@ -1030,10 +1057,16 @@ void fill_regions(
             case fill_gauss_state::level_set:
                 gauss_level_set.update_host(); 
                 break;    
+
+            // ------------------------------------------------------------
+            // Developers:
+            // ADD other gauss fill state here
+
         } // end switch
     } // end for
 
-    //---------
+
+    //-------------
     // node state
     // update host side for node states set on the mesh
     for (auto field : fill_node_states){
@@ -1046,6 +1079,11 @@ void fill_regions(
                 // if check is needed as solver state might not match fill instructions
                 if (node_temp.size()>0){node_temp.update_host();}
                 break;
+
+            // ------------------------------------------------------------
+            // Developers:
+            // ADD other node fill state here
+
         } // end switch
     } // end for
     
@@ -1623,169 +1661,7 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
     in.close();
 } // end routine
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn fill_geometric_region
-///
-/// \brief a function to calculate whether to fill this element based on the 
-/// input geometries fill types.  The output is
-///  = 0 then no, do not fill this element, it has zero volume fraction
-///  >0 and >=1, then yes, fill this element
-///
-/// \param mesh is the simulation mesh
-/// \param node_coords is the nodal position array
-/// \param voxel_elem_mat_id are the voxel values on a structured i,j,k mesh 
-/// \param region_fills are the instructions to paint state on the mesh
-/// \param mesh_coords is the geometric center of the element or a node coordinates
-///
-/////////////////////////////////////////////////////////////////////////////
-KOKKOS_FUNCTION
-double fill_geometric_region(const swage::Mesh& mesh,
-                             const DCArrayKokkos<size_t>& voxel_elem_mat_id,
-                             const DCArrayKokkos<double>& elem_geo_volfrac_fill,
-                             const DCArrayKokkos<int>& object_ids,
-                             const CArrayKokkos<RegionFill_t>& region_fills,
-                             const ViewCArrayKokkos <double>& mesh_coords,
-                             const double voxel_dx, 
-                             const double voxel_dy, 
-                             const double voxel_dz,
-                             const double orig_x, 
-                             const double orig_y, 
-                             const double orig_z,
-                             const size_t voxel_num_i, 
-                             const size_t voxel_num_j, 
-                             const size_t voxel_num_k,
-                             const size_t f_id,
-                             const size_t elem_gid)
-{
 
-    // default is not to fill the element
-    double geo_volfrac = 0.0;
-
-
-    // for shapes with an origin (e.g., sphere and circle), accounting for the origin
-    double dist_x = mesh_coords(0) - region_fills(f_id).origin[0];
-    double dist_y = mesh_coords(1) - region_fills(f_id).origin[1];
-    double dist_z = mesh_coords(2) - region_fills(f_id).origin[2];
-
-    // spherical radius 
-    double radius = sqrt(dist_x * dist_x +
-                         dist_y * dist_y +
-                         dist_z * dist_z);
-
-    // cylindrical radius
-    double radius_cyl = sqrt(dist_x * dist_x +
-                             dist_y * dist_y);
-
-
-    // check to see if this element should be filled
-    switch (region_fills(f_id).volume) {
-        case region::global:
-            {
-                geo_volfrac = 1;
-                break;
-            }
-        case region::box:
-            {
-
-                double x_lower_bound = region_fills(f_id).x1;
-                double x_upper_bound = region_fills(f_id).x2;
-
-                double y_lower_bound = region_fills(f_id).y1;
-                double y_upper_bound = region_fills(f_id).y2;
-
-                double z_lower_bound = region_fills(f_id).z1;
-                double z_upper_bound = region_fills(f_id).z2;
-
-
-                if (mesh_coords(0) >= x_lower_bound && mesh_coords(0) <= x_upper_bound &&
-                    mesh_coords(1) >= y_lower_bound && mesh_coords(1) <= y_upper_bound &&
-                    mesh_coords(2) >= z_lower_bound && mesh_coords(2) <= z_upper_bound) {
-                    geo_volfrac = 1.0;
-                }
-                break;
-            }
-        case region::cylinder:
-            {
-                double z_lower_bound = region_fills(f_id).z1;
-                double z_upper_bound = region_fills(f_id).z2;
-
-                if (radius_cyl >= region_fills(f_id).radius1 && 
-                    radius_cyl <= region_fills(f_id).radius2 &&
-                    mesh_coords(2) >= z_lower_bound && mesh_coords(2) <= z_upper_bound) {
-                    geo_volfrac = 1.0;
-                }
-                break;
-            }
-        case region::sphere:
-            {
-                if (radius >= region_fills(f_id).radius1
-                    && radius <= region_fills(f_id).radius2) {
-                    geo_volfrac = 1.0;
-                }
-                break;
-            }
-        case region::readVoxelFile:
-            {
-
-                geo_volfrac = 0; // default is no, don't fill it
-
-                // find the closest element in the voxel mesh to this element
-                double i0_real = (mesh_coords(0) - orig_x - region_fills(f_id).origin[0]) / (voxel_dx);
-                double j0_real = (mesh_coords(1) - orig_y - region_fills(f_id).origin[1]) / (voxel_dy);
-                double k0_real = (mesh_coords(2) - orig_z - region_fills(f_id).origin[2]) / (voxel_dz);
-
-                int i0 = (int)i0_real;
-                int j0 = (int)j0_real;
-                int k0 = (int)k0_real;
-
-                // look for the closest element in the voxel mesh
-                int elem_id0 = get_id_device(i0, j0, k0, voxel_num_i, voxel_num_j);
-
-                // if voxel mesh overlaps this mesh, then fill it if =1
-                if (elem_id0 < voxel_elem_mat_id.size() && elem_id0 >= 0 &&
-                    i0 >= 0 && j0 >= 0 && k0 >= 0 &&
-                    i0 < voxel_num_i && j0 < voxel_num_j && k0 < voxel_num_k) {
-                    // voxel mesh elem values = 0 or 1
-                    geo_volfrac = (double)voxel_elem_mat_id(elem_id0); // values from file
-
-                } // end if
-
-                break;
-
-            } // end case
-        case region::readSTLFile:
-        {
-            geo_volfrac = elem_geo_volfrac_fill(elem_gid);
-            break;
-        }
-        case region::readVTUFile:
-            {
-                // if the part id in .vtu file matches the specified id, then fill it
-                if(object_ids(elem_gid) == region_fills(f_id).part_id){
-                    geo_volfrac = 1.0;
-                }
-                break;
-            }
-        case region::no_volume:
-            {
-                geo_volfrac = 0.0; // default is no, don't fill it
-
-                break;
-            }
-        default:
-            {
-                geo_volfrac = 0; // default is no, don't fill it
-
-                break;
-            }
-
-    } // end of switch
-
-
-    return geo_volfrac;
-
-} // end function
 
 
 
@@ -1795,7 +1671,7 @@ double fill_geometric_region(const swage::Mesh& mesh,
 ///
 /// \brief a function to append fills 
 ///
-/// \param elem_geo_volfracs is the geometric volume fraction in the element
+/// \param elem_geo_volfrac_region_fills is the geometric volume fraction in the element
 /// \param elem_region_ids is the fill id in an element
 /// \param elem_num_region_fills is the number of region fills saved in an element
 /// \param region_fills are the instructions to paint state on the mesh
@@ -1806,7 +1682,7 @@ double fill_geometric_region(const swage::Mesh& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
+void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfrac_region_fills,
                           const CArrayKokkos <size_t>& elem_region_ids,
                           const DCArrayKokkos <size_t>& elem_num_region_fills,
                           const double geo_volfrac,
@@ -1825,7 +1701,7 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
 
     // append the reg_id and geometric volfracs in elem
     elem_region_ids(elem_gid, fill_storage_lid) = reg_id;
-    elem_geo_volfracs(elem_gid, fill_storage_lid) = geo_volfrac;
+    elem_geo_volfrac_region_fills(elem_gid, fill_storage_lid) = geo_volfrac;
 
 
     // add one more region to this elem
@@ -1835,7 +1711,7 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
     // ----------
     // Important: make geo volfrac be bounded by 1.0
     //
-    bool volfrac_compressed = bound_volfracs(elem_geo_volfracs,
+    bool volfrac_compressed = bound_volfracs(elem_geo_volfrac_region_fills,
                                              elem_gid,
                                              elem_num_region_fills(elem_gid));
     
@@ -1849,11 +1725,11 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
 
         for (size_t read_idx = 0; read_idx < elem_num_region_fills(elem_gid); ++read_idx) {
 
-            if (elem_geo_volfracs(elem_gid, read_idx) > 1.e-8) {
+            if (elem_geo_volfrac_region_fills(elem_gid, read_idx) > 1.e-8) {
 
                 if (write_idx != read_idx){
                     elem_region_ids(elem_gid, write_idx) = elem_region_ids(elem_gid, read_idx);
-                    elem_geo_volfracs(elem_gid, write_idx) = elem_geo_volfracs(elem_gid, read_idx);
+                    elem_geo_volfrac_region_fills(elem_gid, write_idx) = elem_geo_volfrac_region_fills(elem_gid, read_idx);
                 }
 
                 write_idx++;

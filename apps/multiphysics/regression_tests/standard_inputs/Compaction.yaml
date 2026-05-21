@@ -24,20 +24,20 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: state
-    graphics_time_step: 3.0
+    output_file_format: viz_and_state  #state
+    graphics_time_step: 1.0. # 3
     #graphics_iteration_step: 1
-    #elem_field_outputs:
-    #    - den
-    #    - pres
-    #    - sie
-    #mat_pt_field_outputs:
-    #    - den
-    #    - pres
-    #    - sie
-    #    - volfrac
-    #node_field_outputs:
-    #    - vel
+    elem_field_outputs:
+       - den
+       - pres
+       - sie
+    mat_pt_field_outputs:
+       - den
+       - pres
+       - sie
+       - volfrac
+    node_field_outputs:
+       - vel
 
 
 
@@ -201,8 +201,7 @@ regions:
             y1: 0
             y2: 10
             z1: 0
-            z2: 10
-        solver_id: 0   
+            z2: 10  
 
 
 initial_conditions:
@@ -221,7 +220,7 @@ initial_conditions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 0.5 
 
@@ -239,7 +238,7 @@ initial_conditions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 0.25
 
@@ -257,7 +256,7 @@ initial_conditions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 0.25
 
@@ -278,7 +277,7 @@ initial_conditions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
     

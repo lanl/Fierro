@@ -238,7 +238,6 @@ initial_conditions:
     # energy source        
     - initial_condition:
         region_id: 1
-        solver_id: 0
         material_id: 0
         density: 
             type: uniform
