@@ -158,7 +158,7 @@ initial_conditions:
     #     material_id: 0
     #     den: 1.0
     #     # ie: 0.25833839995946534
-    #     sie: 61.67375002 # 963.652344
+    #     sie: 61.67375002 # 963.6523
     #     velocity: cartesian
     #     u: 0.0
     #     v: 0.0

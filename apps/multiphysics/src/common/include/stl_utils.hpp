@@ -358,15 +358,35 @@ std::tuple<
 >
 binary_stl_reader(const std::string& path)
 {
+    
+    // Open file in binary mode and position at end
     std::ifstream in(path, std::ios::binary | std::ios::ate);
-    if (!in) { std::perror("open"); std::exit(EXIT_FAILURE); }
 
-    const std::streamoff filesize = in.tellg();
-    if (filesize < 100) {
-        std::cerr << "ERROR: File too small to be a valid STL\n";
-        std::exit(EXIT_FAILURE);
+    // Check file opened successfully
+    if (!in) {
+        throw std::runtime_error(
+            "ERROR: Failed to open STL file: " + path + "\n"
+        );
     }
+
+    // Get file size
+    const std::streamoff filesize = in.tellg();
+
+    // Basic sanity check
+    if (filesize < 100) {
+        throw std::runtime_error(
+            "ERROR: STL file too small to be valid: " + path + "\n"
+        );
+    }
+
+    // Move back to beginning of file
     in.seekg(0);
+
+    std::cout << "Successfully opened STL file.\n";
+    std::cout << "File size = " << filesize << " bytes\n";
+
+    // Continue reading/parsing STL file here...
+
 
     // ---- check if ASCII -------------------------------------------------
     char magic[6] = { 0 };

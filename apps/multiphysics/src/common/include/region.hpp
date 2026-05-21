@@ -124,7 +124,7 @@ struct RegionFill_t
 /////////////////////////////////////////////////////////////////////////////
 struct RegionFill_host_t
 {
-    std::string file_path; ///< path of mesh file
+    std::string file_path = ""; ///< path of mesh file
 
     // scale parameters for input mesh files
     double scale_x = 1.0;
