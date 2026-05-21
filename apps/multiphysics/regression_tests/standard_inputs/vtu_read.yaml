@@ -87,10 +87,15 @@ materials:
 
 regions:
     - region:
+        id: 0
         volume:
             type: vtu_file
             part_id: 1
         solver_id: 0
+
+initial_conditions:
+    - initial_condition:
+        region_id: 0
         material_id: 0
         density: 
             type: uniform

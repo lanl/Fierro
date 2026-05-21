@@ -24,20 +24,20 @@ mesh_options:
 
 output_options:
     timer_output_level: thorough
-    output_file_format: viz_and_state  #state
-    graphics_time_step: 1.0. # 3
+    output_file_format: state
+    graphics_time_step: 3.0. # 3
     #graphics_iteration_step: 1
-    elem_field_outputs:
-       - den
-       - pres
-       - sie
-    mat_pt_field_outputs:
-       - den
-       - pres
-       - sie
-       - volfrac
-    node_field_outputs:
-       - vel
+    #elem_field_outputs:
+    #   - den
+    #   - pres
+    #   - sie
+    #mat_pt_field_outputs:
+    #   - den
+    #   - pres
+    #   - sie
+    #   - volfrac
+    #node_field_outputs:
+    #   - vel
 
 
 
