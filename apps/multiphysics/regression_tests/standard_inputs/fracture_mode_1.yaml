@@ -119,12 +119,12 @@ regions:
       id: 0
       volume:
           type: global
-      material_id: 0
       solver_id: 0
 
 initial_conditions:
   - initial_condition:
       region_id: 0
+      material_id: 0
       density: 
           type: uniform
           value: 1
