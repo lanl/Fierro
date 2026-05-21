@@ -301,6 +301,7 @@ void parse_regions(Yaml::Node& root,
 
                                 case region::global:
                                     std::cout << "Setting volume fill type to global " << std::endl;
+                                    region_fills_host(reg_id).volume = region::global;
                                     RUN({
                                         region_fills(reg_id).volume = region::global;
                                     });
@@ -308,6 +309,7 @@ void parse_regions(Yaml::Node& root,
 
                                 case region::box:
                                     std::cout << "Setting volume fill type to box " << std::endl;
+                                    region_fills_host(reg_id).volume = region::box;
                                     RUN({
                                         region_fills(reg_id).volume = region::box;
                                     });
@@ -315,6 +317,7 @@ void parse_regions(Yaml::Node& root,
 
                                 case region::cylinder:
                                     std::cout << "Setting volume fill type to cylinder " << std::endl;
+                                    region_fills_host(reg_id).volume = region::cylinder;
                                     RUN({
                                         region_fills(reg_id).volume = region::cylinder;
                                     });
@@ -322,6 +325,7 @@ void parse_regions(Yaml::Node& root,
 
                                 case region::sphere:
                                     std::cout << "Setting volume fill type to sphere " << std::endl;
+                                    region_fills_host(reg_id).volume = region::sphere;
                                     RUN({
                                         region_fills(reg_id).volume = region::sphere;
                                     });
@@ -329,6 +333,7 @@ void parse_regions(Yaml::Node& root,
 
                                 case region::readVoxelFile:
                                     std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
+                                    region_fills_host(reg_id).volume = region::readVoxelFile;
                                     RUN({
                                         region_fills(reg_id).volume = region::readVoxelFile;
                                     });
@@ -336,6 +341,7 @@ void parse_regions(Yaml::Node& root,
                                 
                                 case region::readSTLFile:
                                     std::cout << "Setting volume fill type to readSTLFile " << std::endl;
+                                    region_fills_host(reg_id).volume = region::readSTLFile;
                                     RUN({
                                         region_fills(reg_id).volume = region::readSTLFile;
                                     });
@@ -343,18 +349,20 @@ void parse_regions(Yaml::Node& root,
 
                                 case region::readVTUFile:
                                     std::cout << "Setting volume fill type to readVTUFile " << std::endl;
+                                    region_fills_host(reg_id).volume = region::readVTUFile;
                                     RUN({
                                         region_fills(reg_id).volume = region::readVTUFile;
                                     });
                                     break;
                                 case region::no_volume:
                                     std::cout << "Setting volume fill type to none " << std::endl;
+                                    region_fills_host(reg_id).volume = region::no_volume;
                                     RUN({
                                         region_fills(reg_id).volume = region::no_volume;
                                     });
                                     break;
                                 default:
-
+                                    region_fills_host(reg_id).volume = region::no_volume;
                                     RUN({ 
                                         region_fills(reg_id).volume = region::no_volume;
                                     });

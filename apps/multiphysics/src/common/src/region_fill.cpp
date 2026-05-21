@@ -297,16 +297,6 @@ void fill_regions(
     // NOTE: more then one material can be painted on a region, so for instance, elem_geo_volfrac_reg of 2 might apply to 4 materials
     elem_geo_volfrac_region_fills.set_values(0.0);  // initialized to zero
 
-    // --- map vol tag options to the CPU side ---
-    // an array to store fill types on the host side, copying from device side
-    DCArrayKokkos <region::vol_tag> fill_volume_type(num_region_fills, "fill_volume_type");
-
-    FOR_ALL(reg_id, 0, num_region_fills, {
-        fill_volume_type(reg_id) = region_fills(reg_id).volume;
-    }); // end parallel for
-    fill_volume_type.update_host(); // copy to CPU the fill volume type
-    Kokkos::fence();
-
     
     // ----------------------------------------------------------------------------
     // calculating the element average coordinates for geometric painting and
@@ -362,7 +352,7 @@ void fill_regions(
     for (size_t reg_id = 0; reg_id < num_region_fills; reg_id++) {
 
         // check to see if this element should be filled
-        switch (fill_volume_type.host(reg_id)) {
+        switch (region_fills_host(reg_id).volume) {
             case region::global:
             {
                 elem_geo_volfrac_a_fill.set_values(1.0);

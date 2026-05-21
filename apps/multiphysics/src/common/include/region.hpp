@@ -126,6 +126,9 @@ struct RegionFill_host_t
 {
     std::string file_path = ""; ///< path of mesh file
 
+    // type
+    region::vol_tag volume; ///< Type of volume for this region eg. global, box, sphere, planes, etc.
+
     // scale parameters for input mesh files
     double scale_x = 1.0;
     double scale_y = 1.0;

@@ -66,6 +66,8 @@ void Driver::initialize()
     parse_yaml(root, SimulationParamaters, Materials, BoundaryConditions);
     std::cout << "Finished  parsing YAML file" << std::endl;
 
+
+    // mesh read
     if (SimulationParamaters.MeshInput.source == mesh_input::file) {
 
         // Make mesh paths relative to the YAML location (so `file_path: meshes/abaqus.inp`
@@ -101,6 +103,33 @@ void Driver::initialize()
         throw std::runtime_error("**** NO MESH INPUT OPTIONS PROVIDED IN YAML ****");
         return;
     }
+
+
+    // check if a STL CAD file or Voxel mesh is used to define a region
+    size_t num_region_fills = SimulationParamaters.RegionSetups.region_fills_host.size();
+    for(size_t reg_id=0; reg_id<num_region_fills; reg_id++){
+        // -----
+        // check paths to meshes defining region fills
+        if (SimulationParamaters.RegionSetups.region_fills_host(reg_id).volume == region::readVoxelFile ||
+            SimulationParamaters.RegionSetups.region_fills_host(reg_id).volume == region::readSTLFile)
+        {
+            // Make mesh paths relative to the YAML location (so `file_path: stl/part.stl`
+            // works regardless of where you run `./app/Fierro`).
+            try {
+                std::filesystem::path yaml_path(yaml_file ? yaml_file : "");
+                std::filesystem::path mesh_path(SimulationParamaters.RegionSetups.region_fills_host(reg_id).file_path);
+                if (!yaml_path.empty() && !mesh_path.empty() && !mesh_path.is_absolute()) {
+                    mesh_path = yaml_path.parent_path() / mesh_path;
+                    mesh_path = mesh_path.lexically_normal();
+                    SimulationParamaters.RegionSetups.region_fills_host(reg_id).file_path = mesh_path.string();
+                }
+            } catch (...) {
+                // Fall back to the original path if path resolution fails.
+            }
+
+        } // end check on region_fill being a file
+    } // end for reg_id
+
 
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;

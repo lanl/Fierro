@@ -179,7 +179,7 @@ regions:
         id: 1
         volume:
             type: stl
-            file_path: ./standard_inputs/stl/icosahedron_bin.stl
+            file_path: ./stl/icosahedron_bin.stl
         # Apply the Sedov "blast" only to this localized region.
 
 # ---------------------------------------------------------------------------

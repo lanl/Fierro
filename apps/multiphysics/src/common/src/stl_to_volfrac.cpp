@@ -262,71 +262,9 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
 
         } // end for tri in STL file
 
-        printf("node_sdf %d = %f \n", node_gid, node_sdf(node_gid));
-
     }); // end parallel for  
 
 
-    // ----- testing coding above ------
-
-    // -----------------
-    //  Viz for checking STL reader
-    // -----------------
-/*
-    printf("Writing VTK STL Point File \n\n");
-
-    std::ofstream out("tri_points.vtk");
-
-    out << "# vtk DataFile Version 3.0\n";
-    out << "3D point cloud\n";
-    out << "ASCII\n";
-    out << "DATASET POLYDATA\n";
-    out << "POINTS " << num_inp_triangles << " float\n";
-    for (size_t tri_gid = 0; tri_gid < num_inp_triangles; tri_gid++) {
-
-        const double x_tri = (v0X_host(tri_gid) + v1X_host(tri_gid) + v2X_host(tri_gid))/3.0;
-        const double y_tri = (v0Y_host(tri_gid) + v1Y_host(tri_gid) + v2Y_host(tri_gid))/3.0;
-        const double z_tri = (v0Z_host(tri_gid) + v1Z_host(tri_gid) + v2Z_host(tri_gid))/3.0;
-
-        out << x_tri << " " 
-            << y_tri << " " 
-            << z_tri << "\n";
-    }
-
-    out << "\nPOINT_DATA " << num_inp_triangles << "\n";
-    out << "SCALARS lvlset float 1\n";
-    out << "LOOKUP_TABLE default\n";
-    for (size_t tri_gid = 0; tri_gid < num_inp_triangles; ++tri_gid) {
-        out << 0 << "\n";
-    }
-
-    // -----
-
-    printf("Writing VTK SDF File \n\n");
-
-    std::ofstream out_sdf("sdf_nodes.vtk");
-
-    out_sdf << "# vtk DataFile Version 3.0\n";
-    out_sdf << "3D point cloud\n";
-    out_sdf << "ASCII\n";
-    out_sdf << "DATASET POLYDATA\n";
-    out_sdf << "POINTS " << num_nodes << " float\n";
-    for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
-
-        out_sdf << node_coords.host(node_gid,0) << " " 
-                << node_coords.host(node_gid,1) << " " 
-                << node_coords.host(node_gid,2) << "\n";
-
-    }
-
-    out_sdf << "\nPOINT_DATA " << num_nodes << "\n";
-    out_sdf << "SCALARS SDF float 1\n";
-    out_sdf << "LOOKUP_TABLE default\n";
-    for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
-        out_sdf << node_sdf(node_gid) << "\n";
-    }
-
-*/
 
     // -----------------
     // reference element integration
@@ -396,7 +334,6 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
         //  The ratio of hits to number of points is vol frac
         elem_geo_volfrac_fill(elem_gid) = num_inside_part/((double)num_eval_pnts); // coded for 3D
 
-        printf("vol frac in elem %d = %f \n", elem_gid, elem_geo_volfrac_fill(elem_gid));
     }); // end parallel for
 
 
