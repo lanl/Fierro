@@ -628,7 +628,7 @@ void fill_regions(
     DynamicRaggedRightArrayKokkos <size_t> ics_in_region(num_region_fills, num_region_ics); 
 
     // DEBUG:
-    printf("num regions = %zu, num_ics = %zu \n", num_region_fills, num_region_ics);
+    //printf("Number of region fills = %zu, and initial conditions = %zu \n", num_region_fills, num_region_ics);
 
 
     // loop over initial conditions and save them to the region fills,

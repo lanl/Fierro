@@ -272,6 +272,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
     // -----------------
     //  Viz for checking STL reader
     // -----------------
+/*
     printf("Writing VTK STL Point File \n\n");
 
     std::ofstream out("tri_points.vtk");
@@ -325,6 +326,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
         out_sdf << node_sdf(node_gid) << "\n";
     }
 
+*/
 
     // -----------------
     // reference element integration
