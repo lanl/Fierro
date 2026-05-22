@@ -218,14 +218,26 @@ materials:
 
 
 # ---------------------------------------------------------------------------
-# Regions (initial conditions)
+# Regions (paint regions on the mesh)
 # ---------------------------------------------------------------------------
 regions:
     - region:
+        id: 0
         volume:
             type: global
+        # Solver ID this region belongs to (must match `solver_options`), 
+        # This is for solvers that only opperate on portions of the mesh
+        solver_id: 0 # ignored with FE solvers, for illistrative purposes
+
+# ---------------------------------------------------------------------------
+# Apply initial conditions to the regions
+# ---------------------------------------------------------------------------
+initial_conditions:
+    - initial_condition:
+        # region this IC applies to
+        region_id: 0
+        # Material ID used by constitutive models in this region.
         material_id: 0
-        solver_id: 0
         # Initial state variables for the entire computational domain.
         density: 
             type: uniform
@@ -241,8 +253,8 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
-            # Region volume fraction (1.0 for single-material initialization).
+        material_volume_fraction:
+            # Region material volume fraction (1.0 for single-material initialization).
             type: uniform
             value: 1.0
 

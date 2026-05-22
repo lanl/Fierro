@@ -186,6 +186,8 @@ regions:
         id: 0
         volume:
             type: global
+        # Solver ID this region belongs to (must match `solver_options`), 
+        # This is for solvers that only opperate on portions of the mesh
         solver_id: 0
 
     - region:

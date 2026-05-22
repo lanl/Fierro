@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------
-# Example Fierro input: Sedov point explosion (3D box, SGH)
+# Example Fierro input: energy deposited inside region defined by a STL file
 #
 # Goal
-# - Run a Sedov-like point explosion (initial internal energy "blast")
+# - Run a region explosion (initial internal energy "blast")
 #   on a 3D Cartesian box mesh.
 # - Uses reflective velocity boundary conditions on the x=0, y=0, and z=0
 #   planes to model symmetry (octant-style setup).
@@ -10,7 +10,7 @@
 # Solver mapping note
 # - `solver_options[].solver.method: dynx_FE` maps to `SGH3D` in Fierro.
 #
-# Assumed input scaling / units (consistent with `input-noh.yaml`)
+# Assumed input scaling / units (consistent with `input.yaml`)
 # - Mass: grams (g)
 # - Length: centimeters (cm)
 # - Time: micro second (microsecond)
@@ -27,11 +27,11 @@
 # ---------------------------------------------------------------------------
 dynamic_options:
 
-    time_final: 100.0 # Final simulation time (microseconds).
+    time_final: 0.1 # Final simulation time (microseconds).
     dt_min: 1.e-8 # Minimum adaptive timestep bound (microseconds).
     dt_max: 1.e-2 # Maximum adaptive timestep bound (microseconds).
     dt_start: 1.e-5 # Initial timestep guess (microseconds).
-    cycle_stop: 1 # Hard stop after this many cycles.
+    cycle_stop: 1000 # Hard stop after this many cycles.
 
 # ---------------------------------------------------------------------------
 # Mesh options (3D box)
@@ -54,11 +54,10 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     # Output format for visualization.
-    output_file_format: viz # only options are viz or viz_and_state
+    output_file_format: viz
     # Amount of simulated time between visualization dumps (microseconds).
-    graphics_time_step: 0.05
-    # graphics_iteration_step: 10
-    elem_field_outputs:
+    graphics_time_step: 0.1
+        elem_field_outputs:
         - den
         - pres
         - stress
@@ -72,6 +71,7 @@ output_options:
     node_field_outputs:
         - vel
         - mass
+
 
 # ---------------------------------------------------------------------------
 # Solver configuration
@@ -214,12 +214,12 @@ regions:
             type: global
         # Fill the entire domain with ambient (uniform) initial conditions.
     
-    # Energy source initial conditions (Sedov blast)
+    # Energy source region
     - region:
         id: 1
         volume:
             type: stl
-            file_path: ../../icosahedron_bin.stl
+            file_path: ./stl/icosahedron_bin.stl
         # Apply the Sedov "blast" only to this localized region.
 
 # ---------------------------------------------------------------------------
@@ -249,7 +249,7 @@ initial_conditions:
             type: uniform
             value: 1.0
     
-    # Energy source initial conditions (Sedov blast)
+    # Energy source initial conditions (causes a blast)
     - initial_condition:
         region_id: 1
         material_id: 1
