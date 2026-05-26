@@ -128,6 +128,12 @@ void TLQS3D::post_process(
     strain(0,1) = 0.5 * (grad_u[0][1] + grad_u[1][0] + grad_u[0][0]*grad_u[0][1] + grad_u[1][0]*grad_u[1][1] + grad_u[2][0]*grad_u[2][1]);
     strain(1,0) = strain(0,1);
 
+    /* for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            strain(i,j) = grad_u[i][j];
+        }
+    } */
+
     // Normal stresses
     stress(0,0) = material_matrix[0][0] * strain(0,0) + material_matrix[0][1] * strain(1,1) + material_matrix[0][2] * strain(2,2); // Sxx
     stress(1,1) = material_matrix[1][0] * strain(0,0) + material_matrix[1][1] * strain(1,1) + material_matrix[1][2] * strain(2,2); // Syy

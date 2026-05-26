@@ -97,7 +97,7 @@ void Driver::initialize()
         return;
     }
 
-    if (mesh.elem_kind != mesh_init::linear_simplex_element) {
+    if (TLQS_active) {
         //int elem_order = (int)pow(static_cast<double>(mesh.num_nodes_in_elem),1.0/3.0) - 1;
         //std::cout << "ELEM ORDER: " << elem_order << std::endl;
         //std::cout << "ELEM ORDER: " << mesh.Pn << std::endl;

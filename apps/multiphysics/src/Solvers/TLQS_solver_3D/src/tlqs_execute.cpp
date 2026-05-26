@@ -90,6 +90,10 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> displacement_step(3*mesh.num_nodes); /// tally vector for iterations
     CArrayKokkos <double> displacement_iter(3*mesh.num_nodes); /// iteration vector solved for via conjugate gradient method
 
+    // Anderson acceleration variables
+    size_t window_size = 5;
+    CArrayKokkos <double> anderson_weights(window_size);
+
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
@@ -307,7 +311,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 // check convergence
                 double norm = sqrt(rkp1trkp1);
-                if (norm < 1E-12) {
+                if (norm < 1E-10) {
                     break;
                 }
 

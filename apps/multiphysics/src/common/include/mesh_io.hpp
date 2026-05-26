@@ -380,7 +380,7 @@ public:
             }
         }
         else if(extension == "vtu"){ // vtu file format
-            read_vtu_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            read_vtu_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims, HexN);
         }
         else{
             throw std::runtime_error("**** Mesh file extension not understood ****");
@@ -1126,7 +1126,8 @@ public:
                     node_t&   node,
                     corner_t& corner,
                     mesh_input_t& mesh_inps,
-                    int num_dims)
+                    int num_dims,
+                    bool HexN)
     {
 
         std::cout<<"Reading VTU file in a multiblock VTK mesh"<<std::endl;
@@ -1165,7 +1166,7 @@ public:
         //------------------------------------
         // allocate mesh class nodes and elems
         mesh.initialize_nodes(num_nodes);
-        if(Pn_order > 1){
+        if(HexN){
             mesh.initialize_elems_Pn(num_elems, num_dims, Pn_order);
         } else {
             mesh.initialize_elems(num_elems, num_dims);
@@ -1391,7 +1392,7 @@ public:
                             
                             // store the points in this elem according the the finite
                             // element numbering convention
-                            convert_pn_vtk_to_ijk.host(this_index) = this_node;
+                            convert_pn_vtk_to_ijk.host(this_node) = this_index;
                             
                             // increment the point counting index
                             this_node = this_node + 1;
@@ -1406,7 +1407,8 @@ public:
                 FOR_ALL (elem_gid, 0, mesh.num_elems, {
                     
                     for (size_t node_lid=0; node_lid<mesh.num_nodes_in_elem; node_lid++){
-                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,convert_pn_vtk_to_ijk(node_lid));
+                        int vtk_index = convert_pn_vtk_to_ijk(node_lid); 
+                        mesh.nodes_in_elem(elem_gid, node_lid) = connectivity(elem_gid,vtk_index);
                     }
                     
                 }); // end for
@@ -1987,19 +1989,39 @@ public:
         // 
         std::vector<node_state> required_node_state = { node_state::coords };
         node.initialize(num_points, num_dim, required_node_state);
+
+        // getting lobatto distribution for interpolation
+        CArrayKokkos <double> lob_nodes_1D(num_1D_points, "lob_nodes_1D");
+        RUN({
+            elements::get_lobatto_nodes_1D(lob_nodes_1D, Pn_order+1);
+        });
+
         // populate the point data structures
         for (int k = 0; k < num_points_k; k++){
             for (int j = 0; j < num_points_j; j++){
                 for (int i = 0; i < num_points_i; i++){
 
-                
                     // global id for the point
                     int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
+                    // decompose global index into element + local node
+                    int e_i  = i / Pn_order,  li = i % Pn_order;
+                    int e_j  = j / Pn_order,  lj = j % Pn_order;
+                    int e_k  = k / Pn_order,  lk = k % Pn_order;
+
+                    // lob factor replaces the raw index: maps [-1,1] -> [0, Pn_order]
+                    double lob_i = e_i * Pn_order + (lob_nodes_1D(li) + 1.0) / 2.0 * Pn_order;
+                    double lob_j = e_j * Pn_order + (lob_nodes_1D(lj) + 1.0) / 2.0 * Pn_order;
+                    double lob_k = e_k * Pn_order + (lob_nodes_1D(lk) + 1.0) / 2.0 * Pn_order;
+
                     // store the point coordinates
-                    node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
+                    node.coords.host(node_gid, 0) = origin[0] + lob_i * dx;
+                    node.coords.host(node_gid, 1) = origin[1] + lob_j * dy;
+                    node.coords.host(node_gid, 2) = origin[2] + lob_k * dz;
+
+                    //node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+                    //node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+                    //node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
                     
                 } // end for k
             } // end for i
