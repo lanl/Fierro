@@ -196,6 +196,7 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
 /// \param num_bins is the number of bins or fills
 ///
 /////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
 bool bound_volfracs(const DCArrayKokkos <double>& volfracs,
                     const size_t index,
                     const size_t num_bins);
