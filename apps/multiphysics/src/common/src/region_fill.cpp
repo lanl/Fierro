@@ -364,16 +364,17 @@ void fill_regions(
             {
                 elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
 
-                const double x_lower_bound = region_fills(reg_id).x1;
-                const double x_upper_bound = region_fills(reg_id).x2;
-
-                const double y_lower_bound = region_fills(reg_id).y1;
-                const double y_upper_bound = region_fills(reg_id).y2;
-
-                const double z_lower_bound = region_fills(reg_id).z1;
-                const double z_upper_bound = region_fills(reg_id).z2;
 
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
+
+                    const double x_lower_bound = region_fills(reg_id).x1;
+                    const double x_upper_bound = region_fills(reg_id).x2;
+
+                    const double y_lower_bound = region_fills(reg_id).y1;
+                    const double y_upper_bound = region_fills(reg_id).y2;
+
+                    const double z_lower_bound = region_fills(reg_id).z1;
+                    const double z_upper_bound = region_fills(reg_id).z2;
 
                     if (elem_coords(elem_gid,0) >= x_lower_bound && elem_coords(elem_gid,0) <= x_upper_bound &&
                         elem_coords(elem_gid,1) >= y_lower_bound && elem_coords(elem_gid,1) <= y_upper_bound &&
@@ -477,6 +478,7 @@ void fill_regions(
 
                 // copy values read from file to device
                 voxel_elem_mat_id.update_device();
+                Kokkos::fence();
 
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
