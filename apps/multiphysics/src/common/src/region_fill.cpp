@@ -524,7 +524,7 @@ void fill_regions(
                 
                 if (paint_sucessful==false){
                     // exit with error message
-
+                    throw std::runtime_error("**** Paint Failed ****");
                 }
 
                 break;
@@ -1753,6 +1753,7 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfrac_region_
 /// \param bin_stop is the last bin or fill to check volfracs up to
 ///
 /////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
 bool bound_volfracs(const DCArrayKokkos <double>& volfracs,
                     const size_t index,
                     const size_t bin_stop){
