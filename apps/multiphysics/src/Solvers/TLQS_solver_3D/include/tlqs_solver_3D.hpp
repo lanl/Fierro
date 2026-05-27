@@ -270,6 +270,8 @@ public:
         const double vol_frac
     );
 
+    // **** Functions defined in cgm_functions.cpp **** //
+
     // inputs: mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter
     // outputs: initial cgm residual: r0
     void get_r0(
@@ -306,6 +308,8 @@ public:
         const CArrayKokkos<double>& rkp1
     );
 
+    // **** Functions defined in post_process.cpp **** //
+
     // postprocessing function: updates stress and strain material point fields
     void post_process(
         const double material_matrix[6][6],
@@ -316,7 +320,28 @@ public:
         ViewCArrayKokkos <double>& stress,
         ViewCArrayKokkos <double>& strain
     );
-        
+
+    // **** Functions defined in qr_solver.cpp **** //
+    void QR_backsub(const CArrayKokkos <double> &R, 
+        const CArrayKokkos <double> &y,
+        DCArrayKokkos <double> &x
+    );
+
+    void QR_decompose(const CArrayKokkos <double> &A, 
+        FArrayKokkos <double> &Q, 
+        CArrayKokkos <double> &R
+    );
+    
+    double QR_determinant(const FArrayKokkos <double> &Q,
+        const CArrayKokkos <double> &R
+    );
+
+    void QR_solver(const CArrayKokkos <double> &A, 
+        const CArrayKokkos <double> &b,
+        DCArrayKokkos <double> &x
+    );
+
+    
 };
 
 

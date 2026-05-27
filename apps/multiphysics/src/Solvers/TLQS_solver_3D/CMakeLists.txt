@@ -27,5 +27,6 @@ ${CMAKE_CURRENT_SOURCE_DIR}/src/time_integration.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/tlqs_setup.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/tlqs_initialize.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/post_process.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/qr_solver.cpp
 PARENT_SCOPE
 )

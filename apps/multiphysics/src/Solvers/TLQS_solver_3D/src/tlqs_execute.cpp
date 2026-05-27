@@ -64,13 +64,13 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
 
     // double time_initial = SimulationParamaters.dynamic_options.time_initial;
-    double time_final   = this->time_end; //SimulationParamaters.dynamic_options.time_final;
+    double time_final   = this->time_end;
     double dt_start = SimulationParamaters.dynamic_options.dt_start;
 
     int cycle_stop    = SimulationParamaters.dynamic_options.cycle_stop;
 
     // initialize time, time_step, and cycles
-    double time_value = this->time_start;  // was 0.0
+    double time_value = this->time_start;
     double dt = dt_start;
 
     // *******************************
@@ -86,28 +86,46 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> rk(3*mesh.num_nodes);
     CArrayKokkos <double> rkp1(3*mesh.num_nodes);
 
-    // Picard iteration vectors
-    CArrayKokkos <double> displacement_step(3*mesh.num_nodes); /// tally vector for iterations
-    CArrayKokkos <double> displacement_iter(3*mesh.num_nodes); /// iteration vector solved for via conjugate gradient method
-
     // Anderson acceleration variables
     size_t window_size = 5;
-    CArrayKokkos <double> anderson_weights(window_size);
+    DCArrayKokkos <double> anderson_weights(window_size);
+    CArrayKokkos <double> curr_anderson_residual(3*mesh.num_nodes);
+    CArrayKokkos <double> hist_anderson_residual(3*mesh.num_nodes,window_size);
+    hist_anderson_residual.set_values(0);
+    CArrayKokkos <double> hist_displacement_iter(3*mesh.num_nodes,window_size);
+    hist_displacement_iter.set_values(0);
+
+    // Picard iteration vectors
+    //
+    // displacement_step    : current best estimate of the total displacement increment
+    //                        for this load step.  Passed to get_gradients so that K/F
+    //                        are evaluated at the current linearisation point.
+    //                        Set (not accumulated) to displacement_iter_kp1 after each
+    //                        Anderson-accelerated Picard iterate.
+    //
+    // displacement_iter_k  : Picard iterate coming *into* the current iteration (x_k).
+    //                        Initialised to zero at the start of every load step;
+    //                        updated to displacement_iter_kp1 at the end of each iter.
+    //
+    // displacement_iter_kp1: result of the CG solve for this Picard iteration G(x_k),
+    //                        then overwritten with the Anderson-accelerated update x_{k+1}.
+    //                        Reset to zero before every CG solve.
+    CArrayKokkos <double> displacement_step(3*mesh.num_nodes); /// current load-step displacement estimate
+    CArrayKokkos <double> displacement_iter_k(3*mesh.num_nodes);   /// x_k  (Picard iterate in)
+    CArrayKokkos <double> displacement_iter_kp1(3*mesh.num_nodes); /// G(x_k) then x_{k+1}
 
     // Create mesh writer
-    MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
+    MeshWriter mesh_writer;
 
     // --- Graphics vars ----
     CArray<double> graphics_times = CArray<double>(20000);
-    graphics_times(0) = this->time_start; // was zero
-    double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
+    graphics_times(0) = this->time_start;
+    double graphics_time = this->time_start;
     
     double cached_pregraphics_dt = fuzz;
 
     // the number of materials specified by the user input
     const size_t num_mats = Materials.num_mats;
-
-    
 
     // a flag to exit the calculation
     size_t stop_calc = 0;
@@ -128,8 +146,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                               this->solver_id,
                               ref_elem);
     
-
-
     graphics_time = time_value + graphics_dt_ival;
 
     // ******************************************************************************************************
@@ -150,34 +166,28 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         if (cycle == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         }
-        // print time step every 10 cycles
+        // print time step every 20 cycles
         else if (cycle % 20 == 0) {
             printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
-        } // end if
+        } 
 
+        // -----------------------------------------------------------
+        // Reset all Picard / Anderson state for this new load step.
+        // displacement_step is the running estimate of the load-step
+        // displacement, so it also starts from zero.
+        // -----------------------------------------------------------
         displacement_step.set_values(0);
+        displacement_iter_k.set_values(0);
+        displacement_iter_kp1.set_values(0);
+        hist_anderson_residual.set_values(0);
+        hist_displacement_iter.set_values(0);
         Kokkos::fence();
-        //std::cout << "NUM MAT POINTS REF ELEM: " << ref_elem.gauss_point_grad_basis.dims(0) << std::endl;
-        //std::cout << "NUM MAT POINTS IN ELEM: " << mesh.num_gauss_in_elem << std::endl;
-        //std::cout << "NUM MAT ELEMS: " << State.MaterialToMeshMaps.num_mat_elems.host(0) << std::endl;
-        //std::cout << "NUM BDY PATCHES: " << mesh.num_bdy_patches << std::endl;
-        //std::cout << "NUM PATCHES: " << mesh.num_patches << std::endl;
-        /* for (int i = 0; i < mesh.num_nodes; i++) {
-            for (int j = 0; j < 3; j++) {
-                std::cout << State.node.coords_t0(i,j) << "   ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl << std::endl; */
-        /* for (int i = 0; i < mesh.num_elems; i++) {
-            for (int j = 0; j < mesh.num_nodes_in_elem; j++) {
-                std::cout << mesh.nodes_in_elem(i,j) << "   ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl << std::endl; */
+
         // start Picard iteration loop
         for (int iter = 0; iter < max_iter; iter++) {
+
+            // dirichlet (displacement) type
+            boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
 
             // ***************************************************
             // get element arrays
@@ -222,13 +232,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 Kokkos::fence();
 
             } // end mat_id
-            /* for (int i = 0; i < 3*mesh.num_nodes_in_elem; i++) {
-                for (int j = 0; j < 3*mesh.num_nodes_in_elem; j++) {
-                    std::cout << K_elem(0,i,j) << "   ";
-                }
-                std::cout << std::endl;
-            }
-            std::cout << std::endl << std::endl; */
+
             // ***************************************************
             // end element arrays
             // ***************************************************
@@ -250,20 +254,13 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // begin conjugate gradient solve
             // ***************************************************
 
-            displacement_iter.set_values(0);
+            // Reset the CG solution vector each Picard iteration
+            displacement_iter_kp1.set_values(0);
             rk.set_values(0);
             Kokkos::fence();
 
-            // getting r0 = (02F - 01F) - K * displacement_iter
-            get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter, rk);
-            /* for (int i = 0; i < mesh.num_nodes; i++) {
-                for (int j = 0; j < 3; j++) {
-                    std::cout << rk(3*i + j) << "   ";
-                    //std::cout << State.node.coords_t0(i,j) << "   ";
-                }
-                std::cout << std::endl;
-            }
-            std::cout << std::endl << std::endl; */
+            // getting r0 = (02F - 01F) - K * displacement_iter_k
+            get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
 
             // p0 = r0
             FOR_ALL(i, 0, 3*mesh.num_nodes, {
@@ -271,7 +268,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             });
             Kokkos::fence();
 
-            // start of iteration loop
+            // start of CG iteration loop
             for (int cgm_iter = 0; cgm_iter < max_iter; cgm_iter++) {
 
                 // calculating this here to avoid calculating it twice
@@ -282,21 +279,15 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     loc_rktrk += rk(i) * rk(i);
                 }, rktrk);
                 Kokkos::fence();
-                //std::cout << "RKTRK: " << rktrk << std::endl;
 
                 // get scalar: alpha_k = (r_k^T * r_k) / (p_k^T * K * p_k)
                 double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rktrk, p);
-                //std::cout << "ALPHA: " << alpha_k << std::endl;
 
-                // get vector: displacement_iter_k+1 = displacement_iter_k + alpha_k * p_k
+                // get vector: displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
                 FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                    displacement_iter(i) += alpha_k * p(i);
+                    displacement_iter_kp1(i) += alpha_k * p(i);
                 });
                 Kokkos::fence();
-                /* for (int i = 0; i < 3*mesh.num_nodes; i++) {
-                    std::cout << displacement_iter(i) << std::endl;
-                }
-                std::cout << std::endl << std::endl; */
 
                 // get vector: r_k+1 = r_k - alpha_k * K * p_k
                 get_rkp1(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p, alpha_k, rkp1);
@@ -323,29 +314,145 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     p(i) = rkp1(i) + beta_k * p(i);
                 });
 
-                // update rk for next iteration
+                // update rk for next CG iteration
                 FOR_ALL(i, 0, 3*mesh.num_nodes, {
                     rk(i) = rkp1(i);
                 });
                 Kokkos::fence();
 
-            } // end iteration loop
+            } // end CG iteration loop
 
             // ***************************************************
             // end conjugate gradient solve
+            // displacement_iter_kp1 now holds G(x_k): the Picard
+            // fixed-point map applied to the current iterate x_k.
+            // ***************************************************
+
+            // ***************************************************
+            // Anderson acceleration of Picard solve
+            //
+            // Standard AA-m formulation:
+            //   f_k   = G(x_k) - x_k          (residual of fixed-point eq.)
+            //   x_{k+1} = sum_i( theta_i * G(x_{hist_i}) )
+            // where theta minimises ||F * theta|| s.t. sum(theta) = 1,
+            // and F = [f_{oldest} ... f_k] (columns, m_anderson of them).
+            //
+            // The history is stored in a circular buffer of depth window_size.
+            // Column overwritten each iteration = iter % window_size.
+            // A temporary copy of the residual history is passed to qr_solve()
+            // because QR factorisation is destructive.
+            // ***************************************************
+
+            // --- Step 1: compute Anderson residual f_k = G(x_k) - x_k ---
+            FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                curr_anderson_residual(i) = displacement_iter_kp1(i) - displacement_iter_k(i);
+            });
+            Kokkos::fence();
+
+            // --- Step 2: store f_k and G(x_k) in circular buffer ---
+            // Column to overwrite is determined by the modulo of the current
+            // Picard iteration index against the window size.
+            int anderson_col = iter % (int)window_size;
+
+            FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                hist_anderson_residual(i, anderson_col) = curr_anderson_residual(i);
+                hist_displacement_iter(i, anderson_col) = displacement_iter_kp1(i);
+            });
+            Kokkos::fence();
+
+            // --- Step 3: determine how many history columns to use ---
+            // On early iterations the buffer is only partially filled.
+            int m_anderson = std::min(iter + 1, (int)window_size);
+
+            // --- Step 4: build a temporary copy of the residual history ---
+            // The copy is ordered oldest -> newest so column 0 of temp is the
+            // oldest retained residual and column m_anderson-1 is f_k.
+            //
+            // Mapping from window slot w (0 = oldest, m_anderson-1 = newest)
+            // to circular buffer column:
+            //   if buffer not yet full  -> hist_col = w
+            //   if buffer full          -> hist_col = (anderson_col - m_anderson + 1 + w
+            //                                          + window_size) % window_size
+            // Both branches reduce to the same expression when the buffer is not
+            // yet full (anderson_col == iter, m_anderson == iter+1), but we keep
+            // them explicit for clarity.
+            //
+            // We allocate a fresh CArrayKokkos each iteration so the size matches
+            // m_anderson exactly.  The destructor frees the memory when we leave
+            // this scope.
+            CArrayKokkos<double> temp_residual_hist(3*mesh.num_nodes, m_anderson);
+
+            for (int w = 0; w < m_anderson; w++) {
+                int hist_col;
+                if (iter + 1 <= (int)window_size) {
+                    // Buffer not yet full: columns 0..iter are valid, in order.
+                    hist_col = w;
+                } else {
+                    // Buffer full: walk forward from the slot after anderson_col
+                    // (= oldest) to anderson_col itself (= newest).
+                    hist_col = (anderson_col - m_anderson + 1 + w + (int)window_size) % (int)window_size;
+                }
+
+                FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                    temp_residual_hist(i, w) = hist_anderson_residual(i, hist_col);
+                });
+                Kokkos::fence();
+            }
+
+            // --- Step 5: solve for Anderson mixing weights via QR ---
+            // qr_solve() finds theta such that:
+            //   min_theta  || temp_residual_hist * theta ||_2
+            //   subject to    sum(theta_i) = 1
+            // and stores the result in anderson_weights(0..m_anderson-1).
+            //
+            // The call is destructive with respect to temp_residual_hist; the
+            // circular buffer hist_anderson_residual is untouched because we
+            // passed a copy.
+            anderson_weights.set_values(0);
+            QR_solver(temp_residual_hist, curr_anderson_residual, anderson_weights);
+            anderson_weights.update_host();
+
+            // --- Step 6: form the Anderson-accelerated iterate ---
+            //   x_{k+1} = sum_{w=0}^{m_anderson-1}  theta_w * G(x_{hist_col_w})
+            //
+            // anderson_weights(w) are assumed to be accessible on the host after
+            // qr_solve() returns (sync/copy is the responsibility of qr_solve).
+            displacement_iter_kp1.set_values(0);
+            Kokkos::fence();
+
+            for (int w = 0; w < m_anderson; w++) {
+                int hist_col;
+                if (iter + 1 <= (int)window_size) {
+                    hist_col = w;
+                } else {
+                    hist_col = (anderson_col - m_anderson + 1 + w + (int)window_size) % (int)window_size;
+                }
+
+                // Read weight on host; capture by value into the kernel.
+                // (Requires qr_solve to have made anderson_weights host-accessible.)
+                double theta_w = anderson_weights.host(w);
+
+                FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                    displacement_iter_kp1(i) += theta_w * hist_displacement_iter(i, hist_col);
+                });
+                Kokkos::fence();
+            }
+
+            // ***************************************************
+            // end Anderson acceleration
             // ***************************************************
 
             // update displacement step vector for convergence check and next iteration
             FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                displacement_step(i) += displacement_iter(i);
+                displacement_step(i) += displacement_iter_kp1(i);
             });
             Kokkos::fence();
 
             // convergence check
-            double norm_num = 0.0;
+            /* double norm_num = 0.0;
             double loc_norm_num = 0.0;
             FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_norm_num, {
-                loc_norm_num += displacement_iter(i) * displacement_iter(i);
+                loc_norm_num += curr_anderson_residual(i) * curr_anderson_residual(i);
             }, norm_num);
 
             double norm_den = 0.0;
@@ -354,12 +461,24 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 loc_norm_den += displacement_step(i) * displacement_step(i);
             }, norm_den);
 
-            double norm = sqrt(norm_num / norm_den);
-            std::cout << "ITER: " << iter << "   PICARD NORM: " << norm << std::endl;
-            if (norm < 1E-8 && iter > 1) {
+            double norm = sqrt(norm_num / norm_den); */
+            double norm = 0.0;
+            double loc_norm = 0.0;
+            FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_norm, {
+                loc_norm += curr_anderson_residual(i) * curr_anderson_residual(i);
+            }, norm);
+
+            std::cout << "ITER: " << iter << "   ANDERSON RESIDUAL NORM: " << norm << std::endl;
+            if (norm < 1E-12 && iter > 1) {
                 std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }
+
+            // Update x_k <- x_{k+1} for the next Picard iteration.
+            FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                displacement_iter_k(i) = displacement_iter_kp1(i);
+            });
+            Kokkos::fence();
 
         } // end Picard iteration loop
 
@@ -369,14 +488,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.node.displacement(i,j) += displacement_step(3*i + j);
         });
         Kokkos::fence();
-
-        /* for (int i = 0; i < mesh.num_nodes; i++) {
-            for (int j = 0; j < 3; j++) {
-                std::cout << State.node.displacement(i,j) << "   ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl; */
 
         // filling in stress and strain for output
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
@@ -401,13 +512,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                     // tallying to element array
                     post_process(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, curr_grad_basis, stress_view, strain_view);
-                    /* for (int i = 0; i < 3; i++) {
-                        for (int j = 0; j < 3; j++) {
-                            std::cout << stress_view(i,j) << "   ";
-                        }
-                        std::cout << std::endl;
-                    }
-                    std::cout << std::endl; */
+
                 } // end mat_pt
 
             }); // end elem
@@ -464,6 +569,4 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 
-} // end of SGH execute
-
-
+} // end of TLQS3D execute
