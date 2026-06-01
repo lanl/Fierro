@@ -185,10 +185,15 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // start Picard iteration loop
         for (int iter = 0; iter < max_iter; iter++) {
+            std::cout << "ITER: " << iter << std::endl;
+            const auto start_time = std::chrono::steady_clock::now();
 
             // dirichlet (displacement) type
             boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
 
+            auto point_A = std::chrono::steady_clock::now();
+            auto elapsed_A = std::chrono::duration_cast<std::chrono::milliseconds>(point_A - start_time).count();
+            //std::cout << "Time elapsed for first bc: " << elapsed_A << " ms\n";
             // ***************************************************
             // get element arrays
             // ***************************************************
@@ -232,7 +237,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 Kokkos::fence();
 
             } // end mat_id
-
+            auto point_B = std::chrono::steady_clock::now();
+            auto elapsed_B = std::chrono::duration_cast<std::chrono::milliseconds>(point_B - point_A).count();
+            //std::cout << "Time elapsed to build element arrays: " << elapsed_B << " ms\n";
             // ***************************************************
             // end element arrays
             // ***************************************************
@@ -245,7 +252,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // dirichlet (displacement) type
             boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
-
+            auto point_C = std::chrono::steady_clock::now();
+            auto elapsed_C = std::chrono::duration_cast<std::chrono::milliseconds>(point_C - point_B).count();
+            //std::cout << "Time elapsed for second bc: " << elapsed_C << " ms\n";
             // ***************************************************
             // end boundary conditions
             // ***************************************************
@@ -259,69 +268,113 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             rk.set_values(0);
             Kokkos::fence();
 
-            // getting r0 = (02F - 01F) - K * displacement_iter_k
-            get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
-
-            // p0 = r0
-            FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                p(i) = rk(i);
+            // ***************************************************
+            // build Jacobi preconditioner (assembly-free diagonal)
+            // ***************************************************
+            CArrayKokkos<double> M_inv(3 * mesh.num_nodes);
+            FOR_ALL(node_gid, 0, mesh.num_nodes, {
+                const size_t num_elems_in_node = mesh.elems_in_node.stride(node_gid);
+                for (size_t p_dir = 0; p_dir < 3; p_dir++) {
+                    const size_t global_dof = 3 * node_gid + p_dir;
+                    double diag = 0.0;
+                    for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
+                        const size_t elem_gid = mesh.elems_in_node(node_gid, elem_lid);
+                        size_t local_node_lid = mesh.num_nodes_in_elem;
+                        for (size_t a = 0; a < mesh.num_nodes_in_elem; a++) {
+                            if (mesh.nodes_in_elem(elem_gid, a) == node_gid) {
+                                local_node_lid = a;
+                                break;
+                            }
+                        }
+                        const size_t local_dof = 3 * local_node_lid + p_dir;
+                        diag += K_elem(elem_gid, local_dof, local_dof);
+                    }
+                    M_inv(global_dof) = 1.0 / (diag + 1e-16);
+                }
             });
             Kokkos::fence();
 
-            // start of CG iteration loop
+            // getting r0 = (02F - 01F) - K * displacement_iter_k
+            get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
+
+            // z0 = M_inv * r0,  p0 = z0
+            CArrayKokkos<double> zk(3 * mesh.num_nodes);
+            CArrayKokkos<double> zkp1(3 * mesh.num_nodes);
+            FOR_ALL(i, 0, 3 * mesh.num_nodes, {
+                zk(i) = M_inv(i) * rk(i);
+                p(i)  = zk(i);
+            });
+            Kokkos::fence();
+
+            // start of PCG iteration loop
             for (int cgm_iter = 0; cgm_iter < max_iter; cgm_iter++) {
 
-                // calculating this here to avoid calculating it twice
-                // r_k^T * r_k
-                double rktrk = 0.0;
-                double loc_rktrk = 0.0;
-                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rktrk, {
-                    loc_rktrk += rk(i) * rk(i);
-                }, rktrk);
-                Kokkos::fence();
+            // r_k^T * z_k
+            double rktzk = 0.0;
+            double loc_rktzk = 0.0;
+            FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rktzk, {
+                loc_rktzk += rk(i) * zk(i);
+            }, rktzk);
+            Kokkos::fence();
 
-                // get scalar: alpha_k = (r_k^T * r_k) / (p_k^T * K * p_k)
-                double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rktrk, p);
+            // alpha_k = (r_k^T * z_k) / (p_k^T * K * p_k)
+            double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rktzk, p);
 
-                // get vector: displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
-                FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                    displacement_iter_kp1(i) += alpha_k * p(i);
-                });
-                Kokkos::fence();
+                            // displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
+            FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                displacement_iter_kp1(i) += alpha_k * p(i);
+            });
+            Kokkos::fence();
 
-                // get vector: r_k+1 = r_k - alpha_k * K * p_k
-                get_rkp1(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p, alpha_k, rkp1);
+            // r_{k+1} = r_k - alpha_k * K * p_k
+            get_rkp1(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p, alpha_k, rkp1);
 
-                // r_k+1^T * r_k+1
-                double rkp1trkp1 = 0.0;
-                double loc_rkp1trkp1 = 0.0;
-                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1trkp1, {
-                    loc_rkp1trkp1 += rkp1(i) * rkp1(i);
-                }, rkp1trkp1);
-                Kokkos::fence();
+                            // z_{k+1} = M_inv * r_{k+1}
+            FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                zkp1(i) = M_inv(i) * rkp1(i);
+            });
+            Kokkos::fence();
 
-                // check convergence
-                double norm = sqrt(rkp1trkp1);
-                if (norm < 1E-10) {
-                    break;
-                }
+            // check convergence on true residual norm
+            double rkp1trkp1 = 0.0;
+            double loc_rkp1trkp1 = 0.0;
+            FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1trkp1, {
+                loc_rkp1trkp1 += rkp1(i) * rkp1(i);
+            }, rkp1trkp1);
+            Kokkos::fence();
+            double norm = sqrt(rkp1trkp1);
+            //std::cout << "CGM iter " << cgm_iter << " residual norm: " << norm << "\n";
+            if (norm < 1E-10) {
+                break;
+            }
 
-                // get scalar: beta_k = (r_k+1^T * r_k+1) / (r_k^T * r_k)
-                double beta_k = rkp1trkp1 / rktrk;
+            // r_{k+1}^T * z_{k+1}
+            double rkp1tzkp1 = 0.0;
+            double loc_rkp1tzkp1 = 0.0;
+            FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1tzkp1, {
+                loc_rkp1tzkp1 += rkp1(i) * zkp1(i);
+            }, rkp1tzkp1);
+            Kokkos::fence();
 
-                // get vector: p_k+1 = r_k+1 + beta_k * p_k
-                FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                    p(i) = rkp1(i) + beta_k * p(i);
-                });
+            // beta_k = (r_{k+1}^T * z_{k+1}) / (r_k^T * z_k)
+            double beta_k = rkp1tzkp1 / (rktzk + 1e-16);
 
-                // update rk for next CG iteration
-                FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                    rk(i) = rkp1(i);
-                });
-                Kokkos::fence();
+            // p_{k+1} = z_{k+1} + beta_k * p_k
+            FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                p(i) = zkp1(i) + beta_k * p(i);
+            });
 
-            } // end CG iteration loop
+            // update rk, zk for next iteration
+            FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                rk(i) = rkp1(i);
+                zk(i) = zkp1(i);
+            });
+            Kokkos::fence();
 
+            } // end PCG iteration loop
+            auto point_D = std::chrono::steady_clock::now();
+            auto elapsed_D = std::chrono::duration_cast<std::chrono::milliseconds>(point_D - point_C).count();
+            //std::cout << "Time elapsed for CGM: " << elapsed_D << " ms\n";
             // ***************************************************
             // end conjugate gradient solve
             // displacement_iter_kp1 now holds G(x_k): the Picard
@@ -437,7 +490,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 });
                 Kokkos::fence();
             }
-
+            auto point_E = std::chrono::steady_clock::now();
+            auto elapsed_E = std::chrono::duration_cast<std::chrono::milliseconds>(point_E - point_D).count();
+            //std::cout << "Time elapsed for anderson: " << elapsed_E << " ms\n";
             // ***************************************************
             // end Anderson acceleration
             // ***************************************************
@@ -479,7 +534,11 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 displacement_iter_k(i) = displacement_iter_kp1(i);
             });
             Kokkos::fence();
-
+            auto point_F = std::chrono::steady_clock::now();
+            auto elapsed_F = std::chrono::duration_cast<std::chrono::milliseconds>(point_F - point_E).count();
+            //std::cout << "Time elapsed for picard convergence and update: " << elapsed_F << " ms\n";
+            auto elapsed_iter = std::chrono::duration_cast<std::chrono::milliseconds>(point_F - start_time).count();
+            //std::cout << "Time elapsed for this full iteration: " << elapsed_iter << " ms\n";
         } // end Picard iteration loop
 
         // updating total displacement for next load step
