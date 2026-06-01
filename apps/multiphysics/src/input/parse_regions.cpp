@@ -411,6 +411,9 @@ void parse_regions(Yaml::Node& root,
                         } //
 
                         // storing the origin values as (x1,y1,z1)
+                        region_fills_host(reg_id).origin[0] = x1;
+                        region_fills_host(reg_id).origin[1] = y1;
+                        region_fills_host(reg_id).origin[2] = z1;
                         RUN({
                             region_fills(reg_id).origin[0] = x1;
                             region_fills(reg_id).origin[1] = y1;

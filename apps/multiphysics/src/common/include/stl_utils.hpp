@@ -239,8 +239,15 @@ vec_t closest_point_on_segment(const vec_t& p,
                                const vec_t& a, 
                                const vec_t& b) {
     vec_t ab = b - a;
-    double t = dot(p - a, ab) / dot(ab, ab);
+
+    double denom = dot(ab, ab);
+
+    // degenerate segment
+    if (denom < 1.e-30) return a;
+
+    double t = dot(p - a, ab) / denom;
     t = clamp(t, 0.0, 1.0);
+
     return a + ab * t;
 } // end function
 
@@ -294,7 +301,7 @@ vec_t closest_point_on_triangle(const vec_t& p,
     if (va <= 0.0 && (d4 - d3) >= 0.0 && (d5 - d6) >= 0.0)
         return closest_point_on_segment(p, b, c);
 
-    double denom = 1.0 / (va + vb + vc);
+    double denom = 1.0 / (va + vb + vc + 1.0e-16);
     double v = vb * denom;
     double w = vc * denom;
 

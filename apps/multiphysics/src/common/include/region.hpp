@@ -133,6 +133,9 @@ struct RegionFill_host_t
     double scale_x = 1.0;
     double scale_y = 1.0;
     double scale_z = 1.0;
+
+    // the volume origin
+    double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region fill, its the volume origin
 };
 
 

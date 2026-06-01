@@ -522,6 +522,12 @@ void fill_regions(
                                                         node_coords,
                                                         mesh.nodes_in_elem,
                                                         mesh.num_nodes,
+                                                        region_fills_host(reg_id).scale_x,
+                                                        region_fills_host(reg_id).scale_y,
+                                                        region_fills_host(reg_id).scale_z,
+                                                        region_fills_host(reg_id).origin[0], 
+                                                        region_fills_host(reg_id).origin[1],
+                                                        region_fills_host(reg_id).origin[2],
                                                         region_fills_host(reg_id).file_path);
                 
                 if (paint_sucessful==false){

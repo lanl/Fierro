@@ -180,6 +180,12 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
                       const DCArrayKokkos <double> &node_coords,
                       const DCArrayKokkos <size_t> &nodes_in_elem,
                       const size_t num_nodes,
+                      const double scale_x,
+                      const double scale_y,
+                      const double scale_z,
+                      const double origin_x,
+                      const double origin_y,
+                      const double origin_z,
                       const std::string &file_path)
 {
 
@@ -213,7 +219,6 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
     DViewCArrayKokkos <double> v2Y(&v2Y_host(0),num_inp_triangles); 
     DViewCArrayKokkos <double> v2Z(&v2Z_host(0),num_inp_triangles); 
 
-
     normal.update_device(); 
     v0X.update_device(); 
     v0Y.update_device(); 
@@ -224,7 +229,127 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
     v2X.update_device(); 
     v2Y.update_device(); 
     v2Z.update_device(); 
+    Kokkos::fence();
 
+
+
+    // check for a closed surface and calculate volume
+    double sum0 = 0.0;
+    double sum1 = 0.0;
+    double sum2 = 0.0;
+    double sum3 = 0.0;
+
+    // no MATAR reductions for multiple values yet, thus harding coding the kokkos loop
+    Kokkos::parallel_reduce(
+        "stl_mesh_sum_checks",
+        num_inp_triangles,
+    
+        // this is the for loop coding
+        KOKKOS_LAMBDA(const int tri,         
+                      double& sum_lcl_0,
+                      double& sum_lcl_1,
+                      double& sum_lcl_2,
+                      double& sum_lcl_3) {
+
+            //A = p1 - p0;
+            //B = p2 - p0;
+            vec_t A;
+            A.x =  v1X(tri) - v0X(tri);
+            A.y =  v1Y(tri) - v0Y(tri);
+            A.z =  v1Z(tri) - v0Z(tri);
+            
+            vec_t B;
+            B.x =  v2X(tri) - v0X(tri);
+            B.y =  v2Y(tri) - v0Y(tri);
+            B.z =  v2Z(tri) - v0Z(tri);
+            
+            // area normal of triangle
+            vec_t N;
+            N.x = 0.5*(A.y * B.z - A.z * B.y); 
+            N.y = 0.5*(A.z * B.x - A.x * B.z); 
+            N.z = 0.5*(A.x * B.y - A.y * B.x); 
+
+            sum_lcl_0 += N.x; // checking area normal in x sums to zero
+            sum_lcl_1 += N.y; // checking area normal in y sums to zero
+            sum_lcl_2 += N.z; // checking area normal in z sums to zero
+
+            const double area = magnitude(N); // surface area
+            if(fabs(area)<1.e-15) Kokkos::abort("ERROR: STL triangle has zero surface area \n");
+
+            // get the volume
+
+            double mid_point[3];
+            mid_point[0] = v0X(tri);
+            mid_point[1] = v0Y(tri);
+            mid_point[2] = v0Z(tri);
+            
+            mid_point[0] += v1X(tri);
+            mid_point[1] += v1Y(tri);
+            mid_point[2] += v1Z(tri);
+
+            mid_point[0] += v2X(tri);
+            mid_point[1] += v2Y(tri);
+            mid_point[2] += v2Z(tri);
+   
+            // need to divide by 3 to get mid point location
+            mid_point[0] /= 3.0;
+            mid_point[1] /= 3.0;
+            mid_point[2] /= 3.0;
+
+            // n dot x_mid_point, this is for getting the volume
+            sum_lcl_3 += N.x*mid_point[0] + N.y*mid_point[1] + N.z*mid_point[2]; 
+
+        },
+     sum0,
+     sum1,
+     sum2,
+     sum3); // end parallel sum over all STL triangles
+
+    
+    // DEBUG:
+    //printf("closed surface checks, nx=%f, ny=%f, nz=%f \n", sum0, sum1, sum2);
+
+    if(fabs(sum0)>1.e-8 || 
+       fabs(sum1)>1.e-8 ||
+       fabs(sum2)>1.e-8 )
+    {
+       printf("*** Error in STL geometry, it is not a closed part surface \n");
+       printf("error = (%f, %f, %f) \n", sum0, sum1, sum2);
+       std::runtime_error("**** Failed to Paint STL file on mesh ****");
+    } // end if on normal check
+    printf("STL volume = %f \n", sum3/3.0); // Vol = (1/3* sum N dot x_mid_point)
+
+
+    // apply scaling and shifts if they are set
+    if (fabs(origin_x) > 1.0e-13 ||
+        fabs(origin_y) > 1.0e-13 ||
+        fabs(origin_z) > 1.0e-13 || 
+        fabs(scale_x - 1.0) > 1.0e-13 ||
+        fabs(scale_y - 1.0) > 1.0e-13 ||
+        fabs(scale_z - 1.0) > 1.0e-13)
+    {
+        // loop over all facets
+        FOR_ALL(tri,0, num_inp_triangles, {
+
+            // update x coordinates of triangle vertices
+            v0X(tri) = scale_x*(v0X(tri) - origin_x);
+            v1X(tri) = scale_x*(v1X(tri) - origin_x);
+            v2X(tri) = scale_x*(v2X(tri) - origin_x);
+
+            // update y coordinates of triangle vertices
+            v0Y(tri) = scale_y*(v0Y(tri) - origin_y);
+            v1Y(tri) = scale_y*(v1Y(tri) - origin_y);
+            v2Y(tri) = scale_y*(v2Y(tri) - origin_y);
+
+            // update z coordinates of triangle vertices
+            v0Z(tri) = scale_z*(v0Z(tri) - origin_z);
+            v1Z(tri) = scale_z*(v1Z(tri) - origin_z);
+            v2Z(tri) = scale_z*(v2Z(tri) - origin_z);
+
+        }); // end for all over triangles
+        Kokkos::fence();
+
+    } // end if
 
     // -----------------
     // Getting SDF at the mesh nodes
