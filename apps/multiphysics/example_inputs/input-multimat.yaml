@@ -229,14 +229,22 @@ multimaterial_options:
         - 1.0 # pressure relax coeff (delta P)/coef
 
 # ---------------------------------------------------------------------------
-# Regions: initial conditions and material assignment
+# Regions: 
 # ---------------------------------------------------------------------------
 regions:
     # gas-like material (material id 0)
     - region:
+        id: 0
         volume:
             type: global
         solver_id: 0
+
+# ---------------------------------------------------------------------------
+# Initial Conditions
+# ---------------------------------------------------------------------------
+initial_conditions:
+    - initial_condition:
+        region_id: 0
         material_id: 0
         density:
             # Initial density (g / cm^3).
@@ -253,16 +261,13 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             # Initial volume fraction of this material in each element.
             type: uniform
             value: 0.5
 
-    # notional metal-like material (material id 1)
-    - region:
-        volume:
-            type: global
-        solver_id: 0
+    - initial_condition:
+        region_id: 0
         material_id: 1
         density:
             # Initial density (g / cm^3).
@@ -278,7 +283,7 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             # Initial volume fraction in each element.
             type: uniform
             value: 0.5

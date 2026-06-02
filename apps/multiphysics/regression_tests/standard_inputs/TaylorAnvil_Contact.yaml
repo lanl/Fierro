@@ -169,8 +169,36 @@ materials:
 regions:
     # fill with copper
     - region:
+        id: 0
         volume:
             type: global
+
+    - region:
+        id: 1
+        volume:
+            type: box
+            x1: 0.0
+            x2: 1.91
+            y1: 0
+            y2: 1.91
+            z1: 0
+            z2: 7.51
+
+    - region:
+        id: 2
+        volume:
+            type: box
+            x1: 0.0
+            x2: 1.91
+            y1: 0
+            y2: 1.91
+            z1: -8.0
+            z2: -0.49
+
+
+initial_conditions:
+    - initial_condition:
+        region_id: 0
         material_id: 0
         density: 
             type: uniform
@@ -183,19 +211,12 @@ regions:
             u: 0.0  
             v: 0.0
             w: 0.0 #-0.0205
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
 
-    - region:
-        volume:
-            type: box
-            x1: 0.0
-            x2: 1.91
-            y1: 0
-            y2: 1.91
-            z1: 0
-            z2: 7.51
+    - initial_condition:
+        region_id: 1
         material_id: 0
         density: 
             type: uniform
@@ -208,19 +229,12 @@ regions:
             u: 0.0
             v: 0.0
             w: -0.0083 #-0.0205
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
 
-    - region:
-        volume:
-            type: box
-            x1: 0.0
-            x2: 1.91
-            y1: 0
-            y2: 1.91
-            z1: -8.0
-            z2: -0.49
+    - initial_condition:
+        region_id: 2
         material_id: 0
         density: 
             type: uniform
@@ -233,6 +247,6 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0083 #-0.0205
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0

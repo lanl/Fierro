@@ -335,7 +335,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void read_mesh(swage::Mesh& mesh,
                    State_t& State,
-                   mesh_input_t& mesh_inps,
+                   MeshInput_t& mesh_inps,
                    int      num_dims)
     {
         if (mesh_file_ == NULL) {
@@ -399,7 +399,7 @@ public:
                            GaussPoint_t& GaussPoints,
                            node_t&   node,
                            corner_t& corner,
-                           mesh_input_t& mesh_inps,
+                           MeshInput_t& mesh_inps,
                            int num_dims)
     {
         FILE* in;
@@ -712,7 +712,7 @@ public:
                     GaussPoint_t& GaussPoints,
                     node_t&   node,
                     corner_t& corner,
-                    mesh_input_t& mesh_inps,
+                    MeshInput_t& mesh_inps,
                     int num_dims)
     {
 
@@ -941,7 +941,7 @@ public:
                     GaussPoint_t& GaussPoints,
                     node_t&   node,
                     corner_t& corner,
-                    mesh_input_t& mesh_inps,
+                    MeshInput_t& mesh_inps,
                     int num_dims)
     {
 
@@ -1285,11 +1285,11 @@ public:
         corner_t& corner,
         SimulationParameters_t& SimulationParamaters)
     {
-        if (SimulationParamaters.mesh_input.num_dims == 2) {
-            if (SimulationParamaters.mesh_input.type == mesh_input::Polar) {
+        if (SimulationParamaters.MeshInput.num_dims == 2) {
+            if (SimulationParamaters.MeshInput.type == mesh_input::Polar) {
                 build_2d_polar(mesh, GaussPoints, node, corner, SimulationParamaters);
             }
-            else if (SimulationParamaters.mesh_input.type == mesh_input::Box) {
+            else if (SimulationParamaters.MeshInput.type == mesh_input::Box) {
                 build_2d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
             }
             else{
@@ -1302,7 +1302,7 @@ public:
                 throw std::runtime_error("**** 2D MESH TYPE NOT SUPPORTED ****");
             }
         }
-        else if (SimulationParamaters.mesh_input.num_dims == 3) {
+        else if (SimulationParamaters.MeshInput.num_dims == 3) {
             build_3d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
         }
         else{
@@ -1333,11 +1333,11 @@ public:
 
         const int num_dim = 2;
 
-        const double lx = SimulationParamaters.mesh_input.length[0];
-        const double ly = SimulationParamaters.mesh_input.length[1];
+        const double lx = SimulationParamaters.MeshInput.length[0];
+        const double ly = SimulationParamaters.MeshInput.length[1];
 
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
+        const int num_elems_i = SimulationParamaters.MeshInput.num_elems[0];
+        const int num_elems_j = SimulationParamaters.MeshInput.num_elems[1];
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -1350,8 +1350,8 @@ public:
         const int num_elems = num_elems_i * num_elems_j;
 
         std::vector<double> origin(num_dim);
-        // SimulationParamaters.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+        // SimulationParamaters.MeshInput.origin.update_host();
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.MeshInput.origin[i]; }
 
         // --- 2D parameters ---
         // const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -1459,14 +1459,14 @@ public:
 
         int num_dim     = 2;
 
-        const double inner_radius = SimulationParamaters.mesh_input.inner_radius;
-        const double outer_radius = SimulationParamaters.mesh_input.outer_radius;
+        const double inner_radius = SimulationParamaters.MeshInput.inner_radius;
+        const double outer_radius = SimulationParamaters.MeshInput.outer_radius;
 
-        const double start_angle = PI / 180.0 * SimulationParamaters.mesh_input.starting_angle;
-        const double end_angle   = PI / 180.0 * SimulationParamaters.mesh_input.ending_angle;
+        const double start_angle = PI / 180.0 * SimulationParamaters.MeshInput.starting_angle;
+        const double end_angle   = PI / 180.0 * SimulationParamaters.MeshInput.ending_angle;
 
-        const int num_elems_i = SimulationParamaters.mesh_input.num_radial_elems;
-        const int num_elems_j = SimulationParamaters.mesh_input.num_angular_elems;
+        const int num_elems_i = SimulationParamaters.MeshInput.num_radial_elems;
+        const int num_elems_j = SimulationParamaters.MeshInput.num_angular_elems;
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -1480,7 +1480,7 @@ public:
 
         std::vector<double> origin(num_dim);
 
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.MeshInput.origin[i]; }
 
         // --- 2D parameters ---
         // const int num_faces_in_elem  = 4;  // number of faces in elem
@@ -1594,15 +1594,15 @@ public:
 
         const int num_dim = 3;
 
-        // SimulationParamaters.mesh_input.length.update_host();
-        const double lx = SimulationParamaters.mesh_input.length[0];
-        const double ly = SimulationParamaters.mesh_input.length[1];
-        const double lz = SimulationParamaters.mesh_input.length[2];
+        // SimulationParamaters.MeshInput.length.update_host();
+        const double lx = SimulationParamaters.MeshInput.length[0];
+        const double ly = SimulationParamaters.MeshInput.length[1];
+        const double lz = SimulationParamaters.MeshInput.length[2];
 
-        // SimulationParamaters.mesh_input.num_elems.update_host();
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
-        const int num_elems_k = SimulationParamaters.mesh_input.num_elems[2];
+        // SimulationParamaters.MeshInput.num_elems.update_host();
+        const int num_elems_i = SimulationParamaters.MeshInput.num_elems[0];
+        const int num_elems_j = SimulationParamaters.MeshInput.num_elems[1];
+        const int num_elems_k = SimulationParamaters.MeshInput.num_elems[2];
 
         const int num_points_i = num_elems_i + 1; // num points in x
         const int num_points_j = num_elems_j + 1; // num points in y
@@ -1617,8 +1617,8 @@ public:
         const int num_elems = num_elems_i * num_elems_j * num_elems_k;
 
         std::vector<double> origin(num_dim);
-        // SimulationParamaters.mesh_input.origin.update_host();
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+        // SimulationParamaters.MeshInput.origin.update_host();
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.MeshInput.origin[i]; }
 
         // --- 3D parameters ---
         // const int num_faces_in_elem  = 6;  // number of faces in elem
@@ -1726,18 +1726,18 @@ public:
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
         const int num_dim = 3;
 
-        // SimulationParamaters.mesh_input.length.update_host();
-        const double lx = SimulationParamaters.mesh_input.length[0];
-        const double ly = SimulationParamaters.mesh_input.length[1];
-        const double lz = SimulationParamaters.mesh_input.length[2];
+        // SimulationParamaters.MeshInput.length.update_host();
+        const double lx = SimulationParamaters.MeshInput.length[0];
+        const double ly = SimulationParamaters.MeshInput.length[1];
+        const double lz = SimulationParamaters.MeshInput.length[2];
 
-        // SimulationParamaters.mesh_input.num_elems.update_host();
-        const int num_elems_i = SimulationParamaters.mesh_input.num_elems[0];
-        const int num_elems_j = SimulationParamaters.mesh_input.num_elems[1];
-        const int num_elems_k = SimulationParamaters.mesh_input.num_elems[2];
+        // SimulationParamaters.MeshInput.num_elems.update_host();
+        const int num_elems_i = SimulationParamaters.MeshInput.num_elems[0];
+        const int num_elems_j = SimulationParamaters.MeshInput.num_elems[1];
+        const int num_elems_k = SimulationParamaters.MeshInput.num_elems[2];
 
         // creating zones for the Pn order
-        const int Pn_order = SimulationParamaters.mesh_input.p_order;
+        const int Pn_order = SimulationParamaters.MeshInput.p_order;
         
         if (Pn_order > 19) {
             printf("Fierro DG and RD solvers are only valid for elements up to Pn = 19 \n");
@@ -1761,7 +1761,7 @@ public:
         // const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
 
         std::vector<double> origin(num_dim);
-        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.mesh_input.origin[i]; }
+        for (int i = 0; i < num_dim; i++) { origin[i] = SimulationParamaters.MeshInput.origin[i]; }
 
         // --- 3D parameters ---
         // const int num_faces_in_zone = 6;   // number of faces in zone
@@ -1957,7 +1957,7 @@ public:
                     State.MaterialPoints.mass.update_host();
                     break;
                 case material_pt_state::volume_fraction:
-                    State.MaterialPoints.volfrac.update_host();
+                    State.MaterialPoints.mat_volfrac.update_host();
                     State.MaterialPoints.geo_volfrac.update_host();
                     break;
                 case material_pt_state::eroded_flag:
@@ -2058,7 +2058,7 @@ public:
         size_t num_mat_pt_tensor_vars = 0;
             
         // count the number of material point state vars to write out
-        for (auto field : SimulationParamaters.output_options.output_mat_pt_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_mat_pt_state){
             switch(field){
                 // scalar vars to write out
                 case material_pt_state::density:
@@ -2120,7 +2120,7 @@ public:
         size_t num_elem_tensor_vars = 0;
 
         // count the number of element average fields to write out
-        for (auto field : SimulationParamaters.output_options.output_elem_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_elem_state){
             switch(field){
                 // scalar vars to write out
                 case material_pt_state::density:
@@ -2177,7 +2177,7 @@ public:
         size_t num_gauss_pt_tensor_vars = 0;
 
         // gauss point values to ouptput
-        for (auto field : SimulationParamaters.output_options.output_gauss_pt_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_gauss_pt_state){
             switch(field){
                 // scalar vars to write out
                 case gauss_pt_state::volume:
@@ -2220,7 +2220,7 @@ public:
         int mat_sie_id = -1;
         int mat_sspd_id = -1;
         int mat_mass_id = -1;
-        int mat_volfrac_id = -1;  
+        int mat_mat_volfrac_id = -1;  
         int mat_geo_volfrac_id = -1;  // geometric volume fraction of part
         int mat_eroded_id = -1;
         int mat_stress_id = -1;
@@ -2234,7 +2234,7 @@ public:
         size_t tensor_var = 0;
 
         // material point state to output
-        for (auto field : SimulationParamaters.output_options.output_mat_pt_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_mat_pt_state){
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
@@ -2263,8 +2263,8 @@ public:
                     var++;
                     break;
                 case material_pt_state::volume_fraction:
-                    mat_elem_scalar_var_names[var] = "mat_volfrac";
-                    mat_volfrac_id = var; 
+                    mat_elem_scalar_var_names[var] = "mat_volfrac";  // mat_mat_volfrac
+                    mat_mat_volfrac_id = var; 
                     var++;
 
                     mat_elem_scalar_var_names[var] = "mat_geo_volfrac";
@@ -2332,7 +2332,7 @@ public:
         tensor_var = 0;
 
         // element state to output
-        for (auto field : SimulationParamaters.output_options.output_elem_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_elem_state){
             switch(field){
                 // scalar vars
                 case material_pt_state::density:
@@ -2405,7 +2405,7 @@ public:
         int vel_grad_id = -1;
         
 
-        for (auto field : SimulationParamaters.output_options.output_gauss_pt_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_gauss_pt_state){
             switch(field){
                 // scalars
                 case gauss_pt_state::volume:
@@ -2442,7 +2442,7 @@ public:
         size_t num_node_scalar_vars = 0;
         size_t num_node_vector_vars = 0;
 
-        for (auto field : SimulationParamaters.output_options.output_node_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_node_state){
             switch(field){
                 // --- scalars
                 case node_state::mass:
@@ -2489,7 +2489,7 @@ public:
         vector_var = 0;
         tensor_var = 0;
 
-        for (auto field : SimulationParamaters.output_options.output_node_state){
+        for (auto field : SimulationParamaters.OutputOptions.output_node_state){
             switch(field){
                 // scalars
                 case node_state::mass:
@@ -2570,8 +2570,8 @@ public:
                                     elem_scalar_fields,
                                     elem_tensor_fields,
                                     State.MaterialToMeshMaps.elem_in_mat_elem,
-                                    SimulationParamaters.output_options.output_elem_state,
-                                    SimulationParamaters.output_options.output_gauss_pt_state,
+                                    SimulationParamaters.OutputOptions.output_elem_state,
+                                    SimulationParamaters.OutputOptions.output_gauss_pt_state,
                                     State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                                     mat_id,
                                     num_elems,
@@ -2613,7 +2613,7 @@ public:
         concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
                                  node_vector_fields,
-                                 SimulationParamaters.output_options.output_node_state,
+                                 SimulationParamaters.OutputOptions.output_node_state,
                                  dt,
                                  num_nodes,
                                  num_dims,
@@ -2634,8 +2634,8 @@ public:
         //  Write the nodal and elem fields 
         // ********************************
 
-        if (SimulationParamaters.output_options.format == output_options::viz ||
-            SimulationParamaters.output_options.format == output_options::viz_and_state) {
+        if (SimulationParamaters.OutputOptions.format == output_options::viz ||
+            SimulationParamaters.OutputOptions.format == output_options::viz_and_state) {
 
             // create the folder structure if it does not exist
             struct stat st;
@@ -2731,7 +2731,7 @@ public:
                                                mat_elem_scalar_fields,
                                                mat_elem_tensor_fields,
                                                State.MaterialToMeshMaps.elem_in_mat_elem,
-                                               SimulationParamaters.output_options.output_mat_pt_state,
+                                               SimulationParamaters.OutputOptions.output_mat_pt_state,
                                                num_mat_elems,
                                                mat_id,
                                                mat_den_id,
@@ -2739,7 +2739,7 @@ public:
                                                mat_sie_id,
                                                mat_sspd_id,
                                                mat_mass_id,
-                                               mat_volfrac_id,
+                                               mat_mat_volfrac_id,
                                                mat_geo_volfrac_id,  
                                                mat_eroded_id,
                                                mat_stress_id,
@@ -2857,8 +2857,8 @@ public:
 
 
         // STATE
-        if (SimulationParamaters.output_options.format == output_options::state ||
-            SimulationParamaters.output_options.format == output_options::viz_and_state) {
+        if (SimulationParamaters.OutputOptions.format == output_options::state ||
+            SimulationParamaters.OutputOptions.format == output_options::viz_and_state) {
 
             write_material_point_state(mesh,
                                        State,
@@ -2873,7 +2873,7 @@ public:
 
 
         // will drop ensight outputs in the near future
-        if (SimulationParamaters.output_options.format == output_options::ensight){
+        if (SimulationParamaters.OutputOptions.format == output_options::ensight){
            write_ensight(mesh,
                          State,
                          SimulationParamaters,
@@ -3697,7 +3697,7 @@ public:
 
                         // field
                         elem_scalar_fields(den_id, elem_gid) += MaterialPoints.den(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                                MaterialPoints.mat_volfrac(mat_id, mat_elem_sid)*
                                                                 MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                     });
                     break;
@@ -3709,7 +3709,7 @@ public:
 
                         // field
                         elem_scalar_fields(pres_id, elem_gid) += MaterialPoints.pres(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                                MaterialPoints.mat_volfrac(mat_id, mat_elem_sid)*
                                                                 MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                     });
                     break;
@@ -3733,7 +3733,7 @@ public:
 
                         // field
                         elem_scalar_fields(sspd_id, elem_gid) += MaterialPoints.sspd(mat_id, mat_elem_sid)*
-                                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                                MaterialPoints.mat_volfrac(mat_id, mat_elem_sid)*
                                                                 MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                     });
                     break;
@@ -3765,7 +3765,7 @@ public:
                                 // stress tensor 
                                 elem_tensor_fields(stress_id, elem_gid, i, j) +=
                                                 MaterialPoints.stress(mat_id, mat_elem_sid,i,j) *
-                                                MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                MaterialPoints.mat_volfrac(mat_id, mat_elem_sid)*
                                                 MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                             } // end for
                         } // end for
@@ -3781,7 +3781,7 @@ public:
 
                         // field
                         elem_scalar_fields(conductivity_id, elem_gid) += MaterialPoints.conductivity(mat_id, mat_elem_sid)*
-                                                                             MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                                             MaterialPoints.mat_volfrac(mat_id, mat_elem_sid)*
                                                                              MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                     });
                     break;
@@ -3794,7 +3794,7 @@ public:
 
                         // field
                         elem_scalar_fields(specific_heat_id, elem_gid) += MaterialPoints.specific_heat(mat_id, mat_elem_sid)*
-                                                                              MaterialPoints.volfrac(mat_id, mat_elem_sid)*
+                                                                              MaterialPoints.mat_volfrac(mat_id, mat_elem_sid)*
                                                                               MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
                     });
                     break;
@@ -3900,7 +3900,7 @@ public:
                                 const int mat_sie_id,
                                 const int mat_sspd_id,
                                 const int mat_mass_id,
-                                const int mat_volfrac_id,  
+                                const int mat_mat_volfrac_id,  
                                 const int mat_geo_volfrac_id,  
                                 const int mat_eroded_id,
                                 const int mat_stress_id,
@@ -3955,7 +3955,7 @@ public:
 
                         // field
                         // this is the volume fraction of a material within a part
-                        mat_elem_scalar_fields(mat_volfrac_id, mat_elem_sid) = MaterialPoints.volfrac(mat_id, mat_elem_sid);
+                        mat_elem_scalar_fields(mat_mat_volfrac_id, mat_elem_sid) = MaterialPoints.mat_volfrac(mat_id, mat_elem_sid);
                     });
 
                     // geometric volume fraction

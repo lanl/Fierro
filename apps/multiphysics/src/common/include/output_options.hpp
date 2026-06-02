@@ -116,12 +116,12 @@ static std::map<std::string, material_pt_state> elem_outputs_map
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct output_options_t
+/// \struct OutputOptions_t
 ///
 /// \brief Output related options for a Fierro simulation
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct output_options_t
+struct OutputOptions_t
 {
     output_options::format format;  ///< Format for the output files
     output_options::timer_output_level timer_level; ///< How often to output mesh WARNING: CURRENTLY UNUSED
@@ -134,7 +134,7 @@ struct output_options_t
     std::vector<gauss_pt_state> output_gauss_pt_state;
     std::vector<material_pt_state> output_mat_pt_state;
 
-}; // output_options_t
+}; // OutputOptions_t
 
 // ----------------------------------
 // valid inputs for output options

@@ -58,7 +58,7 @@ void SGTM3D::initialize(SimulationParameters_t& SimulationParamaters,
         // check that the fills specify the required nodal fields
     bool filled_nodal_state =
         check_fill_node_states(SGTM3D_State::required_fill_node_state,
-                               SimulationParamaters.region_setups.fill_node_states);
+                               SimulationParamaters.InitialConditionSetup.fill_node_states);
     
     if (filled_nodal_state == false){
         std::cout <<" Missing required nodal state in the fill instructions for the thrmex_FE solver \n";
@@ -91,15 +91,15 @@ void SGTM3D::initialize_material_state(SimulationParameters_t& SimulationParamat
     // check that the fills specify the required material point state fields
     bool filled_material_state_A =
         check_fill_mat_states(SGTM3D_State::required_optA_fill_material_pt_state,
-                              SimulationParamaters.region_setups.fill_gauss_states);
+                              SimulationParamaters.InitialConditionSetup.fill_gauss_states);
     bool filled_material_state_B =
         check_fill_mat_states(SGTM3D_State::required_optB_fill_material_pt_state,
-                              SimulationParamaters.region_setups.fill_gauss_states);
+                              SimulationParamaters.InitialConditionSetup.fill_gauss_states);
     
     // --- full stress tensor is not yet supported in region_fill ---
     //bool filled_material_state_C =
     //    check_fill_mat_states(SGTM3D_State::required_optC_fill_material_pt_state,
-    //                                 SimulationParamaters.region_setups.fill_gauss_states);
+    //                                 SimulationParamaters.InitialConditionSetup.fill_gauss_states);
 
     if (filled_material_state_A == false &&
         filled_material_state_B == false){

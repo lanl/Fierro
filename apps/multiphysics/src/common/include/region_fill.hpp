@@ -1,5 +1,5 @@
 /**********************************************************************************************
-� 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -87,10 +87,10 @@ void fill_regions(
         DCArrayKokkos <double>& elem_geo_volfrac,
         DCArrayKokkos <size_t>& elem_mat_id,
         DCArrayKokkos <size_t>& elem_num_mats_saved_in_elem,
-        DCArrayKokkos <size_t>& voxel_elem_mat_id,
         const DCArrayKokkos <int>& object_ids,
         const CArrayKokkos <RegionFill_t>& region_fills,
         const CArray <RegionFill_host_t>& region_fills_host,
+        const CArrayKokkos <RegionICs_t>& region_ics,
         std::vector <fill_gauss_state>& fill_gauss_states,
         std::vector <fill_node_state>& fill_node_states,
         const size_t num_mats_per_elem);
@@ -142,8 +142,9 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-size_t fill_geometric_region(const swage::Mesh& mesh,
+double fill_geometric_region(const swage::Mesh& mesh,
                              const DCArrayKokkos<size_t>& voxel_elem_mat_id,
+                             const DCArrayKokkos<double>& elem_geo_volfrac_fill,
                              const DCArrayKokkos<int>& object_ids,
                              const CArrayKokkos<RegionFill_t>& region_fills,
                              const ViewCArrayKokkos <double>& mesh_coords,
@@ -165,24 +166,41 @@ size_t fill_geometric_region(const swage::Mesh& mesh,
 ///
 /// \brief a function to append fills 
 ///
-/// \param elem_fill_ids is the fill id in an element
-/// \param num_fills_saved_in_elem is the number of fills the element has
-/// \param region_fills are the instructions to paint state on the mesh
+/// \param elem_geo_volfracs is the geometric volume fraction in the element
+/// \param elem_region_ids is the fill id in an element
+/// \param elem_num_region_fills is the number of region fills saved in an element
+/// \param geo_volfrac is the value to be added to the element
 /// \param elem_gid is the element global mesh index
-/// \param fill_id is fill instruction
+/// \param reg_id is fill instruction
+/// \param max_num_mats_per_elem is the max allowed number of materials in an element
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void append_fills_in_elem(const DCArrayKokkos <double>& elem_volfracs,
-                          const DCArrayKokkos <double>& elem_geo_volfracs,
-                          const CArrayKokkos <size_t>& elem_fill_ids,
-                          const DCArrayKokkos <size_t>& num_fills_saved_in_elem,
-                          const CArrayKokkos<RegionFill_t>& region_fills,
-                          const double volfrac,
-                          const double geo_volfrac,
+void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
+                          const CArrayKokkos <size_t>& elem_region_ids,
+                          const DCArrayKokkos <size_t>& elem_num_region_fills,
+                          const double geovolfrac,
                           const size_t elem_gid,
-                          const size_t fill_id,
+                          const size_t reg_id,
                           const size_t max_num_mats_per_elem);
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn bound_volfracs
+///
+/// \brief a general function to bound volume fraction arrays 
+///
+/// \param volfracs is a volume fraction array(index,bin)
+/// \param index is the index for the location
+/// \param num_bins is the number of bins or fills
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+bool bound_volfracs(const DCArrayKokkos <double>& volfracs,
+                    const size_t index,
+                    const size_t num_bins);
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -206,7 +224,7 @@ double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
                          const double orig[3],
                          const size_t mesh_gid,
                          const size_t num_dims,
-                         const init_conds::init_scalar_conds scalarFieldType);
+                         const initial_conditions::ICsScalar scalarFieldType);
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -234,7 +252,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
                         const size_t mesh_gid,
                         const size_t num_dims,
                         const size_t bin,
-                        const init_conds::init_scalar_conds scalarFieldType);
+                        const initial_conditions::ICsScalar scalarFieldType);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -256,7 +274,7 @@ void paint_scalar(const DCArrayKokkos<double>& field_scalar,
                   const double slope,
                   const size_t mesh_gid,
                   const size_t num_dims,
-                  const init_conds::init_scalar_conds scalarFieldType);
+                  const initial_conditions::ICsScalar scalarFieldType);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -283,7 +301,7 @@ void paint_vector(const DCArrayKokkos<double>& vector_field,
                   const double scalar,
                   const size_t mesh_gid,
                   const size_t num_dims,
-                  const init_conds::init_vector_conds vectorFieldType);
+                  const initial_conditions::ICsVector vectorFieldType);
 
 
 
@@ -416,10 +434,24 @@ void calc_node_mass(const swage::Mesh& mesh,
 
 
 
-
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn init_corner_node_masses_zero
+///
+/// \brief a function to initialize corner and node masses to zero
+///
+/// \param mesh is the simulation mesh
+/// \param node_mass is the node mass
+/// \param corner_mass is the corner mass
+///
+/////////////////////////////////////////////////////////////////////////////
 void init_corner_node_masses_zero(
         const swage::Mesh& mesh,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_mass);
+
+
+
+
 
 #endif

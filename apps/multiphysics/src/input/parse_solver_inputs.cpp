@@ -50,11 +50,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "parse_solver_inputs.hpp"
 
 // simulation parameters contains:
-//   mesh_input
-//   output_options
-//   dynamic_options
+//   MeshInput
+//   OutputOptions
+//   DynamicOptions
 //   solver_inputs
-//   region_setups
+//   RegionSetups
+//   InitialConditions
 #include "simulation_parameters.hpp"
 
 

@@ -39,6 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstring>
 
 using namespace mtr;
+
 // -----------------------------------------------------------------------------
 //  Table_t: A structure to hold tabular data and perform linear interpolation
 //  using MATAR data types for portability (CPU/GPU).

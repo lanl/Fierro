@@ -36,10 +36,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <map>
 
-namespace init_conds
+#include "state.hpp" // for fill state
+
+// initial
+namespace initial_conditions
 {
     // initial conditions for a vector field
-    enum init_vector_conds
+    enum ICsVector
     {
         noICsVec = 0,  // do nothing
 
@@ -61,7 +64,7 @@ namespace init_conds
     };
 
     // initial conditions for a scalar field
-    enum init_scalar_conds
+    enum ICsScalar
     {
         noICsScalar = 0,  // do nothing
 
@@ -88,28 +91,334 @@ namespace init_conds
 } // end of initial conditions namespace
 
 
-
-
-static std::map<std::string, init_conds::init_vector_conds> vector_ics_type_map
+static std::map<std::string, initial_conditions::ICsVector> vector_ics_type_map
 {
-    { "static", init_conds::stationary },
-    { "cartesian", init_conds::cartesian },
-    { "radial", init_conds::radialVec },
-    { "spherical", init_conds::sphericalVec },
-    { "radial_linear", init_conds::radialLinearVec },
-    { "spherical_linear", init_conds::sphericalLinearVec },
-    { "tg_vortex", init_conds::tgVortexVec }
+    { "static", initial_conditions::stationary },
+    { "cartesian", initial_conditions::cartesian },
+    { "radial", initial_conditions::radialVec },
+    { "spherical", initial_conditions::sphericalVec },
+    { "radial_linear", initial_conditions::radialLinearVec },
+    { "spherical_linear", initial_conditions::sphericalLinearVec },
+    { "tg_vortex", initial_conditions::tgVortexVec }
 };
 
-static std::map<std::string, init_conds::init_scalar_conds> scalar_ics_type_map
+
+static std::map<std::string, initial_conditions::ICsScalar> scalar_ics_type_map
 {
-    { "uniform", init_conds::uniform },
-    { "radial", init_conds::radialScalar },
-    { "spherical", init_conds::sphericalScalar },
-    { "x_linear", init_conds::xlinearScalar },
-    { "y_linear", init_conds::ylinearScalar },
-    { "z_linear", init_conds::zlinearScalar },
-    { "tg_vortex", init_conds::tgVortexScalar }
+    { "uniform", initial_conditions::uniform },
+    { "radial", initial_conditions::radialScalar },
+    { "spherical", initial_conditions::sphericalScalar },
+    { "x_linear", initial_conditions::xlinearScalar },
+    { "y_linear", initial_conditions::ylinearScalar },
+    { "z_linear", initial_conditions::zlinearScalar },
+    { "tg_vortex", initial_conditions::tgVortexScalar }
+};
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct RegionICs_t
+///
+/// \brief The initial conditions for the regions created on the mesh
+///
+/////////////////////////////////////////////////////////////////////////////
+struct RegionICs_t
+{
+    
+    // region id
+    size_t region_id;  ///< the region id to apply the IC's to
+
+    // material id
+    size_t material_id; ///< Material ID for this region
+
+    // initial condition for velocity 
+    initial_conditions::ICsVector vel_field = initial_conditions::noICsVec;  ///< ICs for velocity in this region
+
+    // initial conditions for density
+    initial_conditions::ICsScalar den_field = initial_conditions::noICsScalar;
+
+    // initial conditions for specific internal energy
+    initial_conditions::ICsScalar sie_field = initial_conditions::noICsScalar;
+
+    // initial conditions for specific internal energy
+    initial_conditions::ICsScalar ie_field = initial_conditions::noICsScalar;
+
+    // initial conditions for level set field
+    initial_conditions::ICsScalar level_set_field = initial_conditions::noICsScalar;
+
+    // initial condition for temperature distribution
+    initial_conditions::ICsScalar temperature_field= initial_conditions::noICsScalar;
+
+    // initial condition for thermal conductivity distribution
+    initial_conditions::ICsScalar thermal_conductivity_field= initial_conditions::noICsScalar;
+
+    // initial condition for specific heat distribution
+    initial_conditions::ICsScalar specific_heat_field= initial_conditions::noICsScalar;
+
+    // initial condition for material volume fraction distribution
+    initial_conditions::ICsScalar mat_volfrac_field = initial_conditions::uniform;
+
+    // velocity coefficients by component
+    double u = 0.0; ///< U component of velocity
+    double v = 0.0; ///< V component of velocity
+    double w = 0.0; ///< W component of velocity
+
+    double speed = 0.0; ///< velocity magnitude for radial velocity initialization
+
+    double temperature = 0.0; ///< temperature magnitude for initialization
+    double temperature_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for temperature field
+
+    double ie  = 0.0;  ///< extensive internal energy
+    double sie = 0.0;  ///< specific internal energy
+    double sie_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for sie or ie field
+
+    double den = 0.0;  ///< density
+    double den_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for den field
+
+
+    double level_set = 0.0; ///< level set field
+    double level_set_slope = 0.0; ///< slope of level_set field
+    double level_set_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for level_set field
+    
+    // note: setup applies min and max fcns, making it [0:1]
+    double mat_volfrac = 1.0; ///< volume fraction of material field
+    double mat_volfrac_slope = 0.0; ///< slope of volume fraction field
+    double mat_volfrac_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for volume fraction field
+
+    double specific_heat = 0.0; ///< specific heat
+    double specific_heat_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for specific heat field
+
+    double thermal_conductivity = 0.0; ///< thermal conductivity
+    double thermal_conductivity_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for thermal cond field
+
+};
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \struct InitialConditionSetup_t
+///
+/// \brief Contains kokkos arrays for applying ICs to the regions
+///
+/////////////////////////////////////////////////////////////////////////////
+struct InitialConditionSetup_t
+{
+    // vectors storing what state is to be filled on the mesh
+    // Note: the fill_gauss_state and fill_node_state are enums in state.h
+    std::vector <fill_gauss_state> fill_gauss_states; ///< Enums for the state at guass_pts, which live under the mat_pts
+    std::vector <fill_node_state>  fill_node_states;  ///< Enums for the state at nodes
+    
+    mtr::CArrayKokkos<RegionICs_t> region_ics;        ///< set the initial conditions in created regions
+};
+
+
+// ----------------------------------
+// valid inputs for a material fill
+// ----------------------------------
+static std::vector<std::string> str_ics_inps
+{
+    "region_id",
+    "material_id",
+    "material_volume_fraction",
+    "velocity",
+    "temperature",
+    "density",
+    "specific_heat",
+    "thermal_conductivity",
+    "specific_internal_energy",
+    "internal_energy",
+    "level_set"
+};
+
+
+// ---------------------------------------------------------------------
+// valid inputs for filling velocity, these are subfields under velocity
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_ics_vel_inps
+{
+    "type",
+    "u",
+    "v",
+    "w",
+    "speed"
+};
+
+
+// ---------------------------------------------------------------------
+// valid inputs for filling den, these are subfields under den
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_ics_den_inps
+{
+    "type",
+    "value"
+};
+
+
+// ---------------------------------------------------------------------
+// valid inputs for filling sie, these are subfields under sie
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_ics_sie_inps
+{
+    "type",
+    "value"
+};
+
+
+// ---------------------------------------------------------------------
+// valid inputs for filling ie, these are subfields under ie
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_ics_ie_inps
+{
+    "type",
+    "value"
+};
+
+
+// ---------------------------------------------------------------------
+// valid inputs for filling temperature, these are subfields under tempature
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_ics_temperature_inps
+{
+    "type",
+    "value"
+};
+
+
+// ---------------------------------------------------------------------
+// valid inputs for filling specific heat, these are subfields under specific heat
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_ics_specific_heat_inps
+{
+    "type",
+    "value"
+};
+
+
+// ---------------------------------------------------------------------
+// valid inputs for filling thermal conductivity, these are subfields under thermal conductivity
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_ics_thermal_conductivity_inps
+{
+    "type",
+    "value"
+};
+
+
+// ---------------------------------------------------------------------
+// valid inputs for filling level set, these are subfields under level_set
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_ics_level_set_inps
+{
+    "type",
+    "value",
+    "slope",
+    "origin"
+};
+
+
+// ---------------------------------------------------------------------
+// valid inputs for filling volfrac, these are subfields under volume fuction
+// ---------------------------------------------------------------------
+static std::vector<std::string> str_ics_mat_volfrac_inps
+{
+    "type",
+    "value",
+    "slope",
+    "origin"
+};
+
+
+
+// ----------------------------------
+// required inputs for ics options
+// ----------------------------------
+static std::vector<std::string> ics_required_inps
+{
+    "region_id",
+    "material_id"
+};
+
+
+// -------------------------------------
+// required inputs for filling velocity
+// -------------------------------------
+static std::vector<std::string> ics_vel_required_inps
+{
+    "type"
+};
+
+
+// -------------------------------------
+// required inputs for filling density
+// -------------------------------------
+static std::vector<std::string> ics_den_required_inps
+{
+    "type"
+};
+
+
+// -------------------------------------
+// required inputs for filling sie
+// -------------------------------------
+static std::vector<std::string> ics_sie_required_inps
+{
+    "type"
+};
+
+
+// -------------------------------------
+// required inputs for filling ie
+// -------------------------------------
+static std::vector<std::string> ics_ie_required_inps
+{
+    "type"
+};
+
+
+// -------------------------------------
+// required inputs for filling temperature
+// -------------------------------------
+static std::vector<std::string> ics_temperature_required_inps
+{
+    "type"
+};
+
+
+// -------------------------------------
+// required inputs for filling specific heat
+// -------------------------------------
+static std::vector<std::string> ics_specific_heat_required_inps
+{
+    "type"
+};
+
+
+// -------------------------------------
+// required inputs for filling thermal conductivity
+// -------------------------------------
+static std::vector<std::string> ics_thermal_conductivity_required_inps
+{
+    "type"
+};
+
+
+// -------------------------------------
+// required inputs for filling level set
+// -------------------------------------
+static std::vector<std::string> ics_level_set_required_inps
+{
+    "type"
+//    "value",
+//    "slope"
+};
+
+
+// -------------------------------------
+// required inputs for filling material volume fraction
+// -------------------------------------
+static std::vector<std::string> ics_mat_volfrac_required_inps
+{
+    "type"
 };
 
 #endif // end Header Guard

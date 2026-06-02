@@ -79,7 +79,7 @@ void SGHRZ::initialize_material_state(SimulationParameters_t& SimulationParamate
     State.MaterialCorners.initialize(mesh.num_dims, SGHRZ_State::required_material_corner_state); 
     // zones are not used
     
-    // NOTE: Material points are populated in the material_state_setup funcion
+    // NOTE: Material points are populated in the material_state_setup function
     
     return;
 

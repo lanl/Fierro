@@ -51,6 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "parse_tools.hpp"
 #include "parse_regions.hpp"
+#include "parse_initial_conditions.hpp"
 #include "parse_mesh_inputs.hpp"
 #include "parse_solver_inputs.hpp"
 #include "parse_material_inputs.hpp"
@@ -59,11 +60,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "parse_output_options.hpp"
 
 // simulation parameters contains:
-//   mesh_input
-//   output_options
-//   dynamic_options
+//   MeshInput
+//   OutputOptions
+//   DynamicOptions
 //   solver_inputs
-//   region_setups
+//   RegionSetups
+//   InitialConditions
 #include "simulation_parameters.hpp"
 
 
@@ -82,11 +84,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, Material_t& Materials, BoundaryCondition_t& Boundary)
 {
 
-    parse_mesh_inputs(root, SimulationParamaters.mesh_input);
+    parse_mesh_inputs(root, SimulationParamaters.MeshInput);
 
-    parse_dynamic_options(root, SimulationParamaters.dynamic_options);
+    parse_dynamic_options(root, SimulationParamaters.DynamicOptions);
 
-    parse_output_options(root, SimulationParamaters.output_options);
+    parse_output_options(root, SimulationParamaters.OutputOptions);
 
     parse_solver_input(root, SimulationParamaters.solver_inputs);
 
@@ -97,16 +99,23 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
 
     // parse the region yaml text into a vector of region_fills
     parse_regions(root, 
-                  SimulationParamaters.region_setups.reg_fills_in_solver,
-                  SimulationParamaters.region_setups.num_reg_fills_in_solver,
-                  SimulationParamaters.region_setups.region_fills,
-                  SimulationParamaters.region_setups.region_fills_host,
-                  SimulationParamaters.region_setups.fill_gauss_states,
-                  SimulationParamaters.region_setups.fill_node_states,
+                  SimulationParamaters.RegionSetups.reg_fills_in_solver,
+                  SimulationParamaters.RegionSetups.num_reg_fills_in_solver,
+                  SimulationParamaters.RegionSetups.region_fills,
+                  SimulationParamaters.RegionSetups.region_fills_host,
                   num_solvers);
 
+
+
+    // parse the initial conditions yaml text into a vector of region_ics
+    parse_initial_conditions(root, 
+                             SimulationParamaters.InitialConditionSetup.region_ics,
+                             SimulationParamaters.InitialConditionSetup.fill_gauss_states,
+                             SimulationParamaters.InitialConditionSetup.fill_node_states);
+
+
     // parse the material yaml text into a vector of materials
-    parse_materials(root, Materials, SimulationParamaters.mesh_input.num_dims);
+    parse_materials(root, Materials, SimulationParamaters.MeshInput.num_dims);
     parse_multimaterial_options(root, Materials);
 }
 

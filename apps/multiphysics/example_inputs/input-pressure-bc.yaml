@@ -218,13 +218,21 @@ materials:
             - 1.0
 
 # ---------------------------------------------------------------------------
-# Initial conditions (uniform fill)
+# Region
 # ---------------------------------------------------------------------------
 regions:
     - region:
+        id: 0
         volume:
             type: global
-        solver_id: 0
+        solver_id: 0 # ignored with FE solvers, for illistrative purposes
+
+# ---------------------------------------------------------------------------
+# Initial conditions (uniform fill)
+# ---------------------------------------------------------------------------        
+initial_conditions:
+    - initial_condition:
+        region_id: 0
         material_id: 0
         density: 
             # Uniform initial density (g/cm^3 with input scaling).
@@ -240,7 +248,7 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             # Fraction of the element occupied by this material (single
             # material case here).
             type: uniform

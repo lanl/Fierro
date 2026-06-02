@@ -81,11 +81,23 @@ materials:
             - 0.0   # phi_min
             - 1.0   # pin_curl_min
             
+# ---------------------------------------------------------------------------
+# Regions 
+# ---------------------------------------------------------------------------
 regions:
     - region:
+        id: 0
         volume:
             type: global
         solver_id: 0
+
+
+# ---------------------------------------------------------------------------
+# Initial Conditions
+# ---------------------------------------------------------------------------
+initial_conditions:
+    - initial_condition:
+        region_id: 0
         material_id: 0
         density: 
             type: uniform
@@ -98,7 +110,7 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
 

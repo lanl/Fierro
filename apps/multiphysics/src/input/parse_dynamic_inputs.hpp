@@ -47,12 +47,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Yaml.hpp"
 
 
-struct dynamic_options_t;
+struct DynamicOptions_t;
 
 using namespace mtr;
 
 
 // Parse dynamic time related options
-void parse_dynamic_options(Yaml::Node& root, dynamic_options_t& dynamic_options);
+void parse_dynamic_options(Yaml::Node& root, DynamicOptions_t& DynamicOptions);
 
 #endif // end Header Guard
