@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Set build type if not already set
 if (NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo) # RelWithDebInfo, Debug
 endif()
 
 # Set module path
@@ -15,8 +15,8 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # --- Options ---
-option(FIERRO_ENABLE_SERIAL   "Enable Serial backend"   OFF)
-option(FIERRO_ENABLE_OPENMP   "Enable OpenMP backend"   ON)
+option(FIERRO_ENABLE_SERIAL   "Enable Serial backend"   ON)
+option(FIERRO_ENABLE_OPENMP   "Enable OpenMP backend"   OFF)
 option(FIERRO_ENABLE_PTHREADS "Enable PThreads backend" OFF)
 option(FIERRO_ENABLE_CUDA     "Enable CUDA backend"     OFF)
 option(FIERRO_ENABLE_HIP      "Enable HIP backend"      OFF)

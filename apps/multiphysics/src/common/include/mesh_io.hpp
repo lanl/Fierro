@@ -454,6 +454,9 @@ public:
         fscanf(in, "%lu", &num_nodes);
         printf("Number of nodes read in %lu\n", num_nodes);
 
+        // initialize node variables
+        mesh.initialize_nodes(num_nodes);
+
         node_coords = MPICArrayKokkos<double>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
 
         // read the initial mesh coordinates
