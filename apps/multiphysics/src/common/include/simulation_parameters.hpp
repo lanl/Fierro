@@ -39,6 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "material.hpp"
 #include "region.hpp"
+#include "initial_conditions.hpp"
 #include "mesh_inputs.hpp"
 #include "solver_inputs.hpp"
 #include "output_options.hpp"
@@ -57,15 +58,17 @@ using namespace mtr;
 /////////////////////////////////////////////////////////////////////////////
 struct SimulationParameters_t
 {
-    mesh_input_t mesh_input;    ///< Mesh input information
+    MeshInput_t MeshInput;                    ///< Mesh input information
 
-    output_options_t output_options; ///< Simulation output information
+    OutputOptions_t OutputOptions;            ///< Simulation output information
 
-    dynamic_options_t dynamic_options;  ///< Simulation timing and dynamic options
+    DynamicOptions_t DynamicOptions;          ///< Simulation timing and dynamic options
 
     std::vector<solver_input_t> solver_inputs;  ///< Solvers to use during the simulation
 
-    SolverRegionSetup_t region_setups;  ///< region fills across all solvers
+    RegionSetup_t RegionSetups;                ///< region fills across all solvers
+
+    InitialConditionSetup_t InitialConditionSetup;     ///< intial conditions
 
 }; // simulation_parameters_t
 

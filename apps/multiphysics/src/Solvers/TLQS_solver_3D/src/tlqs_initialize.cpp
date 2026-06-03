@@ -61,7 +61,7 @@ void TLQS3D::initialize(SimulationParameters_t& SimulationParamaters,
     // check that the fills specify the required nodal fields
     bool filled_nodal_state =
         check_fill_node_states(TLQS3D_State::required_fill_node_state,
-                               SimulationParamaters.region_setups.fill_node_states);
+                               SimulationParamaters.InitialConditionSetup.fill_node_states);
     
     if (filled_nodal_state == false){
         std::cout <<" Missing required nodal state in the fill instructions for the TLQS solver \n";

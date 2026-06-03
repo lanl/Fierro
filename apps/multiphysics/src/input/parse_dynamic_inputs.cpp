@@ -50,11 +50,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "parse_dynamic_inputs.hpp"
 
 // simulation parameters contains:
-//   mesh_input
-//   output_options
-//   dynamic_options
+//   MeshInput
+//   OutputOptions
+//   DynamicOptions
 //   solver_inputs
-//   region_setups
+//   RegionSetups
+//   InitialConditions
 #include "simulation_parameters.hpp"
 
 
@@ -68,7 +69,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // =================================================================================
 //    Parse Dynamic Options regions
 // =================================================================================
-void parse_dynamic_options(Yaml::Node& root, dynamic_options_t& dynamic_options)
+void parse_dynamic_options(Yaml::Node& root, DynamicOptions_t& DynamicOptions)
 {
     Yaml::Node& yaml = root["dynamic_options"];
 
@@ -84,57 +85,57 @@ void parse_dynamic_options(Yaml::Node& root, dynamic_options_t& dynamic_options)
         // Start time
         if (a_word.compare("time_initial") == 0) {
             double time_initial = yaml[a_word].As<double>();
-            dynamic_options.time_initial = time_initial;
+            DynamicOptions.time_initial = time_initial;
         } // start time
         // End time
         else if (a_word.compare("time_final") == 0) {
             double time_final = yaml[a_word].As<double>();
-            dynamic_options.time_final = time_final;
+            DynamicOptions.time_final = time_final;
         } // end time
         // Minimum time step
         else if (a_word.compare("dt_min") == 0) {
             double dt_min = yaml[a_word].As<double>();
-            dynamic_options.dt_min = dt_min;
+            DynamicOptions.dt_min = dt_min;
         }
         // Maximum time step
         else if (a_word.compare("dt_max") == 0) {
             double dt_max = yaml[a_word].As<double>();
-            dynamic_options.dt_max = dt_max;
+            DynamicOptions.dt_max = dt_max;
         }
         // Initial time step
         else if (a_word.compare("dt_start") == 0) {
             double dt_start = yaml[a_word].As<double>();
-            dynamic_options.dt_start = dt_start;
+            DynamicOptions.dt_start = dt_start;
         }
         // CFL valid timestep
         else if (a_word.compare("dt_cfl") == 0) {
             double dt_cfl = yaml[a_word].As<double>();
-            dynamic_options.dt_cfl = dt_cfl;
+            DynamicOptions.dt_cfl = dt_cfl;
         }
         // End cycle count
         else if (a_word.compare("cycle_stop") == 0) {
             int cycle_stop = yaml[a_word].As<int>();
-            dynamic_options.cycle_stop = cycle_stop;
+            DynamicOptions.cycle_stop = cycle_stop;
         }
         // Machine precision small value
         else if (a_word.compare("fuzz") == 0) {
             double fuzz = yaml[a_word].As<double>();
-            dynamic_options.fuzz = fuzz;
+            DynamicOptions.fuzz = fuzz;
         }
         // Very small value
         else if (a_word.compare("tiny") == 0) {
             double tiny = yaml[a_word].As<double>();
-            dynamic_options.tiny = tiny;
+            DynamicOptions.tiny = tiny;
         }
         // Single precision value
         else if (a_word.compare("small") == 0) {
             double small = yaml[a_word].As<double>();
-            dynamic_options.small = small;
+            DynamicOptions.small = small;
         }
         //  Number of RK stages
         else if (a_word.compare("rk_num_stages") == 0) {
             int rk_num_stages = yaml[a_word].As<int>();
-            dynamic_options.rk_num_stages = rk_num_stages;
+            DynamicOptions.rk_num_stages = rk_num_stages;
         }
         else {
             std::cout << "ERROR: invalid input: " << a_word << std::endl;

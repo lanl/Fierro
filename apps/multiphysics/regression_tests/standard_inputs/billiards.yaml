@@ -94,24 +94,14 @@ materials:
 
 regions:
   - region:
+        id: 0
         volume:
             type: global
-        material_id: 0
         solver_id: 0
-        density: 
-            type: uniform
-            value: 1
-        specific_internal_energy: 
-            type: uniform
-            value: 1.0e-10
-        velocity: 
-            type: cartesian
-            u: 0.0
-            v: 0.0
-            w: 0.0
 
   # top block initial velocity conditions
   - region:
+      id: 1
       volume:
         type: box
         origin: [0.0, 0.0, 0.0]
@@ -121,8 +111,27 @@ regions:
         y2: 0.5
         z1: 0.0
         z2: 0.5
-      material_id: 0
       solver_id: 0
+      
+initial_conditions:
+  - initial_condition:
+      region_id: 0
+      material_id: 0
+      density: 
+          type: uniform
+          value: 1
+      specific_internal_energy: 
+          type: uniform
+          value: 1.0e-10
+      velocity: 
+          type: cartesian
+          u: 0.0
+          v: 0.0
+          w: 0.0
+
+  - initial_condition:
+      region_id: 1
+      material_id: 0
       density:
         type: uniform
         value: 1.0

@@ -218,11 +218,12 @@ materials:
 
 
  # ---------------------------------------------------------------------------
- # Regions: initialize level set `phi` on multiple subdomains
+ # Regions: create multiple subdomains
  # ---------------------------------------------------------------------------
 regions:
 
     - region:
+        id: 0
         volume:
             type: box
             x1: 0.0
@@ -231,7 +232,100 @@ regions:
             y2: 0.5
             z1: 0.0
             z2: 0.5
-        solver_id: 0
+        solver_id: 0 # not used at this time by level set solver
+
+    - region:
+        id: 1
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.0
+            y2: 0.5
+            z1: 0.0
+            z2: 0.5
+        solver_id: 0 # not used at this time by level set solver
+
+
+    - region:
+        id: 2
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.5
+            y2: 1.0
+            z1: 0.0
+            z2: 0.5
+        solver_id: 0 # not used at this time by level set solver
+
+    - region:
+        id: 3
+        volume:
+            type: box
+            x1: 0.0
+            x2: 0.5
+            y1: 0.5
+            y2: 1.0
+            z1: 0.0
+            z2: 0.5
+        solver_id: 0 # not used at this time by level set solver
+
+    - region:
+        id: 4
+        volume:
+            type: box
+            x1: 0.0
+            x2: 0.5
+            y1: 0.0
+            y2: 0.5
+            z1: 0.5
+            z2: 1.0
+        solver_id: 0 # not used at this time by level set solver
+        
+    - region:
+        id: 5
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.0
+            y2: 0.5
+            z1: 0.5
+            z2: 1.0
+        solver_id: 0 # not used at this time by level set solver
+
+    - region:
+        id: 6
+        volume:
+            type: box
+            x1: 0.0
+            x2: 0.5
+            y1: 0.5
+            y2: 1.0
+            z1: 0.5
+            z2: 1.0
+        solver_id: 0 # not used at this time by level set solver
+
+    - region:
+        id: 7
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.5
+            y2: 1.0
+            z1: 0.5
+            z2: 1.0
+        solver_id: 0 # not used at this time by level set solver
+
+
+# ---------------------------------------------------------------------------
+# Initial Conditions: initialize level set `phi` on multiple subdomains
+# ---------------------------------------------------------------------------
+initial_conditions:
+    - initial_condition:
+        region_id: 0
         material_id: 0
         level_set: 
             #type: uniform
@@ -245,20 +339,12 @@ regions:
             value: 0.1
             slope: 1.0
             origin: [0.0, 0.0, 0.0]
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
     
-    - region:
-        volume:
-            type: box
-            x1: 0.5
-            x2: 1.0
-            y1: 0.0
-            y2: 0.5
-            z1: 0.0
-            z2: 0.5
-        solver_id: 0
+    - initial_condition:
+        region_id: 1
         material_id: 0
         level_set: 
             #type: uniform
@@ -272,20 +358,12 @@ regions:
             value: 0.1
             slope: 1.0
             origin: [1.0, 0.0, 0.0]
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
 
-    - region:
-        volume:
-            type: box
-            x1: 0.5
-            x2: 1.0
-            y1: 0.5
-            y2: 1.0
-            z1: 0.0
-            z2: 0.5
-        solver_id: 0
+    - initial_condition:
+        region_id: 2
         material_id: 0
         level_set: 
             #type: uniform
@@ -299,20 +377,13 @@ regions:
             value: 0.1
             slope: 1.0
             origin: [1.0, 1.0, 0.0]
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
 
-    - region:
-        volume:
-            type: box
-            x1: 0.0
-            x2: 0.5
-            y1: 0.5
-            y2: 1.0
-            z1: 0.0
-            z2: 0.5
-        solver_id: 0
+
+    - initial_condition:    
+        region_id: 3
         material_id: 0
         level_set: 
             #type: uniform
@@ -326,20 +397,12 @@ regions:
             value: 0.1
             slope: 1.0
             origin: [0.0, 1.0, 0.0]
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
 
-    - region:
-        volume:
-            type: box
-            x1: 0.0
-            x2: 0.5
-            y1: 0.0
-            y2: 0.5
-            z1: 0.5
-            z2: 1.0
-        solver_id: 0
+    - initial_condition:
+        region_id: 4
         material_id: 0
         level_set: 
             #type: uniform
@@ -353,20 +416,12 @@ regions:
             value: 0.1
             slope: 1.0
             origin: [0.0, 0.0, 1.0]
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
 
-    - region:
-        volume:
-            type: box
-            x1: 0.5
-            x2: 1.0
-            y1: 0.0
-            y2: 0.5
-            z1: 0.5
-            z2: 1.0
-        solver_id: 0
+    - initial_condition:
+        region_id: 5
         material_id: 0
         level_set: 
             #type: uniform
@@ -380,21 +435,12 @@ regions:
             value: 0.1
             slope: 1.0
             origin: [1.0, 0.0, 1.0]
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
 
-
-    - region:
-        volume:
-            type: box
-            x1: 0.0
-            x2: 0.5
-            y1: 0.5
-            y2: 1.0
-            z1: 0.5
-            z2: 1.0
-        solver_id: 0
+    - initial_condition:
+        region_id: 6
         material_id: 0
         level_set: 
             #type: uniform
@@ -408,20 +454,12 @@ regions:
             value: 0.1
             slope: 1.0
             origin: [0.0, 1.0, 1.0]
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
 
-    - region:
-        volume:
-            type: box
-            x1: 0.5
-            x2: 1.0
-            y1: 0.5
-            y2: 1.0
-            z1: 0.5
-            z2: 1.0
-        solver_id: 0
+    - initial_condition:
+        region_id: 7
         material_id: 0
         level_set: 
             #type: uniform
@@ -435,6 +473,6 @@ regions:
             value: 0.1
             slope: 1.0
             origin: [1.0, 1.0, 1.0]
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0

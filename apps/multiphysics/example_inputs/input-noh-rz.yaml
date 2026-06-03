@@ -142,14 +142,22 @@ materials:
             - 1.0
 
 # ---------------------------------------------------------------------------
-# Initial conditions
+# Regions
 # ---------------------------------------------------------------------------
 regions:
     - region:
+        id: 0
         volume:
             type: global
+        solver_id: 0 # ignored with FE solvers, for illistrative purposes
+
+# ---------------------------------------------------------------------------
+# Initial conditions
+# ---------------------------------------------------------------------------        
+initial_conditions:
+    - initial_condition:
+        region_id: 0
         material_id: 0
-        solver_id: 0
         density: 
             # Initial density (g/cm^3 with input scaling).
             type: uniform

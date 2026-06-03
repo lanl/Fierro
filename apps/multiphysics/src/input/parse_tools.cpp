@@ -49,11 +49,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "matar.h"
 
 // simulation parameters contains:
-//   mesh_input
-//   output_options
-//   dynamic_options
+//   MeshInput
+//   OutputOptions
+//   DynamicOptions
 //   solver_inputs
-//   region_setups
+//   RegionSetups
+//   InitialConditions
 #include "simulation_parameters.hpp"
 
 // boundary conditions
@@ -402,6 +403,7 @@ void print_inputs()
 
     }
     //------
+    //------
     std::cout << "    regions: \n";
     std::cout << "       #...as many regions as you need... \n";
     std::cout << "       - region: \n";
@@ -429,10 +431,17 @@ void print_inputs()
 
             } // end for
         } // end if volume
-        else if(field.compare("volume_fraction") == 0){
-            std::cout << "          volume_fraction: \n";
+    } // end for region
+    //------
+    //------
+    std::cout << "    initial_conditions: \n";
+    std::cout << "       #...as many initial conditions as you need... \n";
+    std::cout << "       - initial_condition: \n";
+    for (auto field : str_ics_inps){
+        if(field.compare("material_volume_fraction") == 0){
+            std::cout << "          material_volume_fraction: \n";
 
-            for (auto subfield : str_region_volfrac_inps){
+            for (auto subfield : str_ics_mat_volfrac_inps){
 
                 if(subfield.compare("type") == 0){
 
@@ -462,7 +471,7 @@ void print_inputs()
         else if(field.compare("density") == 0){
             std::cout << "          density: \n";
 
-            for (auto subfield : str_region_den_inps){
+            for (auto subfield : str_ics_den_inps){
 
                 if(subfield.compare("type") == 0){
 
@@ -492,7 +501,7 @@ void print_inputs()
         else if(field.compare("specific_internal_energy") == 0){
             std::cout << "          specific_internal_energy: \n";
 
-            for (auto subfield : str_region_sie_inps){
+            for (auto subfield : str_ics_sie_inps){
 
                 if(subfield.compare("type") == 0){
 
@@ -522,7 +531,7 @@ void print_inputs()
         else if(field.compare("internal_energy") == 0){
             std::cout << "          internal_energy: \n";
 
-            for (auto subfield : str_region_ie_inps){
+            for (auto subfield : str_ics_ie_inps){
 
                 if(subfield.compare("type") == 0){
 
@@ -552,7 +561,7 @@ void print_inputs()
         else if(field.compare("specific_heat") == 0){
             std::cout << "          specific_heat: \n";
 
-            for (auto subfield : str_region_specific_heat_inps){
+            for (auto subfield : str_ics_specific_heat_inps){
 
                 if(subfield.compare("type") == 0){
 
@@ -582,7 +591,7 @@ void print_inputs()
         else if(field.compare("thermal_conductivity") == 0){
             std::cout << "          thermal_conductivity: \n";
 
-            for (auto subfield : str_region_thermal_conductivity_inps){
+            for (auto subfield : str_ics_thermal_conductivity_inps){
 
                 if(subfield.compare("type") == 0){
 
@@ -612,7 +621,7 @@ void print_inputs()
         else if(field.compare("temperature") == 0){
             std::cout << "          temperature: \n";
 
-            for (auto subfield : str_region_temperature_inps){
+            for (auto subfield : str_ics_temperature_inps){
 
                 if(subfield.compare("type") == 0){
 
@@ -642,7 +651,7 @@ void print_inputs()
         else if(field.compare("level_set") == 0){
             std::cout << "          level_set: \n";
 
-            for (auto subfield : str_region_level_set_inps){
+            for (auto subfield : str_ics_level_set_inps){
 
                 if(subfield.compare("type") == 0){
 
@@ -673,7 +682,7 @@ void print_inputs()
             std::cout << "          velocity: \n";
             
 
-            for (auto subfield : str_region_vel_inps){
+            for (auto subfield : str_ics_vel_inps){
 
                 if(subfield.compare("type") == 0){
                     std::cout << "             type:";

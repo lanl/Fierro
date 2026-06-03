@@ -46,13 +46,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "Yaml.hpp"
 
-struct mesh_input_t;
+struct MeshInput_t;
 
 
 using namespace mtr;
 
 
 // Parse the mesh related data
-void parse_mesh_inputs(Yaml::Node& root, mesh_input_t& mesh_input);
+void parse_mesh_inputs(Yaml::Node& root, MeshInput_t& mesh_input);
 
 #endif // end Header Guard

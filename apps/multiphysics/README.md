@@ -302,8 +302,7 @@ Configures options for handling mixed-material elements.
 *   `geo_equilibration_global_vars`: Parameters for geometric equilibration (list of doubles/ints).
 
 #### regions
-Defines initial conditions by assigning material properties and state variables to geometric regions.
-
+Defines geometric regions on the mesh.
 *   `region`: A block defining a single region.
     *   `volume`: Defines the geometric volume of the region.
         *   `type`: Type of volume. Options: `<box>`, `<cylinder>`, `<global>`, `<sphere>`, `<voxel_file>`, `<vtu_file>`.
@@ -313,8 +312,13 @@ Defines initial conditions by assigning material properties and state variables 
         *   `origin`: Origin of the volume (list of doubles).
         *   `part_id`: ID of the part for multi-part meshes (integer).
     *   `solver_id`: ID of the solver this region belongs to (integer).
+
+#### initial conditions
+Defines initial conditions by assigning material properties and state variables to geometric regions.
+*   `initial condition`: A block defining a single initial condition.    
+    *   `region_id`: ID of the region to assign to this initial condition (integer).
     *   `material_id`: ID of the material to assign to this region (integer).
-    *   `volume_fraction`: Fraction of the element volume filled by this region.
+    *   `material_volume_fraction`: Fraction of the element volume filled by this material.
         *   `type`: Distribution type. Options: `<radial>`, `<spherical>`, `<tg_vortex>`, `<uniform>`, `<x_linear>`, `<y_linear>`, `<z_linear>`.
         *   `value`: Constant value or base value (double).
         *   `slope`: Slope for linear distributions (double).

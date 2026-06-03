@@ -79,7 +79,9 @@ void Driver::initialize()
     element_communication_plan.initialize(MPI_COMM_WORLD);
     node_communication_plan.initialize(MPI_COMM_WORLD);
 
-    if (SimulationParamaters.mesh_input.source == mesh_input::file) {
+
+    // mesh read
+    if (SimulationParamaters.MeshInput.source == mesh_input::file) {
 
         // Create and/or read mesh on rank 0
         if (rank == 0) {
@@ -87,26 +89,26 @@ void Driver::initialize()
             // works regardless of where you run `./app/Fierro`).
             try {
                 std::filesystem::path yaml_path(yaml_file ? yaml_file : "");
-                std::filesystem::path mesh_path(SimulationParamaters.mesh_input.file_path);
+                std::filesystem::path mesh_path(SimulationParamaters.MeshInput.file_path);
                 if (!yaml_path.empty() && !mesh_path.empty() && !mesh_path.is_absolute()) {
                     mesh_path = yaml_path.parent_path() / mesh_path;
                     mesh_path = mesh_path.lexically_normal();
-                    SimulationParamaters.mesh_input.file_path = mesh_path.string();
+                    SimulationParamaters.MeshInput.file_path = mesh_path.string();
                 }
             } catch (...) {
                 // Fall back to the original path if path resolution fails.
             }
 
             // Create and/or read mesh
-            log_.info("Mesh file path: %s\n", SimulationParamaters.mesh_input.file_path.c_str());
-            mesh_reader.set_mesh_file(SimulationParamaters.mesh_input.file_path.data());
+            log_.info("Mesh file path: %s\n", SimulationParamaters.MeshInput.file_path.c_str());
+            mesh_reader.set_mesh_file(SimulationParamaters.MeshInput.file_path.data());
             mesh_reader.read_mesh(initial_mesh, 
                                   initial_node_coords,
-                                  SimulationParamaters.mesh_input, 
+                                  SimulationParamaters.MeshInput, 
                                   initial_mesh.num_dims);
         } // end if rank == 0
     }
-    else if (SimulationParamaters.mesh_input.source == mesh_input::generate) {
+    else if (SimulationParamaters.MeshInput.source == mesh_input::generate) {
         // Build mesh on rank 0
         if (rank == 0) {
             mesh_builder.build_mesh(initial_mesh, 
@@ -186,6 +188,33 @@ void Driver::initialize()
                   total_elems, total_owned_elems, total_ghost_elems);
     }
 
+
+    // check if a STL CAD file or Voxel mesh is used to define a region
+    size_t num_region_fills = SimulationParamaters.RegionSetups.region_fills_host.size();
+    for(size_t reg_id=0; reg_id<num_region_fills; reg_id++){
+        // -----
+        // check paths to meshes defining region fills
+        if (SimulationParamaters.RegionSetups.region_fills_host(reg_id).volume == region::readVoxelFile ||
+            SimulationParamaters.RegionSetups.region_fills_host(reg_id).volume == region::readSTLFile)
+        {
+            // Make mesh paths relative to the YAML location (so `file_path: stl/part.stl`
+            // works regardless of where you run `./app/Fierro`).
+            try {
+                std::filesystem::path yaml_path(yaml_file ? yaml_file : "");
+                std::filesystem::path mesh_path(SimulationParamaters.RegionSetups.region_fills_host(reg_id).file_path);
+                if (!yaml_path.empty() && !mesh_path.empty() && !mesh_path.is_absolute()) {
+                    mesh_path = yaml_path.parent_path() / mesh_path;
+                    mesh_path = mesh_path.lexically_normal();
+                    SimulationParamaters.RegionSetups.region_fills_host(reg_id).file_path = mesh_path.string();
+                }
+            } catch (...) {
+                // Fall back to the original path if path resolution fails.
+            }
+
+        } // end check on region_fill being a file
+    } // end for reg_id
+
+
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;
 
@@ -207,7 +236,7 @@ void Driver::initialize()
 
 
     // Setup the Solvers
-    double time_final = SimulationParamaters.dynamic_options.time_final;
+    double time_final = SimulationParamaters.DynamicOptions.time_final;
     for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
@@ -486,7 +515,7 @@ void Driver::setup_solver_vars(T& a_solver,
 
 
     // the final time of the simulation
-    double time_final = this->SimulationParamaters.dynamic_options.time_final;
+    double time_final = this->SimulationParamaters.DynamicOptions.time_final;
 
     // save the solver_id
     a_solver->solver_id = solver_id;

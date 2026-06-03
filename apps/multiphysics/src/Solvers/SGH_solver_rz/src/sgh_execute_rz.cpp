@@ -57,22 +57,22 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                   State_t& State)
 {
 
-    double fuzz  = SimulationParamaters.dynamic_options.fuzz;
-    double tiny  = SimulationParamaters.dynamic_options.tiny;
-    double small = SimulationParamaters.dynamic_options.small;
+    double fuzz  = SimulationParamaters.DynamicOptions.fuzz;
+    double tiny  = SimulationParamaters.DynamicOptions.tiny;
+    double small = SimulationParamaters.DynamicOptions.small;
 
-    double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
-    int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
+    double graphics_dt_ival  = SimulationParamaters.OutputOptions.graphics_time_step;
+    int    graphics_cyc_ival = SimulationParamaters.OutputOptions.graphics_iteration_step;
 
-    // double time_initial = SimulationParamaters.dynamic_options.time_initial;
-    double time_final = this->time_end; //SimulationParamaters.dynamic_options.time_final;
-    double dt_min   = SimulationParamaters.dynamic_options.dt_min;
-    double dt_max   = SimulationParamaters.dynamic_options.dt_max;
-    double dt_start = SimulationParamaters.dynamic_options.dt_start;
-    double dt_cfl   = SimulationParamaters.dynamic_options.dt_cfl;
+    // double time_initial = SimulationParamaters.DynamicOptions.time_initial;
+    double time_final = this->time_end; //SimulationParamaters.DynamicOptions.time_final;
+    double dt_min   = SimulationParamaters.DynamicOptions.dt_min;
+    double dt_max   = SimulationParamaters.DynamicOptions.dt_max;
+    double dt_start = SimulationParamaters.DynamicOptions.dt_start;
+    double dt_cfl   = SimulationParamaters.DynamicOptions.dt_cfl;
 
-    int rk_num_stages = SimulationParamaters.dynamic_options.rk_num_stages;
-    int cycle_stop    = SimulationParamaters.dynamic_options.cycle_stop;
+    int rk_num_stages = SimulationParamaters.DynamicOptions.rk_num_stages;
+    int cycle_stop    = SimulationParamaters.DynamicOptions.cycle_stop;
 
     // initialize time, time_step, and cycles
     double time_value = this->time_start; // 0.0;
@@ -302,7 +302,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 State.MaterialPoints.stress,
                                 State.MaterialPoints.sspd,
                                 State.MaterialCorners.force,
-                                State.MaterialPoints.volfrac,
+                                State.MaterialPoints.mat_volfrac,
                                 State.MaterialPoints.geo_volfrac,
                                 State.corners_in_mat_elem,
                                 State.MaterialToMeshMaps.elem_in_mat_elem,
@@ -412,7 +412,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                 State.MaterialPoints.stress_n0,
                                 State.MaterialPoints.sspd,
                                 State.MaterialPoints.sie, // fixed to use current value
-                                State.MaterialPoints.volfrac,
+                                State.MaterialPoints.mat_volfrac,
                                 State.MaterialPoints.geo_volfrac,
                                 State.GaussPoints.vol,
                                 State.MaterialPoints.mass,

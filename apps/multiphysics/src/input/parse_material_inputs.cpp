@@ -212,11 +212,11 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             Yaml::Node& material_inps_yaml = root["materials"][m_id]["material"][a_word];
 
             
-            //extract eos model
             if (a_word.compare("id") == 0) {
                 // do nothing
                 // this id was read in an earlier loop
             }
+            //extract eos model
             else if (a_word.compare("eos_model_type") == 0) {
                 std::string type = root["materials"][m_id]["material"]["eos_model_type"].As<std::string>();
 

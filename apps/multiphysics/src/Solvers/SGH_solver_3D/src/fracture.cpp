@@ -52,7 +52,7 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State, const Simul
     size_t num_bdy_nodes = mesh.num_bdy_nodes;
     
     // geometric tolerance for determining if nodes are overlapping from dynamic_options.hpp (small = 1e-8)
-    const double geom_tol = SimulationParameters.dynamic_options.small; 
+    const double geom_tol = SimulationParameters.DynamicOptions.small; 
 
     // update device data before accessing in RUN block
     State.node.coords.update_device();

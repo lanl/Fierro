@@ -225,13 +225,22 @@ materials:
 
        
 # ---------------------------------------------------------------------------
-# Regions (fills / initial conditions)
+# Regions 
 # ---------------------------------------------------------------------------
 regions:
     - region:
+        id: 0
         volume:
             type: global
         solver_id: 0
+
+
+# ---------------------------------------------------------------------------
+# Initial Conditions
+# ---------------------------------------------------------------------------
+initial_conditions:
+    - initial_condition:
+        region_id: 0
         material_id: 0
         density: 
             # Uniform density for thermal capacity (tonne/mm^3 with this setup’s scaling).

@@ -226,28 +226,16 @@ materials:
 # ---------------------------------------------------------------------------
 regions:
     - region:
+        id: 0
         # Global fill: material_id 0 across the entire computational domain.
         volume:
             type: global
-        material_id: 0
-        solver_id: 0
-        density: 
-            # Background density.
-            type: uniform
-            value: 0.001
-        specific_internal_energy: 
-            # Background specific internal energy.
-            type: uniform
-            value: 1.e-12
-        velocity: 
-            # Initial velocity (u,v,w) in Cartesian components.
-            type: cartesian
-            u: 0.0
-            v: 0.0
-            w: 0.0
+        # Solver ID this region belongs to (must match `solver_options`), 
+        # This is for solvers that only opperate on portions of the mesh
+        solver_id: 0 # ignored with FE solvers, for illistrative purposes
 
-    
     - region:
+        id: 1
         # Voxelized lattice solid region read from a VTK file.
         #
         # `voxel_file` loads geometry and paints material_id=1 into elements
@@ -266,22 +254,12 @@ regions:
             scale_y: 0.02
             scale_z: 0.040635127
             origin: [-0.5, -0.5, 0.]
-        material_id: 1
-        solver_id: 0
-        density: 
-            type: uniform
-            value: 8.93
-        specific_internal_energy: 
-            type: uniform
-            value: 1.e-10
-        velocity: 
-            type: cartesian
-            u: 0.0
-            v: 0.0
-            w: 0.0
+        solver_id: 0 # ignored with FE solvers, for illistrative purposes
+
 
     # top block initial velocity conditions
     - region:
+        id: 2
         # Overlay region: imposes an initial downward velocity on a top
         # sub-block (material_id=1). This region's velocity overrides the
         # voxel_file region's velocity in the overlap.
@@ -294,8 +272,48 @@ regions:
             y2: 0.51
             z1: 0.956
             z2: 1.05
+        solver_id: 0 # ignored with FE solvers, for illistrative purposes
+
+
+# ---------------------------------------------------------------------------
+# Apply initial conditions to the regions
+# ---------------------------------------------------------------------------
+initial_conditions:       
+    - initial_condition:
+        region_id: 0
+        material_id: 0
+        density: 
+            # Background density.
+            type: uniform
+            value: 0.001
+        specific_internal_energy: 
+            # Background specific internal energy.
+            type: uniform
+            value: 1.e-12
+        velocity: 
+            # Initial velocity (u,v,w) in Cartesian components.
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+
+    - initial_condition:
+        region_id: 1
         material_id: 1
-        solver_id: 0
+        density: 
+            type: uniform
+            value: 8.93
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity: 
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+
+
+        material_id: 1
         density:
             type: uniform
             value: 8.93
