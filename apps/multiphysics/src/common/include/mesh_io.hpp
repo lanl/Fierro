@@ -4909,25 +4909,8 @@ public:
 
         size_t num_dims = mesh.num_dims;
 
-        //  ---------------------------------------------------------------------------
-        //  Setup of file and directory for exporting
-        //  ---------------------------------------------------------------------------
-
-        // output file
-        FILE* out_elem_state;  // element average state
-        char  filename[128];
-
-        int max_len = sizeof filename;
-
-        //snprintf(filename, max_len, "state/mat_pt_state_rank_%d_t_%6.4e.txt", mpi_rank, time_value);
-        snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e.txt", time_value);
-
-        // output files
-        out_elem_state = fopen(filename, "w");
-
-        // write state dump
-        fprintf(out_elem_state, "# state dump file\n");
-        fprintf(out_elem_state, "# x  y  z  radius_2D  radius_3D  den  pres  sie  sspd  vol  mass \n");
+        std::vector<double> local_mat_pt_data;
+        std::vector<double> local_node_data;
 
         // write out values for the elem
         for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
@@ -4938,6 +4921,11 @@ public:
             {
 
                 const size_t elem_gid = State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, mat_elem_sid);
+
+                // Skip if this element is not owned by the current rank
+                if (elem_gid >= mesh.num_owned_elems) {
+                    continue;
+                }
 
                 double elem_coords[3];
                 elem_coords[0] = 0.0;
@@ -4968,39 +4956,21 @@ public:
                                    elem_coords[1] * elem_coords[1] +
                                    elem_coords[2] * elem_coords[2]);
 
-
-                fprintf(out_elem_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t \n",
-                         elem_coords[0],
-                         elem_coords[1],
-                         elem_coords[2],
-                         rad2,
-                         rad3,
-                         State.MaterialPoints.den.host(mat_id, mat_elem_sid),
-                         State.MaterialPoints.pres.host(mat_id, mat_elem_sid),
-                         State.MaterialPoints.sie.host(mat_id, mat_elem_sid),
-                         State.MaterialPoints.sspd.host(mat_id, mat_elem_sid),
-                         State.GaussPoints.vol.host(elem_gid),
-                         State.MaterialPoints.mass.host(mat_id, mat_elem_sid) );
+                local_mat_pt_data.push_back(elem_coords[0]);
+                local_mat_pt_data.push_back(elem_coords[1]);
+                local_mat_pt_data.push_back(elem_coords[2]);
+                local_mat_pt_data.push_back(rad2);
+                local_mat_pt_data.push_back(rad3);
+                local_mat_pt_data.push_back(State.MaterialPoints.den.host(mat_id, mat_elem_sid));
+                local_mat_pt_data.push_back(State.MaterialPoints.pres.host(mat_id, mat_elem_sid));
+                local_mat_pt_data.push_back(State.MaterialPoints.sie.host(mat_id, mat_elem_sid));
+                local_mat_pt_data.push_back(State.MaterialPoints.sspd.host(mat_id, mat_elem_sid));
+                local_mat_pt_data.push_back(State.GaussPoints.vol.host(elem_gid));
+                local_mat_pt_data.push_back(State.MaterialPoints.mass.host(mat_id, mat_elem_sid));
 
             } // end for elements
 
         } // end for materials
-        fclose(out_elem_state);
-
-
-
-        // printing nodal state
-            
-        FILE* out_point_state;  // element average state
-
-        snprintf(filename, max_len, "state/node_state_t_%6.4e.txt", time_value);
-
-        // output files
-        out_point_state = fopen(filename, "w");
-
-        // write state dump
-        fprintf(out_point_state, "# state node dump file\n");
-        fprintf(out_point_state, "# x  y  z  radius_2D  radius_3D  vel_x  vel_y  vel_z  speed  ||err_v_dot_r|| \n");
 
         // get the coordinates of the node
         for (size_t node_gid = 0; node_gid < mesh.num_owned_nodes; node_gid++) {
@@ -5055,24 +5025,162 @@ public:
 
             double mag_err_v_dot_r = sqrt(err_v_dot_r[0]*err_v_dot_r[0] + err_v_dot_r[1]*err_v_dot_r[1]);
 
-            fprintf(out_point_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t  %4.12e\t %4.12e\t \n",
-                         node_coords[0],
-                         node_coords[1],
-                         node_coords[2],
-                         rad2,
-                         rad3,
-                         node_vel[0],
-                         node_vel[1],
-                         node_vel[2],
-                         speed,
-                         mag_err_v_dot_r);
+            local_node_data.push_back(node_coords[0]);
+            local_node_data.push_back(node_coords[1]);
+            local_node_data.push_back(node_coords[2]);
+            local_node_data.push_back(rad2);
+            local_node_data.push_back(rad3);
+            local_node_data.push_back(node_vel[0]);
+            local_node_data.push_back(node_vel[1]);
+            local_node_data.push_back(node_vel[2]);
+            local_node_data.push_back(speed);
+            local_node_data.push_back(mag_err_v_dot_r);
 
 
         } // end loop over nodes in element
 
+        int local_mat_pt_rows = static_cast<int>(local_mat_pt_data.size() / 11);
+        int local_node_rows = static_cast<int>(local_node_data.size() / 10);
+
+        std::vector<int> mat_pt_row_counts;
+        std::vector<int> mat_pt_row_displs;
+        std::vector<int> node_row_counts;
+        std::vector<int> node_row_displs;
+        if (mpi_rank == 0) {
+            mat_pt_row_counts.assign(mpi_size, 0);
+            mat_pt_row_displs.assign(mpi_size, 0);
+            node_row_counts.assign(mpi_size, 0);
+            node_row_displs.assign(mpi_size, 0);
+        }
+
+        MPI_Gather(&local_mat_pt_rows, 1, MPI_INT,
+                   mpi_rank == 0 ? mat_pt_row_counts.data() : nullptr, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Gather(&local_node_rows, 1, MPI_INT,
+                   mpi_rank == 0 ? node_row_counts.data() : nullptr, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+        int total_mat_pt_rows = 0;
+        int total_node_rows = 0;
+        std::vector<int> mat_pt_counts;
+        std::vector<int> mat_pt_displs;
+        std::vector<int> node_counts;
+        std::vector<int> node_displs;
+        std::vector<double> gathered_mat_pt_data;
+        std::vector<double> gathered_node_data;
+        if (mpi_rank == 0) {
+            mat_pt_counts.assign(mpi_size, 0);
+            mat_pt_displs.assign(mpi_size, 0);
+            node_counts.assign(mpi_size, 0);
+            node_displs.assign(mpi_size, 0);
+
+            int mat_disp = 0;
+            int node_disp = 0;
+            for (int r = 0; r < mpi_size; r++) {
+                mat_pt_row_displs[r] = mat_disp;
+                mat_disp += mat_pt_row_counts[r];
+                total_mat_pt_rows += mat_pt_row_counts[r];
+
+                node_row_displs[r] = node_disp;
+                node_disp += node_row_counts[r];
+                total_node_rows += node_row_counts[r];
+            }
+
+            for (int r = 0; r < mpi_size; r++) {
+                mat_pt_counts[r] = mat_pt_row_counts[r] * 11;
+                mat_pt_displs[r] = mat_pt_row_displs[r] * 11;
+                node_counts[r] = node_row_counts[r] * 10;
+                node_displs[r] = node_row_displs[r] * 10;
+            }
+
+            gathered_mat_pt_data.assign(total_mat_pt_rows * 11, 0.0);
+            gathered_node_data.assign(total_node_rows * 10, 0.0);
+        }
+
+        MPI_Gatherv(local_mat_pt_data.empty() ? nullptr : local_mat_pt_data.data(),
+                    static_cast<int>(local_mat_pt_data.size()), MPI_DOUBLE,
+                    mpi_rank == 0 ? gathered_mat_pt_data.data() : nullptr,
+                    mpi_rank == 0 ? mat_pt_counts.data() : nullptr,
+                    mpi_rank == 0 ? mat_pt_displs.data() : nullptr,
+                    MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Gatherv(local_node_data.empty() ? nullptr : local_node_data.data(),
+                    static_cast<int>(local_node_data.size()), MPI_DOUBLE,
+                    mpi_rank == 0 ? gathered_node_data.data() : nullptr,
+                    mpi_rank == 0 ? node_counts.data() : nullptr,
+                    mpi_rank == 0 ? node_displs.data() : nullptr,
+                    MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+        if (mpi_rank == 0) {
+
+        //  ---------------------------------------------------------------------------
+        //  Setup of file and directory for exporting
+        //  ---------------------------------------------------------------------------
+
+        // output file
+        FILE* out_elem_state;  // element average state
+        char  filename[128];
+
+        int max_len = sizeof filename;
+
+        //snprintf(filename, max_len, "state/mat_pt_state_rank_%d_t_%6.4e.txt", mpi_rank, time_value);
+        snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e.txt", time_value);
+
+        // output files
+        out_elem_state = fopen(filename, "w");
+
+        // write state dump
+        fprintf(out_elem_state, "# state dump file\n");
+        fprintf(out_elem_state, "# x  y  z  radius_2D  radius_3D  den  pres  sie  sspd  vol  mass \n");
+
+        for (int row = 0; row < total_mat_pt_rows; row++) {
+            size_t i = static_cast<size_t>(row) * 11;
+            fprintf(out_elem_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t \n",
+                     gathered_mat_pt_data[i],
+                     gathered_mat_pt_data[i + 1],
+                     gathered_mat_pt_data[i + 2],
+                     gathered_mat_pt_data[i + 3],
+                     gathered_mat_pt_data[i + 4],
+                     gathered_mat_pt_data[i + 5],
+                     gathered_mat_pt_data[i + 6],
+                     gathered_mat_pt_data[i + 7],
+                     gathered_mat_pt_data[i + 8],
+                     gathered_mat_pt_data[i + 9],
+                     gathered_mat_pt_data[i + 10]);
+        }
+        fclose(out_elem_state);
+
+
+
+        // printing nodal state
+            
+        FILE* out_point_state;  // element average state
+
+        snprintf(filename, max_len, "state/node_state_t_%6.4e.txt", time_value);
+
+        // output files
+        out_point_state = fopen(filename, "w");
+
+        // write state dump
+        fprintf(out_point_state, "# state node dump file\n");
+        fprintf(out_point_state, "# x  y  z  radius_2D  radius_3D  vel_x  vel_y  vel_z  speed  ||err_v_dot_r|| \n");
+
+        for (int row = 0; row < total_node_rows; row++) {
+            size_t i = static_cast<size_t>(row) * 10;
+            fprintf(out_point_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t  %4.12e\t %4.12e\t \n",
+                         gathered_node_data[i],
+                         gathered_node_data[i + 1],
+                         gathered_node_data[i + 2],
+                         gathered_node_data[i + 3],
+                         gathered_node_data[i + 4],
+                         gathered_node_data[i + 5],
+                         gathered_node_data[i + 6],
+                         gathered_node_data[i + 7],
+                         gathered_node_data[i + 8],
+                         gathered_node_data[i + 9]);
+        }
+
 
         fclose(out_point_state);
 
+        } // mpi_rank == 0
 
         return;
     } // end of state output
