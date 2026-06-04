@@ -341,6 +341,64 @@ public:
         DCArrayKokkos <double> &x
     );
 
+    // **** Functions defined in additive_schwarz_preconditioning.cpp **** //
+    /* void get_z0(
+        const size_t num_nodes,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<double>& rk,
+        CArrayKokkos<double>& zk
+    );
+
+    void get_zkp1(
+        const size_t num_nodes,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<double>& rk,
+        CArrayKokkos<double>& zk
+    ); */
+
+    // **** Functions defined in chebyshev_smoothing.cpp **** //
+    void apply_chebyshev_preconditioner(const CArrayKokkos<double>& rk,
+        const CArrayKokkos<double>& zkp1,
+        const CArrayKokkos<double>& D_inv,
+        const CArrayKokkos<double>& zk,
+        const CArrayKokkos<double>& delta_z,
+        const CArrayKokkos<double>& temporary,
+        const CArrayKokkos<double>& K_elem,
+        const size_t num_nodes,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const double alpha,
+        const double beta,
+        const int degree
+    );
+
+    void get_diagonal_inverse(CArrayKokkos<double>& D_inv,
+        const CArrayKokkos<double>& K_elem,
+        const size_t num_nodes,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem
+    );
+
+    void get_chebyshev_bounds(double& alpha,
+        double& beta,
+        const CArrayKokkos<double>& D_inv,
+        const CArrayKokkos<double>& K_elem,
+        const size_t num_nodes,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        CArrayKokkos<double>& v_scratch,
+        CArrayKokkos<double>& w_scratch,
+        const int max_iters
+    );
     
 };
 

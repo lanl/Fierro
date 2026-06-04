@@ -40,6 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.hpp"
 #include "geometry_new.hpp"
 #include "mesh_io.hpp"
+#include "lu_solver.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -81,6 +82,14 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> K_elem(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem); /// K1 + K2
     CArrayKokkos <double> F_elem(mesh.num_elems,3*mesh.num_nodes_in_elem); /// F02 - F01
 
+    // additive schwarz preconditioning variables
+    /* CArrayKokkos <double> K_elem_inv(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
+    CArrayKokkos <double> intermediate_K_elem_inv(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
+    CArrayKokkos <double> temporary(mesh.num_elems, 3*mesh.num_nodes_in_elem);
+    CArrayKokkos <size_t> perm(mesh.num_elems, 3*mesh.num_nodes_in_elem);
+    CArrayKokkos<double> zk(3 * mesh.num_nodes);
+    CArrayKokkos<double> zkp1(3 * mesh.num_nodes); */
+
     // conjugate gradient method vectors
     CArrayKokkos <double> p(3*mesh.num_nodes);
     CArrayKokkos <double> rk(3*mesh.num_nodes);
@@ -113,6 +122,40 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> displacement_step(3*mesh.num_nodes); /// current load-step displacement estimate
     CArrayKokkos <double> displacement_iter_k(3*mesh.num_nodes);   /// x_k  (Picard iterate in)
     CArrayKokkos <double> displacement_iter_kp1(3*mesh.num_nodes); /// G(x_k) then x_{k+1}
+
+    // variables for chebyshev smoothing
+    CArrayKokkos<double> D_inv(3 * mesh.num_nodes);
+    CArrayKokkos<double> zk(3 * mesh.num_nodes);
+    CArrayKokkos<double> zkp1(3 * mesh.num_nodes);
+    CArrayKokkos<double> delta_z(3 * mesh.num_nodes);
+    CArrayKokkos<double> temporary(3 * mesh.num_nodes);
+
+
+    // Algebraic Multigrid variables
+    /* int max_layers = 10;
+    int dof_cutoff = 3000; // NOTE: LOOK INTO THIS VALUE MORE
+    double theta = 0.25;
+    double omega = 2/3;
+    CArrayKokkos <double> A1;
+    CArrayKokkos <double> A2;
+    CArrayKokkos <double> A3;
+    CArrayKokkos <double> A4;
+    CArrayKokkos <double> A5;
+    CArrayKokkos <double> A6;
+    CArrayKokkos <double> A7;
+    CArrayKokkos <double> A8;
+    CArrayKokkos <double> A9;
+    CArrayKokkos <double> A10;
+    CArrayKokkos <double> P1;
+    CArrayKokkos <double> P2;
+    CArrayKokkos <double> P3;
+    CArrayKokkos <double> P4;
+    CArrayKokkos <double> P5;
+    CArrayKokkos <double> P6;
+    CArrayKokkos <double> P7;
+    CArrayKokkos <double> P8;
+    CArrayKokkos <double> P9;
+    CArrayKokkos <double> P10; */
 
     // Create mesh writer
     MeshWriter mesh_writer;
@@ -151,7 +194,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // ******************************************************************************************************
     // setting max_iter, need to figure out either a good general number or make it a user set with a default
     // ******************************************************************************************************
-    int max_iter = 500;
+    int max_iter = 5000;
 
     // loop over the max number of load steps
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
@@ -185,7 +228,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // start Picard iteration loop
         for (int iter = 0; iter < max_iter; iter++) {
-            std::cout << "ITER: " << iter << std::endl;
+            //std::cout << "ITER: " << iter << std::endl;
             const auto start_time = std::chrono::steady_clock::now();
 
             // dirichlet (displacement) type
@@ -240,6 +283,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             auto point_B = std::chrono::steady_clock::now();
             auto elapsed_B = std::chrono::duration_cast<std::chrono::milliseconds>(point_B - point_A).count();
             //std::cout << "Time elapsed to build element arrays: " << elapsed_B << " ms\n";
+
             // ***************************************************
             // end element arrays
             // ***************************************************
@@ -259,6 +303,39 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // end boundary conditions
             // ***************************************************
 
+            /* // get inverse of K_elem arrays for each element
+            // initialize K_elem_inv to K_elem since LU functions are destructive
+            FOR_ALL(i, 0, mesh.num_elems,
+                    j, 0, 3*mesh.num_nodes_in_elem,
+                    k, 0, 3*mesh.num_nodes_in_elem,{
+                intermediate_K_elem_inv(i,j,k) = K_elem(i,j,k);
+            });
+
+            // Regularize: K_e <- K_e + eps * (trace(K_e)/n_local) * I
+            // This lifts the null space without significantly affecting the deformation modes
+            FOR_ALL(elem_gid, 0, mesh.num_elems, {
+                const size_t n_local = 3 * mesh.num_nodes_in_elem;
+                double trace = 0.0;
+                for (size_t d = 0; d < n_local; d++) {
+                    trace += intermediate_K_elem_inv(elem_gid, d, d);
+                }
+                const double reg = 1e-6 * trace / (double)n_local;
+                for (size_t d = 0; d < n_local; d++) {
+                    intermediate_K_elem_inv(elem_gid, d, d) += reg;
+                }
+            });
+            Kokkos::fence();
+
+            FOR_ALL(i, 0, mesh.num_elems,{
+                ViewCArrayKokkos<double> curr_intermediate_K_elem_inv(&intermediate_K_elem_inv(i,0,0),3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
+                ViewCArrayKokkos<double> curr_temporary(&temporary(i, 0), 3*mesh.num_nodes_in_elem);
+                ViewCArrayKokkos<size_t> curr_perm(&perm(i, 0), 3*mesh.num_nodes_in_elem);
+                ViewCArrayKokkos<double> curr_K_elem_inv(&K_elem_inv(i,0,0),3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
+                int parity;
+                LU_decompose(curr_intermediate_K_elem_inv, curr_perm, curr_temporary, parity);
+                LU_invert(curr_intermediate_K_elem_inv, curr_perm, curr_K_elem_inv, curr_temporary);
+            }); */
+
             // ***************************************************
             // begin conjugate gradient solve
             // ***************************************************
@@ -268,40 +345,32 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             rk.set_values(0);
             Kokkos::fence();
 
-            // ***************************************************
-            // build Jacobi preconditioner (assembly-free diagonal)
-            // ***************************************************
-            CArrayKokkos<double> M_inv(3 * mesh.num_nodes);
-            FOR_ALL(node_gid, 0, mesh.num_nodes, {
-                const size_t num_elems_in_node = mesh.elems_in_node.stride(node_gid);
-                for (size_t p_dir = 0; p_dir < 3; p_dir++) {
-                    const size_t global_dof = 3 * node_gid + p_dir;
-                    double diag = 0.0;
-                    for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
-                        const size_t elem_gid = mesh.elems_in_node(node_gid, elem_lid);
-                        size_t local_node_lid = mesh.num_nodes_in_elem;
-                        for (size_t a = 0; a < mesh.num_nodes_in_elem; a++) {
-                            if (mesh.nodes_in_elem(elem_gid, a) == node_gid) {
-                                local_node_lid = a;
-                                break;
-                            }
-                        }
-                        const size_t local_dof = 3 * local_node_lid + p_dir;
-                        diag += K_elem(elem_gid, local_dof, local_dof);
-                    }
-                    M_inv(global_dof) = 1.0 / (diag + 1e-16);
-                }
-            });
-            Kokkos::fence();
+            // getting inverse of the diagonal like diagonal jacobi
+            get_diagonal_inverse(D_inv, K_elem, mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem);
+
+            // getting spectral bounds for chebyshev smoothing
+            // We pass zk and temporary here safely because they are currently uninitialized 
+            // scratch space before the CG loop kicks off.
+            double alpha = 0.0;
+            double beta = 0.0;
+            const int cheb_degree = 3; // Choose your Chebyshev polynomial degree (typically 2 to 5)
+            
+            get_chebyshev_bounds(alpha, beta, D_inv, K_elem, mesh.num_nodes, 
+                                 mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem,
+                                 zk, temporary, 15); // Running 15 power iterations
 
             // getting r0 = (02F - 01F) - K * displacement_iter_k
             get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
 
+            // smoothing with chebyshev polynomial
+            apply_chebyshev_preconditioner(rk, zk, D_inv, zk, delta_z, temporary, K_elem, 
+                                           mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, 
+                                           alpha, beta, cheb_degree);
+
             // z0 = M_inv * r0,  p0 = z0
-            CArrayKokkos<double> zk(3 * mesh.num_nodes);
-            CArrayKokkos<double> zkp1(3 * mesh.num_nodes);
+            //get_z0(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, mesh.elems_in_node, K_elem, rk, zk);
             FOR_ALL(i, 0, 3 * mesh.num_nodes, {
-                zk(i) = M_inv(i) * rk(i);
+                //zk(i) = M_inv(i) * rk(i);
                 p(i)  = zk(i);
             });
             Kokkos::fence();
@@ -309,67 +378,73 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // start of PCG iteration loop
             for (int cgm_iter = 0; cgm_iter < max_iter; cgm_iter++) {
 
-            // r_k^T * z_k
-            double rktzk = 0.0;
-            double loc_rktzk = 0.0;
-            FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rktzk, {
-                loc_rktzk += rk(i) * zk(i);
-            }, rktzk);
-            Kokkos::fence();
+                // r_k^T * z_k
+                double rktzk = 0.0;
+                double loc_rktzk = 0.0;
+                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rktzk, {
+                    loc_rktzk += rk(i) * zk(i);
+                }, rktzk);
+                Kokkos::fence();
 
-            // alpha_k = (r_k^T * z_k) / (p_k^T * K * p_k)
-            double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rktzk, p);
+                // alpha_k = (r_k^T * z_k) / (p_k^T * K * p_k)
+                double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rktzk, p);
 
-                            // displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
-            FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                displacement_iter_kp1(i) += alpha_k * p(i);
-            });
-            Kokkos::fence();
+                // displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
+                FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                    displacement_iter_kp1(i) += alpha_k * p(i);
+                });
+                Kokkos::fence();
 
-            // r_{k+1} = r_k - alpha_k * K * p_k
-            get_rkp1(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p, alpha_k, rkp1);
+                // r_{k+1} = r_k - alpha_k * K * p_k
+                get_rkp1(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p, alpha_k, rkp1);
 
-                            // z_{k+1} = M_inv * r_{k+1}
-            FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                zkp1(i) = M_inv(i) * rkp1(i);
-            });
-            Kokkos::fence();
+                // smoothing with chebyshev polynomial
+                apply_chebyshev_preconditioner(rkp1, zkp1, D_inv, zk, delta_z, temporary, K_elem, 
+                                               mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, 
+                                               alpha, beta, cheb_degree);
 
-            // check convergence on true residual norm
-            double rkp1trkp1 = 0.0;
-            double loc_rkp1trkp1 = 0.0;
-            FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1trkp1, {
-                loc_rkp1trkp1 += rkp1(i) * rkp1(i);
-            }, rkp1trkp1);
-            Kokkos::fence();
-            double norm = sqrt(rkp1trkp1);
-            //std::cout << "CGM iter " << cgm_iter << " residual norm: " << norm << "\n";
-            if (norm < 1E-10) {
-                break;
-            }
+                // z_{k+1} = M_inv * r_{k+1}
+                //get_zkp1(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, mesh.elems_in_node, K_elem, rkp1, zkp1);
+                /* FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                    zkp1(i) = M_inv(i) * rkp1(i);
+                });
+                Kokkos::fence(); */
 
-            // r_{k+1}^T * z_{k+1}
-            double rkp1tzkp1 = 0.0;
-            double loc_rkp1tzkp1 = 0.0;
-            FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1tzkp1, {
-                loc_rkp1tzkp1 += rkp1(i) * zkp1(i);
-            }, rkp1tzkp1);
-            Kokkos::fence();
+                // check convergence on true residual norm
+                double rkp1trkp1 = 0.0;
+                double loc_rkp1trkp1 = 0.0;
+                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1trkp1, {
+                    loc_rkp1trkp1 += rkp1(i) * rkp1(i);
+                }, rkp1trkp1);
+                Kokkos::fence();
+                double norm = sqrt(rkp1trkp1);
+                //std::cout << "CGM iter " << cgm_iter << " residual norm: " << norm << "\n";
+                if (norm < 1.0/*1E-10*/) {
+                    break;
+                }
 
-            // beta_k = (r_{k+1}^T * z_{k+1}) / (r_k^T * z_k)
-            double beta_k = rkp1tzkp1 / (rktzk + 1e-16);
+                // r_{k+1}^T * z_{k+1}
+                double rkp1tzkp1 = 0.0;
+                double loc_rkp1tzkp1 = 0.0;
+                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1tzkp1, {
+                    loc_rkp1tzkp1 += rkp1(i) * zkp1(i);
+                }, rkp1tzkp1);
+                Kokkos::fence();
 
-            // p_{k+1} = z_{k+1} + beta_k * p_k
-            FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                p(i) = zkp1(i) + beta_k * p(i);
-            });
+                // beta_k = (r_{k+1}^T * z_{k+1}) / (r_k^T * z_k)
+                double beta_k = rkp1tzkp1 / (rktzk + 1e-16);
 
-            // update rk, zk for next iteration
-            FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                rk(i) = rkp1(i);
-                zk(i) = zkp1(i);
-            });
-            Kokkos::fence();
+                // p_{k+1} = z_{k+1} + beta_k * p_k
+                FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                    p(i) = zkp1(i) + beta_k * p(i);
+                });
+
+                // update rk, zk for next iteration
+                FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                    rk(i) = rkp1(i);
+                    zk(i) = zkp1(i);
+                });
+                Kokkos::fence();
 
             } // end PCG iteration loop
             auto point_D = std::chrono::steady_clock::now();
