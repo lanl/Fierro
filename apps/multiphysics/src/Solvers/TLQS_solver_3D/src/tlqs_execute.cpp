@@ -40,7 +40,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.hpp"
 #include "geometry_new.hpp"
 #include "mesh_io.hpp"
-#include "lu_solver.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
