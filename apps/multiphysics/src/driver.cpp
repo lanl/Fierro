@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Will be parsed from YAML input
 void Driver::initialize()
 {
-	std::cout << "Initializing Driver" << std::endl;
+    log_.info("Initializing Driver\n");
     Yaml::Node root;
     try
     {
@@ -59,49 +59,133 @@ void Driver::initialize()
     }
     catch (const Yaml::Exception e)
     {
-        std::cout << "Exception " << e.Type() << ": " << e.what() << std::endl;
+        log_.error("YAML parse exception %d: %s\n", (int)e.Type(), e.what());
+        log_.flush();
         exit(0);
     }
 
+    // Read the YAML input file
     parse_yaml(root, SimulationParamaters, Materials, BoundaryConditions);
-    std::cout << "Finished  parsing YAML file" << std::endl;
+    log_.info("Finished parsing YAML file\n");
+
+
+    // Create initial mesh on rank 0
+    swage::Mesh initial_mesh;
+    MPICArrayKokkos<double> initial_node_coords;
+    MPICArrayKokkos<double> final_node_coords;
+
+    // Initialize communication plans
+    // These are set up by elements::partition_mesh
+    element_communication_plan.initialize(MPI_COMM_WORLD);
+    node_communication_plan.initialize(MPI_COMM_WORLD);
 
 
     // mesh read
     if (SimulationParamaters.MeshInput.source == mesh_input::file) {
 
-        // Make mesh paths relative to the YAML location (so `file_path: meshes/abaqus.inp`
-        // works regardless of where you run `./app/Fierro`).
-        try {
-            std::filesystem::path yaml_path(yaml_file ? yaml_file : "");
-            std::filesystem::path mesh_path(SimulationParamaters.MeshInput.file_path);
-            if (!yaml_path.empty() && !mesh_path.empty() && !mesh_path.is_absolute()) {
-                mesh_path = yaml_path.parent_path() / mesh_path;
-                mesh_path = mesh_path.lexically_normal();
-                SimulationParamaters.MeshInput.file_path = mesh_path.string();
+        // Create and/or read mesh on rank 0
+        if (rank == 0) {
+            // Make mesh paths relative to the YAML location (so `file_path: meshes/abaqus.inp`
+            // works regardless of where you run `./app/Fierro`).
+            try {
+                std::filesystem::path yaml_path(yaml_file ? yaml_file : "");
+                std::filesystem::path mesh_path(SimulationParamaters.MeshInput.file_path);
+                if (!yaml_path.empty() && !mesh_path.empty() && !mesh_path.is_absolute()) {
+                    mesh_path = yaml_path.parent_path() / mesh_path;
+                    mesh_path = mesh_path.lexically_normal();
+                    SimulationParamaters.MeshInput.file_path = mesh_path.string();
+                }
+            } catch (...) {
+                // Fall back to the original path if path resolution fails.
             }
-        } catch (...) {
-            // Fall back to the original path if path resolution fails.
-        }
 
-        // Create and/or read mesh
-        std::cout << "Mesh file path: " << SimulationParamaters.MeshInput.file_path << std::endl;
-        mesh_reader.set_mesh_file(SimulationParamaters.MeshInput.file_path.data());
-        mesh_reader.read_mesh(mesh, 
-                              State,
-                              SimulationParamaters.MeshInput, 
-                              num_dims);
+            // Create and/or read mesh
+            log_.info("Mesh file path: %s\n", SimulationParamaters.MeshInput.file_path.c_str());
+            mesh_reader.set_mesh_file(SimulationParamaters.MeshInput.file_path.data());
+            mesh_reader.read_mesh(initial_mesh, 
+                                  initial_node_coords,
+                                  SimulationParamaters.MeshInput, 
+                                  initial_mesh.num_dims);
+        } // end if rank == 0
     }
     else if (SimulationParamaters.MeshInput.source == mesh_input::generate) {
-        mesh_builder.build_mesh(mesh, 
-                                State.GaussPoints, 
-                                State.node, 
-                                State.corner, 
-                                SimulationParamaters);
+        // Build mesh on rank 0
+        if (rank == 0) {
+            mesh_builder.build_mesh(initial_mesh, 
+                                    initial_node_coords,
+                                    SimulationParamaters);
+        } // end if rank == 0
     }
     else{
         throw std::runtime_error("**** NO MESH INPUT OPTIONS PROVIDED IN YAML ****");
         return;
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+    
+    // Partition the mesh to all ranks
+    if(world_size != 1) { // pass through the partitioning function if not a single rank
+        elements::partition_mesh(initial_mesh, mesh, initial_node_coords, final_node_coords, element_communication_plan, node_communication_plan, world_size, rank);   
+        // Verify communication plans (matches ELEMENTS decomp_example pattern)
+        // element_communication_plan.verify_graph_communicator();
+        // node_communication_plan.verify_graph_communicator();
+        MPI_Barrier(MPI_COMM_WORLD);
+    } else {
+        mesh = initial_mesh;
+        mesh.num_elems = initial_mesh.num_elems;
+        mesh.num_nodes = initial_mesh.num_nodes;
+        mesh.num_owned_elems = initial_mesh.num_elems;
+        mesh.num_owned_nodes = initial_mesh.num_nodes;
+        mesh.num_dims = initial_mesh.num_dims;
+        final_node_coords = initial_node_coords;
+
+
+        mesh.shared_tally_owned_nodes = DCArrayKokkos<bool>(mesh.num_owned_nodes, "shared_tally_owned_nodes");
+        mesh.shared_tally_owned_nodes.set_values(true);
+    }
+
+    // WARNING: This needs to be moved into the partition mesh function, along with all of the above copies. 
+    // TODO: Add a copy constructor to the mesh class to handle this consistently. 
+    // mesh.num_dims = initial_mesh.num_dims;
+    // partition_mesh() builds corner connectivity (corners_in_elem, corners_in_node)
+    // but does not set the scalar counter mesh.num_corners. Many solvers size
+    // State.corner.* using mesh.num_corners, so if it is left at 0 any
+    // corner_mass(corner_gid) write becomes an out-of-bounds / heap-corrupting
+    // store. There is one corner per node-in-element pair.
+    mesh.num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // Report per-rank mesh information. With the Logger we no longer need a
+    // serialized-by-barriers print loop: every rank appends to its own buffer
+    // (non-collective), and the collective flush() below dumps them to stdout
+    // in rank order AND to each rank's per-rank file (Fierro_log_<rank>).
+    {
+        size_t num_ghost_nodes = mesh.num_nodes > mesh.num_owned_nodes ? mesh.num_nodes - mesh.num_owned_nodes : 0;
+        size_t num_ghost_elems = mesh.num_elems > mesh.num_owned_elems ? mesh.num_elems - mesh.num_owned_elems : 0;
+        log_.info("num_nodes=%zu (owned=%zu, ghost=%zu), num_elems=%zu (owned=%zu, ghost=%zu)\n",
+                  mesh.num_nodes, mesh.num_owned_nodes, num_ghost_nodes,
+                  mesh.num_elems, mesh.num_owned_elems, num_ghost_elems);
+    }
+
+    // For totals, root rank gathers and prints
+    size_t local_nodes = mesh.num_nodes;
+    size_t local_elems = mesh.num_elems;
+    size_t local_owned_nodes = mesh.num_owned_nodes;
+    size_t local_owned_elems = mesh.num_owned_elems;
+
+    size_t total_nodes = 0, total_elems = 0, total_owned_nodes = 0, total_owned_elems = 0;
+
+    MPI_Reduce(&local_nodes, &total_nodes, 1, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_elems, &total_elems, 1, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_owned_nodes, &total_owned_nodes, 1, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_owned_elems, &total_owned_elems, 1, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        size_t total_ghost_nodes = total_nodes > total_owned_nodes ? total_nodes - total_owned_nodes : 0;
+        size_t total_ghost_elems = total_elems > total_owned_elems ? total_elems - total_owned_elems : 0;
+        log_.info("Totals across all ranks: num_nodes=%zu (owned=%zu, ghost=%zu), num_elems=%zu (owned=%zu, ghost=%zu)\n",
+                  total_nodes, total_owned_nodes, total_ghost_nodes,
+                  total_elems, total_owned_elems, total_ghost_elems);
     }
 
 
@@ -134,6 +218,17 @@ void Driver::initialize()
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;
 
+    // Initialize node state
+    std::vector<node_state> required_node_state = { node_state::coords };
+    State.node.initialize(mesh.num_nodes, mesh.num_dims, required_node_state, node_communication_plan);
+
+    // Copy the partitioned node coordinates to the state
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+            State.node.coords(node_gid, dim) = final_node_coords(node_gid, dim);
+        }
+    });
+
     // --- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
@@ -146,8 +241,9 @@ void Driver::initialize()
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
 
-            std::cout << "Initializing dynx_FE solver" << std::endl;
+            log_.info("Initializing dynx_FE solver\n");
             SGH3D* sgh_solver = new SGH3D(); 
+            sgh_solver->set_logger(log_);
 
             sgh_solver->initialize(SimulationParamaters, 
                                    Materials, 
@@ -165,8 +261,9 @@ void Driver::initialize()
         } // end if SGH solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGHRZ) {
 
-            std::cout << "Initializing dynx_FE_RZ solver" << std::endl;
+            log_.info("Initializing dynx_FE_RZ solver\n");
             SGHRZ* sgh_solver_rz = new SGHRZ(); 
+            sgh_solver_rz->set_logger(log_);
 
             sgh_solver_rz->initialize(SimulationParamaters, 
                                    Materials, 
@@ -182,8 +279,9 @@ void Driver::initialize()
         } // end if SGHRZ solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGTM3D) {
 
-            std::cout << "Initializing thrmex_FE solver" << std::endl;
+            log_.info("Initializing thrmex_FE solver\n");
             SGTM3D* sgtm_solver_3d = new SGTM3D(); 
+            sgtm_solver_3d->set_logger(log_);
         
             sgtm_solver_3d->initialize(SimulationParamaters, 
                                        Materials, 
@@ -200,8 +298,9 @@ void Driver::initialize()
         } // end if SGTM solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::levelSet) {
 
-            std::cout << "Initializing level set solver" << std::endl;
+            log_.info("Initializing level set solver\n");
             LevelSet* level_set_solver = new LevelSet(); 
+            level_set_solver->set_logger(log_);
         
             level_set_solver->initialize(SimulationParamaters, 
                                          Materials, 
@@ -217,8 +316,9 @@ void Driver::initialize()
 
         } // end if level set solver
         else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::TLQS3D) {
-            std::cout << "Initializing TLQS solver" << std::endl;
+            log_.info("Initializing TLQS solver\n");
             TLQS3D* tlqs_solver = new TLQS3D(); 
+            tlqs_solver->set_logger(log_);
 
             tlqs_solver->initialize(SimulationParamaters, 
                                     Materials, 
@@ -231,7 +331,7 @@ void Driver::initialize()
 
             solvers.push_back(tlqs_solver);
 
-            std::cout << "TLQS solver added to solvers vector \n";
+            log_.info("TLQS solver added to solvers vector\n");
 
         } // end if TLQS solver
         else {
@@ -241,6 +341,33 @@ void Driver::initialize()
 
     } // end for loop over solvers
 
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    // Solvers allocate nodal velocity with node_t::initialize(..., states) without a comm plan.
+    // MPICArrayKokkos::communicate() requires initialize_comm_plan(node_communication_plan).
+    // WARNING: Hack here, we need to move this into the solver initialize function by 
+    // passing in the communication plans. Possibly save the communication plans in the solver class.
+    if (State.node.vel.size() > 0) {
+        State.node.vel.initialize_comm_plan(node_communication_plan);
+    }
+    if (State.node.vel_n0.size() > 0) {
+        State.node.vel_n0.initialize_comm_plan(node_communication_plan);
+    }
+    if (State.GaussPoints.shock_detector.size() > 0){
+        State.GaussPoints.shock_detector.initialize_comm_plan(element_communication_plan);
+    }
+    if (State.GaussPoints.level_set.size() > 0){
+        State.GaussPoints.level_set.initialize_comm_plan(element_communication_plan);
+    }
+    if (State.GaussPoints.level_set_n0.size() > 0){
+        State.GaussPoints.level_set_n0.initialize_comm_plan(element_communication_plan);
+    }
+    if (State.node.temp.size() > 0){
+        State.node.temp.initialize_comm_plan(node_communication_plan);
+    }
+    if (State.node.temp_n0.size() > 0){
+        State.node.temp_n0.initialize_comm_plan(node_communication_plan);
+    }
 
     // ----
     // setup the simulation by applying all the fills to the mesh
@@ -248,7 +375,7 @@ void Driver::initialize()
     fillGaussState_t fillGaussState;
     fillElemState_t  fillElemState;
 
-    std::cout << "Applying fills to the mesh" << std::endl;
+    log_.info("Applying fills to the mesh\n");
 
     simulation_setup(SimulationParamaters, 
                      Materials, 
@@ -258,7 +385,7 @@ void Driver::initialize()
                      fillGaussState,
                      fillElemState);
 
-    std::cout << "Fills applied to the mesh" << std::endl;
+    log_.info("Fills applied to the mesh\n");
     // Allocate material state
     for (auto& solver : solvers) {
         solver->initialize_material_state(SimulationParamaters, 
@@ -270,7 +397,7 @@ void Driver::initialize()
 
 
     // populate the material point state
-    std::cout << "Populating the material point state" << std::endl;
+    log_.info("Populating the material point state\n");
     material_state_setup(SimulationParamaters, 
                          Materials, 
                          mesh, 
@@ -278,9 +405,14 @@ void Driver::initialize()
                          State,
                          fillGaussState,
                          fillElemState);
-    std::cout << "Material point state populated" << std::endl;
+    log_.info("Material point state populated\n");
 
-    std::cout << "Driver initialization complete" << std::endl;
+    log_.info("Driver initialization complete\n");
+
+    // Collective dump of the full initialization transcript to stdout (in rank
+    // order) and to per-rank log files (Fierro_log_<rank>). Safe: every rank
+    // reaches this point exactly once.
+    log_.flush();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -292,7 +424,7 @@ void Driver::initialize()
 /////////////////////////////////////////////////////////////////////////////
 void Driver::setup()
 {
-    std::cout << "Inside driver setup" << std::endl;
+    log_.info("Inside driver setup\n");
 
     // allocate state, setup models, and apply fill instructions
     for (auto& solver : solvers) {
@@ -302,6 +434,10 @@ void Driver::setup()
                       BoundaryConditions,
                       State);
     } // end for over solvers
+
+    // Collective: dump buffered output. Every rank reaches this after all
+    // solvers have returned from setup().
+    log_.flush();
 
 } // end setup function of driver
 
@@ -315,14 +451,21 @@ void Driver::setup()
 /////////////////////////////////////////////////////////////////////////////
 void Driver::execute()
 {
-    std::cout << "Inside driver execute" << std::endl;
+    
+    log_.info("Inside driver execute\n");
     for (auto& solver : solvers) {
+        MPI_Barrier(MPI_COMM_WORLD);
         solver->execute(SimulationParamaters, 
                         Materials, 
                         BoundaryConditions, 
                         mesh, 
                         State);
     } // loop over solvers
+
+    // Collective: dump any remaining buffered output from the run. Solvers
+    // are free to call log_.flush() at their own cycle boundaries; this
+    // catches anything they didn't.
+    log_.flush();
 }
 
 
@@ -337,8 +480,9 @@ void Driver::execute()
 /////////////////////////////////////////////////////////////////////////////
 void Driver::finalize()
 {
-    std::cout << "Inside driver finalize" << std::endl;
+    log_.info("Inside driver finalize\n");
     for (auto& solver : solvers) {
+        MPI_Barrier(MPI_COMM_WORLD);
         if (solver->finalize_flag) {
             solver->finalize(SimulationParamaters, 
                              Materials, 
@@ -347,9 +491,14 @@ void Driver::finalize()
     }
     // destroy FEA modules
     for (auto& solver : solvers) {
-        std::cout << "Deleting solver" << std::endl;
+        log_.info("Deleting solver\n");
         delete solver;
     }
+
+    // Last collective flush before Driver destruction. ~Logger will also
+    // flush if MPI is still initialized, but doing it here keeps the
+    // observable output ordered next to the finalize phase.
+    log_.flush();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -421,7 +570,8 @@ void Driver::setup_solver_vars(T& a_solver,
         
     } // end if solver=0
 
-    std::cout << "Solver " << solver_id << " start time = " << a_solver->time_start << ", ending time = " << a_solver->time_end << "\n";
+    log_.info("Solver %zu start time = %g, ending time = %g\n",
+              solver_id, a_solver->time_start, a_solver->time_end);
 
     return;
 } // end setup solver vars function

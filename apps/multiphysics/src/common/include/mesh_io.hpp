@@ -51,7 +51,23 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sstream>
 #include <vector>
 #include <string>
+#include <mpi.h>
 
+namespace mesh_io_mpi_detail {
+
+/// @brief Returns (0,1) if MPI is not initialized (e.g. some unit paths).
+inline void query_world_rank_size(int& rank, int& world_size) noexcept
+{
+    rank        = 0;
+    world_size  = 1;
+    int init = 0;
+    if (MPI_Initialized(&init) == MPI_SUCCESS && init) {
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+    }
+}
+
+} // namespace mesh_io_mpi_detail
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -334,9 +350,9 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_mesh(swage::Mesh& mesh,
-                   State_t& State,
+                   MPICArrayKokkos<double>& node_coords,
                    MeshInput_t& mesh_inps,
-                   int      num_dims)
+                   int           num_dims)
     {
         if (mesh_file_ == NULL) {
             throw std::runtime_error("**** No mesh path given for read_mesh ****");
@@ -365,20 +381,32 @@ public:
         std::cout << "File extension is: " << extension << std::endl;
 
         if(extension == "geo"){ // Ensight meshfile extension
-            read_ensight_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            read_ensight_mesh(mesh, node_coords, mesh_inps, num_dims);
         }
         else if(extension == "inp"){ // Abaqus meshfile extension
-            read_Abaqus_mesh(mesh, State, num_dims);
+            read_Abaqus_mesh(mesh, node_coords, mesh_inps, num_dims);
         }
         else if(extension == "vtk"){ // vtk file format
-            read_vtk_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            read_vtk_mesh(mesh, node_coords, mesh_inps, num_dims);
         }
         else if(extension == "vtu"){ // vtu file format
-            read_vtu_mesh(mesh, State.GaussPoints, State.node, State.corner, mesh_inps, num_dims);
+            read_vtu_mesh(mesh, node_coords, mesh_inps, num_dims);
         }
         else{
             throw std::runtime_error("**** Mesh file extension not understood ****");
         }
+
+        // Initialize/create connectivity
+
+        int num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
+        mesh.initialize_corners(num_corners);
+        mesh.build_connectivity();
+        // corner.initialize(num_corners, num_dims);
+
+
+        // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
+        // std::vector<node_state> required_node_state = { node_state::coords };
+        // node.initialize(mesh.num_nodes, num_dims, required_node_state);
 
     }
 
@@ -396,9 +424,7 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_ensight_mesh(swage::Mesh& mesh,
-                           GaussPoint_t& GaussPoints,
-                           node_t&   node,
-                           corner_t& corner,
+                           MPICArrayKokkos<double>& node_coords,
                            MeshInput_t& mesh_inps,
                            int num_dims)
     {
@@ -428,31 +454,29 @@ public:
         fscanf(in, "%lu", &num_nodes);
         printf("Number of nodes read in %lu\n", num_nodes);
 
-        
+        // initialize node variables
         mesh.initialize_nodes(num_nodes);
 
-        // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dims, required_node_state);
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
 
         // read the initial mesh coordinates
         // x-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            fscanf(in, "%le", &node.coords.host(node_id, 0));
-            node.coords.host(node_id, 0)*= mesh_inps.scale_x;
+            fscanf(in, "%le", &node_coords.host(node_id, 0));
+            node_coords.host(node_id, 0)*= mesh_inps.scale_x;
         }
 
         // y-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-            fscanf(in, "%le", &node.coords.host(node_id, 1));
-            node.coords.host(node_id, 1)*= mesh_inps.scale_y;
+            fscanf(in, "%le", &node_coords.host(node_id, 1));
+            node_coords.host(node_id, 1)*= mesh_inps.scale_y;
         }
 
         // z-coords
         for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
             if (num_dims == 3) {
-                fscanf(in, "%le", &node.coords.host(node_id, 2));
-                node.coords.host(node_id, 2)*= mesh_inps.scale_z;
+                fscanf(in, "%le", &node_coords.host(node_id, 2));
+                node_coords.host(node_id, 2)*= mesh_inps.scale_z;
             }
             else{
                 double dummy;
@@ -462,7 +486,7 @@ public:
 
 
         // Update device nodal positions
-        node.coords.update_device();
+        node_coords.update_device();
 
         ch = (char)fgetc(in);
 
@@ -520,16 +544,8 @@ public:
         // update device side
         mesh.nodes_in_elem.update_device();
 
-        // initialize corner variables
-        int num_corners = num_elem * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dims);
-
         // Close mesh input file
         fclose(in);
-
-        // Build connectivity
-        mesh.build_connectivity();
 
         return;
     } // end read ensight mesh
@@ -541,13 +557,13 @@ public:
     /// \brief Read .inp mesh file
     ///
     /// \param Simulation mesh
-    /// \param Simulation state
-    /// \param Node state struct
+    /// \param Node coordinates
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_Abaqus_mesh(swage::Mesh& mesh,
-                          State_t& State,
+                          MPICArrayKokkos<double>& node_coords,
+                          MeshInput_t& mesh_inps,
                           int num_dims)
     {
 
@@ -643,26 +659,22 @@ public:
 
         size_t num_nodes = nodes.size();
 
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
+
         printf("Number of nodes read in %lu\n", num_nodes);
 
         // initialize node variables
         mesh.initialize_nodes(num_nodes);
 
-        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-
-        State.node.initialize(num_nodes, num_dims, required_node_state);
-
-
         // Copy nodes to mesh
         for(int node_gid = 0; node_gid < num_nodes; node_gid++){
-            State.node.coords.host(node_gid, 0) = nodes[node_gid].x;
-            State.node.coords.host(node_gid, 1) = nodes[node_gid].y;
-            State.node.coords.host(node_gid, 2) = nodes[node_gid].z;
+            node_coords.host(node_gid, 0) = nodes[node_gid].x * mesh_inps.scale_x;
+            node_coords.host(node_gid, 1) = nodes[node_gid].y * mesh_inps.scale_y;
+            node_coords.host(node_gid, 2) = nodes[node_gid].z * mesh_inps.scale_z;
         }
 
         // Update device nodal positions
-        State.node.coords.update_device();
+        node_coords.update_device();
 
 
         // --- read in the elements in the mesh ---
@@ -685,14 +697,6 @@ public:
 
         // update device side
         mesh.nodes_in_elem.update_device();
-
-        // initialize corner variables
-        int num_corners = num_elem * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // State.corner.initialize(num_corners, num_dims);
-
-        // Build connectivity
-        mesh.build_connectivity();
     } // end read abaqus mesh
 
 
@@ -709,25 +713,22 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_vtk_mesh(swage::Mesh& mesh,
-                    GaussPoint_t& GaussPoints,
-                    node_t&   node,
-                    corner_t& corner,
-                    MeshInput_t& mesh_inps,
-                    int num_dims)
+                       MPICArrayKokkos<double>& node_coords,
+                       MeshInput_t& mesh_inps,
+                       int num_dims)
     {
 
         std::cout<<"Reading VTK mesh"<<std::endl;
     
         int i;           // used for writing information to file
-        int node_gid;    // the global id for the point
-        int elem_gid;     // the global id for the elem
+        int node_gid = 0;    // the global id for the point
+        int elem_gid = 0;     // the global id for the elem
 
         size_t num_nodes_in_elem = 1;
         for (int dim = 0; dim < num_dims; dim++) {
             num_nodes_in_elem *= 2;
         }
         
-
         std::string token;
         
         bool found = false;
@@ -735,7 +736,6 @@ public:
         std::ifstream in;  // FILE *in;
         in.open(mesh_file_);
         
-
         // look for POINTS
         i = 0;
         while (found==false) {
@@ -751,8 +751,8 @@ public:
                 printf("Number of nodes read in %zu\n", num_nodes);
                 mesh.initialize_nodes(num_nodes);
 
-                std::vector<node_state> required_node_state = { node_state::coords };
-                node.initialize(num_nodes, num_dims, required_node_state);
+                // std::vector<node_state> required_node_state = { node_state::coords };
+                // node.initialize(num_nodes, num_dims, required_node_state);
                 
                 found=true;
             } // end if
@@ -765,9 +765,11 @@ public:
             
             i++;
         } // end while
+
+        node_coords = MPICArrayKokkos<double>(mesh.num_nodes, num_dims, "Node_coordinates_in_mesh_io");
         
         // read the node coordinates
-        for (node_gid=0; node_gid<mesh.num_nodes; node_gid++){
+        for (node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
             
             std::string str;
             std::getline(in, str);
@@ -776,25 +778,25 @@ public:
             std::vector<std::string> v = split (str, delimiter);
             
             // save the nodal coordinates
-            node.coords.host(node_gid, 0) = mesh_inps.scale_x*std::stod(v[0]); // double
-            node.coords.host(node_gid, 1) = mesh_inps.scale_y*std::stod(v[1]); // double
-            if(num_dims==3){
-                node.coords.host(node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
+            node_coords.host(node_gid, 0) = mesh_inps.scale_x*std::stod(v[0]); // double
+            node_coords.host(node_gid, 1) = mesh_inps.scale_y*std::stod(v[1]); // double
+            if(num_dims == 3){
+                node_coords.host(node_gid, 2) = mesh_inps.scale_z*std::stod(v[2]); // double
             }
             
         } // end for nodes
 
 
         // Update device nodal positions
-        node.coords.update_device();
+        node_coords.update_device();
         
 
-        found=false;
+        found = false;
 
         // look for CELLS
         i = 0;
         size_t num_elem = 0;
-        while (found==false) {
+        while (found == false) {
             std::string str;
             std::getline(in, str);
             
@@ -815,7 +817,7 @@ public:
             } // end if
             
             
-            if (i>1000){
+            if (i>10000){
                 printf("ERROR: Failed to find CELLS \n");
                 break;
             } // end if
@@ -825,7 +827,7 @@ public:
         
         
         // read the node ids in the element
-        for (elem_gid=0; elem_gid<num_elem; elem_gid++) {
+        for (elem_gid = 0; elem_gid < num_elem; elem_gid++) {
             
             std::string str;
             std::getline(in, str);
@@ -834,7 +836,7 @@ public:
             std::vector<std::string> v = split (str, delimiter);
             num_nodes_in_elem = std::stoi(v[0]);
             
-            for (size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
+            for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
                 mesh.nodes_in_elem.host(elem_gid, node_lid) = std::stod(v[node_lid+1]);
                 //printf(" %zu ", elem_point_list(elem_gid,node_lid) ); // printing
             }
@@ -866,16 +868,6 @@ public:
         }
         // update device side
         mesh.nodes_in_elem.update_device();
-
-
-        // initialize corner variables
-        size_t num_corners = num_elem * num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-
-
-        // Build connectivity
-        mesh.build_connectivity();
-
 
         found=false;
 
@@ -915,7 +907,7 @@ public:
         found=false;
         
         
-        if(num_nodes_in_elem==8 & elem_type != 12) {
+        if(num_nodes_in_elem == 8 && elem_type != 12) {
             printf("Wrong element type of %zu \n", elem_type);
             std::cerr << "ERROR: incorrect element type in VTK file" << std::endl;
         }
@@ -931,25 +923,23 @@ public:
     ///
     /// \brief Read ASCII .vtu mesh file
     ///
-    /// \param Simulation mesh
-    /// \param Simulation state
-    /// \param Node state struct
-    /// \param Number of dimensions
+    /// \param mesh Simulation mesh
+    /// \param node_coords Node coordinates
+    /// \param mesh_inps Mesh input parameters
+    /// \param num_dims Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_vtu_mesh(swage::Mesh& mesh,
-                    GaussPoint_t& GaussPoints,
-                    node_t&   node,
-                    corner_t& corner,
-                    MeshInput_t& mesh_inps,
-                    int num_dims)
+                       MPICArrayKokkos<double>& node_coords,
+                       MeshInput_t& mesh_inps,
+                       int num_dims)
     {
 
         std::cout<<"Reading VTU file in a multiblock VTK mesh"<<std::endl;
     
-        int i;           // used for writing information to file
-        int node_gid;    // the global id for the point
-        int elem_gid;    // the global id for the elem
+        // int i;           // used for writing information to file
+        int node_gid = 0;    // the global id for the point
+        int elem_gid = 0;    // the global id for the elem
 
 
         //
@@ -971,7 +961,7 @@ public:
         found = extract_num_points_and_cells_xml(num_nodes,
                                                  num_elems,
                                                  in);
-        if(found==false){
+        if(found == false){
             throw std::runtime_error("ERROR: number of points and/or cells not found in the XML file!");
             //std::cout << "ERROR: number of points and cells not found in the XML file!" << std::endl;
         }
@@ -983,10 +973,6 @@ public:
         mesh.initialize_nodes(num_nodes);
         mesh.initialize_elems(num_elems, num_dims);
 
-        //------------------------------------
-        // allocate node coordinate state
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dims, required_node_state);
 
         //------------------------------------
         // allocate the elem object id array
@@ -1003,9 +989,11 @@ public:
         // ------------------------
         
         // temporary arrays
-        DCArrayKokkos<double> node_coords(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
+        DCArrayKokkos<double> node_coords_vtu(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
         DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem, "connectivity_vtu_file");
         DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
+
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
 
 
         // for all fields, we stop recording when we get to "<"
@@ -1043,7 +1031,7 @@ public:
         // coordinates of the node
         // array dims are (num_nodes,dims)
         // must use the quotes around Points to read the point values
-        found = extract_values_xml(node_coords.host.pointer(),
+        found = extract_values_xml(node_coords_vtu.host.pointer(),
                                 "\"Points\"",
                                 stop,
                                 in,
@@ -1056,7 +1044,7 @@ public:
             throw std::runtime_error("ERROR: failed to read all the mesh nodes!");
             //std::cout << "ERROR: failed to read all the mesh nodes!" << std::endl;
         }
-        node_coords.update_device();
+        node_coords_vtu.update_device();
 
         // dimensional scaling of the mesh
         const double scl_x = mesh_inps.scale_x;
@@ -1067,14 +1055,14 @@ public:
         FOR_ALL(node_gid, 0, mesh.num_nodes, {
             
             // save the nodal coordinates
-            node.coords(node_gid, 0) = scl_x*node_coords(node_gid, 0); // double
-            node.coords(node_gid, 1) = scl_y*node_coords(node_gid, 1); // double
-            if(num_dims==3){
-                node.coords(node_gid, 2) = scl_z*node_coords(node_gid, 2); // double
+            node_coords(node_gid, 0) = scl_x*node_coords_vtu(node_gid, 0); // double
+            node_coords(node_gid, 1) = scl_y*node_coords_vtu(node_gid, 1); // double
+            if(num_dims == 3){
+                node_coords(node_gid, 2) = scl_z*node_coords_vtu(node_gid, 2); // double
             }
 
         }); // end for parallel nodes
-        node.coords.update_host();
+        node_coords.update_host();
 
 
         // ---
@@ -1228,16 +1216,6 @@ public:
         } // end switch
         mesh.nodes_in_elem.update_host();
 
-
-        // initialize corner variables
-        size_t num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-
-
-        // Build connectivity
-        mesh.build_connectivity();
-
-
         in.close();
             
     } // end of VTMread function
@@ -1272,25 +1250,21 @@ public:
     ///
     /// \brief Build a mesh for Fierro based on the input instructions
     ///
-    /// \param Simulation mesh that is built
-    /// \param Element state data
-    /// \param Node state data
-    /// \param Corner state data
-    /// \param Simulation parameters
+    /// \param mesh Simulation mesh to be built
+    /// \param node_coords Node coordinates
+    /// \param SimulationParamaters Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_mesh(swage::Mesh& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParamaters)
+                    MPICArrayKokkos<double>& node_coords,
+                    SimulationParameters_t& SimulationParamaters)
     {
         if (SimulationParamaters.MeshInput.num_dims == 2) {
             if (SimulationParamaters.MeshInput.type == mesh_input::Polar) {
-                build_2d_polar(mesh, GaussPoints, node, corner, SimulationParamaters);
+                build_2d_polar(mesh, node_coords, SimulationParamaters);
             }
             else if (SimulationParamaters.MeshInput.type == mesh_input::Box) {
-                build_2d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+                build_2d_box(mesh, node_coords, SimulationParamaters);
             }
             else{
                 std::cout << "**** 2D MESH TYPE NOT SUPPORTED **** " << std::endl;
@@ -1303,11 +1277,15 @@ public:
             }
         }
         else if (SimulationParamaters.MeshInput.num_dims == 3) {
-            build_3d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+            build_3d_box(mesh, node_coords, SimulationParamaters);
         }
         else{
             throw std::runtime_error("**** ONLY 2D RZ OR 3D MESHES ARE SUPPORTED ****");
         }
+
+        int num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
+        mesh.initialize_corners(num_corners);
+        mesh.build_connectivity();
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1324,10 +1302,8 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_2d_box(swage::Mesh& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+                      MPICArrayKokkos<double>& node_coords,
+                      SimulationParameters_t& SimulationParamaters) const
     {
         printf("Creating a 2D box mesh \n");
 
@@ -1371,9 +1347,7 @@ public:
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
 
-        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dim, required_node_state);
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dim, "node_coordinates_in_mesh_io");
 
         // --- Build nodes ---
 
@@ -1384,13 +1358,13 @@ public:
                 int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
 
                 // store the point coordinates
-                node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+                node_coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+                node_coords.host(node_gid, 1) = origin[1] + (double)j * dy;
             } // end for i
         } // end for j
 
 
-        node.coords.update_device();
+        node_coords.update_device();
 
         // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
@@ -1426,14 +1400,6 @@ public:
 
         // update device side
         mesh.nodes_in_elem.update_device();
-
-        // intialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
-
-        // Build connectivity
-        mesh.build_connectivity();
     } // end build_2d_box
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1450,10 +1416,8 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_2d_polar(swage::Mesh& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+                        MPICArrayKokkos<double>& node_coords,
+                        SimulationParameters_t& SimulationParamaters) const
     {
         printf("Creating a 2D polar mesh \n");
 
@@ -1499,10 +1463,7 @@ public:
 
         // intialize node variables
         mesh.initialize_nodes(num_nodes);
-
-        // initialize node state, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dim, required_node_state);
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dim, "node_coordinates_in_mesh_io");
 
         // populate the point data structures
         for (int j = 0; j < num_points_j; j++) {
@@ -1514,10 +1475,10 @@ public:
                 double theta_j = start_angle + (double)j * dy;
 
                 // store the point coordinates
-                node.coords.host(node_gid, 0) = origin[0] + r_i * cos(theta_j);
-                node.coords.host(node_gid, 1) = origin[1] + r_i * sin(theta_j);
+                node_coords.host(node_gid, 0) = origin[0] + r_i * cos(theta_j);
+                node_coords.host(node_gid, 1) = origin[1] + r_i * sin(theta_j);
 
-                if(node.coords.host(node_gid, 0) < 0.0){
+                if(node_coords.host(node_gid, 0) < 0.0){
                     throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
                 }
 
@@ -1525,7 +1486,7 @@ public:
         } // end for j
 
 
-        node.coords.update_device();
+        node_coords.update_device();
 
         // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
@@ -1561,14 +1522,6 @@ public:
 
         // update device side
         mesh.nodes_in_elem.update_device();
-
-        // intialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
-
-        // Build connectivity
-        mesh.build_connectivity();
     } // end build_2d_box
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1585,10 +1538,8 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_3d_box(swage::Mesh& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+                      MPICArrayKokkos<double>& node_coords,
+                      SimulationParameters_t& SimulationParamaters) const
     {
         printf("Creating a 3D box mesh \n");
 
@@ -1629,10 +1580,7 @@ public:
 
         // initialize mesh node variables
         mesh.initialize_nodes(num_nodes);
-
-         // initialize node state variables, for now, we just need coordinates, the rest will be initialize by the respective solvers
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_nodes, num_dim, required_node_state);
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dim, "node_coordinates_in_mesh_io");
 
         // --- Build nodes ---
 
@@ -1644,15 +1592,15 @@ public:
                     int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
                     // store the point coordinates
-                    node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
+                    node_coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+                    node_coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+                    node_coords.host(node_gid, 2) = origin[2] + (double)k * dz;
                 } // end for i
             } // end for j
         } // end for k
 
 
-        node.coords.update_device();
+        node_coords.update_device();
 
         // initialize elem variables
         mesh.initialize_elems(num_elems, num_dim);
@@ -1694,14 +1642,6 @@ public:
 
         // update device side
         mesh.nodes_in_elem.update_device();
-
-        // initialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
-
-        // Build connectivity
-        mesh.build_connectivity();
     } // end build_3d_box
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1718,10 +1658,8 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_3d_HexN_box(swage::Mesh& mesh,
-        GaussPoint_t& GaussPoints,
-        node_t&   node,
-        corner_t& corner,
-        SimulationParameters_t& SimulationParamaters) const
+                           MPICArrayKokkos<double>& node_coords,
+                           SimulationParameters_t& SimulationParamaters) const
     {
         printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
         const int num_dim = 3;
@@ -1781,17 +1719,13 @@ public:
         
         // --- point ---
         int num_points = num_points_i * num_points_j * num_points_k;
-        auto pt_coords = CArray <double> (num_points, num_dim);
 
 
-        // --- Build nodes ---
-        
         // initialize node variables
         mesh.initialize_nodes(num_points);
 
-        // 
-        std::vector<node_state> required_node_state = { node_state::coords };
-        node.initialize(num_points, num_dim, required_node_state);
+        node_coords = MPICArrayKokkos<double>(num_points, num_dim, "node_coordinates_in_mesh_io");
+
         // populate the point data structures
         for (int k = 0; k < num_points_k; k++){
             for (int j = 0; j < num_points_j; j++){
@@ -1802,16 +1736,16 @@ public:
                     int node_gid = get_id(i, j, k, num_points_i, num_points_j);
 
                     // store the point coordinates
-                    node.coords.host(node_gid, 0) = origin[0] + (double)i * dx;
-                    node.coords.host(node_gid, 1) = origin[1] + (double)j * dy;
-                    node.coords.host(node_gid, 2) = origin[2] + (double)k * dz;
+                    node_coords.host(node_gid, 0) = origin[0] + (double)i * dx;
+                    node_coords.host(node_gid, 1) = origin[1] + (double)j * dy;
+                    node_coords.host(node_gid, 2) = origin[2] + (double)k * dz;
                     
                 } // end for k
             } // end for i
         } // end for j
 
 
-        node.coords.update_device();
+        node_coords.update_device();
 
 
         // initialize elem variables
@@ -1865,15 +1799,6 @@ public:
 
         // update device side
         mesh.nodes_in_elem.update_device();
-
-        // initialize corner variables
-        int num_corners = num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
-        // corner.initialize(num_corners, num_dim);
-
-        // Build connectivity
-        mesh.build_connectivity();
-
     }
 };
 
@@ -2008,10 +1933,12 @@ public:
                 case gauss_pt_state::level_set:
                     State.GaussPoints.level_set.update_host();
                     break;      
-
                 // tensor vars to write out
                 case gauss_pt_state::gradient_velocity:
                     State.GaussPoints.vel_grad.update_host();
+                    break;
+                case gauss_pt_state::shock_detector:
+                    State.GaussPoints.shock_detector.update_host();
                     break;
                 default:
                     std::cout<<"Desired Gauss point state not understood in vtk outputs"<<std::endl;
@@ -2189,11 +2116,14 @@ public:
                 case gauss_pt_state::divergence_velocity:
                     num_gauss_pt_scalar_vars ++;
                     break;
-
+                case gauss_pt_state::shock_detector:
+                    num_gauss_pt_scalar_vars ++;
+                    break;
                 // tensor vars to write out
                 case gauss_pt_state::gradient_velocity:
                     num_gauss_pt_tensor_vars ++;
                     break;
+                
                 default:
                     std::cout<<"Desired Gauss point state not understood in vtk outputs"<<std::endl;
 
@@ -2403,7 +2333,7 @@ public:
         int div_id = -1;
         int level_set_id = -1;
         int vel_grad_id = -1;
-        
+        int shock_detector_id = -1;
 
         for (auto field : SimulationParamaters.OutputOptions.output_gauss_pt_state){
             switch(field){
@@ -2422,6 +2352,12 @@ public:
                 case gauss_pt_state::level_set:
                     elem_scalar_var_names[var] = "level_set";
                     level_set_id = var;
+                    var++;
+                    break;
+                
+                case gauss_pt_state::shock_detector:
+                    elem_scalar_var_names[var] = "shock_detector";
+                    shock_detector_id = var;
                     var++;
                     break;
 
@@ -2583,6 +2519,7 @@ public:
                                     stress_id,
                                     vol_id,
                                     div_id,
+                                    shock_detector_id,
                                     level_set_id,
                                     vel_grad_id,
                                     conductivity_id,
@@ -2637,77 +2574,124 @@ public:
         if (SimulationParamaters.OutputOptions.format == output_options::viz ||
             SimulationParamaters.OutputOptions.format == output_options::viz_and_state) {
 
-            // create the folder structure if it does not exist
+            int mpi_rank = 0;
+            int mpi_size = 1;
+            mesh_io_mpi_detail::query_world_rank_size(mpi_rank, mpi_size);
+
+            MPI_Barrier(MPI_COMM_WORLD);
+
+            if (mpi_rank == 0 && solver_id == 0 && graphics_id == 0) {
+                struct stat st_rm;
+                if (stat("vtk", &st_rm) == 0) {
+                    (void)system("rm -f vtk/Fierro*");
+                }
+                if (stat("vtk/data", &st_rm) == 0) {
+                    (void)system("rm -f vtk/data/Fierro*");
+                }
+            }
+
+            MPI_Barrier(MPI_COMM_WORLD);
+
             struct stat st;
-
             if (stat("vtk", &st) != 0) {
-                int returnCode = system("mkdir vtk");
-
-                if (returnCode == 1) {
+                if (system("mkdir vtk") == 1) {
                     std::cout << "Unable to make vtk directory" << std::endl;
                 }
             }
-            else{
-                if(solver_id==0 && graphics_id==0){
-                    // delete the existing files inside
-                    int returnCode = system("rm vtk/Fierro*");
-                    if (returnCode == 1) {
-                        std::cout << "Unable to clear vtk/Fierro directory" << std::endl;
-                    }
-                }
-            }
-
             if (stat("vtk/data", &st) != 0) {
-                int returnCode = system("mkdir vtk/data");
-                if (returnCode == 1) {
+                if (system("mkdir vtk/data") == 1) {
                     std::cout << "Unable to make vtk/data directory" << std::endl;
                 }
             }
-            else{
-                if(solver_id==0 && graphics_id==0){
-                    // delete the existing files inside the folder
-                    int returnCode = system("rm vtk/data/Fierro*");
-                    if (returnCode == 1) {
-                        std::cout << "Unable to clear vtk/data directory" << std::endl;
+
+            // Per-rank VTU: write owned elements only (rows 0..num_owned_elems-1 of nodes_in_elem), but
+            // Points must list all local nodes (0..num_nodes-1). Connectivity is full local indexing;
+            // boundary elements reference ghost nodes — truncating coords to num_owned_nodes (the prior
+            // bug) misaligned indices and produced inverted/wrong cells in ParaView.
+            const size_t n_owned_elems = mesh.num_owned_elems; // num_elems; 
+ 
+
+            const std::string elem_fields_name = "fields";
+
+            ViewCArray<double> node_coords_host(&State.node.coords.host(0, 0), num_nodes, num_dims);
+            ViewCArray<size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0, 0), n_owned_elems, num_nodes_in_elem);
+
+            // VTK diagnostics (optional CellData / PointData in write_vtu): host-side scratch arrays,
+            // then const pointers so write_vtu can emit one value per owned cell or per owned node.
+            //   diag_mpi_rank_elem — CellData "mpi_rank" (which MPI rank owns each exported element).
+            //   diag_global_elem   — CellData "global_elem_id" from mesh.local_to_global_elem_mapping (or local e).
+            //   diag_global_node   — PointData "global_node_id" from mesh.local_to_global_node_mapping (or local n).
+            //   p_*                — nullptr until filled; passed to write_vtu (nullptr disables that array).
+            std::vector<double> diag_mpi_rank_elem;
+            std::vector<double> diag_global_elem;
+            std::vector<double> diag_global_node;
+            const double*       p_rank_elem = nullptr;
+            const double*       p_glob_elem = nullptr;
+            const double*       p_glob_node = nullptr;
+
+            if (n_owned_elems > 0 && num_nodes > 0) {
+                diag_mpi_rank_elem.assign(n_owned_elems, static_cast<double>(mpi_rank));
+                p_rank_elem = diag_mpi_rank_elem.data();
+
+                diag_global_elem.resize(n_owned_elems);
+                if (mpi_size > 1 || mesh.num_elems > mesh.num_owned_elems) {
+                    mesh.local_to_global_elem_mapping.update_host();
+                    for (size_t e = 0; e < n_owned_elems; e++) {
+                        diag_global_elem[e] =
+                            static_cast<double>(mesh.local_to_global_elem_mapping.host(e));
                     }
                 }
+                else {
+                    for (size_t e = 0; e < n_owned_elems; e++) {
+                        diag_global_elem[e] = static_cast<double>(e);
+                    }
+                }
+                p_glob_elem = diag_global_elem.data();
+
+                diag_global_node.resize(num_nodes);
+                if (mpi_size > 1 || mesh.num_nodes > mesh.num_owned_nodes) {
+                    mesh.local_to_global_node_mapping.update_host();
+                    for (size_t n = 0; n < num_nodes; n++) {
+                        diag_global_node[n] =
+                            static_cast<double>(mesh.local_to_global_node_mapping.host(n));
+                    }
+                }
+                else {
+                    for (size_t n = 0; n < num_nodes; n++) {
+                        diag_global_node[n] = static_cast<double>(n);
+                    }
+                }
+                p_glob_node = diag_global_node.data();
+
+                write_vtu(node_coords_host,
+                          nodes_in_elem_host,
+                          elem_scalar_fields,
+                          elem_tensor_fields,
+                          node_scalar_fields,
+                          node_vector_fields,
+                          elem_scalar_var_names,
+                          elem_tensor_var_names,
+                          node_scalar_var_names,
+                          node_vector_var_names,
+                          elem_fields_name,
+                          graphics_id,
+                          num_nodes,
+                          n_owned_elems,
+                          num_nodes_in_elem,
+                          Pn_order,
+                          num_dims,
+                          solver_id,
+                          mpi_rank,
+                          mpi_size,
+                          p_rank_elem,
+                          p_glob_elem,
+                          p_glob_node);
             }
-            
-            // call the .vtu writer for element fields
-            std::string elem_fields_name = "fields";
-
-            // make a view of node coords for passing into functions
-            ViewCArray <double> node_coords_host(&State.node.coords.host(0,0), num_nodes, num_dims);
-            ViewCArray <size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0,0), num_elems, num_nodes_in_elem);
-
-
-            write_vtu(node_coords_host,
-                      nodes_in_elem_host,
-                      elem_scalar_fields,
-                      elem_tensor_fields,
-                      node_scalar_fields,
-                      node_vector_fields,
-                      elem_scalar_var_names,
-                      elem_tensor_var_names,
-                      node_scalar_var_names,
-                      node_vector_var_names,
-                      elem_fields_name,
-                      graphics_id,
-                      num_nodes,
-                      num_elems,
-                      num_nodes_in_elem,
-                      Pn_order,
-                      num_dims,
-                      solver_id);
-
 
             // ********************************
             //  Build and write the mat fields 
             // ********************************
 
-
-            // note: the file path and folder was created in the elem and node outputs
-            size_t num_mat_files_written = 0;
             if(num_mat_pt_scalar_vars > 0 || num_mat_pt_tensor_vars >0){
 
                 for (int mat_id = 0; mat_id < num_mats; mat_id++) {
@@ -2776,7 +2760,7 @@ public:
                         ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
                         ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
                         
-                        // write out a vtu file this 
+                        // write out a vtu file this
                         write_vtu(mat_node_coords_host,
                                   mat_nodes_in_elem_host,
                                   mat_elem_scalar_fields,
@@ -2794,10 +2778,12 @@ public:
                                   num_nodes_in_elem,
                                   Pn_order,
                                   num_dims,
-                                  solver_id);
-
-
-                        num_mat_files_written++;
+                                  solver_id,
+                                  mpi_rank,
+                                  mpi_size,
+                                  nullptr,
+                                  nullptr,
+                                  nullptr);
 
                     } // end for mat_id
 
@@ -2812,6 +2798,38 @@ public:
 
             // save the graphics time
             graphics_times(graphics_id) = time_value;
+
+            std::vector<unsigned long long> local_mat_counts(num_mats, 0ULL);
+            for (size_t mi = 0; mi < num_mats; mi++) {
+                local_mat_counts[mi] =
+                    static_cast<unsigned long long>(State.MaterialToMeshMaps.num_mat_elems.host(mi));
+            }
+            std::vector<unsigned long long> gathered_mat_elems;
+            if (mpi_rank == 0) {
+                gathered_mat_elems.assign(static_cast<size_t>(mpi_size) * num_mats, 0ULL);
+            }
+            MPI_Gather(local_mat_counts.data(),
+                       static_cast<int>(num_mats),
+                       MPI_UNSIGNED_LONG_LONG,
+                       mpi_rank == 0 ? gathered_mat_elems.data() : nullptr,
+                       static_cast<int>(num_mats),
+                       MPI_UNSIGNED_LONG_LONG,
+                       0,
+                       MPI_COMM_WORLD);
+
+            const unsigned long long      local_owned_elems_ull = static_cast<unsigned long long>(n_owned_elems);
+            std::vector<unsigned long long> gathered_owned_elems;
+            if (mpi_rank == 0) {
+                gathered_owned_elems.assign(static_cast<size_t>(mpi_size), 0ULL);
+            }
+            MPI_Gather(&local_owned_elems_ull,
+                       1,
+                       MPI_UNSIGNED_LONG_LONG,
+                       mpi_rank == 0 ? gathered_owned_elems.data() : nullptr,
+                       1,
+                       MPI_UNSIGNED_LONG_LONG,
+                       0,
+                       MPI_COMM_WORLD);
 
             // check to see if an mesh state was written 
             bool write_mesh_state = false;
@@ -2831,24 +2849,31 @@ public:
                  write_mat_pt_state = true;
             }
 
-            // call the vtm file writer
-            std::string mat_fields_name = "mat";
-            write_vtm(graphics_times,
-                      elem_fields_name,
-                      mat_fields_name,
-                      time_value,
-                      graphics_id,
-                      num_mat_files_written,
-                      write_mesh_state,
-                      write_mat_pt_state,
-                      solver_id);
+            MPI_Barrier(MPI_COMM_WORLD);
 
-            // call the pvd file writer
-            write_pvd(graphics_times,
-                      time_value,
-                      graphics_id,
-                      solver_id);
+            if (mpi_rank == 0) {
+                const std::string mat_fields_name = "mat";
+                write_vtm(graphics_times,
+                          elem_fields_name,
+                          mat_fields_name,
+                          time_value,
+                          graphics_id,
+                          num_mats,
+                          write_mesh_state,
+                          write_mat_pt_state,
+                          solver_id,
+                          mpi_size,
+                          gathered_owned_elems.empty() ? nullptr : gathered_owned_elems.data(),
+                          gathered_mat_elems.empty() ? nullptr : gathered_mat_elems.data());
 
+                write_pvd(graphics_times,
+                          time_value,
+                          graphics_id,
+                          solver_id,
+                          mpi_rank);
+            }
+
+            MPI_Barrier(MPI_COMM_WORLD);
 
             // increment graphics id counter
             graphics_id++; // this is private variable in the class
@@ -3678,6 +3703,7 @@ public:
                                  const int stress_id,
                                  const int vol_id,
                                  const int div_id,
+                                 const int shock_detector_id,
                                  const int level_set_id,
                                  const int vel_grad_id,
                                  const int conductivity_id,
@@ -3846,6 +3872,12 @@ public:
                         elem_scalar_fields(level_set_id, elem_gid) = GaussPoints.level_set(elem_gid);
                     });
 
+                    break;
+
+                case gauss_pt_state::shock_detector:
+                    FOR_ALL(elem_gid, 0, num_elems, {
+                        elem_scalar_fields(shock_detector_id, elem_gid) = GaussPoints.shock_detector(elem_gid);
+                    });
                     break;
 
                 // tensors
@@ -4191,12 +4223,16 @@ public:
         const size_t num_nodes_in_elem,
         const int Pn_order,
         const size_t num_dims,
-        const size_t solver_id
-        )
+        const size_t solver_id,
+        int mpi_rank,
+        int mpi_size,
+        const double* diag_mpi_rank_per_elem,
+        const double* diag_global_elem_id,
+        const double* diag_global_node_id)
     {
-        FILE* out[20];   // the output files that are written to
-        char  filename[100]; // char string
-        int   max_len = sizeof filename;
+        FILE* out[20];
+        char  filename[512];
+        int   max_len = static_cast<int>(sizeof filename);
         int   str_output_len;
 
         const size_t num_elem_scalar_vars = elem_scalar_var_names.size();
@@ -4206,14 +4242,31 @@ public:
         const size_t num_node_vector_vars = node_vector_var_names.size();
 
 
-        // create filename
-        str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%s.%05d.vtu", 
-                                                                 solver_id, partname.c_str(), graphics_id);
+        if (mpi_size > 1) {
+            str_output_len = snprintf(filename,
+                                        static_cast<size_t>(max_len),
+                                        "vtk/data/Fierro.solver%zu.%s.%05d_r%04d.vtu",
+                                        solver_id,
+                                        partname.c_str(),
+                                        graphics_id,
+                                        mpi_rank);
+        }
+        else {
+            str_output_len = snprintf(filename,
+                                        static_cast<size_t>(max_len),
+                                        "vtk/data/Fierro.solver%zu.%s.%05d.vtu",
+                                        solver_id,
+                                        partname.c_str(),
+                                        graphics_id);
+        }
 
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-        // mesh file
-        
+
         out[0] = fopen(filename, "w");
+        if (!out[0]) {
+            std::cerr << "[MeshWriter] Failed to open VTU file: " << filename << std::endl;
+            return;
+        }
 
         fprintf(out[0], "<?xml version=\"1.0\"?>\n");  
         fprintf(out[0], "<VTKFile type=\"UnstructuredGrid\" version=\"1.0\" byte_order=\"LittleEndian\">\n"); 
@@ -4346,11 +4399,10 @@ public:
         // vtk vector vars = (position, velocity)
         fprintf(out[0], "\n");
         fprintf(out[0], "      <!-- Define the node vector data -->\n");
-        if(num_node_vector_vars >0 || num_node_scalar_vars>0){
+        if (num_node_vector_vars > 0 || num_node_scalar_vars > 0 || diag_global_node_id != nullptr) {
 
             fprintf(out[0], "      <PointData>\n");
 
-            // node vectors
             for (int a_var = 0; a_var < num_node_vector_vars; a_var++) {
                 fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" NumberOfComponents=\"3\" format=\"ascii\">\n", node_vector_var_names[a_var].c_str());
                
@@ -4359,20 +4411,25 @@ public:
                             node_vector_fields.host(a_var, node_gid, 0),
                             node_vector_fields.host(a_var, node_gid, 1),
                             node_vector_fields.host(a_var, node_gid, 2));
-                } // end for nodes
+                }
                 fprintf(out[0], "        </DataArray>\n");
+            }
 
-            } // end for vec_vars
-
-
-            // node scalar vars
             for (int a_var = 0; a_var < num_node_scalar_vars; a_var++) {
                 fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" format=\"ascii\">\n", node_scalar_var_names[a_var].c_str());
                 for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
                     fprintf(out[0], "          %.15e\n", node_scalar_fields.host(a_var, node_gid));
-                } // end for nodes
+                }
                 fprintf(out[0], "        </DataArray>\n");
-            } // end for vec_vars
+            }
+
+            if (diag_global_node_id != nullptr) {
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"global_node_id\" format=\"ascii\">\n");
+                for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
+                    fprintf(out[0], "          %.15e\n", diag_global_node_id[node_gid]);
+                }
+                fprintf(out[0], "        </DataArray>\n");
+            }
 
             fprintf(out[0], "      </PointData>\n");
 
@@ -4385,37 +4442,49 @@ public:
         */
         fprintf(out[0], "\n");
         fprintf(out[0], "      <!-- Define the cell data -->\n");
-        if(num_elem_scalar_vars >0 || num_elem_tensor_vars>0){
+        if (num_elem_scalar_vars > 0 || num_elem_tensor_vars > 0 || diag_mpi_rank_per_elem != nullptr ||
+            diag_global_elem_id != nullptr) {
 
             fprintf(out[0], "      <CellData>\n");
 
             for (int a_var = 0; a_var < num_elem_scalar_vars; a_var++) {
 
-                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" format=\"ascii\">\n", elem_scalar_var_names[a_var].c_str()); // the 1 is number of scalar components [1:4]
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" format=\"ascii\">\n", elem_scalar_var_names[a_var].c_str());
 
                 for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
                     fprintf(out[0], "          %.15e\n", elem_scalar_fields.host(a_var, elem_gid));
-                } // end for elem
+                }
                 fprintf(out[0], "        </DataArray>\n");
-            } // end for elem scalar_vars
+            }
 
-
-            // tensors
             for (int a_var = 0; a_var < num_elem_tensor_vars; a_var++) {
-                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" NumberOfComponents=\"9\" format=\"ascii\">\n", elem_tensor_var_names[a_var].c_str()); // the 1 is number of scalar components [1:4]
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" NumberOfComponents=\"9\" format=\"ascii\">\n", elem_tensor_var_names[a_var].c_str());
                 
                 for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
-                    // note: paraview is row-major, CArray convention
-                    // Txx  Txy  Txz  Tyx  Tyy  Tyz  Tzx  Tzy  Tzz
-                    for (size_t i=0; i<3; i++){
-                        for(size_t j=0; j<3; j++){
+                    for (size_t i = 0; i < 3; i++) {
+                        for (size_t j = 0; j < 3; j++) {
                             fprintf(out[0], "          %.15e ", elem_tensor_fields.host(a_var, elem_gid, i, j));
-                        } // end j
-                    } // end i
-                } // end for elem
+                        }
+                    }
+                }
                 fprintf(out[0], "\n");
                 fprintf(out[0], "        </DataArray>\n");
-            } // end for elem scalar_vars
+            }
+
+            if (diag_mpi_rank_per_elem != nullptr) {
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"mpi_rank\" format=\"ascii\">\n");
+                for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+                    fprintf(out[0], "          %.15e\n", diag_mpi_rank_per_elem[elem_gid]);
+                }
+                fprintf(out[0], "        </DataArray>\n");
+            }
+            if (diag_global_elem_id != nullptr) {
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"global_elem_id\" format=\"ascii\">\n");
+                for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+                    fprintf(out[0], "          %.15e\n", diag_global_elem_id[elem_gid]);
+                }
+                fprintf(out[0], "        </DataArray>\n");
+            }
 
             fprintf(out[0], "      </CellData>\n");
         } // end if
@@ -4448,18 +4517,21 @@ public:
     void write_pvd(CArray<double>& graphics_times,
                    double time_value,
                    int graphics_id,
-                   const size_t solver_id){
+                   const size_t solver_id,
+                   int mpi_rank)
+    {
+        if (mpi_rank != 0) {
+            return;
+        }
 
-        FILE* out[20];   // the output files that are written to
-        char  filename[100]; // char string
-        int   max_len = sizeof filename;
+        FILE* out[20];
+        char  filename[512];
+        int   max_len = static_cast<int>(sizeof filename);
         int   str_output_len;
 
-        // Write time series metadata
-        str_output_len = snprintf(filename, max_len, "vtk/Fierro.solver%zu.pvd", solver_id); 
+        str_output_len = snprintf(filename, static_cast<size_t>(max_len), "vtk/Fierro.solver%zu.pvd", solver_id);
 
         if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-        // mesh file
 
         out[0] = fopen(filename, "w");
  
@@ -4495,73 +4567,175 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_vtm(CArray<double>& graphics_times,
-                   const  std::string& elem_part_name,
-                   const  std::string& mat_part_name,
+                   const std::string& elem_part_name,
+                   const std::string& mat_part_name,
                    double time_value,
                    int graphics_id,
-                   int num_mats,
+                   size_t num_mats_global,
                    bool write_mesh_state,
                    bool write_mat_pt_state,
-                   const size_t solver_id)
+                   const size_t solver_id,
+                   int mpi_size,
+                   const unsigned long long* owned_elems_by_rank,
+                   const unsigned long long* mat_elem_counts_by_rank)
     {
-        // loop over all the files that were written 
-        for(int file_id=0; file_id<=graphics_id; file_id++){
+        for (int file_id = 0; file_id <= graphics_id; file_id++) {
 
-            FILE* out[20];   // the output files that are written to
-            char  filename[100]; // char string
-            int   max_len = sizeof filename;
+            FILE* out[20];
+            char  filename[512];
+            int   max_len = static_cast<int>(sizeof filename);
             int   str_output_len;
 
-
-            // Write time series metadata to the data file
-            str_output_len = snprintf(filename, max_len, "vtk/data/Fierro.solver%zu.%05d.vtm", solver_id, file_id); 
+            str_output_len =
+                snprintf(filename, static_cast<size_t>(max_len), "vtk/data/Fierro.solver%zu.%05d.vtm", solver_id, file_id);
 
             if (str_output_len >= max_len) { fputs("Filename length exceeded; string truncated", stderr); }
-            // mesh file
 
             out[0] = fopen(filename, "w");
-    
+            if (!out[0]) {
+                std::cerr << "[MeshWriter] Failed to open VTM file: " << filename << std::endl;
+                continue;
+            }
+
             fprintf(out[0], "<?xml version=\"1.0\"?>\n");
             fprintf(out[0], "<VTKFile type=\"vtkMultiBlockDataSet\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n");
             fprintf(out[0], "  <vtkMultiBlockDataSet>\n");
 
-            
-            // Average mesh fields -- node and elem state written
-            size_t block_id = 0;  // this will need to be incremented based on the number of mesh fields written
-            if (write_mesh_state){
-                fprintf(out[0], "    <Block index=\"%zu\" name=\"Mesh\">\n", block_id);
-                {
-                    block_id++;  // increment block id for material outputs that follow the element avg block
-
-                    // elem and nodal fields are in this file
-                    fprintf(out[0], "      <Piece index=\"0\" name=\"Field\">\n");
-                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s.%05d.vtu\" time= \"%12.5e\" />\n", 
-                                                              file_id, solver_id, elem_part_name.c_str(), file_id, graphics_times(file_id) );
-                    fprintf(out[0], "      </Piece>\n");
-
-                    // add other Mesh average output Pieces here
+            size_t block_id = 0;
+            if (write_mesh_state) {
+                int mesh_pieces = 0;
+                if (mpi_size > 1 && owned_elems_by_rank != nullptr) {
+                    for (int r = 0; r < mpi_size; r++) {
+                        if (owned_elems_by_rank[static_cast<size_t>(r)] > 0ULL) {
+                            mesh_pieces++;
+                        }
+                    }
                 }
-                fprintf(out[0], "    </Block>\n");
-            } // end if write elem and node state is true
+                else if (owned_elems_by_rank != nullptr && owned_elems_by_rank[0] > 0ULL) {
+                    mesh_pieces = 1;
+                }
+                else if (owned_elems_by_rank == nullptr) {
+                    mesh_pieces = 1;
+                }
 
-            // note: the block_id was incremented if an element average field output was made
-            if (write_mat_pt_state){
-                fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
-                for (size_t mat_id=0; mat_id<num_mats; mat_id++){
-                    
-                    // output the material specific fields
-                    fprintf(out[0], "      <Piece index=\"%zu\" name=\"Mat%zu\">\n", mat_id, mat_id);
-                    fprintf(out[0], "        <DataSet timestep=\"%d\" file=\"Fierro.solver%zu.%s%zu.%05d.vtu\" time= \"%12.5e\" />\n", 
-                                                               file_id, solver_id, mat_part_name.c_str(), mat_id, file_id, graphics_times(file_id) );
-                    fprintf(out[0], "      </Piece>\n");
+                if (mesh_pieces > 0) {
+                    // vtkMultiBlockDataSet schema: <DataSet> children must be direct
+                    // children of <Block>, not wrapped in <Piece>. Sibling index attrs
+                    // must be unique within the parent.
+                    fprintf(out[0], "    <Block index=\"%zu\" name=\"Mesh\">\n", block_id);
+                    {
+                        block_id++;
+                        int ds_index = 0;
+                        if (mpi_size > 1 && owned_elems_by_rank != nullptr) {
+                            for (int r = 0; r < mpi_size; r++) {
+                                if (owned_elems_by_rank[static_cast<size_t>(r)] == 0ULL) {
+                                    continue;
+                                }
+                                fprintf(out[0],
+                                        "      <DataSet index=\"%d\" name=\"Field_r%04d\" file=\"Fierro.solver%zu.%s.%05d_r%04d.vtu\" />\n",
+                                        ds_index,
+                                        r,
+                                        solver_id,
+                                        elem_part_name.c_str(),
+                                        file_id,
+                                        r);
+                                ds_index++;
+                            }
+                        }
+                        else {
+                            fprintf(out[0],
+                                    "      <DataSet index=\"0\" name=\"Field\" file=\"Fierro.solver%zu.%s.%05d.vtu\" />\n",
+                                    solver_id,
+                                    elem_part_name.c_str(),
+                                    file_id);
+                        }
+                    }
+                    fprintf(out[0], "    </Block>\n");
+                }
+            }
 
-                } // end for loop mat_id
-                fprintf(out[0], "    </Block>\n");
-            } // end if write mat satte is true
+            if (write_mat_pt_state && mat_elem_counts_by_rank != nullptr && num_mats_global > 0) {
+                int mat_pieces = 0;
+                for (size_t mat_id = 0; mat_id < num_mats_global; mat_id++) {
+                    if (mpi_size > 1) {
+                        for (int r = 0; r < mpi_size; r++) {
+                            if (mat_elem_counts_by_rank[static_cast<size_t>(r) * num_mats_global + mat_id] > 0ULL) {
+                                mat_pieces++;
+                            }
+                        }
+                    }
+                    else if (mat_elem_counts_by_rank[mat_id] > 0ULL) {
+                        mat_pieces++;
+                    }
+                }
+                if (mat_pieces > 0) {
+                    // Nested layout: <Block name="Mat"> contains one <Block name="MatN"> per
+                    // material that has data, each with per-rank <DataSet> children. This is
+                    // required because the prior flat layout reset piece_index to 0 per
+                    // material, producing duplicate sibling indices (e.g. Mat0_r0000 and
+                    // Mat1_r0001 both at index 0) which ParaView silently collapses, dropping
+                    // the first piece. mat_block_idx is a contiguous counter so sibling
+                    // indices in the outer Mat block remain unique and dense.
+                    fprintf(out[0], "    <Block index=\"%zu\" name=\"Mat\">\n", block_id);
+                    size_t mat_block_idx = 0;
+                    for (size_t mat_id = 0; mat_id < num_mats_global; mat_id++) {
+                        int pieces_this_mat = 0;
+                        if (mpi_size > 1) {
+                            for (int r = 0; r < mpi_size; r++) {
+                                if (mat_elem_counts_by_rank[static_cast<size_t>(r) * num_mats_global + mat_id] > 0ULL) {
+                                    pieces_this_mat++;
+                                }
+                            }
+                        }
+                        else if (mat_elem_counts_by_rank[mat_id] > 0ULL) {
+                            pieces_this_mat = 1;
+                        }
+                        if (pieces_this_mat == 0) {
+                            continue;
+                        }
 
-            // done writing the files to be read by the vtm file
+                        fprintf(out[0], "      <Block index=\"%zu\" name=\"Mat%zu\">\n", mat_block_idx, mat_id);
+                        int ds_index = 0;
+                        if (mpi_size > 1) {
+                            for (int r = 0; r < mpi_size; r++) {
+                                const unsigned long long nm =
+                                    mat_elem_counts_by_rank[static_cast<size_t>(r) * num_mats_global + mat_id];
+                                if (nm == 0ULL) {
+                                    continue;
+                                }
+                                fprintf(out[0],
+                                        "        <DataSet index=\"%d\" name=\"Mat%zu_r%04d\" "
+                                        "file=\"Fierro.solver%zu.%s%zu.%05d_r%04d.vtu\" />\n",
+                                        ds_index,
+                                        mat_id,
+                                        r,
+                                        solver_id,
+                                        mat_part_name.c_str(),
+                                        mat_id,
+                                        file_id,
+                                        r);
+                                ds_index++;
+                            }
+                        }
+                        else {
+                            fprintf(out[0],
+                                    "        <DataSet index=\"0\" name=\"Mat%zu\" "
+                                    "file=\"Fierro.solver%zu.%s%zu.%05d.vtu\" />\n",
+                                    mat_id,
+                                    solver_id,
+                                    mat_part_name.c_str(),
+                                    mat_id,
+                                    file_id);
+                        }
+                        fprintf(out[0], "      </Block>\n");
+                        mat_block_idx++;
+                    }
+                    fprintf(out[0], "    </Block>\n");
+                }
+            }
+
             fprintf(out[0], "  </vtkMultiBlockDataSet>\n");
-            fprintf(out[0], "</VTKFile>"); 
+            fprintf(out[0], "</VTKFile>");
 
             fclose(out[0]);
 
@@ -4589,7 +4763,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void build_material_elem_node_lists(
         const swage::Mesh& mesh,
-        const DCArrayKokkos<double>& state_node_coords,
+        const MPICArrayKokkos<double>& state_node_coords,
         DCArrayKokkos<double>& mat_node_coords,
         DCArrayKokkos <size_t>& mat_nodes_in_mat_elem,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
@@ -4700,6 +4874,10 @@ public:
         // This currently assumes the gauss and material point IDs are the same as the element ID
         // This will need to be updated for high order methods
 
+        int mpi_rank = 0;
+        int mpi_size = 1;
+        mesh_io_mpi_detail::query_world_rank_size(mpi_rank, mpi_size);
+
         // Update host data
         // ---- Update host data ----
         size_t num_mats = State.MaterialPoints.num_material_points.size();
@@ -4712,6 +4890,7 @@ public:
         State.MaterialPoints.mass.update_host();
 
         State.GaussPoints.vol.update_host();
+        State.GaussPoints.shock_detector.update_host();
 
         State.node.coords.update_host();
         State.node.vel.update_host();
@@ -4720,31 +4899,18 @@ public:
         Kokkos::fence();
 
         struct stat st;
-
-        if (stat("state", &st) != 0) {
-            system("mkdir state");
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (mpi_rank == 0) {
+            if (stat("state", &st) != 0) {
+                system("mkdir state");
+            }
         }
+        MPI_Barrier(MPI_COMM_WORLD);
 
         size_t num_dims = mesh.num_dims;
 
-        //  ---------------------------------------------------------------------------
-        //  Setup of file and directory for exporting
-        //  ---------------------------------------------------------------------------
-
-        // output file
-        FILE* out_elem_state;  // element average state
-        char  filename[128];
-
-        int max_len = sizeof filename;
-
-        snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e.txt", time_value);
-
-        // output files
-        out_elem_state = fopen(filename, "w");
-
-        // write state dump
-        fprintf(out_elem_state, "# state dump file\n");
-        fprintf(out_elem_state, "# x  y  z  radius_2D  radius_3D  den  pres  sie  sspd  vol  mass \n");
+        std::vector<double> local_mat_pt_data;
+        std::vector<double> local_node_data;
 
         // write out values for the elem
         for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
@@ -4755,6 +4921,11 @@ public:
             {
 
                 const size_t elem_gid = State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, mat_elem_sid);
+
+                // Skip if this element is not owned by the current rank
+                if (elem_gid >= mesh.num_owned_elems) {
+                    continue;
+                }
 
                 double elem_coords[3];
                 elem_coords[0] = 0.0;
@@ -4785,42 +4956,24 @@ public:
                                    elem_coords[1] * elem_coords[1] +
                                    elem_coords[2] * elem_coords[2]);
 
-
-                fprintf(out_elem_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t \n",
-                         elem_coords[0],
-                         elem_coords[1],
-                         elem_coords[2],
-                         rad2,
-                         rad3,
-                         State.MaterialPoints.den.host(mat_id, mat_elem_sid),
-                         State.MaterialPoints.pres.host(mat_id, mat_elem_sid),
-                         State.MaterialPoints.sie.host(mat_id, mat_elem_sid),
-                         State.MaterialPoints.sspd.host(mat_id, mat_elem_sid),
-                         State.GaussPoints.vol.host(elem_gid),
-                         State.MaterialPoints.mass.host(mat_id, mat_elem_sid) );
+                local_mat_pt_data.push_back(elem_coords[0]);
+                local_mat_pt_data.push_back(elem_coords[1]);
+                local_mat_pt_data.push_back(elem_coords[2]);
+                local_mat_pt_data.push_back(rad2);
+                local_mat_pt_data.push_back(rad3);
+                local_mat_pt_data.push_back(State.MaterialPoints.den.host(mat_id, mat_elem_sid));
+                local_mat_pt_data.push_back(State.MaterialPoints.pres.host(mat_id, mat_elem_sid));
+                local_mat_pt_data.push_back(State.MaterialPoints.sie.host(mat_id, mat_elem_sid));
+                local_mat_pt_data.push_back(State.MaterialPoints.sspd.host(mat_id, mat_elem_sid));
+                local_mat_pt_data.push_back(State.GaussPoints.vol.host(elem_gid));
+                local_mat_pt_data.push_back(State.MaterialPoints.mass.host(mat_id, mat_elem_sid));
 
             } // end for elements
 
         } // end for materials
-        fclose(out_elem_state);
-
-
-
-        // printing nodal state
-            
-        FILE* out_point_state;  // element average state
-
-        snprintf(filename, max_len, "state/node_state_t_%6.4e.txt", time_value);
-
-        // output files
-        out_point_state = fopen(filename, "w");
-
-        // write state dump
-        fprintf(out_point_state, "# state node dump file\n");
-        fprintf(out_point_state, "# x  y  z  radius_2D  radius_3D  vel_x  vel_y  vel_z  speed  ||err_v_dot_r|| \n");
 
         // get the coordinates of the node
-        for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
+        for (size_t node_gid = 0; node_gid < mesh.num_owned_nodes; node_gid++) {
 
             double node_coords[3];
 
@@ -4872,24 +5025,162 @@ public:
 
             double mag_err_v_dot_r = sqrt(err_v_dot_r[0]*err_v_dot_r[0] + err_v_dot_r[1]*err_v_dot_r[1]);
 
-            fprintf(out_point_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t  %4.12e\t %4.12e\t \n",
-                         node_coords[0],
-                         node_coords[1],
-                         node_coords[2],
-                         rad2,
-                         rad3,
-                         node_vel[0],
-                         node_vel[1],
-                         node_vel[2],
-                         speed,
-                         mag_err_v_dot_r);
+            local_node_data.push_back(node_coords[0]);
+            local_node_data.push_back(node_coords[1]);
+            local_node_data.push_back(node_coords[2]);
+            local_node_data.push_back(rad2);
+            local_node_data.push_back(rad3);
+            local_node_data.push_back(node_vel[0]);
+            local_node_data.push_back(node_vel[1]);
+            local_node_data.push_back(node_vel[2]);
+            local_node_data.push_back(speed);
+            local_node_data.push_back(mag_err_v_dot_r);
 
 
         } // end loop over nodes in element
 
+        int local_mat_pt_rows = static_cast<int>(local_mat_pt_data.size() / 11);
+        int local_node_rows = static_cast<int>(local_node_data.size() / 10);
+
+        std::vector<int> mat_pt_row_counts;
+        std::vector<int> mat_pt_row_displs;
+        std::vector<int> node_row_counts;
+        std::vector<int> node_row_displs;
+        if (mpi_rank == 0) {
+            mat_pt_row_counts.assign(mpi_size, 0);
+            mat_pt_row_displs.assign(mpi_size, 0);
+            node_row_counts.assign(mpi_size, 0);
+            node_row_displs.assign(mpi_size, 0);
+        }
+
+        MPI_Gather(&local_mat_pt_rows, 1, MPI_INT,
+                   mpi_rank == 0 ? mat_pt_row_counts.data() : nullptr, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Gather(&local_node_rows, 1, MPI_INT,
+                   mpi_rank == 0 ? node_row_counts.data() : nullptr, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+        int total_mat_pt_rows = 0;
+        int total_node_rows = 0;
+        std::vector<int> mat_pt_counts;
+        std::vector<int> mat_pt_displs;
+        std::vector<int> node_counts;
+        std::vector<int> node_displs;
+        std::vector<double> gathered_mat_pt_data;
+        std::vector<double> gathered_node_data;
+        if (mpi_rank == 0) {
+            mat_pt_counts.assign(mpi_size, 0);
+            mat_pt_displs.assign(mpi_size, 0);
+            node_counts.assign(mpi_size, 0);
+            node_displs.assign(mpi_size, 0);
+
+            int mat_disp = 0;
+            int node_disp = 0;
+            for (int r = 0; r < mpi_size; r++) {
+                mat_pt_row_displs[r] = mat_disp;
+                mat_disp += mat_pt_row_counts[r];
+                total_mat_pt_rows += mat_pt_row_counts[r];
+
+                node_row_displs[r] = node_disp;
+                node_disp += node_row_counts[r];
+                total_node_rows += node_row_counts[r];
+            }
+
+            for (int r = 0; r < mpi_size; r++) {
+                mat_pt_counts[r] = mat_pt_row_counts[r] * 11;
+                mat_pt_displs[r] = mat_pt_row_displs[r] * 11;
+                node_counts[r] = node_row_counts[r] * 10;
+                node_displs[r] = node_row_displs[r] * 10;
+            }
+
+            gathered_mat_pt_data.assign(total_mat_pt_rows * 11, 0.0);
+            gathered_node_data.assign(total_node_rows * 10, 0.0);
+        }
+
+        MPI_Gatherv(local_mat_pt_data.empty() ? nullptr : local_mat_pt_data.data(),
+                    static_cast<int>(local_mat_pt_data.size()), MPI_DOUBLE,
+                    mpi_rank == 0 ? gathered_mat_pt_data.data() : nullptr,
+                    mpi_rank == 0 ? mat_pt_counts.data() : nullptr,
+                    mpi_rank == 0 ? mat_pt_displs.data() : nullptr,
+                    MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Gatherv(local_node_data.empty() ? nullptr : local_node_data.data(),
+                    static_cast<int>(local_node_data.size()), MPI_DOUBLE,
+                    mpi_rank == 0 ? gathered_node_data.data() : nullptr,
+                    mpi_rank == 0 ? node_counts.data() : nullptr,
+                    mpi_rank == 0 ? node_displs.data() : nullptr,
+                    MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+        if (mpi_rank == 0) {
+
+        //  ---------------------------------------------------------------------------
+        //  Setup of file and directory for exporting
+        //  ---------------------------------------------------------------------------
+
+        // output file
+        FILE* out_elem_state;  // element average state
+        char  filename[128];
+
+        int max_len = sizeof filename;
+
+        //snprintf(filename, max_len, "state/mat_pt_state_rank_%d_t_%6.4e.txt", mpi_rank, time_value);
+        snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e.txt", time_value);
+
+        // output files
+        out_elem_state = fopen(filename, "w");
+
+        // write state dump
+        fprintf(out_elem_state, "# state dump file\n");
+        fprintf(out_elem_state, "# x  y  z  radius_2D  radius_3D  den  pres  sie  sspd  vol  mass \n");
+
+        for (int row = 0; row < total_mat_pt_rows; row++) {
+            size_t i = static_cast<size_t>(row) * 11;
+            fprintf(out_elem_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t \n",
+                     gathered_mat_pt_data[i],
+                     gathered_mat_pt_data[i + 1],
+                     gathered_mat_pt_data[i + 2],
+                     gathered_mat_pt_data[i + 3],
+                     gathered_mat_pt_data[i + 4],
+                     gathered_mat_pt_data[i + 5],
+                     gathered_mat_pt_data[i + 6],
+                     gathered_mat_pt_data[i + 7],
+                     gathered_mat_pt_data[i + 8],
+                     gathered_mat_pt_data[i + 9],
+                     gathered_mat_pt_data[i + 10]);
+        }
+        fclose(out_elem_state);
+
+
+
+        // printing nodal state
+            
+        FILE* out_point_state;  // element average state
+
+        snprintf(filename, max_len, "state/node_state_t_%6.4e.txt", time_value);
+
+        // output files
+        out_point_state = fopen(filename, "w");
+
+        // write state dump
+        fprintf(out_point_state, "# state node dump file\n");
+        fprintf(out_point_state, "# x  y  z  radius_2D  radius_3D  vel_x  vel_y  vel_z  speed  ||err_v_dot_r|| \n");
+
+        for (int row = 0; row < total_node_rows; row++) {
+            size_t i = static_cast<size_t>(row) * 10;
+            fprintf(out_point_state, "%4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t %4.12e\t  %4.12e\t %4.12e\t \n",
+                         gathered_node_data[i],
+                         gathered_node_data[i + 1],
+                         gathered_node_data[i + 2],
+                         gathered_node_data[i + 3],
+                         gathered_node_data[i + 4],
+                         gathered_node_data[i + 5],
+                         gathered_node_data[i + 6],
+                         gathered_node_data[i + 7],
+                         gathered_node_data[i + 8],
+                         gathered_node_data[i + 9]);
+        }
+
 
         fclose(out_point_state);
 
+        } // mpi_rank == 0
 
         return;
     } // end of state output

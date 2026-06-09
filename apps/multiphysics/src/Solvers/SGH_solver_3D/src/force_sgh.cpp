@@ -70,10 +70,11 @@ void SGH3D::get_force(const Material_t& Materials,
                       const swage::Mesh& mesh,
                       const DCArrayKokkos<double>& GaussPoints_vol,
                       const DCArrayKokkos<double>& GaussPoints_vel_grad,
+                      const MPICArrayKokkos<double>& GaussPoints_shock_detector,
                       const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                       const DCArrayKokkos<double>& corner_force,
-                      const DCArrayKokkos<double>& node_coords,
-                      const DCArrayKokkos<double>& node_vel,
+                      const MPICArrayKokkos<double>& node_coords,
+                      const MPICArrayKokkos<double>& node_vel,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
@@ -100,6 +101,9 @@ void SGH3D::get_force(const Material_t& Materials,
 
         // get elem gid
         size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
+
+        // WARNING: We need to calculate phi (limiter) as a gauss point quantity (instead of a material point quantity) and communicated
+        // and passed into the dissipation model by the elem_gid. We need to also rename the variable to (dissipation limiter)
 
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_sid = mat_elem_sid;
@@ -173,6 +177,7 @@ void SGH3D::get_force(const Material_t& Materials,
                                     elem_node_gids,
                                     Materials.dissipation_global_vars,
                                     GaussPoints_vel_grad,
+                                    GaussPoints_shock_detector,
                                     MaterialPoints_eroded,
                                     node_vel,
                                     MaterialPoints_den,

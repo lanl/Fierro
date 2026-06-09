@@ -355,8 +355,8 @@ struct MaterialFunctions_t
     // Material strength model function pointers
     void (*calc_stress)(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
-        const DCArrayKokkos<double>  &node_coords,
-        const DCArrayKokkos<double>  &node_vel,
+        const MPICArrayKokkos<double>  &node_coords,
+        const MPICArrayKokkos<double>  &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
@@ -413,8 +413,9 @@ struct MaterialFunctions_t
         const ViewCArrayKokkos<size_t> elem_node_gids,
         const RaggedRightArrayKokkos <double>& dissipation_global_vars,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
+        const MPICArrayKokkos<double>& GaussPoints_shock_detector,
         const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-        const DCArrayKokkos<double>& node_vel,
+        const MPICArrayKokkos<double>& node_vel,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         const ViewCArrayKokkos<double>& disp_corner_forces,

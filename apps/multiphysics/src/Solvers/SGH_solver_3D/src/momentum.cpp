@@ -51,8 +51,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGH3D::update_velocity(double rk_alpha,
     double dt,
     const swage::Mesh& mesh,
-    DCArrayKokkos<double>& node_vel,
-    DCArrayKokkos<double>& node_vel_n0,
+    MPICArrayKokkos<double>& node_vel,
+    MPICArrayKokkos<double>& node_vel_n0,
     const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& node_force,
     const DCArrayKokkos<double>& corner_force,
@@ -113,8 +113,8 @@ void SGH3D::update_velocity(double rk_alpha,
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
     const swage::Mesh& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
+    const MPICArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
 {
     const size_t num_nodes_in_elem = 8;
@@ -122,8 +122,6 @@ void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
 
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
-
-
         double u_array[num_nodes_in_elem];
         double v_array[num_nodes_in_elem];
         double w_array[num_nodes_in_elem];
@@ -197,7 +195,15 @@ void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
             + w(2) * b_matrix(2, 2) + w(3) * b_matrix(3, 2)
             + w(4) * b_matrix(4, 2) + w(5) * b_matrix(5, 2)
             + w(6) * b_matrix(6, 2) + w(7) * b_matrix(7, 2)) * inverse_vol;
+
+
+            // Compute the divergence of velocity for each element
+
+
+
     });  // end parallel for over elem_gid
+    Kokkos::fence();
+
 
     return;
 } // end subroutine
@@ -218,8 +224,8 @@ void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::get_divergence(DCArrayKokkos<double>& elem_div,
     const swage::Mesh& mesh,
-    const DCArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_vel,
+    const MPICArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---

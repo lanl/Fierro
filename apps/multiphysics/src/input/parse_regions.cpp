@@ -67,6 +67,7 @@ void parse_regions(Yaml::Node& root,
                    const size_t num_solvers)
 
 {
+    bool verbose = false; 
     // allocate memory
     num_reg_fills_in_solver = DCArrayKokkos<size_t>(num_solvers, "sim_param.region_setup.num_reg_fills_in_solver");
     num_reg_fills_in_solver.set_values(0);
@@ -300,7 +301,7 @@ void parse_regions(Yaml::Node& root,
                             switch(region_type_map[type]){
 
                                 case region::global:
-                                    std::cout << "Setting volume fill type to global " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to global " << std::endl;
                                     region_fills_host(reg_id).volume = region::global;
                                     RUN({
                                         region_fills(reg_id).volume = region::global;
@@ -308,7 +309,7 @@ void parse_regions(Yaml::Node& root,
                                     break;
 
                                 case region::box:
-                                    std::cout << "Setting volume fill type to box " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to box " << std::endl;
                                     region_fills_host(reg_id).volume = region::box;
                                     RUN({
                                         region_fills(reg_id).volume = region::box;
@@ -316,7 +317,7 @@ void parse_regions(Yaml::Node& root,
                                     break;
 
                                 case region::cylinder:
-                                    std::cout << "Setting volume fill type to cylinder " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to cylinder " << std::endl;
                                     region_fills_host(reg_id).volume = region::cylinder;
                                     RUN({
                                         region_fills(reg_id).volume = region::cylinder;
@@ -324,7 +325,7 @@ void parse_regions(Yaml::Node& root,
                                     break;
 
                                 case region::sphere:
-                                    std::cout << "Setting volume fill type to sphere " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to sphere " << std::endl;
                                     region_fills_host(reg_id).volume = region::sphere;
                                     RUN({
                                         region_fills(reg_id).volume = region::sphere;
@@ -332,7 +333,7 @@ void parse_regions(Yaml::Node& root,
                                     break;
 
                                 case region::readVoxelFile:
-                                    std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
                                     region_fills_host(reg_id).volume = region::readVoxelFile;
                                     RUN({
                                         region_fills(reg_id).volume = region::readVoxelFile;
@@ -348,14 +349,14 @@ void parse_regions(Yaml::Node& root,
                                     break;
 
                                 case region::readVTUFile:
-                                    std::cout << "Setting volume fill type to readVTUFile " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to readVTUFile " << std::endl;
                                     region_fills_host(reg_id).volume = region::readVTUFile;
                                     RUN({
                                         region_fills(reg_id).volume = region::readVTUFile;
                                     });
                                     break;
                                 case region::no_volume:
-                                    std::cout << "Setting volume fill type to none " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to none " << std::endl;
                                     region_fills_host(reg_id).volume = region::no_volume;
                                     RUN({
                                         region_fills(reg_id).volume = region::no_volume;

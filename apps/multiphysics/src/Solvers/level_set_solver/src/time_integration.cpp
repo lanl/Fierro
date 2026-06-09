@@ -50,8 +50,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::rk_init(
-    DCArrayKokkos<double>& GaussPoints_level_set,
-    DCArrayKokkos<double>& GaussPoints_level_set_n0,
+    MPICArrayKokkos<double>& GaussPoints_level_set,
+    MPICArrayKokkos<double>& GaussPoints_level_set_n0,
     DRaggedRightArrayKokkos<size_t>& elem_mat_elem,
     const size_t num_dims,
     const size_t num_mat_elems,
@@ -94,7 +94,7 @@ void LevelSet::rk_init(
 void LevelSet::get_timestep(
     const swage::Mesh& mesh,
     const Material_t& Materials,
-    const DCArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DRaggedRightArrayKokkos<size_t>& elem_mat_elem,
     const size_t num_mat_elems,
@@ -221,7 +221,7 @@ void LevelSet::get_timestep(
 void LevelSet::get_timestep_2D(
     const swage::Mesh& mesh,
     const Material_t& Materials,
-    const DCArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DRaggedRightArrayKokkos<size_t>& elem_mat_elem,
     const size_t num_mat_elems,

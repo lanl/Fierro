@@ -249,9 +249,9 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 void fill_regions(
         const Material_t& Materials,
         const swage::Mesh& mesh,
-        const DCArrayKokkos <double>& node_coords,
-        DCArrayKokkos <double>& node_vel,
-        DCArrayKokkos <double>& node_temp,
+        const MPICArrayKokkos<double>& node_coords,
+        MPICArrayKokkos <double>& node_vel,
+        MPICArrayKokkos <double>& node_temp,
         DCArrayKokkos <double>& gauss_den,
         DCArrayKokkos <double>& gauss_sie,
         DCArrayKokkos <bool>&   gauss_use_sie,
@@ -1115,6 +1115,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                           fillGaussState_t& fillGaussState,
                           fillElemState_t&  fillElemState)
 {
+    bool verbose = false;
 
     // short hand names
     //const size_t num_dims  = mesh.num_dims;
@@ -1282,7 +1283,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     // copy the state to the device
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
-        std::cout << "Number of elements = " << 
+        if(verbose) std::cout << "Number of elements = " << 
             State.MaterialToMeshMaps.num_mat_elems.host(mat_id) << " for material " << mat_id << "\n";
     
     } // end for loop over mats
@@ -2052,8 +2053,9 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 /// \param scalarFieldType is enum for setting the field
 ///
 /////////////////////////////////////////////////////////////////////////////
+
 KOKKOS_FUNCTION
-void paint_scalar(const DCArrayKokkos<double>& field_scalar,
+void paint_scalar(const MPICArrayKokkos<double>& field_scalar,
                   const ViewCArrayKokkos <double> mesh_coords,
                   const double scalar,
                   const double slope,
@@ -2183,7 +2185,7 @@ void paint_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_vector(const DCArrayKokkos<double>& vector_field,
+void paint_vector(const MPICArrayKokkos<double>& vector_field,
                   const ViewCArrayKokkos <double>& mesh_coords,
                   const double u,
                   const double v,
@@ -2341,7 +2343,7 @@ KOKKOS_FUNCTION
 void paint_node_scalar(const double scalar,
                        const CArrayKokkos<RegionICs_t>& region_ics,
                        const DCArrayKokkos<double>& node_scalar,
-                       const DCArrayKokkos<double>& node_coords,
+                       const MPICArrayKokkos<double>& node_coords,
                        const double node_gid,
                        const double num_dims,
                        const size_t f_id)
@@ -2609,7 +2611,7 @@ void init_press_sspd_stress(const Material_t& Materials,
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass(const Material_t& Materials,
                       const swage::Mesh& mesh,
-                      const DCArrayKokkos<double>& node_coords,
+                      const MPICArrayKokkos<double>& node_coords,
                       const DCArrayKokkos<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
@@ -2617,25 +2619,19 @@ void calc_corner_mass(const Material_t& Materials,
                       const size_t num_mat_elems,
                       const size_t mat_id)
 {
-
-
     FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
-        // get elem gid
-        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);  
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
-        // calculate the fraction of matpt mass to scatter to each corner
         double corner_frac = 1.0/((double)mesh.num_nodes_in_elem);  // =1/8
-        
-        // partion the mass to the corners
+
         for(size_t corner_lid=0; corner_lid<mesh.num_nodes_in_elem; corner_lid++){
             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
             corner_mass(corner_gid) += corner_frac*MaterialPoints_mass(mat_id, mat_elem_sid);
         } // end for
 
     }); // end parallel for over mat elem local ids
-
-
+    Kokkos::fence();
 } // end function calculate corner mass
 
 
@@ -2655,7 +2651,7 @@ void calc_corner_mass(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_mass(const swage::Mesh& mesh,
-                    const DCArrayKokkos<double>& node_coords,
+                    const MPICArrayKokkos<double>& node_coords,
                     const DCArrayKokkos<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass)
 {

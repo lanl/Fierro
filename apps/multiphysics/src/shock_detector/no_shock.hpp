@@ -31,38 +31,21 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
-#include "sgh_solver_3D.hpp"
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn update_position
-///
-/// \brief Updates the nodal positions based on the nodal velocity
-///
-/// \param Runge Kutta time integration alpha value
-/// \param Time step size
-/// \param Number of dimensions in the mesh (REMOVE)
-/// \param Number of nodes in the mesh
-/// \param View of nodal position data
-/// \param View of nodal velocity data
-///
-/////////////////////////////////////////////////////////////////////////////
-void SGH3D::update_position(double rk_alpha,
-    double dt,
-    const size_t num_dims,
-    const size_t num_nodes,
-    MPICArrayKokkos<double>& node_coords,
-    MPICArrayKokkos<double>& node_coords_n0,
-    const MPICArrayKokkos<double>& node_vel,
-    const MPICArrayKokkos<double>& node_vel_n0) const
-{
-    // loop over all the nodes in the mesh
-    FOR_ALL(node_gid, 0, num_nodes, {
-        for (int dim = 0; dim < num_dims; dim++) {
-            double half_vel = (node_vel(node_gid, dim) + node_vel_n0(node_gid, dim)) * 0.5;
-            node_coords(node_gid, dim) = node_coords_n0(node_gid, dim) + rk_alpha * dt * half_vel;
-        }
-    }); // end parallel for over nodes
-    Kokkos::fence();
-    
-} // end subroutine
+#ifndef NO_SHOCK_H
+#define NO_SHOCK_H
+
+#include "matar.h"
+
+namespace NoShockDetector {
+
+    KOKKOS_FUNCTION
+    static void detect_shock(const ViewCArrayKokkos<double>& GaussPoints_vel_grad,
+                             const ViewCArrayKokkos<double>& GaussPoints_shock_detector)
+    {
+        return;
+    }
+} // end NoShockDetector namespace
+
+
+#endif // end NO_SHOCK_H Header Guard

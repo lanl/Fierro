@@ -66,6 +66,8 @@ include_directories(material_models/equilibration)
 include_directories(material_models/equilibration/include)
 include_directories(material_models/tabular/include)
 
+include_directories(shock_detector)
+
 add_subdirectory(material_models/equilibration)
 add_subdirectory(material_models/tabular)
 

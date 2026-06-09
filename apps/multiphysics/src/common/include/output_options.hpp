@@ -86,7 +86,8 @@ static std::map<std::string, gauss_pt_state> gauss_pt_outputs_map
 {
     { "volume",    gauss_pt_state::volume },
     { "level_set", gauss_pt_state::level_set },
-    { "vel_grad",  gauss_pt_state::gradient_velocity }
+    { "vel_grad",  gauss_pt_state::gradient_velocity },
+    { "shock_detector", gauss_pt_state::shock_detector }
 };
 
 // material point state variables writen to file

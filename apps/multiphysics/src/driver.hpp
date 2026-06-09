@@ -39,16 +39,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "geometry_new.hpp"
 
-// // Headers for solver classes
-// #include "sgh_solver_3D.hpp"
-// #include "sgh_solver_rz.hpp"
-// #include "sgtm_solver_3D.hpp"
-
-
 // Physical state data
 #include "state.hpp"
 
-
+// MPI- and GPU-safe printf-style logger (one per Driver; passed by reference
+// to solvers and captured into kernels via its POD Handle view).
+#include "logger.hpp"
 
 
 class Driver
@@ -58,14 +54,20 @@ public:
     char* mesh_file;
     char* yaml_file;
 
-    // ---------------------------------------------------------------------
-    //    input type declarations
-    // ---------------------------------------------------------------------
+    // MPI rank and world size
+    int rank;
+    int world_size;
 
+    // Communication plans
+    CommunicationPlan element_communication_plan;
+    CommunicationPlan node_communication_plan;
+    // ---------------------------------------------------------------------
+    //    Menshing and Simulation Parameters
+    // ---------------------------------------------------------------------
     MeshReader  mesh_reader;
     MeshBuilder mesh_builder;
 
-    SimulationParameters_t SimulationParamaters; ///< the input simulation parameters
+    SimulationParameters_t SimulationParamaters; ///< the input simulation parameters (WARNING, Misspelled, correct in following PR)
 
     // ---------------------------------------------------------------------
     //    Material and Boundary declarations
@@ -74,7 +76,6 @@ public:
     Material_t Materials;                   ///< Material data for simulation
     BoundaryCondition_t BoundaryConditions; ///< Simulation boundary conditions
 
-    int num_dims = 3;
 
     // ---------------------------------------------------------------------
     //    mesh data type declarations
@@ -91,9 +92,19 @@ public:
     // set of enabled solvers
     std::vector<Solver*> solvers;
 
-    Driver(char* YAML)
+    // One MPI- and GPU-safe logger, owned by the Driver. Solvers receive a
+    // reference to this and may call log_.info / warn / error / debug on the
+    // host, or capture log_.handle() by value into FOR_ALL / KOKKOS_LAMBDA.
+    // Default constructs against MPI_COMM_WORLD at LogLevel::Info with file
+    // prefix "Fierro_log_", yielding per-rank files Fierro_log_0, Fierro_log_1, ...
+    // MPI must already be initialized by main() before the Driver is constructed.
+    fierro::Logger log_;
+
+    Driver(char* YAML, int rank, int world_size)
     {
         yaml_file = YAML;
+        this->rank = rank;
+        this->world_size = world_size;
     };
     ~Driver() {};
 

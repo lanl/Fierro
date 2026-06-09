@@ -43,6 +43,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.hpp"
 
 #include "geometry_new.hpp"
+#include "logger.hpp"   // fierro::Logger::Handle for in-kernel logging examples
 
 struct SimulationParamaters_t;
 struct Material_t;
@@ -69,9 +70,9 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 void fill_regions(
         const Material_t& Materials,
         const swage::Mesh& mesh,
-        const DCArrayKokkos <double>& node_coords,
-        DCArrayKokkos <double>& node_vel,
-        DCArrayKokkos <double>& node_temp,
+        const MPICArrayKokkos<double>& node_coords,
+        MPICArrayKokkos <double>& node_vel,
+        MPICArrayKokkos <double>& node_temp,
         DCArrayKokkos <double>& gauss_den,
         DCArrayKokkos <double>& gauss_sie,
         DCArrayKokkos <bool>& gauss_use_sie,
@@ -268,7 +269,7 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_scalar(const DCArrayKokkos<double>& field_scalar,
+void paint_scalar(const MPICArrayKokkos<double>& field_scalar,
                   const ViewCArrayKokkos <double> mesh_coords,
                   const double scalar,
                   const double slope,
@@ -293,7 +294,7 @@ void paint_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_vector(const DCArrayKokkos<double>& vector_field,
+void paint_vector(const MPICArrayKokkos<double>& vector_field,
                   const ViewCArrayKokkos <double>& mesh_coords,
                   const double u,
                   const double v,
@@ -326,7 +327,7 @@ KOKKOS_FUNCTION
 void paint_node_scalar(const double scalar,
                        const CArrayKokkos<RegionFill_t>& region_fills,
                        const DCArrayKokkos<double>& node_scalars,
-                       const DCArrayKokkos<double>& node_coords,
+                       const MPICArrayKokkos<double>& node_coords,
                        const double node_gid,
                        const double num_dims,
                        const size_t f_id);
@@ -404,7 +405,7 @@ void init_press_sspd_stress(const Material_t& Materials,
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass(const Material_t& Materials,
                       const swage::Mesh& mesh,
-                      const DCArrayKokkos<double>& node_coords,
+                      const MPICArrayKokkos<double>& node_coords,
                       const DCArrayKokkos<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
                       const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
@@ -428,7 +429,7 @@ void calc_corner_mass(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_mass(const swage::Mesh& mesh,
-                    const DCArrayKokkos<double>& node_coords,
+                    const MPICArrayKokkos<double>& node_coords,
                     const DCArrayKokkos<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass);
 
@@ -449,9 +450,6 @@ void init_corner_node_masses_zero(
         const swage::Mesh& mesh,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_mass);
-
-
-
 
 
 #endif
