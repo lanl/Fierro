@@ -576,10 +576,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 displacement_step(i) += displacement_iter_kp1(i);
             });
             Kokkos::fence();
-            for (int i = 0; i < 3*mesh.num_nodes; i++) {
-                std::cout << displacement_step(i) << std::endl;
-            }
-            std::cout << std::endl;
 
             // convergence check
             /* double norm_num = 0.0;
