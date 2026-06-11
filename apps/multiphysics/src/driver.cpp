@@ -68,6 +68,14 @@ void Driver::initialize()
     parse_yaml(root, SimulationParamaters, Materials, BoundaryConditions);
     log_.info("Finished parsing YAML file\n");
 
+    // checking if TLQS is active in order to run correct read vtk function
+    bool TLQS_active = false;
+    for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
+        if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::TLQS3D) {
+            TLQS_active = true;
+        }
+    }
+
 
     // Create initial mesh on rank 0
     swage::Mesh initial_mesh;
@@ -105,7 +113,8 @@ void Driver::initialize()
             mesh_reader.read_mesh(initial_mesh, 
                                   initial_node_coords,
                                   SimulationParamaters.MeshInput, 
-                                  initial_mesh.num_dims);
+                                  initial_mesh.num_dims,
+                                  TLQS_active);
         } // end if rank == 0
     }
     else if (SimulationParamaters.MeshInput.source == mesh_input::generate) {
@@ -113,7 +122,8 @@ void Driver::initialize()
         if (rank == 0) {
             mesh_builder.build_mesh(initial_mesh, 
                                     initial_node_coords,
-                                    SimulationParamaters);
+                                    SimulationParamaters,
+                                    TLQS_active);
         } // end if rank == 0
     }
     else{
@@ -122,6 +132,11 @@ void Driver::initialize()
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
+
+    // if TLQS solver is active initialize the reference element object
+    if (TLQS_active) {
+        ref_elem.init(mesh.Pn, mesh.num_dims);
+    }
     
     // Partition the mesh to all ranks
     if(world_size != 1) { // pass through the partitioning function if not a single rank
@@ -459,7 +474,8 @@ void Driver::execute()
                         Materials, 
                         BoundaryConditions, 
                         mesh, 
-                        State);
+                        State,
+                        ref_elem);
     } // loop over solvers
 
     // Collective: dump any remaining buffered output from the run. Solvers

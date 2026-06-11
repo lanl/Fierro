@@ -58,6 +58,9 @@ namespace TLQS3D_State
     static const std::vector<node_state> required_node_state = 
     { 
         node_state::coords,
+        node_state::coords_t0,
+        node_state::displacement,
+        node_state::mass
     };
 
     // Gauss point state to be initialized for the TLQS solver
@@ -70,14 +73,11 @@ namespace TLQS3D_State
     static const std::vector<material_pt_state> required_material_pt_state = 
     { 
         material_pt_state::density,
-        material_pt_state::pressure,
         material_pt_state::stress,
-        material_pt_state::specific_internal_energy,
-        material_pt_state::sound_speed,
+        material_pt_state::strain,
         material_pt_state::mass,
         material_pt_state::volume_fraction,
         material_pt_state::eroded_flag,
-        material_pt_state::shear_modulii
     };
 
     // Material corner state to be initialized for the TLQS solver
@@ -98,27 +98,14 @@ namespace TLQS3D_State
      // Node state that must be filled (setup) for the SGH solver
      static const std::vector<fill_node_state> required_fill_node_state = 
      { 
-         fill_node_state::velocity
+         //fill_node_state::displacement
      };
  
      // Material point state that must be filled (setup) for the SGH solver
      // option A
-     static const std::vector<fill_gauss_state> required_optA_fill_material_pt_state = 
+     static const std::vector<fill_gauss_state> required_fill_material_pt_state = 
      { 
-        fill_gauss_state::density,
-        fill_gauss_state::specific_internal_energy
-     };
-     // option B
-     static const std::vector<fill_gauss_state> required_optB_fill_material_pt_state = 
-     { 
-        fill_gauss_state::density,
-        fill_gauss_state::internal_energy
-     };
-     // option C
-     static const std::vector<fill_gauss_state> required_optC_fill_material_pt_state = 
-     { 
-        fill_gauss_state::density,
-        fill_gauss_state::stress
+        fill_gauss_state::density
      };
      // -------------------------------------
 
@@ -127,13 +114,13 @@ namespace TLQS3D_State
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \class SGTM
+/// \class TLQS
 ///
-/// \brief Class for containing functions required to perform staggered grid
-///        thermomechanical 3D Cartesian meshes.
+/// \brief Class for containing functions required to perform Total Lagrangian
+/// quasi-static 3D Cartesian meshes.
 ///
 /// This class contains the requisite functions requited to perform
-/// staggered grid thermomechanical heat transfer.
+/// Total Lagrangian quasi-static mechanics.
 ///
 /////////////////////////////////////////////////////////////////////////////
 class TLQS3D : public Solver
@@ -202,7 +189,8 @@ public:
         Material_t& Materials,
         BoundaryCondition_t& Boundary,
         swage::Mesh&  mesh,
-        State_t& State) override;
+        State_t& State,
+        elements::fe_ref_elem_t& ref_elem) override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -224,10 +212,15 @@ public:
 
 
     // **** Functions defined in boundary.cpp **** //
-    void boundary_position(const swage::Mesh& mesh,
-        const BoundaryCondition_t& BoundaryConditions,
-        MPICArrayKokkos<double>& node_vel,
-        const double time_value) const;
+    void boundary_displacement(const swage::Mesh& mesh,
+    const BoundaryCondition_t& BoundaryConditions,
+    const CArrayKokkos<double>& K_elem,
+    const CArrayKokkos<double>& F_elem,
+    const CArrayKokkos<double>& displacement_step,
+    const double dt,
+    const double time_value,
+    const double time_start,
+    const double time_end) const;
 
     // **** Functions defined in time_integration.cpp **** //
     void timestep_init(
@@ -244,7 +237,169 @@ public:
         const size_t num_nodes,
         const size_t mat_id) const;
 
-        
+    // **** Functions defined in elem_arrays.cpp **** //
+
+    // inputs: material_matrix, mesh map for nodes in the element, element id, node reference coordinates, node displacements, basis gradients wrt master element
+    // outputs: displacement gradient, inverse of jacobian, jacobian determinant, 2nd PK stress in current configuration
+    KOKKOS_FUNCTION
+    void get_gradients(
+        const double material_matrix[6][6],
+        ViewCArrayKokkos <size_t>& nodes_in_elem,
+        const MPICArrayKokkos <double>& coords_t0,
+        const MPICArrayKokkos <double>& displacement,
+        const CArrayKokkos <double>& displacement_step,
+        ViewCArrayKokkos <double>& gauss_point_grad_basis,
+        double grad_u[3][3],
+        double inv_J[3][3],
+        double& det_J,
+        double PK2_curr_config[6]
+    );
+
+    // inputs: material_matrix, displacement gradient, inverse Jacobian, basis gradients wrt master element, current PK2 stress
+    // outputs: updated element stiffness matrix, updated element force vector
+    KOKKOS_FUNCTION
+    void tally_elem_arrays(
+        const double material_matrix[6][6],
+        const double grad_u[3][3],
+        const double inv_J[3][3],
+        ViewCArrayKokkos <double>& gauss_point_grad_basis,
+        double gauss_point_weight,
+        const double PK2_curr_config[6],
+        ViewCArrayKokkos <double>& Kel,
+        ViewCArrayKokkos <double>& Fel,
+        const double vol_frac
+    );
+
+    // **** Functions defined in cgm_functions.cpp **** //
+
+    // inputs: mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter
+    // outputs: initial cgm residual: r0
+    void get_r0(
+        const size_t num_nodes,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const CArrayKokkos<double>& F_elem,
+        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<double>& displacement_iter,
+        const CArrayKokkos<double>& r0
+    );
+
+    // inputs: mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p
+    // outputs: alpha for cgm
+    double get_alpha(
+        const size_t num_nodes,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const CArrayKokkos<double>& K_elem,
+        const double rktrk,
+        const CArrayKokkos<double>& p
+    );
+
+    void get_rkp1(
+        const size_t num_nodes,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<double>& rk,
+        const CArrayKokkos<double>& p,
+        const double alpha,
+        const CArrayKokkos<double>& rkp1
+    );
+
+    // **** Functions defined in post_process.cpp **** //
+
+    // postprocessing function: updates stress and strain material point fields
+    void post_process(
+        const double material_matrix[6][6],
+        ViewCArrayKokkos <size_t>& nodes_in_elem,
+        const MPICArrayKokkos <double>& coords_t0,
+        const MPICArrayKokkos <double>& displacement,
+        ViewCArrayKokkos <double>& gauss_point_grad_basis,
+        ViewCArrayKokkos <double>& stress,
+        ViewCArrayKokkos <double>& strain
+    );
+
+    // **** Functions defined in qr_solver.cpp **** //
+    void QR_backsub(const CArrayKokkos <double> &R, 
+        const CArrayKokkos <double> &y,
+        DCArrayKokkos <double> &x
+    );
+
+    void QR_decompose(const CArrayKokkos <double> &A, 
+        FArrayKokkos <double> &Q, 
+        CArrayKokkos <double> &R
+    );
+    
+    double QR_determinant(const FArrayKokkos <double> &Q,
+        const CArrayKokkos <double> &R
+    );
+
+    void QR_solver(const CArrayKokkos <double> &A, 
+        const CArrayKokkos <double> &b,
+        DCArrayKokkos <double> &x
+    );
+
+    // **** Functions defined in additive_schwarz_preconditioning.cpp **** //
+    /* void get_z0(
+        const size_t num_nodes,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<double>& rk,
+        CArrayKokkos<double>& zk
+    );
+
+    void get_zkp1(
+        const size_t num_nodes,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<double>& rk,
+        CArrayKokkos<double>& zk
+    ); */
+
+    // **** Functions defined in chebyshev_smoothing.cpp **** //
+    void apply_chebyshev_preconditioner(const CArrayKokkos<double>& rk,
+        const CArrayKokkos<double>& zkp1,
+        const CArrayKokkos<double>& D_inv,
+        const CArrayKokkos<double>& zk,
+        const CArrayKokkos<double>& delta_z,
+        const CArrayKokkos<double>& temporary,
+        const CArrayKokkos<double>& K_elem,
+        const size_t num_nodes,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const double alpha,
+        const double beta,
+        const int degree
+    );
+
+    void get_diagonal_inverse(CArrayKokkos<double>& D_inv,
+        const CArrayKokkos<double>& K_elem,
+        const size_t num_nodes,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem
+    );
+
+    void get_chebyshev_bounds(double& alpha,
+        double& beta,
+        const CArrayKokkos<double>& D_inv,
+        const CArrayKokkos<double>& K_elem,
+        const size_t num_nodes,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        CArrayKokkos<double>& v_scratch,
+        CArrayKokkos<double>& w_scratch,
+        const int max_iters
+    );
+    
 };
 
 

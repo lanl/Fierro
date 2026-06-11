@@ -53,7 +53,8 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
                     swage::Mesh& mesh, 
-                    State_t& State)
+                    State_t& State,
+                    elements::fe_ref_elem_t& ref_elem)
 {
 
     // arrays local to this solver

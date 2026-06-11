@@ -67,6 +67,15 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
+    // storing reference configuration if variable initialized
+    if (State.node.coords_t0.size() > 0) {
+        FOR_ALL(i, 0, static_cast<long long>(mesh.num_nodes),
+                j, 0, 3, {
+                    State.node.coords_t0(i,j) = State.node.coords(i,j);
+                });
+        State.node.coords_t0.update_host();
+    }
+
     // Calculate element volume
     geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 

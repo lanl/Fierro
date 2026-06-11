@@ -39,6 +39,7 @@
 #include <memory>
 
 #include "matar.h"
+#include "ELEMENTS.h"
 #include "logger.hpp"
 
 struct SimulationParameters_t;
@@ -110,7 +111,8 @@ public:
                          Material_t& Materials, 
                          BoundaryCondition_t& BoundaryConditions, 
                          swage::Mesh& mesh, 
-                         State_t& State) = 0;
+                         State_t& State,
+                         elements::fe_ref_elem_t& ref_elem) = 0;
 
     virtual void finalize(SimulationParameters_t& SimulationParamaters, 
                           Material_t& Materials, 

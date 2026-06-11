@@ -32,62 +32,46 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
+#ifndef BOUNDARY_QSTATX_STRESS_UNIFORM_H
+#define BOUNDARY_QSTATX_STRESS_UNIFORM_H
 
-#include "tlqs_solver_3D.hpp"
 #include "boundary_conditions.hpp"
 
+struct BoundaryConditionEnums_t;
 
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn boundary_position
-///
-/// \brief Evolves the boundary according to a given displacement
-///
-/// \param mesh The simulation mesh
-/// \param BoundaryConditions Boundary contains arrays of information about BCs
-/// \param node_disp The nodal displacement array
-/// \param time_value The current simulation time
-///
-/////////////////////////////////////////////////////////////////////////////
-void TLQS3D::boundary_displacement(const swage::Mesh& mesh,
-    const BoundaryCondition_t& BoundaryConditions,
-    const CArrayKokkos<double>& K_elem,
-    const CArrayKokkos<double>& F_elem,
-    const CArrayKokkos<double>& displacement_step,
-    const double dt,
-    const double time_value,
-    const double time_start,
-    const double time_end) const
+namespace UniformQstatxStressBC
 {
-    size_t num_disp_bdy_sets = BoundaryConditions.num_disp_bdy_sets_in_solver.host(this->solver_id);
-    //std::cout << "NUM DISP BDY SETS" << num_disp_bdy_sets << std::endl;
-    // Loop over the displacement boundary sets
-    for (size_t bc_lid = 0; bc_lid < num_disp_bdy_sets; bc_lid++) {
-        
-        size_t bdy_set = BoundaryConditions.disp_bdy_sets_in_solver.host(this->solver_id, bc_lid);
-        //std::cout << "NUM BDY NODES IN SET" << mesh.num_bdy_nodes_in_set.host(bdy_set) << std::endl << std::endl;
-        // Loop over boundary nodes in a boundary set
-        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes_in_set.host(bdy_set), {
-            // get the global index for this node on the boundary
-            size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn Boundary stress does not exist, its a free surface
+///
+/// \brief This is a function for a free surface, the default case
+///
+/// \param Mesh object
+/// \param Boundary condition enums to select options
+/// \param Boundary condition global variables array
+/// \param Boundary condition state variables array
+/// \param Node force
+/// \param Time of the simulation
+/// \param Boundary global index for the surface node
+/// \param Boundary set local id
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+static void qstatx_stress(const swage::Mesh& mesh,
+    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+    const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
+    const DCArrayKokkos<double>& bc_state_vars,
+    const ViewCArrayKokkos <double>& corner_surf_force,
+    const ViewCArrayKokkos <double>& corner_surf_normal,
+    const double time_value,
+    const size_t bdy_node_gid,
+    const size_t bdy_set)
+{
 
-            // evaluate displacement on this boundary node
-            BoundaryConditions.BoundaryConditionFunctions(bdy_set).displacement(
-                mesh,
-                BoundaryConditions.BoundaryConditionEnums,
-                BoundaryConditions.displacement_bc_global_vars,
-                BoundaryConditions.bc_state_vars,
-                K_elem,
-                F_elem,
-                displacement_step,
-                dt,
-                time_value,
-                time_start,
-                time_end,
-                bdy_node_gid,
-                bdy_set);
-        }); // end for bdy_node_lid
-    } // end for bdy_set
 
     return;
-} // end boundary_displacement function
+} // end qstatx stress
+} // end namespace
+
+#endif // end Header Guard
