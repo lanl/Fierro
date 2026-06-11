@@ -87,6 +87,7 @@ void Driver::initialize()
     element_communication_plan.initialize(MPI_COMM_WORLD);
     node_communication_plan.initialize(MPI_COMM_WORLD);
 
+    initial_mesh.num_dims = SimulationParamaters.MeshInput.num_dims;
 
     // mesh read
     if (SimulationParamaters.MeshInput.source == mesh_input::file) {
@@ -132,11 +133,6 @@ void Driver::initialize()
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-
-    // if TLQS solver is active initialize the reference element object
-    if (TLQS_active) {
-        ref_elem.init(mesh.Pn, mesh.num_dims);
-    }
     
     // Partition the mesh to all ranks
     if(world_size != 1) { // pass through the partitioning function if not a single rank
@@ -228,6 +224,12 @@ void Driver::initialize()
 
         } // end check on region_fill being a file
     } // end for reg_id
+
+    // if TLQS solver is active initialize the reference element object
+    if (TLQS_active) {
+        std::cout << mesh.Pn << "   " << mesh.num_dims << std::endl;
+        ref_elem.init(mesh.Pn, mesh.num_dims);
+    }
 
 
     // Build boundary conditions

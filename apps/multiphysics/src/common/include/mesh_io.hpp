@@ -1026,6 +1026,7 @@ public:
 
         // --- 3. Connectivity and Reordering ---
         CArray <int> convert_vtk_to_fierro(num_nodes_in_elem);
+        std::cout << "HEREHEREHERE   " << num_nodes_in_elem << std::endl << std::endl;
         bool map_built = false;
 
         for (elem_gid=0; elem_gid < num_elem; elem_gid++) {
@@ -1857,7 +1858,6 @@ public:
                            MPICArrayKokkos<double>& node_coords,
                            SimulationParameters_t& SimulationParamaters) const
     {
-        printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
         const int num_dim = 3;
 
         // SimulationParamaters.MeshInput.length.update_host();
@@ -1945,7 +1945,7 @@ public:
 
 
         // initialize elem variables
-        mesh.initialize_elems_Pn(num_elems, num_dim, mesh.Pn);
+        mesh.initialize_elems_Pn(num_elems, num_dim, SimulationParamaters.MeshInput.p_order);
 
         // --- Build elems  ---
         
