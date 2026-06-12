@@ -171,6 +171,17 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
 
                 solver_inputs[solver_id].use_moving_heat_source = use_moving_heat_source;
             }
+            else if (a_word.compare("time_integration") == 0) {
+                std::string ti = root["solver_options"][s_id]["solver"]["time_integration"].As<std::string>();
+
+                if (ti != "ssprk3" && ti != "rk2avg" && ti != "rk3hc") {
+                    std::cout << "ERROR: invalid time_integration: " << ti << std::endl;
+                    std::cout << "Valid options are: ssprk3, rk2avg, rk3hc" << std::endl;
+                    throw std::runtime_error("**** Solver time_integration Not Understood ****");
+                }
+
+                solver_inputs[solver_id].time_integration = ti;
+            }
             // add solver_vars parsing here
             else {
                 std::cout << "ERROR: invalid input: " << a_word << std::endl;

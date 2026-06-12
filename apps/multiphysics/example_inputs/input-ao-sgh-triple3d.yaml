@@ -1,0 +1,228 @@
+# AO_SGH3D triple point (3D), single-gamma variant of Laghos problem 3.
+# Canonical Laghos uses gamma = 1.4 in the (x > 1, y <= 1.5) region (multi-
+# material); single-material here uses gamma = 1.5 everywhere.
+#   x <= 1:                rho = 1,     p = 1   -> sie = 2.0
+#   x > 1:                 rho = 1,     p = 0.1 -> sie = 0.2, except the
+#   (y,z) checkerboard quadrants (y,z both < 1.5 or both > 1.5) which get
+#   rho = 0.125, p = 0.1 -> sie = 1.6 (Laghos 3D rho0 for problem 3).
+# Slip on all faces. Regenerate the mesh from build/ via:
+#   ./app/ao_sgh_box_vtu_gen --nx 28 --ny 12 --nz 12 --p 2 \
+#                            --origin 0,0,0 --length 7,3,3 \
+#                            --out box_28x12x12_p2.vtu
+
+dynamic_options:
+    time_final: 2.5
+    dt_min: 1.0e-9
+    dt_max: 1.0e-2
+    dt_start: 1.0e-5
+    dt_cfl: 0.25
+    cycle_stop: 200000
+
+mesh_options:
+    source: file
+    file_path: box_28x12x12_p2.vtu
+    num_dims: 3
+    polynomial_order: 2
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: viz
+    graphics_time_step: 0.25
+    node_field_outputs:
+        - vel
+
+solver_options:
+  - solver:
+        method: ao_dynx_FE
+        id: 0
+        time_integration: rk3hc
+
+boundary_conditions:
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 0.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1
+            - 0
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 7.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1
+            - 0
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 0.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 1
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 3.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 1
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 0.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 0
+            - 1
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 3.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 0
+            - 1
+
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0
+            - 1.0
+            - 1.333
+            - 1.333
+            - 0
+            - 1.0
+        eos_global_vars:
+            - 1.5
+            - 1.0e-14
+            - 1.0
+
+regions:
+    - region:
+        id: 0
+        volume:
+            type: global
+        solver_id: 0
+
+    - region:
+        id: 1
+        volume:
+            type: box
+            x1: 1.0
+            x2: 7.0
+            y1: 0.0
+            y2: 3.0
+            z1: 0.0
+            z2: 3.0
+        solver_id: 0
+
+    - region:
+        id: 2
+        volume:
+            type: box
+            x1: 1.0
+            x2: 7.0
+            y1: 0.0
+            y2: 1.5
+            z1: 0.0
+            z2: 1.5
+        solver_id: 0
+
+    - region:
+        id: 3
+        volume:
+            type: box
+            x1: 1.0
+            x2: 7.0
+            y1: 1.5
+            y2: 3.0
+            z1: 1.5
+            z2: 3.0
+        solver_id: 0
+
+initial_conditions:
+    - initial_condition:
+        region_id: 0
+        material_id: 0
+        density:
+            type: uniform
+            value: 1.0
+        specific_internal_energy:
+            type: uniform
+            value: 2.0
+        velocity:
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+
+    - initial_condition:
+        region_id: 1
+        material_id: 0
+        density:
+            type: uniform
+            value: 1.0
+        specific_internal_energy:
+            type: uniform
+            value: 0.2
+        velocity:
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+
+    - initial_condition:
+        region_id: 2
+        material_id: 0
+        density:
+            type: uniform
+            value: 0.125
+        specific_internal_energy:
+            type: uniform
+            value: 1.6
+        velocity:
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+
+    - initial_condition:
+        region_id: 3
+        material_id: 0
+        density:
+            type: uniform
+            value: 0.125
+        specific_internal_energy:
+            type: uniform
+            value: 1.6
+        velocity:
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0

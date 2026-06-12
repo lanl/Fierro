@@ -325,7 +325,12 @@ enum class gauss_pt_state
     volume,
     divergence_velocity,
     gradient_velocity,
-    level_set
+    level_set,
+    detj0,         // det(J0) at t=0, frozen reference-to-physical Jacobian determinant
+    jac0_inv,      // inv(J0) at t=0, frozen reference-to-physical Jacobian inverse
+    rho0_detj0_w,  // rho0 * det(J0) * w_q, frozen per-qpt conserved mass weight
+    detj,          // det(J(t)) at current time, rebuilt each RK stage
+    jac_inv        // inv(J(t)) at current time, rebuilt each RK stage
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -345,6 +350,12 @@ struct GaussPoint_t
     DCArrayKokkos<double> level_set;  ///< GaussPoint level set field
     DCArrayKokkos<double> level_set_n0;  ///< GaussPoint level set field
 
+    DCArrayKokkos<double> detj0;         ///< det(J0) at t=0, frozen ref-to-physical Jacobian determinant
+    DCArrayKokkos<double> jac0_inv;      ///< inv(J0) at t=0, shape (num_gauss_pnts, num_dims, num_dims)
+    DCArrayKokkos<double> rho0_detj0_w;  ///< rho0 * det(J0) * w_q, per-qpt conserved mass weight
+    DCArrayKokkos<double> detj;          ///< det(J(t)) at current time
+    DCArrayKokkos<double> jac_inv;       ///< inv(J(t)) at current time, shape (num_gauss_pnts, num_dims, num_dims)
+
     // initialization method (num_cells, num_dims)
     void initialize(size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states)
     {
@@ -363,6 +374,21 @@ struct GaussPoint_t
                 case gauss_pt_state::level_set:
                     if (level_set.size() == 0) this->level_set = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set");
                     if (level_set_n0.size() == 0) this->level_set_n0 = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set_n0");
+                    break;
+                case gauss_pt_state::detj0:
+                    if (detj0.size() == 0) this->detj0 = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_detj0");
+                    break;
+                case gauss_pt_state::jac0_inv:
+                    if (jac0_inv.size() == 0) this->jac0_inv = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_jac0_inv");
+                    break;
+                case gauss_pt_state::rho0_detj0_w:
+                    if (rho0_detj0_w.size() == 0) this->rho0_detj0_w = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_rho0_detj0_w");
+                    break;
+                case gauss_pt_state::detj:
+                    if (detj.size() == 0) this->detj = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_detj");
+                    break;
+                case gauss_pt_state::jac_inv:
+                    if (jac_inv.size() == 0) this->jac_inv = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_jac_inv");
                     break;
                 default:
                     std::cout<<"Desired gauss point state not understood in GaussPoint_t initialize"<<std::endl;
@@ -461,7 +487,8 @@ enum class material_pt_state
     shear_modulii,
     poisson_ratios,
     thermal_conductivity,
-    specific_heat
+    specific_heat,
+    coords  // physical position at the material point (= qpt for single-material)
 };
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -494,7 +521,9 @@ struct MaterialPoint_t
     DRaggedRightArrayKokkos<double> elastic_modulii;  ///<  MaterialPoint elastic modulii Exx, Eyy, Ezz
     DRaggedRightArrayKokkos<double> shear_modulii;    ///<  MaterialPoint shear modulii Gxy, Gxz, Gyz
     DRaggedRightArrayKokkos<double> poisson_ratios;   ///<  MaterialPoint poisson ratios nu_xy, nu_xz, nu_yz
-    
+
+    DRaggedRightArrayKokkos<double> coords;           ///< physical position at the material point
+
 
     // Material Models are stored on Material points
     DRaggedRightArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS, accessed as (mat_id, elem_lid, var_lid)
@@ -580,6 +609,9 @@ struct MaterialPoint_t
                 case material_pt_state::eroded_flag:
                     if (eroded.size() == 0) this->eroded = DRaggedRightArrayKokkos<bool>(this->num_material_points_buffer, "material_point_eroded");
                     break;
+                case material_pt_state::coords:
+                    if (coords.size() == 0) this->coords = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, "material_point_coords");
+                    break;
                 default:
                     std::cout<<"Desired material point state not understood in MaterialPoint_t initialize"<<std::endl;
                     throw std::runtime_error("**** Error in State Field Name ****");
@@ -594,7 +626,8 @@ struct MaterialPoint_t
 // Possible material zone states, used to initialize MaterialZone_t
 enum class material_zone_state
 {
-    specific_internal_energy
+    specific_internal_energy,
+    mass  // lumped row-sum thermo mass per zone DoF; time-invariant under pointwise rho update
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -611,6 +644,7 @@ struct MaterialZone_t
 
     DRaggedRightArrayKokkos<double> sie;     ///< coefficients for the sie polynomial field
     DRaggedRightArrayKokkos<double> sie_n0;  ///< coefficients for the sie polynomial field at t=n0 of time integration
+    DRaggedRightArrayKokkos<double> mass;    ///< lumped row-sum mass per zone DoF
 
 
     void initialize_num_mats(size_t num_mats)
@@ -635,6 +669,9 @@ struct MaterialZone_t
                 case material_zone_state::specific_internal_energy:
                     if (sie.size() == 0) this->sie = DRaggedRightArrayKokkos<double>(this->num_material_zones_buffer, "material_zone_sie");
                     if (sie_n0.size() == 0) this->sie_n0 = DRaggedRightArrayKokkos<double>(this->num_material_zones_buffer, "material_zone_sie_n0");
+                    break;
+                case material_zone_state::mass:
+                    if (mass.size() == 0) this->mass = DRaggedRightArrayKokkos<double>(this->num_material_zones_buffer, "material_zone_mass");
                     break;
                 default:
                     std::cout<<"Desired material zone state not understood in MaterialZone_t initialize"<<std::endl;

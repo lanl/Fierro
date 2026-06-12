@@ -43,6 +43,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "sgtm_solver_3D.hpp"
 #include "level_set_solver.hpp"
 #include "tlqs_solver_3D.hpp"
+#include "ao_sgh_solver_3D.hpp"
 
 #include "region_fill.hpp"
 
@@ -234,6 +235,24 @@ void Driver::initialize()
             std::cout << "TLQS solver added to solvers vector \n";
 
         } // end if TLQS solver
+        else if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::AOSGH3D) {
+
+            std::cout << "Initializing AO_SGH3D solver" << std::endl;
+            ao_sgh::AO_SGH3D* ao_sgh_solver = new ao_sgh::AO_SGH3D();
+
+            ao_sgh_solver->initialize(SimulationParamaters,
+                                      Materials,
+                                      mesh,
+                                      BoundaryConditions,
+                                      State);
+
+            // set the variables in the solver class
+            setup_solver_vars(ao_sgh_solver,
+                              solver_id);
+
+            solvers.push_back(ao_sgh_solver);
+
+        } // end if AO_SGH solver
         else {
             throw std::runtime_error("**** NO SOLVER INPUT OPTIONS PROVIDED IN YAML, OR OPTION NOT UNDERSTOOD ****");
             return;

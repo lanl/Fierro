@@ -1,0 +1,171 @@
+# AO_SGH3D Sod shock tube. gamma = 1.4; left (x < 0.5): rho = 1, p = 1
+# (sie = 2.5); right: rho = 0.125, p = 0.1 (sie = 2.0). Slip on all faces.
+# Exact solution at t = 0.2: shock at x ~ 0.85, contact at x ~ 0.685,
+# post-shock plateau rho ~ 0.266, contact-left rho ~ 0.426.
+# Regenerate the mesh from build/ via:
+#   ./app/ao_sgh_box_vtu_gen --nx 100 --ny 1 --nz 1 --p 2 \
+#                            --origin 0,0,0 --length 1,0.01,0.01 \
+#                            --out box_100x1x1_p2.vtu
+
+dynamic_options:
+    time_final: 0.2
+    dt_min: 1.0e-9
+    dt_max: 1.0e-2
+    dt_start: 1.0e-6
+    dt_cfl: 0.25
+    cycle_stop: 100000
+
+mesh_options:
+    source: file
+    file_path: box_100x1x1_p2.vtu
+    num_dims: 3
+    polynomial_order: 2
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: viz
+    graphics_time_step: 0.05
+    node_field_outputs:
+        - vel
+
+solver_options:
+  - solver:
+        method: ao_dynx_FE
+        id: 0
+        time_integration: rk3hc
+
+boundary_conditions:
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 0.0
+            tolerance: 1.0e-6
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1
+            - 0
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 1.0
+            tolerance: 1.0e-6
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1
+            - 0
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 0.0
+            tolerance: 1.0e-6
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 1
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 0.01
+            tolerance: 1.0e-6
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 1
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 0.0
+            tolerance: 1.0e-6
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 0
+            - 1
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 0.01
+            tolerance: 1.0e-6
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 0
+            - 1
+
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0
+            - 1.0
+            - 1.333
+            - 1.333
+            - 0
+            - 1.0
+        eos_global_vars:
+            - 1.4
+            - 1.0e-14
+            - 1.0
+
+regions:
+    - region:
+        id: 0
+        volume:
+            type: global
+        solver_id: 0
+
+    - region:
+        id: 1
+        volume:
+            type: box
+            x1: 0.5
+            x2: 1.0
+            y1: 0.0
+            y2: 0.01
+            z1: 0.0
+            z2: 0.01
+        solver_id: 0
+
+initial_conditions:
+    - initial_condition:
+        region_id: 0
+        material_id: 0
+        density:
+            type: uniform
+            value: 1.0
+        specific_internal_energy:
+            type: uniform
+            value: 2.5
+        velocity:
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0
+
+    - initial_condition:
+        region_id: 1
+        material_id: 0
+        density:
+            type: uniform
+            value: 0.125
+        specific_internal_energy:
+            type: uniform
+            value: 2.0
+        velocity:
+            type: cartesian
+            u: 0.0
+            v: 0.0
+            w: 0.0

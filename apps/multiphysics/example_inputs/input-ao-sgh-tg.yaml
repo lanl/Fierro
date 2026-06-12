@@ -1,0 +1,139 @@
+# AO_SGH3D Taylor-Green vortex driver. Reads an equispaced VTK_LAGRANGE_HEXAHEDRON
+# .vtu, projects to GLL, applies the analytic TG fields each step (prescribed-driver
+# mode), advances position with SSP-RK3. Regenerate the mesh from build/ via:
+#   ./app/ao_sgh_box_vtu_gen --nx 8 --ny 8 --nz 1 --p 3 \
+#                            --origin 0,0,0 --length 1,1,0.125 \
+#                            --out box_8x8x1_p3.vtu
+
+dynamic_options:
+    time_final: 0.5
+    dt_min: 1.0e-8
+    dt_max: 1.0e-2
+    dt_start: 1.0e-4
+    dt_cfl: 0.25
+    cycle_stop: 5000
+
+mesh_options:
+    source: file
+    file_path: box_8x8x1_p3.vtu
+    num_dims: 3
+    polynomial_order: 3
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: viz
+    graphics_time_step: 0.05
+    node_field_outputs:
+        - vel
+
+solver_options:
+  - solver:
+        method: ao_dynx_FE
+        id: 0
+        time_integration: rk3hc
+
+boundary_conditions:
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 0.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1
+            - 0
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 1.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1
+            - 0
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 0.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 1
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 1.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 1
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 0.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 0
+            - 1
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 0.1
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 0
+            - 1
+
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0
+            - 1.0
+            - 1.333
+            - 1.333
+            - 0
+            - 1.0
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0e-14
+            - 1.0
+
+regions:
+    - region:
+        id: 0
+        volume:
+            type: global
+        solver_id: 0
+
+initial_conditions:
+    - initial_condition:
+        region_id: 0
+        material_id: 0
+        density:
+            type: uniform
+            value: 1.0
+        specific_internal_energy:
+            type: tg_vortex
+            value: 1.5
+        velocity:
+            type: tg_vortex

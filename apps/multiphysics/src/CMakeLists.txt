@@ -108,13 +108,18 @@ add_subdirectory(Solvers/level_set_solver)
 # Add TLQS Solver
 include_directories(Solvers/TLQS_solver_3D/include)
 add_subdirectory(Solvers/TLQS_solver_3D)
+
+# Add AO_SGH 3D Solver (high-order analogue of SGH-3D)
+include_directories(Solvers/AO_SGH_solver_3D/include)
+add_subdirectory(Solvers/AO_SGH_solver_3D)
+
 add_definitions(-DHAVE_KOKKOS=1)
 
 # --- Create Object Libraries to Reduce Linking Time ---
 # Object libraries group related source files, reducing the number of inputs
 # the linker needs to process, which significantly speeds up linking.
 
-add_executable(Fierro main.cpp driver.cpp solver.cpp ${COMMON_Files} ${EQUILIBRATION_Files} ${YAML_SRC_Files} ${SGH_3D_SRC_Files} ${SGH_RZ_SRC_Files} ${SGTM_3D_SRC_Files} ${LVLSET_SRC_Files} ${TLQS_3D_SRC_Files})
+add_executable(Fierro main.cpp driver.cpp solver.cpp ${COMMON_Files} ${EQUILIBRATION_Files} ${YAML_SRC_Files} ${SGH_3D_SRC_Files} ${SGH_RZ_SRC_Files} ${SGTM_3D_SRC_Files} ${LVLSET_SRC_Files} ${TLQS_3D_SRC_Files} ${AO_SGH_3D_SRC_Files})
 
 target_link_libraries(Fierro PRIVATE ELEMENTS)
 
