@@ -35,7 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "tlqs_solver_3D.hpp"
 
 
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void TLQS3D::get_gradients(
     const double material_matrix[6][6],
     ViewCArrayKokkos <size_t>& nodes_in_elem,
@@ -138,7 +138,7 @@ void TLQS3D::get_gradients(
 
 } // end get_gradients
 
-KOKKOS_INLINE_FUNCTION
+KOKKOS_FUNCTION
 void TLQS3D::tally_elem_arrays(
     const double material_matrix[6][6],
     const double grad_u[3][3],
