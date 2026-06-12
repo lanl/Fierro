@@ -6059,7 +6059,7 @@ public:
         x_phys.set_values(0);
         FOR_ALL(elem, 0, num_mat_elems, {
             const size_t elem_id =
-                State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, elem);
+                State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
 
             for (size_t gp = 0; gp < num_gp_per_elem; gp++) {
 
