@@ -74,12 +74,6 @@ void TLQS3D::setup(SimulationParameters_t& SimulationParamaters,
 
     } // for loop over mat_id
 
-    // defining displacement at start of tlqs solve
-    FOR_ALL(i, 0, static_cast<long long>(mesh.num_nodes),
-            j, 0, 3, {
-                State.node.displacement(i,j) = State.node.coords(i,j) - State.node.coords_t0(i,j);
-            });
-
     std::cout << "TLQS solver setup \n";
     return;
 } // end TLQS setup
