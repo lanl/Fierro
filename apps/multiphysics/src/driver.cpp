@@ -46,6 +46,21 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "region_fill.hpp"
 
+void setting_nodes(MPICArrayKokkos<double> &node_coords,
+                   MPICArrayKokkos<double> &final_node_coords,
+		   size_t num_nodes,
+		   size_t num_dims){
+
+    // Copy the partitioned node coordinates to the state
+    FOR_ALL(node_gid, 0, num_nodes, {
+        for (size_t dim = 0; dim < num_dims; dim++) {
+            node_coords(node_gid, dim) = final_node_coords(node_gid, dim);
+        }
+    });
+    Kokkos::fence();
+    return;
+};
+
 
 // Initialize driver data.  Solver type, number of solvers
 // Will be parsed from YAML input
@@ -239,12 +254,7 @@ void Driver::initialize()
     std::vector<node_state> required_node_state = { node_state::coords };
     State.node.initialize(mesh.num_nodes, mesh.num_dims, required_node_state, node_communication_plan);
 
-    // Copy the partitioned node coordinates to the state
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            State.node.coords(node_gid, dim) = final_node_coords(node_gid, dim);
-        }
-    });
+    setting_nodes(State.node.coords, final_node_coords, mesh.num_nodes, mesh.num_dims);
 
     // --- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
