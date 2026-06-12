@@ -6081,8 +6081,8 @@ public:
 
                 // VTK always expects 3 components; pad Z to 0 for 2-D runs.
                 fprintf(fp, "          %.15e %.15e %.15e\n",
-                        x_phys(elem, gp, 0),
-                        x_phys(elem, gp, 1),
+                        x_phys.host(elem, gp, 0),
+                        x_phys.host(elem, gp, 1),
                         (num_dims == 3) ? x_phys.host(elem, gp, 2) : 0.0);
 
             } // end gp
