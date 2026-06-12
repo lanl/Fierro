@@ -6083,7 +6083,7 @@ public:
                 fprintf(fp, "          %.15e %.15e %.15e\n",
                         x_phys(elem, gp, 0),
                         x_phys(elem, gp, 1),
-                        (num_dims == 3) ? x_phys(elem, gp, 2) : 0.0);
+                        (num_dims == 3) ? x_phys.host(elem, gp, 2) : 0.0);
 
             } // end gp
         } // end elem
