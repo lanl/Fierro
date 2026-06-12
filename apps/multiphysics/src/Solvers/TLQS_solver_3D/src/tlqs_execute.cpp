@@ -267,11 +267,11 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
 
                         // tallying to element array
-                        get_gradients(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, displacement_step, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
+                        TLQS3D::get_gradients(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, displacement_step, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
                         double weight = ref_elem.gauss_point_weights(mat_pt)*det_J;
                         double local_mat_vol_frac = State.MaterialPoints.mat_volfrac(mat_id, elem);
 
-                        tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, weight, PK2_curr_config, curr_K_elem, curr_F_elem, local_mat_vol_frac);
+                        TLQS3D::tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, weight, PK2_curr_config, curr_K_elem, curr_F_elem, local_mat_vol_frac);
                     } // end mat_pt
 
                 }); // end elem
