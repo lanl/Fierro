@@ -1038,6 +1038,9 @@ void fill_regions(
             case fill_gauss_state::stress:
                 gauss_stress.update_host();
                 break;
+            case fill_gauss_state::strain:
+                std::cerr << "WARNING: strain fill is not currently supported." << std::endl;
+                break;
             case fill_gauss_state::elastic_modulii:
                 gauss_elastic_modulii.update_host();
                 break;
@@ -1081,6 +1084,9 @@ void fill_regions(
             case fill_node_state::velocity:
                 // if check is needed as solver state might not match fill instructions
                 if(node_vel.size()>0){node_vel.update_host();}
+                break;
+            case fill_node_state::displacement:
+                std::cerr << "WARNING: displacement fill is not currently supported." << std::endl;
                 break;
             case fill_node_state::temperature:
                 // if check is needed as solver state might not match fill instructions
