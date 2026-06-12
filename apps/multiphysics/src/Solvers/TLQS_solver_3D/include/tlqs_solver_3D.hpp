@@ -241,7 +241,7 @@ public:
 
     // inputs: material_matrix, mesh map for nodes in the element, element id, node reference coordinates, node displacements, basis gradients wrt master element
     // outputs: displacement gradient, inverse of jacobian, jacobian determinant, 2nd PK stress in current configuration
-    KOKKOS_FUNCTION
+    KOKKOS_INLINE_FUNCTION
     void get_gradients(
         const double material_matrix[6][6],
         ViewCArrayKokkos <size_t>& nodes_in_elem,
@@ -257,7 +257,7 @@ public:
 
     // inputs: material_matrix, displacement gradient, inverse Jacobian, basis gradients wrt master element, current PK2 stress
     // outputs: updated element stiffness matrix, updated element force vector
-    KOKKOS_FUNCTION
+    KOKKOS_INLINE_FUNCTION
     void tally_elem_arrays(
         const double material_matrix[6][6],
         const double grad_u[3][3],
