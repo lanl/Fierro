@@ -6054,30 +6054,36 @@ public:
         fprintf(fp, "      <Points>\n");
         fprintf(fp, "        <DataArray type=\"Float64\" "
                     "NumberOfComponents=\"3\" format=\"ascii\">\n");
-
-        for (size_t elem = 0; elem < num_mat_elems; elem++) {
-
+        
+        DCArrayKokkos <double> x_phys(num_mat_elems, num_gp_per_elem, 3);
+        x_phys.set_values(0);
+        FOR_ALL(elem, 0, num_mat_elems, {
             const size_t elem_id =
                 State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, elem);
 
             for (size_t gp = 0; gp < num_gp_per_elem; gp++) {
 
-                double x_phys[3] = {0.0, 0.0, 0.0};
-
                 for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
-                    const size_t node_gid = mesh.nodes_in_elem.host(elem_id, node_lid);
+                    const size_t node_gid = mesh.nodes_in_elem(elem_id, node_lid);
                     const double N        = ref_elem.gauss_point_basis(gp, node_lid);
 
                     for (size_t dim = 0; dim < num_dims; dim++) {
-                        x_phys[dim] += N * State.node.coords.host(node_gid, dim);
+                        x_phys(elem, gp, dim) += N * State.node.coords.host(node_gid, dim);
                     }
                 }
 
+            } // end gp
+        });
+        x_phys.update_host();
+        for (size_t elem = 0; elem < num_mat_elems; elem++) {
+
+            for (size_t gp = 0; gp < num_gp_per_elem; gp++) {
+
                 // VTK always expects 3 components; pad Z to 0 for 2-D runs.
                 fprintf(fp, "          %.15e %.15e %.15e\n",
-                        x_phys[0],
-                        x_phys[1],
-                        (num_dims == 3) ? x_phys[2] : 0.0);
+                        x_phys(elem, gp, 0),
+                        x_phys(elem, gp, 1),
+                        (num_dims == 3) ? x_phys(elem, gp, 2) : 0.0);
 
             } // end gp
         } // end elem
