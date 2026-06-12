@@ -645,7 +645,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     ViewCArrayKokkos<double> strain_view(&State.MaterialPoints.strain(mat_id, State.points_in_mat_elem(elem,mat_pt),0,0),3,3);
 
                     // tallying to element array
-                    post_process(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, curr_grad_basis, stress_view, strain_view);
+                    TLQS3D::post_process(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, curr_grad_basis, stress_view, strain_view);
 
                 } // end mat_pt
 

@@ -312,7 +312,7 @@ public:
 
     // postprocessing function: updates stress and strain material point fields
     KOKKOS_FUNCTION
-    void post_process(
+    static void post_process(
         const double material_matrix[6][6],
         ViewCArrayKokkos <size_t>& nodes_in_elem,
         const MPICArrayKokkos <double>& coords_t0,
