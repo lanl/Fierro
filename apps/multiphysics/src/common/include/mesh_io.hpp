@@ -6068,7 +6068,7 @@ public:
                     const double N        = ref_elem.gauss_point_basis(gp, node_lid);
 
                     for (size_t dim = 0; dim < num_dims; dim++) {
-                        x_phys(elem, gp, dim) += N * State.node.coords.host(node_gid, dim);
+                        x_phys(elem, gp, dim) += N * State.node.coords(node_gid, dim);
                     }
                 }
 
