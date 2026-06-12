@@ -224,7 +224,7 @@ void Driver::initialize()
 
     // a function is used to set the node coords, ensuring the compiler doesn't change the FOR_ALL
     // to be a FOR_ALL_CLASS.  Be careful with using FOR_ALL (etc) in classes as some compilers will 
-    // change the coding, adding a *this to the lambda function, which creates a bug on a GPU.
+    // change the coding, adding a *this to the lambda function, which can create a bug on a GPU.
     setting_nodes(State.node.coords, final_node_coords, mesh.num_nodes, mesh.num_dims);
 
     // --- calculate bdy sets ---//
