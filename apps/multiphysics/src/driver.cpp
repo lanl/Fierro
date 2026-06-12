@@ -222,12 +222,15 @@ void Driver::initialize()
     std::vector<node_state> required_node_state = { node_state::coords };
     State.node.initialize(mesh.num_nodes, mesh.num_dims, required_node_state, node_communication_plan);
 
-    // Copy the partitioned node coordinates to the state
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            State.node.coords(node_gid, dim) = final_node_coords(node_gid, dim);
-        }
-    });
+
+    setting_nodes(State.node.coords, final_node_coords, mesh.num_nodes, mesh.num_dims);
+
+    // // Copy the partitioned node coordinates to the state
+    // FOR_ALL(node_gid, 0, mesh.num_nodes, {
+    //     for (size_t dim = 0; dim < mesh.num_dims; dim++) {
+    //         State.node.coords(node_gid, dim) = final_node_coords(node_gid, dim);
+    //     }
+    // });
 
     // --- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
@@ -575,3 +578,18 @@ void Driver::setup_solver_vars(T& a_solver,
 
     return;
 } // end setup solver vars function
+
+
+inline void setting_nodes(MPICArrayKokkos<double> &node_coords,
+                   const MPICArrayKokkos<double> &final_node_coords,
+		           const size_t num_nodes,
+		           const size_t num_dims){
+
+    // Copy the partitioned node coordinates to the state
+    FOR_ALL(node_gid, 0, num_nodes, {
+        for (size_t dim = 0; dim < num_dims; dim++) {
+            node_coords(node_gid, dim) = final_node_coords(node_gid, dim);
+        }
+    });
+    return;
+};
