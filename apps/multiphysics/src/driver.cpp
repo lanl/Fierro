@@ -223,12 +223,10 @@ void Driver::initialize()
     std::vector<node_state> required_node_state = { node_state::coords };
     State.node.initialize(mesh.num_nodes, mesh.num_dims, required_node_state, node_communication_plan);
 
-    // Copy the partitioned node coordinates to the state
-    FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            State.node.coords(node_gid, dim) = final_node_coords(node_gid, dim);
-        }
-    });
+    // a function is used to set the node coords, ensuring the compiler doesn't change the FOR_ALL
+    // to be a FOR_ALL_CLASS.  Be careful with using FOR_ALL (etc) in classes as some compilers will 
+    // change the coding, adding a *this to the lambda function, which can create a bug on a GPU.
+    setting_nodes(State.node.coords, final_node_coords, mesh.num_nodes, mesh.num_dims);
 
     // --- calculate bdy sets ---//
     mesh.init_bdy_sets(num_bcs);
@@ -576,3 +574,19 @@ void Driver::setup_solver_vars(T& a_solver,
 
     return;
 } // end setup solver vars function
+
+
+// setting node coords
+inline void setting_nodes(MPICArrayKokkos<double> &node_coords,
+                   const MPICArrayKokkos<double> &final_node_coords,
+		           const size_t num_nodes,
+		           const size_t num_dims){
+
+    // Copy the partitioned node coordinates to the state
+    FOR_ALL(node_gid, 0, num_nodes, {
+        for (size_t dim = 0; dim < num_dims; dim++) {
+            node_coords(node_gid, dim) = final_node_coords(node_gid, dim);
+        }
+    });
+    return;
+}; // end function
