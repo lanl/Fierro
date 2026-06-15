@@ -54,9 +54,6 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State, const Simul
     // geometric tolerance for determining if nodes are overlapping from dynamic_options.hpp (small = 1e-8)
     const double geom_tol = SimulationParameters.DynamicOptions.small; 
 
-    // update device data before accessing in RUN block
-    State.node.coords.update_device();
-
     // local reference to the array of State.node.coords
     auto node_coords = State.node.coords;
 
@@ -108,6 +105,7 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State, const Simul
 
     // reset counter for second pass
     pair_count.host(0) = 0;
+    // alex to check if this is needed in follow up PR 
     pair_count.update_device();
 
     // device side computation
@@ -158,7 +156,7 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State, const Simul
         geom_tol
     );
     cz_info.update_host();
-    cz_info.update_device(); // GPU: update device for cz.info before oriented() runs and accesses cz_info on device
+
 } // end cohesive_zones_t::initialize
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -241,6 +239,7 @@ void cohesive_zones_t::initialize_fracture_bc(
             prony_params.host(j, 0)     = bc_params.host(6 + 2*j);     // E_j
             prony_params.host(j, 1) = bc_params.host(6 + 2*j + 1); // tau_j
         }
+        // alex to check if this is needed in follow up PR 
         prony_params.update_device();
     } else {
         // allocate minimal array to avoid null issues (debug aid)
@@ -304,6 +303,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
     DCArrayKokkos<int> found_reorient(1, "found_reorient");
     found_reorient.set_values(0); // initialize to zero
     reorient_params.set_values(0.0); // initialize to zero
+    // alex to check if this is needed in follow up PR 
     found_reorient.update_device();
     reorient_params.update_device();
 
@@ -848,6 +848,7 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
     // update host
     cohesive_zone_info.update_host();
     // sync back to device before returning
+    // alex to check if this is needed in follow up PR 
     cohesive_zone_info.update_device();
     return cohesive_zone_info;
 
@@ -1704,11 +1705,9 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
     if (npairs == 0) return;
 
     // ensure mesh connectivity and nodal state are current on device
-    // for GPU/MPI: vel and coords updates touch host
-    // device copies consumed by oriented(), ucmap() and cohesive_zone_loads() need to be refreshed
+    // alex to check if this is needed in follow up PR 
     mesh.nodes_in_elem.update_device();
-    State.node.coords.update_device();
-    State.node.vel.update_device();
+
     Kokkos::fence();
 
      // 1) cohesive zone interface orientation (normal at t and t+dt)
