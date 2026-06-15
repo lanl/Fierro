@@ -79,6 +79,7 @@ void Driver::initialize()
     element_communication_plan.initialize(MPI_COMM_WORLD);
     node_communication_plan.initialize(MPI_COMM_WORLD);
 
+    initial_mesh.num_dims = SimulationParamaters.MeshInput.num_dims;
 
     // mesh read
     if (SimulationParamaters.MeshInput.source == mesh_input::file) {
