@@ -57,24 +57,24 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 {
 
     // arrays local to this solver
-    DCArrayKokkos <double> node_level_set_vel(mesh.num_nodes, mesh.num_dims);
+    MPICArrayKokkos<double> node_level_set_vel(mesh.num_nodes, mesh.num_dims);
 
-    double fuzz  = SimulationParamaters.dynamic_options.fuzz;
-    double tiny  = SimulationParamaters.dynamic_options.tiny;
-    double small = SimulationParamaters.dynamic_options.small;
+    double fuzz  = SimulationParamaters.DynamicOptions.fuzz;
+    double tiny  = SimulationParamaters.DynamicOptions.tiny;
+    double small = SimulationParamaters.DynamicOptions.small;
 
-    double graphics_dt_ival  = SimulationParamaters.output_options.graphics_time_step;
-    int    graphics_cyc_ival = SimulationParamaters.output_options.graphics_iteration_step;
+    double graphics_dt_ival  = SimulationParamaters.OutputOptions.graphics_time_step;
+    int    graphics_cyc_ival = SimulationParamaters.OutputOptions.graphics_iteration_step;
 
-    // double time_initial = SimulationParamaters.dynamic_options.time_initial;
-    double time_final   = this->time_end; //SimulationParamaters.dynamic_options.time_final;
-    double dt_min   = SimulationParamaters.dynamic_options.dt_min;
-    double dt_max   = SimulationParamaters.dynamic_options.dt_max;
-    double dt_start = SimulationParamaters.dynamic_options.dt_start;
-    double dt_cfl   = SimulationParamaters.dynamic_options.dt_cfl;
+    // double time_initial = SimulationParamaters.DynamicOptions.time_initial;
+    double time_final   = this->time_end; //SimulationParamaters.DynamicOptions.time_final;
+    double dt_min   = SimulationParamaters.DynamicOptions.dt_min;
+    double dt_max   = SimulationParamaters.DynamicOptions.dt_max;
+    double dt_start = SimulationParamaters.DynamicOptions.dt_start;
+    double dt_cfl   = SimulationParamaters.DynamicOptions.dt_cfl;
 
-    int rk_num_stages = SimulationParamaters.dynamic_options.rk_num_stages;
-    int cycle_stop    = SimulationParamaters.dynamic_options.cycle_stop;
+    int rk_num_stages = SimulationParamaters.DynamicOptions.rk_num_stages;
+    int cycle_stop    = SimulationParamaters.DynamicOptions.cycle_stop;
 
     // initialize time, time_step, and cycles
     double time_value = this->time_start;  // was 0.0
@@ -88,7 +88,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
     graphics_times(0) = this->time_start; // was zero
     double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
 
-    std::cout << "Applying initial boundary conditions" << std::endl;
+    if (log) log->info("Applying initial boundary conditions \n");
     //boundary_velocity(mesh, BoundaryConditions, node_level_set_vel, time_value); // Time value = 0.0;
 
     
@@ -105,7 +105,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
     auto time_1 = std::chrono::high_resolution_clock::now();
 
     // Write initial state at t=0
-    printf("Writing outputs to file at %f \n", graphics_time);
+    if (log) log->info("Writing outputs to file at %f \n", graphics_time);
     mesh_writer.write_mesh(
         mesh, 
         State, 
@@ -184,7 +184,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                         tiny);                    
                 }
                 else {
-                    std::cout << "ERROR: level set only works in 2D and 3D \n";
+                    if (log) log->error("ERROR: level set only works in 2D and 3D \n");
                 }
 
             } 
@@ -201,12 +201,20 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 
         dt = min_dt_calc;  // save this dt time step
 
+        // Global minimum dt across MPI ranks (each rank's CFL limit is local to its partition).
+        {
+            int init = 0;
+            if (MPI_Initialized(&init) == MPI_SUCCESS && init) {
+                MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+            }
+        }
+
         if (cycle == 0) {
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+            if (log) log->info("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         }
         // print time step every 10 cycles
         else if (cycle % 20 == 0) {
-            printf("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
+            if (log) log->info("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
         } // end if
 
 
@@ -240,20 +248,22 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
             nodal_gradient(
                 mesh,
                 State.node.coords,
-                node_level_set_vel,
+                State.node.vel, //node_level_set_vel,
                 State.node.gradient_level_set,
                 State.corner.normal,
                 State.corner.volume,
                 State.GaussPoints.level_set,
                 State.GaussPoints.vol,
                 fuzz);
-
+            
+            
+            // State.node.gradient_level_set.communicate();
 
             // ---- apply velocity boundary conditions to the boundary patches----
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
                 if (Materials.MaterialEnums.host(mat_id).levelSetType == model::evolveFront){
-                    boundary_velocity(mesh, BoundaryConditions, node_level_set_vel, time_value, small);
+                    boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value, small); // node_level_set_vel
                 } //
                 else if (Materials.MaterialEnums.host(mat_id).levelSetType == model::advectFront){
                     
@@ -262,7 +272,8 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                 }
 
             } // end for mat_id
-            
+
+            // State.node.vel.communicate();
 
             // update level set field in material regions that have this solver
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
@@ -273,7 +284,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                     update_level_set(
                         mesh,
                         Materials,
-                        node_level_set_vel,
+                        State.node.vel, //node_level_set_vel,
                         State.node.gradient_level_set,
                         State.GaussPoints.level_set,
                         State.GaussPoints.level_set_n0,
@@ -296,6 +307,8 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
                 } // end if advecting level set field
 
             } // end for mat_id
+            State.GaussPoints.level_set.communicate();
+            State.GaussPoints.level_set_n0.communicate();
           
 
         } // end of RK loop
@@ -319,7 +332,8 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 
         // write outputs
         if (write == 1) {
-            printf("Writing outputs to file at %f \n", graphics_time);
+            if (log) log->info("Writing outputs to file at %f \n", graphics_time);
+            if (log) log->flush();
             mesh_writer.write_mesh(mesh,
                                    State,
                                    SimulationParamaters,
@@ -345,7 +359,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
     auto time_2    = std::chrono::high_resolution_clock::now();
     auto calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_2 - time_1).count();
 
-    printf("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
+    if (log) log->info("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 
 } // end of SGH execute
 

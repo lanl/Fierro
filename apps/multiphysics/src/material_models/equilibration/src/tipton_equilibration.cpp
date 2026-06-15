@@ -95,7 +95,7 @@ namespace TiptonEquilibrationModel {
                 GaussPoint_pres,
                 GaussPoint_pres_denominator,
                 GaussPoint_volfrac_min,
-                State.MaterialPoints.volfrac,  // material volfrac
+                State.MaterialPoints.mat_volfrac,  // material volfrac
                 State.MaterialPoints.pres,
                 State.MaterialPoints.den,
                 State.MaterialPoints.sspd,
@@ -129,8 +129,8 @@ namespace TiptonEquilibrationModel {
                 GaussPoint_volfrac_limiter,
                 State.GaussPoints.vel_grad,
                 State.GaussPoints.vol,
-                State.MaterialPoints.volfrac,       // material volfrac
-                State.MaterialPoints.delta_volfrac, // the change in the material volfrac
+                State.MaterialPoints.mat_volfrac,       // material volfrac
+                State.MaterialPoints.delta_mat_volfrac, // the change in the material volfrac
                 State.MaterialPoints.pres,
                 State.MaterialPoints.den,
                 State.MaterialPoints.sspd,
@@ -160,8 +160,8 @@ namespace TiptonEquilibrationModel {
                 GaussPoint_volfrac_limiter,
                 State.GaussPoints.vel_grad,
                 State.GaussPoints.vol,
-                State.MaterialPoints.volfrac,       // material volfrac
-                State.MaterialPoints.delta_volfrac, // the change in material volfrac
+                State.MaterialPoints.mat_volfrac,       // material volfrac
+                State.MaterialPoints.delta_mat_volfrac, // the change in material volfrac
                 State.MaterialPoints.geo_volfrac,       // geo_volfrac
                 State.MaterialPoints.delta_geo_volfrac, // the change in geo_volfrac
                 State.MaterialPoints.pres,
@@ -285,8 +285,8 @@ namespace TiptonEquilibrationModel {
                 State.GaussPoints.vol,
                 State.MaterialPoints.geo_volfrac,       // geo_volfrac
                 State.MaterialPoints.delta_geo_volfrac, // the change in geo_volfrac
-                State.MaterialPoints.volfrac,       // material volfrac
-                State.MaterialPoints.delta_volfrac, // the change in material volfrac
+                State.MaterialPoints.mat_volfrac,       // material volfrac
+                State.MaterialPoints.delta_mat_volfrac, // the change in material volfrac
                 State.MaterialPoints.pres,
                 State.MaterialPoints.den,
                 State.MaterialPoints.sie,

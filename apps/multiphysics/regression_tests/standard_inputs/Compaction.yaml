@@ -25,19 +25,19 @@ mesh_options:
 output_options:
     timer_output_level: thorough
     output_file_format: state
-    graphics_time_step: 3.0
+    graphics_time_step: 3.0. # 3
     #graphics_iteration_step: 1
     #elem_field_outputs:
-    #    - den
-    #    - pres
-    #    - sie
+    #   - den
+    #   - pres
+    #   - sie
     #mat_pt_field_outputs:
-    #    - den
-    #    - pres
-    #    - sie
-    #    - volfrac
+    #   - den
+    #   - pres
+    #   - sie
+    #   - volfrac
     #node_field_outputs:
-    #    - vel
+    #   - vel
 
 
 
@@ -187,8 +187,27 @@ multimaterial_options:
 
 regions:
     - region:
+        id: 0
         volume:
             type: global
+
+    # energy source initial conditions
+    - region:
+        id: 1
+        volume:
+            type: box
+            x1: 0
+            x2: 0.05
+            y1: 0
+            y2: 10
+            z1: 0
+            z2: 10  
+
+
+initial_conditions:
+
+    - initial_condition:
+        region_id: 0
         material_id: 0
         density: 
             type: uniform
@@ -201,13 +220,12 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
-            value: 0.5
+            value: 0.5 
 
-    - region:
-        volume:
-            type: global
+    - initial_condition:
+        region_id: 0
         material_id: 1
         density: 
             type: uniform
@@ -220,13 +238,12 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 0.25
 
-    - region:
-        volume:
-            type: global
+    - initial_condition:    
+        region_id: 0
         material_id: 2
         density: 
             type: uniform
@@ -239,21 +256,14 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 0.25
 
+        
     # energy source initial conditions
-    - region:
-        volume:
-            type: box
-            x1: 0
-            x2: 0.05
-            y1: 0
-            y2: 10
-            z1: 0
-            z2: 10
-        solver_id: 0
+    - initial_condition:    
+        region_id: 1
         material_id: 0
         density: 
             type: uniform
@@ -267,7 +277,7 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             type: uniform
             value: 1.0
     

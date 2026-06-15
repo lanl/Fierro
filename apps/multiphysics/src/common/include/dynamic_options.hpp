@@ -39,12 +39,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \struct dynamic_options_t
+/// \struct DynamicOptions_t
 ///
 /// \brief Stores time and cycle options
 ///
 /////////////////////////////////////////////////////////////////////////////
-struct dynamic_options_t
+struct DynamicOptions_t
 {
     unsigned long cycle_stop = 2000000;
 
@@ -62,7 +62,7 @@ struct dynamic_options_t
     int rk_num_stages = 2;      ///< Number of RK stages
 
     // Unparsed internal variables
-}; // output_options_t
+}; // DynamicOptions_t
 
 // ----------------------------------
 // valid inputs for dynamic options

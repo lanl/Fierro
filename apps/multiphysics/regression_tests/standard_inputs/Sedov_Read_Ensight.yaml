@@ -80,9 +80,25 @@ materials:
 
 regions:
     - region:
+        id: 0
         volume:
             type: global
         solver_id: 0
+
+    # energy source initial conditions
+    - region:
+        id: 1
+        volume:
+            type: sphere
+            origin: [0.0, 0.0, 0.0]
+            radius1: 0.0
+            radius2: 0.1
+        solver_id: 0
+
+
+initial_conditions:
+    - initial_condition:
+        region_id: 0
         material_id: 0
         density: 
             type: uniform
@@ -96,16 +112,9 @@ regions:
             v: 0.0
             w: 0.0
 
-    
-
     # energy source initial conditions
-    - region:
-        volume:
-            type: sphere
-            origin: [0.0, 0.0, 0.0]
-            radius1: 0.0
-            radius2: 0.1
-        solver_id: 0
+    - initial_condition:
+        region_id: 1
         material_id: 0
         density: 
             type: uniform

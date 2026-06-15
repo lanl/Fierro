@@ -190,18 +190,31 @@ materials:
 
 
 # ---------------------------------------------------------------------------
-# Regions (initial conditions)
+# Regions 
 # ---------------------------------------------------------------------------
-# Regions assign initial state variables (density, energy, velocity, etc.)
-# over geometric volumes and link those variables to a solver and material.
+# Paint regions on the mesh
 # (See `apps/multiphysics/README.md` → `regions`.)
 regions:
     - region:
+        id: 0
         volume:
             # `global` applies the region to the whole computational domain.
             type: global
-        # Solver ID this region belongs to (must match `solver_options`).
-        solver_id: 0
+        # Solver ID this region belongs to (must match `solver_options`), 
+        # This is for solvers that only opperate on portions of the mesh
+        solver_id: 0 # ignored with FE solvers, for illistrative purposes
+
+
+# ---------------------------------------------------------------------------
+# Initial Conditions
+# ---------------------------------------------------------------------------
+# Assign initial state variables (density, energy, velocity, etc.)
+# over geometric volumes and link those variables to material.
+# (See `apps/multiphysics/README.md` → `initial_conditions`.)
+initial_conditions:
+    - initial_condition:
+        # region this IC applies to
+        region_id: 0
         # Material ID used by constitutive models in this region.
         material_id: 0
         density: 
@@ -218,8 +231,8 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
-            # Region volume fraction (used for mixed-material / interface logic).
+        material_volume_fraction:
+            # Region material volume fraction (used for mixed-material).
             type: uniform
             value: 1.0
 

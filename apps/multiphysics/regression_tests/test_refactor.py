@@ -15,9 +15,11 @@ solvers = ["Fierro"]
 
 solver_path = "../build/app/Fierro"
 
+num_ranks = 1 # WARNING: Currently regression test only support 1 rank
+
 # Add names of each test
-tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
-         "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
+tests = ["stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
+         "Compaction_rz", "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
         "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", \
         "Pressure_bc_box","vtu_read", \
         "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
@@ -26,6 +28,8 @@ tests = ["TaylorAnvil", "TaylorAnvil_rz", "Compaction", "Compaction_rz", \
         "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact",\
         "TaylorAnvil_Contact", "fracture_mode_1", "fracture_mode_2", \
         "fracture_reorientation"]
+
+
 #,"SGTM_cooling_cube" currently broken
 
 # Parse command line arguments
@@ -101,7 +105,7 @@ for i in range(len(executables)):
         try:
             # Call Fierro with YAML inputs
             print("Running "+test_name)
-            os.system(executables[i] + ' ' + inputs[j])
+            os.system('mpirun --oversubscribe -np ' + str(num_ranks) + ' ' + executables[i] + ' ' + inputs[j])
     
             # Compare to standard results
             if not standard_results[j]:

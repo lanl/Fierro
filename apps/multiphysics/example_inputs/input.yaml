@@ -27,7 +27,7 @@
 # ---------------------------------------------------------------------------
 dynamic_options:
 
-    time_final: 100.0 # Final simulation time (microseconds).
+    time_final: 10.0 # Final simulation time (microseconds).
     dt_min: 1.e-8 # Minimum adaptive timestep bound (microseconds).
     dt_max: 1.e-2 # Maximum adaptive timestep bound (microseconds).
     dt_start: 1.e-5 # Initial timestep guess (microseconds).
@@ -56,7 +56,7 @@ output_options:
     # Output format for visualization.
     output_file_format: viz # only options are viz or viz_and_state
     # Amount of simulated time between visualization dumps (microseconds).
-    graphics_time_step: 0.05
+    graphics_time_step: 0.5
     # graphics_iteration_step: 10
     elem_field_outputs:
         - den
@@ -174,7 +174,7 @@ materials:
             - 1.0   # q1ex
             - 1.333 # q2
             - 1.333 # q2ex
-            - 0.0   # phi_min
+            - 1.0   # phi_min
             - 1.0   # pin_curl_min
 
 
@@ -183,10 +183,34 @@ materials:
 # ---------------------------------------------------------------------------
 regions:
     - region:
+        id: 0
         volume:
             type: global
-        # Fill the entire domain with ambient (uniform) initial conditions.
+        # Solver ID this region belongs to (must match `solver_options`), 
+        # This is for solvers that only opperate on portions of the mesh
         solver_id: 0
+
+    - region:
+        id: 1
+        volume:
+            type: sphere
+            # Sphere centered at the origin.
+            origin: [0.0, 0.0, 0.0]
+            # radius1 is the inner radius (0.0 means a solid sphere).
+            radius1: 0.0
+            # radius2 is the outer radius (cm); the sphere injects internal energy.
+            radius2: 0.04
+        # Apply the Sedov "blast" only to this localized region.
+        solver_id: 0
+
+# ---------------------------------------------------------------------------
+# Initial conditions (they are applied to regions)
+# ---------------------------------------------------------------------------
+initial_conditions:
+
+    - initial_condition:
+        # Fill the entire domain with ambient (uniform) initial conditions.
+        region_id: 0
         material_id: 0
         density: 
             # Ambient density (g/cm^3 with the assumed cm scaling).
@@ -202,23 +226,14 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             # Single-material case: volume fraction is 1 everywhere.
             type: uniform
             value: 1.0
 
-    # Energy source initial conditions (Sedov blast)
-    - region:
-        volume:
-            type: sphere
-            # Sphere centered at the origin.
-            origin: [0.0, 0.0, 0.0]
-            # radius1 is the inner radius (0.0 means a solid sphere).
-            radius1: 0.0
-            # radius2 is the outer radius (cm); the sphere injects internal energy.
-            radius2: 0.04
-        # Apply the Sedov "blast" only to this localized region.
-        solver_id: 0
+    - initial_condition:
+        # Energy source initial conditions (Sedov blast)
+        region_id: 1
         material_id: 0
         density: 
             # Density fill inside the blast region.
@@ -235,8 +250,7 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             # Single-material case: 1 everywhere.
             type: uniform
             value: 1.0
-

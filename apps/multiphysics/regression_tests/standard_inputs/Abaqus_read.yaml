@@ -116,9 +116,25 @@ materials:
 
 regions:
     - region:
+        id: 0
         volume:
             type: global
         solver_id: 0
+    - region:
+        id: 1
+        volume:
+            type: box
+            x1: -4.0
+            x2: 4.0
+            y1: -4.0
+            y2: 4.0
+            z1: 0.0
+            z2: 1.0
+        solver_id: 0
+
+initial_conditions:
+    - initial_condition:
+        region_id: 0
         material_id: 0
         density: 
             type: uniform
@@ -142,23 +158,15 @@ regions:
     #     material_id: 0
     #     den: 1.0
     #     # ie: 0.25833839995946534
-    #     sie: 61.67375002 # 963.652344
+    #     sie: 61.67375002 # 963.6523
     #     velocity: cartesian
     #     u: 0.0
     #     v: 0.0
     #     w: 0.0
 
-    - region:
-        volume:
-            type: box
-            x1: -4.0
-            x2: 4.0
-            y1: -4.0
-            y2: 4.0
-            z1: 0.0
-            z2: 1.0
+    - initial_condition:
+        region_id: 1
         material_id: 0
-        solver_id: 0
         density: 
             type: uniform
             value: 1.0

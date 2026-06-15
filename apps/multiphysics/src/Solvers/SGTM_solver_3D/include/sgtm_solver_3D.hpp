@@ -231,30 +231,30 @@ public:
     void boundary_temperature(
         const swage::Mesh& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>&     node_temp,
+        MPICArrayKokkos<double>&     node_temp,
         const double time_value) const;
 
     void boundary_convection(
         const swage::Mesh& mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        const DCArrayKokkos<double>& node_temp,
+        const MPICArrayKokkos<double>& node_temp,
         const DCArrayKokkos<double>& node_flux,
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const double time_value) const;
 
 
     void boundary_radiation(
         const swage::Mesh& mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        const DCArrayKokkos<double>& node_temp,
+        const MPICArrayKokkos<double>& node_temp,
         const DCArrayKokkos<double>& node_flux,
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const double time_value) const;
 
     void boundary_heat_flux(
         const swage::Mesh& mesh,
         const BoundaryCondition_t& Boundary,
-        DCArrayKokkos<double>&     node_temp,
+        MPICArrayKokkos<double>&     node_temp,
         const double time_value) const;
 
     // **** Functions defined in energy_sgtm.cpp **** //
@@ -262,10 +262,10 @@ public:
     //    const double rk_alpha,
     //    const double dt,
     //    const swage::Mesh& mesh,
-    //    const DCArrayKokkos<double>& node_vel,
-    //    const DCArrayKokkos<double>& node_vel_n0,
-    //    const DCArrayKokkos<double>& node_coords,
-    //    const DCArrayKokkos<double>& node_coords_n0,
+    //    const MPICArrayKokkos<double>& node_vel,
+    //    const MPICArrayKokkos<double>& node_vel_n0,
+    //    const MPICArrayKokkos<double>& node_coords,
+    //    const MPICArrayKokkos<double>& node_coords_n0,
     //    const DCArrayKokkos<double>& MaterialPoints_sie,
     //    const DCArrayKokkos<double>& MaterialPoints_sie_n0,
     //    const DCArrayKokkos<double>& MaterialPoints_mass,
@@ -278,8 +278,8 @@ public:
     void update_temperature(
             const swage::Mesh& mesh,
             const DCArrayKokkos<double>& corner_q_transfer,
-            const DCArrayKokkos<double>& node_temp,
-            const DCArrayKokkos<double>& node_temp_n0,
+            const MPICArrayKokkos<double>& node_temp,
+            const MPICArrayKokkos<double>& node_temp_n0,
             const DCArrayKokkos<double>& node_mass,
             const DCArrayKokkos<double>& node_q_transfer,
             const DRaggedRightArrayKokkos<double>& mat_pt_specific_heat,
@@ -291,8 +291,8 @@ public:
         const Material_t& Materials,
         const swage::Mesh& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_temp,
+        const MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_temp,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_q_flux,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_temp_grad,
@@ -311,7 +311,7 @@ public:
         const Material_t& Materials,
         const swage::Mesh& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& corner_q_flux,
         const DCArrayKokkos<double>& sphere_position,
         const corners_in_mat_t corners_in_mat_elem,
@@ -330,10 +330,10 @@ public:
         double dt,
         const size_t num_dims,
         const size_t num_nodes,
-        DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_coords_n0,
-        const DCArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& node_vel_n0) const;
+        MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords_n0,
+        const MPICArrayKokkos<double>& node_vel,
+        const MPICArrayKokkos<double>& node_vel_n0) const;
 
 
     // **** Functions defined in momentum.cpp **** //
@@ -341,7 +341,7 @@ public:
         double rk_alpha,
         double dt,
         const swage::Mesh& mesh,
-        DCArrayKokkos<double>& node_vel,
+        MPICArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_force) const;
 
@@ -349,7 +349,7 @@ public:
     void update_properties(
         const Material_t& Materials,
         const swage::Mesh&     mesh,
-        const DCArrayKokkos<double>& node_temp,
+        const MPICArrayKokkos<double>& node_temp,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_specific_heat,
@@ -360,12 +360,12 @@ public:
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
     void rk_init(
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_coords_n0,
-        DCArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& node_vel_n0,
-        DCArrayKokkos<double>& node_temp,
-        DCArrayKokkos<double>& node_temp_n0,
+        MPICArrayKokkos<double>& node_coords,
+        MPICArrayKokkos<double>& node_coords_n0,
+        MPICArrayKokkos<double>& node_vel,
+        MPICArrayKokkos<double>& node_vel_n0,
+        MPICArrayKokkos<double>& node_temp,
+        MPICArrayKokkos<double>& node_temp_n0,
         DCArrayKokkos<double>& node_q_flux,
         DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
         const size_t num_dims,
@@ -375,8 +375,8 @@ public:
 
     void get_timestep(
         swage::Mesh& mesh,
-        DCArrayKokkos<double>& node_coords,
-        DCArrayKokkos<double>& node_vel,
+        MPICArrayKokkos<double>& node_coords,
+        MPICArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
         DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,

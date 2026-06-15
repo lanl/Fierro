@@ -55,10 +55,10 @@ void SGHRZ::update_energy_rz(
       const double rk_alpha,
       const double dt,
       const swage::Mesh& mesh,
-      const DCArrayKokkos<double>& node_vel,
-      const DCArrayKokkos<double>& node_vel_n0,
-      const DCArrayKokkos<double>& node_coords,
-      const DCArrayKokkos<double>& node_coords_n0,
+      const MPICArrayKokkos<double>& node_vel,
+      const MPICArrayKokkos<double>& node_vel_n0,
+      const MPICArrayKokkos<double>& node_coords,
+      const MPICArrayKokkos<double>& node_coords_n0,
       const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
       const DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
       const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
@@ -78,10 +78,7 @@ void SGHRZ::update_energy_rz(
 
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_sid = mat_elem_sid;
-
-        
         double MaterialPoints_power = 0.0;
-
 
         // --- tally the contribution from each corner to the element ---
 

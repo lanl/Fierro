@@ -15,4 +15,5 @@ __pycache__
 cmake_uninstall.cmake
 CTestTestfile.cmake
 install*
+*Fierro_log*
 

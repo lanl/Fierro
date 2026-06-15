@@ -63,7 +63,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGTM3D::update_properties(
     const Material_t& Materials,
     const swage::Mesh&     mesh,
-    const DCArrayKokkos<double>& node_temp,
+    const MPICArrayKokkos<double>& node_temp,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_specific_heat,

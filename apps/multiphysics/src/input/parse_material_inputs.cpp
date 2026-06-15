@@ -106,10 +106,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // =================================================================================
 void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims)    
 {
+    bool verbose = false; 
     Yaml::Node& material_yaml = root["materials"];
 
     size_t num_materials = material_yaml.Size();
-    std::cout << "Number of materials =  "<< num_materials << std::endl;
 
     // Verify that at least one material is specified
     if (num_materials == 0) {
@@ -212,11 +212,11 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             Yaml::Node& material_inps_yaml = root["materials"][m_id]["material"][a_word];
 
             
-            //extract eos model
             if (a_word.compare("id") == 0) {
                 // do nothing
                 // this id was read in an earlier loop
             }
+            //extract eos model
             else if (a_word.compare("eos_model_type") == 0) {
                 std::string type = root["materials"][m_id]["material"]["eos_model_type"].As<std::string>();
 
@@ -226,7 +226,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                     // eos_type_map[type] returns enum value, e.g., model::decoupled
                     switch(eos_type_map[type]){
                         case model::decoupledEOSType:
-                            std::cout << "Setting EOS type to decoupled " << std::endl;
+                            if (verbose) std::cout << "Setting EOS type to decoupled " << std::endl;
                             RUN({
                                 Materials.MaterialEnums(mat_id).EOSType = model::decoupledEOSType;
                             });
@@ -235,7 +235,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                             break;
 
                         case model::coupledEOSType:
-                            std::cout << "Setting EOS type to coupled " << std::endl;
+                            if (verbose) std::cout << "Setting EOS type to coupled " << std::endl;
                             RUN({
                                 Materials.MaterialEnums(mat_id).EOSType = model::coupledEOSType;
                             });
@@ -411,7 +411,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 // set the strength
                 if (strength_models_map.find(strength_model) != strength_models_map.end()) {
 
-                    std::cout << "strength model = \n" << strength_models_map[strength_model] << std::endl;
+                    if (verbose) std::cout << "strength model = \n" << strength_models_map[strength_model] << std::endl;
                     
                     switch(strength_models_map[strength_model]){
 
@@ -746,8 +746,6 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     double eos_var = root["materials"][m_id]["material"]["eos_global_vars"][global_var_id].As<double>();
-                    
-
                     RUN({
                         tempGlobalEOSVars(mat_id, global_var_id) = eos_var;
                     });

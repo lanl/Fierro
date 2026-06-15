@@ -196,9 +196,43 @@ materials:
 regions:
 
     - region:
+        id: 0
         volume:
             type: global
-        solver_id: 0
+        solver_id: 0 # ignored with FE solvers, for illistrative purposes
+
+
+    # Energy source region 
+    - region:
+        id: 1
+        volume:
+            type: sphere
+            origin: [0.0, 0.0, 0.0]
+            radius1: 0.0
+            radius2: 0.1
+        solver_id: 0 # ignored with FE solvers, for illistrative purposes
+
+
+    # Energy source (material_id 1) with the same blast geometry
+    - region:
+        id: 2
+        volume:
+            type: sphere
+            origin: [0.0, 0.0, 0.0]
+            radius1: 0.0
+            radius2: 0.1
+        solver_id: 0 # ignored with FE solvers, for illistrative purposes
+
+
+# ---------------------------------------------------------------------------
+# Initial Conditions
+# ---------------------------------------------------------------------------
+# Assign initial state variables (density, energy, velocity, etc.)
+# over geometric volumes and link those variables to material.
+# (See `apps/multiphysics/README.md` → `initial_conditions`.)
+initial_conditions:
+    - initial_condition:
+        region_id: 0
         material_id: 0
         density: 
             type: uniform
@@ -211,7 +245,7 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             # Linear-in-x volume fraction:
             #   volfrac(x) = clamp(slope * x + value, 0, 1)
             # where x is the mesh x-coordinate (mesh_coords(0)).
@@ -220,10 +254,8 @@ regions:
             value: 0.0
             slope: 1.0
 
-    - region:
-        volume:
-            type: global
-        solver_id: 0
+    - initial_condition:
+        region_id: 0
         material_id: 1
         density: 
             type: uniform
@@ -236,23 +268,16 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             # Linear-in-x volume fraction for material 1:
             #   volfrac_1(x) = clamp(slope * x + value, 0, 1)
             type: x_linear
             value: 1.0
             slope: -1.0
 
-    # -----------------------------------------------------------------------
-    # Energy source initial conditions (Sedov blast)
-    # -----------------------------------------------------------------------
-    - region:
-        volume:
-            type: sphere
-            origin: [0.0, 0.0, 0.0]
-            radius1: 0.0
-            radius2: 0.1
-        solver_id: 0
+    - initial_condition:
+        # energy source ICs
+        region_id: 1
         material_id: 0
         density: 
             type: uniform
@@ -267,19 +292,14 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             # Fraction of material 0 within the blast sphere.
             type: uniform
             value: 0.25
 
-    # Energy source (material_id 1) with the same blast geometry
-    - region:
-        volume:
-            type: sphere
-            origin: [0.0, 0.0, 0.0]
-            radius1: 0.0
-            radius2: 0.1
-        solver_id: 0
+    - initial_condition:
+        # energy source ICs
+        region_id: 2
         material_id: 1
         density: 
             type: uniform
@@ -294,7 +314,7 @@ regions:
             u: 0.0
             v: 0.0
             w: 0.0
-        volume_fraction:
+        material_volume_fraction:
             # Fraction of material 1 within the blast sphere.
             type: uniform
             value: 0.75

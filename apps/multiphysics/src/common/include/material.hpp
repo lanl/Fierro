@@ -163,6 +163,7 @@ static std::map<std::string, model::StrengthType> strength_type_map
     { "state_based", model::stateBased },
 };
 
+
 static std::map<std::string, model::StrengthModels> strength_models_map
 {
     { "no_strength", model::noStrengthModel },
@@ -182,6 +183,7 @@ static std::map<std::string, model::EOSType> eos_type_map
     { "decoupled", model::decoupledEOSType },
 };
 
+
 static std::map<std::string, model::EOSModels> eos_models_map
 {
     { "no_eos", model::noEOS },
@@ -200,12 +202,14 @@ static std::map<std::string, model::ErosionModels> erosion_model_map
     { "basic", model::basicErosion },
 };
 
+
 static std::map<std::string, model::EquilibrationModels> equilibration_model_map
 {
     { "no_equilibration", model::noEquilibration },
     { "tipton", model::tiptonEquilibration },
     { "user_defined", model::userDefinedEquilibration }
 };
+
 
 static std::map<std::string, model::DissipationModels> dissipation_model_map
 {
@@ -215,6 +219,7 @@ static std::map<std::string, model::DissipationModels> dissipation_model_map
     { "directional_MARS", model::directionalMARS },
     { "directional_MARS_rz", model::directionalMARSRZ },
 };
+
 
 static std::map<std::string, model::levelSetType> level_set_type_map
 {
@@ -307,6 +312,7 @@ struct MaterialEnums_t
 
 }; // end boundary condition enums
 
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \struct MaterialFunctions_t
@@ -349,8 +355,8 @@ struct MaterialFunctions_t
     // Material strength model function pointers
     void (*calc_stress)(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
-        const DCArrayKokkos<double>  &node_coords,
-        const DCArrayKokkos<double>  &node_vel,
+        const MPICArrayKokkos<double>  &node_coords,
+        const MPICArrayKokkos<double>  &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
@@ -407,8 +413,9 @@ struct MaterialFunctions_t
         const ViewCArrayKokkos<size_t> elem_node_gids,
         const RaggedRightArrayKokkos <double>& dissipation_global_vars,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
+        const MPICArrayKokkos<double>& GaussPoints_shock_detector,
         const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-        const DCArrayKokkos<double>& node_vel,
+        const MPICArrayKokkos<double>& node_vel,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         const ViewCArrayKokkos<double>& disp_corner_forces,
@@ -532,8 +539,8 @@ struct Material_t
     size_t max_num_mats_per_element = 3; ///< default is to allow up to 3 materials in an element in setup
 
     
-
 }; // end Material_t
+
 
 // ----------------------------------
 // valid inputs for material options

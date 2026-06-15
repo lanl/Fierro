@@ -69,10 +69,11 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                          const swage::Mesh& mesh,
                          const DCArrayKokkos<double>& GaussPoints_vol,
                          const DCArrayKokkos<double>& GaussPoints_vel_grad,
+                         const MPICArrayKokkos<double>& GaussPoints_shock_detector,
                          const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                          const DCArrayKokkos<double>& corner_force,
-                         const DCArrayKokkos<double>& node_coords,
-                         const DCArrayKokkos<double>& node_vel,
+                         const MPICArrayKokkos<double>& node_coords,
+                         const MPICArrayKokkos<double>& node_vel,
                          const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
                          const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
                          const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
@@ -145,8 +146,6 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
 
         geometry::get_area_weights2D(corner_areas, elem_gid, node_coords, elem_node_gids);
 
-
-        
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             for (size_t dim = 0; dim < num_dims; dim++) {
 
@@ -181,6 +180,7 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
                                     elem_node_gids,
                                     Materials.dissipation_global_vars,
                                     GaussPoints_vel_grad,
+                                    GaussPoints_shock_detector,
                                     MaterialPoints_eroded,
                                     node_vel,
                                     MaterialPoints_den,
@@ -212,8 +212,6 @@ void SGHRZ::get_force_rz(const Material_t& Materials,
             // Get the material corner lid
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_sid, corner_lid);
 
-
-            
             // loop over dimensions and calc corner forces
             if (MaterialPoints_eroded(mat_id, mat_point_sid) == true) { 
                 for (int dim = 0; dim < num_dims; dim++) {

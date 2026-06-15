@@ -177,12 +177,12 @@ public:
     // **** Functions defined in solver_functions.cpp **** //
     void nodal_gradient(
         const swage::Mesh mesh,
-        const DCArrayKokkos<double>& Node_coords,
-        const DCArrayKokkos<double>& node_level_set_vel,
+        const MPICArrayKokkos<double>& Node_coords,
+        const MPICArrayKokkos<double>& node_level_set_vel,
         const DCArrayKokkos<double>& Node_grad_level_set,
         const DCArrayKokkos<double>& Corner_normal,
         const DCArrayKokkos<double>& Corner_volume,
-        const DCArrayKokkos<double>& GaussPoints_level_set,
+        const MPICArrayKokkos<double>& GaussPoints_level_set,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const double fuzz) const;                   
 
@@ -190,10 +190,10 @@ public:
     void update_level_set(
             const swage::Mesh& mesh,
             const Material_t& Materials,
-            const DCArrayKokkos<double>& node_level_set_vel,
+            const MPICArrayKokkos<double>& node_level_set_vel,
             const DCArrayKokkos<double>& Node_grad_level_set,
-            const DCArrayKokkos<double>& GaussPoints_level_set,
-            const DCArrayKokkos<double>& GaussPoints_level_set_n,
+            const MPICArrayKokkos<double>& GaussPoints_level_set,
+            const MPICArrayKokkos<double>& GaussPoints_level_set_n,
             const DCArrayKokkos<double>& GaussPoints_vol,
             const DCArrayKokkos<double>& Corner_normal,
             const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
@@ -210,8 +210,8 @@ public:
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
     void rk_init(
-        DCArrayKokkos<double>& GaussPoints_level_set,
-        DCArrayKokkos<double>& GaussPoints_level_set_n0,
+        MPICArrayKokkos<double>& GaussPoints_level_set,
+        MPICArrayKokkos<double>& GaussPoints_level_set_n0,
         DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_dims,
         const size_t num_mat_elems,
@@ -220,7 +220,7 @@ public:
     void get_timestep(
         const swage::Mesh& mesh,
         const Material_t& Materials,
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
@@ -238,7 +238,7 @@ public:
     void get_timestep_2D(
         const swage::Mesh& mesh,
         const Material_t& Materials,
-        const DCArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
@@ -259,7 +259,7 @@ public:
     void boundary_velocity(
         const swage::Mesh&  mesh,
         const BoundaryCondition_t& BoundaryConditions,
-        DCArrayKokkos<double>& node_vel,
+        MPICArrayKokkos<double>& node_level_set_vel,
         const double time_value,
         const double small) const;
 
