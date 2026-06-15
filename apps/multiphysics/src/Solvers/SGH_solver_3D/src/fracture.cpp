@@ -158,6 +158,7 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State, const Simul
         geom_tol
     );
     cz_info.update_host();
+    cz_info.update_device(); // GPU: update device for cz.info before oriented() runs and accesses cz_info on device
 } // end cohesive_zones_t::initialize
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1702,8 +1703,13 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
     const size_t npairs = overlapping_node_gids.dims(0);
     if (npairs == 0) return;
 
-    // ensure mesh connectivity is on device
+    // ensure mesh connectivity and nodal state are current on device
+    // for GPU/MPI: vel and coords updates touch host
+    // device copies consumed by oriented(), ucmap() and cohesive_zone_loads() need to be refreshed
     mesh.nodes_in_elem.update_device();
+    State.node.coords.update_device();
+    State.node.vel.update_device();
+    Kokkos::fence();
 
      // 1) cohesive zone interface orientation (normal at t and t+dt)
     DCArrayKokkos<double> cz_orientation(npairs, 6, "cz_orientation");
