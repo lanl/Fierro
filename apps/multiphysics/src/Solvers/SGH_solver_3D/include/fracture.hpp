@@ -137,9 +137,6 @@ struct cohesive_zones_t {
         bool doing_fracture
     );
 
-    /// \brief returns true if fracture_BC initialization was successful
-    bool is_ready() const;
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn reset_delta_internal_vars
     ///
