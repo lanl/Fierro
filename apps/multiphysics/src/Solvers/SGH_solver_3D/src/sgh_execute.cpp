@@ -435,7 +435,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             }
 
             // apply cohesive zone nodal forces (fracture)
-            if (doing_fracture && cohesive_zones_bank.is_ready()) {
+            if (doing_fracture) {
                 
                 // reset delta internal vars to zero
                 cohesive_zones_bank.reset_delta_internal_vars();
@@ -465,7 +465,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     cohesive_zones_bank.F_cz,
                     mesh.num_nodes
                 );
-            }        
+            } // end if doing_fracture       
 
             // SKIP SGH SOLVER EVOLUTION (REORIENTATION TESTING MODE)
             if (reorient_mode) {

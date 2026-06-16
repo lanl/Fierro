@@ -153,19 +153,7 @@ void cohesive_zones_t::initialize_fracture_bc(
 {
     
     num_nodes = mesh.num_nodes;
-    
-    // guard: no valid BC set
-    if (fracture_bdy_set < 0) {
-        is_initialized = false;
-        return;
-    }
-
-    // gaurd: no cohesive zone pairs found
     const size_t npairs = overlapping_node_gids.dims(0);
-    if (npairs == 0) {
-        is_initialized = false;
-        return;
-    }
 
     // allocate cohesive zone force array
     F_cz = CArrayKokkos<double>(3 * num_nodes, "cz_nodal_forces");
@@ -221,8 +209,7 @@ void cohesive_zones_t::initialize_fracture_bc(
             prony_params.host(j, 0)     = bc_params.host(6 + 2*j);     // E_j
             prony_params.host(j, 1) = bc_params.host(6 + 2*j + 1); // tau_j
         }
-        // alex to check if this is needed in follow up PR 
-        prony_params.update_device();
+
     } else {
         // allocate minimal array to avoid null issues (debug aid)
         prony_params = DCArrayKokkos<double>(1, 2, "cz_prony_params_empty");
@@ -243,9 +230,7 @@ void cohesive_zones_t::initialize_fracture_bc(
     // node gather map (built once) so cohesive_zone_loads can gather pairwise forces to nodes without atomics
     // each pair contributes to its A node (+F, side 0) and B node (-F, side 1)
     // a node may belong toseveral pairs (crack junctions); the map lets ONE thread own each node and sum its pairs
-
     overlapping_node_gids.update_host();
-
 
     // node count: runing tally of contributions per node 
     // node_to_u: compact cohesive node index assigned to each node, or -1 if the node is not in any pair
@@ -344,10 +329,6 @@ void cohesive_zones_t::initialize_reorientation_mode(
     bool doing_fracture)
 {
     reorientation_validation_mode = false;
-    
-    if (!doing_fracture) {
-        return;
-    }
     
     // temporary scratch array used to scan BC data for reorientaion mode
     DCArrayKokkos<double> reorient_params(5, "reorient_params");
@@ -451,16 +432,9 @@ void cohesive_zones_t::initialize_reorientation_mode(
     Kokkos::fence();
 }
 
-// check if cohesive zone constitutive parameters initialization was successful and cohesive zones are ready to be used
-bool cohesive_zones_t::is_ready() const
-{
-    return is_initialized && overlapping_node_gids.dims(0) > 0;
-}
-
 // zero out delta_internal_vars at the strat of each RK stage
 void cohesive_zones_t::reset_delta_internal_vars()
 {
-    if (!is_initialized) return;
     delta_internal_vars.set_values(0.0);
 }
 
@@ -1271,10 +1245,6 @@ void cohesive_zones_t::cohesive_zone_var_update(
     DCArrayKokkos<double>& delta_internal_vars // (overlapping_node_gids.dims(0), 4 + num_prony_terms) 
 )
 {
-    if (!(dt_stage > 0.0)) {
-        return;
-    }
-
     // loop over each cohesive zone node pair
     FOR_ALL(i, 0, overlapping_node_gids.dims(0), {
 
@@ -1447,7 +1417,6 @@ void cohesive_zones_t::cohesive_zone_loads(
 
     // aliases
     auto pair_force_dev = pair_force;
-
 
     // zero the per-pair force buffer so skipped/invalid pairs dont't contribute
     pair_force.set_values(0.0);
@@ -1745,7 +1714,6 @@ void cohesive_zones_t::cohesive_zone_loads(
     Kokkos::fence();
 }            
       
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn compute_cohesive_zone_nodal_forces
 ///
@@ -1761,10 +1729,7 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
     size_t rk_num_stages,
     CArrayKokkos<double>& F_cz)
 {
-    if (!is_initialized) return;
-
     const size_t npairs = overlapping_node_gids.dims(0);
-    if (npairs == 0) return;
 
     // ensure mesh connectivity and nodal state are current on device
     // alex to check if this is needed in follow up PR 
@@ -1772,7 +1737,7 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
 
     Kokkos::fence();
 
-     // 1) cohesive zone interface orientation (normal at t and t+dt)
+    // 1) cohesive zone interface orientation (normal at t and t+dt)
     DCArrayKokkos<double> cz_orientation(npairs, 6, "cz_orientation");
     cz_orientation.set_values(0.0);
 
@@ -1847,8 +1812,6 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 void cohesive_zones_t::commit_internal_vars(size_t rk_stage, size_t rk_num_stages)
 {
-    if (!is_initialized) return;
-
     // 5) update global state: internal vars and nodal forces
     // ensuring the internal vars are updated only at the last RK stage
     if (rk_stage != rk_num_stages - 1) return;  
@@ -1936,21 +1899,11 @@ void cohesive_zones_t::add_cohesive_zone_nodal_forces(
         // total number of mesh nodes to loop over
         const size_t nmax = num_nodes;
 
-        // total length of the cohesive force array
-        // F_cz size = 3 * num_nodes (Fx, Fy, Fz per node)
-        const size_t fzlen = F_cz_local.size();
-
         // loop over all mesh nodes; each node is written by only one thread, so no atomics needed
         FOR_ALL(n, 0, num_nodes, {
 
             // index of z component of node n in the cohesive force array
             const size_t idx2 = 3*n + 2;
-
-            // safety guard: if cohesive force array smaller than expected,
-            // skip this node to avoid out-of-bounds memory access
-            if (idx2 >= fzlen) {
-                return;
-            }
 
             // add cohesive force x component into global nodal force array
             node_force(n, 0) += F_cz_local(3*n);
