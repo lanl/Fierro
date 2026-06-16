@@ -5926,14 +5926,46 @@ public:
         if (SimulationParamaters.OutputOptions.format == output_options::state ||
             SimulationParamaters.OutputOptions.format == output_options::viz_and_state) {
 
-            write_material_point_state(mesh,
+            /* write_material_point_state(mesh,
                                        State,
                                        SimulationParamaters,
                                        time_value,
                                        graphics_times,
                                        node_states,
                                        gauss_pt_states,
-                                       material_pt_states);
+                                       material_pt_states); */
+            for (int mats = 0; mats < (int)State.MaterialToMeshMaps.num_mat_elems.dims(0); mats++) {
+                write_text_state_Pn(mesh,
+                                    State,
+                                    ref_elem,
+                                    mat_elem_scalar_var_names,
+                                    mat_elem_tensor_var_names,
+                                    node_scalar_var_names,
+                                    node_vector_var_names,
+                                    mats,
+                                    State.MaterialToMeshMaps.num_mat_elems.host(mats),
+                                    mesh.num_nodes_in_elem,
+                                    mesh.num_dims,
+                                    time_value,
+                                    mat_den_id,
+                                    mat_pres_id,
+                                    mat_sie_id,
+                                    mat_sspd_id,
+                                    mat_mass_id,
+                                    mat_volfrac_id,
+                                    mat_geo_volfrac_id,
+                                    mat_eroded_id,
+                                    mat_stress_id,
+                                    mat_strain_id,
+                                    mat_conductivity_id,
+                                    mat_specific_heat_id,
+                                    node_mass_id,
+                                    node_vel_id,
+                                    node_coord_id,
+                                    node_temp_id,
+                                    node_grad_level_set_id,
+                                    node_disp_id);
+            }
 
         } // end if state is to be written
 
@@ -7193,6 +7225,431 @@ public:
 
         return;
     } // end of state output
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn write_text_state_Pn
+    ///
+    /// \brief  ASCII columnar text-dump companion to write_vtu_Pn.
+    ///         Produces two files per call:
+    ///
+    ///           state/mat_pt_state_t_<time>.txt  – one row per Gauss point,
+    ///                                              all material-point fields
+    ///           state/node_state_t_<time>.txt    – one row per mesh node,
+    ///                                              coords + velocity (+ mass)
+    ///
+    ///         Field selection follows the same slot-ID convention as
+    ///         write_vtu_Pn (-1 means "not requested").  Column headers in
+    ///         both files are prefixed with '#' so Gnuplot, NumPy, etc. can
+    ///         load the files directly without skipping.
+    ///
+    ///         Assumes that host mirrors for State.node.coords, State.node.vel,
+    ///         State.node.mass, and all State.MaterialPoints.* arrays are
+    ///         up-to-date at the time of the call (i.e. update_host() was
+    ///         already called by the caller for each device array).
+    ///
+    /// \param mesh                  Simulation mesh
+    /// \param State                 State data
+    /// \param ref_elem              Reference finite element (quadrature layout)
+    /// \param mat_scalar_var_names  Registered scalar field names (for headers)
+    /// \param mat_tensor_var_names  Registered tensor field names (for headers)
+    /// \param node_scalar_var_names    Registered node scalar field names
+    /// \param node_vector_var_names    Registered node vector field names
+    /// \param mat_id                Material index
+    /// \param num_mat_elems         Number of elements containing this material
+    /// \param num_nodes_in_elem     Nodes per element
+    /// \param num_dims              Spatial dimension count (2 or 3)
+    /// \param time_value            Current simulation time (embedded in filename)
+    /// \param mat_den_id … mat_specific_heat_id   Slot IDs (-1 = not requested)
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    void write_text_state_Pn(
+        const swage::Mesh&                   mesh,
+        const State_t&                       State,
+        elements::fe_ref_elem_t&             ref_elem,
+        const std::vector<std::string>&      mat_scalar_var_names,
+        const std::vector<std::string>&      mat_tensor_var_names,
+        const std::vector<std::string>&      node_scalar_var_names,
+        const std::vector<std::string>&      node_vector_var_names,
+        const int                            mat_id,
+        const size_t                         num_mat_elems,
+        const size_t                         num_nodes_in_elem,
+        const size_t                         num_dims,
+        const double                         time_value,
+        // field slot IDs (-1 means "not requested")
+        const int mat_den_id,
+        const int mat_pres_id,
+        const int mat_sie_id,
+        const int mat_sspd_id,
+        const int mat_mass_id,
+        const int mat_volfrac_id,
+        const int mat_geo_volfrac_id,
+        const int mat_eroded_id,
+        const int mat_stress_id,
+        const int mat_strain_id,
+        const int mat_conductivity_id,
+        const int mat_specific_heat_id,
+        // node field slot IDs (-1 means "not requested")
+        const int node_mass_id,
+        const int node_vel_id,
+        const int node_coord_id,
+        const int node_temp_id,
+        const int node_grad_level_set_id,
+        const int node_disp_id
+    )
+    {
+        // -----------------------------------------------------------------------
+        //  Derived sizes
+        // -----------------------------------------------------------------------
+
+        const size_t num_gp_per_elem = ref_elem.gauss_point_grad_basis.dims(0);
+
+        // -----------------------------------------------------------------------
+        //  Gauss-point physical coordinates  (isoparametric mapping)
+        //
+        //  Same kernel as write_vtu_Pn so the two outputs are numerically
+        //  identical for the coordinate columns.
+        // -----------------------------------------------------------------------
+
+        DCArrayKokkos<double> x_phys(num_mat_elems, num_gp_per_elem, 3);
+        x_phys.set_values(0);
+
+        FOR_ALL(elem, 0, num_mat_elems, {
+            const size_t elem_id =
+                State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
+            for (size_t gp = 0; gp < num_gp_per_elem; gp++) {
+                for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                    const size_t node_gid = mesh.nodes_in_elem(elem_id, node_lid);
+                    const double N        = ref_elem.gauss_point_basis(gp, node_lid);
+                    for (size_t dim = 0; dim < num_dims; dim++) {
+                        x_phys(elem, gp, dim) += N * State.node.coords(node_gid, dim);
+                    }
+                }
+            }
+        });
+        x_phys.update_host();
+
+        // -----------------------------------------------------------------------
+        //  Ensure the output directory exists before opening any files.
+        //  create_directories is a no-op (and does not error) if the path
+        //  already exists.  Requires #include <filesystem> and C++17.
+        // -----------------------------------------------------------------------
+        struct stat st;
+        MPI_Barrier(MPI_COMM_WORLD);
+        //if (mpi_rank == 0) {
+            if (stat("state", &st) != 0) {
+                system("mkdir state");
+            }
+        //}
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        // -----------------------------------------------------------------------
+        //  FILE 1 – Material-point (Gauss-point) state
+        //
+        //  Filename:  state/mat_pt_state_t_<time>.txt
+        //  Format:    fixed-width columns, one row per Gauss point,
+        //             header line prefixed with '#'
+        // -----------------------------------------------------------------------
+        {
+            FILE* out_elem_state;
+            char  filename[128];
+            int   max_len = sizeof filename;
+            snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e.txt", time_value);
+
+            out_elem_state = fopen(filename, "w");
+            if (!out_elem_state) {
+                std::cerr << "write_text_state_Pn: could not open "
+                        << filename << std::endl;
+                return;
+            }
+
+            // ---- Metadata comment -------------------------------------------
+            fprintf(out_elem_state,
+                    "# Material-point state  mat_id=%d  time=%.10e\n",
+                    mat_id, time_value);
+            fprintf(out_elem_state,
+                    "# num_mat_elems=%zu  num_gp_per_elem=%zu\n",
+                    num_mat_elems, num_gp_per_elem);
+
+            // ---- Column header line -----------------------------------------
+            //
+            // Always-present columns first, then conditionally-present scalars
+            // in the same order as the VTK writer, then expanded tensor columns.
+            // All headers are left-aligned in a 22-character field to match the
+            // data column width below.
+            // -----------------------------------------------------------------
+            fprintf(out_elem_state,
+                    "# %-12s %-8s %-8s  %-22s %-22s %-22s",
+                    "elem_gid", "elem", "gp", "x", "y", "z");
+
+            if (mat_den_id          >= 0 && State.MaterialPoints.den.size() > 0)
+                fprintf(out_elem_state, "  %-22s",
+                        mat_scalar_var_names[mat_den_id].c_str());
+            if (mat_pres_id         >= 0 && State.MaterialPoints.pres.size() > 0)
+                fprintf(out_elem_state, "  %-22s",
+                        mat_scalar_var_names[mat_pres_id].c_str());
+            if (mat_sie_id          >= 0 && State.MaterialPoints.sie.size() > 0)
+                fprintf(out_elem_state, "  %-22s",
+                        mat_scalar_var_names[mat_sie_id].c_str());
+            if (mat_sspd_id         >= 0 && State.MaterialPoints.sspd.size() > 0)
+                fprintf(out_elem_state, "  %-22s",
+                        mat_scalar_var_names[mat_sspd_id].c_str());
+            if (mat_mass_id         >= 0 && State.MaterialPoints.mass.size() > 0)
+                fprintf(out_elem_state, "  %-22s",
+                        mat_scalar_var_names[mat_mass_id].c_str());
+            if (mat_volfrac_id      >= 0 && State.MaterialPoints.mat_volfrac.size() > 0)
+                fprintf(out_elem_state, "  %-22s",
+                        mat_scalar_var_names[mat_volfrac_id].c_str());
+            if (mat_geo_volfrac_id  >= 0 && State.MaterialPoints.geo_volfrac.size() > 0)
+                fprintf(out_elem_state, "  %-22s",
+                        mat_scalar_var_names[mat_geo_volfrac_id].c_str());
+            if (mat_eroded_id       >= 0 && State.MaterialPoints.eroded.size() > 0)
+                fprintf(out_elem_state, "  %-22s",
+                        mat_scalar_var_names[mat_eroded_id].c_str());
+            if (mat_conductivity_id >= 0 && State.MaterialPoints.conductivity.size() > 0)
+                fprintf(out_elem_state, "  %-22s",
+                        mat_scalar_var_names[mat_conductivity_id].c_str());
+            if (mat_specific_heat_id >= 0 && State.MaterialPoints.specific_heat.size() > 0)
+                fprintf(out_elem_state, "  %-22s",
+                        mat_scalar_var_names[mat_specific_heat_id].c_str());
+
+            // Tensor headers: <name>_ij  (i, j ∈ {x, y, z}), row-major
+            const char* comp[3] = {"x", "y", "z"};
+            if (mat_stress_id >= 0 && State.MaterialPoints.stress.size() > 0) {
+                for (int i = 0; i < 3; i++) {
+                    for (int j = 0; j < 3; j++) {
+                        char col[40];
+                        snprintf(col, sizeof col, "%s_%s%s",
+                                mat_tensor_var_names[mat_stress_id].c_str(),
+                                comp[i], comp[j]);
+                        fprintf(out_elem_state, "  %-22s", col);
+                    }
+                }
+            }
+            if (mat_strain_id >= 0 && State.MaterialPoints.strain.size() > 0) {
+                for (int i = 0; i < 3; i++) {
+                    for (int j = 0; j < 3; j++) {
+                        char col[40];
+                        snprintf(col, sizeof col, "%s_%s%s",
+                                mat_tensor_var_names[mat_strain_id].c_str(),
+                                comp[i], comp[j]);
+                        fprintf(out_elem_state, "  %-22s", col);
+                    }
+                }
+            }
+            fprintf(out_elem_state, "\n");
+
+            // ---- Data rows --------------------------------------------------
+            for (size_t elem = 0; elem < num_mat_elems; elem++) {
+                const size_t elem_gid =
+                    State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
+
+                for (size_t gp = 0; gp < num_gp_per_elem; gp++) {
+                    const size_t pt_id = State.points_in_mat_elem.host(elem, gp);
+
+                    // Always-present: global elem id, local elem/gp indices, coords
+                    fprintf(out_elem_state,
+                            "  %-12zu %-8zu %-8zu  %22.14e %22.14e %22.14e",
+                            elem_gid, elem, gp,
+                            x_phys.host(elem, gp, 0),
+                            x_phys.host(elem, gp, 1),
+                            (num_dims == 3) ? x_phys.host(elem, gp, 2) : 0.0);
+
+                    // Scalar fields (in the same order as the header)
+                    if (mat_den_id          >= 0 && State.MaterialPoints.den.size() > 0)
+                        fprintf(out_elem_state, "  %22.14e",
+                                State.MaterialPoints.den.host(mat_id, pt_id));
+                    if (mat_pres_id         >= 0 && State.MaterialPoints.pres.size() > 0)
+                        fprintf(out_elem_state, "  %22.14e",
+                                State.MaterialPoints.pres.host(mat_id, pt_id));
+                    if (mat_sie_id          >= 0 && State.MaterialPoints.sie.size() > 0)
+                        fprintf(out_elem_state, "  %22.14e",
+                                State.MaterialPoints.sie.host(mat_id, pt_id));
+                    if (mat_sspd_id         >= 0 && State.MaterialPoints.sspd.size() > 0)
+                        fprintf(out_elem_state, "  %22.14e",
+                                State.MaterialPoints.sspd.host(mat_id, pt_id));
+                    if (mat_mass_id         >= 0 && State.MaterialPoints.mass.size() > 0)
+                        fprintf(out_elem_state, "  %22.14e",
+                                State.MaterialPoints.mass.host(mat_id, pt_id));
+                    if (mat_volfrac_id      >= 0 && State.MaterialPoints.mat_volfrac.size() > 0)
+                        fprintf(out_elem_state, "  %22.14e",
+                                State.MaterialPoints.mat_volfrac.host(mat_id, pt_id));
+                    if (mat_geo_volfrac_id  >= 0 && State.MaterialPoints.geo_volfrac.size() > 0)
+                        fprintf(out_elem_state, "  %22.14e",
+                                State.MaterialPoints.geo_volfrac.host(mat_id, pt_id));
+                    if (mat_eroded_id       >= 0 && State.MaterialPoints.eroded.size() > 0)
+                        fprintf(out_elem_state, "  %22.14e",
+                                static_cast<double>(
+                                    State.MaterialPoints.eroded.host(mat_id, pt_id)));
+                    if (mat_conductivity_id >= 0 && State.MaterialPoints.conductivity.size() > 0)
+                        fprintf(out_elem_state, "  %22.14e",
+                                State.MaterialPoints.conductivity.host(mat_id, pt_id));
+                    if (mat_specific_heat_id >= 0 && State.MaterialPoints.specific_heat.size() > 0)
+                        fprintf(out_elem_state, "  %22.14e",
+                                State.MaterialPoints.specific_heat.host(mat_id, pt_id));
+
+                    // Tensor fields: all 9 components, row-major (Txx Txy Txz ...)
+                    if (mat_stress_id >= 0 && State.MaterialPoints.stress.size() > 0) {
+                        for (size_t i = 0; i < 3; i++)
+                            for (size_t j = 0; j < 3; j++)
+                                fprintf(out_elem_state, "  %22.14e",
+                                        State.MaterialPoints.stress.host(
+                                            mat_id, pt_id, i, j));
+                    }
+                    if (mat_strain_id >= 0 && State.MaterialPoints.strain.size() > 0) {
+                        for (size_t i = 0; i < 3; i++)
+                            for (size_t j = 0; j < 3; j++)
+                                fprintf(out_elem_state, "  %22.14e",
+                                        State.MaterialPoints.strain.host(
+                                            mat_id, pt_id, i, j));
+                    }
+
+                    fprintf(out_elem_state, "\n");
+
+                } // end gp
+            } // end elem
+
+            fclose(out_elem_state);
+
+        } // end FILE 1 scope
+
+        // -----------------------------------------------------------------------
+        //  FILE 2 – Node state
+        //
+        //  Filename:  state/node_state_t_<time>.txt
+        //  Format:    fixed-width columns, one row per owned mesh node,
+        //             header line prefixed with '#'
+        //
+        //  All fields are driven by their slot ID (-1 = skip), following the
+        //  same convention as the mat-pt file above.
+        //
+        //  Vector fields (coord, vel, accel, disp, grad_level_set) produce
+        //  four columns each:  <name>_x  <name>_y  <name>_z  |<name>|
+        //  The Z component is 0.0 for 2-D runs.
+        //
+        //  Scalar fields (mass, temp) produce a single column each.
+        //
+        //  Uses mesh.num_owned_nodes to skip ghost nodes in MPI runs,
+        //  mirroring the behaviour of write_material_point_state.
+        // -----------------------------------------------------------------------
+        {
+            FILE* out_point_state;
+            char  filename[128];
+            int   max_len = sizeof filename;
+            snprintf(filename, max_len, "state/node_state_t_%6.4e.txt", time_value);
+    
+            out_point_state = fopen(filename, "w");
+            if (!out_point_state) {
+                std::cerr << "write_text_state_Pn: could not open "
+                        << filename << std::endl;
+                return;
+            }
+    
+            const size_t num_owned_nodes = mesh.num_owned_nodes;
+    
+            // ---- Metadata comment -------------------------------------------
+            fprintf(out_point_state,
+                    "# Node state  time=%.10e\n", time_value);
+            fprintf(out_point_state,
+                    "# num_owned_nodes=%zu  num_dims=%zu\n",
+                    num_owned_nodes, num_dims);
+    
+            // ---- Column header line -----------------------------------------
+            //
+            // node_id is always present.  Every requested vector field adds four
+            // columns (<name>_x/y/z, |<name>|); every requested scalar adds one.
+            // -----------------------------------------------------------------
+    
+            fprintf(out_point_state, "# %-12s", "node_id");
+    
+            // Lambda: emit the four header columns for one vector field.
+            auto hdr_vec = [&out_point_state](const std::string& name) {
+                char col[48];
+                snprintf(col, sizeof col, "%s_x", name.c_str());
+                fprintf(out_point_state, "  %-22s", col);
+                snprintf(col, sizeof col, "%s_y", name.c_str());
+                fprintf(out_point_state, "  %-22s", col);
+                snprintf(col, sizeof col, "%s_z", name.c_str());
+                fprintf(out_point_state, "  %-22s", col);
+                snprintf(col, sizeof col, "|%s|", name.c_str());
+                fprintf(out_point_state, "  %-22s", col);
+            };
+    
+            if (node_coord_id          >= 0)
+                hdr_vec(node_vector_var_names[node_coord_id]);
+            if (node_vel_id            >= 0 && State.node.vel.size() > 0)
+                hdr_vec(node_vector_var_names[node_vel_id]);
+            if (node_disp_id           >= 0 && State.node.displacement.size() > 0)
+                hdr_vec(node_vector_var_names[node_disp_id]);
+            if (node_grad_level_set_id >= 0 && State.node.gradient_level_set.size() > 0)
+                hdr_vec(node_vector_var_names[node_grad_level_set_id]);
+            if (node_mass_id           >= 0 && State.node.mass.size() > 0)
+                fprintf(out_point_state, "  %-22s",
+                        node_scalar_var_names[node_mass_id].c_str());
+            if (node_temp_id           >= 0 && State.node.temp.size() > 0)
+                fprintf(out_point_state, "  %-22s",
+                        node_scalar_var_names[node_temp_id].c_str());
+    
+            fprintf(out_point_state, "\n");
+    
+            // ---- Data rows --------------------------------------------------
+            //
+            // Lambda: write 3 components + magnitude for one vector field.
+            // Raw Z value is zeroed here for 2-D runs so callers always pass
+            // the full [2] index without a conditional at the call site.
+            auto dat_vec = [&out_point_state](double vx, double vy, double vz) {
+                const double mag = sqrt(vx*vx + vy*vy + vz*vz);
+                fprintf(out_point_state,
+                        "  %22.14e  %22.14e  %22.14e  %22.14e",
+                        vx, vy, vz, mag);
+            };
+    
+            for (size_t node_gid = 0; node_gid < num_owned_nodes; node_gid++) {
+    
+                // Always-present row identifier
+                fprintf(out_point_state, "  %-12zu", node_gid);
+    
+                // ---- Vector fields ------------------------------------------
+    
+                if (node_coord_id >= 0)
+                    dat_vec(State.node.coords.host(node_gid, 0),
+                            State.node.coords.host(node_gid, 1),
+                            State.node.coords.host(node_gid, 2));
+    
+                if (node_vel_id >= 0 && State.node.vel.size() > 0)
+                    dat_vec(State.node.vel.host(node_gid, 0),
+                            State.node.vel.host(node_gid, 1),
+                            State.node.vel.host(node_gid, 2));
+    
+                if (node_disp_id >= 0 && State.node.displacement.size() > 0)
+                    dat_vec(State.node.displacement.host(node_gid, 0),
+                            State.node.displacement.host(node_gid, 1),
+                            State.node.displacement.host(node_gid, 2));
+    
+                if (node_grad_level_set_id >= 0 && State.node.gradient_level_set.size() > 0)
+                    dat_vec(State.node.gradient_level_set.host(node_gid, 0),
+                            State.node.gradient_level_set.host(node_gid, 1),
+                            State.node.gradient_level_set.host(node_gid, 2));
+    
+                // ---- Scalar fields ------------------------------------------
+    
+                if (node_mass_id >= 0 && State.node.mass.size() > 0)
+                    fprintf(out_point_state, "  %22.14e",
+                            State.node.mass.host(node_gid));
+    
+                if (node_temp_id >= 0 && State.node.temp.size() > 0)
+                    fprintf(out_point_state, "  %22.14e",
+                            State.node.temp.host(node_gid));
+    
+                fprintf(out_point_state, "\n");
+    
+            } // end node loop
+    
+            fclose(out_point_state);
+    
+        } // end FILE 2 scope
+
+    } // end write_text_state_Pn
 }; // end class
 
 #endif // end Header Guard
