@@ -80,6 +80,12 @@ struct cohesive_zones_t {
 
     /// --- cohesive zone nodal forces ---
     CArrayKokkos<double> F_cz; // output global force vector (3*num_nodes): cohesive nodal forces accumulated as [Fx,Fy,Fz] per node
+    // write each contribution below to a slot owned by exactly one thread to avoid atomics 
+    CArrayKokkos<double>  pair_force;       // (npairs x 3) per-pair force buffer (collision-free slot)
+    DCArrayKokkos<size_t> gather_nodes;     // (U) unique cohesive zone node gids
+    DCArrayKokkos<int>    gather_counts;    // (U) # pairs touching each node
+    DCArrayKokkos<int>    gather_entries;   // (U x maxShare) packed (pair,side): entry = 2*pair + side
+    size_t                gather_node_count = 0;  // U
 
     // --- initialization flags ---
     int fracture_bdy_set = -1;
