@@ -85,6 +85,7 @@ void cohesive_zones_t::initialize(
         pair_offsets.host(i) = num_pairs;
         num_pairs += pair_count.host(i);
     }
+    pair_offsets.update_device(); // copy host built offsets to device before pass 2 reads pair_offsets
     
     // allocate only the size of overlapping nodes 
     overlapping_node_gids = DCArrayKokkos<size_t>(num_pairs, 2, "overlapping_node_gids");
@@ -200,6 +201,7 @@ void cohesive_zones_t::initialize_fracture_bc(
             prony_params.host(j, 0)     = bc_params.host(6 + 2*j);     // E_j
             prony_params.host(j, 1) = bc_params.host(6 + 2*j + 1); // tau_j
         }
+        prony_params.update_device(); // copy host built prony_params to device for use in constitutive update (Prony params read on device)
 
     } else {
         // allocate minimal array to avoid null issues (debug aid)
@@ -279,6 +281,9 @@ void cohesive_zones_t::initialize_fracture_bc(
         const size_t ub = static_cast<size_t>(node_to_u.host(b)); // compact index of B node
         gather_entries.host(ub, static_cast<size_t>(node_count.host(b)++)) = static_cast<long>(2*i + 1);
     }
+    gather_nodes.update_device(); // copy host built gather_nodes to device for use in atomic free node map in cohesive_zone_loads (gather_nodes read on device)
+    gather_counts.update_device(); // copy host build gather_counts to device for use in cohesive_zone_loads (gather_counts read on device)
+    gather_entries.update_device(); // copy host built gather_entries to device for use in cohesive_zone_loads (gather_entries read on device)
 
     // per pair collision free buffer for cohesive forces (npairs x 3); each pair writes its force contribution here, then gather map is used to sum to nodes without atomics
     // in cohesive_zone_loads each paur writes its own row pair_force(i, :) one thread per pair, so no collisions happen and no atomics are needed
@@ -1417,7 +1422,7 @@ void cohesive_zone_loads(
     FOR_ALL(i, 0, overlapping_node_gids.dims(0),{
 
         // global node IDs for the cohesive zone node pairs
-        const size_t gidA = overlapping_node_gids(i,0);
+        const size_t gidA = overlapping_node_gids(i,0)
         const size_t gidB = overlapping_node_gids(i,1);
 
         // guard: if gidA or gidB is out of bounds, skip this pair
@@ -1891,8 +1896,8 @@ void commit_internal_vars(
                 // commit updated Prony stress/history
                 cz_internal(i, col) = cz_delta(i, col);
             }
-    }); // end FOR_ALL
-    Kokkos::fence();
+        }); // end FOR_ALL
+        Kokkos::fence();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1926,6 +1931,6 @@ void add_cohesive_zone_nodal_forces(
 
             // add cohesive force z component into global nodal force array
             node_force(n, 2) += F_cz_local(3*n + 2);
-    });
-    Kokkos::fence();
+        }); // end FOR_ALL
+        Kokkos::fence();
 }
