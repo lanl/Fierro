@@ -72,7 +72,7 @@ struct cohesive_zones_t {
     double u_n_star = 1.0; // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0)
     double u_t_star = 1.0; // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0
     int num_prony_terms = 0; // number of prony series terms
-    DCArrayKokkos<double> prony_params;  // (num_prony_terms, 2): row j = [E_j, tau_j] 
+    CArrayKokkos<double> prony_params;  // (num_prony_terms, 2): row j = [E_j, tau_j] 
 
     // --- inernal state variables for cohesive zone constitutive model ---
     CArrayKokkos<double> internal_vars;
@@ -173,7 +173,7 @@ void compute_cohesive_zone_nodal_forces(
     double geom_tol,
     const double E_inf, const double a1, const double n_exp,
     const double u_n_star, const double u_t_star, const int num_prony_terms,
-    DCArrayKokkos<double>& prony_params,
+    CArrayKokkos<double>& prony_params,
     CArrayKokkos<double>& internal_vars,
     CArrayKokkos<double>& delta_internal_vars,
     CArrayKokkos<double>& pair_force,
@@ -300,7 +300,7 @@ void cohesive_zone_var_update(
     const double time_value, // ADDED IN FOR DEBUGGING
     DCArrayKokkos<size_t>& overlapping_node_gids,
     const double E_inf, const double a1, const double n_exp, const double u_n_star, const double u_t_star, const int num_prony_terms, // cohesive zone parameters
-    const DCArrayKokkos<double>& prony_params, // E_j, tau_j pairs
+    const CArrayKokkos<double>& prony_params, // E_j, tau_j pairs
     const CArrayKokkos<double>& internal_vars,      // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
     CArrayKokkos<double>& delta_internal_vars 
 );

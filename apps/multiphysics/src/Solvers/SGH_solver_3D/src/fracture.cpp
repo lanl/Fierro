@@ -56,6 +56,7 @@ void cohesive_zones_t::initialize(
 
     // pass 1 (parallel count): for each boundary node i, count how i > i overlap it
     // each i writes only (pair_count(i)): no race
+    // DCArrayKokkos because written on device in FOR_ALL then read on host in serial loop that builds pair_offsets
     DCArrayKokkos<size_t> pair_count(num_bdy_nodes, "cz_pair_count");
     pair_count.set_values(0); // initialize to zero
 
@@ -79,6 +80,7 @@ void cohesive_zones_t::initialize(
 
     // copy pair count back to host
     pair_count.update_host();
+    // DCArrayKokkos because serial host build + read on device in pass 2
     DCArrayKokkos<size_t> pair_offsets(num_bdy_nodes, "cz_pair_offsets");
     size_t num_pairs = 0;
     for (size_t i = 0; i < num_bdy_nodes; ++i) {
@@ -196,16 +198,18 @@ void cohesive_zones_t::initialize_fracture_bc(
     // device-accessible Prony parameters (E_j, tau_j pairs)
     if (num_prony_terms > 0) {
         // 2D array: row j contains [E_j, tau_j] for Prony term j
-        prony_params = DCArrayKokkos<double>(num_prony_terms, 2, "cz_prony_params");
-        for (int j = 0; j < num_prony_terms; ++j) {
-            prony_params.host(j, 0)     = bc_params.host(6 + 2*j);     // E_j
-            prony_params.host(j, 1) = bc_params.host(6 + 2*j + 1); // tau_j
-        }
-        prony_params.update_device(); // copy host built prony_params to device for use in constitutive update (Prony params read on device)
+        prony_params = CArrayKokkos<double>(num_prony_terms, 2, "cz_prony_params");
+        FOR_ALL(i, 0, 1, {
+            for (int j = 0; j < num_prony_terms; ++j) {
+                prony_params(j, 0) = bc_params(6 + 2*j);     // E_j
+                prony_params(j, 1) = bc_params(6 + 2*j + 1); // tau_j
+            }
+        }); // end FOR_ALL
+        Kokkos::fence();
 
     } else {
         // allocate minimal array to avoid null issues (debug aid)
-        prony_params = DCArrayKokkos<double>(1, 2, "cz_prony_params_empty");
+        prony_params = CArrayKokkos<double>(1, 2, "cz_prony_params_empty");
         prony_params.set_values(0.0);
     }
 
@@ -230,10 +234,10 @@ void cohesive_zones_t::initialize_fracture_bc(
     DCArrayKokkos<int> node_count(num_nodes, "cz_node_count_scratch");
     DCArrayKokkos<int> node_to_u (num_nodes, "cz_node_to_u_scratch");
 
-    // start every node at zero contributions and not a cohesive node (-1)
+    // serial host init: start every node at zero contributions and not a cohesive node (-1)
     for (size_t n = 0; n < num_nodes; ++n) { node_count.host(n) = 0; node_to_u.host(n) = -1; }
 
-    // pass 1: count contributions per node
+    // pass 1: serial on host; count contributions per node
     // every pair touches its A node (column 0) and its B node (column 1)
     // after this loop, node_count(n) = number of pairs that reference node n ()
     for (size_t i = 0; i < npairs; ++i) {             
@@ -242,6 +246,7 @@ void cohesive_zones_t::initialize_fracture_bc(
     }
 
     // assign compact indices to cohesive zone nodes u = 0,1,2,... and find max share count (for allocation of gather_entries)
+    // serial on host: U++ is a sequential running index, so iteration order matters and must be serial
     size_t U = 0, max_share = 1;                         
     for (size_t n = 0; n < num_nodes; ++n) {
         const int c = node_count.host(n);
@@ -253,6 +258,8 @@ void cohesive_zones_t::initialize_fracture_bc(
 
     // U is the number of unique cohesive zone nodes
     // allocate compact map arrays
+    // gather_nodes, gather_counts, gather_entries are built on host by the serial two pass connectivity algorithm below
+    // they are later read on device in cohesive_zone_lads
     gather_node_count = U; // unique cohesive zone nodes 
     gather_nodes   = DCArrayKokkos<size_t>(U, "cz_gather_nodes"); // u --> global node id
     gather_counts  = DCArrayKokkos<int>(U, "cz_gather_counts"); // u --> # of contributions
@@ -271,9 +278,10 @@ void cohesive_zones_t::initialize_fracture_bc(
         node_count.host(n) = 0;
     }
 
-    // pass 2: place each contribution into its node's row of gather_entries
+    // pass 2: serial on host; place each contribution into its node's row of gather_entries
     // entry = 2*pair + side (side 0 = A node, +F; side 1 = B node, -F)
     // place packed (pair, side) entries in gather_entries: entry = 2*pair + side (side=0 for A node, 1 for B node)
+    // node_count(...)++ acts as per node write cursor, sequential dependency that needs to be serial
     for (size_t i = 0; i < npairs; ++i) {            
         const size_t a = overlapping_node_gids.host(i, 0), b = overlapping_node_gids.host(i, 1);
         const size_t ua = static_cast<size_t>(node_to_u.host(a)); // compact index of A node
@@ -290,24 +298,6 @@ void cohesive_zones_t::initialize_fracture_bc(
     // gather map is then used to sum those rows onto nodes wiht one thread per node
     pair_force = CArrayKokkos<double>(npairs, 3, "cz_pair_force");  
 
-    // print output for setup of cohesive zone constitutive parameters  
-    printf("Cohesive zone constitutive parameters initialized:\n");
-    printf("  cohesive zone node pairs = %zu\n", overlapping_node_gids.dims(0));
-    printf("  E_inf = %e\n", E_inf);
-    printf("  a1 = %e\n", a1);
-    printf("  n_exp = %e\n", n_exp);
-    printf("  u_n_star = %e\n", u_n_star);
-    printf("  u_t_star = %e\n", u_t_star);
-    printf("  num_prony_terms = %d\n", num_prony_terms);
-
-    // print Prony series terms if any exist
-    if (num_prony_terms > 0) {
-        printf("  Prony series terms:\n");
-        for (int j = 0; j < num_prony_terms; ++j) {
-            printf("    prony_%d_E = %e\n", j, prony_params.host(j, 0));
-            printf("    prony_%d_tau = %e\n", j, prony_params.host(j, 1));
-        }
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -377,14 +367,6 @@ void cohesive_zones_t::initialize_reorientation_mode(
     omega_z = reorient_params.host(2);
     cz_opening_rate = reorient_params.host(3);
     x_interface = reorient_params.host(4);
-
-    // print confirmation
-    printf("=== REORIENTATION VALIDATION MODE ENABLED ===\n");
-    printf("  omega_y         = %.10f rad/us\n", omega_y);
-    printf("  omega_z         = %.10f rad/us\n", omega_z);
-    printf("  cz_opening_rate = %.10e cm/us\n", cz_opening_rate);
-    printf("  x_interface     = %.4f cm\n", x_interface);
-    printf("==============================================\n");
 
     // allocate reorientation-only storage; this happens only when validation mode is enabled
     initial_coords = CArrayKokkos<double>(num_nodes, 3, "initial_coords");
@@ -1231,7 +1213,7 @@ void cohesive_zone_var_update(
     const double time_value, 
     DCArrayKokkos<size_t>& overlapping_node_gids,
     const double E_inf, const double a1, const double n_exp, const double u_n_star, const double u_t_star, const int num_prony_terms, // cohesive zone parameters
-    const DCArrayKokkos<double>& prony_params, // E_j, tau_j pairs
+    const CArrayKokkos<double>& prony_params, // E_j, tau_j pairs
     const CArrayKokkos<double>& internal_vars, // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
     CArrayKokkos<double>& delta_internal_vars // (overlapping_node_gids.dims(0), 4 + num_prony_terms) 
 )
@@ -1725,7 +1707,7 @@ void compute_cohesive_zone_nodal_forces(
     double geom_tol,
     const double E_inf, const double a1, const double n_exp,
     const double u_n_star, const double u_t_star, const int num_prony_terms,
-    DCArrayKokkos<double>& prony_params,
+    CArrayKokkos<double>& prony_params,
     CArrayKokkos<double>& internal_vars,
     CArrayKokkos<double>& delta_internal_vars,
     CArrayKokkos<double>& pair_force,
