@@ -2101,6 +2101,10 @@ public:
                     State.MaterialPoints.specific_heat.update_host();
                     break;
 
+                case material_pt_state::heat_flux:
+                    State.MaterialPoints.q_flux.update_host();
+                    break;
+
                 // add other variables here
                 
                 // not used
@@ -2110,8 +2114,7 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
-                case material_pt_state::heat_flux:
-                    break;
+                
                 default:
                     std::cout<<"Desired material point state not understood in outputs"<<std::endl;
             } // end switch
@@ -2232,6 +2235,10 @@ public:
                     num_mat_pt_scalar_vars ++;
                     break;
 
+                case material_pt_state::heat_flux:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+
                 // add other variables here
 
                 // not used
@@ -2241,8 +2248,7 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
-                case material_pt_state::heat_flux:
-                    break;
+                
                 default:
                     std::cout<<"Desired material point state not understood in outputs"<<std::endl;
             } // end switch
@@ -2363,6 +2369,7 @@ public:
         int mat_eroded_id = -1;
         int mat_stress_id = -1;
         int mat_strain_id = -1;
+        int mat_heat_flux_id = -1;
 
         int mat_conductivity_id = -1;
         int mat_specific_heat_id = -1;
@@ -2441,6 +2448,12 @@ public:
                     var++;
                     break;
 
+                case material_pt_state::heat_flux:
+                    mat_elem_scalar_var_names[var] = "mat_heat_flux";
+                    mat_heat_flux_id = var;
+                    var++;
+                    break;
+
 
                 // add other variables here
 
@@ -2451,8 +2464,7 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
-                case material_pt_state::heat_flux:
-                    break;
+                
             } // end switch
         } // end for over mat_pt_states
 
@@ -2966,7 +2978,8 @@ public:
                                                mat_stress_id,
                                                mat_strain_id,
                                                mat_conductivity_id,
-                                               mat_specific_heat_id);
+                                               mat_specific_heat_id,
+                                               mat_heat_flux_id);
                         Kokkos::fence();
                         mat_elem_scalar_fields.update_host();
                         mat_elem_tensor_fields.update_host();
@@ -3153,6 +3166,7 @@ public:
                              mat_strain_id,
                              mat_conductivity_id,
                              mat_specific_heat_id,
+                             mat_heat_flux_id,
                              node_mass_id,
                              node_vel_id,
                              node_coord_id,
@@ -4229,7 +4243,8 @@ public:
                                 const int mat_stress_id,
                                 const int mat_strain_id,
                                 const int mat_conductivity_id,
-                                const int mat_specific_heat_id)
+                                const int mat_specific_heat_id,
+                                const int mat_heat_flux_id)
     {
       
         // --- loop over the material point states
@@ -4356,6 +4371,17 @@ public:
                     });
                     break;
 
+                case material_pt_state::heat_flux:
+                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+
+                        // get elem gid
+                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+
+                        // field
+                        mat_elem_scalar_fields(mat_heat_flux_id, elem_gid) += MaterialPoints.q_flux(mat_id, mat_elem_sid);
+                    });
+                    break;
+
                 // add other variables here
 
                 // not used variables
@@ -4365,8 +4391,7 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
-                case material_pt_state::heat_flux:
-                    break;
+                
             } // end switch
         }// end for over mat point state
 
@@ -4928,6 +4953,10 @@ public:
                     State.MaterialPoints.specific_heat.update_host();
                     break;
 
+                case material_pt_state::heat_flux:
+                    State.MaterialPoints.q_flux.update_host();
+                    break;
+
                 // add other variables here
 
                 // not used
@@ -4937,8 +4966,7 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
-                case material_pt_state::heat_flux:
-                    break;
+                
                 default:
                     std::cout<<"Desired material point state not understood in outputs"<<std::endl;
             } // end switch
@@ -5058,6 +5086,10 @@ public:
                     num_mat_pt_scalar_vars ++;
                     break;
 
+                case material_pt_state::heat_flux:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+
                 // add other variables here
 
                 // not used
@@ -5067,8 +5099,7 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
-                case material_pt_state::heat_flux:
-                    break;
+                
                 default:
                     std::cout<<"Desired material point state not understood in outputs"<<std::endl;
             } // end switch
@@ -5190,6 +5221,7 @@ public:
         int mat_eroded_id = -1;
         int mat_stress_id = -1;
         int mat_strain_id = -1;
+        int mat_heat_flux_id = -1;
 
         int mat_conductivity_id = -1;
         int mat_specific_heat_id = -1;
@@ -5269,6 +5301,12 @@ public:
                     var++;
                     break;
 
+                case material_pt_state::heat_flux:
+                    mat_elem_scalar_var_names[var] = "mat_heat_flux";
+                    mat_heat_flux_id = var;
+                    var++;
+                    break;
+
 
                 // add other variables here
 
@@ -5279,8 +5317,7 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
-                case material_pt_state::heat_flux:
-                    break;
+                
             } // end switch
         } // end for over mat_pt_states
 
@@ -5800,7 +5837,8 @@ public:
                                                mat_stress_id,
                                                mat_strain_id,
                                                mat_conductivity_id,
-                                               mat_specific_heat_id);
+                                               mat_specific_heat_id,
+                                               mat_heat_flux_id);
                         Kokkos::fence();
                         mat_elem_scalar_fields.update_host();
                         mat_elem_tensor_fields.update_host();
@@ -7273,6 +7311,7 @@ public:
         const int mat_strain_id,
         const int mat_conductivity_id,
         const int mat_specific_heat_id,
+        const int mat_heat_flux_id,
         // node field slot IDs (-1 means "not requested")
         const int node_mass_id,
         const int node_vel_id,
@@ -7393,6 +7432,9 @@ public:
             if (mat_specific_heat_id >= 0 && State.MaterialPoints.specific_heat.size() > 0)
                 fprintf(out_elem_state, "  %-22s",
                         mat_scalar_var_names[mat_specific_heat_id].c_str());
+            if (mat_heat_flux_id >= 0 && State.MaterialPoints.q_flux.size() > 0)
+                fprintf(out_elem_state, "  %-22s",
+                        mat_scalar_var_names[mat_heat_flux_id].c_str());
 
             // Tensor headers: <name>_ij  (i, j in {x, y, z}), row-major
             const char* comp[3] = {"x", "y", "z"};
@@ -7480,6 +7522,9 @@ public:
                 if (mat_specific_heat_id >= 0 && State.MaterialPoints.specific_heat.size() > 0)
                     fprintf(out_elem_state, "  %22.14e",
                             State.MaterialPoints.specific_heat.host(mat_id, pt_id));
+                if (mat_heat_flux_id >= 0 && State.MaterialPoints.q_flux.size() > 0)
+                    fprintf(out_elem_state, "  %22.14e",
+                            State.MaterialPoints.q_flux.host(mat_id, pt_id));
 
                 // Tensor fields: all 9 components, row-major (Txx Txy Txz ...)
                 if (mat_stress_id >= 0 && State.MaterialPoints.stress.size() > 0) {

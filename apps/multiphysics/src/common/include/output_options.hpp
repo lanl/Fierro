@@ -102,7 +102,8 @@ static std::map<std::string, material_pt_state> mat_pt_outputs_map
     { "sspd",    material_pt_state::sound_speed},
     { "mass",    material_pt_state::mass},
     { "volfrac", material_pt_state::volume_fraction},
-    { "eroded",  material_pt_state::eroded_flag}
+    { "eroded",  material_pt_state::eroded_flag},
+    { "heat_flux",  material_pt_state::heat_flux}
 };
 
 // element average state variables writen to file
