@@ -253,14 +253,14 @@ void cohesive_zones_t::initialize_fracture_bc(
 
     // U is the number of unique cohesive zone nodes
     // allocate compact map arrays
-    gather_node_count = U;
+    gather_node_count = U; // unique cohesive zone nodes 
     gather_nodes   = DCArrayKokkos<size_t>(U, "cz_gather_nodes"); // u --> global node id
     gather_counts  = DCArrayKokkos<int>(U, "cz_gather_counts"); // u --> # of contributions
     gather_entries = DCArrayKokkos<int>(U, max_share, "cz_gather_entries"); // u --> list of (pair, side)
     gather_entries.set_values(0);
 
     // fill node list + counts
-    // fill per node ino (gather_nodes, gather_counts) 
+    // fill per node info (gather_nodes, gather_counts) 
     // reset node_count(n) to 0 so it can be used in pass 2 as per node write
     for (size_t n = 0; n < num_nodes; ++n) {          
         const int u = node_to_u.host(n);
@@ -1422,7 +1422,7 @@ void cohesive_zone_loads(
     FOR_ALL(i, 0, overlapping_node_gids.dims(0),{
 
         // global node IDs for the cohesive zone node pairs
-        const size_t gidA = overlapping_node_gids(i,0)
+        const size_t gidA = overlapping_node_gids(i,0);
         const size_t gidB = overlapping_node_gids(i,1);
 
         // guard: if gidA or gidB is out of bounds, skip this pair
@@ -1687,9 +1687,9 @@ void cohesive_zone_loads(
         const size_t n = gather_nodes_dev(u);
         const int c = gather_counts_dev(u);
 
-        double fx = 0.0;
-        double fy = 0.0;
-        double fz = 0.0;
+        double fx = 0.0; // local variables thread-private; no collision occurs while summing
+        double fy = 0.0; // local variables thread-private; no collision occurs while summing
+        double fz = 0.0; // local variables thread-private; no collision occurs while summing
 
         for (int j = 0; j < c; ++j){
             const int val = gather_entries_dev(u, j);
