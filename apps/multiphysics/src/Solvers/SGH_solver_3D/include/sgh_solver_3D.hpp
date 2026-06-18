@@ -241,6 +241,10 @@ public:
 
     void boundary_contact_force(State_t& State, const swage::Mesh &mesh, const double &del_t, contact_state_t &Contact_State);
 
+    void boundary_fracture_force(State_t& State, swage::Mesh &mesh, const double &dt_stage,
+                                    cohesive_zones_t &cohesive_zones_bank, const double &time_value,
+                                    const size_t &cycle, const size_t &rk_stage, const size_t &rk_num_stages);    
+
     void boundary_stress(const swage::Mesh& mesh,
                     const BoundaryCondition_t& BoundaryConditions,
                     DCArrayKokkos<double>& node_bdy_force,

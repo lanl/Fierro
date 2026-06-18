@@ -439,62 +439,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // apply cohesive zone nodal forces (fracture)
             if (doing_fracture) {
-                
-                // reset delta internal vars to zero
-                reset_delta_internal_vars(cohesive_zones_bank.delta_internal_vars);
-                
-                // reset F_cz for this stage
-                cohesive_zones_bank.F_cz.set_values(0.0);
-                
-                // Compute cohesive forces (orientation, openings, constitutive, loads)
-                compute_cohesive_zone_nodal_forces(
-                    mesh.nodes_in_elem,
-                    State.node.coords,
-                    State.node.vel,
-                    cohesive_zones_bank.overlapping_node_gids,
-                    cohesive_zones_bank.cz_info,
-                    cohesive_zones_bank.max_elem_in_cohesive_zone,
-                    cohesive_zones_bank.geom_tol,
-                    cohesive_zones_bank.E_inf,
-                    cohesive_zones_bank.a1,
-                    cohesive_zones_bank.n_exp,
-                    cohesive_zones_bank.u_n_star,
-                    cohesive_zones_bank.u_t_star,
-                    cohesive_zones_bank.num_prony_terms,
-                    cohesive_zones_bank.prony_params,
-                    cohesive_zones_bank.internal_vars,
-                    cohesive_zones_bank.delta_internal_vars,
-                    cohesive_zones_bank.pair_force,
-                    cohesive_zones_bank.gather_nodes,
-                    cohesive_zones_bank.gather_counts,
-                    cohesive_zones_bank.gather_entries,
-                    cohesive_zones_bank.gather_node_count,
-                    dt_stage,
-                    time_value,
-                    cycle,
-                    rk_stage,
-                    rk_num_stages,
-                    cohesive_zones_bank.F_cz
-                );
-
-                // commit internal variable updates at final RK stage only
-                // consistent with forward euler incrementalization of the cohesive zone evolution
-                commit_internal_vars(
-                    cohesive_zones_bank.internal_vars,
-                    cohesive_zones_bank.delta_internal_vars,
-                    cohesive_zones_bank.overlapping_node_gids,
-                    cohesive_zones_bank.num_prony_terms,
-                    rk_stage,
-                    rk_num_stages
-                );
-                
-                // add cohesive zone nodal forces to global nodal force array (State.node.force)
-                add_cohesive_zone_nodal_forces(
-                    State.node.force,
-                    cohesive_zones_bank.F_cz,
-                    mesh.num_nodes
-                );
-            } // end if doing_fracture       
+                boundary_fracture_force(State, mesh, dt_stage, cohesive_zones_bank,
+                                        time_value, cycle, rk_stage, rk_num_stages);
+            } // end if doing_fracture
 
             // SKIP SGH SOLVER EVOLUTION (REORIENTATION TESTING MODE)
             if (reorient_mode) {
