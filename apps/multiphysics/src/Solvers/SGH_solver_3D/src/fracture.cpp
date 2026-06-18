@@ -54,6 +54,7 @@ void cohesive_zones_t::initialize(
     MPICArrayKokkos<double>& node_coords,            // node_coords
     double geom_tol){                                // SimulationParameters.DynamicOptions.small
 
+    // this overlapping_node_gids algorithm will eventually be replaced by Nathaniels parallel algorithm: build_multi_node_connectivity
     // pass 1 (parallel count): for each boundary node i, count how i > i overlap it
     // each i writes only (pair_count(i)): no race
     // DCArrayKokkos because written on device in FOR_ALL then read on host in serial loop that builds pair_offsets
@@ -224,6 +225,7 @@ void cohesive_zones_t::initialize_fracture_bc(
     delta_internal_vars = CArrayKokkos<double>(npairs, width, "cz_delta_internal_vars");
     delta_internal_vars.set_values(0.0);
 
+    // this node gather map (thread safe force accumulation) algorithm will eventually be replaced by Nathaniels parallel algorithm: build_multi_node_connectivity
     // node gather map (built once) so cohesive_zone_loads can gather pairwise forces to nodes without atomics
     // each pair contributes to its A node (+F, side 0) and B node (-F, side 1)
     // a node may belong toseveral pairs (crack junctions); the map lets ONE thread own each node and sum its pairs
