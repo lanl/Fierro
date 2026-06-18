@@ -147,184 +147,184 @@ struct cohesive_zones_t {
 }; // end struct cohesive_zones_t (end member functions (initialization))  
 
 
-    // =====================================================================================================================
-    //                          FREE FUNCTIONS
-    // =====================================================================================================================
+// =====================================================================================================================
+//                          FREE FUNCTIONS
+// =====================================================================================================================
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn reset_delta_internal_vars
-    ///
-    /// \brief reset delta_internal_vars to zero (call at start of each RK stage)
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void reset_delta_internal_vars(CArrayKokkos<double>& delta_internal_vars);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn reset_delta_internal_vars
+///
+/// \brief reset delta_internal_vars to zero (call at start of each RK stage)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void reset_delta_internal_vars(CArrayKokkos<double>& delta_internal_vars);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn compute_cohesive_zone_nodal_forces
-    ///
-    /// \brief compute cohesive zone nodal forces for this Rk stage
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
-    void compute_cohesive_zone_nodal_forces(
-        DCArrayKokkos<size_t>& nodes_in_elem,            // mesh.nodes_in_elem
-        MPICArrayKokkos<double>& node_coords,            // State.node.coords
-        MPICArrayKokkos<double>& vel,                    // State.node.vel
-        DCArrayKokkos<size_t>& overlapping_node_gids,
-        CArrayKokkos<int>& cz_info,
-        size_t max_elem_in_cohesive_zone,
-        double geom_tol,
-        const double E_inf, const double a1, const double n_exp,
-        const double u_n_star, const double u_t_star, const int num_prony_terms,
-        DCArrayKokkos<double>& prony_params,
-        CArrayKokkos<double>& internal_vars,
-        CArrayKokkos<double>& delta_internal_vars,
-        CArrayKokkos<double>& pair_force,
-        DCArrayKokkos<size_t>& gather_nodes,
-        DCArrayKokkos<int>& gather_counts,
-        DCArrayKokkos<int>& gather_entries,
-        size_t gather_node_count,
-        double dt_stage,
-        double time_value,
-        size_t cycle,
-        size_t rk_stage,
-        size_t rk_num_stages,
-        CArrayKokkos<double>& F_cz);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn compute_cohesive_zone_nodal_forces
+///
+/// \brief compute cohesive zone nodal forces for this Rk stage
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////    
+void compute_cohesive_zone_nodal_forces(
+    DCArrayKokkos<size_t>& nodes_in_elem,            // mesh.nodes_in_elem
+    MPICArrayKokkos<double>& node_coords,            // State.node.coords
+    MPICArrayKokkos<double>& vel,                    // State.node.vel
+    DCArrayKokkos<size_t>& overlapping_node_gids,
+    CArrayKokkos<int>& cz_info,
+    size_t max_elem_in_cohesive_zone,
+    double geom_tol,
+    const double E_inf, const double a1, const double n_exp,
+    const double u_n_star, const double u_t_star, const int num_prony_terms,
+    DCArrayKokkos<double>& prony_params,
+    CArrayKokkos<double>& internal_vars,
+    CArrayKokkos<double>& delta_internal_vars,
+    CArrayKokkos<double>& pair_force,
+    DCArrayKokkos<size_t>& gather_nodes,
+    DCArrayKokkos<int>& gather_counts,
+    DCArrayKokkos<int>& gather_entries,
+    size_t gather_node_count,
+    double dt_stage,
+    double time_value,
+    size_t cycle,
+    size_t rk_stage,
+    size_t rk_num_stages,
+    CArrayKokkos<double>& F_cz);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn commit_internal_vars
-    ///
-    /// \brief commit internal variable updates (call only at final RK stage: constistent with Forward Euler 
-    ///        incrementalization of the cohesive zone)
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-    void commit_internal_vars(
-        CArrayKokkos<double>& internal_vars,
-        CArrayKokkos<double>& delta_internal_vars,
-        DCArrayKokkos<size_t>& overlapping_node_gids,
-        int num_prony_terms,
-        size_t rk_stage,
-        size_t rk_num_stages);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn commit_internal_vars
+///
+/// \brief commit internal variable updates (call only at final RK stage: constistent with Forward Euler 
+///        incrementalization of the cohesive zone)
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+void commit_internal_vars(
+    CArrayKokkos<double>& internal_vars,
+    CArrayKokkos<double>& delta_internal_vars,
+    DCArrayKokkos<size_t>& overlapping_node_gids,
+    int num_prony_terms,
+    size_t rk_stage,
+    size_t rk_num_stages);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn add_cohesive_zone_nodal_forces
-    ///
-    /// \brief add cohesive zon foces to global nodal force array (State.node.force)
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-    void add_cohesive_zone_nodal_forces(
-        DCArrayKokkos<double>& node_force,
-        const CArrayKokkos<double>& F_cz,
-        size_t num_nodes
-    );
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn add_cohesive_zone_nodal_forces
+///
+/// \brief add cohesive zon foces to global nodal force array (State.node.force)
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+void add_cohesive_zone_nodal_forces(
+    DCArrayKokkos<double>& node_force,
+    const CArrayKokkos<double>& F_cz,
+    size_t num_nodes
+);
 
-    // =====================================================================================================================
-    //                          FRACTURE PIPELINE FUNCTIONS
-    // =====================================================================================================================
+// =====================================================================================================================
+//                          FRACTURE PIPELINE FUNCTIONS
+// =====================================================================================================================
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \brief Count max elements attached to any CZ node pair
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    size_t cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids, 
-        const RaggedRightArrayKokkos<size_t>& elems_in_node);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \brief Count max elements attached to any CZ node pair
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+size_t cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids, 
+    const RaggedRightArrayKokkos<size_t>& elems_in_node);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn compute_face_geometry
-    ///
-    /// \brief establishes the local (n, r, s) coordinate system for a cohesive zone surface
-    /// \param n              [output] unit normal vector to the cohesive zone surface (normal to plane of crack tip)
-    /// \param r              [output] first in-plane tangent vector (orthogonal to plane formed by s and n)
-    /// \param s              [output] second in-plane tangent vector (coincident with cruve of crack tip)
-    /// \param cenface        [output] centroid of the cohesive zone face in physical coordinates;
-    ///                       used for face-matching and area calculations
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-    KOKKOS_FUNCTION
-    static void compute_face_geometry(
-        const DCArrayKokkos<size_t>& nodes_in_elem,  // just this from mesh
-        const MPICArrayKokkos<double>& node_coords,
-        const size_t surf,
-        const size_t elem,
-        ViewCArrayKokkos<double>& n,
-        ViewCArrayKokkos<double>& r,
-        ViewCArrayKokkos<double>& s,
-        ViewCArrayKokkos<double>& cenface
-    );
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn compute_face_geometry
+///
+/// \brief establishes the local (n, r, s) coordinate system for a cohesive zone surface
+/// \param n              [output] unit normal vector to the cohesive zone surface (normal to plane of crack tip)
+/// \param r              [output] first in-plane tangent vector (orthogonal to plane formed by s and n)
+/// \param s              [output] second in-plane tangent vector (coincident with cruve of crack tip)
+/// \param cenface        [output] centroid of the cohesive zone face in physical coordinates;
+///                       used for face-matching and area calculations
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+KOKKOS_FUNCTION
+static void compute_face_geometry(
+    const DCArrayKokkos<size_t>& nodes_in_elem,  // just this from mesh
+    const MPICArrayKokkos<double>& node_coords,
+    const size_t surf,
+    const size_t elem,
+    ViewCArrayKokkos<double>& n,
+    ViewCArrayKokkos<double>& r,
+    ViewCArrayKokkos<double>& s,
+    ViewCArrayKokkos<double>& cenface
+);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn build_cohesive_zone_info
-    ///
-    /// \brief build cohesive zone connectivity info (cz_info) for each cohesive zone node pair: which elements and faces 
-    ///        are connected to each node in the pair
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-    CArrayKokkos<int> build_cohesive_zone_info(
-        RaggedRightArrayKokkos<size_t>& elems_in_node,  // mesh.elems_in_node
-        DCArrayKokkos<size_t>& nodes_in_elem,           // mesh.nodes_in_elem
-        MPICArrayKokkos<double>& node_coords,             // state.node.coords
-        DCArrayKokkos<size_t>& overlapping_node_gids,
-        size_t max_elem_in_cohesive_zone,
-        const double geom_tol
-    );
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn build_cohesive_zone_info
+///
+/// \brief build cohesive zone connectivity info (cz_info) for each cohesive zone node pair: which elements and faces 
+///        are connected to each node in the pair
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+CArrayKokkos<int> build_cohesive_zone_info(
+    RaggedRightArrayKokkos<size_t>& elems_in_node,  // mesh.elems_in_node
+    DCArrayKokkos<size_t>& nodes_in_elem,           // mesh.nodes_in_elem
+    MPICArrayKokkos<double>& node_coords,             // state.node.coords
+    DCArrayKokkos<size_t>& overlapping_node_gids,
+    size_t max_elem_in_cohesive_zone,
+    const double geom_tol
+);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn oriented
-    ///
-    /// \brief compute cohesive zone interface orientation (normal at t and t+dt) for each cohesive zone node pair
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-    void oriented(
-        DCArrayKokkos<size_t>& nodes_in_elem,
-        MPICArrayKokkos<double>& node_coords,      // reference  coords (num_nodes x 3) 
-        DCArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
-        CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
-        size_t max_elem_in_cohesive_zone,
-        double geom_tol,                 // centroid coincidence tolerance (ABS distance)
-        CArrayKokkos<double>& cohesive_zone_orientation       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
-    ); 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn oriented
+///
+/// \brief compute cohesive zone interface orientation (normal at t and t+dt) for each cohesive zone node pair
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+void oriented(
+    DCArrayKokkos<size_t>& nodes_in_elem,
+    MPICArrayKokkos<double>& node_coords,      // reference  coords (num_nodes x 3) 
+    DCArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
+    CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
+    size_t max_elem_in_cohesive_zone,
+    double geom_tol,                 // centroid coincidence tolerance (ABS distance)
+    CArrayKokkos<double>& cohesive_zone_orientation       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
+); 
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn ucmap
-    ///
-    /// \brief map global nodal motion to local cohesive zone openings for each cohesive zone node pair
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-    void ucmap(
-        const MPICArrayKokkos<double>& node_coords,
-        const MPICArrayKokkos<double>& vel,
-        const CArrayKokkos<double>& cohesive_zone_orientation,
-        DCArrayKokkos<size_t>& overlapping_node_gids,
-        const double dt_stage, 
-        CArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
-    );
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn ucmap
+///
+/// \brief map global nodal motion to local cohesive zone openings for each cohesive zone node pair
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+void ucmap(
+    const MPICArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& vel,
+    const CArrayKokkos<double>& cohesive_zone_orientation,
+    DCArrayKokkos<size_t>& overlapping_node_gids,
+    const double dt_stage, 
+    CArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
+);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn cohesive_zone_var_update
-    ///
-    /// \brief update cohesive zone variables based on local openings and cohesive zone constitutive parameters
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
-    void cohesive_zone_var_update(
-        const CArrayKokkos<double>& local_opening,
-        const double dt_stage, 
-        const double time_value, // ADDED IN FOR DEBUGGING
-        DCArrayKokkos<size_t>& overlapping_node_gids,
-        const double E_inf, const double a1, const double n_exp, const double u_n_star, const double u_t_star, const int num_prony_terms, // cohesive zone parameters
-        const DCArrayKokkos<double>& prony_params, // E_j, tau_j pairs
-        const CArrayKokkos<double>& internal_vars,      // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
-        CArrayKokkos<double>& delta_internal_vars 
-    );
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn cohesive_zone_var_update
+///
+/// \brief update cohesive zone variables based on local openings and cohesive zone constitutive parameters
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
+void cohesive_zone_var_update(
+    const CArrayKokkos<double>& local_opening,
+    const double dt_stage, 
+    const double time_value, // ADDED IN FOR DEBUGGING
+    DCArrayKokkos<size_t>& overlapping_node_gids,
+    const double E_inf, const double a1, const double n_exp, const double u_n_star, const double u_t_star, const int num_prony_terms, // cohesive zone parameters
+    const DCArrayKokkos<double>& prony_params, // E_j, tau_j pairs
+    const CArrayKokkos<double>& internal_vars,      // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
+    CArrayKokkos<double>& delta_internal_vars 
+);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /// \fn cohesive_zone_loads
-    ///
-    /// \brief assemble cohesive zone nodal forces from tractions and effective area for each cohesive zone node pair
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
-    void cohesive_zone_loads(
-        DCArrayKokkos<size_t>& nodes_in_elem,
-        const MPICArrayKokkos<double>& node_coords,
-        DCArrayKokkos<size_t>& overlapping_node_gids,
-        const CArrayKokkos<double>& cohesive_zone_orientation,
-        CArrayKokkos<int>& cz_info,
-        const size_t max_elem_in_cohesive_zone,
-        const CArrayKokkos<double>& internal_vars,
-        const CArrayKokkos<double>& delta_internal_vars,
-        CArrayKokkos<double>& pair_area,
-        CArrayKokkos<double>& pair_force,
-        DCArrayKokkos<size_t>& gather_nodes,
-        DCArrayKokkos<int>& gather_counts,
-        DCArrayKokkos<int>& gather_entries,
-        size_t gather_node_count,
-        CArrayKokkos<double>& F_cz);
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn cohesive_zone_loads
+///
+/// \brief assemble cohesive zone nodal forces from tractions and effective area for each cohesive zone node pair
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
+void cohesive_zone_loads(
+    DCArrayKokkos<size_t>& nodes_in_elem,
+    const MPICArrayKokkos<double>& node_coords,
+    DCArrayKokkos<size_t>& overlapping_node_gids,
+    const CArrayKokkos<double>& cohesive_zone_orientation,
+    CArrayKokkos<int>& cz_info,
+    const size_t max_elem_in_cohesive_zone,
+    const CArrayKokkos<double>& internal_vars,
+    const CArrayKokkos<double>& delta_internal_vars,
+    CArrayKokkos<double>& pair_area,
+    CArrayKokkos<double>& pair_force,
+    DCArrayKokkos<size_t>& gather_nodes,
+    DCArrayKokkos<int>& gather_counts,
+    DCArrayKokkos<int>& gather_entries,
+    size_t gather_node_count,
+    CArrayKokkos<double>& F_cz);
 
 #endif
