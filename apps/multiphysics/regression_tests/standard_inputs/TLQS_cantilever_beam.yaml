@@ -1,0 +1,129 @@
+# num_dims: 3
+
+dynamic_options:
+    time_final: 10.0
+    dt_min: 1.e-8
+    dt_max: 1.e-2
+    dt_start: 10.0
+    cycle_stop: 300000
+
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [20.0, 1.0, 1.0]
+    num_elems: [10, 1, 1]
+    polynomial_order: 3
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: state
+    graphics_time_step: 10.0
+    mat_pt_field_outputs:
+        - stress
+        - strain
+    node_field_outputs:
+        - disp
+
+solver_options:
+  - solver:
+        method: qstatx_FE
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+boundary_conditions:
+
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+        displacement_model: fixed
+
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 20.0
+        displacement_model: piston
+        displacement_bc_global_vars:
+            - 2E-5 #mag
+            - y #dir
+
+  
+materials:
+    - material:
+        id: 0
+        strength_model: qstatx_isotropic_linear_elastic
+        # young's modulus
+        # poisson's ratio
+        strength_global_vars:
+            - 2E11 #2E6
+            - 0.33
+
+    #- material:
+    #    id: 1
+    #    strength_model: qstatx_isotropic_linear_elastic
+    #    # young's modulus
+    #    # poisson's ratio
+    #    strength_global_vars:
+    #        - 2E16
+    #        - 0.33
+
+
+regions:
+    - region:
+        id: 0
+        volume:
+            type: global
+        # Solver ID this region belongs to (must match `solver_options`), 
+        # This is for solvers that only opperate on portions of the mesh
+        solver_id: 0 # ignored with FE solvers, for illistrative purposes
+
+
+initial_conditions:
+    - initial_condition:
+        # region this IC applies to
+        region_id: 0
+        # Material ID used by constitutive models in this region.
+        material_id: 0
+        # Initial state variables for the entire computational domain.
+        density: 
+            type: uniform
+            # Density (kg/m^3, assuming SI-like scaling).
+            value: 1.0
+        specific_internal_energy: 
+            type: uniform
+            # Specific internal energy (J/kg, assuming SI-like scaling).
+            value: 1.e-10
+        material_volume_fraction:
+            # Region material volume fraction (1.0 for single-material initialization).
+            type: uniform
+            value: 1.0
+
+    #- initial_condition:
+    #    # region this IC applies to
+    #    region_id: 0
+    #    # Material ID used by constitutive models in this region.
+    #    material_id: 1
+    #    # Initial state variables for the entire computational domain.
+    #    density: 
+    #        type: uniform
+    #        # Density (kg/m^3, assuming SI-like scaling).
+    #        value: 1.0
+    #    specific_internal_energy: 
+    #        type: uniform
+    #        # Specific internal energy (J/kg, assuming SI-like scaling).
+    #        value: 1.e-10
+    #    material_volume_fraction:
+    #        # Region material volume fraction (1.0 for single-material initialization).
+    #        type: uniform
+    #        value: 0.5
+
+    
+
+
