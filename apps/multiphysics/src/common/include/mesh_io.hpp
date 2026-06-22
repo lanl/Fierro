@@ -3148,16 +3148,16 @@ public:
         if (SimulationParamaters.OutputOptions.format == output_options::state ||
             SimulationParamaters.OutputOptions.format == output_options::viz_and_state) {
 
-            write_material_point_state(mesh,
+            /* write_material_point_state(mesh,
                                        State,
                                        SimulationParamaters,
                                        time_value,
                                        graphics_times,
                                        node_states,
                                        gauss_pt_states,
-                                       material_pt_states);
+                                       material_pt_states); */
 
-            /* write_text_state(mesh,
+            write_text_state(mesh,
                              State,
                              mat_elem_scalar_var_names,
                              mat_elem_tensor_var_names,
@@ -3184,7 +3184,7 @@ public:
                              node_coord_id,
                              node_temp_id,
                              node_grad_level_set_id,
-                             node_disp_id); */
+                             node_disp_id);
 
         } // end if state is to be written
 
@@ -7438,8 +7438,8 @@ public:
             // it carries no information.
             // -----------------------------------------------------------------
             fprintf(out_elem_state,
-                    "# %-12s %-8s  %-22s %-22s %-22s",
-                    "elem_gid", "mat_elem_id", "x", "y", "z");
+                    "# %-12s %-8s  %-22s %-22s %-22s %-22s %-22s",
+                    "elem_gid", "mat_elem_id", "x", "y", "z", "radius_2D", "radius_3D");
 
             if (mat_den_id           >= 0 && State.MaterialPoints.den.size() > 0)
                 fprintf(out_elem_state, "  %-22s",
@@ -7523,11 +7523,13 @@ public:
                 const size_t pt_id = State.points_in_mat_elem.host(elem, 0);
 
                 fprintf(out_elem_state,
-                        "  %-12zu %-8zu  %22.14e %22.14e %22.14e",
+                        "  %-12zu %-8zu  %22.14e %22.14e %22.14e %22.14e %22.14e",
                         elem_gid, elem,
                         x_phys.host(elem, 0),
                         x_phys.host(elem, 1),
-                        (num_dims == 3) ? x_phys.host(elem, 2) : 0.0);
+                        (num_dims == 3) ? x_phys.host(elem, 2) : 0.0,
+                        sqrt(x_phys.host(elem, 0)*x_phys.host(elem, 0)+x_phys.host(elem, 1)*x_phys.host(elem, 1)),
+                        (num_dims == 3) ? sqrt(x_phys.host(elem, 0)*x_phys.host(elem, 0)+x_phys.host(elem, 1)*x_phys.host(elem, 1)+x_phys.host(elem, 2)*x_phys.host(elem, 2)) : 0.0);
 
                 // Scalar fields
                 if (mat_den_id           >= 0 && State.MaterialPoints.den.size() > 0)
