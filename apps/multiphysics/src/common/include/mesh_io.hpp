@@ -2191,6 +2191,7 @@ public:
 
         size_t num_mat_pt_scalar_vars = 0;
         size_t num_mat_pt_tensor_vars = 0;
+        size_t num_mat_pt_vector_vars = 0;
             
         // count the number of material point state vars to write out
         for (auto field : SimulationParamaters.OutputOptions.output_mat_pt_state){
@@ -2236,7 +2237,7 @@ public:
                     break;
 
                 case material_pt_state::heat_flux:
-                    num_mat_pt_scalar_vars ++;
+                    num_mat_pt_vector_vars ++;
                     break;
 
                 // add other variables here
@@ -2352,10 +2353,12 @@ public:
         // Scalar, vector, and tensor value names associated with a elem
         std::vector<std::string> elem_scalar_var_names(num_elem_scalar_vars);
         std::vector<std::string> elem_tensor_var_names(num_elem_tensor_vars);
+        std::vector<std::string> elem_vector_var_names(num_elem_vector_vars);
 
         // Scalar, vector, and tensor values associated with a material in part elems
         std::vector<std::string> mat_elem_scalar_var_names(num_mat_pt_scalar_vars);
         std::vector<std::string> mat_elem_tensor_var_names(num_mat_pt_tensor_vars);
+        std::vector<std::string> mat_elem_vector_var_names(num_mat_pt_vector_vars);
 
 
         // the ids to access a variable in the mat_scalar_var_name or tensor list
@@ -2449,9 +2452,9 @@ public:
                     break;
 
                 case material_pt_state::heat_flux:
-                    mat_elem_scalar_var_names[var] = "mat_heat_flux";
-                    mat_heat_flux_id = var;
-                    var++;
+                    mat_elem_vector_var_names[var] = "mat_heat_flux";
+                    mat_heat_flux_id = vector_var;
+                    vector_var++;
                     break;
 
 
@@ -2738,6 +2741,7 @@ public:
         // save the elem state to an array for exporting to graphics files
         DCArrayKokkos<double> elem_scalar_fields(num_elem_scalar_vars, num_elems, "elem_scalars");
         DCArrayKokkos<double> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3, "elem_tensors");
+        DCArrayKokkos<double> elem_vector_fields(num_elem_vector_vars, num_elems, 3, "elem_vectors");
         elem_scalar_fields.set_values(0.0);
         elem_tensor_fields.set_values(0.0);
 
@@ -2916,10 +2920,12 @@ public:
                           nodes_in_elem_host,
                           elem_scalar_fields,
                           elem_tensor_fields,
+                          elem_vector_fields,
                           node_scalar_fields,
                           node_vector_fields,
                           elem_scalar_var_names,
                           elem_tensor_var_names,
+                          elem_vector_var_names,
                           node_scalar_var_names,
                           node_vector_var_names,
                           elem_fields_name,
@@ -2941,7 +2947,7 @@ public:
             //  Build and write the mat fields 
             // ********************************
 
-            if(num_mat_pt_scalar_vars > 0 || num_mat_pt_tensor_vars >0){
+            if(num_mat_pt_scalar_vars > 0 || num_mat_pt_tensor_vars >0 || num_mat_pt_vector_vars >0){
 
                 for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
@@ -2957,12 +2963,14 @@ public:
                         // the arrays storing all the material field data
                         DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
                         DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
+                        DCArrayKokkos<double> mat_elem_vector_fields(num_mat_pt_vector_vars, num_mat_elems, 3, "mat_pt_vectors");
 
 
                         // concatenate material fields into a single array
                         concatenate_mat_fields(State.MaterialPoints,
                                                mat_elem_scalar_fields,
                                                mat_elem_tensor_fields,
+                                               mat_elem_vector_fields,
                                                State.MaterialToMeshMaps.elem_in_mat_elem,
                                                SimulationParamaters.OutputOptions.output_mat_pt_state,
                                                num_mat_elems,
@@ -2983,6 +2991,7 @@ public:
                         Kokkos::fence();
                         mat_elem_scalar_fields.update_host();
                         mat_elem_tensor_fields.update_host();
+                        mat_elem_vector_fields.update_host();
 
 
                         std::string str_mat_val = std::to_string(mat_id);                       
@@ -3016,10 +3025,12 @@ public:
                                   mat_nodes_in_elem_host,
                                   mat_elem_scalar_fields,
                                   mat_elem_tensor_fields,
+                                  mat_elem_vector_fields,
                                   node_scalar_fields,
                                   node_vector_fields,
                                   mat_elem_scalar_var_names,
                                   mat_elem_tensor_var_names,
+                                  mat_elem_vector_var_names,
                                   node_scalar_var_names,
                                   node_vector_var_names,
                                   mat_fields_name,
@@ -3095,7 +3106,8 @@ public:
             // check to see if a mat state was written
             bool write_mat_pt_state = false;
             if( num_mat_pt_scalar_vars > 0 ||
-                num_mat_pt_tensor_vars > 0)
+                num_mat_pt_tensor_vars > 0 ||
+                num_mat_pt_vector_vars > 0)
             {
                  write_mat_pt_state = true;
             }
@@ -3136,16 +3148,16 @@ public:
         if (SimulationParamaters.OutputOptions.format == output_options::state ||
             SimulationParamaters.OutputOptions.format == output_options::viz_and_state) {
 
-            /* write_material_point_state(mesh,
+            write_material_point_state(mesh,
                                        State,
                                        SimulationParamaters,
                                        time_value,
                                        graphics_times,
                                        node_states,
                                        gauss_pt_states,
-                                       material_pt_states); */
+                                       material_pt_states);
 
-            write_text_state(mesh,
+            /* write_text_state(mesh,
                              State,
                              mat_elem_scalar_var_names,
                              mat_elem_tensor_var_names,
@@ -3172,7 +3184,7 @@ public:
                              node_coord_id,
                              node_temp_id,
                              node_grad_level_set_id,
-                             node_disp_id);
+                             node_disp_id); */
 
         } // end if state is to be written
 
@@ -4228,6 +4240,7 @@ public:
     void concatenate_mat_fields(const MaterialPoint_t& MaterialPoints,
                                 DCArrayKokkos<double>& mat_elem_scalar_fields,
                                 DCArrayKokkos<double>& mat_elem_tensor_fields,
+                                DCArrayKokkos<double>& mat_elem_vector_fields,
                                 const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                                 const std::vector<material_pt_state>& output_material_pt_states,
                                 const size_t num_mat_elems,
@@ -4374,11 +4387,10 @@ public:
                 case material_pt_state::heat_flux:
                     FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
-                        // get elem gid
-                        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
-
                         // field
-                        mat_elem_scalar_fields(mat_heat_flux_id, elem_gid) += MaterialPoints.q_flux(mat_id, mat_elem_sid);
+                        for (size_t i=0; i<3; i++) {
+                            mat_elem_vector_fields(mat_heat_flux_id, mat_elem_sid) += MaterialPoints.q_flux(mat_id, mat_elem_sid,i);
+                        }
                     });
                     break;
 
@@ -4556,10 +4568,12 @@ public:
         const ViewCArray<size_t>& nodes_in_elem_host,
         const DCArrayKokkos<double>& elem_scalar_fields,
         const DCArrayKokkos<double>& elem_tensor_fields,
+        const DCArrayKokkos<double>& elem_vector_fields,
         const DCArrayKokkos<double>& node_scalar_fields,
         const DCArrayKokkos<double>& node_vector_fields,
         const std::vector<std::string>& elem_scalar_var_names,
         const std::vector<std::string>& elem_tensor_var_names,
+        const std::vector<std::string>& elem_vector_var_names,
         const std::vector<std::string>& node_scalar_var_names,
         const std::vector<std::string>& node_vector_var_names,
         const std::string partname,
@@ -4583,6 +4597,7 @@ public:
 
         const size_t num_elem_scalar_vars = elem_scalar_var_names.size();
         const size_t num_elem_tensor_vars = elem_tensor_var_names.size();
+        const size_t num_elem_vector_vars = elem_vector_var_names.size();
 
         const size_t num_node_scalar_vars = node_scalar_var_names.size();
         const size_t num_node_vector_vars = node_vector_var_names.size();
@@ -4812,8 +4827,8 @@ public:
         */
         fprintf(out[0], "\n");
         fprintf(out[0], "      <!-- Define the cell data -->\n");
-        if (num_elem_scalar_vars > 0 || num_elem_tensor_vars > 0 || diag_mpi_rank_per_elem != nullptr ||
-            diag_global_elem_id != nullptr) {
+        if (num_elem_scalar_vars > 0 || num_elem_tensor_vars > 0 || num_elem_vector_vars > 0 ||
+            diag_mpi_rank_per_elem != nullptr || diag_global_elem_id != nullptr) {
 
             fprintf(out[0], "      <CellData>\n");
 
@@ -4838,6 +4853,18 @@ public:
                     }
                 }
                 fprintf(out[0], "\n");
+                fprintf(out[0], "        </DataArray>\n");
+            }
+
+            for (int a_var = 0; a_var < num_elem_vector_vars; a_var++) {
+                fprintf(out[0], "        <DataArray type=\"Float64\" Name=\"%s\" NumberOfComponents=\"3\" format=\"ascii\">\n", elem_vector_var_names[a_var].c_str());
+
+                for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
+                    fprintf(out[0], "          %.15e %.15e %.15e\n",
+                            elem_vector_fields.host(a_var, elem_gid, 0),
+                            elem_vector_fields.host(a_var, elem_gid, 1),
+                            elem_vector_fields.host(a_var, elem_gid, 2));
+                }
                 fprintf(out[0], "        </DataArray>\n");
             }
 
@@ -5041,6 +5068,7 @@ public:
 
         size_t num_mat_pt_scalar_vars = 0;
         size_t num_mat_pt_tensor_vars = 0;
+        size_t num_mat_pt_vector_vars = 0;
 
         // count the number of material point state vars to write out
         for (auto field : SimulationParamaters.OutputOptions.output_mat_pt_state){
@@ -5087,7 +5115,7 @@ public:
                     break;
 
                 case material_pt_state::heat_flux:
-                    num_mat_pt_scalar_vars ++;
+                    num_mat_pt_vector_vars ++;
                     break;
 
                 // add other variables here
@@ -5204,10 +5232,12 @@ public:
         // Scalar, vector, and tensor value names associated with a elem
         std::vector<std::string> elem_scalar_var_names(num_elem_scalar_vars);
         std::vector<std::string> elem_tensor_var_names(num_elem_tensor_vars);
+        std::vector<std::string> elem_vector_var_names(num_elem_vector_vars);
 
         // Scalar, vector, and tensor values associated with a material in part elems
         std::vector<std::string> mat_elem_scalar_var_names(num_mat_pt_scalar_vars);
         std::vector<std::string> mat_elem_tensor_var_names(num_mat_pt_tensor_vars);
+        std::vector<std::string> mat_elem_vector_var_names(num_mat_pt_vector_vars);
 
 
         // the ids to access a variable in the mat_scalar_var_name or tensor list
@@ -5302,9 +5332,9 @@ public:
                     break;
 
                 case material_pt_state::heat_flux:
-                    mat_elem_scalar_var_names[var] = "mat_heat_flux";
-                    mat_heat_flux_id = var;
-                    var++;
+                    mat_elem_vector_var_names[var] = "mat_heat_flux";
+                    mat_heat_flux_id = vector_var;
+                    vector_var++;
                     break;
 
 
@@ -5594,6 +5624,8 @@ public:
         // save the elem state to an array for exporting to graphics files
         DCArrayKokkos<double> elem_scalar_fields(num_elem_scalar_vars, num_elems, "elem_scalars");
         DCArrayKokkos<double> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3, "elem_tensors");
+        DCArrayKokkos<double> elem_vector_fields(num_elem_vector_vars, num_elems, 3, "elem_vectors");
+
         elem_scalar_fields.set_values(0.0);
         elem_tensor_fields.set_values(0.0);
 
@@ -5772,10 +5804,12 @@ public:
                           nodes_in_elem_host,
                           elem_scalar_fields,
                           elem_tensor_fields,
+                          elem_vector_fields,
                           node_scalar_fields,
                           node_vector_fields,
                           elem_scalar_var_names,
                           elem_tensor_var_names,
+                          elem_vector_var_names,
                           node_scalar_var_names,
                           node_vector_var_names,
                           elem_fields_name,
@@ -5816,12 +5850,14 @@ public:
                         // the arrays storing all the material field data
                         DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
                         DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
+                        DCArrayKokkos<double> mat_elem_vector_fields(num_mat_pt_vector_vars, num_mat_elems, 3, "mat_pt_vectors");
 
 
                         // concatenate material fields into a single array
                         concatenate_mat_fields(State.MaterialPoints,
                                                mat_elem_scalar_fields,
                                                mat_elem_tensor_fields,
+                                               mat_elem_vector_fields,
                                                State.MaterialToMeshMaps.elem_in_mat_elem,
                                                SimulationParamaters.OutputOptions.output_mat_pt_state,
                                                num_mat_elems,
@@ -5842,6 +5878,7 @@ public:
                         Kokkos::fence();
                         mat_elem_scalar_fields.update_host();
                         mat_elem_tensor_fields.update_host();
+                        mat_elem_vector_fields.update_host();
 
 
                         std::string str_mat_val = std::to_string(mat_id);                       
@@ -5875,10 +5912,12 @@ public:
                                   mat_nodes_in_elem_host,
                                   mat_elem_scalar_fields,
                                   mat_elem_tensor_fields,
+                                  mat_elem_vector_fields,
                                   node_scalar_fields,
                                   node_vector_fields,
                                   mat_elem_scalar_var_names,
                                   mat_elem_tensor_var_names,
+                                  mat_elem_vector_var_names,
                                   node_scalar_var_names,
                                   node_vector_var_names,
                                   mat_fields_name,
