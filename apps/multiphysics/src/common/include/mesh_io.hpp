@@ -3161,6 +3161,7 @@ public:
                              State,
                              mat_elem_scalar_var_names,
                              mat_elem_tensor_var_names,
+                             mat_elem_vector_var_names,
                              node_scalar_var_names,
                              node_vector_var_names,
                              mesh.num_nodes_in_elem,
@@ -7332,6 +7333,7 @@ public:
         const State_t&                       State,
         const std::vector<std::string>&      mat_scalar_var_names,
         const std::vector<std::string>&      mat_tensor_var_names,
+        const std::vector<std::string>&      mat_vector_var_names,
         const std::vector<std::string>&      node_scalar_var_names,
         const std::vector<std::string>&      node_vector_var_names,
         const size_t                         num_nodes_in_elem,
@@ -7471,9 +7473,16 @@ public:
             if (mat_specific_heat_id >= 0 && State.MaterialPoints.specific_heat.size() > 0)
                 fprintf(out_elem_state, "  %-22s",
                         mat_scalar_var_names[mat_specific_heat_id].c_str());
-            if (mat_heat_flux_id >= 0 && State.MaterialPoints.q_flux.size() > 0)
-                fprintf(out_elem_state, "  %-22s",
-                        mat_scalar_var_names[mat_heat_flux_id].c_str());
+            if (mat_heat_flux_id >= 0 && State.MaterialPoints.q_flux.size() > 0) {
+                fprintf(out_elem_state, "  %-22s", 
+                        (mat_vector_var_names[mat_heat_flux_id] + "_x").c_str());
+
+                fprintf(out_elem_state, "  %-22s", 
+                        (mat_vector_var_names[mat_heat_flux_id] + "_y").c_str());
+
+                fprintf(out_elem_state, "  %-22s", 
+                        (mat_vector_var_names[mat_heat_flux_id] + "_z").c_str());
+                }
 
             // Tensor headers: <name>_ij  (i, j in {x, y, z}), row-major
             const char* comp[3] = {"x", "y", "z"};
@@ -7564,8 +7573,10 @@ public:
                     fprintf(out_elem_state, "  %22.14e",
                             State.MaterialPoints.specific_heat.host(mat_id, pt_id));
                 if (mat_heat_flux_id >= 0 && State.MaterialPoints.q_flux.size() > 0)
-                    fprintf(out_elem_state, "  %22.14e",
-                            State.MaterialPoints.q_flux.host(mat_id, pt_id));
+                    for (size_t i = 0; i < 3; i++)
+                        fprintf(out_elem_state, "  %22.14e",
+                                State.MaterialPoints.q_flux.host(
+                                    mat_id, pt_id, i));
 
                 // Tensor fields: all 9 components, row-major (Txx Txy Txz ...)
                 if (mat_stress_id >= 0 && State.MaterialPoints.stress.size() > 0) {

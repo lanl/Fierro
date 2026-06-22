@@ -25,21 +25,12 @@ output_options:
     timer_output_level: thorough
     output_file_format: state #viz #ensight #state
     graphics_time_step: 0.5
-    # graphics_iteration_step: 10
-    elem_field_outputs:
-        - den
-        - pres
-        - stress
-        - sie
-        - mass
     mat_pt_field_outputs:
         - den
         - pres
         - sie
         - volfrac
-    node_field_outputs:
-        - vel
-        - mass
+
 
 solver_options:
   - solver:

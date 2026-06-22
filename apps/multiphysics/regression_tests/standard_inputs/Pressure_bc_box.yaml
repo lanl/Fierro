@@ -25,7 +25,11 @@ output_options:
     timer_output_level: thorough
     output_file_format: state
     graphics_time_step: 0.6
-    # graphics_iteration_step: 10
+    mat_pt_field_outputs:
+      - den
+      - sie
+      - pres
+      - volfrac
 
 solver_options:
   - solver:

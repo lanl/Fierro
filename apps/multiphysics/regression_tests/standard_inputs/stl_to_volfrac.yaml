@@ -31,6 +31,11 @@ output_options:
     output_file_format: state 
     # Amount of simulated time between visualization dumps (microseconds).
     graphics_time_step: 0.1
+    mat_pt_field_outputs:
+      - den
+      - sie
+      - pres
+      - volfrac
 
 
 # ---------------------------------------------------------------------------

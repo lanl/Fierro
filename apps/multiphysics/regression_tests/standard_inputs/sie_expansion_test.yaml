@@ -26,7 +26,11 @@ output_options:
   timer_output_level: thorough
   output_file_format: state
   graphics_time_step: 0.75
-  # graphics_iteration_step: 10
+  mat_pt_field_outputs:
+      - den
+      - sie
+      - pres
+      - volfrac
 
 solver_options:
   - solver:
@@ -116,6 +120,9 @@ initial_conditions:
           u: 0.0
           v: 0.0
           w: 0.0
+      material_volume_fraction:
+          type: uniform
+          value: 1.0
 
   # top block initial velocity conditions
   - initial_condition:
@@ -132,3 +139,6 @@ initial_conditions:
         u: 0.0
         v: 0.0
         w: 0.0
+      material_volume_fraction:
+          type: uniform
+          value: 1.0

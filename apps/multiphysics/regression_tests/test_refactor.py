@@ -63,10 +63,10 @@ def extract_state_data(filename):
     headers = cleaned_header.split()
 
     # Skip one more line to get data
-    lines = lines[1:]
+    lines = lines[2:]
     # Parse the simulation data
     for line in lines:
-        values = line.rstrip().split('\t')
+        values = line.rstrip().split()
         values = [float(val) for val in values]
         data.append(values)
     return data, headers
