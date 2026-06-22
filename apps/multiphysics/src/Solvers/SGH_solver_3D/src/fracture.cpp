@@ -46,116 +46,95 @@ cohesive_zones_t::cohesive_zones_t() {}
 /// \brief Initialize mesh topology: find overlapping node pairs (cohesive zone node pairs) and build cz_info,
 ///        computes max_elem_in_cohesive_zone and stores overlapping_node_gids 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State, const SimulationParameters_t& SimulationParameters){
-                   
-    // counting the number of boundary nodes
-    size_t num_bdy_nodes = mesh.num_bdy_nodes;
-    
-    // geometric tolerance for determining if nodes are overlapping from dynamic_options.hpp (small = 1e-8)
-    const double geom_tol = SimulationParameters.DynamicOptions.small; 
+void cohesive_zones_t::initialize(
+    DCArrayKokkos<size_t>& nodes_in_elem,            // nodes_in_elem
+    RaggedRightArrayKokkos<size_t>& elems_in_node,   // elems_in_node
+    CArrayKokkos<size_t>& bdy_nodes,                 // mesh.bdy_nodes
+    size_t num_bdy_nodes,                            // mesh.num_bdy_nodes
+    MPICArrayKokkos<double>& node_coords,            // node_coords
+    double geom_tol){                                // SimulationParameters.DynamicOptions.small
 
-    // local reference to the array of State.node.coords
-    auto node_coords = State.node.coords;
+    // this overlapping_node_gids algorithm will eventually be replaced by Nathaniels parallel algorithm: build_multi_node_connectivity
+    // pass 1 (parallel count): for each boundary node i, count how i > i overlap it
+    // each i writes only (pair_count(i)): no race
+    // DCArrayKokkos because written on device in FOR_ALL then read on host in serial loop that builds pair_offsets
+    DCArrayKokkos<size_t> pair_count(num_bdy_nodes, "cz_pair_count");
+    pair_count.set_values(0); // initialize to zero
 
-    // local reference to array of bdy_nodes
-    auto bdy_nodes = mesh.bdy_nodes; 
-
-    // device-accessible counter
-    DCArrayKokkos<size_t> pair_count(1, "pair_count");
-    pair_count.host(0) = 0;
-    pair_count.update_device();    
-
-    // device side computation
-    RUN({
-    // count unique overlapping nodes
-        for (size_t i = 0; i < num_bdy_nodes; ++i) {
-            //size_t node_i = mesh.bdy_nodes(i);
-            size_t node_i = bdy_nodes(i);
-            for (size_t j = i + 1; j < num_bdy_nodes; ++j) {
-                //size_t node_j = mesh.bdy_nodes(j);
-                size_t node_j = bdy_nodes(j);
-
-                bool overlap = true;
-                for (size_t k = 0; k < 3; ++k) {
-                    
-                    if (fabs(node_coords(node_i, k) - node_coords(node_j, k)) > geom_tol) {
-                        overlap = false;
-                        break;
-                    }
+    FOR_ALL(i, 0, num_bdy_nodes, {
+        const size_t node_i = bdy_nodes(i);
+        size_t c = 0;
+        for (size_t j = i + 1; j < num_bdy_nodes; ++j){
+            const size_t node_j = bdy_nodes(j);
+            bool overlap = true;
+            for (size_t k = 0; k < 3; ++k) {
+                if (fabs(node_coords(node_i, k) - node_coords(node_j, k)) > geom_tol){
+                    overlap = false;
+                    break;
                 }
-
-                if (overlap) {
-                    //++pair_count;
-                    pair_count(0) += 1;
-                }   
             }
+            if (overlap) { c +=1; }
         }
-    }); // end RUN
+        pair_count(i) = c;
+    }); // end FOR_ALL
     Kokkos::fence();
 
-    // copy pair count back to host and print
+    // copy pair count back to host
     pair_count.update_host();
-    size_t num_pairs = pair_count.host(0);
- 
+    // DCArrayKokkos because serial host build + read on device in pass 2
+    DCArrayKokkos<size_t> pair_offsets(num_bdy_nodes, "cz_pair_offsets");
+    size_t num_pairs = 0;
+    for (size_t i = 0; i < num_bdy_nodes; ++i) {
+        pair_offsets.host(i) = num_pairs;
+        num_pairs += pair_count.host(i);
+    }
+    pair_offsets.update_device(); // copy host built offsets to device before pass 2 reads pair_offsets
+    
     // allocate only the size of overlapping nodes 
     overlapping_node_gids = DCArrayKokkos<size_t>(num_pairs, 2, "overlapping_node_gids");
 
     // local copy of overlapping_node_gids for device access
     auto local_overlapping_node_gids = overlapping_node_gids;
 
-    // reset counter for second pass
-    pair_count.host(0) = 0;
-    // alex to check if this is needed in follow up PR 
-    pair_count.update_device();
-
-    // device side computation
-    RUN({
-        // second pass: store actual overlapping node pairs
-        size_t pair_index = 0; // fills the rows (pairs) that are added to 2D overlapping_node_gids array  
-        // pair_index lives only inside the RUN and exists only on the device (GPU)
-    
-        // store node IDs in the array
-        for (size_t i = 0; i < num_bdy_nodes; ++i) {
-            //size_t node_i = mesh.bdy_nodes(i);
-            size_t node_i = bdy_nodes(i);
-            for (size_t j = i + 1; j < num_bdy_nodes; ++j) {
-                //size_t node_j = mesh.bdy_nodes(j);
-                size_t node_j = bdy_nodes(j);
-
-                bool overlap = true;
-                for (size_t k = 0; k < 3; ++k) {
-                    if (fabs(node_coords(node_i, k) - node_coords(node_j, k)) > geom_tol) {
-                        overlap = false;
-                        break;
-                    }
-                }
-
-                if (overlap) {
-                    local_overlapping_node_gids(pair_index, 0) = node_i;
-                    local_overlapping_node_gids(pair_index, 1) = node_j;
-                    ++pair_index;
-               
+    // pass 2 (parallel): each boundary node i writes its matched pairs starting at pair_offsets(i)
+    FOR_ALL(i, 0, num_bdy_nodes, {
+        const size_t node_i = bdy_nodes(i);
+        size_t w = pair_offsets(i);
+        for (size_t j = i + 1; j < num_bdy_nodes; ++j){
+            const size_t node_j = bdy_nodes(j);
+            bool overlap = true;
+            for (size_t k = 0; k < 3; ++k) {
+                if (fabs(node_coords(node_i, k) - node_coords(node_j, k)) > geom_tol) {
+                    overlap = false;
+                    break;
                 }
             }
+            if (overlap) {
+                local_overlapping_node_gids(w, 0) = node_i;
+                local_overlapping_node_gids(w, 1) = node_j;
+                ++w;
+            }
         }
-    }); // end run
+    });
     Kokkos::fence();
+
+    // sync overlapping node pairs to host for connectivity build
+    overlapping_node_gids.update_host();
 
     // determine maximum number of elements attached to any overlapping node pair
     // this determines the max size of the cohesive zone neighborhood and thus the size of the cz_info array
-    max_elem_in_cohesive_zone = cohesive_zone_elem_count(overlapping_node_gids, mesh.elems_in_node);
+    max_elem_in_cohesive_zone = cohesive_zone_elem_count(overlapping_node_gids, elems_in_node);
 
     // build cz_info array
     // (num_pairs, 6 * max_elem_in_cohesive_zone)
     cz_info = build_cohesive_zone_info(
-        mesh.elems_in_node,
-        mesh.nodes_in_elem,
-        State.node.coords,
+        elems_in_node,
+        nodes_in_elem,
+        node_coords,
         overlapping_node_gids,
         max_elem_in_cohesive_zone,
         geom_tol
     );
-    cz_info.update_host();
 
 } // end cohesive_zones_t::initialize
 
@@ -165,25 +144,11 @@ void cohesive_zones_t::initialize(swage::Mesh& mesh, State_t& State, const Simul
 /// \brief Initialize fracture BC: set cohesive zone constitutive parameters from .yaml input
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void cohesive_zones_t::initialize_fracture_bc(
-    const swage::Mesh& mesh,
+    size_t num_nodes,
     const BoundaryCondition_t& BoundaryConditions,
     int fracture_bdy_set)
 {
-    
-    num_nodes = mesh.num_nodes;
-    
-    // guard: no valid BC set
-    if (fracture_bdy_set < 0) {
-        is_initialized = false;
-        return;
-    }
-
-    // gaurd: no cohesive zone pairs found
     const size_t npairs = overlapping_node_gids.dims(0);
-    if (npairs == 0) {
-        is_initialized = false;
-        return;
-    }
 
     // allocate cohesive zone force array
     F_cz = CArrayKokkos<double>(3 * num_nodes, "cz_nodal_forces");
@@ -194,7 +159,7 @@ void cohesive_zones_t::initialize_fracture_bc(
     // temporary staging array to copy from device
     DCArrayKokkos<double> bc_params(30, "bc_params");
 
-    RUN({
+    FOR_ALL(i, 0, 1, {
         // store the cohsive zone consituitive parameters ina compact temp array
         // cohesive zone parameters 0 through 5
         // E_inf, a1, n_exp, u_n_star, u_t_star, num_prony_terms
@@ -219,7 +184,7 @@ void cohesive_zones_t::initialize_fracture_bc(
             bc_params(6 + 2*j)     = BC.stress_bc_global_vars(fracture_bdy_set, prony_base);     // E_j
             bc_params(6 + 2*j + 1) = BC.stress_bc_global_vars(fracture_bdy_set, prony_base + 1); // tau_j
         }
-    });
+    }); // end FOR_ALL
     Kokkos::fence();
     bc_params.update_host();
 
@@ -234,51 +199,107 @@ void cohesive_zones_t::initialize_fracture_bc(
     // device-accessible Prony parameters (E_j, tau_j pairs)
     if (num_prony_terms > 0) {
         // 2D array: row j contains [E_j, tau_j] for Prony term j
-        prony_params = DCArrayKokkos<double>(num_prony_terms, 2, "cz_prony_params");
-        for (int j = 0; j < num_prony_terms; ++j) {
-            prony_params.host(j, 0)     = bc_params.host(6 + 2*j);     // E_j
-            prony_params.host(j, 1) = bc_params.host(6 + 2*j + 1); // tau_j
-        }
-        // alex to check if this is needed in follow up PR 
-        prony_params.update_device();
+        prony_params = CArrayKokkos<double>(num_prony_terms, 2, "cz_prony_params");
+        FOR_ALL(i, 0, 1, {
+            for (int j = 0; j < num_prony_terms; ++j) {
+                prony_params(j, 0) = bc_params(6 + 2*j);     // E_j
+                prony_params(j, 1) = bc_params(6 + 2*j + 1); // tau_j
+            }
+        }); // end FOR_ALL
+        Kokkos::fence();
+
     } else {
         // allocate minimal array to avoid null issues (debug aid)
-        prony_params = DCArrayKokkos<double>(1, 2, "cz_prony_params_empty");
+        prony_params = CArrayKokkos<double>(1, 2, "cz_prony_params_empty");
         prony_params.set_values(0.0);
     }
 
     // ensure persistent storage for cohesive internal vars
     // internal_vars = persistent history carried across full tme steps
     const int width = 4 + num_prony_terms;
-    internal_vars = DCArrayKokkos<double>(npairs, width, "cz_internal_vars");
+    internal_vars = CArrayKokkos<double>(npairs, width, "cz_internal_vars");
     internal_vars.set_values(0.0);
 
     // ensure persistent storage for cohesive delta internal vars
     // delta_internal_vars = stage local predicted updates for current RK stage
-    delta_internal_vars = DCArrayKokkos<double>(npairs, width, "cz_delta_internal_vars");
+    delta_internal_vars = CArrayKokkos<double>(npairs, width, "cz_delta_internal_vars");
     delta_internal_vars.set_values(0.0);
 
-    // mrk fracture BC initialization complete
-    is_initialized = true;
+    // this node gather map (thread safe force accumulation) algorithm will eventually be replaced by Nathaniels parallel algorithm: build_multi_node_connectivity
+    // node gather map (built once) so cohesive_zone_loads can gather pairwise forces to nodes without atomics
+    // each pair contributes to its A node (+F, side 0) and B node (-F, side 1)
+    // a node may belong toseveral pairs (crack junctions); the map lets ONE thread own each node and sum its pairs
+    overlapping_node_gids.update_host();
 
-    // print output for setup of cohesive zone constitutive parameters  
-    printf("Cohesive zone constitutive parameters initialized:\n");
-    printf("  cohesive zone node pairs = %zu\n", overlapping_node_gids.dims(0));
-    printf("  E_inf = %e\n", E_inf);
-    printf("  a1 = %e\n", a1);
-    printf("  n_exp = %e\n", n_exp);
-    printf("  u_n_star = %e\n", u_n_star);
-    printf("  u_t_star = %e\n", u_t_star);
-    printf("  num_prony_terms = %d\n", num_prony_terms);
+    // node count: runing tally of contributions per node 
+    // node_to_u: compact cohesive node index assigned to each node, or -1 if the node is not in any pair
+    DCArrayKokkos<int> node_count(num_nodes, "cz_node_count_scratch");
+    DCArrayKokkos<int> node_to_u (num_nodes, "cz_node_to_u_scratch");
 
-    // print Prony series terms if any exist
-    if (num_prony_terms > 0) {
-        printf("  Prony series terms:\n");
-        for (int j = 0; j < num_prony_terms; ++j) {
-            printf("    prony_%d_E = %e\n", j, prony_params.host(j, 0));
-            printf("    prony_%d_tau = %e\n", j, prony_params.host(j, 1));
+    // serial host init: start every node at zero contributions and not a cohesive node (-1)
+    for (size_t n = 0; n < num_nodes; ++n) { node_count.host(n) = 0; node_to_u.host(n) = -1; }
+
+    // pass 1: serial on host; count contributions per node
+    // every pair touches its A node (column 0) and its B node (column 1)
+    // after this loop, node_count(n) = number of pairs that reference node n ()
+    for (size_t i = 0; i < npairs; ++i) {             
+        node_count.host(overlapping_node_gids.host(i, 0)) += 1;
+        node_count.host(overlapping_node_gids.host(i, 1)) += 1;
+    }
+
+    // assign compact indices to cohesive zone nodes u = 0,1,2,... and find max share count (for allocation of gather_entries)
+    // serial on host: U++ is a sequential running index, so iteration order matters and must be serial
+    size_t U = 0, max_share = 1;                         
+    for (size_t n = 0; n < num_nodes; ++n) {
+        const int c = node_count.host(n);
+        if (c > 0) { // node n participates in at least one pair
+            node_to_u.host(n) = static_cast<int>(U++); // give it to next compact index then increase U (U++)
+            if (static_cast<size_t>(c) > max_share) max_share = static_cast<size_t>(c); // track worst case for allocation of gather_entries
         }
     }
+
+    // U is the number of unique cohesive zone nodes
+    // allocate compact map arrays
+    // gather_nodes, gather_counts, gather_entries are built on host by the serial two pass connectivity algorithm below
+    // they are later read on device in cohesive_zone_lads
+    gather_node_count = U; // unique cohesive zone nodes 
+    gather_nodes   = DCArrayKokkos<size_t>(U, "cz_gather_nodes"); // u --> global node id
+    gather_counts  = DCArrayKokkos<int>(U, "cz_gather_counts"); // u --> # of contributions
+    gather_entries = DCArrayKokkos<int>(U, max_share, "cz_gather_entries"); // u --> list of (pair, side)
+    gather_entries.set_values(0);
+
+    // fill node list + counts
+    // fill per node info (gather_nodes, gather_counts) 
+    // reset node_count(n) to 0 so it can be used in pass 2 as per node write
+    for (size_t n = 0; n < num_nodes; ++n) {          
+        const int u = node_to_u.host(n);
+        if (u >= 0) {
+            gather_nodes.host(static_cast<size_t>(u))  = n;
+            gather_counts.host(static_cast<size_t>(u)) = node_count.host(n);
+        }
+        node_count.host(n) = 0;
+    }
+
+    // pass 2: serial on host; place each contribution into its node's row of gather_entries
+    // entry = 2*pair + side (side 0 = A node, +F; side 1 = B node, -F)
+    // place packed (pair, side) entries in gather_entries: entry = 2*pair + side (side=0 for A node, 1 for B node)
+    // node_count(...)++ acts as per node write cursor, sequential dependency that needs to be serial
+    for (size_t i = 0; i < npairs; ++i) {            
+        const size_t a = overlapping_node_gids.host(i, 0), b = overlapping_node_gids.host(i, 1);
+        const size_t ua = static_cast<size_t>(node_to_u.host(a)); // compact index of A node
+        gather_entries.host(ua, static_cast<size_t>(node_count.host(a)++)) = static_cast<long>(2*i + 0);
+        const size_t ub = static_cast<size_t>(node_to_u.host(b)); // compact index of B node
+        gather_entries.host(ub, static_cast<size_t>(node_count.host(b)++)) = static_cast<long>(2*i + 1);
+    }
+    gather_nodes.update_device(); // copy host built gather_nodes to device for use in atomic free node map in cohesive_zone_loads (gather_nodes read on device)
+    gather_counts.update_device(); // copy host build gather_counts to device for use in cohesive_zone_loads (gather_counts read on device)
+    gather_entries.update_device(); // copy host built gather_entries to device for use in cohesive_zone_loads (gather_entries read on device)
+
+    // per pair collision free buffer for cohesive forces (npairs x 3); each pair writes its force contribution here, then gather map is used to sum to nodes without atomics
+    // in cohesive_zone_loads each paur writes its own row pair_force(i, :) one thread per pair, so no collisions happen and no atomics are needed
+    // gather map is then used to sum those rows onto nodes wiht one thread per node
+    pair_force = CArrayKokkos<double>(npairs, 3, "cz_pair_force");  
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -287,32 +308,28 @@ void cohesive_zones_t::initialize_fracture_bc(
 /// \brief Initialize fracture reorientation validation mode (for testing)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void cohesive_zones_t::initialize_reorientation_mode(
-    const swage::Mesh& mesh,
-    State_t& State,
+    DCArrayKokkos<size_t>& nodes_in_elem,            // nodes_in_elem
+    size_t num_nodes,                                // num_nodes
+    size_t num_elems,                                // num_elems
+    size_t num_nodes_in_elem,                        // num_nodes_in_elem
+    MPICArrayKokkos<double>& node_coords,            // node_coords
     const BoundaryCondition_t& BoundaryConditions,
-    bool doing_fracture)
+    bool doing_fracture)   
 {
     reorientation_validation_mode = false;
-    
-    if (!doing_fracture) {
-        return;
-    }
     
     // temporary scratch array used to scan BC data for reorientaion mode
     DCArrayKokkos<double> reorient_params(5, "reorient_params");
     DCArrayKokkos<int> found_reorient(1, "found_reorient");
     found_reorient.set_values(0); // initialize to zero
     reorient_params.set_values(0.0); // initialize to zero
-    // alex to check if this is needed in follow up PR 
-    found_reorient.update_device();
-    reorient_params.update_device();
 
     // local references for device access, so RUN kernel can read BC data
     auto bc_enums = BoundaryConditions.BoundaryConditionEnums;
     auto vel_bc_vars = BoundaryConditions.velocity_bc_global_vars;
     size_t num_bcs = BoundaryConditions.num_bcs;
 
-    RUN({
+    FOR_ALL(i, 0, 1, {
         // search boundary conditions for user-defined velocity BC with reorientation 
         for (size_t bdy_set = 0; bdy_set < num_bcs; bdy_set++) {
             // check whether this user-defined velocity BC enables reorientation validation mode
@@ -335,7 +352,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
                 break;
             }
         }
-    }); // end RUN
+    }); // end FOR_ALL
     Kokkos::fence();
 
     // copying reults back to host
@@ -353,23 +370,13 @@ void cohesive_zones_t::initialize_reorientation_mode(
     cz_opening_rate = reorient_params.host(3);
     x_interface = reorient_params.host(4);
 
-    // print confirmation
-    printf("=== REORIENTATION VALIDATION MODE ENABLED ===\n");
-    printf("  omega_y         = %.10f rad/us\n", omega_y);
-    printf("  omega_z         = %.10f rad/us\n", omega_z);
-    printf("  cz_opening_rate = %.10e cm/us\n", cz_opening_rate);
-    printf("  x_interface     = %.4f cm\n", x_interface);
-    printf("==============================================\n");
-
     // allocate reorientation-only storage; this happens only when validation mode is enabled
-    initial_coords = CArrayKokkos<double>(mesh.num_nodes, 3, "initial_coords");
-    cz_b_side_flag = CArrayKokkos<int>(mesh.num_nodes, "cz_b_side_flag");
+    initial_coords = CArrayKokkos<double>(num_nodes, 3, "initial_coords");
+    cz_b_side_flag = CArrayKokkos<int>(num_nodes, "cz_b_side_flag");
     cz_b_side_flag.set_values(0);
 
-    // store initial coordinates for all nodes
-    auto node_coords = State.node.coords;
     auto init_coords = initial_coords;
-    FOR_ALL(n, 0, mesh.num_nodes, {
+    FOR_ALL(n, 0, num_nodes, {
         init_coords(n,0) = node_coords(n,0);
         init_coords(n,1) = node_coords(n,1);
         init_coords(n,2) = node_coords(n,2);
@@ -377,12 +384,11 @@ void cohesive_zones_t::initialize_reorientation_mode(
     Kokkos::fence();
 
     // initialize b-side flags using x_interface parameter from .yaml
-    const size_t nne = mesh.num_nodes_in_elem;
+    const size_t nne = num_nodes_in_elem;
     const double x_int = x_interface;
-    auto nodes_in_elem = mesh.nodes_in_elem;
     auto b_side_flag = cz_b_side_flag;
     
-    FOR_ALL(e, 0, mesh.num_elems, {
+    FOR_ALL(e, 0, num_elems, {
         double xc = 0.0;
         // compute element centroid x coordinate
         for (size_t a = 0; a < nne; ++a) {
@@ -403,16 +409,9 @@ void cohesive_zones_t::initialize_reorientation_mode(
     Kokkos::fence();
 }
 
-// check if cohesive zone constitutive parameters initialization was successful and cohesive zones are ready to be used
-bool cohesive_zones_t::is_ready() const
-{
-    return is_initialized && overlapping_node_gids.dims(0) > 0;
-}
-
 // zero out delta_internal_vars at the strat of each RK stage
-void cohesive_zones_t::reset_delta_internal_vars()
+void reset_delta_internal_vars(CArrayKokkos<double>& delta_internal_vars)
 {
-    if (!is_initialized) return;
     delta_internal_vars.set_values(0.0);
 }
 
@@ -424,7 +423,7 @@ void cohesive_zones_t::reset_delta_internal_vars()
 /// \param elems_in_node RaggedRightArray mapping each node to the elements it belongs to
 /// \return Maximum number of elements connected to any node in any cohesive pair
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-size_t cohesive_zones_t::cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids,
+size_t cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids,
                const RaggedRightArrayKokkos<size_t>& elems_in_node) {
 
     overlapping_node_gids.update_host();
@@ -441,6 +440,7 @@ size_t cohesive_zones_t::cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlap
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// \fn compute_face_geometry
 /// \brief Computes face geometry vectors and centroid for a given element surface
 ///
 /// This function computes the geometric properties of a specified surface (face)  
@@ -463,7 +463,7 @@ size_t cohesive_zones_t::cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlap
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void cohesive_zones_t::compute_face_geometry(
+void compute_face_geometry(
     const DCArrayKokkos<size_t>& nodes_in_elem,  
     const MPICArrayKokkos<double>& node_coords,
     const size_t surf,
@@ -611,7 +611,7 @@ void cohesive_zones_t::compute_face_geometry(
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \fn cohesive_zones_t::build_cohesive_zone_info
+/// \fn build_cohesive_zone_info
 /// \brief Build per-cohesive zone node-pair lookup tables of incident elements, corner indices, and the matched (opposing) faces.
 ///
 /// This routine assembles, for every overlapping_node_gids.dims(0) overlapping node pair (A,B), the mesh connectivity that a cohesive zone needs:
@@ -651,7 +651,7 @@ void cohesive_zones_t::compute_face_geometry(
 ///  - All outputs are initialized to -1.
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
+CArrayKokkos<int> build_cohesive_zone_info(
     RaggedRightArrayKokkos<size_t>& elems_in_node,
     DCArrayKokkos<size_t>& nodes_in_elem,
     MPICArrayKokkos<double>& node_coords,
@@ -668,7 +668,7 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
     // [3]   matched face ids B-side (filled later)
     // [4]   local-corner index in element for nodeA (filled when discover k)
     // [5]   local-corner index in element for nodeB (filled when discover k)
-    DCArrayKokkos<int> cohesive_zone_info(
+    CArrayKokkos<int> cohesive_zone_info(
         overlapping_node_gids.dims(0),
         6 * max_elem_in_cohesive_zone,
         "cohesive_zone_info"
@@ -692,9 +692,8 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
     });
     Kokkos::fence();
 
-    RUN({
+    FOR_ALL(i, 0, overlapping_node_gids.dims(0), {
     // build candidate faces + store local corner k slot-keyed
-    for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
         // Walk element slots for this pair
         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
 
@@ -723,14 +722,11 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
                 cohesive_zone_info(i, 5*max_elem_in_cohesive_zone + j) = kB;
             }   
         }
-    }
-    }); // end RUN
+    }); // end FOR_ALL
     Kokkos::fence();
 
-    RUN({
+    FOR_ALL(i, 0, overlapping_node_gids.dims(0), {
     // find ALL opposing/coincident face matches (one per element slot)
-    for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
-
         // void top-level commas in macro body so RUN(...) is parsed as one argument
         double nA[3];
         double rA[3];
@@ -788,7 +784,7 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
                 if (fA < 0) continue;
 
                 // compute A face geometry
-                cohesive_zones_t::compute_face_geometry(nodes_in_elem, node_coords,
+                compute_face_geometry(nodes_in_elem, node_coords,
                         static_cast<size_t>(fA), static_cast<size_t>(eA),
                         nAj, rAj, sAj, cAj);
 
@@ -813,7 +809,7 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
                         if (fB < 0) continue;
 
                         // compute B face geometry
-                        cohesive_zones_t::compute_face_geometry(nodes_in_elem, node_coords,
+                        compute_face_geometry(nodes_in_elem, node_coords,
                             static_cast<size_t>(fB), static_cast<size_t>(eB),
                             nBk, rBk, sBk, cBk);
 
@@ -840,22 +836,14 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
                 }
             }
         }
-
-    } // end for overlapping_node_gids
-    }); // end RUN
+    }); // end FOR_ALL
     Kokkos::fence();
-
-    // update host
-    cohesive_zone_info.update_host();
-    // sync back to device before returning
-    // alex to check if this is needed in follow up PR 
-    cohesive_zone_info.update_device();
     return cohesive_zone_info;
 
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \fn cohesive_zones_t::oriented
+/// \fn oriented
 /// \brief Average and orient cohesive-zone face normals for each overlapping_node_gids.dims(0) overlapping node pair (reference and current configs).
 ///
 /// For every cohesive zone node pair (A,B), this routine scans the per-pair "slots" produced by build_cohesive_zone_info(),
@@ -905,19 +893,16 @@ DCArrayKokkos<int> cohesive_zones_t::build_cohesive_zone_info(
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void cohesive_zones_t::oriented(
+void oriented(
     DCArrayKokkos<size_t>& nodes_in_elem,
     MPICArrayKokkos<double>& node_coords,      // current  coords (num_nodes x 3)
     DCArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
-    DCArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
+    CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
     size_t max_elem_in_cohesive_zone,
     double geom_tol,                 // centroid coincidence tolerance (ABS distance)
-    DCArrayKokkos<double>& cohesive_zone_orientation       // (overlapping_node_gids.dims(0) x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
+    CArrayKokkos<double>& cohesive_zone_orientation       // (overlapping_node_gids.dims(0) x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
 ) 
 {
-    // zero out output array
-    //cohesive_zone_orientation.set_values(0.0);
-
     // pull the single matched faces that build_cohesive_zone_info() wrote:
     // A-faces are in block [2], B-faces are in block [3]
     // A-elems in block [0], B-elems in block [1]
@@ -925,10 +910,8 @@ void cohesive_zones_t::oriented(
     // find first true A/B face match (abs centroid distance <= geom_tol and opposite normals)
     // A-side element slots are in block #0; their local corners are in block #4
 
-    //mesh.nodes_in_elem.update_host();
     // looping through each cohesive zone pair
-    RUN({
-    for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
+    FOR_ALL(i, 0, overlapping_node_gids.dims(0), {
         double nA_t_buf[3];
         double rA_t_buf[3];
         double sA_t_buf[3];
@@ -989,10 +972,10 @@ void cohesive_zones_t::oriented(
         
         
             // compute A-side normal at t (reference) and t+dt (current)
-            cohesive_zones_t::compute_face_geometry(nodes_in_elem, node_coords,
+            compute_face_geometry(nodes_in_elem, node_coords,
                                 static_cast<size_t>(fA), static_cast<size_t>(eA),
                                 nA_t, rA_t, sA_t, cA_t);
-            cohesive_zones_t::compute_face_geometry(nodes_in_elem, node_coords,
+            compute_face_geometry(nodes_in_elem, node_coords,
                                 static_cast<size_t>(fA), static_cast<size_t>(eA),
                                 nA_dt, rA_dt, sA_dt, cA_dt);
 
@@ -1011,7 +994,7 @@ void cohesive_zones_t::oriented(
 
         if (cnt == 0) {
             // no matched A-faces found for this VCZ row; leave zeros
-            continue;
+            return;
         }        
 
         // align t+dt sum to t sum (keep a consistent sign across time)
@@ -1054,14 +1037,13 @@ void cohesive_zones_t::oriented(
         cohesive_zone_orientation(i,3) = next_norm[0]; // nx_tdt (next)
         cohesive_zone_orientation(i,4) = next_norm[1]; // ny_tdt (next)
         cohesive_zone_orientation(i,5) = next_norm[2]; // nz_tdt (next)
-    }
-    }); // end RUN
+    }); // end FOR_ALL
     Kokkos::fence();
 } // end oriented()
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \fn cohesive_zones_t::ucmap
+/// \fn ucmap
 /// \brief Compute cohesive-zone opening components (normal + tangential magnitudes) for each overlapping node pair
 ///        using the per-pair oriented unit normal at time t, and predict t+dt_stage via Forward-Euler with relative velocity.
 ///
@@ -1113,17 +1095,17 @@ void cohesive_zones_t::oriented(
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void cohesive_zones_t::ucmap(
+void ucmap(
     const MPICArrayKokkos<double>& node_coords, // State.node.coords // rename as pos
     const MPICArrayKokkos<double>& vel, // State.node.vel //rename as vel
-    const DCArrayKokkos<double>& cohesive_zone_orientation,
+    const CArrayKokkos<double>& cohesive_zone_orientation,
     DCArrayKokkos<size_t>& overlapping_node_gids,
     const double dt_stage, 
-    DCArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
+    CArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
 )
 {
-    RUN({
-    for (size_t i = 0; i < overlapping_node_gids.dims(0); ++i) {
+
+    FOR_ALL(i, 0, overlapping_node_gids.dims(0), {
         const size_t NodeA = overlapping_node_gids(i,0);
         const size_t NodeB = overlapping_node_gids(i,1);
 
@@ -1178,14 +1160,12 @@ void cohesive_zones_t::ucmap(
         local_opening(i,1) = u_tan_mag_t; // tangential crack opening magnitude at time t
         local_opening(i,2) = u_norm_mag_tdt; // forward eueler predicted normal crack opening magnitude at time t+dt
         local_opening(i,3) = u_tan_mag_tdt; // forward euler predicted tangential crack opening magnitude at time t+dt
-        
-    }
-    }); // end RUN
+    }); // end FOR_ALL
     Kokkos::fence();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \fn cohesive_zones_t::cohesive_zone_var_update
+/// \fn cohesive_zone_var_update
 /// \brief Update cohesive-zone internal variables (lambda rate, damage increment, Prony branch stresses) and compute
 ///        traction increments for each overlapping node pair over a stage step dt_stage.
 ///
@@ -1229,24 +1209,19 @@ void cohesive_zones_t::ucmap(
 ///        delta_internal_vars(i,4+j) = updated Prony branch variable (stage-advanced sigma_j)
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void cohesive_zones_t::cohesive_zone_var_update(
-    const DCArrayKokkos<double>& local_opening,
+void cohesive_zone_var_update(
+    const CArrayKokkos<double>& local_opening,
     const double dt_stage, 
     const double time_value, 
     DCArrayKokkos<size_t>& overlapping_node_gids,
     const double E_inf, const double a1, const double n_exp, const double u_n_star, const double u_t_star, const int num_prony_terms, // cohesive zone parameters
-    const DCArrayKokkos<double>& prony_params, // E_j, tau_j pairs
-    const DCArrayKokkos<double>& internal_vars, // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
-    DCArrayKokkos<double>& delta_internal_vars // (overlapping_node_gids.dims(0), 4 + num_prony_terms) 
+    const CArrayKokkos<double>& prony_params, // E_j, tau_j pairs
+    const CArrayKokkos<double>& internal_vars, // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
+    CArrayKokkos<double>& delta_internal_vars // (overlapping_node_gids.dims(0), 4 + num_prony_terms) 
 )
 {
-    if (!(dt_stage > 0.0)) {
-        return;
-    }
-
     // loop over each cohesive zone node pair
-    RUN({
-    for (size_t i = 0; i < overlapping_node_gids.dims(0); i++){
+    FOR_ALL(i, 0, overlapping_node_gids.dims(0), {
 
         // stage-effective modulus: E_inf + Prony contribution
         double E_dt = E_inf;
@@ -1276,7 +1251,7 @@ void cohesive_zones_t::cohesive_zone_var_update(
             for (int j = 0; j < num_prony_terms; ++j) {
                 delta_internal_vars(i, 4 + j) = internal_vars(i, 4 + j);
             }
-            continue;
+            return;
         }
         const double lambda_dot_t = (lambda_tdt - lambda_t) / dt_stage;
         delta_internal_vars(i,0) = lambda_dot_t; // lambda rate at t
@@ -1354,13 +1329,12 @@ void cohesive_zones_t::cohesive_zone_var_update(
         // delta_internal_vars(i,2) : normal traction increment
         // delta_internal_vars(i,3) : tangential traction increment
         // delta_internal_vars(i, 4 + j) : prony internal variables 
-    }
-    }); // end RUN
+    }); // end FOR_ALL
     Kokkos::fence();
 }      
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// \fn cohesive_zones_t::cohesive_zone_loads
+/// \fn cohesive_zone_loads
 /// \brief Assemble and apply cohesive-zone nodal forces for each overlapping node pair using tractions at t+dt_stage
 ///        and an effective (lumped) cohesive face area integrated from the A-side matched faces in cz_info.
 ///
@@ -1396,28 +1370,40 @@ void cohesive_zones_t::cohesive_zone_var_update(
 /// \param pair_area Output (num_pairs): stored effective area per pair (useful for debugging/verification).
 /// \param F_cz Output global force vector (3*num_nodes): cohesive nodal forces accumulated as [Fx,Fy,Fz] per node.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void cohesive_zones_t::cohesive_zone_loads(
+void cohesive_zone_loads(
     DCArrayKokkos<size_t>& nodes_in_elem,
     const MPICArrayKokkos<double> &node_coords,
     DCArrayKokkos<size_t> &overlapping_node_gids,
-    const DCArrayKokkos<double> &cohesive_zone_orientation,
-    DCArrayKokkos<int> &cz_info,
+    const CArrayKokkos<double> &cohesive_zone_orientation,
+    CArrayKokkos<int> &cz_info,
     const size_t max_elem_in_cohesive_zone,
-    const DCArrayKokkos<double> &internal_vars,
-    const DCArrayKokkos<double> &delta_internal_vars,
+    const CArrayKokkos<double> &internal_vars,
+    const CArrayKokkos<double> &delta_internal_vars,
     CArrayKokkos<double> &pair_area,
+    CArrayKokkos<double> &pair_force,
+    DCArrayKokkos<size_t> &gather_nodes,
+    DCArrayKokkos<int> &gather_counts,
+    DCArrayKokkos<int> &gather_entries,
+    size_t gather_node_count,
     CArrayKokkos<double> &F_cz
 )
 {
     // zero out the cohesive zone force vector
     F_cz.set_values(0.0);
 
-    // looping over cohesive zone node pairs 
-    RUN({
     const size_t num_nodes_coords = node_coords.dims(0);
     const size_t num_elems = nodes_in_elem.dims(0);
     const size_t fcz_len = F_cz.size();
-    for (size_t i = 0; i < overlapping_node_gids.dims(0); i++){
+
+    // aliases
+    auto pair_force_dev = pair_force;
+
+    // zero the per-pair force buffer so skipped/invalid pairs dont't contribute
+    pair_force.set_values(0.0);
+
+    // phase 1 (parallel over pairs): compute the per-pair cohesive force vector F into pair_force(i, 0..2)
+    // node A receives +F and node B receives -F
+    FOR_ALL(i, 0, overlapping_node_gids.dims(0),{
 
         // global node IDs for the cohesive zone node pairs
         const size_t gidA = overlapping_node_gids(i,0);
@@ -1427,7 +1413,7 @@ void cohesive_zones_t::cohesive_zone_loads(
         if (gidA >= num_nodes_coords || gidB >= num_nodes_coords) {
             printf("[CZ] cohesive_zone_loads invalid gid pair i=%zu gidA=%zu gidB=%zu nn=%zu\n",
                    i, gidA, gidB, num_nodes_coords);
-            continue;
+            return;
         }
 
         // tractions at t+dt (normal and tangential)
@@ -1621,7 +1607,7 @@ void cohesive_zones_t::cohesive_zone_loads(
         pair_area(i) = area_total;
 
         // guard: if there are no faces contributing to area, skip
-        if (area_total <= 0.0) continue;
+        if (area_total <= 0.0) return;
 
         // normal force vectors
         double Fn_x = Tn_tdt * area_total * nx;
@@ -1665,33 +1651,72 @@ void cohesive_zones_t::cohesive_zone_loads(
         const double Fy = Fn_y + Ft_y;
         const double Fz = Fn_z + Ft_z;
 
-        // global scale; apply as equal and opposite nodal forces
-        // gaurd: if gidA or gidB is out of bounds for F_cz, skip this pair
-        // F_cz is flattened at 3 DOFs per node, so max index is 3*gid + 2
-        if ((3*gidA + 2) >= fcz_len || (3*gidB + 2) >= fcz_len) {
-            printf("[CZ] cohesive_zone_loads invalid F_cz index i=%zu gidA=%zu gidB=%zu len=%zu\n",
-                   i, gidA, gidB, fcz_len);
-            continue;
-        }
-        F_cz(3*gidA    ) += Fx;
-        F_cz(3*gidA + 1) += Fy;
-        F_cz(3*gidA + 2) += Fz;
-        F_cz(3*gidB    ) -= Fx;
-        F_cz(3*gidB + 1) -= Fy;
-        F_cz(3*gidB + 2) -= Fz;
-    }
-    }); // end RUN
+        // write the pair's force vector to its own row: no collision or atomics
+        pair_force_dev(i,0) = Fx;
+        pair_force_dev(i,1) = Fy;
+        pair_force_dev(i,2) = Fz;
+    }); // end FOR_ALL
     Kokkos::fence();
-}
 
+    // phase 2: parallel over unique cohesive zone noodes: gather per pair forces into F_cz with one writer per node
+    // each unique node n sums sgn*pair_force(p, :) for all pairs p that touch it (sgn = +-1; A side +1; B side -1)
+    // encoded in gather map build once in initialize_fracture_bc; one thread per node, no atomics
+    // alias before use in kernel
+    auto gather_nodes_dev = gather_nodes;
+    auto gather_counts_dev = gather_counts;
+    auto gather_entries_dev = gather_entries;
+    auto F_cz_dev = F_cz;
+    const size_t U = gather_node_count;
+    FOR_ALL(u, 0, U, {
+        const size_t n = gather_nodes_dev(u);
+        const int c = gather_counts_dev(u);
+
+        double fx = 0.0; // local variables thread-private; no collision occurs while summing
+        double fy = 0.0; // local variables thread-private; no collision occurs while summing
+        double fz = 0.0; // local variables thread-private; no collision occurs while summing
+
+        for (int j = 0; j < c; ++j){
+            const int val = gather_entries_dev(u, j);
+            const size_t p = static_cast<size_t>(val >> 1);
+            const int s = static_cast<int>(val & 1); 
+            const double sgn = (s == 0) ? 1.0 : -1.0;
+
+            fx += sgn * pair_force_dev(p, 0);
+            fy += sgn * pair_force_dev(p, 1);
+            fz += sgn * pair_force_dev(p, 2);
+        }
+
+        // single writer for node n --> race free without atomics
+        F_cz_dev(3*n    ) = fx;
+        F_cz_dev(3*n + 1) = fy;
+        F_cz_dev(3*n + 2) = fz;
+    });
+    Kokkos::fence();
+}            
+      
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn compute_cohesive_zone_nodal_forces
 ///
 /// \brief compute cohesive zone nodal forces for this Rk stage
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
-    swage::Mesh& mesh,
-    State_t& State,
+void compute_cohesive_zone_nodal_forces(
+    DCArrayKokkos<size_t>& nodes_in_elem,            // mesh.nodes_in_elem
+    MPICArrayKokkos<double>& node_coords,            // State.node.coords
+    MPICArrayKokkos<double>& vel,                    // State.node.vel
+    DCArrayKokkos<size_t>& overlapping_node_gids,
+    CArrayKokkos<int>& cz_info,
+    size_t max_elem_in_cohesive_zone,
+    double geom_tol,
+    const double E_inf, const double a1, const double n_exp,
+    const double u_n_star, const double u_t_star, const int num_prony_terms,
+    CArrayKokkos<double>& prony_params,
+    CArrayKokkos<double>& internal_vars,
+    CArrayKokkos<double>& delta_internal_vars,
+    CArrayKokkos<double>& pair_force,
+    DCArrayKokkos<size_t>& gather_nodes,
+    DCArrayKokkos<int>& gather_counts,
+    DCArrayKokkos<int>& gather_entries,
+    size_t gather_node_count,
     double dt_stage,
     double time_value,
     size_t cycle,
@@ -1699,26 +1724,17 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
     size_t rk_num_stages,
     CArrayKokkos<double>& F_cz)
 {
-    if (!is_initialized) return;
-
     const size_t npairs = overlapping_node_gids.dims(0);
-    if (npairs == 0) return;
 
-    // ensure mesh connectivity and nodal state are current on device
-    // alex to check if this is needed in follow up PR 
-    mesh.nodes_in_elem.update_device();
-
-    Kokkos::fence();
-
-     // 1) cohesive zone interface orientation (normal at t and t+dt)
-    DCArrayKokkos<double> cz_orientation(npairs, 6, "cz_orientation");
+    // 1) cohesive zone interface orientation (normal at t and t+dt)
+    CArrayKokkos<double> cz_orientation(npairs, 6, "cz_orientation");
     cz_orientation.set_values(0.0);
 
     // calling the function oriented()
     // computes cohesive zone interface orientation (normal at t and t+dt) for each cohesive zone node pair
     oriented(
-        mesh.nodes_in_elem,
-        State.node.coords,
+        nodes_in_elem,
+        node_coords,
         overlapping_node_gids,
         cz_info,
         max_elem_in_cohesive_zone,
@@ -1727,14 +1743,14 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
 
     // 2) local openings (un_t, utan_t, un_tdt, utan_tdt)
     // map global nodal motion to local cohesive zone openings for each pair
-    DCArrayKokkos<double> local_opening(npairs, 4, "cz_local_opening");
+    CArrayKokkos<double> local_opening(npairs, 4, "cz_local_opening");
     local_opening.set_values(0.0);
 
     // calling the function ucmap()
     // maps global nodal motion to local cohesive zone openings for each cohesive zone node pair
     ucmap(
-        State.node.coords,
-        State.node.vel,
+        node_coords,
+        vel,
         cz_orientation,
         overlapping_node_gids,
         dt_stage,
@@ -1763,8 +1779,8 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
 
     // F_cz should already be sized and zeroed by caller
     cohesive_zone_loads(
-        mesh.nodes_in_elem,
-        State.node.coords,
+        nodes_in_elem,
+        node_coords,
         overlapping_node_gids,
         cz_orientation,
         cz_info,
@@ -1772,6 +1788,11 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
         internal_vars,
         delta_internal_vars,
         pair_area,
+        pair_force,
+        gather_nodes,
+        gather_counts,
+        gather_entries,
+        gather_node_count,
         F_cz);
 
     Kokkos::fence();
@@ -1783,10 +1804,16 @@ void cohesive_zones_t::compute_cohesive_zone_nodal_forces(
 /// \brief commit internal variable updates (call only at final RK stage: constistent with Forward Euler 
 ///        incrementalization of the cohesive zone)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-void cohesive_zones_t::commit_internal_vars(size_t rk_stage, size_t rk_num_stages)
-{
-    if (!is_initialized) return;
+// void cohesive_zones_t::commit_internal_vars(size_t rk_stage, size_t rk_num_stages)
+void commit_internal_vars(
+    CArrayKokkos<double>& internal_vars,
+    CArrayKokkos<double>& delta_internal_vars,
+    DCArrayKokkos<size_t>& overlapping_node_gids,
+    int num_prony_terms,
+    size_t rk_stage,
+    size_t rk_num_stages)
 
+{
     // 5) update global state: internal vars and nodal forces
     // ensuring the internal vars are updated only at the last RK stage
     if (rk_stage != rk_num_stages - 1) return;  
@@ -1801,7 +1828,6 @@ void cohesive_zones_t::commit_internal_vars(size_t rk_stage, size_t rk_num_stage
     // cache number of prony terms on host so it can be captured into device kernel
     const int npr = num_prony_terms;
 
-    RUN({
         // use the smaller of the two row counts as a safety gaurd in case mismatched numbers of cohesive zone node pairs
         const size_t npairs_use = (cz_internal.dims(0) < cz_delta.dims(0))
             ? cz_internal.dims(0) : cz_delta.dims(0);
@@ -1825,8 +1851,10 @@ void cohesive_zones_t::commit_internal_vars(size_t rk_stage, size_t rk_num_stage
         // the number of Prony columns that actually fit in the array
         const int npr_use = (npr < npr_max) ? npr : npr_max;
 
-        // loop over all cohesive zone node pairs
-        for (size_t i = 0; i < npairs_use; ++i) {
+
+        // loop over all cohesive zone node pairs and commit updates to internal variables
+        // each pair writes only its own row to be parallel safe
+        FOR_ALL(i, 0, npairs_use, {
             // 0: lambda_dot_t (store current rate)
             if (width_use > 0) {
                 cz_internal(i, 0) = cz_delta(i, 0);
@@ -1852,9 +1880,8 @@ void cohesive_zones_t::commit_internal_vars(size_t rk_stage, size_t rk_num_stage
                 // commit updated Prony stress/history
                 cz_internal(i, col) = cz_delta(i, col);
             }
-        }
-    });
-    Kokkos::fence();
+        }); // end FOR_ALL
+        Kokkos::fence();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1862,35 +1889,23 @@ void cohesive_zones_t::commit_internal_vars(size_t rk_stage, size_t rk_num_stage
 ///
 /// \brief add cohesive zon foces to global nodal force array (State.node.force)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
-void cohesive_zones_t::add_cohesive_zone_nodal_forces(
+void add_cohesive_zone_nodal_forces(
     DCArrayKokkos<double>& node_force,
     const CArrayKokkos<double>& F_cz,
-    size_t num_nodes)
+    size_t num_nodes)   
 {
     // 5) add F_cz into solver's global nodal force array State.node.force
     // local alias to global nodal force array for cleaner code in the RUN loop
     auto F_cz_local = F_cz;
 
-    // launch device kernel to add cohesive forces to global nodal force array
-    RUN({
         // total number of mesh nodes to loop over
         const size_t nmax = num_nodes;
 
-        // total length of the cohesive force array
-        // F_cz size = 3 * num_nodes (Fx, Fy, Fz per node)
-        const size_t fzlen = F_cz_local.size();
-
-        // loop over all mesh nodes
-        for (size_t n = 0; n < nmax; ++n) {
+        // loop over all mesh nodes; each node is written by only one thread, so no atomics needed
+        FOR_ALL(n, 0, num_nodes, {
 
             // index of z component of node n in the cohesive force array
             const size_t idx2 = 3*n + 2;
-
-            // safety guard: if cohesive force array smaller than expected,
-            // skip this node to avoid out-of-bounds memory access
-            if (idx2 >= fzlen) {
-                continue;
-            }
 
             // add cohesive force x component into global nodal force array
             node_force(n, 0) += F_cz_local(3*n);
@@ -1900,7 +1915,6 @@ void cohesive_zones_t::add_cohesive_zone_nodal_forces(
 
             // add cohesive force z component into global nodal force array
             node_force(n, 2) += F_cz_local(3*n + 2);
-        }
-    });
-    Kokkos::fence();
+        }); // end FOR_ALL
+        Kokkos::fence();
 }
