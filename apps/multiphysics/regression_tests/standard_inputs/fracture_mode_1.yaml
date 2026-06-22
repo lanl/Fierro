@@ -1,22 +1,22 @@
 # num_dims: 3
 
 dynamic_options:
-  time_final: 4.0
-  dt_min: 1e-6
-  dt_max: 0.001
-  dt_start: 1.e-5
+  time_final: 1.5
+  dt_min: 1e-3
+  dt_max: 0.1
+  dt_start: 1.e-2
   cycle_stop: 300000
 
 
 mesh_options:
   source: file
-  file_path: meshes/fracture_mode_1.vtk
+  file_path: meshes/fracture_modes.vtk
   num_dims: 3
 
 output_options:
   timer_output_level: thorough
   output_file_format: state
-  graphics_time_step: 2.0
+  graphics_time_step: 1.5
   mat_pt_field_outputs:
       - den
       - sie
@@ -64,11 +64,11 @@ boundary_conditions:
         - 1 # z
         - 0.0 # hydro_bc_vel_0 
         - 0.0 # hydro_bc_vel_1 
-        - -5.0e-2 # hydro_bc_vel_2 
+        - -5.0e-7 # hydro_bc_vel_2 
         - 0.0 # t_start
-        - 4.0 # t_end
+        - 1.5 # t_end
 
-  # Tag z plane (top surface z=2 velocity in +z direction)
+  # Tag z plane (top surface z=0.2 velocity in +z direction)
   - boundary_condition:
       solver_id: 0
       surface:
@@ -81,9 +81,9 @@ boundary_conditions:
         - 1 # z
         - 0.0 # hydro_bc_vel_0 
         - 0.0 # hydro_bc_vel_1 
-        - 5.0e-2 # hydro_bc_vel_2 
+        - 5.0e-7 # hydro_bc_vel_2 
         - 0.0 # t_start 
-        - 4.0    # t_end
+        - 1.5    # t_end
 
 materials:
   - material:
@@ -113,10 +113,6 @@ materials:
           - 1.333 # q2ex
           - 0.1     # phi_min
           - 1.0   # phi_curl
-      eos_global_vars:
-          - 10 #1.666666666666667
-          - 1.0E-14
-          - 1.0
 
 regions:
   - region:
@@ -140,4 +136,3 @@ initial_conditions:
           u: 0.0
           v: 0.0
           w: 0.0
-
