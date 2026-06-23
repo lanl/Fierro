@@ -200,7 +200,7 @@ void cohesive_zones_t::initialize_fracture_bc(
     if (num_prony_terms > 0) {
         // 2D array: row j contains [E_j, tau_j] for Prony term j
         prony_params = CArrayKokkos<double>(num_prony_terms, 2, "cz_prony_params");
-        FOR_ALL(i, 0, 1, {
+        FOR_ALL_CLASS(i, 0, 1, {
             for (int j = 0; j < num_prony_terms; ++j) {
                 prony_params(j, 0) = bc_params(6 + 2*j);     // E_j
                 prony_params(j, 1) = bc_params(6 + 2*j + 1); // tau_j
@@ -1411,7 +1411,7 @@ void cohesive_zone_loads(
 
         // guard: if gidA or gidB is out of bounds, skip this pair
         if (gidA >= num_nodes_coords || gidB >= num_nodes_coords) {
-            printf("[CZ] cohesive_zone_loads invalid gid pair i=%zu gidA=%zu gidB=%zu nn=%zu\n",
+            printf("[CZ] cohesive_zone_loads invalid gid pair i=%d gidA=%zu gidB=%zu nn=%zu\n",
                    i, gidA, gidB, num_nodes_coords);
             return;
         }
@@ -1436,7 +1436,7 @@ void cohesive_zone_loads(
             // guard: if no element/face, skip
             if (eA < 0 || fA < 0) continue;
             if ((size_t)eA >= num_elems || fA > 5) {
-                printf("[CZ] cohesive_zone_loads invalid slot i=%zu j=%zu eA=%d fA=%d num_elems=%zu\n",
+                printf("[CZ] cohesive_zone_loads invalid slot i=%d j=%zu eA=%d fA=%d num_elems=%zu\n",
                        i, j, eA, fA, num_elems);
                 continue;
             }
