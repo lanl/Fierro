@@ -224,8 +224,9 @@ void TLQS3D::tally_elem_arrays(
         }
         for (int m = 0; m < 6; m++) {
             for (int k = 0; k < 6; k++) {
+                const double shear_fix = (k >= 3) ? 0.5 : 1.0;
                 for (int p = 0; p < 3; p++) {
-                    CT_matmul_B1_a[m][p] += material_matrix[m][k] * B1_a[k][p];
+                    CT_matmul_B1_a[m][p] += shear_fix*material_matrix[m][k] * B1_a[k][p];
                 }
             }
         }
