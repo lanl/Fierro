@@ -7823,10 +7823,10 @@ public:
         //             header line prefixed with '#'
         // -----------------------------------------------------------------------
         for (int mat_id = 0; mat_id < (int)State.MaterialToMeshMaps.num_mat_elems.dims(0); mat_id++) {
-            DCArrayKokkos<double> x_phys(State.MaterialToMeshMaps.num_mat_elems(mat_id), num_gp_per_elem, 3);
+            DCArrayKokkos<double> x_phys(State.MaterialToMeshMaps.num_mat_elems.host(mat_id), num_gp_per_elem, 3);
             x_phys.set_values(0);
 
-            FOR_ALL(elem, 0, State.MaterialToMeshMaps.num_mat_elems(mat_id), {
+            FOR_ALL(elem, 0, State.MaterialToMeshMaps.num_mat_elems.host(mat_id), {
                 const size_t elem_id =
                     State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
                 for (size_t gp = 0; gp < num_gp_per_elem; gp++) {
@@ -7859,7 +7859,7 @@ public:
                     mat_id, time_value);
             fprintf(out_elem_state,
                     "# num_mat_elems=%zu  num_gp_per_elem=%zu\n",
-                    State.MaterialToMeshMaps.num_mat_elems(mat_id), num_gp_per_elem);
+                    State.MaterialToMeshMaps.num_mat_elems.host(mat_id), num_gp_per_elem);
 
             // ---- Column header line -----------------------------------------
             //
@@ -7934,7 +7934,7 @@ public:
             mesh_io_mpi_detail::query_world_rank_size(rank,world_size);
 
             // ---- Data rows --------------------------------------------------
-            for (size_t elem = 0; elem < State.MaterialToMeshMaps.num_mat_elems(mat_id); elem++) {
+            for (size_t elem = 0; elem < State.MaterialToMeshMaps.num_mat_elems.host(mat_id); elem++) {
                 const size_t elem_rid =
                     State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
                 size_t elem_gid;
