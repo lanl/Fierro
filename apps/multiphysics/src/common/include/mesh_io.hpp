@@ -7521,7 +7521,7 @@ public:
             // -----------------------------------------------------------------
             for (size_t elem = 0; elem < num_mat_elems; elem++) {
                 const size_t elem_rid =
-                    State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
+                    State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, elem);
                 size_t elem_gid;
                 if (world_size > 1) {
                     elem_gid = mesh.local_to_global_elem_mapping(elem_rid);
@@ -7936,7 +7936,7 @@ public:
             // ---- Data rows --------------------------------------------------
             for (size_t elem = 0; elem < State.MaterialToMeshMaps.num_mat_elems.host(mat_id); elem++) {
                 const size_t elem_rid =
-                    State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
+                    State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, elem);
                 size_t elem_gid;
                 if (world_size > 1) {
                     elem_gid = mesh.local_to_global_elem_mapping(elem_rid);
