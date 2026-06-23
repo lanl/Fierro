@@ -7950,14 +7950,14 @@ public:
 
                     // Always-present: global elem id, local elem/gp indices, coords
                     fprintf(out_elem_state,
-                            "  %-12zu %-8zu  %22.14e %22.14e %22.14e %22.14e %22.14e",
-                            elem_gid, elem,
-                            x_phys.host(elem, 0),
-                            x_phys.host(elem, 1),
-                            (num_dims == 3) ? x_phys.host(elem, 2) : 0.0,
-                            sqrt(x_phys.host(elem, 0)*x_phys.host(elem, 0)+x_phys.host(elem, 1)*x_phys.host(elem, 1)),
-                            (num_dims == 3) ? sqrt(x_phys.host(elem, 0)*x_phys.host(elem, 0)+x_phys.host(elem, 1)*x_phys.host(elem, 1)+x_phys.host(elem, 2)*x_phys.host(elem, 2)) : 0.0);
-
+                            "  %-12zu %-8zu %-8zu %22.14e %22.14e %22.14e %22.14e %22.14e",
+                            elem_gid, elem, gp,
+                            x_phys.host(elem, gp, 0),
+                            x_phys.host(elem, gp, 1),
+                            (num_dims == 3) ? x_phys.host(elem, gp, 2) : 0.0,
+                            sqrt(x_phys.host(elem, gp, 0)*x_phys.host(elem, gp, 0)+x_phys.host(elem, gp, 1)*x_phys.host(elem, gp, 1)),
+                            (num_dims == 3) ? sqrt(x_phys.host(elem, gp, 0)*x_phys.host(elem, gp, 0)+x_phys.host(elem, gp, 1)*x_phys.host(elem, gp, 1)+x_phys.host(elem, gp, 2)*x_phys.host(elem, gp, 2)) : 0.0);
+                    
                     // Scalar fields (in the same order as the header)
                     if (mat_den_id          >= 0 && State.MaterialPoints.den.size() > 0)
                         fprintf(out_elem_state, "  %22.14e",
