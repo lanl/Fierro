@@ -12,7 +12,7 @@ mesh_options:
     num_dims: 3
     type: box
     origin: [0.0, 0.0, 0.0]
-    length: [20.0, 1.0, 1.0]
+    length: [20.0, 1.0, 1.0] # m
     num_elems: [10, 1, 1]
     polynomial_order: 3
 
@@ -62,7 +62,7 @@ materials:
         # young's modulus
         # poisson's ratio
         strength_global_vars:
-            - 2E11 #2E6
+            - 200 # GPa
             - 0.33
 
     #- material:
