@@ -68,6 +68,7 @@ static void qstatx_stress(const swage::Mesh& mesh,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
+    Kokkos::abort("ERROR: qstatx stress boundary conditions not yet supported.");
 
 
     return;

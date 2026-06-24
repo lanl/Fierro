@@ -1026,7 +1026,6 @@ public:
 
         // --- 3. Connectivity and Reordering ---
         CArray <int> convert_vtk_to_fierro(num_nodes_in_elem);
-        std::cout << "HEREHEREHERE   " << num_nodes_in_elem << std::endl << std::endl;
         bool map_built = false;
 
         for (elem_gid=0; elem_gid < num_elem; elem_gid++) {

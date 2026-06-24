@@ -48,8 +48,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 void setting_nodes(MPICArrayKokkos<double> &node_coords,
                    MPICArrayKokkos<double> &final_node_coords,
-		   size_t num_nodes,
-		   size_t num_dims){
+		           size_t num_nodes,
+		           size_t num_dims){
 
     // Copy the partitioned node coordinates to the state
     FOR_ALL(node_gid, 0, num_nodes, {
