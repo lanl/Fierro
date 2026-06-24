@@ -27,7 +27,7 @@ tests = ["stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
         "sie_expansion_test", "confined_preload", "unconfined_preload",\
         "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact",\
         "TaylorAnvil_Contact", "fracture_mode_1", "fracture_mode_2", \
-        "fracture_reorientation"]
+        "fracture_reorientation", "TLQS_uniaxial", "TLQS_cantilever_beam"]
 
 
 #,"SGTM_cooling_cube" currently broken
@@ -63,10 +63,10 @@ def extract_state_data(filename):
     headers = cleaned_header.split()
 
     # Skip one more line to get data
-    lines = lines[1:]
+    lines = lines[2:]
     # Parse the simulation data
     for line in lines:
-        values = line.rstrip().split('\t')
+        values = line.rstrip().split()
         values = [float(val) for val in values]
         data.append(values)
     return data, headers

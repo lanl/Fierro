@@ -202,7 +202,8 @@ public:
         Material_t& Materials,
         BoundaryCondition_t& Boundary,
         swage::Mesh&  mesh,
-        State_t& State) override;
+        State_t& State,
+        elements::fe_ref_elem_t& ref_elem) override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///

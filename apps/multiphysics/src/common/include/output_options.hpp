@@ -78,7 +78,8 @@ static std::map<std::string, node_state> node_outputs_map
     { "temp",   node_state::temp },
     { "mass",   node_state::mass },
     { "force",  node_state::force },
-    { "grad_level_set", node_state::gradient_level_set}
+    { "grad_level_set", node_state::gradient_level_set},
+    { "disp", node_state::displacement}
 };
 
 // gauss point state variables writen to file
@@ -96,11 +97,13 @@ static std::map<std::string, material_pt_state> mat_pt_outputs_map
     { "den",     material_pt_state::density},
     { "pres",    material_pt_state::pressure},
     { "stress",  material_pt_state::stress},
+    { "strain",  material_pt_state::strain},
     { "sie",     material_pt_state::specific_internal_energy},
     { "sspd",    material_pt_state::sound_speed},
     { "mass",    material_pt_state::mass},
     { "volfrac", material_pt_state::volume_fraction},
-    { "eroded",  material_pt_state::eroded_flag}
+    { "eroded",  material_pt_state::eroded_flag},
+    { "heat_flux",  material_pt_state::heat_flux}
 };
 
 // element average state variables writen to file

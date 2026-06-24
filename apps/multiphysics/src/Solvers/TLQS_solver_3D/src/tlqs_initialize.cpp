@@ -44,7 +44,7 @@ void TLQS3D::initialize(SimulationParameters_t& SimulationParamaters,
                 	   State_t& State) const
 {
 	const size_t num_nodes = mesh.num_nodes;
-    const size_t num_gauss_pts = mesh.num_elems;
+    const size_t num_gauss_pts = mesh.num_gauss_in_elem*mesh.num_elems;
     const size_t num_corners = mesh.num_corners;
     const size_t num_dims = mesh.num_dims;
 
@@ -59,15 +59,15 @@ void TLQS3D::initialize(SimulationParameters_t& SimulationParamaters,
     State.corner.initialize(num_corners, num_dims, TLQS3D_State::required_corner_state);
 
     // check that the fills specify the required nodal fields
-    bool filled_nodal_state =
+    /* bool filled_nodal_state =
         check_fill_node_states(TLQS3D_State::required_fill_node_state,
-                               SimulationParamaters.InitialConditionSetup.fill_node_states);
+                               SimulationParamaters.region_setups.fill_node_states); */
     
-    if (filled_nodal_state == false){
+    /* if (filled_nodal_state == false){
         std::cout <<" Missing required nodal state in the fill instructions for the TLQS solver \n";
-        std::cout <<" The nodal velocity must be specified. \n" << std::endl;
+        std::cout <<" The nodal displacement must be specified. \n" << std::endl;
         throw std::runtime_error("**** Provide fill instructions for all required nodal variables ****");
-    }
+    } */
 
     std::cout << "TLQS solver initialized \n";
 

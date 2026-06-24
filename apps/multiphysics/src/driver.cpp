@@ -46,6 +46,21 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "region_fill.hpp"
 
+void setting_nodes(MPICArrayKokkos<double> &node_coords,
+                   MPICArrayKokkos<double> &final_node_coords,
+		           size_t num_nodes,
+		           size_t num_dims){
+
+    // Copy the partitioned node coordinates to the state
+    FOR_ALL(node_gid, 0, num_nodes, {
+        for (size_t dim = 0; dim < num_dims; dim++) {
+            node_coords(node_gid, dim) = final_node_coords(node_gid, dim);
+        }
+    });
+    Kokkos::fence();
+    return;
+};
+
 
 // Initialize driver data.  Solver type, number of solvers
 // Will be parsed from YAML input
@@ -67,6 +82,14 @@ void Driver::initialize()
     // Read the YAML input file
     parse_yaml(root, SimulationParamaters, Materials, BoundaryConditions);
     log_.info("Finished parsing YAML file\n");
+
+    // checking if TLQS is active in order to run correct read vtk function
+    bool TLQS_active = false;
+    for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
+        if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::TLQS3D) {
+            TLQS_active = true;
+        }
+    }
 
 
     // Create initial mesh on rank 0
@@ -106,7 +129,8 @@ void Driver::initialize()
             mesh_reader.read_mesh(initial_mesh, 
                                   initial_node_coords,
                                   SimulationParamaters.MeshInput, 
-                                  initial_mesh.num_dims);
+                                  initial_mesh.num_dims,
+                                  TLQS_active);
         } // end if rank == 0
     }
     else if (SimulationParamaters.MeshInput.source == mesh_input::generate) {
@@ -114,7 +138,8 @@ void Driver::initialize()
         if (rank == 0) {
             mesh_builder.build_mesh(initial_mesh, 
                                     initial_node_coords,
-                                    SimulationParamaters);
+                                    SimulationParamaters,
+                                    TLQS_active);
         } // end if rank == 0
     }
     else{
@@ -214,6 +239,12 @@ void Driver::initialize()
 
         } // end check on region_fill being a file
     } // end for reg_id
+
+    // if TLQS solver is active initialize the reference element object
+    if (TLQS_active) {
+        std::cout << mesh.Pn << "   " << mesh.num_dims << std::endl;
+        ref_elem.init(mesh.Pn, mesh.num_dims);
+    }
 
 
     // Build boundary conditions
@@ -458,7 +489,8 @@ void Driver::execute()
                         Materials, 
                         BoundaryConditions, 
                         mesh, 
-                        State);
+                        State,
+                        ref_elem);
     } // loop over solvers
 
     // Collective: dump any remaining buffered output from the run. Solvers

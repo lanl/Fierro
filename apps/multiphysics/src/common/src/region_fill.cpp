@@ -67,6 +67,15 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
     const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
 
+    // storing reference configuration if variable initialized
+    if (State.node.coords_t0.size() > 0) {
+        FOR_ALL(i, 0, static_cast<long long>(mesh.num_nodes),
+                j, 0, 3, {
+                    State.node.coords_t0(i,j) = State.node.coords(i,j);
+                });
+        State.node.coords_t0.update_host();
+    }
+
     // Calculate element volume
     geometry::get_vol(State.GaussPoints.vol, State.node.coords, mesh);
 
@@ -1029,6 +1038,9 @@ void fill_regions(
             case fill_gauss_state::stress:
                 gauss_stress.update_host();
                 break;
+            case fill_gauss_state::strain:
+                std::cerr << "WARNING: strain fill is not currently supported." << std::endl;
+                break;
             case fill_gauss_state::elastic_modulii:
                 gauss_elastic_modulii.update_host();
                 break;
@@ -1072,6 +1084,9 @@ void fill_regions(
             case fill_node_state::velocity:
                 // if check is needed as solver state might not match fill instructions
                 if(node_vel.size()>0){node_vel.update_host();}
+                break;
+            case fill_node_state::displacement:
+                std::cerr << "WARNING: displacement fill is not currently supported." << std::endl;
                 break;
             case fill_node_state::temperature:
                 // if check is needed as solver state might not match fill instructions

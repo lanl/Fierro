@@ -61,7 +61,8 @@ include_directories(material_models/artificial_viscosity)
 include_directories(material_models/eos)
 include_directories(material_models/erosion)
 include_directories(material_models/fracture)
-include_directories(material_models/strength)
+include_directories(material_models/transient_strength)
+include_directories(material_models/quasi_static_strength)
 include_directories(material_models/equilibration)
 include_directories(material_models/equilibration/include)
 include_directories(material_models/tabular/include)
@@ -75,8 +76,10 @@ add_subdirectory(material_models/tabular)
 # Boundary conditions
 message("\n ****** ADDING BOUNDARY CONDITIONS ******** \n ")
 include_directories(boundary_conditions/velocity)
+include_directories(boundary_conditions/displacement)
 include_directories(boundary_conditions/temperature)
 include_directories(boundary_conditions/stress)
+include_directories(boundary_conditions/quasi_static_stress)
 
 
 
