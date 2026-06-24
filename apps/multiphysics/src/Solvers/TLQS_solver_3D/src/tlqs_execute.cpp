@@ -101,13 +101,25 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> rkp1(3*mesh.num_nodes);
 
     // Anderson acceleration variables
-    size_t window_size = 5;
-    DCArrayKokkos <double> anderson_weights(window_size);
+    size_t window_size = 1;
+    const size_t max_hist = (window_size > 1) ? (window_size - 1) : 1;
+    DCArrayKokkos <double> anderson_weights(max_hist);
     CArrayKokkos <double> curr_anderson_residual(3*mesh.num_nodes);
     CArrayKokkos <double> hist_anderson_residual(3*mesh.num_nodes,window_size);
     hist_anderson_residual.set_values(0);
     CArrayKokkos <double> hist_displacement_iter(3*mesh.num_nodes,window_size);
     hist_displacement_iter.set_values(0);
+    CArrayKokkos<double> DeltaF(3*mesh.num_nodes, max_hist);
+    CArrayKokkos<double> DeltaG(3*mesh.num_nodes, max_hist);
+    const int startup_iters = 3;       // Number of initial pure Picard steps
+    const double max_weight = 50.0;     // Threshold to catch exploded weights
+    const double fine_floor = 1e-10;     // Residual norm below which Anderson is unsafe
+
+    // QR variables
+    FArrayKokkos <double> Q(3*mesh.num_nodes, max_hist ,"Q");
+    CArrayKokkos <double> R(max_hist, max_hist, "R");
+    CArrayKokkos <double> y(max_hist, "y");
+    DCArrayKokkos <double> v(max_hist, 3*mesh.num_nodes, "v");
 
     // Picard iteration vectors
     //
@@ -482,6 +494,13 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             });
             Kokkos::fence();
 
+            // Compute current residual norm for safeguarding checks
+            double safe_norm = 0.0;
+            double safe_loc_norm = 0.0;
+            FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, safe_loc_norm, {
+                safe_loc_norm += curr_anderson_residual(i) * curr_anderson_residual(i);
+            }, safe_norm);
+
             // --- Step 2: store f_k and G(x_k) in circular buffer ---
             // Column to overwrite is determined by the modulo of the current
             // Picard iteration index against the window size.
@@ -496,80 +515,80 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // --- Step 3: determine how many history columns to use ---
             // On early iterations the buffer is only partially filled.
             int m_anderson = std::min(iter + 1, (int)window_size);
+            int m_diff = m_anderson - 1;   // number of consecutive differences available
 
-            // --- Step 4: build a temporary copy of the residual history ---
-            // The copy is ordered oldest -> newest so column 0 of temp is the
-            // oldest retained residual and column m_anderson-1 is f_k.
-            //
-            // Mapping from window slot w (0 = oldest, m_anderson-1 = newest)
-            // to circular buffer column:
-            //   if buffer not yet full  -> hist_col = w
-            //   if buffer full          -> hist_col = (anderson_col - m_anderson + 1 + w
-            //                                          + window_size) % window_size
-            // Both branches reduce to the same expression when the buffer is not
-            // yet full (anderson_col == iter, m_anderson == iter+1), but we keep
-            // them explicit for clarity.
-            //
-            // We allocate a fresh CArrayKokkos each iteration so the size matches
-            // m_anderson exactly.  The destructor frees the memory when we leave
-            // this scope.
-            CArrayKokkos<double> temp_residual_hist(3*mesh.num_nodes, m_anderson);
+            bool run_acceleration = (iter >= startup_iters) && 
+                                    (m_diff > 0) && 
+                                    (safe_norm > fine_floor);
+            
+            if (run_acceleration) {
+                std::cout << " [Anderson] Safe to run. Switching from Picard." << std::endl;
+                int oldest_col = (iter + 1 <= (int)window_size) ? 0 : (anderson_col + 1) % (int)window_size;
 
-            for (int w = 0; w < m_anderson; w++) {
-                int hist_col;
-                if (iter + 1 <= (int)window_size) {
-                    // Buffer not yet full: columns 0..iter are valid, in order.
-                    hist_col = w;
-                } else {
-                    // Buffer full: walk forward from the slot after anderson_col
-                    // (= oldest) to anderson_col itself (= newest).
-                    hist_col = (anderson_col - m_anderson + 1 + w + (int)window_size) % (int)window_size;
+                for (int j = 0; j < m_diff; j++) {
+                    int col_j   = (oldest_col + j) % (int)window_size;
+                    int col_jp1 = (oldest_col + j + 1) % (int)window_size;
+                    FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                        DeltaF(i, j) = hist_anderson_residual(i, col_jp1) - hist_anderson_residual(i, col_j);
+                        DeltaG(i, j) = hist_displacement_iter(i, col_jp1) - hist_displacement_iter(i, col_j);
+                    });
+                    Kokkos::fence();
                 }
 
-                FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                    temp_residual_hist(i, w) = hist_anderson_residual(i, hist_col);
-                });
-                Kokkos::fence();
-            }
-
-            // --- Step 5: solve for Anderson mixing weights via QR ---
-            // qr_solve() finds theta such that:
-            //   min_theta  || temp_residual_hist * theta ||_2
-            //   subject to    sum(theta_i) = 1
-            // and stores the result in anderson_weights(0..m_anderson-1).
-            //
-            // The call is destructive with respect to temp_residual_hist; the
-            // circular buffer hist_anderson_residual is untouched because we
-            // passed a copy.
-            anderson_weights.set_values(0);
-            QR_solver(temp_residual_hist, curr_anderson_residual, anderson_weights);
-            anderson_weights.update_host();
-
-            // --- Step 6: form the Anderson-accelerated iterate ---
-            //   x_{k+1} = sum_{w=0}^{m_anderson-1}  theta_w * G(x_{hist_col_w})
-            //
-            // anderson_weights(w) are assumed to be accessible on the host after
-            // qr_solve() returns (sync/copy is the responsibility of qr_solve).
-            displacement_iter_kp1.set_values(0);
-            Kokkos::fence();
-
-            for (int w = 0; w < m_anderson; w++) {
-                int hist_col;
-                if (iter + 1 <= (int)window_size) {
-                    hist_col = w;
-                } else {
-                    hist_col = (anderson_col - m_anderson + 1 + w + (int)window_size) % (int)window_size;
+                anderson_weights.set_values(0);
+                QR_solver(DeltaF, curr_anderson_residual, anderson_weights, Q, R, y, v, (size_t)m_diff);   // see note below
+                anderson_weights.update_host();
+                
+                // SAFEGUARD: Check for ill-conditioning (exploded weights)
+                bool weights_are_valid = true;
+                for (int a = 0; a < m_diff; a++) {
+                    if (fabs(anderson_weights.host(a)) > max_weight) {
+                        weights_are_valid = false;
+                        break;
+                    }
                 }
+                /* // --- Diagnostic Verification Block ---
+                std::vector<double> alpha(m_diff + 1, 0.0);
+                alpha[0] = anderson_weights.host(0);
 
-                // Read weight on host; capture by value into the kernel.
-                // (Requires qr_solve to have made anderson_weights host-accessible.)
-                double theta_w = anderson_weights.host(w);
+                for (int i = 1; i < m_diff; i++) {
+                    alpha[i] = anderson_weights.host(i) - anderson_weights.host(i - 1);
+                }
+                alpha[m_diff] = 1.0 - anderson_weights.host(m_diff - 1);
 
-                FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                    displacement_iter_kp1(i) += theta_w * hist_displacement_iter(i, hist_col);
-                });
-                Kokkos::fence();
+                double alpha_sum = 0.0;
+                std::cout << "Reconstructed Alpha Weights: ";
+                for (double a : alpha) {
+                    std::cout << a << " ";
+                    alpha_sum += a;
+                }
+                std::cout << "\nTotal Alpha Sum (Should be 1.0): " << alpha_sum << std::endl;
+                // ------------------------------------- */
+
+                if (weights_are_valid) {
+                    // --- Step 4a: Apply Accelerated Update ---
+                    FOR_ALL(i, 0, 3*mesh.num_nodes, {
+                        double correction = 0.0;
+                        for (int j = 0; j < m_diff; j++) {
+                            correction += anderson_weights(j) * DeltaG(i, j);
+                        }
+                        displacement_iter_kp1(i) -= correction;
+                    });
+                    Kokkos::fence();
+                } else {
+                    // --- Step 4b: Fallback to Pure Picard (Weights Exploded) ---
+                    // By doing nothing here, displacement_iter_kp1 retains its raw Picard value.
+                    // We print a diagnostic tracking statement.
+                    std::cout << " [Anderson] Ill-conditioned history (Weights Exploded). Falling back to Picard." << std::endl;
+                }
+            } else {
+                // --- Step 4c: Normal Pure Picard Mode ---
+                // Active during the startup phase or when the residual drops below fine_floor.
+                if (safe_norm <= fine_floor && iter >= startup_iters) {
+                    std::cout << " [Anderson] Residual below safety floor (" << safe_norm << "). Finalizing via Picard." << std::endl;
+                }
             }
+
             auto point_E = std::chrono::steady_clock::now();
             auto elapsed_E = std::chrono::duration_cast<std::chrono::milliseconds>(point_E - point_D).count();
             //std::cout << "Time elapsed for anderson: " << elapsed_E << " ms\n";

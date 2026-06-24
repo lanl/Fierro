@@ -59,11 +59,10 @@ using namespace mtr;
 // Back substitution to solve Rx = y
 void TLQS3D::QR_backsub(const CArrayKokkos <double> &R, 
                      const CArrayKokkos <double> &y,
-                     DCArrayKokkos <double> &x) {
+                     DCArrayKokkos <double> &x,
+                     const size_t n_active) {
     
-    size_t n = R.dims(0);
-    
-    for (int i = n - 1; i >= 0; --i) {
+    for (int i = (int)n_active - 1; i >= 0; --i) {
         
         RUN({
             x(i) = y(i);
@@ -72,7 +71,7 @@ void TLQS3D::QR_backsub(const CArrayKokkos <double> &R,
         double sum = 0.0;
         double sum_lcl = 0.0;
 
-        FOR_REDUCE_SUM(j, i + 1, n, 
+        FOR_REDUCE_SUM(j, i + 1, n_active, 
                        sum_lcl, {
              sum_lcl -= R(i,j) * x(j);
         }, sum);
@@ -91,26 +90,25 @@ void TLQS3D::QR_backsub(const CArrayKokkos <double> &R,
 // QR Decomposition using Modified Gram-Schmidt
 void TLQS3D::QR_decompose(const CArrayKokkos <double> &A, 
                        FArrayKokkos <double> &Q, 
-                       CArrayKokkos <double> &R) {
+                       CArrayKokkos <double> &R,
+                       DCArrayKokkos <double> &v,
+                       const size_t n_active) {
 
 
     const size_t m = A.dims(0);
-    const size_t n = A.dims(1);
 
     Q.set_values(0.0);
     R.set_values(0.0);
 
-    DCArrayKokkos <double> v(n,m,"v");
-
     // Copy columns of A to v, and taking transpose
     FOR_ALL(i, 0, m,
-            j, 0, n, {
+            j, 0, n_active, {
         v(j, i) = A(i,j);  
     });
     Kokkos::fence();
 
 
-    for (size_t i = 0; i < n; ++i) {
+    for (size_t i = 0; i < n_active; ++i) {
 
         // find the norm of a column in matrix v for row i
         double tally = 0.0;
@@ -156,7 +154,7 @@ void TLQS3D::QR_decompose(const CArrayKokkos <double> &A,
 */
 // nested parallelism
 
-        FOR_FIRST(jj, i+1, n, {
+        FOR_FIRST(jj, i+1, n_active, {
 
             R(i,jj) = 0.0;
 
@@ -252,20 +250,19 @@ double TLQS3D::QR_determinant(const FArrayKokkos <double> &Q,
 // b[m]
 void TLQS3D::QR_solver(const CArrayKokkos <double> &A, 
                     const CArrayKokkos <double> &b,
-                    DCArrayKokkos <double> &x) {
+                    DCArrayKokkos <double> &x,
+                    FArrayKokkos <double> &Q,
+                    CArrayKokkos <double> &R,
+                    CArrayKokkos <double> &y,
+                    DCArrayKokkos <double> &v,
+                    const size_t n_active) {
     
     const size_t m = A.dims(0);
-    const size_t n = A.dims(1);
 
-    FArrayKokkos <double> Q(m,n,"Q");
-    CArrayKokkos <double> R(n,n,"R");
-    CArrayKokkos <double> y(n,"y");
-
-    QR_decompose(A, Q, R);
-
+    QR_decompose(A, Q, R, v, n_active);
 
     // Compute Q^t * b
-    FOR_FIRST(i, 0, n, {
+    FOR_FIRST(i, 0, n_active, {
 
         double sum = 0.0;
         double sum_lcl = 0.0;
@@ -282,7 +279,7 @@ void TLQS3D::QR_solver(const CArrayKokkos <double> &A,
     Kokkos::fence();
 
     // Solve R x = y
-    QR_backsub(R, y, x);
+    QR_backsub(R, y, x, n_active);
 }
 
 //////////////////////////

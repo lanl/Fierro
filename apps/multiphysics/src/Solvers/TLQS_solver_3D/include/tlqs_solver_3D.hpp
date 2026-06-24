@@ -325,12 +325,15 @@ public:
     // **** Functions defined in qr_solver.cpp **** //
     void QR_backsub(const CArrayKokkos <double> &R, 
         const CArrayKokkos <double> &y,
-        DCArrayKokkos <double> &x
+        DCArrayKokkos <double> &x,
+        const size_t n_active
     );
 
     void QR_decompose(const CArrayKokkos <double> &A, 
         FArrayKokkos <double> &Q, 
-        CArrayKokkos <double> &R
+        CArrayKokkos <double> &R,
+        DCArrayKokkos <double> &v,
+        const size_t n_active
     );
     
     double QR_determinant(const FArrayKokkos <double> &Q,
@@ -339,7 +342,12 @@ public:
 
     void QR_solver(const CArrayKokkos <double> &A, 
         const CArrayKokkos <double> &b,
-        DCArrayKokkos <double> &x
+        DCArrayKokkos <double> &x,
+        FArrayKokkos <double> &Q,
+        CArrayKokkos <double> &R,
+        CArrayKokkos <double> &y,
+        DCArrayKokkos <double> &v,
+        const size_t n_active
     );
 
     // **** Functions defined in additive_schwarz_preconditioning.cpp **** //
