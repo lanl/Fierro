@@ -89,7 +89,7 @@ static void displacement(const swage::Mesh& mesh,
     double disp_next = disp_bc_global_vars(bdy_set, 0)*sin((time_value+dt-time_start)*ang_freq);
     const double total_step_target = disp_next - disp_curr;
 
-    displacement_step(3 * bdy_node_gid + constrained_dir) = total_step_target;
+    displacement_step(bdy_node_gid, constrained_dir) = total_step_target;
 
     for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
         const size_t elem_gid = mesh.elems_in_node(bdy_node_gid, elem_lid);

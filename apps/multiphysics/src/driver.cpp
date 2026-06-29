@@ -383,6 +383,9 @@ void Driver::initialize()
     if (State.node.vel_n0.size() > 0) {
         State.node.vel_n0.initialize_comm_plan(node_communication_plan);
     }
+    if (State.node.displacement.size() > 0) {
+        State.node.displacement.initialize_comm_plan(node_communication_plan);
+    }
     if (State.GaussPoints.shock_detector.size() > 0){
         State.GaussPoints.shock_detector.initialize_comm_plan(element_communication_plan);
     }

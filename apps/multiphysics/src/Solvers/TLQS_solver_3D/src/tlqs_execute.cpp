@@ -55,6 +55,12 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     State_t& State,
                     elements::fe_ref_elem_t& ref_elem)
 {
+    // Get MPI ranks and num ranks
+    int rank;
+    int num_ranks;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
+
     // Conveinent local variables
     double fuzz  = SimulationParamaters.DynamicOptions.fuzz;
     double tiny  = SimulationParamaters.DynamicOptions.tiny;
@@ -104,7 +110,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     size_t window_size = 1;
     const size_t max_hist = (window_size > 1) ? (window_size - 1) : 1;
     DCArrayKokkos <double> anderson_weights(max_hist);
-    CArrayKokkos <double> curr_anderson_residual(3*mesh.num_nodes);
+    //CArrayKokkos <double> curr_anderson_residual(3*mesh.num_nodes);
     CArrayKokkos <double> hist_anderson_residual(3*mesh.num_nodes,window_size);
     hist_anderson_residual.set_values(0);
     CArrayKokkos <double> hist_displacement_iter(3*mesh.num_nodes,window_size);
@@ -114,6 +120,14 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     const int startup_iters = 3;       // Number of initial pure Picard steps
     const double max_weight = 50.0;     // Threshold to catch exploded weights
     const double fine_floor = 1e-10;     // Residual norm below which Anderson is unsafe
+
+    // ***********************************************************
+    // TEMPORARY ALLOCATION AS ANDERSON IS NOT BEING SET FOR MPI YET
+    // ***********************************************************
+    CArrayKokkos <double> curr_anderson_residual(mesh.num_nodes,3);
+    // ***********************************************************
+    // TEMPORARY ALLOCATION AS ANDERSON IS NOT BEING SET FOR MPI YET
+    // ***********************************************************
 
     // QR variables
     FArrayKokkos <double> Q(3*mesh.num_nodes, max_hist ,"Q");
@@ -136,9 +150,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // displacement_iter_kp1: result of the CG solve for this Picard iteration G(x_k),
     //                        then overwritten with the Anderson-accelerated update x_{k+1}.
     //                        Reset to zero before every CG solve.
-    CArrayKokkos <double> displacement_step(3*mesh.num_nodes); /// current load-step displacement estimate
-    CArrayKokkos <double> displacement_iter_k(3*mesh.num_nodes);   /// x_k  (Picard iterate in)
-    CArrayKokkos <double> displacement_iter_kp1(3*mesh.num_nodes); /// G(x_k) then x_{k+1}
+    CArrayKokkos <double> displacement_step(mesh.num_nodes,3); /// current load-step displacement estimate
+    CArrayKokkos <double> displacement_iter_k(mesh.num_nodes,3);   /// x_k  (Picard iterate in)
+    CArrayKokkos <double> displacement_iter_kp1(mesh.num_nodes,3); /// G(x_k) then x_{k+1}
 
     // variables for chebyshev smoothing
     CArrayKokkos<double> D_inv(3 * mesh.num_nodes);
@@ -407,8 +421,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rktzk, p);
 
                 // displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
-                FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                    displacement_iter_kp1(i) += alpha_k * p(i);
+                FOR_ALL(i, 0, (int)mesh.num_nodes,
+                        j, 0, 3, {
+                    displacement_iter_kp1(i, j) += alpha_k * p(3*i + j);
                 });
                 Kokkos::fence();
 
@@ -489,12 +504,13 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // ***************************************************
 
             // --- Step 1: compute Anderson residual f_k = G(x_k) - x_k ---
-            FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                curr_anderson_residual(i) = displacement_iter_kp1(i) - displacement_iter_k(i);
+            FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                    j, 0, 3, {
+                curr_anderson_residual(i,j) = displacement_iter_kp1(i,j) - displacement_iter_k(i,j);
             });
             Kokkos::fence();
 
-            // Compute current residual norm for safeguarding checks
+            /* // Compute current residual norm for safeguarding checks
             double safe_norm = 0.0;
             double safe_loc_norm = 0.0;
             FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, safe_loc_norm, {
@@ -547,7 +563,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         break;
                     }
                 }
-                /* // --- Diagnostic Verification Block ---
+                // --- Diagnostic Verification Block ---
                 std::vector<double> alpha(m_diff + 1, 0.0);
                 alpha[0] = anderson_weights.host(0);
 
@@ -563,7 +579,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     alpha_sum += a;
                 }
                 std::cout << "\nTotal Alpha Sum (Should be 1.0): " << alpha_sum << std::endl;
-                // ------------------------------------- */
+                // -------------------------------------
 
                 if (weights_are_valid) {
                     // --- Step 4a: Apply Accelerated Update ---
@@ -589,6 +605,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 }
             }
 
+            */
             auto point_E = std::chrono::steady_clock::now();
             auto elapsed_E = std::chrono::duration_cast<std::chrono::milliseconds>(point_E - point_D).count();
             //std::cout << "Time elapsed for anderson: " << elapsed_E << " ms\n";
@@ -597,8 +614,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // ***************************************************
 
             // update displacement step vector for convergence check and next iteration
-            FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                displacement_step(i) += displacement_iter_kp1(i);
+            FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                    j, 0, 3, {
+                displacement_step(i,j) += displacement_iter_kp1(i,j);
             });
             Kokkos::fence();
 
@@ -618,8 +636,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             double norm = sqrt(norm_num / norm_den); */
             double norm = 0.0;
             double loc_norm = 0.0;
-            FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_norm, {
-                loc_norm += curr_anderson_residual(i) * curr_anderson_residual(i);
+            FOR_REDUCE_SUM(i, 0, (int)mesh.num_nodes, 
+                           j, 0, 3, loc_norm, {
+                loc_norm += curr_anderson_residual(i,j) * curr_anderson_residual(i,j);
             }, norm);
 
             std::cout << "ITER: " << iter << "   ANDERSON RESIDUAL NORM: " << norm << std::endl;
@@ -629,8 +648,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             }
 
             // Update x_k <- x_{k+1} for the next Picard iteration.
-            FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                displacement_iter_k(i) = displacement_iter_kp1(i);
+            FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                    j, 0, 3, {
+                displacement_iter_k(i,j) = displacement_iter_kp1(i,j);
             });
             Kokkos::fence();
             auto point_F = std::chrono::steady_clock::now();
@@ -643,7 +663,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         // updating total displacement for next load step
         FOR_ALL(i, 0, (int)mesh.num_nodes, 
                 j, 0, 3, {
-                    State.node.displacement(i,j) += displacement_step(3*i + j);
+                    State.node.displacement(i,j) += displacement_step(i, j);
                     State.node.coords(i,j) = State.node.coords_t0(i,j) + State.node.displacement(i,j);
         });
         Kokkos::fence();

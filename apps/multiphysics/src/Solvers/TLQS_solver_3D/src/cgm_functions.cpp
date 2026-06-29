@@ -78,8 +78,7 @@ void TLQS3D::get_r0(
                     const size_t node_gid_b = nodes_in_elem(elem_gid, b);
                     for (size_t q = 0; q < 3; q++) {
                         const size_t local_dof_b = 3 * b + q;
-                        const size_t global_dof_b = 3 * node_gid_b + q;
-                        val -= K_elem(elem_gid, local_dof, local_dof_b) * displacement_iter(global_dof_b);
+                        val -= K_elem(elem_gid, local_dof, local_dof_b) * displacement_iter(node_gid_b, q);
                         //std::cout << "K_ELEM: " << K_elem(elem_gid, local_dof, local_dof_b) << std::endl;
                     }
                 }
