@@ -55,6 +55,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     State_t& State,
                     elements::fe_ref_elem_t& ref_elem)
 {
+    if (mesh.num_dims != 3) {
+        Kokkos::abort("TLQS SOLVER ONLY SUPPORTED IN 3D!!!");
+    }
     // Get MPI ranks and num ranks
     int rank;
     int num_ranks;
