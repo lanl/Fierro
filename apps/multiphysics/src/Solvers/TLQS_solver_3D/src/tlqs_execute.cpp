@@ -153,9 +153,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // displacement_iter_kp1: result of the CG solve for this Picard iteration G(x_k),
     //                        then overwritten with the Anderson-accelerated update x_{k+1}.
     //                        Reset to zero before every CG solve.
-    CArrayKokkos <double> displacement_step(mesh.num_nodes,3); /// current load-step displacement estimate
-    CArrayKokkos <double> displacement_iter_k(mesh.num_nodes,3);   /// x_k  (Picard iterate in)
-    CArrayKokkos <double> displacement_iter_kp1(mesh.num_nodes,3); /// G(x_k) then x_{k+1}
+    MPICArrayKokkos <double> displacement_step(mesh.num_nodes,3); /// current load-step displacement estimate
+    MPICArrayKokkos <double> displacement_iter_k(mesh.num_nodes,3);   /// x_k  (Picard iterate in)
+    MPICArrayKokkos <double> displacement_iter_kp1(mesh.num_nodes,3); /// G(x_k) then x_{k+1}
 
     // variables for chebyshev smoothing
     CArrayKokkos<double> D_inv(3 * mesh.num_nodes);
@@ -267,6 +267,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // dirichlet (displacement) type
             boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
+            displacement_step.communicate();
 
             auto point_A = std::chrono::steady_clock::now();
             auto elapsed_A = std::chrono::duration_cast<std::chrono::milliseconds>(point_A - start_time).count();

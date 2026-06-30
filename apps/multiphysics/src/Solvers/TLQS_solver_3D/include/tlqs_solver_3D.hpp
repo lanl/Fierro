@@ -216,7 +216,7 @@ public:
     const BoundaryCondition_t& BoundaryConditions,
     const CArrayKokkos<double>& K_elem,
     const CArrayKokkos<double>& F_elem,
-    const CArrayKokkos<double>& displacement_step,
+    const MPICArrayKokkos<double>& displacement_step,
     const double dt,
     const double time_value,
     const double time_start,
@@ -247,7 +247,7 @@ public:
         ViewCArrayKokkos <size_t>& nodes_in_elem,
         const MPICArrayKokkos <double>& coords_t0,
         const MPICArrayKokkos <double>& displacement,
-        const CArrayKokkos <double>& displacement_step,
+        const MPICArrayKokkos <double>& displacement_step,
         ViewCArrayKokkos <double>& gauss_point_grad_basis,
         double grad_u[3][3],
         double inv_J[3][3],
@@ -281,7 +281,7 @@ public:
         const DCArrayKokkos<size_t>& nodes_in_elem,
         const CArrayKokkos<double>& F_elem,
         const CArrayKokkos<double>& K_elem,
-        const CArrayKokkos<double>& displacement_iter,
+        const MPICArrayKokkos<double>& displacement_iter,
         const CArrayKokkos<double>& r0
     );
 

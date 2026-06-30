@@ -274,7 +274,7 @@ struct BoundaryConditionFunctions_t
         const DCArrayKokkos<double>& bc_state_vars,
         const CArrayKokkos<double>& K_elem,
         const CArrayKokkos<double>& F_elem,
-        const CArrayKokkos<double>& displacement_step,
+        const MPICArrayKokkos<double>& displacement_step,
         const double dt,
         const double time_value,
         const double time_start,

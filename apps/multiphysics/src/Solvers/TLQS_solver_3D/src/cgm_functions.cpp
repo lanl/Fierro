@@ -42,7 +42,7 @@ void TLQS3D::get_r0(
     const DCArrayKokkos <size_t>& nodes_in_elem,
     const CArrayKokkos <double>& F_elem,
     const CArrayKokkos <double>& K_elem,
-    const CArrayKokkos <double>& displacement_iter,
+    const MPICArrayKokkos <double>& displacement_iter,
     const CArrayKokkos <double>& r0
 )
 {
