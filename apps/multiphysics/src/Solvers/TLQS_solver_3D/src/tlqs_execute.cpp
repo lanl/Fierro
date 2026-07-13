@@ -105,9 +105,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos<double> zkp1(3 * mesh.num_nodes); */
 
     // conjugate gradient method vectors
-    CArrayKokkos <double> p(3*mesh.num_nodes);
-    MPICArrayKokkos <double> rk(3*mesh.num_nodes);
-    MPICArrayKokkos <double> rkp1(3*mesh.num_nodes);
+    CArrayKokkos <double> p(mesh.num_nodes, 3);
+    MPICArrayKokkos <double> rk(mesh.num_nodes, 3);
+    MPICArrayKokkos <double> rkp1(mesh.num_nodes, 3);
 
     // Anderson acceleration variables
     size_t window_size = 1;
@@ -158,11 +158,11 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> displacement_iter_kp1(mesh.num_nodes,3); /// G(x_k) then x_{k+1}
 
     // variables for chebyshev smoothing
-    CArrayKokkos<double> D_inv(3 * mesh.num_nodes);
-    MPICArrayKokkos<double> zk(3 * mesh.num_nodes);
-    MPICArrayKokkos<double> zkp1(3 * mesh.num_nodes);
-    CArrayKokkos<double> delta_z(3 * mesh.num_nodes);
-    MPICArrayKokkos<double> temporary(3 * mesh.num_nodes);
+    MPICArrayKokkos<double> D_inv(mesh.num_nodes, 3);
+    MPICArrayKokkos<double> zk(mesh.num_nodes, 3);
+    MPICArrayKokkos<double> zkp1(mesh.num_nodes, 3);
+    CArrayKokkos<double> delta_z(mesh.num_nodes, 3);
+    MPICArrayKokkos<double> temporary(mesh.num_nodes, 3);
 
 
     // Algebraic Multigrid variables
@@ -190,6 +190,16 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> P8;
     CArrayKokkos <double> P9;
     CArrayKokkos <double> P10; */
+
+    // setting comm plans to node communication plan for all MPI arrays
+    auto& node_communication_plan = State.node.displacement.comm_plan_;
+    rk.initialize_comm_plan(*node_communication_plan);
+    rkp1.initialize_comm_plan(*node_communication_plan);
+    D_inv.initialize_comm_plan(*node_communication_plan);
+    zk.initialize_comm_plan(*node_communication_plan);
+    zkp1.initialize_comm_plan(*node_communication_plan);
+    temporary.initialize_comm_plan(*node_communication_plan);
+
 
     // Create mesh writer
     MeshWriter mesh_writer;
@@ -378,10 +388,10 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             displacement_iter_kp1.set_values(0);
             rk.set_values(0);
             Kokkos::fence();
-
+            
             // getting inverse of the diagonal like diagonal jacobi
             get_diagonal_inverse(D_inv, K_elem, mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem);
-
+            
             // getting spectral bounds for chebyshev smoothing
             // We pass zk and temporary here safely because they are currently uninitialized 
             // scratch space before the CG loop kicks off.
@@ -391,21 +401,22 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             
             get_chebyshev_bounds(alpha, beta, D_inv, K_elem, mesh.num_nodes, 
                                  mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem,
-                                 zk, temporary, 15); // Running 15 power iterations
-
+                                 zk, temporary, 15, mesh.num_owned_nodes, mesh.shared_tally_owned_nodes); // Running 15 power iterations
+            
             // getting r0 = (02F - 01F) - K * displacement_iter_k
             get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
-
+            
             // smoothing with chebyshev polynomial
             apply_chebyshev_preconditioner(rk, zk, D_inv, zk, delta_z, temporary, K_elem, 
                                            mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, 
                                            alpha, beta, cheb_degree);
-
+            
             // z0 = M_inv * r0,  p0 = z0
             //get_z0(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, mesh.elems_in_node, K_elem, rk, zk);
-            FOR_ALL(i, 0, 3 * mesh.num_nodes, {
+            FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                    j, 0, 3, {
                 //zk(i) = M_inv(i) * rk(i);
-                p(i)  = zk(i);
+                p(i,j)  = zk(i,j);
             });
             Kokkos::fence();
 
@@ -415,8 +426,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // r_k^T * z_k
                 double rktzk = 0.0;
                 double loc_rktzk = 0.0;
-                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rktzk, {
-                    loc_rktzk += rk(i) * zk(i);
+                FOR_REDUCE_SUM(i, 0, (int)mesh.num_nodes, 
+                               j, 0, 3, loc_rktzk, {
+                    loc_rktzk += rk(i,j) * zk(i,j);
                 }, rktzk);
                 Kokkos::fence();
 
@@ -428,7 +440,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
                 FOR_ALL(i, 0, (int)mesh.num_nodes,
                         j, 0, 3, {
-                    displacement_iter_kp1(i, j) += alpha_k * p(3*i + j);
+                    displacement_iter_kp1(i, j) += alpha_k * p(i, j);
                 });
                 Kokkos::fence();
 
@@ -450,8 +462,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // check convergence on true residual norm
                 double rkp1trkp1 = 0.0;
                 double loc_rkp1trkp1 = 0.0;
-                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1trkp1, {
-                    loc_rkp1trkp1 += rkp1(i) * rkp1(i);
+                FOR_REDUCE_SUM(i, 0, (int)mesh.num_nodes, 
+                               j, 0, 3, loc_rkp1trkp1, {
+                    loc_rkp1trkp1 += rkp1(i,j) * rkp1(i,j);
                 }, rkp1trkp1);
                 Kokkos::fence();
                 MPI_Allreduce(MPI_IN_PLACE, &rkp1trkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -464,8 +477,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // r_{k+1}^T * z_{k+1}
                 double rkp1tzkp1 = 0.0;
                 double loc_rkp1tzkp1 = 0.0;
-                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1tzkp1, {
-                    loc_rkp1tzkp1 += rkp1(i) * zkp1(i);
+                FOR_REDUCE_SUM(i, 0, (int)mesh.num_nodes,
+                               j, 0, 3, loc_rkp1tzkp1, {
+                    loc_rkp1tzkp1 += rkp1(i,j) * zkp1(i,j);
                 }, rkp1tzkp1);
                 Kokkos::fence();
                 MPI_Allreduce(MPI_IN_PLACE, &rkp1tzkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -474,14 +488,16 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 double beta_k = rkp1tzkp1 / (rktzk + 1e-16);
 
                 // p_{k+1} = z_{k+1} + beta_k * p_k
-                FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                    p(i) = zkp1(i) + beta_k * p(i);
+                FOR_ALL(i, 0, (int)mesh.num_nodes,
+                        j, 0, 3, {
+                    p(i,j) = zkp1(i,j) + beta_k * p(i,j);
                 });
 
                 // update rk, zk for next iteration
-                FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                    rk(i) = rkp1(i);
-                    zk(i) = zkp1(i);
+                FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                        j, 0, 3, {
+                    rk(i,j) = rkp1(i,j);
+                    zk(i,j) = zkp1(i,j);
                 });
                 Kokkos::fence();
 

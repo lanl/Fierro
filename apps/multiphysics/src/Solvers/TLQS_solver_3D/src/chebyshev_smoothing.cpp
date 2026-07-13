@@ -41,7 +41,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
                                             const MPICArrayKokkos<double>& zkp1,
-                                            const CArrayKokkos<double>& D_inv,
+                                            const MPICArrayKokkos<double>& D_inv,
                                             const MPICArrayKokkos<double>& zk,
                                             const CArrayKokkos<double>& delta_z,
                                             const MPICArrayKokkos<double>& temporary,
@@ -61,15 +61,16 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
     const double c = (beta - alpha) / 2.0;
 
     // --- Step 1: Initialize the 3-term recurrence (Iteration k = 0) ---
-    FOR_ALL(i, 0, total_dofs, {
-        zk(i) = 0.0;
-        delta_z(i) = (1.0 / d) * D_inv(i) * rk(i);
-        zk(i) += delta_z(i);
+    FOR_ALL(i, 0, (int)num_nodes,
+            j, 0, 3, {
+        zk(i,j) = 0.0;
+        delta_z(i,j) = (1.0 / d) * D_inv(i,j) * rk(i,j);
+        zk(i,j) += delta_z(i,j);
     });
     MATAR_FENCE();
 
     double rho_prev = c / (2.0 * d);
-
+    
     // --- Step 2: Recurrence Loop (Iteration k = 1 to degree-1) ---
     for (int k = 1; k < degree; ++k) {
         double rho_k = 1.0 / (2.0 * d / c - rho_prev);
@@ -81,7 +82,6 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
             const size_t num_elems_in_node = elems_in_node.stride(node_gid);
 
             for (size_t p = 0; p < 3; p++) {
-                const size_t global_dof = 3 * node_gid + p;
                 double val = 0.0;
 
                 // Sum contributions from all elements containing this global node
@@ -105,24 +105,24 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
                         
                         for (size_t q = 0; q < 3; q++) {
                             const size_t local_dof_b = 3 * b + q;
-                            const size_t global_dof_b = 3 * node_gid_b + q;
                             
-                            val += K_elem(elem_gid, local_dof, local_dof_b) * zk(global_dof_b);
+                            val += K_elem(elem_gid, local_dof, local_dof_b) * zk(node_gid_b, q);
                         }
                     }
                 }
 
                 // Directly assign to scratch array without atomics or clearing passes
-                temporary(global_dof) = val;
+                temporary(node_gid, p) = val;
             }
         });
         MATAR_FENCE();
         // -----------------------------------------------------------------
 
         // Perform the vector updates using MATAR 1D indexing
-        FOR_ALL(i, 0, total_dofs, {
-            delta_z(i) = rho_k * delta_z(i) + gamma_k * D_inv(i) * (rk(i) - temporary(i));
-            zk(i) += delta_z(i);
+        FOR_ALL(i, 0, (int)num_nodes,
+                j, 0, 3, {
+            delta_z(i,j) = rho_k * delta_z(i,j) + gamma_k * D_inv(i,j) * (rk(i,j) - temporary(i,j));
+            zk(i,j) += delta_z(i,j);
         });
         MATAR_FENCE();
 
@@ -130,8 +130,9 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
     }
 
     // --- Step 3: Finalize Output ---
-    FOR_ALL(i, 0, total_dofs, {
-        zkp1(i) = zk(i);
+    FOR_ALL(i, 0, (int)num_nodes,
+            j, 0, 3, {
+        zkp1(i,j) = zk(i,j);
     });
     MATAR_FENCE();
 }
@@ -146,7 +147,7 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
  * @param num_nodes_in_elem  Number of nodes per element (e.g., 64 for cubic hex)
  * @param nodes_in_elem      Array mapping element ID to its global node IDs
  */
-void TLQS3D::get_diagonal_inverse(CArrayKokkos<double>& D_inv,
+void TLQS3D::get_diagonal_inverse(MPICArrayKokkos<double>& D_inv,
                                   const CArrayKokkos<double>& K_elem,
                                   const size_t num_nodes,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_node,
@@ -157,7 +158,6 @@ void TLQS3D::get_diagonal_inverse(CArrayKokkos<double>& D_inv,
         const size_t num_elems_in_node = elems_in_node.stride(node_gid);
         
         for (size_t p_dir = 0; p_dir < 3; p_dir++) {
-            const size_t global_dof = 3 * node_gid + p_dir;
             double diag = 0.0;
             
             for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
@@ -179,10 +179,11 @@ void TLQS3D::get_diagonal_inverse(CArrayKokkos<double>& D_inv,
             }
             
             // Invert with safety epsilon protection
-            D_inv(global_dof) = 1.0 / (diag + 1e-16);
+            D_inv(node_gid, p_dir) = 1.0 / (diag + 1e-16);
         }
     });
     MATAR_FENCE();
+    D_inv.communicate();
 }
 
 /**
@@ -191,7 +192,7 @@ void TLQS3D::get_diagonal_inverse(CArrayKokkos<double>& D_inv,
  */
 void TLQS3D::get_chebyshev_bounds(double& alpha,
                                   double& beta,
-                                  const CArrayKokkos<double>& D_inv,
+                                  const MPICArrayKokkos<double>& D_inv,
                                   const CArrayKokkos<double>& K_elem,
                                   const size_t num_nodes,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_node,
@@ -199,26 +200,30 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
                                   const DCArrayKokkos<size_t>& nodes_in_elem,
                                   MPICArrayKokkos<double>& v_scratch,
                                   MPICArrayKokkos<double>& w_scratch,
-                                  const int max_iters)
+                                  const int max_iters,
+                                  const int num_owned_nodes,
+                                  const DCArrayKokkos<bool> shared_tally_owned_nodes)
 {
-    const size_t total_dofs = 3 * num_nodes;
     double lambda_max = 0.0;
 
     // Initialize initial guess vector v to 1.0
-    FOR_ALL(i, 0, total_dofs, {
-        v_scratch(i) = 1.0;
+    FOR_ALL(i, 0, (int)num_nodes, 
+            j, 0, 3, {
+        v_scratch(i,j) = 1.0;
     });
     MATAR_FENCE();
 
     // --- Power Iteration Loop ---
     for (int iter = 0; iter < max_iters; ++iter) {
+
+        // updating stale indices from previous iteration
+        v_scratch.communicate();
         
         // 1. FUSED KERNEL: Compute Matrix-Free Product AND Scale by D_inv directly
         FOR_ALL(node_gid, 0, num_nodes, {
             const size_t num_elems_in_node = elems_in_node.stride(node_gid);
 
             for (size_t p = 0; p < 3; p++) {
-                const size_t global_dof = 3 * node_gid + p;
                 double val = 0.0;
 
                 for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
@@ -239,15 +244,14 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
                         
                         for (size_t q = 0; q < 3; q++) {
                             const size_t local_dof_b = 3 * b + q;
-                            const size_t global_dof_b = 3 * node_gid_b + q;
                             
-                            val += K_elem(elem_gid, local_dof, local_dof_b) * v_scratch(global_dof_b);
+                            val += K_elem(elem_gid, local_dof, local_dof_b) * v_scratch(node_gid_b, q);
                         }
                     }
                 }
                 
                 // Fused operation: Scale the accumulated stiffness action by D_inv 
-                w_scratch(global_dof) = val * D_inv(global_dof);
+                w_scratch(node_gid, p) = val * D_inv(node_gid, p);
             }
         });
         MATAR_FENCE();
@@ -257,13 +261,15 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
         double v_dot_v = 0.0;
 
         double local_v_dot_w = 0.0;
-        FOR_REDUCE_SUM(i, 0, total_dofs, local_v_dot_w, {
-            local_v_dot_w += v_scratch(i) * w_scratch(i);
+        FOR_REDUCE_SUM(i, 0, (int)num_nodes,
+                       j, 0, 3, local_v_dot_w, {
+            local_v_dot_w += v_scratch(i,j) * w_scratch(i,j);
         }, v_dot_w);
 
         double local_v_dot_v = 0.0;
-        FOR_REDUCE_SUM(i, 0, total_dofs, local_v_dot_v, {
-            local_v_dot_v += v_scratch(i) * v_scratch(i);
+        FOR_REDUCE_SUM(i, 0, (int)num_nodes, 
+                       j, 0, 3, local_v_dot_v, {
+            local_v_dot_v += v_scratch(i,j) * v_scratch(i,j);
         }, v_dot_v);
         MATAR_FENCE();
 
@@ -273,15 +279,17 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
         // 3. Normalize w vector to update our guess v: v = w / ||w||_2
         double w_norm2 = 0.0;
         double local_w_norm2 = 0.0;
-        FOR_REDUCE_SUM(i, 0, total_dofs, local_w_norm2, {
-            local_w_norm2 += w_scratch(i) * w_scratch(i);
+        FOR_REDUCE_SUM(i, 0, (int)num_nodes, 
+                       j, 0, 3, local_w_norm2, {
+            local_w_norm2 += w_scratch(i,j) * w_scratch(i,j);
         }, w_norm2);
         MATAR_FENCE();
         
         double inv_norm = 1.0 / (sqrt(w_norm2) + 1e-16);
 
-        FOR_ALL(i, 0, total_dofs, {
-            v_scratch(i) = w_scratch(i) * inv_norm;
+        FOR_ALL(i, 0, (int)num_nodes,
+                j, 0, 3, {
+            v_scratch(i,j) = w_scratch(i,j) * inv_norm;
         });
         MATAR_FENCE();
     }

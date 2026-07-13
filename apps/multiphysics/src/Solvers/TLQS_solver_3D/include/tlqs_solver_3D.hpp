@@ -374,7 +374,7 @@ public:
     // **** Functions defined in chebyshev_smoothing.cpp **** //
     void apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
         const MPICArrayKokkos<double>& zkp1,
-        const CArrayKokkos<double>& D_inv,
+        const MPICArrayKokkos<double>& D_inv,
         const MPICArrayKokkos<double>& zk,
         const CArrayKokkos<double>& delta_z,
         const MPICArrayKokkos<double>& temporary,
@@ -388,7 +388,7 @@ public:
         const int degree
     );
 
-    void get_diagonal_inverse(CArrayKokkos<double>& D_inv,
+    void get_diagonal_inverse(MPICArrayKokkos<double>& D_inv,
         const CArrayKokkos<double>& K_elem,
         const size_t num_nodes,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
@@ -398,7 +398,7 @@ public:
 
     void get_chebyshev_bounds(double& alpha,
         double& beta,
-        const CArrayKokkos<double>& D_inv,
+        const MPICArrayKokkos<double>& D_inv,
         const CArrayKokkos<double>& K_elem,
         const size_t num_nodes,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
@@ -406,7 +406,9 @@ public:
         const DCArrayKokkos<size_t>& nodes_in_elem,
         MPICArrayKokkos<double>& v_scratch,
         MPICArrayKokkos<double>& w_scratch,
-        const int max_iters
+        const int max_iters,
+        const int num_owned_nodes,
+        const DCArrayKokkos<bool> shared_tally_owned_nodes
     );
     
 };
