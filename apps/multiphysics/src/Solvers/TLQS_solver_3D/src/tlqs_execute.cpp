@@ -426,16 +426,19 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // r_k^T * z_k
                 double rktzk = 0.0;
                 double loc_rktzk = 0.0;
-                FOR_REDUCE_SUM(i, 0, (int)mesh.num_nodes, 
-                               j, 0, 3, loc_rktzk, {
-                    loc_rktzk += rk(i,j) * zk(i,j);
+                FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_rktzk, {
+                    if(mesh.shared_tally_owned_nodes(i)) {
+                        for (int j = 0; j < 3; j++) {
+                            loc_rktzk += rk(i,j) * zk(i,j);
+                        }
+                    }
                 }, rktzk);
                 Kokkos::fence();
 
                 MPI_Allreduce(MPI_IN_PLACE, &rktzk, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                 // alpha_k = (r_k^T * z_k) / (p_k^T * K * p_k)
-                double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rktzk, p);
+                double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.num_owned_nodes, mesh.elems_in_node, mesh.nodes_in_elem, K_elem, rktzk, p, temporary, mesh.shared_tally_owned_nodes);
 
                 // displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
                 FOR_ALL(i, 0, (int)mesh.num_nodes,
@@ -462,9 +465,12 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // check convergence on true residual norm
                 double rkp1trkp1 = 0.0;
                 double loc_rkp1trkp1 = 0.0;
-                FOR_REDUCE_SUM(i, 0, (int)mesh.num_nodes, 
-                               j, 0, 3, loc_rkp1trkp1, {
-                    loc_rkp1trkp1 += rkp1(i,j) * rkp1(i,j);
+                FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_rkp1trkp1, {
+                    if(mesh.shared_tally_owned_nodes(i)){
+                        for (int j = 0; j < 3; j++) {
+                            loc_rkp1trkp1 += rkp1(i,j) * rkp1(i,j);
+                        }
+                    }
                 }, rkp1trkp1);
                 Kokkos::fence();
                 MPI_Allreduce(MPI_IN_PLACE, &rkp1trkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -477,9 +483,12 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // r_{k+1}^T * z_{k+1}
                 double rkp1tzkp1 = 0.0;
                 double loc_rkp1tzkp1 = 0.0;
-                FOR_REDUCE_SUM(i, 0, (int)mesh.num_nodes,
-                               j, 0, 3, loc_rkp1tzkp1, {
-                    loc_rkp1tzkp1 += rkp1(i,j) * zkp1(i,j);
+                FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_rkp1tzkp1, {
+                    if(mesh.shared_tally_owned_nodes(i)){
+                        for (int j = 0; j < 3; j++) {
+                            loc_rkp1tzkp1 += rkp1(i,j) * zkp1(i,j);
+                        }
+                    }
                 }, rkp1tzkp1);
                 Kokkos::fence();
                 MPI_Allreduce(MPI_IN_PLACE, &rkp1tzkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -659,10 +668,15 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             double norm = sqrt(norm_num / norm_den); */
             double norm = 0.0;
             double loc_norm = 0.0;
-            FOR_REDUCE_SUM(i, 0, (int)mesh.num_nodes, 
-                           j, 0, 3, loc_norm, {
-                loc_norm += curr_anderson_residual(i,j) * curr_anderson_residual(i,j);
+            FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_norm, {
+                if(mesh.shared_tally_owned_nodes(i)){
+                    for (int j = 0; j < 3; j++) {
+                        loc_norm += curr_anderson_residual(i,j) * curr_anderson_residual(i,j);
+                    }
+                }
             }, norm);
+
+            MPI_Allreduce(MPI_IN_PLACE, &norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
             std::cout << "ITER: " << iter << "   ANDERSON RESIDUAL NORM: " << norm << std::endl;
             if (norm < 1E-12 && iter > 1) {

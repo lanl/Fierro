@@ -44,7 +44,7 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
                                             const MPICArrayKokkos<double>& D_inv,
                                             const MPICArrayKokkos<double>& zk,
                                             const CArrayKokkos<double>& delta_z,
-                                            const MPICArrayKokkos<double>& temporary,
+                                            MPICArrayKokkos<double>& temporary,
                                             const CArrayKokkos<double>& K_elem,
                                             const size_t num_nodes,
                                             const RaggedRightArrayKokkos<size_t>& elems_in_node,
@@ -54,8 +54,6 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
                                             const double beta,
                                             const int degree)
 {
-    const size_t total_dofs = 3 * num_nodes;
-    
     // Compute Chebyshev parameters based on spectral bounds
     const double d = (beta + alpha) / 2.0;
     const double c = (beta - alpha) / 2.0;
@@ -117,6 +115,7 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
         });
         MATAR_FENCE();
         // -----------------------------------------------------------------
+        temporary.communicate();
 
         // Perform the vector updates using MATAR 1D indexing
         FOR_ALL(i, 0, (int)num_nodes,
@@ -215,9 +214,6 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
 
     // --- Power Iteration Loop ---
     for (int iter = 0; iter < max_iters; ++iter) {
-
-        // updating stale indices from previous iteration
-        v_scratch.communicate();
         
         // 1. FUSED KERNEL: Compute Matrix-Free Product AND Scale by D_inv directly
         FOR_ALL(node_gid, 0, num_nodes, {
@@ -261,17 +257,27 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
         double v_dot_v = 0.0;
 
         double local_v_dot_w = 0.0;
-        FOR_REDUCE_SUM(i, 0, (int)num_nodes,
-                       j, 0, 3, local_v_dot_w, {
-            local_v_dot_w += v_scratch(i,j) * w_scratch(i,j);
+        FOR_REDUCE_SUM(i, 0, (int)num_owned_nodes, local_v_dot_w, {
+            if(shared_tally_owned_nodes(i)){
+                for (int j = 0; j < 3; j++) {
+                    local_v_dot_w += v_scratch(i,j) * w_scratch(i,j);
+                }
+            }
         }, v_dot_w);
 
+        MPI_Allreduce(MPI_IN_PLACE, &v_dot_w, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
         double local_v_dot_v = 0.0;
-        FOR_REDUCE_SUM(i, 0, (int)num_nodes, 
-                       j, 0, 3, local_v_dot_v, {
-            local_v_dot_v += v_scratch(i,j) * v_scratch(i,j);
+        FOR_REDUCE_SUM(i, 0, (int)num_owned_nodes, local_v_dot_v, {
+            if(shared_tally_owned_nodes(i)){
+                for (int j = 0; j < 3; j++) {
+                    local_v_dot_v += v_scratch(i,j) * v_scratch(i,j);
+                }
+            }
         }, v_dot_v);
         MATAR_FENCE();
+
+        MPI_Allreduce(MPI_IN_PLACE, &v_dot_v, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         // Calculate current estimate of the maximum eigenvalue
         lambda_max = v_dot_w / (v_dot_v + 1e-16);
@@ -279,19 +285,27 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
         // 3. Normalize w vector to update our guess v: v = w / ||w||_2
         double w_norm2 = 0.0;
         double local_w_norm2 = 0.0;
-        FOR_REDUCE_SUM(i, 0, (int)num_nodes, 
-                       j, 0, 3, local_w_norm2, {
-            local_w_norm2 += w_scratch(i,j) * w_scratch(i,j);
+        FOR_REDUCE_SUM(i, 0, (int)num_owned_nodes, local_w_norm2, {
+            if(shared_tally_owned_nodes(i)){
+                for (int j = 0; j < 3; j++) {
+                    local_w_norm2 += w_scratch(i,j) * w_scratch(i,j);
+                }
+            }
         }, w_norm2);
         MATAR_FENCE();
+
+        MPI_Allreduce(MPI_IN_PLACE, &w_norm2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         
         double inv_norm = 1.0 / (sqrt(w_norm2) + 1e-16);
 
-        FOR_ALL(i, 0, (int)num_nodes,
+        FOR_ALL(i, 0, (int)num_owned_nodes,
                 j, 0, 3, {
             v_scratch(i,j) = w_scratch(i,j) * inv_norm;
         });
         MATAR_FENCE();
+
+        // updating stale indices for following iteration
+        v_scratch.communicate();
     }
 
     // --- 4. Apply Heuristic Bounding Box ---
