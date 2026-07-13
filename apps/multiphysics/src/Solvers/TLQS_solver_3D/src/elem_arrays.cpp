@@ -41,7 +41,7 @@ void TLQS3D::get_gradients(
     ViewCArrayKokkos <size_t>& nodes_in_elem,
     const MPICArrayKokkos <double>& coords_t0,
     const MPICArrayKokkos <double>& displacement,
-    const MPICArrayKokkos <double>& displacement_step,
+    const CArrayKokkos <double>& displacement_step,
     ViewCArrayKokkos <double>& gauss_point_grad_basis,
     double grad_u[3][3],
     double inv_J[3][3],

@@ -216,7 +216,7 @@ public:
     const BoundaryCondition_t& BoundaryConditions,
     const CArrayKokkos<double>& K_elem,
     const CArrayKokkos<double>& F_elem,
-    const MPICArrayKokkos<double>& displacement_step,
+    const CArrayKokkos<double>& displacement_step,
     const double dt,
     const double time_value,
     const double time_start,
@@ -247,7 +247,7 @@ public:
         ViewCArrayKokkos <size_t>& nodes_in_elem,
         const MPICArrayKokkos <double>& coords_t0,
         const MPICArrayKokkos <double>& displacement,
-        const MPICArrayKokkos <double>& displacement_step,
+        const CArrayKokkos <double>& displacement_step,
         ViewCArrayKokkos <double>& gauss_point_grad_basis,
         double grad_u[3][3],
         double inv_J[3][3],
@@ -281,8 +281,8 @@ public:
         const DCArrayKokkos<size_t>& nodes_in_elem,
         const CArrayKokkos<double>& F_elem,
         const CArrayKokkos<double>& K_elem,
-        const MPICArrayKokkos<double>& displacement_iter,
-        const CArrayKokkos<double>& r0
+        const CArrayKokkos<double>& displacement_iter,
+        const MPICArrayKokkos<double>& r0
     );
 
     // inputs: mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p
@@ -302,10 +302,10 @@ public:
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
         const CArrayKokkos<double>& K_elem,
-        const CArrayKokkos<double>& rk,
+        const MPICArrayKokkos<double>& rk,
         const CArrayKokkos<double>& p,
         const double alpha,
-        const CArrayKokkos<double>& rkp1
+        const MPICArrayKokkos<double>& rkp1
     );
 
     // **** Functions defined in post_process.cpp **** //
@@ -372,12 +372,12 @@ public:
     ); */
 
     // **** Functions defined in chebyshev_smoothing.cpp **** //
-    void apply_chebyshev_preconditioner(const CArrayKokkos<double>& rk,
-        const CArrayKokkos<double>& zkp1,
+    void apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
+        const MPICArrayKokkos<double>& zkp1,
         const CArrayKokkos<double>& D_inv,
-        const CArrayKokkos<double>& zk,
+        const MPICArrayKokkos<double>& zk,
         const CArrayKokkos<double>& delta_z,
-        const CArrayKokkos<double>& temporary,
+        const MPICArrayKokkos<double>& temporary,
         const CArrayKokkos<double>& K_elem,
         const size_t num_nodes,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
@@ -404,8 +404,8 @@ public:
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
-        CArrayKokkos<double>& v_scratch,
-        CArrayKokkos<double>& w_scratch,
+        MPICArrayKokkos<double>& v_scratch,
+        MPICArrayKokkos<double>& w_scratch,
         const int max_iters
     );
     

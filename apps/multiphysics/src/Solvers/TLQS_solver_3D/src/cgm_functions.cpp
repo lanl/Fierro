@@ -42,8 +42,8 @@ void TLQS3D::get_r0(
     const DCArrayKokkos <size_t>& nodes_in_elem,
     const CArrayKokkos <double>& F_elem,
     const CArrayKokkos <double>& K_elem,
-    const MPICArrayKokkos <double>& displacement_iter,
-    const CArrayKokkos <double>& r0
+    const CArrayKokkos <double>& displacement_iter,
+    const MPICArrayKokkos <double>& r0
 )
 {
     // getting r0 = (02F - 01F) - K * displacement_iter
@@ -126,6 +126,8 @@ double TLQS3D::get_alpha(
         }
     }, ptkp);
     Kokkos::fence();
+
+    MPI_Allreduce(MPI_IN_PLACE, &ptkp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     //std::cout << "PTKP: " << ptkp << std::endl;
 
     return rktrk / (ptkp+1E-16);
@@ -137,10 +139,10 @@ void TLQS3D::get_rkp1(
     const size_t num_nodes_in_elem,
     const DCArrayKokkos<size_t>& nodes_in_elem,
     const CArrayKokkos<double>& K_elem,
-    const CArrayKokkos<double>& rk,
+    const MPICArrayKokkos<double>& rk,
     const CArrayKokkos<double>& p,
     const double alpha,
-    const CArrayKokkos<double>& rkp1)
+    const MPICArrayKokkos<double>& rkp1)
 {
     // r_{k+1} = r_k - alpha * K * p
     FOR_ALL(node_gid, 0, num_nodes, {

@@ -39,12 +39,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * @brief Applies a matrix-free Chebyshev polynomial preconditioner using a thread-safe,
  * node-based gathering approach (no atomic operations required).
  */
-void TLQS3D::apply_chebyshev_preconditioner(const CArrayKokkos<double>& rk,
-                                            const CArrayKokkos<double>& zkp1,
+void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
+                                            const MPICArrayKokkos<double>& zkp1,
                                             const CArrayKokkos<double>& D_inv,
-                                            const CArrayKokkos<double>& zk,
+                                            const MPICArrayKokkos<double>& zk,
                                             const CArrayKokkos<double>& delta_z,
-                                            const CArrayKokkos<double>& temporary,
+                                            const MPICArrayKokkos<double>& temporary,
                                             const CArrayKokkos<double>& K_elem,
                                             const size_t num_nodes,
                                             const RaggedRightArrayKokkos<size_t>& elems_in_node,
@@ -197,8 +197,8 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_node,
                                   const size_t num_nodes_in_elem,
                                   const DCArrayKokkos<size_t>& nodes_in_elem,
-                                  CArrayKokkos<double>& v_scratch,
-                                  CArrayKokkos<double>& w_scratch,
+                                  MPICArrayKokkos<double>& v_scratch,
+                                  MPICArrayKokkos<double>& w_scratch,
                                   const int max_iters)
 {
     const size_t total_dofs = 3 * num_nodes;

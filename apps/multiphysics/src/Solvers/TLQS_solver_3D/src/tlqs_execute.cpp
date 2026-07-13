@@ -106,8 +106,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // conjugate gradient method vectors
     CArrayKokkos <double> p(3*mesh.num_nodes);
-    CArrayKokkos <double> rk(3*mesh.num_nodes);
-    CArrayKokkos <double> rkp1(3*mesh.num_nodes);
+    MPICArrayKokkos <double> rk(3*mesh.num_nodes);
+    MPICArrayKokkos <double> rkp1(3*mesh.num_nodes);
 
     // Anderson acceleration variables
     size_t window_size = 1;
@@ -153,16 +153,16 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // displacement_iter_kp1: result of the CG solve for this Picard iteration G(x_k),
     //                        then overwritten with the Anderson-accelerated update x_{k+1}.
     //                        Reset to zero before every CG solve.
-    MPICArrayKokkos <double> displacement_step(mesh.num_nodes,3); /// current load-step displacement estimate
-    MPICArrayKokkos <double> displacement_iter_k(mesh.num_nodes,3);   /// x_k  (Picard iterate in)
-    MPICArrayKokkos <double> displacement_iter_kp1(mesh.num_nodes,3); /// G(x_k) then x_{k+1}
+    CArrayKokkos <double> displacement_step(mesh.num_nodes,3); /// current load-step displacement estimate
+    CArrayKokkos <double> displacement_iter_k(mesh.num_nodes,3);   /// x_k  (Picard iterate in)
+    CArrayKokkos <double> displacement_iter_kp1(mesh.num_nodes,3); /// G(x_k) then x_{k+1}
 
     // variables for chebyshev smoothing
     CArrayKokkos<double> D_inv(3 * mesh.num_nodes);
-    CArrayKokkos<double> zk(3 * mesh.num_nodes);
-    CArrayKokkos<double> zkp1(3 * mesh.num_nodes);
+    MPICArrayKokkos<double> zk(3 * mesh.num_nodes);
+    MPICArrayKokkos<double> zkp1(3 * mesh.num_nodes);
     CArrayKokkos<double> delta_z(3 * mesh.num_nodes);
-    CArrayKokkos<double> temporary(3 * mesh.num_nodes);
+    MPICArrayKokkos<double> temporary(3 * mesh.num_nodes);
 
 
     // Algebraic Multigrid variables
@@ -267,7 +267,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // dirichlet (displacement) type
             boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
-            displacement_step.communicate();
 
             auto point_A = std::chrono::steady_clock::now();
             auto elapsed_A = std::chrono::duration_cast<std::chrono::milliseconds>(point_A - start_time).count();
@@ -421,6 +420,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 }, rktzk);
                 Kokkos::fence();
 
+                MPI_Allreduce(MPI_IN_PLACE, &rktzk, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
                 // alpha_k = (r_k^T * z_k) / (p_k^T * K * p_k)
                 double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rktzk, p);
 
@@ -453,6 +454,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     loc_rkp1trkp1 += rkp1(i) * rkp1(i);
                 }, rkp1trkp1);
                 Kokkos::fence();
+                MPI_Allreduce(MPI_IN_PLACE, &rkp1trkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 double norm = sqrt(rkp1trkp1);
                 //std::cout << "CGM iter " << cgm_iter << " residual norm: " << norm << "\n";
                 if (norm < 1.0/*1E-10*/) {
@@ -466,6 +468,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     loc_rkp1tzkp1 += rkp1(i) * zkp1(i);
                 }, rkp1tzkp1);
                 Kokkos::fence();
+                MPI_Allreduce(MPI_IN_PLACE, &rkp1tzkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                 // beta_k = (r_{k+1}^T * z_{k+1}) / (r_k^T * z_k)
                 double beta_k = rkp1tzkp1 / (rktzk + 1e-16);
