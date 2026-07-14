@@ -7371,6 +7371,10 @@ public:
         }
         MPI_Barrier(MPI_COMM_WORLD);
 
+        int rank;
+        int world_size;
+        mesh_io_mpi_detail::query_world_rank_size(rank,world_size);
+
         // -----------------------------------------------------------------------
         //  FILE 1 – Material-point state
         //
@@ -7414,9 +7418,11 @@ public:
             FILE* out_elem_state;
             char  filename[128];
             int   max_len = sizeof filename;
-            snprintf(filename, max_len,
-                     "state/mat_pt_state_t_%6.4e_mat_id_%d.txt",
-                     time_value, mat_id);
+            if (world_size == 1) {
+                snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e_mat_id_%d.txt", time_value, mat_id);
+            } else {
+                snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e_mat_id_%d_rank_%d.txt", time_value, mat_id, rank);
+            }
 
             out_elem_state = fopen(filename, "w");
             if (!out_elem_state) {
@@ -7508,10 +7514,6 @@ public:
                 }
             }
             fprintf(out_elem_state, "\n");
-
-            int rank;
-            int world_size;
-            mesh_io_mpi_detail::query_world_rank_size(rank,world_size);
 
             // ---- Data rows --------------------------------------------------
             //
@@ -7610,7 +7612,11 @@ public:
             FILE* out_point_state;
             char  filename[128];
             int   max_len = sizeof filename;
-            snprintf(filename, max_len, "state/node_state_t_%6.4e.txt", time_value);
+            if (world_size == 1) {
+                snprintf(filename, max_len, "state/node_state_t_%6.4e.txt", time_value);
+            } else {
+                snprintf(filename, max_len, "state/node_state_t_%6.4e_rank_%d.txt", time_value, rank);
+            }
 
             out_point_state = fopen(filename, "w");
             if (!out_point_state) {
@@ -7814,6 +7820,10 @@ public:
         //}
         MPI_Barrier(MPI_COMM_WORLD);
 
+        int rank;
+        int world_size;
+        mesh_io_mpi_detail::query_world_rank_size(rank,world_size);
+
         // -----------------------------------------------------------------------
         //  FILE 1 – Material-point (Gauss-point) state
         //
@@ -7843,7 +7853,11 @@ public:
             FILE* out_elem_state;
             char  filename[128];
             int   max_len = sizeof filename;
-            snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e_mat_id_%d.txt", time_value, mat_id);
+            if (world_size == 1) {
+                snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e_mat_id_%d.txt", time_value, mat_id);
+            } else {
+                snprintf(filename, max_len, "state/mat_pt_state_t_%6.4e_mat_id_%d_rank_%d.txt", time_value, mat_id, rank);
+            }
 
             out_elem_state = fopen(filename, "w");
             if (!out_elem_state) {
@@ -7927,10 +7941,6 @@ public:
                 }
             }
             fprintf(out_elem_state, "\n");
-
-            int rank;
-            int world_size;
-            mesh_io_mpi_detail::query_world_rank_size(rank,world_size);
 
             // ---- Data rows --------------------------------------------------
             for (size_t elem = 0; elem < State.MaterialToMeshMaps.num_mat_elems.host(mat_id); elem++) {
@@ -8038,7 +8048,11 @@ public:
             FILE* out_point_state;
             char  filename[128];
             int   max_len = sizeof filename;
-            snprintf(filename, max_len, "state/node_state_t_%6.4e.txt", time_value);
+            if (world_size == 1) {
+                snprintf(filename, max_len, "state/node_state_t_%6.4e.txt", time_value);
+            } else {
+                snprintf(filename, max_len, "state/node_state_t_%6.4e_rank_%d.txt", time_value, rank);
+            }
     
             out_point_state = fopen(filename, "w");
             if (!out_point_state) {
