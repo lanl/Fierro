@@ -206,8 +206,8 @@ void sample_thermo_at_kine_gll(const DCArrayKokkos<double>& thermo_coef_per_elem
 
     std::vector<double> xi_kine(nk);
     std::vector<double> xi_thermo(nt);
-    for (size_t i = 0; i < nk; ++i) xi_kine[i]   = kine_ref.dof_positions_1d(i);
-    for (size_t j = 0; j < nt; ++j) xi_thermo[j] = thermo_ref.dof_positions_1d(j);
+    for (size_t i = 0; i < nk; ++i) xi_kine[i]   = kine_ref.dof_positions_1d.host(i);
+    for (size_t j = 0; j < nt; ++j) xi_thermo[j] = thermo_ref.dof_positions_1d.host(j);
 
     for (size_t i = 0; i < nk; ++i) {
         for (size_t j = 0; j < nt; ++j) {
@@ -292,7 +292,7 @@ void sample_qpt_field_element_average(const DCArrayKokkos<double>& qpt_field,
     const size_t nk = kine_ref.num_dofs_1d;
     const size_t n_qpts_3d = nq * nq * nq;
 
-    const CArrayKokkos<double>& w1 = quad.qpt_weights_1d;
+    const DCArrayKokkos<double>& w1 = quad.qpt_weights_1d;
 
     FOR_ALL(elem_gid, 0, num_elems, {
         double num = 0.0;
@@ -366,8 +366,8 @@ void write_lagrange_thermo_hex_vtu(const std::string&            path,
     const size_t nv_3d     = nv_1d * nv_1d * nv_1d;
 
     std::vector<double> xi_kine(nk), xi_thermo(nt), xi_equi(nv_1d);
-    for (size_t a = 0; a < nk; ++a) xi_kine[a]   = kine_ref.dof_positions_1d(a);
-    for (size_t j = 0; j < nt; ++j) xi_thermo[j] = thermo_ref.dof_positions_1d(j);
+    for (size_t a = 0; a < nk; ++a) xi_kine[a]   = kine_ref.dof_positions_1d.host(a);
+    for (size_t j = 0; j < nt; ++j) xi_thermo[j] = thermo_ref.dof_positions_1d.host(j);
     for (size_t i = 0; i < nv_1d; ++i) {
         xi_equi[i] = -1.0 + 2.0 * static_cast<double>(i) / static_cast<double>(vis_order);
     }
@@ -530,7 +530,7 @@ void write_lagrange_kine_hex_vtu(const std::string&            path,
     const size_t nv_3d     = nv_1d * nv_1d * nv_1d;
 
     std::vector<double> xi_kine(nk), xi_equi(nv_1d);
-    for (size_t a = 0; a < nk; ++a) xi_kine[a] = kine_ref.dof_positions_1d(a);
+    for (size_t a = 0; a < nk; ++a) xi_kine[a] = kine_ref.dof_positions_1d.host(a);
     for (size_t i = 0; i < nv_1d; ++i) {
         xi_equi[i] = -1.0 + 2.0 * static_cast<double>(i) / static_cast<double>(vis_order);
     }

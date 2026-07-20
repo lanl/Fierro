@@ -94,6 +94,48 @@ inline void fill_gl_weights_1d(CArrayKokkos<double>& weights_1d, const size_t nu
 }
 
 
+// DCArrayKokkos overloads: the get_*_1D routines fill a device CArrayKokkos,
+// so stage through a temporary and copy into the dual array, then sync host.
+// Keeps these 1D tables host-readable for setup / viz / error kernels.
+inline void fill_gll_nodes_1d(DCArrayKokkos<double>& nodes_1d, const size_t num_nodes_1d)
+{
+    CArrayKokkos<double> tmp(num_nodes_1d, "ao_sgh_gll_nodes_tmp");
+    RUN({
+        get_lobatto_nodes_1D(tmp, static_cast<int>(num_nodes_1d));
+    });
+    Kokkos::fence();
+    FOR_ALL(i, 0, num_nodes_1d, { nodes_1d(i) = tmp(i); });
+    Kokkos::fence();
+    nodes_1d.update_host();
+}
+
+
+inline void fill_gl_nodes_1d(DCArrayKokkos<double>& nodes_1d, const size_t num_nodes_1d)
+{
+    CArrayKokkos<double> tmp(num_nodes_1d, "ao_sgh_gl_nodes_tmp");
+    RUN({
+        get_legendre_nodes_1D(tmp, static_cast<int>(num_nodes_1d));
+    });
+    Kokkos::fence();
+    FOR_ALL(i, 0, num_nodes_1d, { nodes_1d(i) = tmp(i); });
+    Kokkos::fence();
+    nodes_1d.update_host();
+}
+
+
+inline void fill_gl_weights_1d(DCArrayKokkos<double>& weights_1d, const size_t num_qpts_1d)
+{
+    CArrayKokkos<double> tmp(num_qpts_1d, "ao_sgh_gl_weights_tmp");
+    RUN({
+        get_legendre_weights_1D(tmp, static_cast<int>(num_qpts_1d));
+    });
+    Kokkos::fence();
+    FOR_ALL(i, 0, num_qpts_1d, { weights_1d(i) = tmp(i); });
+    Kokkos::fence();
+    weights_1d.update_host();
+}
+
+
 // phi_i(x) = prod_{j != i} (x - x_j) / (x_i - x_j)
 KOKKOS_INLINE_FUNCTION
 void lagrange_basis_1d_at(const ViewCArrayKokkos<double>& basis_out,
@@ -146,16 +188,16 @@ struct quadrature_t
 {
     QuadType type;
     size_t num_qpts_1d;
-    CArrayKokkos<double> qpt_positions_1d;
-    CArrayKokkos<double> qpt_weights_1d;
+    DCArrayKokkos<double> qpt_positions_1d;
+    DCArrayKokkos<double> qpt_weights_1d;
 
     void init(const QuadType type_inp, const size_t num_qpts_1d_inp)
     {
         type        = type_inp;
         num_qpts_1d = num_qpts_1d_inp;
 
-        qpt_positions_1d = CArrayKokkos<double>(num_qpts_1d, "ao_sgh_qpt_positions_1d");
-        qpt_weights_1d   = CArrayKokkos<double>(num_qpts_1d, "ao_sgh_qpt_weights_1d");
+        qpt_positions_1d = DCArrayKokkos<double>(num_qpts_1d, "ao_sgh_qpt_positions_1d");
+        qpt_weights_1d   = DCArrayKokkos<double>(num_qpts_1d, "ao_sgh_qpt_weights_1d");
 
         if (type == QuadType::GaussLegendre) {
             fill_gl_nodes_1d(qpt_positions_1d, num_qpts_1d);
@@ -184,9 +226,9 @@ struct ref_elem_t
     size_t num_qpts_1d;
     size_t num_qpts_in_elem;
 
-    CArrayKokkos<double> dof_positions_1d;
-    CArrayKokkos<double> basis_1d;
-    CArrayKokkos<double> grad_basis_1d;
+    DCArrayKokkos<double> dof_positions_1d;
+    DCArrayKokkos<double> basis_1d;
+    DCArrayKokkos<double> grad_basis_1d;
 
     void init(const size_t        p_order_inp,
               const size_t        num_dim_inp,
@@ -209,7 +251,7 @@ struct ref_elem_t
             num_qpts_in_elem *= num_qpts_1d;
         }
 
-        dof_positions_1d = CArrayKokkos<double>(num_dofs_1d, "ao_sgh_dof_positions_1d");
+        dof_positions_1d = DCArrayKokkos<double>(num_dofs_1d, "ao_sgh_dof_positions_1d");
 
         if (basis_type == BasisType::LagrangeGLL) {
             fill_gll_nodes_1d(dof_positions_1d, num_dofs_1d);
@@ -221,16 +263,16 @@ struct ref_elem_t
             throw std::runtime_error("**** ao_sgh::ref_elem_t: unsupported BasisType ****");
         }
 
-        basis_1d      = CArrayKokkos<double>(num_qpts_1d, num_dofs_1d, "ao_sgh_basis_1d");
-        grad_basis_1d = CArrayKokkos<double>(num_qpts_1d, num_dofs_1d, "ao_sgh_grad_basis_1d");
+        basis_1d      = DCArrayKokkos<double>(num_qpts_1d, num_dofs_1d, "ao_sgh_basis_1d");
+        grad_basis_1d = DCArrayKokkos<double>(num_qpts_1d, num_dofs_1d, "ao_sgh_grad_basis_1d");
 
         const size_t n_dofs_1d = num_dofs_1d;
         const size_t n_qpts_1d = num_qpts_1d;
 
-        CArrayKokkos<double>& dof_pos_ref   = dof_positions_1d;
-        CArrayKokkos<double>& basis_ref     = basis_1d;
-        CArrayKokkos<double>& grad_ref      = grad_basis_1d;
-        const CArrayKokkos<double>& qpt_pos = quad.qpt_positions_1d;
+        DCArrayKokkos<double>& dof_pos_ref   = dof_positions_1d;
+        DCArrayKokkos<double>& basis_ref     = basis_1d;
+        DCArrayKokkos<double>& grad_ref      = grad_basis_1d;
+        const DCArrayKokkos<double>& qpt_pos = quad.qpt_positions_1d;
 
         FOR_ALL(q, 0, n_qpts_1d, {
             ViewCArrayKokkos<double> nodes_view(&dof_pos_ref(0),  n_dofs_1d);
@@ -242,6 +284,10 @@ struct ref_elem_t
             lagrange_basis_grad_1d_at(grad_view,  nodes_view, n_dofs_1d, x);
         });
         Kokkos::fence();
+
+        // Sync the device-filled tables to host for setup / viz reads.
+        basis_1d.update_host();
+        grad_basis_1d.update_host();
     }
 
 

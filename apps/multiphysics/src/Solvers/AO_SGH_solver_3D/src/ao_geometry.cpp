@@ -19,9 +19,9 @@ double compute_total_volume(const DCArrayKokkos<size_t>& nodes_in_elem,
     const size_t n_dofs_1d = kine_ref.num_dofs_1d;
     const size_t n_qpts_1d = quad.num_qpts_1d;
 
-    const CArrayKokkos<double>& basis_1d      = kine_ref.basis_1d;
-    const CArrayKokkos<double>& grad_basis_1d = kine_ref.grad_basis_1d;
-    const CArrayKokkos<double>& qpt_w_1d      = quad.qpt_weights_1d;
+    const DCArrayKokkos<double>& basis_1d      = kine_ref.basis_1d;
+    const DCArrayKokkos<double>& grad_basis_1d = kine_ref.grad_basis_1d;
+    const DCArrayKokkos<double>& qpt_w_1d      = quad.qpt_weights_1d;
 
     double vol_local;
     double total_vol = 0.0;
@@ -109,8 +109,8 @@ void compute_reference_qpt_data(const DCArrayKokkos<size_t>& nodes_in_elem,
     const size_t n_qpts_1d = quad.num_qpts_1d;
     const size_t n_qpts_3d = n_qpts_1d * n_qpts_1d * n_qpts_1d;
 
-    const CArrayKokkos<double>& basis_1d      = kine_ref.basis_1d;
-    const CArrayKokkos<double>& grad_basis_1d = kine_ref.grad_basis_1d;
+    const DCArrayKokkos<double>& basis_1d      = kine_ref.basis_1d;
+    const DCArrayKokkos<double>& grad_basis_1d = kine_ref.grad_basis_1d;
 
     FOR_ALL(elem_gid, 0, num_elems, {
         for (size_t qk = 0; qk < n_qpts_1d; ++qk) {
@@ -206,7 +206,7 @@ double compute_total_volume_from_cache(const DCArrayKokkos<double>& detj0,
 {
     const size_t n_qpts_1d = quad.num_qpts_1d;
     const size_t n_qpts_3d = n_qpts_1d * n_qpts_1d * n_qpts_1d;
-    const CArrayKokkos<double>& qpt_w_1d = quad.qpt_weights_1d;
+    const DCArrayKokkos<double>& qpt_w_1d = quad.qpt_weights_1d;
 
     double vol_local;
     double total_vol = 0.0;
@@ -238,7 +238,7 @@ void compute_mass_per_qpt(const DRaggedRightArrayKokkos<double>& den,
 {
     const size_t n_qpts_1d = quad.num_qpts_1d;
     const size_t n_qpts_3d = n_qpts_1d * n_qpts_1d * n_qpts_1d;
-    const CArrayKokkos<double>& qpt_w_1d = quad.qpt_weights_1d;
+    const DCArrayKokkos<double>& qpt_w_1d = quad.qpt_weights_1d;
 
     FOR_ALL(elem_gid, 0, num_elems, {
         for (size_t qk = 0; qk < n_qpts_1d; ++qk) {
@@ -294,8 +294,8 @@ void compute_jacobian_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
     const size_t n_qpts_3d = nq * nq * nq;
     const size_t num_gauss_pts = num_elems * n_qpts_3d;
 
-    const CArrayKokkos<double>& B  = kine_ref.basis_1d;
-    const CArrayKokkos<double>& dB = kine_ref.grad_basis_1d;
+    const DCArrayKokkos<double>& B  = kine_ref.basis_1d;
+    const DCArrayKokkos<double>& dB = kine_ref.grad_basis_1d;
 
     CArrayKokkos<double> X(num_elems, nk, nk, nk, "ao_sgh_jac_X");
     CArrayKokkos<double> U(num_elems, nk, nk, nq, "ao_sgh_jac_U");
@@ -424,7 +424,7 @@ void compute_position_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
     const size_t nq = quad.num_qpts_1d;
     const size_t n_qpts_3d = nq * nq * nq;
 
-    const CArrayKokkos<double>& B = kine_ref.basis_1d;
+    const DCArrayKokkos<double>& B = kine_ref.basis_1d;
 
     CArrayKokkos<double> X(num_elems, nk, nk, nk, "ao_sgh_pos_X");
     CArrayKokkos<double> U(num_elems, nk, nk, nq, "ao_sgh_pos_U");
@@ -509,8 +509,8 @@ void compute_velocity_gradient_at_qpts(const DCArrayKokkos<size_t>& nodes_in_ele
     const size_t n_qpts_3d = nq * nq * nq;
     const size_t num_gauss_pts = num_elems * n_qpts_3d;
 
-    const CArrayKokkos<double>& B  = kine_ref.basis_1d;
-    const CArrayKokkos<double>& dB = kine_ref.grad_basis_1d;
+    const DCArrayKokkos<double>& B  = kine_ref.basis_1d;
+    const DCArrayKokkos<double>& dB = kine_ref.grad_basis_1d;
 
     CArrayKokkos<double> V_elem(num_elems, nk, nk, nk, "ao_sgh_vgrad_V");
     CArrayKokkos<double> U(num_elems, nk, nk, nq, "ao_sgh_vgrad_U");

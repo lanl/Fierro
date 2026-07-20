@@ -114,7 +114,7 @@ void update_qpt_density_lagrangian(const DCArrayKokkos<double>&           rho0_d
 {
     const size_t nq = quad.num_qpts_1d;
     const size_t n_qpts_3d = nq * nq * nq;
-    const CArrayKokkos<double>& w1 = quad.qpt_weights_1d;
+    const DCArrayKokkos<double>& w1 = quad.qpt_weights_1d;
 
     FOR_ALL(elem_gid, 0, num_elems, {
         for (size_t qk = 0; qk < nq; ++qk) {

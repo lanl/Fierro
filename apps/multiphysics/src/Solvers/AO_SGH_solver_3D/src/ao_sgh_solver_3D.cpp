@@ -214,8 +214,8 @@ inline std::vector<double> build_B_kine_at_thermo(const ref_elem_t& kine_ref,
     const size_t nk = kine_ref.num_dofs_1d;
     const size_t nt = thermo_ref.num_dofs_1d;
     std::vector<double> xi_kine(nk), xi_thermo(nt);
-    for (size_t a = 0; a < nk; ++a) xi_kine[a]   = kine_ref.dof_positions_1d(a);
-    for (size_t j = 0; j < nt; ++j) xi_thermo[j] = thermo_ref.dof_positions_1d(j);
+    for (size_t a = 0; a < nk; ++a) xi_kine[a]   = kine_ref.dof_positions_1d.host(a);
+    for (size_t j = 0; j < nt; ++j) xi_thermo[j] = thermo_ref.dof_positions_1d.host(j);
 
     std::vector<double> B(nt * nk);
     for (size_t i = 0; i < nt; ++i) {
@@ -592,13 +592,18 @@ void AO_SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     // everything else -> region-fill ICs with viscosity on.
     tg_problem = false;
     {
-        const size_t num_ics = SimulationParamaters.InitialConditionSetup.region_ics.size();
-        for (size_t i = 0; i < num_ics; ++i) {
-            if (SimulationParamaters.InitialConditionSetup.region_ics(i).sie_field ==
-                initial_conditions::tgVortexScalar) {
-                tg_problem = true;
+        // region_ics lives in device memory (CArrayKokkos), so scan it on the
+        // device and reduce the match count back to the host.
+        const auto&  region_ics = SimulationParamaters.InitialConditionSetup.region_ics;
+        const size_t num_ics    = region_ics.size();
+        size_t tg_count = 0;
+        size_t tg_local;
+        FOR_REDUCE_SUM(i, 0, num_ics, tg_local, {
+            if (region_ics(i).sie_field == initial_conditions::tgVortexScalar) {
+                tg_local += 1;
             }
-        }
+        }, tg_count);
+        tg_problem = (tg_count > 0);
     }
     use_viscosity = !tg_problem;
 
@@ -838,7 +843,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         }
         const size_t nq = quad.num_qpts_1d;
         const size_t n_qpts_3d = nq * nq * nq;
-        const CArrayKokkos<double>& w1 = quad.qpt_weights_1d;
+        const DCArrayKokkos<double>& w1 = quad.qpt_weights_1d;
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
             const size_t base = elem_gid * n_qpts_3d;
             for (size_t qz = 0; qz < nq; ++qz) {
@@ -1049,9 +1054,9 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 for (size_t qy = 0; qy < nq; ++qy) {
                     for (size_t qx = 0; qx < nq; ++qx) {
                         const size_t g = e * nq * nq * nq + qx + qy * nq + qz * nq * nq;
-                        const double w_dJ = quad.qpt_weights_1d(qx)
-                                          * quad.qpt_weights_1d(qy)
-                                          * quad.qpt_weights_1d(qz)
+                        const double w_dJ = quad.qpt_weights_1d.host(qx)
+                                          * quad.qpt_weights_1d.host(qy)
+                                          * quad.qpt_weights_1d.host(qz)
                                           * State.GaussPoints.detj.host(g);
                         const double px = State.MaterialPoints.coords.host(mat_id, g, 0);
                         const double py = State.MaterialPoints.coords.host(mat_id, g, 1);
