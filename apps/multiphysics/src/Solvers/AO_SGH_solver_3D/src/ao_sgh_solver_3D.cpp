@@ -279,18 +279,18 @@ void interpolate_at_thermo_dofs(FieldFn                            f,
 }
 
 
-// Per-DoF set of velocity from analytic v(x). Iterates kine GLL nodes.
-template<class VelFn>
-void set_velocity_from_fn(VelFn                          vfn,
-                          const DCArrayKokkos<double>&   node_coords,
-                          DCArrayKokkos<double>&         node_vel,
-                          const size_t                   num_nodes)
+// Per-DoF set of the analytic TG velocity at the kine GLL nodes. tg_velocity
+// is called by name (a direct device call); routing it through a function
+// pointer would capture the host address and misbehave on the GPU backends.
+void set_tg_velocity(const DCArrayKokkos<double>&   node_coords,
+                     DCArrayKokkos<double>&         node_vel,
+                     const size_t                   num_nodes)
 {
     FOR_ALL(n, 0, num_nodes, {
         double vx = 0.0;
         double vy = 0.0;
         double vz = 0.0;
-        vfn(node_coords(n, 0), node_coords(n, 1), node_coords(n, 2), vx, vy, vz);
+        tg_velocity(node_coords(n, 0), node_coords(n, 1), node_coords(n, 2), vx, vy, vz);
         node_vel(n, 0) = vx;
         node_vel(n, 1) = vy;
         node_vel(n, 2) = vz;
@@ -613,7 +613,7 @@ void AO_SGH3D::setup(SimulationParameters_t& SimulationParamaters,
         interpolate_at_thermo_dofs(tg_sie, mesh, State.node.coords,
                                    kine_ref, thermo_ref, mat_id,
                                    State.MaterialZones.sie);
-        set_velocity_from_fn(tg_velocity, State.node.coords, State.node.vel, mesh.num_nodes);
+        set_tg_velocity(State.node.coords, State.node.vel, mesh.num_nodes);
     }
     else {
         // region_fill painted MaterialPoints.sie element-uniform (it passes

@@ -218,7 +218,6 @@ public:
         refresh();
     }
 
-private:
     void snapshot(const DCArrayKokkos<double>&           coords,
                   const DCArrayKokkos<double>&           vel,
                   const DRaggedRightArrayKokkos<double>& sie,
@@ -386,6 +385,7 @@ private:
         Kokkos::fence();
     }
 
+private:
     int    S_;
     size_t num_nodes_;
     size_t num_elems_;

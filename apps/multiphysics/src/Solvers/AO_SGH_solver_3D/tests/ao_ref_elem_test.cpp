@@ -36,6 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <cstdio>
 #include <cstdlib>
 #include <string>
+#include <vector>
 
 #include <mpi.h>
 
@@ -73,6 +74,50 @@ static void check_close(const double actual,
 } // end check_close
 
 
+// ref_elem_t / quadrature_t store their tables in CArrayKokkos, which lives in
+// device memory on the CUDA/HIP backends (UVM is off). Stage them to the host
+// through a DCArrayKokkos before reading, so the checks run on any backend.
+static std::vector<double> to_host_1d(const CArrayKokkos<double>& src,
+                                      const size_t n)
+{
+    DCArrayKokkos<double> stage(n, "ao_test_stage_1d");
+    FOR_ALL(i, 0, n, {
+        stage(i) = src(i);
+    });
+    Kokkos::fence();
+    stage.update_host();
+
+    std::vector<double> out(n);
+    for (size_t i = 0; i < n; ++i) {
+        out[i] = stage.host(i);
+    }
+    return out;
+} // end to_host_1d
+
+
+static std::vector<double> to_host_2d(const CArrayKokkos<double>& src,
+                                      const size_t n0,
+                                      const size_t n1)
+{
+    DCArrayKokkos<double> stage(n0, n1, "ao_test_stage_2d");
+    FOR_ALL(a, 0, n0, {
+        for (size_t b = 0; b < n1; ++b) {
+            stage(a, b) = src(a, b);
+        }
+    });
+    Kokkos::fence();
+    stage.update_host();
+
+    std::vector<double> out(n0 * n1);
+    for (size_t a = 0; a < n0; ++a) {
+        for (size_t b = 0; b < n1; ++b) {
+            out[a * n1 + b] = stage.host(a, b);
+        }
+    }
+    return out;
+} // end to_host_2d
+
+
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \brief Test 1: GLL and GL 1D node values match published reference data.
@@ -97,25 +142,31 @@ static void test_gll_and_gl_nodes_1d()
     kine_ref.init(/*p_order=*/4, /*num_dim=*/3,
                   BasisType::LagrangeGLL, shared_quad);
 
-    check_close(kine_ref.dof_positions_1d(0), -1.0,       1e-15, "GLL(5) node 0");
-    check_close(kine_ref.dof_positions_1d(1), -sqrt_3_7,  1e-15, "GLL(5) node 1");
-    check_close(kine_ref.dof_positions_1d(2),  0.0,       1e-15, "GLL(5) node 2");
-    check_close(kine_ref.dof_positions_1d(3),  sqrt_3_7,  1e-15, "GLL(5) node 3");
-    check_close(kine_ref.dof_positions_1d(4),  1.0,       1e-15, "GLL(5) node 4");
+    const std::vector<double> kine_dofs = to_host_1d(kine_ref.dof_positions_1d,
+                                                     kine_ref.num_dofs_1d);
+    check_close(kine_dofs[0], -1.0,       1e-15, "GLL(5) node 0");
+    check_close(kine_dofs[1], -sqrt_3_7,  1e-15, "GLL(5) node 1");
+    check_close(kine_dofs[2],  0.0,       1e-15, "GLL(5) node 2");
+    check_close(kine_dofs[3],  sqrt_3_7,  1e-15, "GLL(5) node 3");
+    check_close(kine_dofs[4],  1.0,       1e-15, "GLL(5) node 4");
 
     // GL(4) reference values.
-    check_close(shared_quad.qpt_positions_1d(0), -0.861136311594052575223946488892, 1e-15, "GL(4) node 0");
-    check_close(shared_quad.qpt_positions_1d(1), -0.339981043584856264802665759103, 1e-15, "GL(4) node 1");
-    check_close(shared_quad.qpt_positions_1d(2),  0.339981043584856264802665759103, 1e-15, "GL(4) node 2");
-    check_close(shared_quad.qpt_positions_1d(3),  0.861136311594052575223946488892, 1e-15, "GL(4) node 3");
+    const std::vector<double> gl_qpts = to_host_1d(shared_quad.qpt_positions_1d,
+                                                  shared_quad.num_qpts_1d);
+    check_close(gl_qpts[0], -0.861136311594052575223946488892, 1e-15, "GL(4) node 0");
+    check_close(gl_qpts[1], -0.339981043584856264802665759103, 1e-15, "GL(4) node 1");
+    check_close(gl_qpts[2],  0.339981043584856264802665759103, 1e-15, "GL(4) node 2");
+    check_close(gl_qpts[3],  0.861136311594052575223946488892, 1e-15, "GL(4) node 3");
 
     // Thermo space: LagrangeOnGL with p_order = k - 1 = 1 gives 2-point GL nodes at +/- 1/sqrt(3).
     ref_elem_t thermo_ref;
     thermo_ref.init(/*p_order=*/1, /*num_dim=*/3,
                     BasisType::LagrangeGL, shared_quad);
     const double inv_sqrt_3 = 1.0 / std::sqrt(3.0);
-    check_close(thermo_ref.dof_positions_1d(0), -inv_sqrt_3, 1e-15, "GL(2) thermo dof 0");
-    check_close(thermo_ref.dof_positions_1d(1),  inv_sqrt_3, 1e-15, "GL(2) thermo dof 1");
+    const std::vector<double> thermo_dofs = to_host_1d(thermo_ref.dof_positions_1d,
+                                                      thermo_ref.num_dofs_1d);
+    check_close(thermo_dofs[0], -inv_sqrt_3, 1e-15, "GL(2) thermo dof 0");
+    check_close(thermo_dofs[1],  inv_sqrt_3, 1e-15, "GL(2) thermo dof 1");
 } // end test_gll_and_gl_nodes_1d
 
 
@@ -140,10 +191,13 @@ static void test_partition_of_unity()
         ref_elem_t ref;
         ref.init(p_order, /*num_dim=*/3, BasisType::LagrangeGLL, quad);
 
+        const std::vector<double> basis = to_host_2d(ref.basis_1d,
+                                                    ref.num_qpts_1d,
+                                                    ref.num_dofs_1d);
         for (size_t q = 0; q < ref.num_qpts_1d; q++) {
             double sum = 0.0;
             for (size_t d = 0; d < ref.num_dofs_1d; d++) {
-                sum += ref.basis_1d(q, d);
+                sum += basis[q * ref.num_dofs_1d + d];
             }
             char label[128];
             std::snprintf(label, sizeof(label),
@@ -157,10 +211,13 @@ static void test_partition_of_unity()
         ref_elem_t ref;
         ref.init(p_order, /*num_dim=*/3, BasisType::LagrangeGL, quad);
 
+        const std::vector<double> basis = to_host_2d(ref.basis_1d,
+                                                    ref.num_qpts_1d,
+                                                    ref.num_dofs_1d);
         for (size_t q = 0; q < ref.num_qpts_1d; q++) {
             double sum = 0.0;
             for (size_t d = 0; d < ref.num_dofs_1d; d++) {
-                sum += ref.basis_1d(q, d);
+                sum += basis[q * ref.num_dofs_1d + d];
             }
             char label[128];
             std::snprintf(label, sizeof(label),
@@ -191,12 +248,15 @@ static void test_gl_quadrature_exactness()
         quadrature_t quad;
         quad.init(QuadType::GaussLegendre, n);
 
+        const std::vector<double> qpts = to_host_1d(quad.qpt_positions_1d, n);
+        const std::vector<double> wts  = to_host_1d(quad.qpt_weights_1d,  n);
+
         const size_t max_deg = 2 * n - 1;
         for (size_t p = 0; p <= max_deg; p++) {
             double approx = 0.0;
             for (size_t q = 0; q < n; q++) {
-                const double x = quad.qpt_positions_1d(q);
-                const double w = quad.qpt_weights_1d(q);
+                const double x = qpts[q];
+                const double w = wts[q];
                 approx += w * std::pow(x, static_cast<double>(p));
             }
             const double exact = (p % 2 == 0) ? (2.0 / (static_cast<double>(p) + 1.0))
@@ -233,16 +293,19 @@ static void test_sum_factorization_equivalence()
         const size_t ndofs = ref.num_dofs_in_elem;
         const size_t nqpts = ref.num_qpts_in_elem;
 
-        // Pseudo-random but deterministic DoF values.
         CArrayKokkos<double> f_dof(ndofs, "f_dof");
         CArrayKokkos<double> f_qpt_sf(nqpts, "f_qpt_sf");
         CArrayKokkos<double> f_qpt_naive(nqpts, "f_qpt_naive");
         CArrayKokkos<double> tmp1(nq * nd * nd, "tmp1");
         CArrayKokkos<double> tmp2(nq * nq * nd, "tmp2");
 
-        for (size_t i = 0; i < ndofs; i++) {
-            f_dof(i) = std::sin(static_cast<double>(i + 1) * 0.7) + 0.3;
-        }
+        // Deterministic pseudo-random DoF values, filled on the device so the
+        // buffer is valid in device memory for the evaluators below.
+        FOR_ALL(i, 0, ndofs, {
+            f_dof(i) = sin(static_cast<double>(i + 1) * 0.7) + 0.3;
+        });
+        Kokkos::fence();
+
         // Run both evaluators on the device with the same ref_elem.
         const ref_elem_t ref_local = ref;
 
@@ -258,9 +321,11 @@ static void test_sum_factorization_equivalence()
         });
         Kokkos::fence();
 
+        const std::vector<double> sf    = to_host_1d(f_qpt_sf,    nqpts);
+        const std::vector<double> naive = to_host_1d(f_qpt_naive, nqpts);
         double max_abs_diff = 0.0;
         for (size_t i = 0; i < nqpts; i++) {
-            const double d = std::fabs(f_qpt_sf(i) - f_qpt_naive(i));
+            const double d = std::fabs(sf[i] - naive[i]);
             if (d > max_abs_diff) {
                 max_abs_diff = d;
             }
