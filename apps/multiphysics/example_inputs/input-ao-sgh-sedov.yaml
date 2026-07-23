@@ -11,14 +11,14 @@ dynamic_options:
     dt_min: 1.0e-8
     dt_max: 1.0e-2
     dt_start: 1.0e-5
-    dt_cfl: 0.25
+    dt_cfl: 0.5
     cycle_stop: 100000
 
 mesh_options:
     source: file
-    file_path: box_12x12x12_p2.vtu
+    file_path: 12x12x12_p3.vtu
     num_dims: 3
-    polynomial_order: 2
+    polynomial_order: 3
 
 output_options:
     timer_output_level: thorough

@@ -15,4 +15,8 @@ __pycache__
 cmake_uninstall.cmake
 CTestTestfile.cmake
 install*
-
+apps/multiphysics/*.sh
+apps/multiphysics/*.vtu
+apps/multiphysics/*.pvd
+apps/multiphysics/TrplPnt3D_batch_output
+apps/multiphysics/cuda_build

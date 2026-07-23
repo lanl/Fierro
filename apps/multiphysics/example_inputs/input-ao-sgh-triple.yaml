@@ -10,23 +10,23 @@
 #                            --out box_42x18x1_p2.vtu
 
 dynamic_options:
-    time_final: 2.5
+    time_final: 5.0
     dt_min: 1.0e-9
     dt_max: 1.0e-2
-    dt_start: 1.0e-5
-    dt_cfl: 0.25
+    dt_start: 1.0e-4
+    dt_cfl: 0.5
     cycle_stop: 200000
 
 mesh_options:
     source: file
-    file_path: box_42x18x1_p2.vtu
+    file_path: 56x24x1_p2.vtu
     num_dims: 3
     polynomial_order: 2
 
 output_options:
     timer_output_level: thorough
     output_file_format: viz
-    graphics_time_step: 0.25
+    graphics_time_step: 0.1
     node_field_outputs:
         - vel
 
@@ -34,7 +34,7 @@ solver_options:
   - solver:
         method: ao_dynx_FE
         id: 0
-        time_integration: rk3hc
+        time_integration: rk2avg
 
 boundary_conditions:
     - boundary_condition:

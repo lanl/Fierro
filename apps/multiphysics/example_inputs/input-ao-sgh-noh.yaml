@@ -10,14 +10,14 @@
 dynamic_options:
     time_final: 0.6
     dt_min: 1.0e-9
-    dt_max: 5.0e-4
+    dt_max: 5.0e-3
     dt_start: 1.0e-5
     dt_cfl: 0.25
     cycle_stop: 100000
 
 mesh_options:
     source: file
-    file_path: box_12x12x12_p2_unit.vtu
+    file_path: 16x16x16_p2.vtu
     num_dims: 3
     polynomial_order: 2
 
@@ -32,7 +32,7 @@ solver_options:
   - solver:
         method: ao_dynx_FE
         id: 0
-        time_integration: rk3hc
+        time_integration: rk2avg
 
 boundary_conditions:
     - boundary_condition:
