@@ -374,8 +374,10 @@ double sigma_min_from_jinv(const double K00, const double K01, const double K02,
 }
 
 
-// CFL (Laghos): dt = cfl / max over qpts of [c/h + 2.5 q /(rho h^2)] with
-// h = sigma_min(J) / p_order and q the artificial-viscosity coefficient.
+// dt = cfl / max over qpts of [c/h + 2.5 q /(rho h^2)], where q is the
+// artificial-viscosity coefficient and h is the physical DoF spacing. On the
+// [-1, 1] reference element sigma_min(J) is half the physical cell size, so the
+// DoF spacing is h = 2 * sigma_min(J) / p_order.
 double compute_cfl_dt(const DCArrayKokkos<double>&            jac_inv,
                       const DCArrayKokkos<double>&            detj,
                       const DRaggedRightArrayKokkos<double>&  sspd,
@@ -397,7 +399,7 @@ double compute_cfl_dt(const DCArrayKokkos<double>&            jac_inv,
         const double sig_min = sigma_min_from_jinv(jac_inv(g, 0, 0), jac_inv(g, 0, 1), jac_inv(g, 0, 2),
                                                    jac_inv(g, 1, 0), jac_inv(g, 1, 1), jac_inv(g, 1, 2),
                                                    jac_inv(g, 2, 0), jac_inv(g, 2, 1), jac_inv(g, 2, 2));
-        const double h   = sig_min * inv_p;
+        const double h   = 2.0 * sig_min * inv_p;
         const double c   = sspd(mat_id, g);
         const double rho = den(mat_id, g);
         const double inv = c / h + 2.5 * visc_coeff(g) / (rho * h * h);
