@@ -715,6 +715,11 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     e_source.set_values(0.0);
     Kokkos::fence();
 
+    // Pre-step snapshot of the evolved state (x, v, e) for step rejection.
+    DCArrayKokkos<double> coords_save(mesh.num_nodes, 3, "ao_sgh_coords_save");
+    DCArrayKokkos<double> vel_save   (mesh.num_nodes, 3, "ao_sgh_vel_save");
+    DCArrayKokkos<double> sie_save   (mesh.num_elems, n_thermo_per_elem, "ao_sgh_sie_save");
+
     // Initial-mesh length scale (Laghos): h0 = (V/Ne)^(1/3) / p_order.
     const double total_vol0 = compute_total_volume_from_cache(State.GaussPoints.detj0,
                                                               quad, mesh.num_elems);
@@ -961,34 +966,106 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     };
     const double E0 = total_energy();
 
+    // One full step with the active integrator, in place on (x, v, e).
+    auto run_step = [&](double step_dt) {
+        if (use_imex) {
+            imex_integrator.evolve(step_dt,
+                                   State.node.coords, State.node.vel, State.MaterialZones.sie,
+                                   mat_id, apply_bc, refresh, rhs_f, rhs_de);
+        }
+        else {
+            ssp_integrator.evolve(step_dt,
+                                  State.node.coords, State.node.vel, State.MaterialZones.sie,
+                                  mat_id, apply_bc, refresh, rhs);
+        }
+    };
+
+    // Step rejection: snapshot (x, v, e) before a step, and if the step inverts
+    // an element (any qpt detj <= 0, which would drive rho and p negative) roll
+    // back and retake at a smaller dt.
+    auto save_state = [&]() {
+        auto& c  = State.node.coords; auto& v  = State.node.vel;
+        auto& s  = State.MaterialZones.sie;
+        auto& cs = coords_save;       auto& vs = vel_save; auto& ss = sie_save;
+        const size_t nt = n_thermo_per_elem; const size_t mid = mat_id;
+        FOR_ALL(n, 0, mesh.num_nodes, {
+            cs(n, 0) = c(n, 0); cs(n, 1) = c(n, 1); cs(n, 2) = c(n, 2);
+            vs(n, 0) = v(n, 0); vs(n, 1) = v(n, 1); vs(n, 2) = v(n, 2);
+        });
+        FOR_ALL(e, 0, mesh.num_elems, {
+            for (size_t j = 0; j < nt; ++j) { ss(e, j) = s(mid, e * nt + j); }
+        });
+        Kokkos::fence();
+    };
+    auto restore_state = [&]() {
+        auto& c  = State.node.coords; auto& v  = State.node.vel;
+        auto& s  = State.MaterialZones.sie;
+        auto& cs = coords_save;       auto& vs = vel_save; auto& ss = sie_save;
+        const size_t nt = n_thermo_per_elem; const size_t mid = mat_id;
+        FOR_ALL(n, 0, mesh.num_nodes, {
+            c(n, 0) = cs(n, 0); c(n, 1) = cs(n, 1); c(n, 2) = cs(n, 2);
+            v(n, 0) = vs(n, 0); v(n, 1) = vs(n, 1); v(n, 2) = vs(n, 2);
+        });
+        FOR_ALL(e, 0, mesh.num_elems, {
+            for (size_t j = 0; j < nt; ++j) { s(mid, e * nt + j) = ss(e, j); }
+        });
+        Kokkos::fence();
+    };
+    // Cap a proposed dt so the step lands exactly on the next output / final
+    // time and stays within [dt_min, dt_max].
+    auto cap_dt = [&](double d) -> double {
+        d = std::min(d, dt_max);
+        if (time_value + d > time_final)    { d = time_final - time_value; }
+        if (time_value + d > graphics_next) { d = graphics_next - time_value; }
+        return std::max(d, dt_min);
+    };
+
     auto time_start_wall = std::chrono::high_resolution_clock::now();
 
     size_t cycle = 0;
     for (cycle = 1; cycle <= cycle_stop; ++cycle) {
 
-        const double dt_cfl_est = compute_cfl_dt(State.GaussPoints.jac_inv,
+        // dt is carried across steps. It grows by at most 2% per accepted step
+        // and backs off by 15% per rejected step, so it tracks the CFL limit
+        // without jumping onto it. dt_taken is dt clamped to hit output times.
+        double dt_taken = cap_dt(dt);
+
+        save_state();
+        bool accepted = false;
+        const int max_rejections = 200;
+        for (int attempt = 0; attempt < max_rejections; ++attempt) {
+            run_step(dt_taken);
+
+            // CFL estimate at the new state; ~0 if a cell inverted (detj<=0).
+            const double dt_est = compute_cfl_dt(State.GaussPoints.jac_inv,
                                                  State.GaussPoints.detj,
                                                  State.MaterialPoints.sspd,
                                                  State.MaterialPoints.den,
                                                  visc_coeff,
                                                  num_gauss_pts, mat_id,
                                                  p_order, dt_cfl);
-        dt = std::min(dt_max, std::max(dt_min, dt_cfl_est));
-        if (time_value + dt > time_final)    dt = time_final - time_value;
-        if (time_value + dt > graphics_next) dt = graphics_next - time_value;
 
-        if (use_imex) {
-            imex_integrator.evolve(dt,
-                                   State.node.coords, State.node.vel, State.MaterialZones.sie,
-                                   mat_id, apply_bc, refresh, rhs_f, rhs_de);
+            if (dt_est >= dt_taken) {
+                // step is CFL-safe; grow the carried dt gently if there is room
+                if (dt_est > 1.25 * dt) { dt = std::min(dt_max, 1.02 * dt); }
+                accepted = true;
+                break;
+            }
+
+            // reject: 15% back-off, roll back, and retake
+            restore_state();
+            if (dt_taken <= dt_min) { break; }  // already at the floor
+            dt       = std::max(dt_min, 0.85 * dt);
+            dt_taken = cap_dt(dt);
         }
-        else {
-            ssp_integrator.evolve(dt,
-                                  State.node.coords, State.node.vel, State.MaterialZones.sie,
-                                  mat_id, apply_bc, refresh, rhs);
+        if (!accepted) {
+            printf("AO_SGH3D::execute() : ABORT cycle=%zu -- no valid step at "
+                   "dt_min=%.3e; stopping at last valid state t=%.6e\n",
+                   cycle, dt_min, time_value);
+            break;  // leave the time loop with the restored, valid state
         }
 
-        time_value += dt;
+        time_value += dt_taken;
 
         if (cycle % 10 == 0 || time_value >= time_final - 1.0e-12) {
             double den_min =  1.0e300, den_max = -1.0e300;
@@ -1016,7 +1093,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             const double E_drift = total_energy() - E0;
             printf("AO_SGH3D::execute() : cycle=%zu  t=%.6e  dt=%.3e  "
                    "den=[%.3e,%.3e]  pres=[%.3e,%.3e]  |v|_max=%.3e  E-E0=%+.3e\n",
-                   cycle, time_value, dt,
+                   cycle, time_value, dt_taken,
                    den_min, den_max, pres_min, pres_max, v_max, E_drift);
         }
 
