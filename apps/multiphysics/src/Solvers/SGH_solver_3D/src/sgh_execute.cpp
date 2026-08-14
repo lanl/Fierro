@@ -58,9 +58,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGH3D::execute(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
-                    swage::Mesh& mesh, 
-                    State_t& State,
-                    elements::fe_ref_elem_t& ref_elem)
+                    swage::Mesh_t& mesh, 
+                    State_t& State)
 {
 
     // Get MPI ranks and num ranks
@@ -801,7 +800,7 @@ double max_Eigen3D(const ViewCArrayKokkos<double> tensor)
 
 // a function to tally the internal energy
 double sum_domain_internal_energy(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_sie)
@@ -842,7 +841,7 @@ double sum_domain_internal_energy(
 ///
 /////////////////////////////////////////////////////////////////////////////
 double sum_domain_kinetic_energy(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_mass)
 {
@@ -888,7 +887,7 @@ double sum_domain_kinetic_energy(
 
 // a function to tally the material point masses
 double sum_domain_material_mass(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass)
 {
@@ -927,7 +926,7 @@ double sum_domain_material_mass(
 /// \return <return type and definition description if not void>
 ///
 /////////////////////////////////////////////////////////////////////////////
-double sum_domain_node_mass(const swage::Mesh& mesh,
+double sum_domain_node_mass(const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_mass)
 {
@@ -954,7 +953,7 @@ double sum_domain_node_mass(const swage::Mesh& mesh,
 
 
 // set the corner forces to zero
-void set_corner_force_zero(const swage::Mesh& mesh,
+void set_corner_force_zero(const swage::Mesh_t& mesh,
     const DCArrayKokkos<double>& corner_force)
 {
     // set corner force to zero

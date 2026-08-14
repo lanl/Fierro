@@ -69,7 +69,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::get_heat_flux(
     const Material_t& Materials,
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const MPICArrayKokkos<double>& node_coords,
     const MPICArrayKokkos<double>& node_temp,
@@ -219,7 +219,7 @@ void SGTM3D::get_heat_flux(
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::moving_flux(
     const Material_t& Materials,
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& corner_q_flux,

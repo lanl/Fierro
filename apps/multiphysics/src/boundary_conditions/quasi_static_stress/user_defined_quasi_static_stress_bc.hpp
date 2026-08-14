@@ -58,7 +58,7 @@ namespace UserDefinedQstatxStressBC
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-static void qstatx_stress(const swage::Mesh& mesh,
+static void qstatx_stress(const swage::Mesh_t& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
     const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
     const DCArrayKokkos<double>& bc_state_vars,

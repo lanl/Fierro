@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::update_temperature(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const DCArrayKokkos<double>& corner_q_transfer,
     const MPICArrayKokkos<double>& node_temp,
     const MPICArrayKokkos<double>& node_temp_n0,

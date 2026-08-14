@@ -349,7 +349,7 @@ public:
     ///
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_mesh(swage::Mesh& mesh,
+    void read_mesh(swage::Mesh_t& mesh,
                    MPICArrayKokkos<double>& node_coords,
                    MeshInput_t& mesh_inps,
                    int           num_dims,
@@ -405,7 +405,6 @@ public:
         // Initialize/create connectivity
 
         int num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
         mesh.build_connectivity();
         // corner.initialize(num_corners, num_dims);
 
@@ -429,7 +428,7 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_ensight_mesh(swage::Mesh& mesh,
+    void read_ensight_mesh(swage::Mesh_t& mesh,
                            MPICArrayKokkos<double>& node_coords,
                            MeshInput_t& mesh_inps,
                            int num_dims)
@@ -511,7 +510,7 @@ public:
         printf("Number of elements read in %lu\n", num_elem);
 
         // initialize elem variables
-        mesh.initialize_elems(num_elem, num_dims);
+        mesh.initialize_elems(num_elem);
         // GaussPoints.initialize(num_elem, 3); // always 3D here, even for 2D
 
         
@@ -567,7 +566,7 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_Abaqus_mesh(swage::Mesh& mesh,
+    void read_Abaqus_mesh(swage::Mesh_t& mesh,
                           MPICArrayKokkos<double>& node_coords,
                           MeshInput_t& mesh_inps,
                           int num_dims)
@@ -688,7 +687,7 @@ public:
         printf("Number of elements read in %lu\n", num_elem);
 
         // initialize elem variables
-        mesh.initialize_elems(num_elem, num_dims);
+        mesh.initialize_elems(num_elem);
 
 
         // for each cell read the list of associated nodes
@@ -718,7 +717,7 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_vtk_mesh(swage::Mesh& mesh,
+    void read_vtk_mesh(swage::Mesh_t& mesh,
                        MPICArrayKokkos<double>& node_coords,
                        MeshInput_t& mesh_inps,
                        int num_dims)
@@ -817,7 +816,7 @@ public:
                 printf("Number of elements read in %zu\n", num_elem);
 
                 // initialize elem variables
-                mesh.initialize_elems(num_elem, num_dims);
+                mesh.initialize_elems(num_elem);
                 
                 found=true;
             } // end if
@@ -935,7 +934,7 @@ public:
     /// \param Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_vtk_hexN_mesh(swage::Mesh& mesh,
+    void read_vtk_hexN_mesh(swage::Mesh_t& mesh,
                        MPICArrayKokkos<double>& node_coords,
                        MeshInput_t& mesh_inps,
                        int num_dims)
@@ -1061,7 +1060,6 @@ public:
 
         // Initialize corners based on dynamic nodes-per-element count
         size_t num_corners = num_elem * num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
 
         // Build connectivity (Faces, etc.)
         mesh.build_connectivity();
@@ -1113,7 +1111,7 @@ public:
     /// \param num_dims Number of dimensions
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void read_vtu_mesh(swage::Mesh& mesh,
+    void read_vtu_mesh(swage::Mesh_t& mesh,
                        MPICArrayKokkos<double>& node_coords,
                        MeshInput_t& mesh_inps,
                        int num_dims,
@@ -1159,7 +1157,7 @@ public:
         if(HexN){
             mesh.initialize_elems_Pn(num_elems, num_dims, Pn_order);
         } else {
-            mesh.initialize_elems(num_elems, num_dims);
+            mesh.initialize_elems(num_elems);
         }
 
 
@@ -1445,7 +1443,7 @@ public:
     /// \param SimulationParamaters Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_mesh(swage::Mesh& mesh,
+    void build_mesh(swage::Mesh_t& mesh,
                     MPICArrayKokkos<double>& node_coords,
                     SimulationParameters_t& SimulationParamaters,
                     bool HexN)
@@ -1480,7 +1478,6 @@ public:
         }
 
         int num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
-        mesh.initialize_corners(num_corners);
         mesh.build_connectivity();
     }
 
@@ -1497,7 +1494,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_box(swage::Mesh& mesh,
+    void build_2d_box(swage::Mesh_t& mesh,
                       MPICArrayKokkos<double>& node_coords,
                       SimulationParameters_t& SimulationParamaters) const
     {
@@ -1563,7 +1560,7 @@ public:
         node_coords.update_device();
 
         // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+        mesh.initialize_elems(num_elems);
 
         // populate the elem center data structures
         for (int j = 0; j < num_elems_j; j++) {
@@ -1611,7 +1608,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_2d_polar(swage::Mesh& mesh,
+    void build_2d_polar(swage::Mesh_t& mesh,
                         MPICArrayKokkos<double>& node_coords,
                         SimulationParameters_t& SimulationParamaters) const
     {
@@ -1685,7 +1682,7 @@ public:
         node_coords.update_device();
 
         // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+        mesh.initialize_elems(num_elems);
 
         // populate the elem center data structures
         for (int j = 0; j < num_elems_j; j++) {
@@ -1733,7 +1730,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_box(swage::Mesh& mesh,
+    void build_3d_box(swage::Mesh_t& mesh,
                       MPICArrayKokkos<double>& node_coords,
                       SimulationParameters_t& SimulationParamaters) const
     {
@@ -1799,7 +1796,7 @@ public:
         node_coords.update_device();
 
         // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+        mesh.initialize_elems(num_elems);
 
         // --- Build elems  ---
 
@@ -1853,7 +1850,7 @@ public:
     /// \param Simulation parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void build_3d_HexN_box(swage::Mesh& mesh,
+    void build_3d_HexN_box(swage::Mesh_t& mesh,
                            MPICArrayKokkos<double>& node_coords,
                            SimulationParameters_t& SimulationParamaters) const
     {
@@ -2031,7 +2028,7 @@ public:
     /// \param Simulation input parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_mesh(swage::Mesh& mesh,
+    void write_mesh(swage::Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double dt,
@@ -3219,7 +3216,7 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_ensight(swage::Mesh& mesh,
+    void write_ensight(swage::Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double dt,
@@ -3632,7 +3629,7 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_vtk_old(swage::Mesh& mesh,
+    void write_vtk_old(swage::Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double dt,
@@ -4909,7 +4906,7 @@ public:
     /// \param Simulation input parameters
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_mesh_Pn(swage::Mesh& mesh,
+    void write_mesh_Pn(swage::Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double dt,
@@ -4919,7 +4916,7 @@ public:
         std::vector<gauss_pt_state> gauss_pt_states,
         std::vector<material_pt_state> material_pt_states,
         const size_t solver_id,
-        elements::fe_ref_elem_t& ref_elem)
+        elements::ReferenceElement_t& ref_elem)
     {
 
 
@@ -6103,9 +6100,9 @@ public:
     /////////////////////////////////////////////////////////////////////////////
 
     void write_vtu_Pn(
-        const swage::Mesh&                   mesh,
+        const swage::Mesh_t&                   mesh,
         const State_t&                       State,
-        elements::fe_ref_elem_t&             ref_elem,
+        elements::ReferenceElement_t&             ref_elem,
         const std::vector<std::string>&      mat_scalar_var_names,   // length == num_mat_pt_scalar_vars
         const std::vector<std::string>&      mat_tensor_var_names,   // length == num_mat_pt_tensor_vars
         const std::string&                   partname,               // e.g. "mat0_Pn"
@@ -6137,7 +6134,7 @@ public:
         // Number of Gauss points per element: (2*Pn)^num_dims
         // Read directly from the reference element so we stay consistent with
         // whatever quadrature order was set up for this run.
-        const size_t num_gp_per_elem   = ref_elem.gauss_point_grad_basis.dims(0);
+        const size_t num_gp_per_elem   = ref_elem.qpt_grad_basis.dims(0);
         const size_t num_total_gp      = num_mat_elems * num_gp_per_elem;
 
         const size_t num_scalar_vars   = mat_scalar_var_names.size();
@@ -6198,7 +6195,7 @@ public:
 
                 for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
                     const size_t node_gid = mesh.nodes_in_elem(elem_id, node_lid);
-                    const double N        = ref_elem.gauss_point_basis(gp, node_lid);
+                    const double N        = ref_elem.qpt_basis(gp, node_lid);
 
                     for (size_t dim = 0; dim < num_dims; dim++) {
                         x_phys(elem, gp, dim) += N * State.node.coords(node_gid, dim);
@@ -6903,7 +6900,7 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void build_material_elem_node_lists(
-        const swage::Mesh& mesh,
+        const swage::Mesh_t& mesh,
         const MPICArrayKokkos<double>& state_node_coords,
         DCArrayKokkos<double>& mat_node_coords,
         DCArrayKokkos <size_t>& mat_nodes_in_mat_elem,
@@ -7002,7 +6999,7 @@ public:
     /// \param Vector of all graphics output times
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void write_material_point_state(swage::Mesh& mesh,
+    void write_material_point_state(swage::Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
         double time_value,
@@ -7328,7 +7325,7 @@ public:
     } // end of state output
 
     void write_text_state(
-        const swage::Mesh&                   mesh,
+        const swage::Mesh_t&                   mesh,
         const State_t&                       State,
         const std::vector<std::string>&      mat_scalar_var_names,
         const std::vector<std::string>&      mat_tensor_var_names,
@@ -7753,9 +7750,9 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void write_text_state_Pn(
-        const swage::Mesh&                   mesh,
+        const swage::Mesh_t&                   mesh,
         const State_t&                       State,
-        elements::fe_ref_elem_t&             ref_elem,
+        elements::ReferenceElement_t&             ref_elem,
         const std::vector<std::string>&      mat_scalar_var_names,
         const std::vector<std::string>&      mat_tensor_var_names,
         const std::vector<std::string>&      node_scalar_var_names,
@@ -7789,7 +7786,7 @@ public:
         //  Derived sizes
         // -----------------------------------------------------------------------
 
-        const size_t num_gp_per_elem = ref_elem.gauss_point_grad_basis.dims(0);
+        const size_t num_gp_per_elem = ref_elem.qpt_grad_basis.dims(0);
 
         // -----------------------------------------------------------------------
         //  Gauss-point physical coordinates  (isoparametric mapping)
@@ -7831,7 +7828,7 @@ public:
                 for (size_t gp = 0; gp < num_gp_per_elem; gp++) {
                     for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
                         const size_t node_gid = mesh.nodes_in_elem(elem_id, node_lid);
-                        const double N        = ref_elem.gauss_point_basis(gp, node_lid);
+                        const double N        = ref_elem.qpt_basis(gp, node_lid);
                         for (size_t dim = 0; dim < num_dims; dim++) {
                             x_phys(elem, gp, dim) += N * State.node.coords(node_gid, dim);
                         }

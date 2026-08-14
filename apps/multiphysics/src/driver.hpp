@@ -80,7 +80,7 @@ public:
     // ---------------------------------------------------------------------
     //    mesh data type declarations
     // ---------------------------------------------------------------------
-    swage::Mesh mesh;
+    swage::Mesh_t mesh;
 
     // ---------------------------------------------------------------------
     //    state data type declaration
@@ -90,7 +90,7 @@ public:
     // ---------------------------------------------------------------------
     //    reference element data type declaration
     // ---------------------------------------------------------------------
-    elements::fe_ref_elem_t ref_elem;
+    elements::ReferenceElement_t ref_elem;
 
     int num_solvers = 0;
 

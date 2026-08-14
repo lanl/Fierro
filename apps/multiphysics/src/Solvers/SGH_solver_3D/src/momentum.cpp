@@ -50,7 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::update_velocity(double rk_alpha,
     double dt,
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     MPICArrayKokkos<double>& node_vel,
     MPICArrayKokkos<double>& node_vel_n0,
     const DCArrayKokkos<double>& node_mass,
@@ -112,7 +112,7 @@ void SGH3D::update_velocity(double rk_alpha,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_coords,
     const MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const
@@ -223,7 +223,7 @@ void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::get_divergence(DCArrayKokkos<double>& elem_div,
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_coords,
     const MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& elem_vol) const

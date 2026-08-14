@@ -257,7 +257,7 @@ struct BoundaryConditionEnums_t
 struct BoundaryConditionFunctions_t
 {
     // function pointer for velocity BC's
-    void (*velocity) (const swage::Mesh& mesh,
+    void (*velocity) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
@@ -268,7 +268,7 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_set) = NULL;
 
     // function pointer for displacement BC's
-    void (*displacement) (const swage::Mesh& mesh,
+    void (*displacement) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& disp_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
@@ -283,7 +283,7 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_set) = NULL;
 
     // function pointer for temperature BC's
-    void (*temperature) (const swage::Mesh& mesh,
+    void (*temperature) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& temp_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
@@ -294,7 +294,7 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_set) = NULL;
 
     // Function pointer to heat flux BCs
-    void (*heat_flux) (const swage::Mesh& mesh,
+    void (*heat_flux) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& heat_flux_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
@@ -306,7 +306,7 @@ struct BoundaryConditionFunctions_t
 
 
     // function pointer for stress BC's
-    void (*stress) (const swage::Mesh& mesh,
+    void (*stress) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
@@ -318,7 +318,7 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_set) = NULL;
 
     // function pointer for stress BC's
-    void (*qstatx_stress) (const swage::Mesh& mesh,
+    void (*qstatx_stress) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& qstatx_stress_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,

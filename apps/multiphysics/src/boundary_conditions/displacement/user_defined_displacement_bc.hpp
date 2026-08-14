@@ -60,7 +60,7 @@ namespace UserDefinedDisplacementBC
 // add an enum for boundary statevars and global vars
 
 KOKKOS_FUNCTION
-static void displacement(const swage::Mesh& mesh,
+static void displacement(const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& disp_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,

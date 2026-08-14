@@ -118,7 +118,7 @@ void get_vol_hex(const DCArrayKokkos<double>& elem_vol,
 /////////////////////////////////////////////////////////////////////////////
 void get_vol(const DCArrayKokkos<double>& elem_vol,
     const MPICArrayKokkos<double>& node_coords,
-    const swage::Mesh& mesh);
+    const swage::Mesh_t& mesh);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -221,7 +221,7 @@ size_t check_bdy(const size_t patch_gid,
     const double  orig_x,
     const double  orig_y,
     const double  orig_z,
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_coords);
 
 /////////////////////////////////////////////////////////////////////////////
@@ -236,7 +236,7 @@ size_t check_bdy(const size_t patch_gid,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void tag_bdys(const BoundaryCondition_t& boundary,
-    swage::Mesh& mesh,
+    swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_coords);
 
 
@@ -249,6 +249,6 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 /// \param Simulation mesh
 ///
 /////////////////////////////////////////////////////////////////////////////
-void build_boundry_node_sets(swage::Mesh& mesh);
+void build_boundry_node_sets(swage::Mesh_t& mesh);
 
 #endif

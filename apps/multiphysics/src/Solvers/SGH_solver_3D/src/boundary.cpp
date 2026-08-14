@@ -47,7 +47,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::boundary_velocity(const swage::Mesh&      mesh,
+void SGH3D::boundary_velocity(const swage::Mesh_t&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
                               MPICArrayKokkos<double>& node_vel,
                               const double time_value) const
@@ -93,7 +93,7 @@ void SGH3D::boundary_velocity(const swage::Mesh&      mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::boundary_contact(const swage::Mesh& mesh,
+void SGH3D::boundary_contact(const swage::Mesh_t& mesh,
                              const BoundaryCondition_t& BoundaryConditions,
                              MPICArrayKokkos<double>& node_vel,
                              const double time_value) const
@@ -110,7 +110,7 @@ void SGH3D::boundary_contact(const swage::Mesh& mesh,
 /// \param The time step size
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D:: boundary_contact_force(State_t& State, const swage::Mesh &mesh, const double &del_t, contact_state_t &Contact_State)
+void SGH3D:: boundary_contact_force(State_t& State, const swage::Mesh_t &mesh, const double &del_t, contact_state_t &Contact_State)
 {
     
     sort(State.node.coords, mesh.num_bdy_nodes, mesh.bdy_nodes, State.node.vel, mesh.num_corners_in_node,
@@ -158,7 +158,7 @@ void SGH3D:: boundary_contact_force(State_t& State, const swage::Mesh &mesh, con
 /// \param The stage time increment
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::boundary_fracture_force(State_t& State, swage::Mesh &mesh, const double &dt_stage,
+void SGH3D::boundary_fracture_force(State_t& State, swage::Mesh_t &mesh, const double &dt_stage,
                                      cohesive_zones_t &cohesive_zones_bank, const double &time_value,
                                      const size_t &cycle, const size_t &rk_stage, const size_t &rk_num_stages)
 {
@@ -228,7 +228,7 @@ void SGH3D::boundary_fracture_force(State_t& State, swage::Mesh &mesh, const dou
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::boundary_stress(const swage::Mesh&      mesh,
+void SGH3D::boundary_stress(const swage::Mesh_t&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
                               DCArrayKokkos<double>& node_bdy_force,
                               MPICArrayKokkos<double>& node_coords,

@@ -54,7 +54,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::update_energy(const double rk_alpha,
     const double dt,
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_vel,
     const MPICArrayKokkos<double>& node_vel_n0,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,

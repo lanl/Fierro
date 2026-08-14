@@ -49,7 +49,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param time_value The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void TLQS3D::boundary_displacement(const swage::Mesh& mesh,
+void TLQS3D::boundary_displacement(const swage::Mesh_t& mesh,
     const BoundaryCondition_t& BoundaryConditions,
     const CArrayKokkos<double>& K_elem,
     const CArrayKokkos<double>& F_elem,

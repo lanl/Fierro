@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::nodal_gradient(
-        const swage::Mesh mesh,
+        const swage::Mesh_t mesh,
         const MPICArrayKokkos<double>& node_coords,
         const MPICArrayKokkos<double>& node_level_set_vel,
         const DCArrayKokkos<double>& node_grad_level_set,
@@ -199,7 +199,7 @@ void LevelSet::nodal_gradient(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::update_level_set(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const Material_t& Materials,
     const MPICArrayKokkos<double>& node_level_set_vel,
     const DCArrayKokkos<double>& node_grad_level_set,

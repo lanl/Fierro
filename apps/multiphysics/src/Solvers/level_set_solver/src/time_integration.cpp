@@ -92,7 +92,7 @@ void LevelSet::rk_init(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::get_timestep(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const Material_t& Materials,
     const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& GaussPoints_vol,
@@ -219,7 +219,7 @@ void LevelSet::get_timestep(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::get_timestep_2D(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const Material_t& Materials,
     const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& GaussPoints_vol,

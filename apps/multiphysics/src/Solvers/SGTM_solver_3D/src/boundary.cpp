@@ -48,7 +48,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::boundary_temperature(const swage::Mesh& mesh,
+void SGTM3D::boundary_temperature(const swage::Mesh_t& mesh,
                                   const BoundaryCondition_t& BoundaryConditions,
                                   MPICArrayKokkos<double>& node_temp,
                                   const double time_value) const
@@ -98,7 +98,7 @@ void SGTM3D::boundary_temperature(const swage::Mesh& mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::boundary_convection(const swage::Mesh& mesh,
+void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
                                  const MPICArrayKokkos<double>& node_temp,
                                  const DCArrayKokkos<double>& node_flux,
@@ -238,7 +238,7 @@ void SGTM3D::boundary_convection(const swage::Mesh& mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::boundary_radiation(const swage::Mesh& mesh,
+void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
                                 const BoundaryCondition_t& BoundaryConditions,
                                 const MPICArrayKokkos<double>& node_temp,
                                 const DCArrayKokkos<double>& node_flux,
@@ -386,7 +386,7 @@ void SGTM3D::boundary_radiation(const swage::Mesh& mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::boundary_heat_flux(const swage::Mesh& mesh,
+void SGTM3D::boundary_heat_flux(const swage::Mesh_t& mesh,
                                   const BoundaryCondition_t& BoundaryConditions,
                                   MPICArrayKokkos<double>& node_temp,
                                   const double time_value) const

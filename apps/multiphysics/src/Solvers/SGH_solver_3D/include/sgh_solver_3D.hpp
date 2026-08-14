@@ -43,7 +43,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Forward declare structs
 struct SimulationParameters_t;
 struct Material_t;
-// struct swage::Mesh;
+// struct swage::Mesh_t;
 struct BoundaryCondition_t;
 // struct State_t;
 struct RegionFill_t;
@@ -163,14 +163,14 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void initialize(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
-                    swage::Mesh& mesh, 
+                    swage::Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override;
 
 
     void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
                 	               Material_t& Materials, 
-                	               swage::Mesh& mesh, 
+                	               swage::Mesh_t& mesh, 
                 	               BoundaryCondition_t& Boundary,
                 	               State_t& State) const override;
 
@@ -183,7 +183,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void setup(SimulationParameters_t& SimulationParamaters,
         Material_t& Materials,
-        swage::Mesh&     mesh,
+        swage::Mesh_t&     mesh,
         BoundaryCondition_t& Boundary,
         State_t& State) override;
 
@@ -198,9 +198,8 @@ public:
     void execute(SimulationParameters_t& SimulationParamaters,
         Material_t& Materials,
         BoundaryCondition_t& Boundary,
-        swage::Mesh&  mesh,
-        State_t& State,
-        elements::fe_ref_elem_t& ref_elem) override;
+        swage::Mesh_t&  mesh,
+        State_t& State) override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -229,24 +228,24 @@ public:
 
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity(
-        const swage::Mesh& mesh,
+        const swage::Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
         MPICArrayKokkos<double>&     node_vel,
         const double time_value) const;
 
     void boundary_contact(
-        const swage::Mesh& mesh,
+        const swage::Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
         MPICArrayKokkos<double>&     node_vel,
         const double time_value) const;
 
-    void boundary_contact_force(State_t& State, const swage::Mesh &mesh, const double &del_t, contact_state_t &Contact_State);
+    void boundary_contact_force(State_t& State, const swage::Mesh_t &mesh, const double &del_t, contact_state_t &Contact_State);
 
-    void boundary_fracture_force(State_t& State, swage::Mesh &mesh, const double &dt_stage,
+    void boundary_fracture_force(State_t& State, swage::Mesh_t &mesh, const double &dt_stage,
                                     cohesive_zones_t &cohesive_zones_bank, const double &time_value,
                                     const size_t &cycle, const size_t &rk_stage, const size_t &rk_num_stages);    
 
-    void boundary_stress(const swage::Mesh& mesh,
+    void boundary_stress(const swage::Mesh_t& mesh,
                     const BoundaryCondition_t& BoundaryConditions,
                     DCArrayKokkos<double>& node_bdy_force,
                     MPICArrayKokkos<double>& node_coords,
@@ -256,7 +255,7 @@ public:
     void update_energy(
         const double  rk_alpha,
         const double  dt,
-        const swage::Mesh& mesh,
+        const swage::Mesh_t& mesh,
         const MPICArrayKokkos<double>& node_vel,
         const MPICArrayKokkos<double>& node_vel_n0,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
@@ -271,7 +270,7 @@ public:
     // **** Functions defined in force_sgh.cpp **** //
     void get_force(
         const Material_t& Materials,
-        const swage::Mesh&     mesh,
+        const swage::Mesh_t&     mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const MPICArrayKokkos<double>& GaussPoints_shock_detector,
@@ -311,7 +310,7 @@ public:
     void update_velocity(
         double rk_alpha,
         double dt,
-        const swage::Mesh& mesh,
+        const swage::Mesh_t& mesh,
         MPICArrayKokkos<double>& node_vel,
         MPICArrayKokkos<double>& node_vel_n0,
         const DCArrayKokkos<double>& node_mass,
@@ -322,14 +321,14 @@ public:
 
     void get_velgrad(
         DCArrayKokkos<double>& vel_grad,
-        const swage::Mesh& mesh,
+        const swage::Mesh_t& mesh,
         const MPICArrayKokkos<double>& node_coords,
         const MPICArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& elem_vol) const;
 
     void get_divergence(
         DCArrayKokkos<double>& GaussPoints_div,
-        const swage::Mesh& mesh,
+        const swage::Mesh_t& mesh,
         const MPICArrayKokkos<double>& node_coords,
         const MPICArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vol) const;
@@ -343,7 +342,7 @@ public:
     // **** Functions defined in properties.cpp **** //
     void update_state(
         const Material_t& Materials,
-        const swage::Mesh&     mesh,
+        const swage::Mesh_t&     mesh,
         const MPICArrayKokkos<double>& node_coords,
         const MPICArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
@@ -371,7 +370,7 @@ public:
 
     void update_stress(
         const Material_t& Materials,
-        const swage::Mesh& mesh,
+        const swage::Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const MPICArrayKokkos<double>& node_coords,
         const MPICArrayKokkos<double>& node_vel,
@@ -413,7 +412,7 @@ public:
         const size_t mat_id) const;
 
     void get_timestep(
-        swage::Mesh& mesh,
+        swage::Mesh_t& mesh,
         MPICArrayKokkos<double>& node_coords,
         MPICArrayKokkos<double>& node_vel,
         DCArrayKokkos<double>& GaussPoints_vol,
@@ -465,26 +464,26 @@ public:
 };
 
 double sum_domain_internal_energy(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_sie);
 
 double sum_domain_kinetic_energy(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& node_mass);
 
 double sum_domain_material_mass(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass);
 
-double sum_domain_node_mass(const swage::Mesh& mesh,
+double sum_domain_node_mass(const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_coords,
     const DCArrayKokkos<double>& node_mass);
 
-void set_corner_force_zero(const swage::Mesh& mesh,
+void set_corner_force_zero(const swage::Mesh_t& mesh,
     const DCArrayKokkos<double>& corner_force);
 
 #endif // end HEADER_H

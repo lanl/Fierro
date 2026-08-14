@@ -107,7 +107,7 @@ void SGH3D::rk_init(
 /// REMOVE EXCESS TIME RELATED VARIABLES
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::get_timestep(swage::Mesh& mesh,
+void SGH3D::get_timestep(swage::Mesh_t& mesh,
                        MPICArrayKokkos<double>& node_coords,
                        MPICArrayKokkos<double>& node_vel,
                        DCArrayKokkos<double>& GaussPoints_vol,
