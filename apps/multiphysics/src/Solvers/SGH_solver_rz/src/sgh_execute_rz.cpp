@@ -713,8 +713,7 @@ void calc_node_areal_mass_rz(const swage::Mesh_t& mesh,
     Kokkos::fence();
 
     // calculate the boundary areal mass
-    //FOR_ALL(node_bdy_gid, 0, mesh.num_bdy_nodes, {
-    for (int node_bdy_gid = 0; node_bdy_gid < mesh.num_bdy_nodes; node_bdy_gid++) {
+    FOR_ALL(node_bdy_gid, 0, mesh.num_bdy_nodes, {
         size_t node_gid = mesh.bdy_nodes(node_bdy_gid);
 
         if (node_coords(node_gid, 1) < tiny) {
@@ -733,8 +732,7 @@ void calc_node_areal_mass_rz(const swage::Mesh_t& mesh,
                 }
             } // end for over neighboring nodes
         } // end if
-    }
-    //}); // end parallel for over elem_gid
+    }); // end parallel for over elem_gid
 
     return;
 }// end function
