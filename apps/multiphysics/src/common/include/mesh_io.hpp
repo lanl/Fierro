@@ -1012,7 +1012,7 @@ public:
             if(v[0] == "CELLS"){
                 num_elem = std::stoi(v[1]);
                 printf("Number of elements read in %zu\n", num_elem);
-                mesh.initialize_elems_Pn(num_elem, num_dims, mesh_inps.p_order);
+                mesh.initialize_elems_Pn(num_elem, mesh_inps.p_order, 2*mesh_inps.p_order);
                 found = true;
             }
 
@@ -1155,7 +1155,7 @@ public:
         // allocate mesh class nodes and elems
         mesh.initialize_nodes(num_nodes);
         if(HexN){
-            mesh.initialize_elems_Pn(num_elems, num_dims, Pn_order);
+            mesh.initialize_elems_Pn(num_elems, Pn_order, 2*Pn_order);
         } else {
             mesh.initialize_elems(num_elems);
         }
@@ -1941,7 +1941,7 @@ public:
 
 
         // initialize elem variables
-        mesh.initialize_elems_Pn(num_elems, num_dim, SimulationParamaters.MeshInput.p_order);
+        mesh.initialize_elems_Pn(num_elems, SimulationParamaters.MeshInput.p_order, 2*SimulationParamaters.MeshInput.p_order);
 
         // --- Build elems  ---
         
@@ -6134,7 +6134,7 @@ public:
         // Number of Gauss points per element: (2*Pn)^num_dims
         // Read directly from the reference element so we stay consistent with
         // whatever quadrature order was set up for this run.
-        const size_t num_gp_per_elem   = ref_elem.qpt_grad_basis.dims(0);
+        const size_t num_gp_per_elem   =  mesh.num_gauss_in_elem;
         const size_t num_total_gp      = num_mat_elems * num_gp_per_elem;
 
         const size_t num_scalar_vars   = mat_scalar_var_names.size();
@@ -7786,7 +7786,7 @@ public:
         //  Derived sizes
         // -----------------------------------------------------------------------
 
-        const size_t num_gp_per_elem = ref_elem.qpt_grad_basis.dims(0);
+        const size_t num_gp_per_elem = mesh.num_gauss_in_elem;
 
         // -----------------------------------------------------------------------
         //  Gauss-point physical coordinates  (isoparametric mapping)

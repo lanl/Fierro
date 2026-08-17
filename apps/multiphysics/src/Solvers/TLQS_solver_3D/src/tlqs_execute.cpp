@@ -92,6 +92,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                                   reference_space::LagrangeLegendre,
                                   Quad,
                                   SimulationParamaters.MeshInput.p_order);
+
+    int num_qpt_in_elem = ref_elem.qpt_grad_basis.dims(0);
     
     // element stiffness and force arrays
     CArrayKokkos <double> K_elem(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem); /// K1 + K2
@@ -289,9 +291,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     ViewCArrayKokkos<double> curr_F_elem(&F_elem(elem_id,0),3*mesh.num_nodes_in_elem);
 
                     // looping through material points
-                    for (int mat_pt = 0; mat_pt < ref_elem.qpt_grad_basis.dims(0); mat_pt++) {
+                    for (int mat_pt = 0; mat_pt < num_qpt_in_elem; mat_pt++) {
                         // setting up view and getting material matrix
-                        ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.qpt_grad_basis(mat_pt,0,0),ref_elem.qpt_grad_basis.dims(1), mesh.num_dims);
+                        ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.qpt_grad_basis(mat_pt,0,0),ref_elem.num_dofs_in_elem, mesh.num_dims);
                         Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
 
                         // tallying to element array
@@ -670,9 +672,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 double material_matrix[6][6];
 
                 // looping through material points
-                for (int mat_pt = 0; mat_pt < ref_elem.qpt_grad_basis.dims(0); mat_pt++) {
+                for (int mat_pt = 0; mat_pt < num_qpt_in_elem; mat_pt++) {
                     // setting up view and getting material matrix
-                    ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.qpt_grad_basis(mat_pt,0,0),ref_elem.qpt_grad_basis.dims(1), mesh.num_dims);
+                    ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.qpt_grad_basis(mat_pt,0,0),ref_elem.num_dofs_in_elem, mesh.num_dims);
                     Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
 
                     // views into stress and strain
