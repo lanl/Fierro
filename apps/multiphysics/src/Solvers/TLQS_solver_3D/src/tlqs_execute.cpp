@@ -89,7 +89,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                                3);
     elements::ReferenceElement_t ref_elem;
     ref_elem.initialize_ref_elem(reference_space::arbitraryOrderElement,
-                                  reference_space::LagrangeLegendre,
+                                  reference_space::LagrangeLobatto,
                                   Quad,
                                   SimulationParamaters.MeshInput.p_order);
 
@@ -635,7 +635,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             }, norm);
 
             std::cout << "ITER: " << iter << "   ANDERSON RESIDUAL NORM: " << norm << std::endl;
-            if (norm < 1E-12 && iter > 1) {
+            if (norm < 1E-16 && iter > 1) {
                 std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }
