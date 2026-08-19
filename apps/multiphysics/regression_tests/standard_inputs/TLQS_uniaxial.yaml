@@ -81,7 +81,7 @@ materials:
         # young's modulus
         # poisson's ratio
         strength_global_vars:
-            - 200 # GPa
+            - 2E11
             - 0.33
 
     #- material:
