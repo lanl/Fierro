@@ -105,7 +105,7 @@ void TLQS3D::get_gradients(
         const double dpsig_k2 = inv_J[2][0]*gauss_point_grad_basis(k,0) + inv_J[2][1]*gauss_point_grad_basis(k,1) + inv_J[2][2]*gauss_point_grad_basis(k,2);
 
         for (int j = 0; j < 3; j++) {
-            const double u_total = displacement(node_gid, j) + displacement_step(3*node_gid + j);
+            const double u_total = displacement(node_gid, j) + displacement_step(node_gid, j);
             grad_u[j][0] += u_total * dpsig_k0;
             grad_u[j][1] += u_total * dpsig_k1;
             grad_u[j][2] += u_total * dpsig_k2;

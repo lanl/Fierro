@@ -281,7 +281,7 @@ public:
         const CArrayKokkos<double>& F_elem,
         const CArrayKokkos<double>& K_elem,
         const CArrayKokkos<double>& displacement_iter,
-        const CArrayKokkos<double>& r0
+        MPICArrayKokkos<double>& r0
     );
 
     // inputs: mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p
@@ -289,10 +289,14 @@ public:
     double get_alpha(
         const size_t num_nodes,
         const size_t num_nodes_in_elem,
+        const size_t num_owned_nodes,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
         const DCArrayKokkos<size_t>& nodes_in_elem,
         const CArrayKokkos<double>& K_elem,
         const double rktrk,
-        const CArrayKokkos<double>& p
+        const CArrayKokkos<double>& p,
+        MPICArrayKokkos<double>& temporary,
+        const DCArrayKokkos<bool> shared_tally_owned_nodes
     );
 
     void get_rkp1(
@@ -301,10 +305,10 @@ public:
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
         const CArrayKokkos<double>& K_elem,
-        const CArrayKokkos<double>& rk,
+        const MPICArrayKokkos<double>& rk,
         const CArrayKokkos<double>& p,
         const double alpha,
-        const CArrayKokkos<double>& rkp1
+        MPICArrayKokkos<double>& rkp1
     );
 
     // **** Functions defined in post_process.cpp **** //
@@ -371,12 +375,12 @@ public:
     ); */
 
     // **** Functions defined in chebyshev_smoothing.cpp **** //
-    void apply_chebyshev_preconditioner(const CArrayKokkos<double>& rk,
-        const CArrayKokkos<double>& zkp1,
-        const CArrayKokkos<double>& D_inv,
-        const CArrayKokkos<double>& zk,
+    void apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
+        const MPICArrayKokkos<double>& zkp1,
+        const MPICArrayKokkos<double>& D_inv,
+        const MPICArrayKokkos<double>& zk,
         const CArrayKokkos<double>& delta_z,
-        const CArrayKokkos<double>& temporary,
+        MPICArrayKokkos<double>& temporary,
         const CArrayKokkos<double>& K_elem,
         const size_t num_nodes,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
@@ -387,7 +391,7 @@ public:
         const int degree
     );
 
-    void get_diagonal_inverse(CArrayKokkos<double>& D_inv,
+    void get_diagonal_inverse(MPICArrayKokkos<double>& D_inv,
         const CArrayKokkos<double>& K_elem,
         const size_t num_nodes,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
@@ -397,15 +401,17 @@ public:
 
     void get_chebyshev_bounds(double& alpha,
         double& beta,
-        const CArrayKokkos<double>& D_inv,
+        const MPICArrayKokkos<double>& D_inv,
         const CArrayKokkos<double>& K_elem,
         const size_t num_nodes,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
-        CArrayKokkos<double>& v_scratch,
-        CArrayKokkos<double>& w_scratch,
-        const int max_iters
+        MPICArrayKokkos<double>& v_scratch,
+        MPICArrayKokkos<double>& w_scratch,
+        const int max_iters,
+        const int num_owned_nodes,
+        const DCArrayKokkos<bool> shared_tally_owned_nodes
     );
     
 };

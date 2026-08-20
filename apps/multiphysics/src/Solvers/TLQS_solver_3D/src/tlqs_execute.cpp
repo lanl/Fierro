@@ -54,6 +54,15 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     swage::Mesh_t& mesh, 
                     State_t& State)
 {
+    if (mesh.num_dims != 3) {
+        Kokkos::abort("TLQS SOLVER ONLY SUPPORTED IN 3D!!!");
+    }
+    // Get MPI ranks and num ranks
+    int rank;
+    int num_ranks;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
+
     // Conveinent local variables
     double fuzz  = SimulationParamaters.DynamicOptions.fuzz;
     double tiny  = SimulationParamaters.DynamicOptions.tiny;
@@ -108,15 +117,15 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos<double> zkp1(3 * mesh.num_nodes); */
 
     // conjugate gradient method vectors
-    CArrayKokkos <double> p(3*mesh.num_nodes);
-    CArrayKokkos <double> rk(3*mesh.num_nodes);
-    CArrayKokkos <double> rkp1(3*mesh.num_nodes);
+    CArrayKokkos <double> p(mesh.num_nodes, 3);
+    MPICArrayKokkos <double> rk(mesh.num_nodes, 3);
+    MPICArrayKokkos <double> rkp1(mesh.num_nodes, 3);
 
     // Anderson acceleration variables
     size_t window_size = 1;
     const size_t max_hist = (window_size > 1) ? (window_size - 1) : 1;
     DCArrayKokkos <double> anderson_weights(max_hist);
-    CArrayKokkos <double> curr_anderson_residual(3*mesh.num_nodes);
+    //CArrayKokkos <double> curr_anderson_residual(3*mesh.num_nodes);
     CArrayKokkos <double> hist_anderson_residual(3*mesh.num_nodes,window_size);
     hist_anderson_residual.set_values(0);
     CArrayKokkos <double> hist_displacement_iter(3*mesh.num_nodes,window_size);
@@ -126,6 +135,14 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     const int startup_iters = 3;       // Number of initial pure Picard steps
     const double max_weight = 50.0;     // Threshold to catch exploded weights
     const double fine_floor = 1e-10;     // Residual norm below which Anderson is unsafe
+
+    // ***********************************************************
+    // TEMPORARY ALLOCATION AS ANDERSON IS NOT BEING SET FOR MPI YET
+    // ***********************************************************
+    CArrayKokkos <double> curr_anderson_residual(mesh.num_nodes,3);
+    // ***********************************************************
+    // TEMPORARY ALLOCATION AS ANDERSON IS NOT BEING SET FOR MPI YET
+    // ***********************************************************
 
     // QR variables
     FArrayKokkos <double> Q(3*mesh.num_nodes, max_hist ,"Q");
@@ -148,16 +165,16 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // displacement_iter_kp1: result of the CG solve for this Picard iteration G(x_k),
     //                        then overwritten with the Anderson-accelerated update x_{k+1}.
     //                        Reset to zero before every CG solve.
-    CArrayKokkos <double> displacement_step(3*mesh.num_nodes); /// current load-step displacement estimate
-    CArrayKokkos <double> displacement_iter_k(3*mesh.num_nodes);   /// x_k  (Picard iterate in)
-    CArrayKokkos <double> displacement_iter_kp1(3*mesh.num_nodes); /// G(x_k) then x_{k+1}
+    CArrayKokkos <double> displacement_step(mesh.num_nodes,3); /// current load-step displacement estimate
+    CArrayKokkos <double> displacement_iter_k(mesh.num_nodes,3);   /// x_k  (Picard iterate in)
+    CArrayKokkos <double> displacement_iter_kp1(mesh.num_nodes,3); /// G(x_k) then x_{k+1}
 
     // variables for chebyshev smoothing
-    CArrayKokkos<double> D_inv(3 * mesh.num_nodes);
-    CArrayKokkos<double> zk(3 * mesh.num_nodes);
-    CArrayKokkos<double> zkp1(3 * mesh.num_nodes);
-    CArrayKokkos<double> delta_z(3 * mesh.num_nodes);
-    CArrayKokkos<double> temporary(3 * mesh.num_nodes);
+    MPICArrayKokkos<double> D_inv(mesh.num_nodes, 3);
+    MPICArrayKokkos<double> zk(mesh.num_nodes, 3);
+    MPICArrayKokkos<double> zkp1(mesh.num_nodes, 3);
+    CArrayKokkos<double> delta_z(mesh.num_nodes, 3);
+    MPICArrayKokkos<double> temporary(mesh.num_nodes, 3);
 
 
     // Algebraic Multigrid variables
@@ -185,6 +202,16 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> P8;
     CArrayKokkos <double> P9;
     CArrayKokkos <double> P10; */
+
+    // setting comm plans to node communication plan for all MPI arrays
+    auto& node_communication_plan = State.node.displacement.comm_plan_;
+    rk.initialize_comm_plan(*node_communication_plan);
+    rkp1.initialize_comm_plan(*node_communication_plan);
+    D_inv.initialize_comm_plan(*node_communication_plan);
+    zk.initialize_comm_plan(*node_communication_plan);
+    zkp1.initialize_comm_plan(*node_communication_plan);
+    temporary.initialize_comm_plan(*node_communication_plan);
+
 
     // Create mesh writer
     MeshWriter mesh_writer;
@@ -386,7 +413,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             
             get_chebyshev_bounds(alpha, beta, D_inv, K_elem, mesh.num_nodes, 
                                  mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem,
-                                 zk, temporary, 15); // Running 15 power iterations
+                                 zk, temporary, 15, mesh.num_owned_nodes, mesh.shared_tally_owned_nodes); // Running 15 power iterations
 
             // getting r0 = (02F - 01F) - K * displacement_iter_k
             get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
@@ -398,9 +425,10 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // z0 = M_inv * r0,  p0 = z0
             //get_z0(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, mesh.elems_in_node, K_elem, rk, zk);
-            FOR_ALL(i, 0, 3 * mesh.num_nodes, {
+            FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                    j, 0, 3, {
                 //zk(i) = M_inv(i) * rk(i);
-                p(i)  = zk(i);
+                p(i,j)  = zk(i,j);
             });
             Kokkos::fence();
 
@@ -410,17 +438,24 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // r_k^T * z_k
                 double rktzk = 0.0;
                 double loc_rktzk = 0.0;
-                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rktzk, {
-                    loc_rktzk += rk(i) * zk(i);
+                FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_rktzk, {
+                    if(mesh.shared_tally_owned_nodes(i)) {
+                        for (int j = 0; j < 3; j++) {
+                            loc_rktzk += rk(i,j) * zk(i,j);
+                        }
+                    }
                 }, rktzk);
                 Kokkos::fence();
 
+                MPI_Allreduce(MPI_IN_PLACE, &rktzk, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
                 // alpha_k = (r_k^T * z_k) / (p_k^T * K * p_k)
-                double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rktzk, p);
+                double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.num_owned_nodes, mesh.elems_in_node, mesh.nodes_in_elem, K_elem, rktzk, p, temporary, mesh.shared_tally_owned_nodes);
 
                 // displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
-                FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                    displacement_iter_kp1(i) += alpha_k * p(i);
+                FOR_ALL(i, 0, (int)mesh.num_nodes,
+                        j, 0, 3, {
+                    displacement_iter_kp1(i, j) += alpha_k * p(i, j);
                 });
                 Kokkos::fence();
 
@@ -442,10 +477,15 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // check convergence on true residual norm
                 double rkp1trkp1 = 0.0;
                 double loc_rkp1trkp1 = 0.0;
-                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1trkp1, {
-                    loc_rkp1trkp1 += rkp1(i) * rkp1(i);
+                FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_rkp1trkp1, {
+                    if(mesh.shared_tally_owned_nodes(i)){
+                        for (int j = 0; j < 3; j++) {
+                            loc_rkp1trkp1 += rkp1(i,j) * rkp1(i,j);
+                        }
+                    }
                 }, rkp1trkp1);
                 Kokkos::fence();
+                MPI_Allreduce(MPI_IN_PLACE, &rkp1trkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 double norm = sqrt(rkp1trkp1);
                 //std::cout << "CGM iter " << cgm_iter << " residual norm: " << norm << "\n";
                 if (norm < 1.0/*1E-10*/) {
@@ -455,23 +495,30 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // r_{k+1}^T * z_{k+1}
                 double rkp1tzkp1 = 0.0;
                 double loc_rkp1tzkp1 = 0.0;
-                FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_rkp1tzkp1, {
-                    loc_rkp1tzkp1 += rkp1(i) * zkp1(i);
+                FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_rkp1tzkp1, {
+                    if(mesh.shared_tally_owned_nodes(i)){
+                        for (int j = 0; j < 3; j++) {
+                            loc_rkp1tzkp1 += rkp1(i,j) * zkp1(i,j);
+                        }
+                    }
                 }, rkp1tzkp1);
                 Kokkos::fence();
+                MPI_Allreduce(MPI_IN_PLACE, &rkp1tzkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                 // beta_k = (r_{k+1}^T * z_{k+1}) / (r_k^T * z_k)
                 double beta_k = rkp1tzkp1 / (rktzk + 1e-16);
 
                 // p_{k+1} = z_{k+1} + beta_k * p_k
-                FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                    p(i) = zkp1(i) + beta_k * p(i);
+                FOR_ALL(i, 0, (int)mesh.num_nodes,
+                        j, 0, 3, {
+                    p(i,j) = zkp1(i,j) + beta_k * p(i,j);
                 });
 
                 // update rk, zk for next iteration
-                FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                    rk(i) = rkp1(i);
-                    zk(i) = zkp1(i);
+                FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                        j, 0, 3, {
+                    rk(i,j) = rkp1(i,j);
+                    zk(i,j) = zkp1(i,j);
                 });
                 Kokkos::fence();
 
@@ -501,12 +548,13 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // ***************************************************
 
             // --- Step 1: compute Anderson residual f_k = G(x_k) - x_k ---
-            FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                curr_anderson_residual(i) = displacement_iter_kp1(i) - displacement_iter_k(i);
+            FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                    j, 0, 3, {
+                curr_anderson_residual(i,j) = displacement_iter_kp1(i,j) - displacement_iter_k(i,j);
             });
             Kokkos::fence();
 
-            // Compute current residual norm for safeguarding checks
+            /* // Compute current residual norm for safeguarding checks
             double safe_norm = 0.0;
             double safe_loc_norm = 0.0;
             FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, safe_loc_norm, {
@@ -559,7 +607,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         break;
                     }
                 }
-                /* // --- Diagnostic Verification Block ---
+                // --- Diagnostic Verification Block ---
                 std::vector<double> alpha(m_diff + 1, 0.0);
                 alpha[0] = anderson_weights.host(0);
 
@@ -575,7 +623,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     alpha_sum += a;
                 }
                 std::cout << "\nTotal Alpha Sum (Should be 1.0): " << alpha_sum << std::endl;
-                // ------------------------------------- */
+                // -------------------------------------
 
                 if (weights_are_valid) {
                     // --- Step 4a: Apply Accelerated Update ---
@@ -601,6 +649,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 }
             }
 
+            */
             auto point_E = std::chrono::steady_clock::now();
             auto elapsed_E = std::chrono::duration_cast<std::chrono::milliseconds>(point_E - point_D).count();
             //std::cout << "Time elapsed for anderson: " << elapsed_E << " ms\n";
@@ -609,8 +658,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // ***************************************************
 
             // update displacement step vector for convergence check and next iteration
-            FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                displacement_step(i) += displacement_iter_kp1(i);
+            FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                    j, 0, 3, {
+                displacement_step(i,j) += displacement_iter_kp1(i,j);
             });
             Kokkos::fence();
 
@@ -630,9 +680,15 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             double norm = sqrt(norm_num / norm_den); */
             double norm = 0.0;
             double loc_norm = 0.0;
-            FOR_REDUCE_SUM(i, 0, 3*mesh.num_nodes, loc_norm, {
-                loc_norm += curr_anderson_residual(i) * curr_anderson_residual(i);
+            FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_norm, {
+                if(mesh.shared_tally_owned_nodes(i)){
+                    for (int j = 0; j < 3; j++) {
+                        loc_norm += curr_anderson_residual(i,j) * curr_anderson_residual(i,j);
+                    }
+                }
             }, norm);
+
+            MPI_Allreduce(MPI_IN_PLACE, &norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
             std::cout << "ITER: " << iter << "   ANDERSON RESIDUAL NORM: " << norm << std::endl;
             if (norm < 1E-16 && iter > 1) {
@@ -641,8 +697,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             }
 
             // Update x_k <- x_{k+1} for the next Picard iteration.
-            FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                displacement_iter_k(i) = displacement_iter_kp1(i);
+            FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                    j, 0, 3, {
+                displacement_iter_k(i,j) = displacement_iter_kp1(i,j);
             });
             Kokkos::fence();
             auto point_F = std::chrono::steady_clock::now();
@@ -655,7 +712,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         // updating total displacement for next load step
         FOR_ALL(i, 0, (int)mesh.num_nodes, 
                 j, 0, 3, {
-                    State.node.displacement(i,j) += displacement_step(3*i + j);
+                    State.node.displacement(i,j) += displacement_step(i, j);
                     State.node.coords(i,j) = State.node.coords_t0(i,j) + State.node.displacement(i,j);
         });
         Kokkos::fence();
