@@ -43,7 +43,7 @@ void TLQS3D::get_r0(
     const CArrayKokkos <double>& F_elem,
     const CArrayKokkos <double>& K_elem,
     const CArrayKokkos <double>& displacement_iter,
-    const CArrayKokkos <double>& r0
+    MPICArrayKokkos <double>& r0
 )
 {
     // getting r0 = (02F - 01F) - K * displacement_iter
@@ -51,7 +51,6 @@ void TLQS3D::get_r0(
         const size_t num_elems_in_node = elems_in_node.stride(node_gid);
 
         for (size_t p = 0; p < 3; p++) {
-            const size_t global_dof = 3 * node_gid + p;
             double val = 0.0;
 
             // Sum contributions from all elements containing this node
@@ -78,58 +77,81 @@ void TLQS3D::get_r0(
                     const size_t node_gid_b = nodes_in_elem(elem_gid, b);
                     for (size_t q = 0; q < 3; q++) {
                         const size_t local_dof_b = 3 * b + q;
-                        const size_t global_dof_b = 3 * node_gid_b + q;
-                        val -= K_elem(elem_gid, local_dof, local_dof_b) * displacement_iter(global_dof_b);
+                        val -= K_elem(elem_gid, local_dof, local_dof_b) * displacement_iter(node_gid_b, q);
                         //std::cout << "K_ELEM: " << K_elem(elem_gid, local_dof, local_dof_b) << std::endl;
                     }
                 }
             }
 
-            r0(global_dof) = val;
+            r0(node_gid, p) = val;
         }
     });
     Kokkos::fence();
+    r0.communicate();
 } // end get_r0
 
 double TLQS3D::get_alpha(
     const size_t num_nodes,
     const size_t num_nodes_in_elem,
+    const size_t num_owned_nodes,
+    const RaggedRightArrayKokkos<size_t>& elems_in_node,
     const DCArrayKokkos<size_t>& nodes_in_elem,
     const CArrayKokkos<double>& K_elem,
     const double rktrk,
-    const CArrayKokkos<double>& p)
+    const CArrayKokkos<double>& p,
+    MPICArrayKokkos<double>& temporary,
+    const DCArrayKokkos<bool> shared_tally_owned_nodes
+    )
 {
+    // Kernel 1: compute temporary = K * p
+    FOR_ALL(node_gid, 0, num_nodes, {
+        for (size_t p_dir = 0; p_dir < 3; p_dir++) {
+            double val = 0.0;
 
-    // denominator: p^T * K * p
-    // first compute Kp = K * p via assembly-free matvec
-    // then dot with p
-    double ptkp = 0.0;
-    double loc_ptkp = 0.0;
-    FOR_REDUCE_SUM(elem_gid, 0, K_elem.dims(0), loc_ptkp, {
+            for (size_t elem_lid = 0; elem_lid < elems_in_node.stride(node_gid); elem_lid++) {
+                const size_t elem_gid = elems_in_node(node_gid, elem_lid);
 
-        for (size_t a = 0; a < num_nodes_in_elem; a++) {
-            const size_t node_gid_a = nodes_in_elem(elem_gid, a);
-            for (size_t p_dir = 0; p_dir < 3; p_dir++) {
-                const size_t local_dof_a  = 3 * a + p_dir;
-                const size_t global_dof_a = 3 * node_gid_a + p_dir;
+                size_t local_node_lid = num_nodes_in_elem;
+                for (size_t a = 0; a < num_nodes_in_elem; a++) {
+                    if (nodes_in_elem(elem_gid, a) == node_gid) {
+                        local_node_lid = a;
+                        break;
+                    }
+                }
 
-                double Kp_val = 0.0;
+                const size_t local_dof = 3 * local_node_lid + p_dir;
+
                 for (size_t b = 0; b < num_nodes_in_elem; b++) {
                     const size_t node_gid_b = nodes_in_elem(elem_gid, b);
                     for (size_t q = 0; q < 3; q++) {
-                        const size_t local_dof_b  = 3 * b + q;
-                        const size_t global_dof_b = 3 * node_gid_b + q;
-                        Kp_val += K_elem(elem_gid, local_dof_a, local_dof_b) * p(global_dof_b);
+                        const size_t local_dof_b = 3 * b + q;
+                        val += K_elem(elem_gid, local_dof, local_dof_b) * p(node_gid_b, q);
                     }
                 }
-                loc_ptkp += p(global_dof_a) * Kp_val;
+            }
+            temporary(node_gid, p_dir) = val;
+        }
+    });
+    MATAR_FENCE();
+
+    // temporary ghost entries needed for dot product
+    temporary.communicate();
+
+    // Kernel 2: p^T * temporary over owned nodes only, then Allreduce
+    double ptkp = 0.0;
+    double loc_ptkp = 0.0;
+    FOR_REDUCE_SUM(node_gid, 0, (int)num_owned_nodes, loc_ptkp, {
+        if(shared_tally_owned_nodes(node_gid)){
+            for (int j = 0; j < 3; j++) {
+                loc_ptkp += p(node_gid, j) * temporary(node_gid, j);
             }
         }
     }, ptkp);
-    Kokkos::fence();
-    //std::cout << "PTKP: " << ptkp << std::endl;
+    MATAR_FENCE();
 
-    return rktrk / (ptkp+1E-16);
+    MPI_Allreduce(MPI_IN_PLACE, &ptkp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    return rktrk / (ptkp + 1e-16);
 } // end get_alpha
 
 void TLQS3D::get_rkp1(
@@ -138,17 +160,16 @@ void TLQS3D::get_rkp1(
     const size_t num_nodes_in_elem,
     const DCArrayKokkos<size_t>& nodes_in_elem,
     const CArrayKokkos<double>& K_elem,
-    const CArrayKokkos<double>& rk,
+    const MPICArrayKokkos<double>& rk,
     const CArrayKokkos<double>& p,
     const double alpha,
-    const CArrayKokkos<double>& rkp1)
+    MPICArrayKokkos<double>& rkp1)
 {
     // r_{k+1} = r_k - alpha * K * p
     FOR_ALL(node_gid, 0, num_nodes, {
         const size_t num_elems_in_node = elems_in_node.stride(node_gid);
 
         for (size_t p_dir = 0; p_dir < 3; p_dir++) {
-            const size_t global_dof = 3 * node_gid + p_dir;
             double Kp_val = 0.0;
 
             for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
@@ -169,14 +190,14 @@ void TLQS3D::get_rkp1(
                     const size_t node_gid_b = nodes_in_elem(elem_gid, b);
                     for (size_t q = 0; q < 3; q++) {
                         const size_t local_dof_b  = 3 * b + q;
-                        const size_t global_dof_b = 3 * node_gid_b + q;
-                        Kp_val += K_elem(elem_gid, local_dof, local_dof_b) * p(global_dof_b);
+                        Kp_val += K_elem(elem_gid, local_dof, local_dof_b) * p(node_gid_b, q);
                     }
                 }
             }
 
-            rkp1(global_dof) = rk(global_dof) - alpha * Kp_val;
+            rkp1(node_gid, p_dir) = rk(node_gid, p_dir) - alpha * Kp_val;
         }
     });
     Kokkos::fence();
+    rkp1.communicate();
 } // end get_rkp1

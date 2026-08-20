@@ -151,7 +151,9 @@ void Driver::initialize()
     
     // Partition the mesh to all ranks
     if(world_size != 1) { // pass through the partitioning function if not a single rank
-        elements::partition_mesh(initial_mesh, mesh, initial_node_coords, final_node_coords, element_communication_plan, node_communication_plan, world_size, rank);   
+        elements::partition_mesh(initial_mesh, mesh, initial_node_coords, final_node_coords, element_communication_plan, node_communication_plan, world_size, rank);
+        MPI_Allreduce(MPI_IN_PLACE, &initial_mesh.num_gauss_in_elem, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        mesh.num_gauss_in_elem = initial_mesh.num_gauss_in_elem;
         // Verify communication plans (matches ELEMENTS decomp_example pattern)
         // element_communication_plan.verify_graph_communicator();
         // node_communication_plan.verify_graph_communicator();
@@ -375,6 +377,9 @@ void Driver::initialize()
     }
     if (State.node.vel_n0.size() > 0) {
         State.node.vel_n0.initialize_comm_plan(node_communication_plan);
+    }
+    if (State.node.displacement.size() > 0) {
+        State.node.displacement.initialize_comm_plan(node_communication_plan);
     }
     if (State.GaussPoints.shock_detector.size() > 0){
         State.GaussPoints.shock_detector.initialize_comm_plan(element_communication_plan);
