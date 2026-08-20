@@ -47,7 +47,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct SimulationParamaters_t;
 struct Material_t;
-// struct swage::Mesh;
+// struct swage::Mesh_t;
 struct BoundaryCondition_t;
 struct State_t;
 struct fillGaussState_t;
@@ -61,7 +61,7 @@ using namespace mtr;
 // ------------------------------------------------------------------------------
 void simulation_setup(SimulationParameters_t& SimulationParamaters, 
                       Material_t& Materials, 
-                      swage::Mesh& mesh, 
+                      swage::Mesh_t& mesh, 
                       BoundaryCondition_t& Boundary,
                       State_t& State,
                       fillGaussState_t& fillGaussState,
@@ -69,7 +69,7 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
 void fill_regions(
         const Material_t& Materials,
-        const swage::Mesh& mesh,
+        const swage::Mesh_t& mesh,
         const MPICArrayKokkos<double>& node_coords,
         MPICArrayKokkos <double>& node_vel,
         MPICArrayKokkos <double>& node_temp,
@@ -102,7 +102,7 @@ void fill_regions(
 // ------------------------------------------------------------------------------
 void material_state_setup(SimulationParameters_t& SimulationParamaters, 
                           Material_t& Materials, 
-                          swage::Mesh& mesh, 
+                          swage::Mesh_t& mesh, 
                           BoundaryCondition_t& Boundary,
                           State_t& State,
                           fillGaussState_t& fillGaussState,
@@ -143,7 +143,7 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-double fill_geometric_region(const swage::Mesh& mesh,
+double fill_geometric_region(const swage::Mesh_t& mesh,
                              const DCArrayKokkos<size_t>& voxel_elem_mat_id,
                              const DCArrayKokkos<double>& elem_geo_volfrac_fill,
                              const DCArrayKokkos<int>& object_ids,
@@ -348,7 +348,7 @@ void paint_node_scalar(const double scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void init_state_vars(const Material_t& Materials,
-                     const swage::Mesh& mesh,
+                     const swage::Mesh_t& mesh,
                      const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
                      const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
                      const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
@@ -375,7 +375,7 @@ void init_state_vars(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void init_press_sspd_stress(const Material_t& Materials,
-                            const swage::Mesh& mesh,
+                            const swage::Mesh_t& mesh,
                             const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
                             DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
                             DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
@@ -404,7 +404,7 @@ void init_press_sspd_stress(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass(const Material_t& Materials,
-                      const swage::Mesh& mesh,
+                      const swage::Mesh_t& mesh,
                       const MPICArrayKokkos<double>& node_coords,
                       const DCArrayKokkos<double>& node_mass,
                       const DCArrayKokkos<double>& corner_mass,
@@ -428,7 +428,7 @@ void calc_corner_mass(const Material_t& Materials,
 /// \param num_mat_elems is the number of material elements for mat_id
 ///
 /////////////////////////////////////////////////////////////////////////////
-void calc_node_mass(const swage::Mesh& mesh,
+void calc_node_mass(const swage::Mesh_t& mesh,
                     const MPICArrayKokkos<double>& node_coords,
                     const DCArrayKokkos<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass);
@@ -447,7 +447,7 @@ void calc_node_mass(const swage::Mesh& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void init_corner_node_masses_zero(
-        const swage::Mesh& mesh,
+        const swage::Mesh_t& mesh,
         const DCArrayKokkos<double>& node_mass,
         const DCArrayKokkos<double>& corner_mass);
 

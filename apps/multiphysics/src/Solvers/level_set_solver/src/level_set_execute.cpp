@@ -52,9 +52,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void LevelSet::execute(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
-                    swage::Mesh& mesh, 
-                    State_t& State,
-                    elements::fe_ref_elem_t& ref_elem)
+                    swage::Mesh_t& mesh, 
+                    State_t& State)
 {
 
     // arrays local to this solver

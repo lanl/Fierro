@@ -51,9 +51,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void TLQS3D::execute(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
                     BoundaryCondition_t& BoundaryConditions, 
-                    swage::Mesh& mesh, 
-                    State_t& State,
-                    elements::fe_ref_elem_t& ref_elem)
+                    swage::Mesh_t& mesh, 
+                    State_t& State)
 {
     // Conveinent local variables
     double fuzz  = SimulationParamaters.DynamicOptions.fuzz;
@@ -82,6 +81,19 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // *******************************
     // local variables for this solver
     // *******************************
+
+    // initializing the reference element
+    elements::Quadrature_t Quad;
+    Quad.initialize_quadrature(reference_space::GaussLegendre,
+                               2*SimulationParamaters.MeshInput.p_order,
+                               3);
+    elements::ReferenceElement_t ref_elem;
+    ref_elem.initialize_ref_elem(reference_space::arbitraryOrderElement,
+                                  reference_space::LagrangeLobatto,
+                                  Quad,
+                                  SimulationParamaters.MeshInput.p_order);
+
+    int num_qpt_in_elem = ref_elem.qpt_grad_basis.dims(0);
     
     // element stiffness and force arrays
     CArrayKokkos <double> K_elem(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem); /// K1 + K2
@@ -279,14 +291,14 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     ViewCArrayKokkos<double> curr_F_elem(&F_elem(elem_id,0),3*mesh.num_nodes_in_elem);
 
                     // looping through material points
-                    for (int mat_pt = 0; mat_pt < ref_elem.gauss_point_grad_basis.dims(0); mat_pt++) {
+                    for (int mat_pt = 0; mat_pt < num_qpt_in_elem; mat_pt++) {
                         // setting up view and getting material matrix
-                        ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.gauss_point_grad_basis(mat_pt,0,0),ref_elem.num_basis, mesh.num_dims);
+                        ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.qpt_grad_basis(mat_pt,0,0),ref_elem.num_dofs_in_elem, mesh.num_dims);
                         Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
 
                         // tallying to element array
                         TLQS3D::get_gradients(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, displacement_step, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
-                        double weight = ref_elem.gauss_point_weights(mat_pt)*det_J;
+                        double weight = Quad.qpt_weights(mat_pt)*det_J;
                         double local_mat_vol_frac = State.MaterialPoints.mat_volfrac(mat_id, elem);
 
                         TLQS3D::tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, weight, PK2_curr_config, curr_K_elem, curr_F_elem, local_mat_vol_frac);
@@ -623,7 +635,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             }, norm);
 
             std::cout << "ITER: " << iter << "   ANDERSON RESIDUAL NORM: " << norm << std::endl;
-            if (norm < 1E-12 && iter > 1) {
+            if (norm < 1E-16 && iter > 1) {
                 std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }
@@ -660,9 +672,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 double material_matrix[6][6];
 
                 // looping through material points
-                for (int mat_pt = 0; mat_pt < ref_elem.gauss_point_grad_basis.dims(0); mat_pt++) {
+                for (int mat_pt = 0; mat_pt < num_qpt_in_elem; mat_pt++) {
                     // setting up view and getting material matrix
-                    ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.gauss_point_grad_basis(mat_pt,0,0),ref_elem.num_basis, mesh.num_dims);
+                    ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.qpt_grad_basis(mat_pt,0,0),ref_elem.num_dofs_in_elem, mesh.num_dims);
                     Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
 
                     // views into stress and strain

@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param corner_mass is the corner mass
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::init_corner_node_masses_zero_rz(const swage::Mesh& mesh,
+void SGHRZ::init_corner_node_masses_zero_rz(const swage::Mesh_t& mesh,
                                             const DCArrayKokkos<double>& node_mass,
                                             const DCArrayKokkos<double>& corner_mass) const
 {
@@ -80,7 +80,7 @@ void SGHRZ::init_corner_node_masses_zero_rz(const swage::Mesh& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::setup(SimulationParameters_t& SimulationParamaters, 
                 Material_t& Materials, 
-                swage::Mesh& mesh, 
+                swage::Mesh_t& mesh, 
                 BoundaryCondition_t& Boundary,
                 State_t& State)
 {
@@ -151,7 +151,7 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass_rz(const Material_t& Materials,
-                         const swage::Mesh& mesh,
+                         const swage::Mesh_t& mesh,
                          const MPICArrayKokkos<double>& node_coords,
                          const DCArrayKokkos<double>& node_mass,
                          const DCArrayKokkos<double>& corner_mass,
@@ -200,7 +200,7 @@ void calc_corner_mass_rz(const Material_t& Materials,
 /// \param num_mat_elems is the number of material elements for mat_id
 ///
 /////////////////////////////////////////////////////////////////////////////
-void calc_node_mass_rz(const swage::Mesh& mesh,
+void calc_node_mass_rz(const swage::Mesh_t& mesh,
                     const MPICArrayKokkos<double>& node_coords,
                     const DCArrayKokkos<double>& node_mass,
                     const DCArrayKokkos<double>& corner_mass)

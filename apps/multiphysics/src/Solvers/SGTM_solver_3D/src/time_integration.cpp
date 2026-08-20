@@ -97,7 +97,7 @@ void SGTM3D::rk_init(
 /// REMOVE EXCESS TIME RELATED VARIABLES
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::get_timestep(swage::Mesh& mesh,
+void SGTM3D::get_timestep(swage::Mesh_t& mesh,
                        MPICArrayKokkos<double>& node_coords,
                        MPICArrayKokkos<double>& node_vel,
                        DCArrayKokkos<double>& GaussPoints_vol,

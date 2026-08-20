@@ -54,7 +54,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGHRZ::update_energy_rz(
       const double rk_alpha,
       const double dt,
-      const swage::Mesh& mesh,
+      const swage::Mesh_t& mesh,
       const MPICArrayKokkos<double>& node_vel,
       const MPICArrayKokkos<double>& node_vel_n0,
       const MPICArrayKokkos<double>& node_coords,

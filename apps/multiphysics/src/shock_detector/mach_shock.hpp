@@ -40,7 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace MachShockDetector {
 
-    static void detect_shock(const swage::Mesh& mesh,
+    static void detect_shock(const swage::Mesh_t& mesh,
                              const DCArrayKokkos<double>& GaussPoints_vel_grad,
                              const MPICArrayKokkos<double>& GaussPoints_shock_detector,
                              const DCArrayKokkos<double>& GaussPoints_vol,
@@ -142,7 +142,7 @@ namespace MachShockDetector {
 
 namespace MachShockDetectorRZ {
 
-    static void detect_shock(const swage::Mesh& mesh,
+    static void detect_shock(const swage::Mesh_t& mesh,
                              const DCArrayKokkos<double>& GaussPoints_vel_grad,
                              const MPICArrayKokkos<double>& GaussPoints_shock_detector,
                              const DCArrayKokkos<double>& GaussPoints_vol,

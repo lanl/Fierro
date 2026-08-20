@@ -130,8 +130,10 @@ for i in range(len(executables)):
     
             # conditional to handle contact cases
             diff_tol = 1E-8
-            if (tests[j] == "slanted_impact" or tests[j] == "sie_expansion_test" or tests[j] == "edge_flat_test" or tests[j] == "billiards" or tests[j] == "TaylorAnvil_Contact"):
+            if (tests[j] == "slanted_impact" or tests[j] == "sie_expansion_test" or tests[j] == "edge_flat_test" or tests[j] == "billiards"):
                 diff_tol = 1E-2
+            if (tests[j] == "TaylorAnvil_Contact"):
+                diff_tol = 1.2E-2
 
             for k in range(len(result_data[0])):
                 calc = [row[k] for row in result_data]

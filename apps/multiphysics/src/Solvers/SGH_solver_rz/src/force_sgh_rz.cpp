@@ -66,7 +66,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::get_force_rz(const Material_t& Materials,
-                         const swage::Mesh& mesh,
+                         const swage::Mesh_t& mesh,
                          const DCArrayKokkos<double>& GaussPoints_vol,
                          const DCArrayKokkos<double>& GaussPoints_vel_grad,
                          const MPICArrayKokkos<double>& GaussPoints_shock_detector,

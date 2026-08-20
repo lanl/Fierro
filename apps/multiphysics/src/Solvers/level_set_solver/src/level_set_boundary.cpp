@@ -48,7 +48,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void LevelSet::boundary_velocity(const swage::Mesh&      mesh,
+void LevelSet::boundary_velocity(const swage::Mesh_t&      mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
                                  MPICArrayKokkos<double>& node_level_set_vel,
                                  const double time_value,

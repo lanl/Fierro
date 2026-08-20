@@ -91,28 +91,27 @@ public:
 
     virtual void initialize(SimulationParameters_t& SimulationParamaters, 
                             Material_t& Materials, 
-                            swage::Mesh& mesh, 
+                            swage::Mesh_t& mesh, 
                             BoundaryCondition_t& Boundary,
                             State_t& State) const = 0;
 
     virtual void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
                 	                      Material_t& Materials, 
-                	                      swage::Mesh& mesh, 
+                	                      swage::Mesh_t& mesh, 
                 	                      BoundaryCondition_t& Boundary,
                 	                      State_t& State) const = 0;
 
     virtual void setup(SimulationParameters_t& SimulationParamaters, 
                        Material_t& Materials, 
-                       swage::Mesh& mesh, 
+                       swage::Mesh_t& mesh, 
                        BoundaryCondition_t& Boundary,
                        State_t& State) = 0;
 
     virtual void execute(SimulationParameters_t& SimulationParamaters, 
                          Material_t& Materials, 
                          BoundaryCondition_t& BoundaryConditions, 
-                         swage::Mesh& mesh, 
-                         State_t& State,
-                         elements::fe_ref_elem_t& ref_elem) = 0;
+                         swage::Mesh_t& mesh, 
+                         State_t& State) = 0;
 
     virtual void finalize(SimulationParameters_t& SimulationParamaters, 
                           Material_t& Materials, 

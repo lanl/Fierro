@@ -53,9 +53,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGHRZ::execute(SimulationParameters_t& SimulationParamaters, 
                   Material_t& Materials, 
                   BoundaryCondition_t& BoundaryConditions, 
-                  swage::Mesh& mesh, 
-                  State_t& State,
-                  elements::fe_ref_elem_t& ref_elem)
+                  swage::Mesh_t& mesh, 
+                  State_t& State)
 {
 
     double fuzz  = SimulationParamaters.DynamicOptions.fuzz;
@@ -551,7 +550,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
 // a function to tally the internal energy
 double sum_domain_internal_energy_rz(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_sie)
@@ -578,7 +577,7 @@ double sum_domain_internal_energy_rz(
 } // end function 
 
 double sum_domain_kinetic_energy_rz(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_vel,
     const CArrayKokkos<double>& node_extensive_mass)
 {
@@ -608,7 +607,7 @@ double sum_domain_kinetic_energy_rz(
 
 // a function to tally the material point masses
 double sum_domain_material_mass_rz(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass)
 {
@@ -632,7 +631,7 @@ double sum_domain_material_mass_rz(
 } // end function
 
 
-double sum_domain_node_mass_rz(const swage::Mesh& mesh,
+double sum_domain_node_mass_rz(const swage::Mesh_t& mesh,
     const CArrayKokkos<double>& node_extensive_mass)
 {
     double mass_domain = 0.0;
@@ -694,7 +693,7 @@ void calc_node_extensive_mass_rz(const CArrayKokkos<double>& node_extensive_mass
 /// \param tiny is a very small number close in value to zero
 ///
 /////////////////////////////////////////////////////////////////////////////
-void calc_node_areal_mass_rz(const swage::Mesh& mesh,
+void calc_node_areal_mass_rz(const swage::Mesh_t& mesh,
                              const MPICArrayKokkos<double>& node_coords,
                              const DCArrayKokkos<double>& node_mass,
                              const CArrayKokkos<double> node_extensive_mass,
@@ -740,7 +739,7 @@ void calc_node_areal_mass_rz(const swage::Mesh& mesh,
 
 
 // set the corner forces to zero
-void set_corner_force_zero_rz(const swage::Mesh& mesh, 
+void set_corner_force_zero_rz(const swage::Mesh_t& mesh, 
                               const DCArrayKokkos<double>& corner_force)
 {
 

@@ -66,7 +66,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::update_state(
     const Material_t& Materials,
-    const swage::Mesh&     mesh,
+    const swage::Mesh_t&     mesh,
     const MPICArrayKokkos<double>& node_coords,
     const MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& GaussPoints_vel_grad,
@@ -291,7 +291,7 @@ void SGH3D::update_state(
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::update_stress(
     const Material_t& Materials,
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const MPICArrayKokkos<double>& node_coords,
     const MPICArrayKokkos<double>& node_vel,

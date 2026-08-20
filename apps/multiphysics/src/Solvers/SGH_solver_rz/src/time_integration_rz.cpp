@@ -110,7 +110,7 @@ void SGHRZ::rk_init_rz(
 /// \param View of element volume
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::get_timestep_rz(swage::Mesh& mesh,
+void SGHRZ::get_timestep_rz(swage::Mesh_t& mesh,
                             MPICArrayKokkos<double>& node_coords,
                             MPICArrayKokkos<double>& node_vel,
                             DCArrayKokkos<double>& GaussPoints_vol,

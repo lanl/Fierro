@@ -51,10 +51,10 @@ struct contact_state_t
     /// \param State state object
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void initialize(size_t num_dims, size_t num_nodes_in_patch, const CArrayKokkos<size_t> &bdy_patches,
-                    size_t num_bdy_nodes, size_t num_bdy_patches, CArrayKokkos <size_t> &patches_in_elem,
-                    CArrayKokkos <size_t> &elems_in_patch, DCArrayKokkos <size_t> &nodes_in_elem,
-                    CArrayKokkos <size_t> &nodes_in_patch, CArrayKokkos <size_t> &bdy_nodes, size_t num_patches,
-                    size_t num_nodes, MPICArrayKokkos<double> &coords, const size_t contact_max_local_iter, const size_t contact_max_global_iter);
+                    size_t num_bdy_nodes, size_t num_bdy_patches, const CArrayKokkos <size_t> &patches_in_elem,
+                    const CArrayKokkos <int> &elems_in_patch, const DCArrayKokkos <size_t> &nodes_in_elem,
+                    const CArrayKokkos <size_t> &nodes_in_patch, const CArrayKokkos <size_t> &bdy_nodes, size_t num_patches,
+                    size_t num_nodes, const MPICArrayKokkos<double> &coords, const size_t contact_max_local_iter, const size_t contact_max_global_iter);
 
     /*
      * Here is a description of each array below:
@@ -624,7 +624,7 @@ void find_penetrating_nodes(double depth_cap, MPICArrayKokkos<double> &coords,
                             double y_min, double z_min, double bucket_size, CArrayKokkos <size_t> &buckets,
                             CArrayKokkos <size_t> &node_penetrations, CArrayKokkos <size_t> &npoint,
                             size_t num_patches, CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &nsort,
-                            DCArrayKokkos <size_t> nodes_in_elem, CArrayKokkos <size_t> elems_in_patch,
+                            DCArrayKokkos <size_t> nodes_in_elem, CArrayKokkos <int> elems_in_patch,
                             size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <double> xi,
                             CArrayKokkos <double> eta, bool preload);
 
@@ -663,7 +663,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                        size_t Sx, size_t Sy, size_t Sz, double bucket_size, CArrayKokkos <size_t> &buckets,
                        CArrayKokkos <size_t> &node_penetrations, CArrayKokkos <size_t> &npoint, size_t num_patches,
                        CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &nsort, DCArrayKokkos <size_t> nodes_in_elem,
-                       CArrayKokkos <size_t> elems_in_patch, size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch,
+                       CArrayKokkos <int> elems_in_patch, size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch,
                        const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, double x_max, double y_max, double z_max, DCArrayKokkos <size_t> &num_active,
                        RaggedRightArrayKokkos <size_t> elems_in_node, CArrayKokkos <size_t> num_nodes_in_elem,
                        CArrayKokkos <size_t> patches_in_elem, RaggedRightArrayKokkos <size_t> &node_patch_pairs, size_t num_elems,

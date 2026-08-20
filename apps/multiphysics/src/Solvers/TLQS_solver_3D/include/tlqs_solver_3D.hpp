@@ -42,7 +42,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Forward declare structs
 struct SimulationParameters_t;
 struct Material_t;
-// struct swage::Mesh;
+// struct swage::Mesh_t;
 struct BoundaryCondition_t;
 // struct State_t;
 struct RegionFill_t;
@@ -142,13 +142,13 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void initialize(SimulationParameters_t& SimulationParamaters, 
                     Material_t& Materials, 
-                    swage::Mesh& mesh, 
+                    swage::Mesh_t& mesh, 
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override;
 
     void initialize_material_state(SimulationParameters_t& SimulationParamaters, 
                 	               Material_t& Materials, 
-                	               swage::Mesh& mesh, 
+                	               swage::Mesh_t& mesh, 
                 	               BoundaryCondition_t& Boundary,
                 	               State_t& State) const override;
 
@@ -167,7 +167,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void setup(SimulationParameters_t& SimulationParamaters,
         Material_t& Materials,
-        swage::Mesh&     mesh,
+        swage::Mesh_t&     mesh,
         BoundaryCondition_t& Boundary,
         State_t& State) override;
 
@@ -188,9 +188,8 @@ public:
     void execute(SimulationParameters_t& SimulationParamaters,
         Material_t& Materials,
         BoundaryCondition_t& Boundary,
-        swage::Mesh&  mesh,
-        State_t& State,
-        elements::fe_ref_elem_t& ref_elem) override;
+        swage::Mesh_t&  mesh,
+        State_t& State) override;
 
     /////////////////////////////////////////////////////////////////////////////
     ///
@@ -212,7 +211,7 @@ public:
 
 
     // **** Functions defined in boundary.cpp **** //
-    void boundary_displacement(const swage::Mesh& mesh,
+    void boundary_displacement(const swage::Mesh_t& mesh,
     const BoundaryCondition_t& BoundaryConditions,
     const CArrayKokkos<double>& K_elem,
     const CArrayKokkos<double>& F_elem,

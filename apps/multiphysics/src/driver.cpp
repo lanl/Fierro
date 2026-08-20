@@ -93,7 +93,7 @@ void Driver::initialize()
 
 
     // Create initial mesh on rank 0
-    swage::Mesh initial_mesh;
+    swage::Mesh_t initial_mesh;
     MPICArrayKokkos<double> initial_node_coords;
     MPICArrayKokkos<double> final_node_coords;
 
@@ -240,13 +240,6 @@ void Driver::initialize()
         } // end check on region_fill being a file
     } // end for reg_id
 
-    // if TLQS solver is active initialize the reference element object
-    if (TLQS_active) {
-        std::cout << mesh.Pn << "   " << mesh.num_dims << std::endl;
-        ref_elem.init(mesh.Pn, mesh.num_dims);
-    }
-
-
     // Build boundary conditions
     const int num_bcs = BoundaryConditions.num_bcs;
 
@@ -260,7 +253,7 @@ void Driver::initialize()
     setting_nodes(State.node.coords, final_node_coords, mesh.num_nodes, mesh.num_dims);
 
     // --- calculate bdy sets ---//
-    mesh.init_bdy_sets(num_bcs);
+    mesh.initialize_bdy_sets(num_bcs);
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
     build_boundry_node_sets(mesh);
 
@@ -489,8 +482,7 @@ void Driver::execute()
                         Materials, 
                         BoundaryConditions, 
                         mesh, 
-                        State,
-                        ref_elem);
+                        State);
     } // loop over solvers
 
     // Collective: dump any remaining buffered output from the run. Solvers
