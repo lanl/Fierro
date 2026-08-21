@@ -72,6 +72,8 @@ include_directories(shock_detector)
 add_subdirectory(material_models/equilibration)
 add_subdirectory(material_models/tabular)
 
+include_directories(remap)
+
 
 # Boundary conditions
 message("\n ****** ADDING BOUNDARY CONDITIONS ******** \n ")
