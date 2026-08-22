@@ -1293,6 +1293,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
         } // end loop over materials in this element
     } // end serial for loop over all elements
     State.MaterialToMeshMaps.elem_in_mat_elem.update_device();
+    State.MeshtoMaterialMaps.mat_elems_in_elem.update_device();
 
 
     // copy the state to the device
