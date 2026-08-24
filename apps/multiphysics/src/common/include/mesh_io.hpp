@@ -7678,7 +7678,7 @@ public:
                     State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, elem);
                 size_t elem_gid;
                 if (world_size > 1) {
-                    elem_gid = mesh.local_to_global_elem_mapping(elem_rid);
+                    elem_gid = mesh.local_to_global_elem_mapping.host(elem_rid);
                 }
                 else {
                     elem_gid = elem_rid;
@@ -8101,7 +8101,7 @@ public:
                     State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, elem);
                 size_t elem_gid;
                 if (world_size > 1) {
-                    elem_gid = mesh.local_to_global_elem_mapping(elem_rid);
+                    elem_gid = mesh.local_to_global_elem_mapping.host(elem_rid);
                 }
                 else {
                     elem_gid = elem_rid;
