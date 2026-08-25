@@ -2011,6 +2011,8 @@ private:
 
 public:
 
+    CArray <long long int> num_owned_mat_elems;
+
     MeshWriter() {}
 
     ~MeshWriter()
@@ -7949,6 +7951,7 @@ public:
         // -----------------------------------------------------------------------
 
         const size_t num_gp_per_elem = ref_elem.qpt_grad_basis.dims(0);
+        const size_t num_mats = State.MaterialPoints.num_material_points.size();
 
         // -----------------------------------------------------------------------
         //  Gauss-point physical coordinates  (isoparametric mapping)
@@ -7956,8 +7959,6 @@ public:
         //  Same kernel as write_vtu_Pn so the two outputs are numerically
         //  identical for the coordinate columns.
         // -----------------------------------------------------------------------
-
-        
 
         // -----------------------------------------------------------------------
         //  Ensure the output directory exists before opening any files.
@@ -7977,6 +7978,14 @@ public:
         int world_size;
         mesh_io_mpi_detail::query_world_rank_size(rank,world_size);
 
+        // sizing owned mat elems if not sized already
+        if (num_owned_mat_elems.size() <= 0) {
+            num_owned_mat_elems = CArray <long long int> (num_mats);
+            for (int mat = 0; mat < num_mats; mat++) {
+                num_owned_mat_elems(mat) = -1;
+            }
+        }
+
         // -----------------------------------------------------------------------
         //  FILE 1 – Material-point (Gauss-point) state
         //
@@ -7985,10 +7994,28 @@ public:
         //             header line prefixed with '#'
         // -----------------------------------------------------------------------
         for (int mat_id = 0; mat_id < (int)State.MaterialToMeshMaps.num_mat_elems.dims(0); mat_id++) {
-            DCArrayKokkos<double> x_phys(State.MaterialToMeshMaps.num_mat_elems.host(mat_id), num_gp_per_elem, 3);
+            // allocating array for storing real space locations of gauss points
+            DCArrayKokkos<double> x_phys;
+
+            // populating the counts for num_owned_mat_elems if not already populated
+            if (num_owned_mat_elems(mat_id) == -1) {
+                int loc_tally = 0;
+                int tally = 0;
+                FOR_REDUCE_SUM(mat_elem, 0, State.MaterialToMeshMaps.num_mat_elems.host(mat_id), loc_tally, {
+                    const size_t elem_id = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, mat_elem);
+                    if (elem_id < mesh.num_owned_elems) {
+                        loc_tally += 1;
+                    }
+                }, tally);
+                // sizing array for storing real space locations of gauss points
+                num_owned_mat_elems(mat_id) = tally;
+            }
+
+            // initializing array for storing real space locations of gauss points
+            x_phys = DCArrayKokkos <double> (num_owned_mat_elems(mat_id), num_gp_per_elem, 3);
             x_phys.set_values(0);
 
-            FOR_ALL(elem, 0, State.MaterialToMeshMaps.num_mat_elems.host(mat_id), {
+            FOR_ALL(elem, 0, num_owned_mat_elems(mat_id), {
                 const size_t elem_id =
                     State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
                 for (size_t gp = 0; gp < num_gp_per_elem; gp++) {
@@ -8096,7 +8123,7 @@ public:
             fprintf(out_elem_state, "\n");
 
             // ---- Data rows --------------------------------------------------
-            for (size_t elem = 0; elem < State.MaterialToMeshMaps.num_mat_elems.host(mat_id); elem++) {
+            for (size_t elem = 0; elem < num_owned_mat_elems(mat_id); elem++) {
                 const size_t elem_rid =
                     State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, elem);
                 size_t elem_gid;
