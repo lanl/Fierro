@@ -1,14 +1,9 @@
-# AO_SGH3D triple point (3D), single-gamma variant of Laghos problem 3.
-# Canonical Laghos uses gamma = 1.4 in the (x > 1, y <= 1.5) region (multi-
-# material); single-material here uses gamma = 1.5 everywhere.
-#   x <= 1:                rho = 1,     p = 1   -> sie = 2.0
-#   x > 1:                 rho = 1,     p = 0.1 -> sie = 0.2, except the
-#   (y,z) checkerboard quadrants (y,z both < 1.5 or both > 1.5) which get
-#   rho = 0.125, p = 0.1 -> sie = 1.6 (Laghos 3D rho0 for problem 3).
-# Slip on all faces. Regenerate the mesh from build/ via:
-#   ./app/ao_sgh_box_vtu_gen --nx 28 --ny 12 --nz 12 --p 2 \
-#                            --origin 0,0,0 --length 7,3,3 \
-#                            --out box_28x12x12_p2.vtu
+# AO_SGH3D triple point (3D), single-gamma variant of Laghos problem 3
+# (gamma = 1.5 everywhere; Laghos uses 1.4 in the x > 1, y <= 1.5 region).
+#   x <= 1:   rho = 1,     p = 1   -> sie = 2.0
+#   x >  1:   rho = 1,     p = 0.1 -> sie = 0.2, except the (y,z) checkerboard
+#             quadrants (both < 1.5 or both > 1.5): rho = 0.125 -> sie = 1.6
+# Slip on all faces.
 
 dynamic_options:
     time_final: 5.0
@@ -19,9 +14,12 @@ dynamic_options:
     cycle_stop: 2000000
 
 mesh_options:
-    source: file
-    file_path: 56x24x24_p2.vtu
+    source: generate
     num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [7.0, 3.0, 3.0]
+    num_elems: [56, 24, 24]
     polynomial_order: 2
 
 output_options:
@@ -35,6 +33,8 @@ solver_options:
   - solver:
         method: ao_dynx_FE
         id: 0
+        # options: ssprk3 (explicit RK3) | rk2avg | rk3hc
+        # (rk2avg / rk3hc are conservative IMEX, 2nd / 3rd order; default rk3hc)
         time_integration: rk2avg
 
 boundary_conditions:

@@ -1309,7 +1309,12 @@ public:
             }
         }
         else if (SimulationParamaters.MeshInput.num_dims == 3) {
-            build_3d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+            if (SimulationParamaters.MeshInput.p_order > 1) {
+                build_3d_HexN_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+            }
+            else{
+                build_3d_box(mesh, GaussPoints, node, corner, SimulationParamaters);
+            }
         }
         else{
             throw std::runtime_error("**** ONLY 2D RZ OR 3D MESHES ARE SUPPORTED ****");
@@ -1729,7 +1734,8 @@ public:
         corner_t& corner,
         SimulationParameters_t& SimulationParamaters) const
     {
-        printf(" ***** WARNING::  build_3d_HexN_box not yet implemented\n");
+        printf("Creating a 3D high order box mesh \n");
+
         const int num_dim = 3;
 
         // SimulationParamaters.MeshInput.length.update_host();
@@ -1820,8 +1826,8 @@ public:
         node.coords.update_device();
 
 
-        // initialize elem variables
-        mesh.initialize_elems(num_elems, num_dim);
+        // initialize elem variables, (Pn_order+1)^3 nodes per element
+        mesh.initialize_elems_Pn(num_elems, num_dim, Pn_order);
 
         // --- Build elems  ---
         

@@ -1,9 +1,8 @@
-# AO_SGH3D Taylor-Green vortex driver. Reads an equispaced VTK_LAGRANGE_HEXAHEDRON
-# .vtu, projects to GLL, applies the analytic TG fields each step (prescribed-driver
-# mode), advances position with SSP-RK3. Regenerate the mesh from build/ via:
-#   ./app/ao_sgh_box_vtu_gen --nx 8 --ny 8 --nz 1 --p 3 \
-#                            --origin 0,0,0 --length 1,1,0.125 \
-#                            --out box_8x8x1_p3.vtu
+# AO_SGH3D Taylor-Green vortex (Laghos problem 0). gamma = 5/3, rho = 1,
+# v = (sin(pi x)cos(pi y), -cos(pi x)sin(pi y), 0), e = 1.5 + (3/8)(cos(2pi x) + cos(2pi y)).
+# The analytic fields are the IC only; an energy source cancels the p div(v)
+# work so that state is an exact steady solution. Viscosity is off, and the
+# run reports L1/L2 velocity and sie error against the analytic fields.
 
 dynamic_options:
     time_final: 0.5
@@ -14,9 +13,12 @@ dynamic_options:
     cycle_stop: 5000
 
 mesh_options:
-    source: file
-    file_path: box_8x8x1_p3.vtu
+    source: generate
     num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1.0, 1.0, 0.125]
+    num_elems: [8, 8, 1]
     polynomial_order: 3
 
 output_options:
@@ -30,6 +32,8 @@ solver_options:
   - solver:
         method: ao_dynx_FE
         id: 0
+        # options: ssprk3 (explicit RK3) | rk2avg | rk3hc
+        # (rk2avg / rk3hc are conservative IMEX, 2nd / 3rd order; default rk3hc)
         time_integration: rk3hc
 
 boundary_conditions:
@@ -92,7 +96,7 @@ boundary_conditions:
         solver_id: 0
         surface:
             type: z_plane
-            plane_position: 0.1
+            plane_position: 0.125
             tolerance: 1.0e-5
         velocity_model: reflected
         velocity_bc_global_vars:

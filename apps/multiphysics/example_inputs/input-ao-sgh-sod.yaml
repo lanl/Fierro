@@ -1,11 +1,6 @@
-# AO_SGH3D Sod shock tube. gamma = 1.4; left (x < 0.5): rho = 1, p = 1
-# (sie = 2.5); right: rho = 0.125, p = 0.1 (sie = 2.0). Slip on all faces.
-# Exact solution at t = 0.2: shock at x ~ 0.85, contact at x ~ 0.685,
-# post-shock plateau rho ~ 0.266, contact-left rho ~ 0.426.
-# Regenerate the mesh from build/ via:
-#   ./app/ao_sgh_box_vtu_gen --nx 100 --ny 1 --nz 1 --p 2 \
-#                            --origin 0,0,0 --length 1,0.01,0.01 \
-#                            --out box_100x1x1_p2.vtu
+# AO_SGH3D Sod shock tube. gamma = 1.4; left (x < 0.5): rho = 1, p = 1 (sie = 2.5);
+# right: rho = 0.125, p = 0.1 (sie = 2.0). Slip on all faces.
+# Exact at t = 0.2: shock at x ~ 0.85, contact at x ~ 0.685.
 
 dynamic_options:
     time_final: 0.2
@@ -16,9 +11,12 @@ dynamic_options:
     cycle_stop: 100000
 
 mesh_options:
-    source: file
-    file_path: box_100x1x1_p2.vtu
+    source: generate
     num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1.0, 0.1, 0.1]
+    num_elems: [100, 1, 1]
     polynomial_order: 2
 
 output_options:
@@ -32,6 +30,8 @@ solver_options:
   - solver:
         method: ao_dynx_FE
         id: 0
+        # options: ssprk3 (explicit RK3) | rk2avg | rk3hc
+        # (rk2avg / rk3hc are conservative IMEX, 2nd / 3rd order; default rk3hc)
         time_integration: rk3hc
 
 boundary_conditions:
@@ -72,7 +72,7 @@ boundary_conditions:
         solver_id: 0
         surface:
             type: y_plane
-            plane_position: 0.01
+            plane_position: 0.1
             tolerance: 1.0e-6
         velocity_model: reflected
         velocity_bc_global_vars:
@@ -94,7 +94,7 @@ boundary_conditions:
         solver_id: 0
         surface:
             type: z_plane
-            plane_position: 0.01
+            plane_position: 0.1
             tolerance: 1.0e-6
         velocity_model: reflected
         velocity_bc_global_vars:
@@ -134,9 +134,9 @@ regions:
             x1: 0.5
             x2: 1.0
             y1: 0.0
-            y2: 0.01
+            y2: 0.1
             z1: 0.0
-            z2: 0.01
+            z2: 0.1
         solver_id: 0
 
 initial_conditions:

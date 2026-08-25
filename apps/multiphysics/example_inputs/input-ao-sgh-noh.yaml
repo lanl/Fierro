@@ -1,11 +1,7 @@
-# AO_SGH3D Noh implosion (octant). rho = 1, v = -r_hat, sie ~ 0, gamma = 5/3.
-# Exact at t = 0.6: shock at r = 0.2, post-shock rho = 64, upstream
-# rho = (1 + t/r)^2. Slip only on the origin planes; outer faces free.
-# dt_max capped because the CFL is sound-speed based and c ~ 0 at t = 0.
-# Regenerate the mesh from build/ via:
-#   ./app/ao_sgh_box_vtu_gen --nx 12 --ny 12 --nz 12 --p 2 \
-#                            --origin 0,0,0 --length 1,1,1 \
-#                            --out box_12x12x12_p2_unit.vtu
+# AO_SGH3D Noh implosion (octant). gamma = 5/3, rho = 1, v = -r_hat, sie ~ 0.
+# Exact at t = 0.6: shock at r = 0.2, post-shock rho = 64, upstream rho = (1 + t/r)^2.
+# Slip on the origin planes only; outer faces are free. dt_max is capped because
+# the CFL is sound-speed based and c ~ 0 at t = 0.
 
 dynamic_options:
     time_final: 0.6
@@ -16,9 +12,12 @@ dynamic_options:
     cycle_stop: 100000
 
 mesh_options:
-    source: file
-    file_path: 16x16x16_p2.vtu
+    source: generate
     num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1.0, 1.0, 1.0]
+    num_elems: [16, 16, 16]
     polynomial_order: 2
 
 output_options:
@@ -32,6 +31,8 @@ solver_options:
   - solver:
         method: ao_dynx_FE
         id: 0
+        # options: ssprk3 (explicit RK3) | rk2avg | rk3hc
+        # (rk2avg / rk3hc are conservative IMEX, 2nd / 3rd order; default rk3hc)
         time_integration: rk2avg
 
 boundary_conditions:

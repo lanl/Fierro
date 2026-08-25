@@ -1,10 +1,6 @@
-# AO_SGH3D Sedov blast (octant). Kamm-calibrated energy for gamma = 5/3:
-# E_total = 0.493390 -> E_octant = 0.0616738 deposited in the corner element
-# (V = 0.1^3 = 1e-3) -> sie = 61.67375. Shock reaches r = 1 at t = 1.
-# Slip on all six faces. Regenerate the mesh from build/ via:
-#   ./app/ao_sgh_box_vtu_gen --nx 12 --ny 12 --nz 12 --p 2 \
-#                            --origin 0,0,0 --length 1.2,1.2,1.2 \
-#                            --out box_12x12x12_p2.vtu
+# AO_SGH3D Sedov blast (octant). gamma = 5/3, rho = 1. Kamm-calibrated
+# E_total = 0.493390 -> E_octant = 0.0616738 in the origin region.
+# Shock reaches r = 1 at t = 1. Slip on all six faces.
 
 dynamic_options:
     time_final: 1.0
@@ -15,9 +11,12 @@ dynamic_options:
     cycle_stop: 100000
 
 mesh_options:
-    source: file
-    file_path: 12x12x12_p3.vtu
+    source: generate
     num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1.2, 1.2, 1.2]
+    num_elems: [12, 12, 12]
     polynomial_order: 3
 
 output_options:
@@ -31,6 +30,8 @@ solver_options:
   - solver:
         method: ao_dynx_FE
         id: 0
+        # options: ssprk3 (explicit RK3) | rk2avg | rk3hc
+        # (rk2avg / rk3hc are conservative IMEX, 2nd / 3rd order; default rk3hc)
         time_integration: rk3hc
 
 boundary_conditions:
