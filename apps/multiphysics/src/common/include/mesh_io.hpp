@@ -7874,6 +7874,134 @@ public:
 
         } // end FILE 2 scope
 
+        // -----------------------------------------------------------------------
+        //  Concatenate per-rank material-point files into one file per mat_id
+        // -----------------------------------------------------------------------
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (world_size > 1 && rank == 0) {
+            const int num_mats = (int)State.MaterialPoints.num_material_points.size();
+
+            for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+                // ---- pass 1: header, column count, and max elem_gid ----------
+                std::vector<std::string> header_lines;
+                int num_columns = 0;
+                size_t max_elem_gid = 0;
+                bool any_rows = false;
+
+                for (int rank_count = 0; rank_count < world_size; rank_count++) {
+                    char filename[128];
+                    snprintf(filename, sizeof filename,
+                             "state/mat_pt_state_t_%6.4e_mat_id_%d_rank_%d.txt",
+                             time_value, mat_id, rank_count);
+
+                    std::ifstream in(filename);
+                    if (!in.is_open()) {
+                        std::cerr << "concatenate mat_pt state: could not open "
+                                  << filename << std::endl;
+                        continue;
+                    }
+
+                    std::string line;
+                    while (std::getline(in, line)) {
+                        if (line.empty()) continue;
+
+                        if (line[0] == '#') {
+                            if (rank_count == 0) header_lines.push_back(line);
+                            continue;
+                        }
+
+                        std::istringstream iss(line);
+                        std::vector<std::string> tok;
+                        std::string t;
+                        while (iss >> t) tok.push_back(t);
+                        if (tok.empty()) continue;
+
+                        if (num_columns == 0) num_columns = (int)tok.size();
+
+                        const size_t elem_gid = std::stoull(tok[0]);
+                        if (elem_gid > max_elem_gid) max_elem_gid = elem_gid;
+                        any_rows = true;
+                    }
+                    in.close();
+                }
+
+                if (!any_rows || num_columns == 0) {
+                    std::cerr << "concatenate mat_pt state: no data rows found for mat_id="
+                              << mat_id << std::endl;
+                    continue;
+                }
+
+                // ---- pass 2: read all rank files into the array --------------
+                CArray <double> temporary(max_elem_gid + 1, num_columns);
+                for (int rank_count = 0; rank_count < world_size; rank_count++) {
+                    char filename[128];
+                    snprintf(filename, sizeof filename,
+                             "state/mat_pt_state_t_%6.4e_mat_id_%d_rank_%d.txt",
+                             time_value, mat_id, rank_count);
+
+                    std::ifstream in(filename);
+                    if (!in.is_open()) {
+                        std::cerr << "concatenate mat_pt state: could not open "
+                                  << filename << std::endl;
+                        continue;
+                    }
+
+                    std::string line;
+                    while (std::getline(in, line)) {
+                        if (line.empty() || line[0] == '#') continue;
+
+                        std::istringstream iss(line);
+                        std::vector<std::string> tok;
+                        std::string t;
+                        while (iss >> t) tok.push_back(t);
+                        if ((int)tok.size() != num_columns) continue; // skip malformed rows
+
+                        const size_t elem_gid = std::stoull(tok[0]);
+
+                        for (int k = 0; k < num_columns; k++) {
+                            temporary(elem_gid, k) = std::stod(tok[k]);
+                        }
+                        temporary(elem_gid, 1) = elem_gid;
+                    }
+                    in.close();
+
+                    // delete the per-rank file now that it's been read in
+                    std::remove(filename);
+                }
+
+                // ---- write out the concatenated file --------------------------
+                char out_filename[128];
+                snprintf(out_filename, sizeof out_filename,
+                         "state/mat_pt_state_t_%6.4e_mat_id_%d.txt",
+                         time_value, mat_id);
+
+                FILE* out = fopen(out_filename, "w");
+                if (!out) {
+                    std::cerr << "concatenate mat_pt state: could not open "
+                              << out_filename << " for writing" << std::endl;
+                    continue;
+                }
+
+                for (const std::string& hline : header_lines) {
+                    fprintf(out, "%s\n", hline.c_str());
+                }
+
+                const size_t num_rows = max_elem_gid + 1;
+                for (size_t r = 0; r < num_rows; r++) {
+                    fprintf(out, "  %-12zu %-8zu ",
+                            (size_t)temporary(r, 0), (size_t)temporary(r, 1));
+                    for (int k = 2; k < num_columns; k++) {
+                        fprintf(out, " %22.14e", temporary(r, k));
+                    }
+                    fprintf(out, "\n");
+                }
+
+                fclose(out);
+            }
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+
     } // end write_text_state
 
     /////////////////////////////////////////////////////////////////////////////
@@ -8349,6 +8477,127 @@ public:
             fclose(out_point_state);
     
         } // end FILE 2 scope
+
+        MPI_Barrier(MPI_COMM_WORLD);
+        CArray <int> num_universal_mat_elems(num_mats);
+        for (int mat_id = 0; mat_id < num_mats; mat_id++){
+            MPI_Allreduce(&num_owned_mat_elems(mat_id), &num_universal_mat_elems(mat_id), 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        }
+
+        // concatenate material outputs if more than one rank
+        if (world_size > 1 && rank == 0) {
+            // looping through materials
+            for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+                // open rank 0's file for this mat_id to count columns and capture header
+                char probe_filename[128];
+                snprintf(probe_filename, sizeof probe_filename,
+                        "state/mat_pt_state_t_%6.4e_mat_id_%d_rank_%d.txt",
+                        time_value, mat_id, 0);
+
+                std::ifstream probe_in(probe_filename);
+                if (!probe_in.is_open()) {
+                    std::cerr << "concatenate mat_pt state: could not open "
+                            << probe_filename << " to count columns" << std::endl;
+                    continue;
+                }
+
+                std::vector<std::string> header_lines;
+                int num_columns = 0;
+                std::string probe_line;
+                while (std::getline(probe_in, probe_line)) {
+                    if (probe_line.empty()) continue;
+
+                    if (probe_line[0] == '#') {
+                        header_lines.push_back(probe_line);
+                        continue;
+                    }
+
+                    std::istringstream iss(probe_line);
+                    std::string tok;
+                    while (iss >> tok) num_columns++;
+                    break; // only need the first data row for the column count
+                }
+                probe_in.close();
+
+                if (num_columns == 0) {
+                    std::cerr << "concatenate mat_pt state: no data rows found in "
+                            << probe_filename << std::endl;
+                    continue;
+                }
+
+                CArray <double> temporary(num_universal_mat_elems(mat_id)*num_gp_per_elem, num_columns);
+                for (int rank_count = 0; rank_count < world_size; rank_count++) {
+
+                    char filename[128];
+                    snprintf(filename, sizeof filename,
+                            "state/mat_pt_state_t_%6.4e_mat_id_%d_rank_%d.txt",
+                            time_value, mat_id, rank_count);
+
+                    std::ifstream in(filename);
+                    if (!in.is_open()) {
+                        std::cerr << "concatenate mat_pt state: could not open "
+                                << filename << std::endl;
+                        continue;
+                    }
+
+                    std::string line;
+                    while (std::getline(in, line)) {
+                        if (line.empty() || line[0] == '#') continue;
+
+                        std::istringstream iss(line);
+                        std::vector<std::string> tok;
+                        std::string t;
+                        while (iss >> t) tok.push_back(t);
+                        if ((int)tok.size() != num_columns) continue; // skip malformed rows
+
+                        const size_t elem_gid = std::stoull(tok[0]);
+                        const size_t gp       = std::stoull(tok[2]);
+
+                        const size_t row_idx = elem_gid * num_gp_per_elem + gp;
+
+                        for (int k = 0; k < num_columns; k++) {
+                            temporary(row_idx, k) = std::stod(tok[k]);
+                        }
+                        temporary(row_idx, 1) = elem_gid;
+                    }
+                    in.close();
+
+                    // delete the per-rank file now that it's been read in
+                    std::remove(filename);
+                }
+
+                // ---- write out the concatenated file ----
+                char out_filename[128];
+                snprintf(out_filename, sizeof out_filename,
+                        "state/mat_pt_state_t_%6.4e_mat_id_%d.txt",
+                        time_value, mat_id);
+
+                FILE* out = fopen(out_filename, "w");
+                if (!out) {
+                    std::cerr << "concatenate mat_pt state: could not open "
+                            << out_filename << " for writing" << std::endl;
+                    continue;
+                }
+
+                for (const std::string& hline : header_lines) {
+                    fprintf(out, "%s\n", hline.c_str());
+                }
+
+                const size_t num_rows = num_universal_mat_elems(mat_id) * num_gp_per_elem;
+                for (size_t r = 0; r < num_rows; r++) {
+                    fprintf(out, "  %-12zu %-8zu %-8zu",
+                            (size_t)temporary(r, 0), (size_t)temporary(r, 1), (size_t)temporary(r, 2));
+                    for (int k = 3; k < num_columns; k++) {
+                        fprintf(out, "  %22.14e", temporary(r, k));
+                    }
+                    fprintf(out, "\n");
+                }
+
+                fclose(out);
+            }
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
 
     } // end write_text_state_Pn
 }; // end class
