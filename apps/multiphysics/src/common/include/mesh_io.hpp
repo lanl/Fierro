@@ -8610,7 +8610,7 @@ public:
 
                 // ---- Make the second column sequential from zero ----
                 for (size_t i = 0; i < all_rows.size(); ++i) {
-                    all_rows[i][1] = static_cast<double>(i);
+                    all_rows[i][1] = static_cast<double>(all_rows[i][0]);
                 }
 
                 // ---- write out the concatenated file ----

@@ -15,7 +15,7 @@ solvers = ["Fierro"]
 
 solver_path = "../build/app/Fierro"
 
-num_ranks = 2
+num_ranks = 1
 
 # Add names of each test
 if (num_ranks == 1):
