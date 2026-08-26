@@ -72,6 +72,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     contact_state_t Contact_State; // keeps track of contact variables
     if (doing_contact) {
+        if (num_ranks > 1) {
+            Kokkos::abort("MPI is not supported with contact.")
+        }
         Contact_State.initialize(mesh.num_dims, mesh.num_nodes_in_patch, mesh.bdy_patches, mesh.num_bdy_nodes, mesh.num_bdy_patches,
                                  mesh.patches_in_elem, mesh.elems_in_patch, mesh.nodes_in_elem, mesh.nodes_in_patch,
                                  mesh.bdy_nodes, mesh.num_patches, mesh.num_nodes, State.node.coords,
@@ -83,6 +86,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // cohesive zone initialization for fracture
     if (doing_fracture) {
+        if (num_ranks > 1) {
+            Kokkos::abort("MPI is not supported with cohesive zone fracture.")
+        }
         const int fracture_bdy_set = BoundaryConditions.fracture_bc_id;
         if (fracture_bdy_set >= 0) {
             cohesive_zones_bank.initialize_fracture_bc(
