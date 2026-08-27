@@ -82,6 +82,7 @@ void Driver::initialize()
     // Read the YAML input file
     parse_yaml(root, SimulationParamaters, Materials, BoundaryConditions);
     log_.info("Finished parsing YAML file\n");
+    printf("AFTER YAML PARSING\n");
 
     // checking if TLQS is active in order to run correct read vtk function
     bool TLQS_active = false;
@@ -90,7 +91,7 @@ void Driver::initialize()
             TLQS_active = true;
         }
     }
-
+    printf("AFTER TLQS ACTIVE BEING SET\n");
 
     // Create initial mesh on rank 0
     swage::Mesh_t initial_mesh;
@@ -146,7 +147,7 @@ void Driver::initialize()
         throw std::runtime_error("**** NO MESH INPUT OPTIONS PROVIDED IN YAML ****");
         return;
     }
-
+    printf("AFTER INITIAL MESH IS BUILT\n");
     MPI_Barrier(MPI_COMM_WORLD);
     
     // Partition the mesh to all ranks
@@ -171,7 +172,7 @@ void Driver::initialize()
         mesh.shared_tally_owned_nodes = DCArrayKokkos<bool>(mesh.num_owned_nodes, "shared_tally_owned_nodes");
         mesh.shared_tally_owned_nodes.set_values(true);
     }
-
+    printf("AFTER MESH HAS BEEN DECOMPOSED\n");
     // WARNING: This needs to be moved into the partition mesh function, along with all of the above copies. 
     // TODO: Add a copy constructor to the mesh class to handle this consistently. 
     // mesh.num_dims = initial_mesh.num_dims;
@@ -259,7 +260,7 @@ void Driver::initialize()
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
     build_boundry_node_sets(mesh);
 
-
+    printf("BEFORE SOLVER INITIALIZE CALLS\n");
     // Setup the Solvers
     double time_final = SimulationParamaters.DynamicOptions.time_final;
     for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
