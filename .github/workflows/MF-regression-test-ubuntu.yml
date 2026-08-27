@@ -39,6 +39,19 @@ jobs:
         sudo apt-get update
         sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake libopenmpi-dev openmpi-bin libblas-dev liblapack-dev python3
 
+    - name: Check environment
+      run: |
+        ldd --version
+        ulimit -a
+        free -h
+
+    - name: Debug build with sanitizers
+      run: |
+        mkdir -p apps/multiphysics/build_debug
+        cd apps/multiphysics/build_debug
+        cmake -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -g" ${{ matrix.cmake_args }} ..
+        make -j$(nproc)
+
     - name: Configure CMake
       run: |
         mkdir -p apps/multiphysics/build
