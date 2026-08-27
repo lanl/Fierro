@@ -54,9 +54,13 @@ void TLQS3D::initialize(SimulationParameters_t& SimulationParamaters,
     }
 
     // mesh state
+    printf("INSIDE TLQS INITIALIZE\n");
     State.node.initialize(num_nodes, num_dims, TLQS3D_State::required_node_state);
+    printf("NODES HAVE BEEN INITIALIZED\n");
     State.GaussPoints.initialize(num_gauss_pts, num_dims, TLQS3D_State::required_gauss_pt_state);
+    printf("GAUSS POINTS HAVE BEEN INITIALIZED\n");
     State.corner.initialize(num_corners, num_dims, TLQS3D_State::required_corner_state);
+    printf("CORNERS HAVE BEEN INITIALIZED\n");
 
     // check that the fills specify the required nodal fields
     /* bool filled_nodal_state =
