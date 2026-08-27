@@ -20,7 +20,7 @@ jobs:
           - name: OpenMP
             build_type: RelWithDebInfo
             cmake_args: -DFIERRO_ENABLE_OPENMP=ON
-            omp_threads: 2
+            omp_threads: 1
           - name: Serial Debug
             build_type: Debug
             cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
@@ -28,7 +28,7 @@ jobs:
           - name: OpenMP Debug
             build_type: Debug
             cmake_args: -DFIERRO_ENABLE_OPENMP=ON
-            omp_threads: 2
+            omp_threads: 1
     steps:
     - uses: actions/checkout@v4
       with:
