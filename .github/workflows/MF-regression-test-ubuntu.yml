@@ -1,12 +1,10 @@
 name: Multiphysics Regression Tests (Ubuntu)
-
 on:
   push:
     branches: [ main, CMake_build ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-
 jobs:
   Regression-Tests:
     name: Regression Tests (${{ matrix.name }})
@@ -27,29 +25,28 @@ jobs:
             build_type: Debug
             cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
             omp_threads: 1
-
+          - name: OpenMP Debug
+            build_type: Debug
+            cmake_args: -DFIERRO_ENABLE_OPENMP=ON
+            omp_threads: 2
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
         fetch-depth: 1  # Only gets the latest commit, much faster
-
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake libopenmpi-dev openmpi-bin libblas-dev liblapack-dev python3
-
     - name: Configure CMake
       run: |
         mkdir -p apps/multiphysics/build
         cd apps/multiphysics/build
         cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ matrix.cmake_args }} ..
-
     - name: Build Fierro
       run: |
         cd apps/multiphysics/build
         make -j$(nproc)
-
     - name: Run Regression Tests
       env:
         OMP_NUM_THREADS: ${{ matrix.omp_threads }}
