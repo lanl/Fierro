@@ -49,7 +49,7 @@ jobs:
       run: |
         mkdir -p apps/multiphysics/build_ubsan
         cd apps/multiphysics/build_ubsan
-        cmake -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-sanitize-recover=all -g" ${{ matrix.cmake_args }} ..
+        cmake -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-sanitize-recover=all -g" -DFIERRO_ENABLE_OPENMP=ON ${{ matrix.cmake_args }} ..
         make -j$(nproc)
 
     - name: Minimal test
@@ -61,19 +61,19 @@ jobs:
       run: |
         cd apps/multiphysics/build_ubsan/app
         ulimit -s unlimited
-        ./Fierro ../../regression_tests/standard_inputs/TLQS_uniaxial
+        ./Fierro ../../regression_tests/standard_inputs/TLQS_uniaxial.yaml
 
     - name: Verbose ASan
       env:
         ASAN_OPTIONS: verbosity=1:halt_on_error=0
       run: |
         cd apps/multiphysics/build_ubsan/app
-        ./Fierro ../../regression_tests/standard_inputs/TLQS_uniaxial
+        ./Fierro ../../regression_tests/standard_inputs/TLQS_uniaxial.yaml
 
     - name: Check initialization
       run: |
         cd apps/multiphysics/build_ubsan/app
-        gdb -batch -ex "break main" -ex "run" -ex "backtrace" ./Fierro ../../regression_tests/standard_inputs/TLQS_uniaxial
+        gdb -batch -ex "break main" -ex "run" -ex "backtrace" ./Fierro ../../regression_tests/standard_inputs/TLQS_uniaxial.yaml
 
     - name: Configure CMake
       run: |
