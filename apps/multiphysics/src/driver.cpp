@@ -257,7 +257,6 @@ void Driver::initialize()
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
     build_boundry_node_sets(mesh);
 
-    printf("BEFORE SOLVER INITIALIZE CALLS\n");
     // Setup the Solvers
     double time_final = SimulationParamaters.DynamicOptions.time_final;
     for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
