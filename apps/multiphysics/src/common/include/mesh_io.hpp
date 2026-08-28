@@ -2011,6 +2011,8 @@ private:
 
 public:
 
+    CArray <long long int> num_owned_mat_elems;
+
     MeshWriter() {}
 
     ~MeshWriter()
@@ -7528,6 +7530,16 @@ public:
         int world_size;
         mesh_io_mpi_detail::query_world_rank_size(rank,world_size);
 
+        const size_t num_mats = State.MaterialPoints.num_material_points.size();
+
+        // sizing owned mat elems if not sized already
+        if (num_owned_mat_elems.size() <= 0) {
+            num_owned_mat_elems = CArray <long long int> (num_mats);
+            for (int mat = 0; mat < num_mats; mat++) {
+                num_owned_mat_elems(mat) = -1;
+            }
+        }
+
         // -----------------------------------------------------------------------
         //  FILE 1 – Material-point state
         //
@@ -7541,18 +7553,26 @@ public:
 
             size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
 
+            // populating the counts for num_owned_mat_elems if not already populated
+            if (num_owned_mat_elems(mat_id) == -1) {
+                int loc_tally = 0;
+                int tally = 0;
+                FOR_REDUCE_SUM(mat_elem, 0, num_mat_elems, loc_tally, {
+                    const size_t elem_id = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, mat_elem);
+                    if (elem_id < mesh.num_owned_elems) {
+                        loc_tally += 1;
+                    }
+                }, tally);
+                num_owned_mat_elems(mat_id) = tally;
+            }
+
             // ------------------------------------------------------------------
             //  Element centroid coordinates
-            //
-            //  x_phys(elem, dim) = (1/num_nodes_in_elem) * Σ_a x_node_a[dim]
-            //
-            //  This is identical to isoparametric mapping with uniform weights,
-            //  which is exact for single-point (mean-value) quadrature.
             // ------------------------------------------------------------------
-            DCArrayKokkos<double> x_phys(num_mat_elems, 3);
+            DCArrayKokkos<double> x_phys(num_owned_mat_elems(mat_id), 3);
             x_phys.set_values(0);
 
-            FOR_ALL(elem, 0, num_mat_elems, {
+            FOR_ALL(elem, 0, num_owned_mat_elems(mat_id), {
                 const size_t elem_id =
                     State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
 
@@ -7590,7 +7610,7 @@ public:
                     mat_id, time_value);
             fprintf(out_elem_state,
                     "# num_mat_elems=%zu  num_gp_per_elem=1\n",
-                    num_mat_elems);
+                    (size_t)num_owned_mat_elems(mat_id));
 
             // ---- Column header line -----------------------------------------
             //
@@ -7673,12 +7693,12 @@ public:
             // One row per element.  pt_id uses gp=0 since there is exactly
             // one integration point per element in this formulation.
             // -----------------------------------------------------------------
-            for (size_t elem = 0; elem < num_mat_elems; elem++) {
+            for (size_t elem = 0; elem < (size_t)num_owned_mat_elems(mat_id); elem++) {
                 const size_t elem_rid =
                     State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, elem);
                 size_t elem_gid;
                 if (world_size > 1) {
-                    elem_gid = mesh.local_to_global_elem_mapping(elem_rid);
+                    elem_gid = mesh.local_to_global_elem_mapping.host(elem_rid);
                 }
                 else {
                     elem_gid = elem_rid;
@@ -7872,6 +7892,143 @@ public:
 
         } // end FILE 2 scope
 
+        // -----------------------------------------------------------------------
+        //  Concatenate per-rank material-point files into one file per mat_id
+        // -----------------------------------------------------------------------
+        MPI_Barrier(MPI_COMM_WORLD);
+        CArray <int> num_universal_mat_elems(num_mats);
+        for (int mat_id = 0; mat_id < num_mats; mat_id++){
+            MPI_Allreduce(&num_owned_mat_elems(mat_id), &num_universal_mat_elems(mat_id), 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        }
+
+        if (world_size > 1 && rank == 0) {
+            for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+                // open rank 0's file for this mat_id to count columns and capture header
+                char probe_filename[128];
+                snprintf(probe_filename, sizeof probe_filename,
+                        "state/mat_pt_state_t_%6.4e_mat_id_%d_rank_%d.txt",
+                        time_value, mat_id, 0);
+
+                std::ifstream probe_in(probe_filename);
+                if (!probe_in.is_open()) {
+                    std::cerr << "concatenate mat_pt state: could not open "
+                            << probe_filename << " to count columns" << std::endl;
+                    continue;
+                }
+
+                std::vector<std::string> header_lines;
+                int num_columns = 0;
+                std::string probe_line;
+                while (std::getline(probe_in, probe_line)) {
+                    if (probe_line.empty()) continue;
+
+                    if (probe_line[0] == '#') {
+                        header_lines.push_back(probe_line);
+                        continue;
+                    }
+
+                    std::istringstream iss(probe_line);
+                    std::string tok;
+                    while (iss >> tok) num_columns++;
+                    break; // only need the first data row for the column count
+                }
+                probe_in.close();
+
+                if (num_columns == 0) {
+                    std::cerr << "concatenate mat_pt state: no data rows found in "
+                            << probe_filename << std::endl;
+                    continue;
+                }
+
+                // Store rows sequentially as they are read 
+                std::vector<std::vector<double>> all_rows;
+                // Pre-allocate capacity to prevent reallocation overhead
+                all_rows.reserve(num_universal_mat_elems(mat_id));
+
+                for (int rank_count = 0; rank_count < world_size; rank_count++) {
+
+                    char filename[128];
+                    snprintf(filename, sizeof filename,
+                            "state/mat_pt_state_t_%6.4e_mat_id_%d_rank_%d.txt",
+                            time_value, mat_id, rank_count);
+
+                    std::ifstream in(filename);
+                    if (!in.is_open()) {
+                        std::cerr << "concatenate mat_pt state: could not open "
+                                << filename << std::endl;
+                        continue;
+                    }
+
+                    std::string line;
+                    while (std::getline(in, line)) {
+                        if (line.empty() || line[0] == '#') continue;
+
+                        std::istringstream iss(line);
+                        std::vector<std::string> tok;
+                        std::string t;
+                        while (iss >> t) tok.push_back(t);
+                        if ((int)tok.size() != num_columns) continue; // skip malformed rows
+                        
+                        // Read row sequentially 
+                        std::vector<double> current_row(num_columns);
+                        for (int k = 0; k < num_columns; k++) {
+                            current_row[k] = std::stod(tok[k]);
+                        }
+
+                        // Append the row to our list
+                        all_rows.push_back(std::move(current_row));
+                    }
+                    in.close();
+
+                    // delete the per-rank file now that it's been read in
+                    std::remove(filename);
+                }
+
+                // ---- Sort the accumulated rows by elem_gid (column 0) ----
+                std::sort(all_rows.begin(), all_rows.end(), 
+                    [](const std::vector<double>& a, const std::vector<double>& b) {
+                        return a[0] < b[0]; 
+                    }
+                );
+
+                // ---- Make the second column sequential from zero ----
+                for (size_t i = 0; i < all_rows.size(); ++i) {
+                    all_rows[i][1] = (i);
+                }
+
+                // ---- write out the concatenated file ----
+                char out_filename[128];
+                snprintf(out_filename, sizeof out_filename,
+                        "state/mat_pt_state_t_%6.4e_mat_id_%d.txt",
+                        time_value, mat_id);
+
+                FILE* out = fopen(out_filename, "w");
+                if (!out) {
+                    std::cerr << "concatenate mat_pt state: could not open "
+                            << out_filename << " for writing" << std::endl;
+                    continue;
+                }
+
+                for (const std::string& hline : header_lines) {
+                    fprintf(out, "%s\n", hline.c_str());
+                }
+
+                // Iterate over the sorted sequential rows
+                for (size_t r = 0; r < all_rows.size(); r++) {
+                    fprintf(out, "  %-12zu %-8zu ",
+                            (size_t)all_rows[r][0], (size_t)all_rows[r][1]);
+                    for (int k = 2; k < num_columns; k++) {
+                        fprintf(out, " %22.14e", all_rows[r][k]);
+                    }
+                    fprintf(out, "\n");
+                }
+
+                fclose(out);
+            }
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+
     } // end write_text_state
 
     /////////////////////////////////////////////////////////////////////////////
@@ -7949,6 +8106,7 @@ public:
         // -----------------------------------------------------------------------
 
         const size_t num_gp_per_elem = ref_elem.qpt_grad_basis.dims(0);
+        const size_t num_mats = State.MaterialPoints.num_material_points.size();
 
         // -----------------------------------------------------------------------
         //  Gauss-point physical coordinates  (isoparametric mapping)
@@ -7956,8 +8114,6 @@ public:
         //  Same kernel as write_vtu_Pn so the two outputs are numerically
         //  identical for the coordinate columns.
         // -----------------------------------------------------------------------
-
-        
 
         // -----------------------------------------------------------------------
         //  Ensure the output directory exists before opening any files.
@@ -7977,6 +8133,14 @@ public:
         int world_size;
         mesh_io_mpi_detail::query_world_rank_size(rank,world_size);
 
+        // sizing owned mat elems if not sized already
+        if (num_owned_mat_elems.size() <= 0) {
+            num_owned_mat_elems = CArray <long long int> (num_mats);
+            for (int mat = 0; mat < num_mats; mat++) {
+                num_owned_mat_elems(mat) = -1;
+            }
+        }
+
         // -----------------------------------------------------------------------
         //  FILE 1 – Material-point (Gauss-point) state
         //
@@ -7985,10 +8149,28 @@ public:
         //             header line prefixed with '#'
         // -----------------------------------------------------------------------
         for (int mat_id = 0; mat_id < (int)State.MaterialToMeshMaps.num_mat_elems.dims(0); mat_id++) {
-            DCArrayKokkos<double> x_phys(State.MaterialToMeshMaps.num_mat_elems.host(mat_id), num_gp_per_elem, 3);
+            // allocating array for storing real space locations of gauss points
+            DCArrayKokkos<double> x_phys;
+
+            // populating the counts for num_owned_mat_elems if not already populated
+            if (num_owned_mat_elems(mat_id) == -1) {
+                int loc_tally = 0;
+                int tally = 0;
+                FOR_REDUCE_SUM(mat_elem, 0, State.MaterialToMeshMaps.num_mat_elems.host(mat_id), loc_tally, {
+                    const size_t elem_id = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, mat_elem);
+                    if (elem_id < mesh.num_owned_elems) {
+                        loc_tally += 1;
+                    }
+                }, tally);
+                // sizing array for storing real space locations of gauss points
+                num_owned_mat_elems(mat_id) = tally;
+            }
+
+            // initializing array for storing real space locations of gauss points
+            x_phys = DCArrayKokkos <double> (num_owned_mat_elems(mat_id), num_gp_per_elem, 3);
             x_phys.set_values(0);
 
-            FOR_ALL(elem, 0, State.MaterialToMeshMaps.num_mat_elems.host(mat_id), {
+            FOR_ALL(elem, 0, num_owned_mat_elems(mat_id), {
                 const size_t elem_id =
                     State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
                 for (size_t gp = 0; gp < num_gp_per_elem; gp++) {
@@ -8096,12 +8278,12 @@ public:
             fprintf(out_elem_state, "\n");
 
             // ---- Data rows --------------------------------------------------
-            for (size_t elem = 0; elem < State.MaterialToMeshMaps.num_mat_elems.host(mat_id); elem++) {
+            for (size_t elem = 0; elem < num_owned_mat_elems(mat_id); elem++) {
                 const size_t elem_rid =
                     State.MaterialToMeshMaps.elem_in_mat_elem.host(mat_id, elem);
                 size_t elem_gid;
                 if (world_size > 1) {
-                    elem_gid = mesh.local_to_global_elem_mapping(elem_rid);
+                    elem_gid = mesh.local_to_global_elem_mapping.host(elem_rid);
                 }
                 else {
                     elem_gid = elem_rid;
@@ -8322,6 +8504,146 @@ public:
             fclose(out_point_state);
     
         } // end FILE 2 scope
+
+        MPI_Barrier(MPI_COMM_WORLD);
+        CArray <int> num_universal_mat_elems(num_mats);
+        for (int mat_id = 0; mat_id < num_mats; mat_id++){
+            MPI_Allreduce(&num_owned_mat_elems(mat_id), &num_universal_mat_elems(mat_id), 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+        }
+
+        // concatenate material outputs if more than one rank
+        if (world_size > 1 && rank == 0) {
+            // looping through materials
+            for (int mat_id = 0; mat_id < num_mats; mat_id++) {
+
+                // open rank 0's file for this mat_id to count columns and capture header
+                char probe_filename[128];
+                snprintf(probe_filename, sizeof probe_filename,
+                        "state/mat_pt_state_t_%6.4e_mat_id_%d_rank_%d.txt",
+                        time_value, mat_id, 0);
+
+                std::ifstream probe_in(probe_filename);
+                if (!probe_in.is_open()) {
+                    std::cerr << "concatenate mat_pt state: could not open "
+                            << probe_filename << " to count columns" << std::endl;
+                    continue;
+                }
+
+                std::vector<std::string> header_lines;
+                int num_columns = 0;
+                std::string probe_line;
+                while (std::getline(probe_in, probe_line)) {
+                    if (probe_line.empty()) continue;
+
+                    if (probe_line[0] == '#') {
+                        header_lines.push_back(probe_line);
+                        continue;
+                    }
+
+                    std::istringstream iss(probe_line);
+                    std::string tok;
+                    while (iss >> tok) num_columns++;
+                    break; // only need the first data row for the column count
+                }
+                probe_in.close();
+
+                if (num_columns == 0) {
+                    std::cerr << "concatenate mat_pt state: no data rows found in "
+                            << probe_filename << std::endl;
+                    continue;
+                }
+
+                // Store rows sequentially as they are read 
+                std::vector<std::vector<double>> all_rows;
+                // Pre-allocate capacity to prevent reallocation overhead
+                all_rows.reserve(num_universal_mat_elems(mat_id) * num_gp_per_elem);
+
+                for (int rank_count = 0; rank_count < world_size; rank_count++) {
+
+                    char filename[128];
+                    snprintf(filename, sizeof filename,
+                            "state/mat_pt_state_t_%6.4e_mat_id_%d_rank_%d.txt",
+                            time_value, mat_id, rank_count);
+
+                    std::ifstream in(filename);
+                    if (!in.is_open()) {
+                        std::cerr << "concatenate mat_pt state: could not open "
+                                << filename << std::endl;
+                        continue;
+                    }
+
+                    std::string line;
+                    while (std::getline(in, line)) {
+                        if (line.empty() || line[0] == '#') continue;
+
+                        std::istringstream iss(line);
+                        std::vector<std::string> tok;
+                        std::string t;
+                        while (iss >> t) tok.push_back(t);
+                        if ((int)tok.size() != num_columns) continue; // skip malformed rows
+
+                        // Read row sequentially 
+                        std::vector<double> current_row(num_columns);
+                        for (int k = 0; k < num_columns; k++) {
+                            current_row[k] = std::stod(tok[k]);
+                        }
+
+                        // Append the row to our list
+                        all_rows.push_back(std::move(current_row));
+                    }
+                    in.close();
+
+                    // delete the per-rank file now that it's been read in
+                    std::remove(filename);
+                }
+
+                // ---- Sort the accumulated rows ----
+                // Sort primarily by elem_gid (column 0), secondarily by gp (column 2)
+                std::sort(all_rows.begin(), all_rows.end(), 
+                    [](const std::vector<double>& a, const std::vector<double>& b) {
+                        if (a[0] != b[0]) {
+                            return a[0] < b[0]; // Sort by elem_gid
+                        }
+                        return a[2] < b[2];     // Sort by gp if elem_gid is identical
+                    }
+                );
+
+                // ---- Make the second column sequential from zero ----
+                for (size_t i = 0; i < all_rows.size(); ++i) {
+                    all_rows[i][1] = static_cast<double>(all_rows[i][0]);
+                }
+
+                // ---- write out the concatenated file ----
+                char out_filename[128];
+                snprintf(out_filename, sizeof out_filename,
+                        "state/mat_pt_state_t_%6.4e_mat_id_%d.txt",
+                        time_value, mat_id);
+
+                FILE* out = fopen(out_filename, "w");
+                if (!out) {
+                    std::cerr << "concatenate mat_pt state: could not open "
+                            << out_filename << " for writing" << std::endl;
+                    continue;
+                }
+
+                for (const std::string& hline : header_lines) {
+                    fprintf(out, "%s\n", hline.c_str());
+                }
+
+                // Iterate over the sorted sequential rows
+                for (size_t r = 0; r < all_rows.size(); r++) {
+                    fprintf(out, "  %-12zu %-8zu %-8zu",
+                            (size_t)all_rows[r][0], (size_t)all_rows[r][1], (size_t)all_rows[r][2]);
+                    for (int k = 3; k < num_columns; k++) {
+                        fprintf(out, "  %22.14e", all_rows[r][k]);
+                    }
+                    fprintf(out, "\n");
+                }
+
+                fclose(out);
+            }
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
 
     } // end write_text_state_Pn
 }; // end class

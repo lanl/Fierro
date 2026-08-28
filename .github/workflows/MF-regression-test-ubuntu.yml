@@ -37,7 +37,43 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake libopenmpi-dev openmpi-bin libblas-dev liblapack-dev python3
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential cmake libopenmpi-dev openmpi-bin libblas-dev liblapack-dev python3 gdb
+
+    # - name: Check environment
+      # run: |
+        # ldd --version
+        # ulimit -a
+        # free -h
+
+    # - name: UBSan build
+      # run: |
+        # mkdir -p apps/multiphysics/build_ubsan
+        # cd apps/multiphysics/build_ubsan
+        # cmake -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-sanitize-recover=all -g" -DFIERRO_ENABLE_OPENMP=ON ${{ matrix.cmake_args }} ..
+        # make -j$(nproc)
+
+    # - name: Minimal test
+      # run: |
+        # cd apps/multiphysics/build_ubsan/app
+        # ./Fierro --help || echo "Exit code: $?"
+
+    # - name: Increase stack and run
+      # run: |
+        # cd apps/multiphysics/build_ubsan/app
+        # ulimit -s unlimited
+        # ./Fierro ../../regression_tests/standard_inputs/TLQS_uniaxial.yaml
+
+    # - name: Verbose ASan
+      # env:
+        # ASAN_OPTIONS: verbosity=1:halt_on_error=0
+      # run: |
+        # cd apps/multiphysics/build_ubsan/app
+        # ./Fierro ../../regression_tests/standard_inputs/TLQS_uniaxial.yaml
+
+    # - name: Check initialization
+      # run: |
+        # cd apps/multiphysics/build_ubsan/app
+        # gdb -batch -ex "break main" -ex "run" -ex "backtrace" ./Fierro ../../regression_tests/standard_inputs/TLQS_uniaxial.yaml
 
     - name: Configure CMake
       run: |
