@@ -6836,7 +6836,7 @@ public:
         fprintf(out[0], "  <Collection>\n");
 
         for (int i = 0; i <= graphics_id; i++) {
-            fprintf(out[0], "    <DataSet timestep=\"%12.5e\" file=\"data/Fierro.solver%zu.%05d.vtm\" time= \"%12.5e\" />\n", 
+            fprintf(out[0], "    <DataSet timestep=\"%.5e\" file=\"data/Fierro.solver%zu.%05d.vtm\" time=\"%.5e\" />\n", 
                                                      graphics_times(i), solver_id, i, graphics_times(i) );
             //fprintf(out[0], "    <DataSet timestep=\"%d\" file=\"data/Fierro.solver%zu.%05d.vtm\" time= \"%12.5e\" />\n", 
             //                                         i, solver_id, i, graphics_times(i) );
