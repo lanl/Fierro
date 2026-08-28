@@ -54,12 +54,12 @@ jobs:
 
     - name: Minimal test
       run: |
-        cd apps/multiphysics/build_ubsan
+        cd apps/multiphysics/build_ubsan/app
         ./Fierro --help || echo "Exit code: $?"
 
     - name: Increase stack and run
       run: |
-        cd apps/multiphysics/build_ubsan
+        cd apps/multiphysics/build_ubsan/app
         ulimit -s unlimited
         ./Fierro ../../regression_tests/standard_inputs/TLQS_uniaxial
 
@@ -67,12 +67,12 @@ jobs:
       env:
         ASAN_OPTIONS: verbosity=1:halt_on_error=0
       run: |
-        cd apps/multiphysics/build_ubsan
+        cd apps/multiphysics/build_ubsan/app
         ./Fierro ../../regression_tests/standard_inputs/TLQS_uniaxial
 
     - name: Check initialization
       run: |
-        cd apps/multiphysics/build_ubsan
+        cd apps/multiphysics/build_ubsan/app
         gdb -batch -ex "break main" -ex "run" -ex "backtrace" ./Fierro ../../regression_tests/standard_inputs/TLQS_uniaxial
 
     - name: Configure CMake
