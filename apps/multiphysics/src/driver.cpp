@@ -91,7 +91,6 @@ void Driver::initialize()
         }
     }
 
-
     // Create initial mesh on rank 0
     swage::Mesh_t initial_mesh;
     MPICArrayKokkos<double> initial_node_coords;
@@ -146,7 +145,6 @@ void Driver::initialize()
         throw std::runtime_error("**** NO MESH INPUT OPTIONS PROVIDED IN YAML ****");
         return;
     }
-
     MPI_Barrier(MPI_COMM_WORLD);
     
     // Partition the mesh to all ranks
@@ -171,7 +169,7 @@ void Driver::initialize()
         mesh.shared_tally_owned_nodes = DCArrayKokkos<bool>(mesh.num_owned_nodes, "shared_tally_owned_nodes");
         mesh.shared_tally_owned_nodes.set_values(true);
     }
-
+    
     // WARNING: This needs to be moved into the partition mesh function, along with all of the above copies. 
     // TODO: Add a copy constructor to the mesh class to handle this consistently. 
     // mesh.num_dims = initial_mesh.num_dims;
@@ -258,7 +256,6 @@ void Driver::initialize()
     mesh.initialize_bdy_sets(num_bcs);
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
     build_boundry_node_sets(mesh);
-
 
     // Setup the Solvers
     double time_final = SimulationParamaters.DynamicOptions.time_final;

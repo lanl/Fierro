@@ -1172,6 +1172,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
      
 
     // the following loop is not thread safe
+    // NOTE: THIS LOOP BEING SERIAL ALLOWS MPI WRITES TO BE DETERMINISTIC
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
 
         for (size_t a_mat_in_elem=0; a_mat_in_elem < State.MeshtoMaterialMaps.num_mats_in_elem.host(elem_gid); a_mat_in_elem++){
