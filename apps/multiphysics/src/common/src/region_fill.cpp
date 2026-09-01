@@ -407,23 +407,55 @@ void fill_regions(
                     const double dist_y = elem_coords(elem_gid,1) - region_fills(reg_id).origin[1];
                     const double dist_z = elem_coords(elem_gid,2) - region_fills(reg_id).origin[2];
 
-                    // spherical radius 
-                    const double radius = sqrt(dist_x * dist_x +
-                                               dist_y * dist_y +
-                                               dist_z * dist_z);
-
-                    // cylindrical radius
-                    const double radius_cyl = sqrt(dist_x * dist_x +
-                                                   dist_y * dist_y);
-
+                    const double x_lower_bound = region_fills(reg_id).x1;
+                    const double x_upper_bound = region_fills(reg_id).x2;
+                    const double y_lower_bound = region_fills(reg_id).y1;
+                    const double y_upper_bound = region_fills(reg_id).y2;
                     const double z_lower_bound = region_fills(reg_id).z1;
                     const double z_upper_bound = region_fills(reg_id).z2;
 
-                    if (radius_cyl >= region_fills(reg_id).radius1 && 
-                        radius_cyl <= region_fills(reg_id).radius2 &&
-                        elem_coords(elem_gid,2) >= z_lower_bound && elem_coords(elem_gid,2) <= z_upper_bound) {
-                        elem_geo_volfrac_a_fill(elem_gid) = 1.0;
-                    } // end if
+                    if( (x_upper_bound-x_lower_bound)>1.e-14 ){
+                                                
+                        // cylinder is along x-axis
+                        const double radius_cyl = sqrt(dist_y * dist_y +
+                                                       dist_z * dist_z);
+
+                        if (radius_cyl >= region_fills(reg_id).radius1 && 
+                            radius_cyl <= region_fills(reg_id).radius2 &&
+                            elem_coords(elem_gid,0) >= x_lower_bound && elem_coords(elem_gid,0) <= x_upper_bound) {
+                            elem_geo_volfrac_a_fill(elem_gid) = 1.0;
+                        } // end if
+
+                    } // end if x-dir
+                    else if( (y_upper_bound-y_lower_bound)>1.e-14 ){
+                        
+                        // cylinder is along y-axis
+                        const double radius_cyl = sqrt(dist_x * dist_x +
+                                                       dist_z * dist_z);
+
+                        if (radius_cyl >= region_fills(reg_id).radius1 && 
+                            radius_cyl <= region_fills(reg_id).radius2 &&
+                            elem_coords(elem_gid,1) >= y_lower_bound && elem_coords(elem_gid,1) <= y_upper_bound) {
+                            elem_geo_volfrac_a_fill(elem_gid) = 1.0;
+                        } // end if
+
+                    } // end if y-dir
+                    else if( (z_upper_bound-z_lower_bound)>1.e-14 ){
+
+                        // cylinder is along z-axis
+                        const double radius_cyl = sqrt(dist_x * dist_x +
+                                                       dist_y * dist_y);
+
+                        if (radius_cyl >= region_fills(reg_id).radius1 && 
+                            radius_cyl <= region_fills(reg_id).radius2 &&
+                            elem_coords(elem_gid,2) >= z_lower_bound && elem_coords(elem_gid,2) <= z_upper_bound) {
+                            elem_geo_volfrac_a_fill(elem_gid) = 1.0;
+                        } // end if
+
+                    } // end if z-dir
+                    else {
+                        Kokkos::abort("ERROR: Painting a cylinder region requires a length in x, y, or z directions. \n");
+                    }
 
                 });
                 Kokkos::fence();
@@ -447,10 +479,6 @@ void fill_regions(
                     const double radius = sqrt(dist_x * dist_x +
                                                dist_y * dist_y +
                                                dist_z * dist_z);
-
-                    // cylindrical radius
-                    const double radius_cyl = sqrt(dist_x * dist_x +
-                                                   dist_y * dist_y);
 
                     if (radius >= region_fills(reg_id).radius1
                         && radius <= region_fills(reg_id).radius2) {
