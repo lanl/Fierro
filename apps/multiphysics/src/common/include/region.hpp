@@ -57,6 +57,7 @@ namespace region
         readPolycrystalFile = 6,///< tag all elements in a polycrystallince voxel mesh (structured VTK)
         readSTLFile = 7,        ///< read a STL file and voxelize it
         readVTUFile = 8,        ///< tag elements in an unstructured .vtu mesh with object_ids
+        cone = 9,
     };
     
 } // end of namespace
@@ -70,7 +71,8 @@ static std::map<std::string, region::vol_tag> region_type_map
     { "cylinder", region::cylinder },
     { "voxel_file", region::readVoxelFile },
     { "stl", region::readSTLFile },
-    { "vtu_file", region::readVTUFile}
+    { "vtu_file", region::readVTUFile },
+    { "cone", region::cone }
 };
 
 
@@ -106,6 +108,12 @@ struct RegionFill_t
     // radius
     double radius1 = 0.0;   ///< Inner radius to fill for sphere
     double radius2 = 0.0;   ///< Outer radius to fill for sphere
+
+    // angles
+    double half_angle = 0.0;  ///<the half angle of a cone
+
+    // direction
+    double unit_vector[3] = { 0.0, 0.0, 0.0 }; ///< unit vector for use to create certain shapes
 
     // the volume origin
     double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region fill, its the volume origin
@@ -182,10 +190,12 @@ static std::vector<std::string> str_region_volume_inps
     "z2",
     "radius1",
     "radius2",
+    "half_angle",
     "scale_x",
     "scale_y",
     "scale_z",
     "origin",
+    "unit_vector",
     "part_id"
 };
 

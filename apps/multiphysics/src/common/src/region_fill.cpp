@@ -463,6 +463,102 @@ void fill_regions(
                 break;
             } // end case
             // ---
+            case region::cone:
+            {
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
+                
+                FOR_ALL(elem_gid, 0, mesh.num_elems, {
+
+                    // vector from apex (ie origin) to the test point is dist_x, dist_y, and dist_z
+                    const double dist_x = elem_coords(elem_gid,0) - region_fills(reg_id).origin[0];
+                    const double dist_y = elem_coords(elem_gid,1) - region_fills(reg_id).origin[1];
+                    const double dist_z = elem_coords(elem_gid,2) - region_fills(reg_id).origin[2];
+
+                    // x,y,z define direction and height
+                    const double x_lower_bound = region_fills(reg_id).x1;
+                    const double x_upper_bound = region_fills(reg_id).x2;
+                    const double y_lower_bound = region_fills(reg_id).y1;
+                    const double y_upper_bound = region_fills(reg_id).y2;
+                    const double z_lower_bound = region_fills(reg_id).z1;
+                    const double z_upper_bound = region_fills(reg_id).z2;
+ 
+                    const double radius1 = region_fills(reg_id).radius1;
+                    const double radius2 = region_fills(reg_id).radius2;
+
+                    bool is_inside_shell = false;
+
+                    // checking to see if it is a cone with spherical radius on top and not a plane
+                    const bool ice_cream_cone = (region_fills(reg_id).radius2 > 1.0e-13);
+
+                    if(ice_cream_cone){
+                        // spherical radius 
+                        const double radius = sqrt(dist_x * dist_x +
+                                                   dist_y * dist_y +
+                                                   dist_z * dist_z);
+
+                        if (radius >= radius1
+                         && radius <= radius2) {
+                            is_inside_shell = true;
+                        } 
+                    } // end if
+
+                    double h = 0.0;
+                    if( (x_upper_bound-x_lower_bound)>1.e-14 ){
+                        h = x_upper_bound-x_lower_bound;
+                    } // end if x-dir
+                    else if( (y_upper_bound-y_lower_bound)>1.e-14 ){
+                        h = y_upper_bound-y_lower_bound;
+                    } // end if y-dir
+                    else if( (z_upper_bound-z_lower_bound)>1.e-14 ){
+                        h = z_upper_bound-z_lower_bound;
+                    } // end if z-dir
+                    else {
+                        Kokkos::abort("ERROR: Painting a cone region requires a length in x, y, or z directions. \n");
+                    }
+
+                    // now check to see if elem is inside cone shape
+
+                    bool is_inside_cone = false;
+
+                    // check height bounds
+                    const double projection = region_fills(reg_id).unit_vector[0]*dist_x + 
+                                              region_fills(reg_id).unit_vector[1]*dist_y + 
+                                              region_fills(reg_id).unit_vector[2]*dist_z;
+
+                    if (projection>=0 && projection<=h ) {
+                        // check angle condition
+                        // cos^2(alpha) * |w|^2 <= (w dot d)^2
+
+                        const double length_squared = dist_x*dist_x + dist_y*dist_y + dist_z*dist_z;
+                        const double cos_half_angle = cos(region_fills(reg_id).half_angle);
+                        const double lhs_squared = length_squared*cos_half_angle*cos_half_angle;
+                        const double projection_squared = projection*projection;
+                        
+                        if(projection_squared >= lhs_squared){
+                            is_inside_cone = true;
+                        };
+                    } // end if inside cone
+
+
+                    if(ice_cream_cone){
+                        // must be inside both the spheres and the cone
+                        if(is_inside_cone && is_inside_shell){
+                            elem_geo_volfrac_a_fill(elem_gid) = 1.0;
+                        }
+                    }
+                    else{
+                        // only inside the cone
+                        if(is_inside_cone){
+                            elem_geo_volfrac_a_fill(elem_gid) = 1.0;
+                        }
+                    }
+
+                });
+                Kokkos::fence();
+
+                break;
+            } // end case
+            // ---
             case region::sphere:
             {
 
