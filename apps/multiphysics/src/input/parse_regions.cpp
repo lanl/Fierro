@@ -259,7 +259,16 @@ void parse_regions(Yaml::Node& root,
                         RUN({
                             region_fills(reg_id).half_angle = half_angle;
                         });
-                    } // z2
+                    } // half angle
+                    else if (a_subfield_word.compare("height") == 0) {
+                        // half angle
+
+                        double height = root["regions"][r_id]["region"]["volume"]["height"].As<double>();
+
+                        RUN({
+                            region_fills(reg_id).height = height;
+                        });
+                    } // height
                     else if (a_subfield_word.compare("scale_x") == 0) {
                         // outer plane
 

@@ -502,19 +502,7 @@ void fill_regions(
                         } 
                     } // end if
 
-                    double h = 0.0;
-                    if( (x_upper_bound-x_lower_bound)>1.e-14 ){
-                        h = x_upper_bound-x_lower_bound;
-                    } // end if x-dir
-                    else if( (y_upper_bound-y_lower_bound)>1.e-14 ){
-                        h = y_upper_bound-y_lower_bound;
-                    } // end if y-dir
-                    else if( (z_upper_bound-z_lower_bound)>1.e-14 ){
-                        h = z_upper_bound-z_lower_bound;
-                    } // end if z-dir
-                    else {
-                        Kokkos::abort("ERROR: Painting a cone region requires a length in x, y, or z directions. \n");
-                    }
+                    const double h = region_fills(reg_id).height;
 
                     // now check to see if elem is inside cone shape
 
