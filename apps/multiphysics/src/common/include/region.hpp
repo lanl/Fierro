@@ -57,7 +57,7 @@ namespace region
         readPolycrystalFile = 6,///< tag all elements in a polycrystallince voxel mesh (structured VTK)
         readSTLFile = 7,        ///< read a STL file and voxelize it
         readVTUFile = 8,        ///< tag elements in an unstructured .vtu mesh with object_ids
-        cone = 9,
+        cone = 9
     };
     
 } // end of namespace

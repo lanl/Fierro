@@ -530,7 +530,7 @@ void fill_regions(
                         // cos^2(alpha) * |w|^2 <= (w dot d)^2
 
                         const double length_squared = dist_x*dist_x + dist_y*dist_y + dist_z*dist_z;
-                        const double cos_half_angle = cos(region_fills(reg_id).half_angle);
+                        const double cos_half_angle = cos(region_fills(reg_id).half_angle*PI/180.);
                         const double lhs_squared = length_squared*cos_half_angle*cos_half_angle;
                         const double projection_squared = projection*projection;
                         

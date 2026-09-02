@@ -340,7 +340,13 @@ void parse_regions(Yaml::Node& root,
                                         region_fills(reg_id).volume = region::sphere;
                                     });
                                     break;
-
+                                case region::cone:
+                                    if (verbose) std::cout << "Setting volume fill type to cone " << std::endl;
+                                    region_fills_host(reg_id).volume = region::cone;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::cone;
+                                    });
+                                    break;
                                 case region::readVoxelFile:
                                     if (verbose) std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
                                     region_fills_host(reg_id).volume = region::readVoxelFile;
