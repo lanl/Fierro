@@ -251,6 +251,24 @@ void parse_regions(Yaml::Node& root,
                             region_fills(reg_id).z2 = z2;
                         });
                     } // z2
+                    else if (a_subfield_word.compare("half_angle") == 0) {
+                        // half angle
+
+                        double half_angle = root["regions"][r_id]["region"]["volume"]["half_angle"].As<double>();
+
+                        RUN({
+                            region_fills(reg_id).half_angle = half_angle;
+                        });
+                    } // half angle
+                    else if (a_subfield_word.compare("height") == 0) {
+                        // half angle
+
+                        double height = root["regions"][r_id]["region"]["volume"]["height"].As<double>();
+
+                        RUN({
+                            region_fills(reg_id).height = height;
+                        });
+                    } // height
                     else if (a_subfield_word.compare("scale_x") == 0) {
                         // outer plane
 
@@ -331,7 +349,13 @@ void parse_regions(Yaml::Node& root,
                                         region_fills(reg_id).volume = region::sphere;
                                     });
                                     break;
-
+                                case region::cone:
+                                    if (verbose) std::cout << "Setting volume fill type to cone " << std::endl;
+                                    region_fills_host(reg_id).volume = region::cone;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::cone;
+                                    });
+                                    break;
                                 case region::readVoxelFile:
                                     if (verbose) std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
                                     region_fills_host(reg_id).volume = region::readVoxelFile;
@@ -392,6 +416,30 @@ void parse_regions(Yaml::Node& root,
 
                     } // end file path
                     //
+                    else if (a_subfield_word.compare("unit_vector") == 0) {
+                        std::string unit_vector = root["regions"][r_id]["region"]["volume"]["unit_vector"].As<std::string>();
+
+                        // get the origin numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(unit_vector, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+                        RUN({
+                            region_fills(reg_id).unit_vector[0] = x1;
+                            region_fills(reg_id).unit_vector[1] = y1;
+                            region_fills(reg_id).unit_vector[2] = z1;
+                        });
+                    } // unit vector
                     else if (a_subfield_word.compare("origin") == 0) {
                         std::string origin = root["regions"][r_id]["region"]["volume"]["origin"].As<std::string>();
 

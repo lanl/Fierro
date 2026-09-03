@@ -399,31 +399,163 @@ void fill_regions(
             case region::cylinder:
             {
                 elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
+
+                RUN({
+                    const double unit_x = region_fills(reg_id).unit_vector[0];
+                    const double unit_y = region_fills(reg_id).unit_vector[1];
+                    const double unit_z = region_fills(reg_id).unit_vector[2];
+
+                    const double mag = sqrt(unit_x*unit_x + unit_y*unit_y + unit_z*unit_z);
+
+                    region_fills(reg_id).unit_vector[0] /= mag;
+                    region_fills(reg_id).unit_vector[1] /= mag;
+                    region_fills(reg_id).unit_vector[2] /= mag;
+                });
+                Kokkos::fence();
+                
+                FOR_ALL(elem_gid, 0, mesh.num_elems, {     
+
+                    // Extract cylinder parameters once
+                    const double origin_x = region_fills(reg_id).origin[0];
+                    const double origin_y = region_fills(reg_id).origin[1];
+                    const double origin_z = region_fills(reg_id).origin[2];
+                    
+                    const double unit_x = region_fills(reg_id).unit_vector[0];
+                    const double unit_y = region_fills(reg_id).unit_vector[1];
+                    const double unit_z = region_fills(reg_id).unit_vector[2];
+                    
+                    const double height = region_fills(reg_id).height;
+                    const double r_inner = region_fills(reg_id).radius1;
+                    const double r_outer = region_fills(reg_id).radius2;
+                    
+                    // Vector from origin to element center
+                    const double dist_x = elem_coords(elem_gid, 0) - origin_x;
+                    const double dist_y = elem_coords(elem_gid, 1) - origin_y;
+                    const double dist_z = elem_coords(elem_gid, 2) - origin_z;
+                    
+                    // Projection onto axis (height check)
+                    const double projection = unit_x * dist_x + unit_y * dist_y + unit_z * dist_z;
+                    
+                    bool is_inside = false;
+                    
+                    if (projection >= 0.0 && projection <= height) {
+
+                        // Only compute perpendicular distance if height check passes
+                        const double length_squared = dist_x*dist_x + dist_y*dist_y + dist_z*dist_z;
+                        const double projection_squared = projection * projection;
+                        const double perp_dist_squared = length_squared - projection_squared;
+                        
+                        const double r_inner_squared = r_inner * r_inner;
+                        const double r_outer_squared = r_outer * r_outer;
+                        
+                        // Check if distance is BETWEEN inner and outer radii
+                        if (perp_dist_squared >= r_inner_squared && 
+                            perp_dist_squared <= r_outer_squared) {
+                            is_inside = true;
+                        }
+
+                    } // end if
+                    
+                    if (is_inside) {
+                        elem_geo_volfrac_a_fill(elem_gid) = 1.0;
+                    }
+
+                });
+                Kokkos::fence();
+
+                break;
+            } // end case
+            // ---
+            case region::cone:
+            {
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
+
+                RUN({
+                    const double unit_x = region_fills(reg_id).unit_vector[0];
+                    const double unit_y = region_fills(reg_id).unit_vector[1];
+                    const double unit_z = region_fills(reg_id).unit_vector[2];
+
+                    const double mag = sqrt(unit_x*unit_x + unit_y*unit_y + unit_z*unit_z);
+
+                    region_fills(reg_id).unit_vector[0] /= mag;
+                    region_fills(reg_id).unit_vector[1] /= mag;
+                    region_fills(reg_id).unit_vector[2] /= mag;
+                });
+                Kokkos::fence();
                 
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
-                    // for shapes with an origin (e.g., sphere and circle), accounting for the origin
+                    // vector from apex (ie origin) to the test point is dist_x, dist_y, and dist_z
                     const double dist_x = elem_coords(elem_gid,0) - region_fills(reg_id).origin[0];
                     const double dist_y = elem_coords(elem_gid,1) - region_fills(reg_id).origin[1];
                     const double dist_z = elem_coords(elem_gid,2) - region_fills(reg_id).origin[2];
 
-                    // spherical radius 
-                    const double radius = sqrt(dist_x * dist_x +
-                                               dist_y * dist_y +
-                                               dist_z * dist_z);
-
-                    // cylindrical radius
-                    const double radius_cyl = sqrt(dist_x * dist_x +
-                                                   dist_y * dist_y);
-
+                    // x,y,z define direction and height
+                    const double x_lower_bound = region_fills(reg_id).x1;
+                    const double x_upper_bound = region_fills(reg_id).x2;
+                    const double y_lower_bound = region_fills(reg_id).y1;
+                    const double y_upper_bound = region_fills(reg_id).y2;
                     const double z_lower_bound = region_fills(reg_id).z1;
                     const double z_upper_bound = region_fills(reg_id).z2;
+ 
+                    const double radius1 = region_fills(reg_id).radius1;
+                    const double radius2 = region_fills(reg_id).radius2;
 
-                    if (radius_cyl >= region_fills(reg_id).radius1 && 
-                        radius_cyl <= region_fills(reg_id).radius2 &&
-                        elem_coords(elem_gid,2) >= z_lower_bound && elem_coords(elem_gid,2) <= z_upper_bound) {
-                        elem_geo_volfrac_a_fill(elem_gid) = 1.0;
+                    bool is_inside_shell = false;
+
+                    // checking to see if it is a cone with spherical radius on top and not a plane
+                    const bool ice_cream_cone = (region_fills(reg_id).radius2 > 1.0e-13);
+
+                    if(ice_cream_cone){
+                        // spherical radius 
+                        const double radius = sqrt(dist_x * dist_x +
+                                                   dist_y * dist_y +
+                                                   dist_z * dist_z);
+
+                        if (radius >= radius1
+                         && radius <= radius2) {
+                            is_inside_shell = true;
+                        } 
                     } // end if
+
+                    const double h = region_fills(reg_id).height;
+
+                    // now check to see if elem is inside cone shape
+
+                    bool is_inside_cone = false;
+
+                    // check height bounds
+                    const double projection = region_fills(reg_id).unit_vector[0]*dist_x + 
+                                              region_fills(reg_id).unit_vector[1]*dist_y + 
+                                              region_fills(reg_id).unit_vector[2]*dist_z;
+
+                    if (projection>=0 && projection<=h ) {
+                        // check angle condition
+                        // cos^2(alpha) * |w|^2 <= (w dot d)^2
+
+                        const double length_squared = dist_x*dist_x + dist_y*dist_y + dist_z*dist_z;
+                        const double cos_half_angle = cos(region_fills(reg_id).half_angle*PI/180.);
+                        const double lhs_squared = length_squared*cos_half_angle*cos_half_angle;
+                        const double projection_squared = projection*projection;
+                        
+                        if(projection_squared >= lhs_squared){
+                            is_inside_cone = true;
+                        };
+                    } // end if inside cone
+
+
+                    if(ice_cream_cone){
+                        // must be inside both the spheres and the cone
+                        if(is_inside_cone && is_inside_shell){
+                            elem_geo_volfrac_a_fill(elem_gid) = 1.0;
+                        }
+                    }
+                    else{
+                        // only inside the cone
+                        if(is_inside_cone){
+                            elem_geo_volfrac_a_fill(elem_gid) = 1.0;
+                        }
+                    }
 
                 });
                 Kokkos::fence();
@@ -447,10 +579,6 @@ void fill_regions(
                     const double radius = sqrt(dist_x * dist_x +
                                                dist_y * dist_y +
                                                dist_z * dist_z);
-
-                    // cylindrical radius
-                    const double radius_cyl = sqrt(dist_x * dist_x +
-                                                   dist_y * dist_y);
 
                     if (radius >= region_fills(reg_id).radius1
                         && radius <= region_fills(reg_id).radius2) {
