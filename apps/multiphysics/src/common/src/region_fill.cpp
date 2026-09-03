@@ -399,62 +399,65 @@ void fill_regions(
             case region::cylinder:
             {
                 elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
+
+                RUN({
+                    const double unit_x = region_fills(reg_id).unit_vector[0];
+                    const double unit_y = region_fills(reg_id).unit_vector[1];
+                    const double unit_z = region_fills(reg_id).unit_vector[2];
+
+                    const double mag = sqrt(unit_x*unit_x + unit_y*unit_y + unit_z*unit_z);
+
+                    region_fills(reg_id).unit_vector[0] /= mag;
+                    region_fills(reg_id).unit_vector[1] /= mag;
+                    region_fills(reg_id).unit_vector[2] /= mag;
+                });
+                Kokkos::fence();
                 
-                FOR_ALL(elem_gid, 0, mesh.num_elems, {
+                FOR_ALL(elem_gid, 0, mesh.num_elems, {     
 
-                    // for shapes with an origin (e.g., sphere and circle), accounting for the origin
-                    const double dist_x = elem_coords(elem_gid,0) - region_fills(reg_id).origin[0];
-                    const double dist_y = elem_coords(elem_gid,1) - region_fills(reg_id).origin[1];
-                    const double dist_z = elem_coords(elem_gid,2) - region_fills(reg_id).origin[2];
+                    // Extract cylinder parameters once
+                    const double origin_x = region_fills(reg_id).origin[0];
+                    const double origin_y = region_fills(reg_id).origin[1];
+                    const double origin_z = region_fills(reg_id).origin[2];
+                    
+                    const double unit_x = region_fills(reg_id).unit_vector[0];
+                    const double unit_y = region_fills(reg_id).unit_vector[1];
+                    const double unit_z = region_fills(reg_id).unit_vector[2];
+                    
+                    const double height = region_fills(reg_id).height;
+                    const double r_inner = region_fills(reg_id).radius1;
+                    const double r_outer = region_fills(reg_id).radius2;
+                    
+                    // Vector from origin to element center
+                    const double dist_x = elem_coords(elem_gid, 0) - origin_x;
+                    const double dist_y = elem_coords(elem_gid, 1) - origin_y;
+                    const double dist_z = elem_coords(elem_gid, 2) - origin_z;
+                    
+                    // Projection onto axis (height check)
+                    const double projection = unit_x * dist_x + unit_y * dist_y + unit_z * dist_z;
+                    
+                    bool is_inside = false;
+                    
+                    if (projection >= 0.0 && projection <= height) {
 
-                    const double x_lower_bound = region_fills(reg_id).x1;
-                    const double x_upper_bound = region_fills(reg_id).x2;
-                    const double y_lower_bound = region_fills(reg_id).y1;
-                    const double y_upper_bound = region_fills(reg_id).y2;
-                    const double z_lower_bound = region_fills(reg_id).z1;
-                    const double z_upper_bound = region_fills(reg_id).z2;
-
-                    if( (x_upper_bound-x_lower_bound)>1.e-14 ){
-                                                
-                        // cylinder is along x-axis
-                        const double radius_cyl = sqrt(dist_y * dist_y +
-                                                       dist_z * dist_z);
-
-                        if (radius_cyl >= region_fills(reg_id).radius1 && 
-                            radius_cyl <= region_fills(reg_id).radius2 &&
-                            elem_coords(elem_gid,0) >= x_lower_bound && elem_coords(elem_gid,0) <= x_upper_bound) {
-                            elem_geo_volfrac_a_fill(elem_gid) = 1.0;
-                        } // end if
-
-                    } // end if x-dir
-                    else if( (y_upper_bound-y_lower_bound)>1.e-14 ){
+                        // Only compute perpendicular distance if height check passes
+                        const double length_squared = dist_x*dist_x + dist_y*dist_y + dist_z*dist_z;
+                        const double projection_squared = projection * projection;
+                        const double perp_dist_squared = length_squared - projection_squared;
                         
-                        // cylinder is along y-axis
-                        const double radius_cyl = sqrt(dist_x * dist_x +
-                                                       dist_z * dist_z);
+                        const double r_inner_squared = r_inner * r_inner;
+                        const double r_outer_squared = r_outer * r_outer;
+                        
+                        // Check if distance is BETWEEN inner and outer radii
+                        if (perp_dist_squared >= r_inner_squared && 
+                            perp_dist_squared <= r_outer_squared) {
+                            is_inside = true;
+                        }
 
-                        if (radius_cyl >= region_fills(reg_id).radius1 && 
-                            radius_cyl <= region_fills(reg_id).radius2 &&
-                            elem_coords(elem_gid,1) >= y_lower_bound && elem_coords(elem_gid,1) <= y_upper_bound) {
-                            elem_geo_volfrac_a_fill(elem_gid) = 1.0;
-                        } // end if
-
-                    } // end if y-dir
-                    else if( (z_upper_bound-z_lower_bound)>1.e-14 ){
-
-                        // cylinder is along z-axis
-                        const double radius_cyl = sqrt(dist_x * dist_x +
-                                                       dist_y * dist_y);
-
-                        if (radius_cyl >= region_fills(reg_id).radius1 && 
-                            radius_cyl <= region_fills(reg_id).radius2 &&
-                            elem_coords(elem_gid,2) >= z_lower_bound && elem_coords(elem_gid,2) <= z_upper_bound) {
-                            elem_geo_volfrac_a_fill(elem_gid) = 1.0;
-                        } // end if
-
-                    } // end if z-dir
-                    else {
-                        Kokkos::abort("ERROR: Painting a cylinder region requires a length in x, y, or z directions. \n");
+                    } // end if
+                    
+                    if (is_inside) {
+                        elem_geo_volfrac_a_fill(elem_gid) = 1.0;
                     }
 
                 });
@@ -466,6 +469,19 @@ void fill_regions(
             case region::cone:
             {
                 elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
+
+                RUN({
+                    const double unit_x = region_fills(reg_id).unit_vector[0];
+                    const double unit_y = region_fills(reg_id).unit_vector[1];
+                    const double unit_z = region_fills(reg_id).unit_vector[2];
+
+                    const double mag = sqrt(unit_x*unit_x + unit_y*unit_y + unit_z*unit_z);
+
+                    region_fills(reg_id).unit_vector[0] /= mag;
+                    region_fills(reg_id).unit_vector[1] /= mag;
+                    region_fills(reg_id).unit_vector[2] /= mag;
+                });
+                Kokkos::fence();
                 
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
