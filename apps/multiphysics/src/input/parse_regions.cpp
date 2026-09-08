@@ -260,15 +260,15 @@ void parse_regions(Yaml::Node& root,
                             region_fills(reg_id).half_angle = half_angle;
                         });
                     } // half angle
-                    else if (a_subfield_word.compare("height") == 0) {
+                    else if (a_subfield_word.compare("length") == 0) {
                         // half angle
 
-                        double height = root["regions"][r_id]["region"]["volume"]["height"].As<double>();
+                        double length = root["regions"][r_id]["region"]["volume"]["length"].As<double>();
 
                         RUN({
-                            region_fills(reg_id).height = height;
+                            region_fills(reg_id).length = length;
                         });
-                    } // height
+                    } // length
                     else if (a_subfield_word.compare("scale_x") == 0) {
                         // outer plane
 

@@ -424,7 +424,7 @@ void fill_regions(
                     const double unit_y = region_fills(reg_id).unit_vector[1];
                     const double unit_z = region_fills(reg_id).unit_vector[2];
                     
-                    const double height = region_fills(reg_id).height;
+                    const double height = region_fills(reg_id).length;
                     const double r_inner = region_fills(reg_id).radius1;
                     const double r_outer = region_fills(reg_id).radius2;
                     
@@ -518,7 +518,7 @@ void fill_regions(
                         } 
                     } // end if
 
-                    const double h = region_fills(reg_id).height;
+                    const double h = region_fills(reg_id).length;
 
                     // now check to see if elem is inside cone shape
 

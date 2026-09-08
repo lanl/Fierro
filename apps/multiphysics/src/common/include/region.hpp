@@ -106,7 +106,7 @@ struct RegionFill_t
     double z2 = 0.0; ///< Second Z plane for creating a box
 
 
-    double height = 0.0; ///< height of certain objects
+    double length = 0.0; ///< length of certain objects
 
     // radius
     double radius1 = 0.0;   ///< Inner radius to fill for sphere
@@ -191,7 +191,7 @@ static std::vector<std::string> str_region_volume_inps
     "y2",
     "z1",
     "z2",
-    "height",
+    "length",
     "radius1",
     "radius2",
     "half_angle",

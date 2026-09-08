@@ -215,7 +215,7 @@ regions:
             # radius2 is the outer radius
             radius2: 0.9
             half_angle: 30.
-            height: 1.2
+            length: 1.2
             unit_vector: [1.0, 0.0, 0.0]
 
 # ---------------------------------------------------------------------------
