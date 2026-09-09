@@ -89,7 +89,11 @@ namespace SGH3D_State
     // Material corner state to be initialized for the SGH solver
     static const std::vector<material_corner_state> required_material_corner_state = 
     { 
-        material_corner_state::force
+        material_corner_state::force,
+        material_corner_state::density,
+        material_corner_state::specific_internal_energy,
+        material_corner_state::kinetic_energy,
+        material_corner_state::velocity
     };
 
     // Corner state to be initialized for the SGH solver
@@ -147,6 +151,15 @@ public:
     bool doing_fracture = false; // condition used in SGH::execute
     bool doing_contact = false;  // Condition used in SGH::execute
     bool doing_preload = false;  // Condition used in SGH::execute
+
+
+    // Reference element 
+    elements::Quadrature_t Quad;
+    elements::ReferenceElement_t FERefElem; // kinematic space
+    elements::ReferenceElement_t DGRefElem; // thermal space, it is discontinous
+
+    elements::SurfaceQuadrature_t SurfQuad;
+    elements::ReferenceSurface_t RefSurf;
 
     SGH3D()  : Solver()
     {
