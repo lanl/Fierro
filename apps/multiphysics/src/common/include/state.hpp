@@ -748,7 +748,11 @@ struct MaterialZone_t
 enum class material_corner_state
 {
     force, 
-    heat_transfer
+    heat_transfer,
+    density,
+    specific_internal_energy,
+    kinetic_energy,
+    velocity
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -766,6 +770,11 @@ struct MaterialCorner_t
     DRaggedRightArrayKokkos<double> force;   ///< Corner force for the material
     DRaggedRightArrayKokkos<double> q_transfer;  ///< Corner heat tranfer per material
 
+    // Material state arrays for remap
+    DRaggedRightArrayKokkos<double> density;  ///< Density used for remap
+    DRaggedRightArrayKokkos<double> specific_internal_energy;  ///< Specific internal energy used for remap
+    DRaggedRightArrayKokkos<double> kinetic_energy;  ///< Kinetic energy used for remap
+    DRaggedRightArrayKokkos<double> velocity;  ///< Velocity used for remap
     
     void initialize_num_mats(size_t num_mats)
     {
@@ -791,6 +800,18 @@ struct MaterialCorner_t
                     break;
                 case material_corner_state::heat_transfer:
                     if (q_transfer.size() == 0) this->q_transfer =DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_q_transfer"); 
+                    break;
+                case material_corner_state::density:
+                    if (density.size() == 0) this->density = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_density");
+                    break;
+                case material_corner_state::specific_internal_energy:
+                    if (specific_internal_energy.size() == 0) this->specific_internal_energy = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_specific_internal_energy");
+                    break;
+                case material_corner_state::kinetic_energy:
+                    if (kinetic_energy.size() == 0) this->kinetic_energy = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_kinetic_energy");
+                    break;
+                case material_corner_state::velocity:
+                    if (velocity.size() == 0) this->velocity = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, num_dims, "material_corner_velocity");
                     break;
                 default:
                     std::cout<<"Desired material corner state not understood in MaterialCorner_t initialize"<<std::endl;
