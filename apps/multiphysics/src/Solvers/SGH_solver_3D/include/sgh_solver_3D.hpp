@@ -161,6 +161,9 @@ public:
     elements::SurfaceQuadrature_t SurfQuad;
     elements::ReferenceSurface_t RefSurf;
 
+    // Map to get from quadrature points on the surface to the element
+    CArrayKokkos<int> surf_qpt_qpt_map;
+
     SGH3D()  : Solver()
     {
     }

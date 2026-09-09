@@ -222,5 +222,11 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
 
     RefSurf.initialize_ref_surf(SurfQuad,
                                 FERefElem);
+
+    // Map to get from quadrature points on the surface to the element
+    int num_surfaces = mesh.num_surfs;
+    int num_surf_qpts = 4;
+    this->surf_qpt_qpt_map = CArrayKokkos<int>(num_surfaces, 2, num_surf_qpts, "surf_qpt_qpt_map");
+    this->surf_qpt_qpt_map.set_values(0);
     
 } // end SGH setup
