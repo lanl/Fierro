@@ -699,9 +699,16 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                     switch(ale_model_map[ale_model]){
                         case model::noALE:
                             Materials.MaterialEnums.host(mat_id).ALEType = model::noALE;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).ALEType = model::noALE;
+                            });
                             break;
                         case model::ALE:
+                            std::cout << "ALE model: " << ale_model << std::endl;
                             Materials.MaterialEnums.host(mat_id).ALEType = model::ALE;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).ALEType = model::ALE;
+                            });
                             break;
                         default:
                             std::cout << "ERROR: invalid ALE input: " << ale_model << std::endl;

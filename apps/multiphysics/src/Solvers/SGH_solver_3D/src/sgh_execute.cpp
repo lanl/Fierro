@@ -605,6 +605,15 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         } // end of RK loop
 
+        // Apply ALE per material with ALE active
+        for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+
+            if(Materials.MaterialEnums.host(mat_id).ALEType == model::ALE){
+                std::cout << "Applying ALE for material " << mat_id << std::endl;
+                // CALL ALE HERE
+            } // end if on applying ALE
+        } // end for mat_id
+
         // increment the time
         time_value += dt;
 

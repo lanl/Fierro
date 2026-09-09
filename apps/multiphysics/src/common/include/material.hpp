@@ -171,7 +171,7 @@ static std::map<std::string, model::StrengthType> strength_type_map
     { "state_based", model::stateBased },
 };
 
-static std::map<std::string, model::StrengthType> ale_type_map
+static std::map<std::string, model::ALEType> ale_type_map
 {
     { "no_ale", model::noALE },
     { "ALE", model::ALE },
@@ -235,6 +235,12 @@ static std::map<std::string, model::DissipationModels> dissipation_model_map
     { "directional_MARS_rz", model::directionalMARSRZ },
 };
 
+
+static std::map<std::string, model::ALEType> ale_model_map
+{
+    { "no_ALE", model::noALE },
+    { "ALE", model::ALE },
+};
 
 static std::map<std::string, model::levelSetType> level_set_type_map
 {
