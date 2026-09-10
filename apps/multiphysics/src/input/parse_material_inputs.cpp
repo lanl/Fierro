@@ -690,6 +690,38 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 } // end if
 
             } // dissipation model 
+            // extract ALE model
+            else if (a_word.compare("ale_model") == 0) {
+                std::string ale_model = root["materials"][m_id]["material"]["ale_model"].As<std::string>();
+
+                // set the ALE model
+                if (ale_model_map.find(ale_model) != ale_model_map.end()) {
+                    switch(ale_model_map[ale_model]){
+                        case model::noALE:
+                            Materials.MaterialEnums.host(mat_id).ALEType = model::noALE;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).ALEType = model::noALE;
+                            });
+                            break;
+                        case model::ALE:
+                            std::cout << "ALE model: " << ale_model << std::endl;
+                            Materials.MaterialEnums.host(mat_id).ALEType = model::ALE;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).ALEType = model::ALE;
+                            });
+                            break;
+                        default:
+                            std::cout << "ERROR: invalid ALE input: " << ale_model << std::endl;
+                            throw std::runtime_error("**** ALE model Not Understood ****");
+                            break;
+                    } // end switch
+                } 
+                else{
+                    std::cout << "ERROR: invalid ALE type input: " << ale_model << std::endl;
+                    throw std::runtime_error("**** ALE model Not Understood ****");
+                    break;
+                }
+            }
             // level set model
             else if (a_word.compare("level_set_type") == 0) {
                 std::string level_set_type = root["materials"][m_id]["material"]["level_set_type"].As<std::string>();

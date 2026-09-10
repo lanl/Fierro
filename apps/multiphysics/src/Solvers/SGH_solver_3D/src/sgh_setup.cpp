@@ -40,6 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.hpp"
 #include "simulation_parameters.hpp"
 #include "geometry_new.hpp"
+#include "ELEMENTS.h"
 
 
 
@@ -187,5 +188,45 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
         }
     }
 
+
+    // Setup the reference element
+       // ================================================================
+    // Create quadrature along with the reference element and surface
+
+    if (log) log->info("Building reference elements and quadrature in SGH setup\n");
+
+    // the minimum quadrature for FE hydrodynamics based on elem order
+    const size_t num_DOFs_1d = 2; // Limited to linear elements for SGH solver
+    const size_t num_qpts_1d = 2; // hard coded for SGH solver
+    const size_t elem_dims = 3; // 3D elements
+    const size_t elem_order = 1; // linear elements
+
+
+    // ---- reference element ----
+
+    // create quadrature
+    Quad.initialize_quadrature(reference_space::GaussLegendre,
+                               num_qpts_1d,
+                               elem_dims);
+
+    // p_order is the basis order for the Lagrange polynomial defining the element
+    FERefElem.initialize_ref_elem(reference_space::arbitraryOrderElement,
+                                  reference_space::LagrangeLobatto,
+                                  Quad,
+                                  elem_order);    
+
+    // ---- reference surface ----
+    SurfQuad.initialize_quadrature(reference_space::GaussLegendre, 
+                                   num_qpts_1d, 
+                                   elem_dims); 
+
+    RefSurf.initialize_ref_surf(SurfQuad,
+                                FERefElem);
+
+    // Map to get from quadrature points on the surface to the element
+    int num_surfaces = mesh.num_surfs;
+    int num_surf_qpts = 4;
+    this->surf_qpt_qpt_map = CArrayKokkos<int>(num_surfaces, 2, num_surf_qpts, "surf_qpt_qpt_map");
+    this->surf_qpt_qpt_map.set_values(0);
     
 } // end SGH setup

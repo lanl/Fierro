@@ -51,6 +51,13 @@ namespace model
         stateBased = 2,     ///<  Model is based on the state after each stage of the time step
     };
 
+    // ALE model types
+    enum ALEType
+    {
+        noALE = 0, ///<  No ALE model used
+        ALE = 1, ///<  ALE model used
+    };
+
     // Specific strength models
     enum StrengthModels
     {
@@ -164,6 +171,12 @@ static std::map<std::string, model::StrengthType> strength_type_map
     { "state_based", model::stateBased },
 };
 
+static std::map<std::string, model::ALEType> ale_type_map
+{
+    { "no_ale", model::noALE },
+    { "ALE", model::ALE },
+};
+
 
 static std::map<std::string, model::StrengthModels> strength_models_map
 {
@@ -222,6 +235,12 @@ static std::map<std::string, model::DissipationModels> dissipation_model_map
     { "directional_MARS_rz", model::directionalMARSRZ },
 };
 
+
+static std::map<std::string, model::ALEType> ale_model_map
+{
+    { "no_ALE", model::noALE },
+    { "ALE", model::ALE },
+};
 
 static std::map<std::string, model::levelSetType> level_set_type_map
 {
@@ -297,6 +316,9 @@ struct MaterialEnums_t
 
     // Erosion model type: none or basic
     model::ErosionModels ErosionModels = model::noErosion;
+
+    // ALE model type: none or ALE
+    model::ALEType ALEType = model::noALE;
 
 
     // -- dissipation --
@@ -569,6 +591,7 @@ static std::vector<std::string> str_material_inps
     "normal_velocity",
     "curvature_velocity",
     "tabular_model",
+    "ale_model",
 };
 
 // ----------------------------------
