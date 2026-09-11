@@ -608,14 +608,189 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         // Apply ALE per material with ALE active
 
         // 1. Compute the mesh velocity. Final location minus current (from Lagrange)/(dt (d\tau = 1).  (maybe make DT = 1, pseudotime).
-
+        // Communicate the mesh velocity from the lagrangian step 
+        std::cout << "Computing mesh velocity" << std::endl;
+        FOR_ALL(node_gid, 0, mesh.num_nodes, {
+            for(size_t dim = 0; dim < mesh.num_dims; dim++){
+                this->mesh_node_velocity(node_gid, dim) = (this->mesh_node_target_coords(node_gid, dim) - State.node.coords(node_gid, dim)) / 1.0; // dt = 1.0 for now
+            }
+        });
         
 
+        // ================================================================
+        // Step 1: build the volume matrix for nodal DG at tau=0
+        // ================================================================
+        build_element_geometry(mesh, tables, State.node.coords, this->elem_det_jac, this->inv_jac_ijq,
+            mesh.num_elems, Quad.num_qpts_in_elem, mesh.num_nodes_in_elem);
+        build_lumped_volume(FERefElem, Quad, tables, elem_det_jac, State.corner.volume,
+            mesh.num_elems, Quad.num_qpts_in_elem, mesh.num_nodes_in_elem);
+        Kokkos::fence();
+            
+
         // 2. Compute advection CFL, and pseudo DT. Solver embedded inside of the solver.
+        // -----------------------------------------------------
+        const double max_vel = 1.0; // the CFL velocity used for calculating d_tau
+        double h_cfl = 1.e-6;       // the CFL length scale for calculating d_tau
+        double dt_tau = 1.e-6;          // dt_tau from CFL at start, this time is pseudo time
+        double tau = 0.0; 
+        double tau_final = 1.0;
+
+
+        // Useful tmp vairables
+        const size_t num_elems = mesh.num_elems;
+        const size_t num_nodes = mesh.num_nodes;
+        const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
+        const size_t num_qpts_in_elem = Quad.num_qpts_in_elem;
+        const size_t num_surfs = mesh.num_surfs;
+        const size_t num_qpts_in_surf = SurfQuad.num_qpts_in_surf;
+        const size_t num_surfs_in_elem = mesh.num_surfs_in_elem;
+        const size_t elem_dims = mesh.num_dims;
 
         // 3. Do Time integrator with multiple RK stages until a time of 1.
 
+        // --------------------------------------------------
+        // Time integration loop
         // WARNING: Be careful to not use intermediate state from remapped fields in not yet remapped fields.
+        for(size_t cycle = 0; cycle < max_cycles; cycle++){
+            
+            if(cycle%10 == 0) printf(" time = %.4f \n", tau);
+
+
+            // --------------------------------------------------
+            // Step 1a: Store time level n state
+
+            FOR_ALL(idx, 0, num_elems*num_nodes_in_elem, {
+
+                const size_t elem_gid = idx / num_nodes_in_elem;
+                const size_t node_lid = idx % num_nodes_in_elem;
+
+                elem_corner_vol_n(elem_gid, node_lid) = elem_corner_vol(elem_gid, node_lid);
+
+                const size_t corner_gid = Mesh.corners_in_elem(elem_gid, node_lid);
+                corner_field_n(corner_gid) = corner_field(corner_gid);
+            });
+
+            FOR_ALL(node_gid, 0, num_nodes, {
+                for(size_t dim=0; dim<elem_dims; dim++){
+                    node_coords_n(node_gid, dim)   = node_coords(node_gid, dim);
+                    node_velocity_n(node_gid, dim) = node_velocity(node_gid, dim);
+                }
+            });
+
+
+            // ------------------------------------------------------
+            // Step 1b: get CFL time step for moving mesh
+
+            // x -> x^(1/3) is monotone, so the smallest length comes from the
+            // smallest quadrature volume: one transcendental instead of one per qpt.
+            double min_vol_loc;
+            double min_vol_qpt;
+            FOR_REDUCE_MIN(idx, 0, num_elems*num_qpts_in_elem,
+                        min_vol_loc, {
+                const size_t elem_gid = idx / num_qpts_in_elem;
+                const size_t qpt_lid  = idx % num_qpts_in_elem;
+
+                const double vol_qpt = Quad.qpt_weights(qpt_lid)*elem_det_jac(elem_gid, qpt_lid);
+                if(vol_qpt < min_vol_loc) min_vol_loc = vol_qpt;
+            }, min_vol_qpt);
+            h_cfl = pow(min_vol_qpt, 0.3333333);
+
+            dt = 0.1*h_cfl/max_vel; // pseudo time step used for the remap
+
+            // A tangled element gives a non-positive quadrature volume, so the CFL
+            // length becomes NaN. NaN then defeats both the max_time test and the
+            // mass conservation check below, so the run has to stop here.
+            if(!(dt > 0.0)){
+                printf("\n STOPPING at time = %.6f, cycle %zu: CFL length is %g,"
+                    " the mesh has tangled.\n", time, cycle, h_cfl);
+                break;
+            }
+
+
+            // Runge Kutta time integration levels
+            for(size_t rk_stage=0; rk_stage<rk_num_stages; rk_stage++){
+
+                // RK coefficient
+                const double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
+
+
+                // ------------------------------------------------------
+                // Step 2: calculate the mesh velocity at time level k
+
+                FOR_ALL(node_gid, 0, num_nodes,{
+                    // new velocity, it is Taylor-Green vortex
+                    // PI is defined in mesh class
+                    node_velocity(node_gid, 0) =  sin(PI*node_coords(node_gid, 0))*cos(PI*node_coords(node_gid, 1));
+                    node_velocity(node_gid, 1) = -cos(PI*node_coords(node_gid, 0))*sin(PI*node_coords(node_gid, 1));
+                    node_velocity(node_gid, 2) = 0.0;
+                });
+
+
+                // ----------------------------------------------------------
+                // Step 3: Calculate the surface fluxes at quadrature points
+
+                build_surface_flux(Mesh, RefSurf, SurfQuad, tables, node_coords, node_velocity, corner_field,
+                                surf_qpt_qpt_map, RHS_surf_flux,
+                                num_surfs, num_qpts_in_surf, num_nodes_in_elem);
+
+
+                // -------------------------------------------------
+                // Step 4: Build RHS of DG equations in the element
+
+                assemble_rhs(Mesh, RefSurf, Quad, tables, elem_det_jac, inv_jac_ijq,
+                            corner_field, corner_field_n, node_velocity, elem_corner_vol_n,
+                            RHS_surf_flux, RHS_elem, qpt_vol_flux,
+                            rk_alpha, dt,
+                            num_elems, num_qpts_in_elem, num_nodes_in_elem,
+                            num_surfs_in_elem, num_qpts_in_surf, elem_dims);
+
+
+                // ================================================================
+                // Step 5: Move the mesh to the new location
+                FOR_ALL(node_gid, 0, num_nodes,{
+                    // new position of the mesh
+                    node_coords(node_gid, 0) = node_coords_n(node_gid, 0) + 0.5*(node_velocity(node_gid, 0)+node_velocity_n(node_gid, 0)) * rk_alpha * dt; 
+                    node_coords(node_gid, 1) = node_coords_n(node_gid, 1) + 0.5*(node_velocity(node_gid, 1)+node_velocity_n(node_gid, 1)) * rk_alpha * dt;
+                    // z-coords never change
+                });
+
+
+                // ================================================================
+                // Step 6: build the diagonal volume matrix for nodal DG after the mesh moved
+                build_element_geometry(Mesh, tables, node_coords, elem_det_jac, inv_jac_ijq,
+                                    num_elems, num_qpts_in_elem, num_nodes_in_elem);
+                build_lumped_volume(FERefElem, Quad, tables, elem_det_jac, elem_corner_vol,
+                                    num_elems, num_qpts_in_elem, num_nodes_in_elem);
+
+
+                // -----------------------------------------------------
+                // 7. Solve M * u^{n+1} = RHS where M is diagonal
+
+                FOR_ALL(idx, 0, num_elems*num_nodes_in_elem, {
+
+                    const size_t elem_gid = idx / num_nodes_in_elem;
+                    const size_t dof_lid  = idx % num_nodes_in_elem;
+
+                    const size_t corner_gid = Mesh.corners_in_elem(elem_gid, dof_lid);
+                    corner_field(corner_gid) = RHS_elem(elem_gid, dof_lid)/elem_corner_vol(elem_gid, dof_lid);
+                });
+
+
+                // -----------------------------------------------------
+                // 8. A slope/bound limiter would be applied to corner_field here;
+                //    see limit_corner_field in remap_dg_lumped_test.cpp.
+
+            } // end Runge Kutta time level loop
+
+
+            // ================================================================
+            // Step 7: update time
+            time += dt;
+
+            
+        } // end loop over cycle
+
+        
 
         
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){

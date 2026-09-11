@@ -309,5 +309,12 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
             this->mesh_node_target_coords(node_gid, dim) = State.node.coords(node_gid, dim);
         }
     });
+
+    // Initialize the mesh node velocity with the same communication plan as the node velocity
+    this->mesh_node_velocity = MPICArrayKokkos<double>(mesh.num_nodes, mesh.num_dims, "mesh_node_velocity");
+    if (State.node.vel.comm_plan_ != nullptr) {
+        this->mesh_node_velocity.initialize_comm_plan(*State.node.vel.comm_plan_);
+    }
+
     
 } // end SGH setup

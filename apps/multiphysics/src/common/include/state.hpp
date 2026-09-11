@@ -265,7 +265,8 @@ enum class node_state
     heat_transfer,
     force,
     gradient_level_set,
-    displacement
+    displacement,
+    mesh_velocity
 };
 
 

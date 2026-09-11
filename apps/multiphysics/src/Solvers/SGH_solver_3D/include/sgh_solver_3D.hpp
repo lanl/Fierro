@@ -62,7 +62,8 @@ namespace SGH3D_State
         node_state::coords,
         node_state::velocity,
         node_state::mass,
-        node_state::force
+        node_state::force,
+        node_state::mesh_velocity
     };
 
     // Gauss point state to be initialized for the SGH solver
@@ -183,6 +184,8 @@ public:
 
 
     CArrayKokkos<double> mesh_node_target_coords; //(num_nodes, num_dims, "mesh_node_target_coords");
+
+    MPICArrayKokkos<double> mesh_node_velocity; //(num_nodes, num_dims, "mesh_node_velocity");
 
     SGH3D()  : Solver()
     {
