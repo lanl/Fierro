@@ -290,6 +290,7 @@ struct node_t
     DCArrayKokkos<double> q_transfer; ///< Nodal heat flux
     DCArrayKokkos<double> gradient_level_set;   ///< Nodal gradient of the level set function
     MPICArrayKokkos<double> displacement; ///< nodal displacement
+    MPICArrayKokkos<double> mesh_velocity; ///< nodal mesh velocity
 
     // initialization method (num_nodes, num_dims, state to allocate)
     void initialize(size_t num_nodes, size_t num_dims, std::vector<node_state> node_states)
@@ -325,6 +326,9 @@ struct node_t
                     break;
                 case node_state::displacement:
                     if (displacement.size() == 0) this->displacement = MPICArrayKokkos<double>(num_nodes, num_dims, "node_force_displacement");
+                    break;
+                case node_state::mesh_velocity:
+                    if (mesh_velocity.size() == 0) this->mesh_velocity = MPICArrayKokkos<double>(num_nodes, num_dims, "node_mesh_velocity");
                     break;
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
@@ -368,7 +372,14 @@ struct node_t
                     if (temp_n0.size() == 0){
                         this->temp_n0 = MPICArrayKokkos<double>(num_nodes, "node_temp_n0");
                         this->temp_n0.initialize_comm_plan(comm_plan);
+                    }   
+
+                case node_state::mesh_velocity:
+                    if (mesh_velocity.size() == 0){
+                        this->mesh_velocity = MPICArrayKokkos<double>(num_nodes, num_dims, "node_mesh_velocity");
+                        this->mesh_velocity.initialize_comm_plan(comm_plan);
                     }
+                    break;
 
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize with communication plan"<<std::endl;

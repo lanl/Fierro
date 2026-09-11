@@ -301,5 +301,13 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     build_lumped_volume(FERefElem, Quad, tables, elem_det_jac, State.corner.volume,
         mesh.num_elems, num_qpts_in_elem, num_nodes_in_elem);
     Kokkos::fence();
+
+    this->mesh_node_target_coords = CArrayKokkos<double>(mesh.num_nodes, mesh.num_dims, "mesh_node_target_coords");
+
+    FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        for(size_t dim = 0; dim < mesh.num_dims; dim++){
+            this->mesh_node_target_coords(node_gid, dim) = State.node.coords(node_gid, dim);
+        }
+    });
     
 } // end SGH setup

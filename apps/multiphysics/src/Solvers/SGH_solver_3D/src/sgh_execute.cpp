@@ -606,6 +606,18 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         } // end of RK loop
 
         // Apply ALE per material with ALE active
+
+        // 1. Compute the mesh velocity. Final location minus current (from Lagrange)/(dt (d\tau = 1).  (maybe make DT = 1, pseudotime).
+
+        
+
+        // 2. Compute advection CFL, and pseudo DT. Solver embedded inside of the solver.
+
+        // 3. Do Time integrator with multiple RK stages until a time of 1.
+
+        // WARNING: Be careful to not use intermediate state from remapped fields in not yet remapped fields.
+
+        
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
             if(Materials.MaterialEnums.host(mat_id).ALEType == model::ALE){

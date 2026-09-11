@@ -181,6 +181,9 @@ public:
 
     CArrayKokkos<double> qpt_vol_flux; //(num_elems, num_qpts_in_elem, elem_dims, "qpt_vol_flux");
 
+
+    CArrayKokkos<double> mesh_node_target_coords; //(num_nodes, num_dims, "mesh_node_target_coords");
+
     SGH3D()  : Solver()
     {
     }
