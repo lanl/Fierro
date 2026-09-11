@@ -39,7 +39,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.hpp"
 #include "contact.hpp"
 #include "fracture.hpp"
-#include "ale_helpers.hpp"
 
 // Forward declare structs
 struct SimulationParameters_t;
@@ -101,8 +100,7 @@ namespace SGH3D_State
     static const std::vector<corner_state> required_corner_state = 
     { 
         corner_state::force,
-        corner_state::mass,
-        corner_state::volume
+        corner_state::mass
     };
 
     // --- checks on fill instructions ---
@@ -133,8 +131,6 @@ namespace SGH3D_State
     };
     // -------------------------------------
 }
-
-
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -167,19 +163,6 @@ public:
 
     // Map to get from quadrature points on the surface to the element
     CArrayKokkos<int> surf_qpt_qpt_map;
-
-    BasisTables_t tables;
-
-
-    // Storage specifically for ALE 
-    CArrayKokkos<double> elem_det_jac;// (num_elems, num_qpts_in_elem, "elem_det_jacobian");
-    CArrayKokkos<double> inv_jac_ijq; //(num_elems, elem_dims, elem_dims, num_qpts_in_elem, "inv_jac_ijq");
-
-    // Calculate RHS_surf_flux
-    CArrayKokkos <double> RHS_surf_flux; //(num_elems, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux"); // used to build RHS vector 
-    CArrayKokkos <double> RHS_elem; //(num_elems, num_nodes_in_elem, "RHS_elem"); // RHS vector 
-
-    CArrayKokkos<double> qpt_vol_flux; //(num_elems, num_qpts_in_elem, elem_dims, "qpt_vol_flux");
 
     SGH3D()  : Solver()
     {
