@@ -638,7 +638,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         const size_t elem_dims = mesh.num_dims;
         
 
-        const size_t max_cycles = 100;
+        const size_t max_cycles = 1;
 
         // Initialize corner data with results from lagrange step
         // First, geometric quantities
@@ -648,7 +648,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         // ================================================================
         build_element_geometry(mesh, tables, State.node.coords, this->elem_det_jac, this->inv_jac_ijq,
             mesh.num_elems, num_qpts_in_elem, num_nodes_in_elem);
-        build_lumped_volume(FERefElem, Quad, tables, this->elem_det_jac, State.corner.volume,
+        build_lumped_volume(mesh, FERefElem, Quad, tables, this->elem_det_jac, State.corner.volume,
             mesh.num_elems, num_qpts_in_elem, num_nodes_in_elem);
         Kokkos::fence();
 
@@ -748,7 +748,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             }
 
 
-            /*
+
             // ------------------------------------------------------
             // Step 1b: get CFL time step for moving mesh
 
@@ -768,16 +768,18 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             dt = 0.1*h_cfl/max_vel; // pseudo time step used for the remap
 
+            std::cout << "CFL time step: " << dt << std::endl;
+
             // A tangled element gives a non-positive quadrature volume, so the CFL
             // length becomes NaN. NaN then defeats both the max_time test and the
             // mass conservation check below, so the run has to stop here.
             if(!(dt > 0.0)){
                 printf("\n STOPPING at time = %.6f, cycle %zu: CFL length is %g,"
-                    " the mesh has tangled.\n", time, cycle, h_cfl);
+                    " the mesh has tangled.\n", tau, cycle, h_cfl);
                 break;
             }
 
-
+            
             // Runge Kutta time integration levels
             for(size_t rk_stage=0; rk_stage<rk_num_stages; rk_stage++){
 
@@ -788,63 +790,106 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 // ------------------------------------------------------
                 // Step 2: calculate the mesh velocity at time level k
 
-                FOR_ALL(node_gid, 0, num_nodes,{
+                // FOR_ALL(node_gid, 0, num_nodes,{
                     // new velocity, it is Taylor-Green vortex
                     // PI is defined in mesh class
-                    node_velocity(node_gid, 0) =  sin(PI*node_coords(node_gid, 0))*cos(PI*node_coords(node_gid, 1));
-                    node_velocity(node_gid, 1) = -cos(PI*node_coords(node_gid, 0))*sin(PI*node_coords(node_gid, 1));
-                    node_velocity(node_gid, 2) = 0.0;
-                });
+                    // node_velocity(node_gid, 0) =  sin(PI*node_coords(node_gid, 0))*cos(PI*node_coords(node_gid, 1));
+                    // node_velocity(node_gid, 1) = -cos(PI*node_coords(node_gid, 0))*sin(PI*node_coords(node_gid, 1));
+                    // node_velocity(node_gid, 2) = 0.0;
+
+                    // velocity computed above from fully reversing the lagrange step
+                    // this->mesh_node_velocity(node_gid, dim)
+                // });
 
 
                 // ----------------------------------------------------------
                 // Step 3: Calculate the surface fluxes at quadrature points
 
-                build_surface_flux(Mesh, RefSurf, SurfQuad, tables, node_coords, node_velocity, corner_field,
-                                surf_qpt_qpt_map, RHS_surf_flux,
-                                num_surfs, num_qpts_in_surf, num_nodes_in_elem);
+                // geometry is shared by all materials and fields
+                build_surface_vn(mesh, RefSurf, SurfQuad, tables, State.node.coords, this->mesh_node_velocity,
+                                 this->surf_vn, num_surfs, num_qpts_in_surf, num_nodes_in_elem);
+                build_qpt_advection_velocity(mesh, Quad, tables, this->elem_det_jac, this->inv_jac_ijq,
+                                             this->mesh_node_velocity, this->qpt_adv_vel,
+                                             num_elems, num_qpts_in_elem, num_nodes_in_elem, elem_dims);
+                Kokkos::fence();
+
+                for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+
+                    size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
+
+                    // Density
+                    build_surface_flux(mesh, tables, this->surf_vn, this->surf_qpt_qpt_map,
+                                       State.MaterialToMeshMaps.elem_in_mat_elem,
+                                       State.MeshtoMaterialMaps.mats_in_elem,
+                                       State.MeshtoMaterialMaps.mat_elems_in_elem,
+                                       State.corners_in_mat_elem,
+                                       State.MaterialCorners.density,
+                                       this->RHS_surf_flux,
+                                       mat_id, num_mat_elems,
+                                       num_surfs_in_elem, num_qpts_in_surf, num_nodes_in_elem);
+
+                } // end for mat_id
 
 
                 // -------------------------------------------------
                 // Step 4: Build RHS of DG equations in the element
 
-                assemble_rhs(Mesh, RefSurf, Quad, tables, elem_det_jac, inv_jac_ijq,
-                            corner_field, corner_field_n, node_velocity, elem_corner_vol_n,
-                            RHS_surf_flux, RHS_elem, qpt_vol_flux,
-                            rk_alpha, dt,
-                            num_elems, num_qpts_in_elem, num_nodes_in_elem,
-                            num_surfs_in_elem, num_qpts_in_surf, elem_dims);
+                for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+
+                    size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
+
+                    // Density
+                    assemble_rhs(mesh, tables, this->qpt_adv_vel, this->RHS_surf_flux,
+                                 State.corner.volume_n0,
+                                 State.MaterialToMeshMaps.elem_in_mat_elem,
+                                 State.corners_in_mat_elem,
+                                 State.MaterialCorners.density,
+                                 State.MaterialCorners.density_n0,
+                                 this->mat_qpt_field, this->RHS_corner,
+                                 rk_alpha, dt, mat_id, num_mat_elems,
+                                 num_nodes_in_elem, num_qpts_in_elem,
+                                 num_surfs_in_elem, num_qpts_in_surf, elem_dims);
+
+                } // end for mat_id
 
 
                 // ================================================================
                 // Step 5: Move the mesh to the new location
-                FOR_ALL(node_gid, 0, num_nodes,{
-                    // new position of the mesh
-                    node_coords(node_gid, 0) = node_coords_n(node_gid, 0) + 0.5*(node_velocity(node_gid, 0)+node_velocity_n(node_gid, 0)) * rk_alpha * dt; 
-                    node_coords(node_gid, 1) = node_coords_n(node_gid, 1) + 0.5*(node_velocity(node_gid, 1)+node_velocity_n(node_gid, 1)) * rk_alpha * dt;
-                    // z-coords never change
-                });
+                // FOR_ALL(node_gid, 0, num_nodes,{
+                //     // new position of the mesh
+                //     node_coords(node_gid, 0) = node_coords_n(node_gid, 0) + 0.5*(node_velocity(node_gid, 0)+node_velocity_n(node_gid, 0)) * rk_alpha * dt; 
+                //     node_coords(node_gid, 1) = node_coords_n(node_gid, 1) + 0.5*(node_velocity(node_gid, 1)+node_velocity_n(node_gid, 1)) * rk_alpha * dt;
+                //     // z-coords never change
+                // });
 
 
                 // ================================================================
                 // Step 6: build the diagonal volume matrix for nodal DG after the mesh moved
-                build_element_geometry(Mesh, tables, node_coords, elem_det_jac, inv_jac_ijq,
-                                    num_elems, num_qpts_in_elem, num_nodes_in_elem);
-                build_lumped_volume(FERefElem, Quad, tables, elem_det_jac, elem_corner_vol,
-                                    num_elems, num_qpts_in_elem, num_nodes_in_elem);
+                build_element_geometry(mesh, tables, State.node.coords, this->elem_det_jac, this->inv_jac_ijq,
+                    mesh.num_elems, num_qpts_in_elem, num_nodes_in_elem);
+                build_lumped_volume(mesh, FERefElem, Quad, tables, this->elem_det_jac, State.corner.volume,
+                    mesh.num_elems, num_qpts_in_elem, num_nodes_in_elem);
+                Kokkos::fence();
 
 
                 // -----------------------------------------------------
                 // 7. Solve M * u^{n+1} = RHS where M is diagonal
+                const auto RHS_corner_loc = this->RHS_corner;
+                for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
-                FOR_ALL(idx, 0, num_elems*num_nodes_in_elem, {
+                    size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
 
-                    const size_t elem_gid = idx / num_nodes_in_elem;
-                    const size_t dof_lid  = idx % num_nodes_in_elem;
+                    // Density
+                    FOR_ALL(mat_elem_sid, 0, num_mat_elems,
+                            dof_lid, 0, num_nodes_in_elem, {
 
-                    const size_t corner_gid = Mesh.corners_in_elem(elem_gid, dof_lid);
-                    corner_field(corner_gid) = RHS_elem(elem_gid, dof_lid)/elem_corner_vol(elem_gid, dof_lid);
-                });
+                        const size_t elem_gid   = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, mat_elem_sid);
+                        const size_t corner_gid = mesh.corners_in_elem(elem_gid, dof_lid);
+                        const size_t corner_sid = State.corners_in_mat_elem(mat_elem_sid, dof_lid);
+
+                        State.MaterialCorners.density(mat_id, corner_sid) = RHS_corner_loc(mat_id, corner_sid)/State.corner.volume(corner_gid);
+                    });
+                } // end for mat_id
 
 
                 // -----------------------------------------------------
@@ -856,8 +901,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // ================================================================
             // Step 7: update time
-            time += dt;
-            */
+            tau += dt;
+            
             
         } // end loop over cycle
 

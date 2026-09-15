@@ -225,7 +225,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
 
     // Map to get from quadrature points on the surface to the element
     int num_surfaces = mesh.num_surfs;
-    int num_surf_qpts = 4;
+    const size_t num_surf_qpts = SurfQuad.num_qpts_in_surf;
     this->surf_qpt_qpt_map = CArrayKokkos<int>(num_surfaces, 2, num_surf_qpts, "surf_qpt_qpt_map");
     this->surf_qpt_qpt_map.set_values(-1);
 
@@ -244,10 +244,12 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     this->elem_det_jac = CArrayKokkos<double>(mesh.num_elems, num_qpts_in_elem, "elem_det_jacobian");
     this->inv_jac_ijq = CArrayKokkos<double>(mesh.num_elems, elem_dims, elem_dims, num_qpts_in_elem, "inv_jac_ijq");
     
-    this->RHS_surf_flux = CArrayKokkos<double>(mesh.num_elems, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux");
-    this->RHS_elem = CArrayKokkos<double>(mesh.num_elems, num_nodes_in_elem, "RHS_elem");
+    this->surf_vn = CArrayKokkos<double>(mesh.num_surfs, num_qpts_in_surf, "surf_vn");
+    this->RHS_surf_flux = DRaggedRightArrayKokkos<double>(State.MaterialToMeshMaps.num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux");
+    this->RHS_corner = DRaggedRightArrayKokkos<double>(State.MaterialCorners.num_material_corners_buffer, "RHS_corner");
 
-    this->qpt_vol_flux = CArrayKokkos<double>(mesh.num_elems, num_qpts_in_elem, elem_dims, "qpt_vol_flux");
+    this->qpt_adv_vel = CArrayKokkos<double>(mesh.num_elems, num_qpts_in_elem, elem_dims, "qpt_adv_vel");
+    this->mat_qpt_field = DRaggedRightArrayKokkos<double>(State.MaterialToMeshMaps.num_mat_elems_buffer, num_qpts_in_elem, "mat_qpt_field");
 
     // Setup the basis tables
     tables.basis_row_sum = CArrayKokkos<double>(num_qpts_in_elem, "basis_row_sum");
@@ -298,7 +300,7 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
 
     build_element_geometry(mesh, tables, State.node.coords, elem_det_jac, inv_jac_ijq,
         mesh.num_elems, num_qpts_in_elem, num_nodes_in_elem);
-    build_lumped_volume(FERefElem, Quad, tables, elem_det_jac, State.corner.volume,
+    build_lumped_volume(mesh, FERefElem, Quad, tables, elem_det_jac, State.corner.volume,
         mesh.num_elems, num_qpts_in_elem, num_nodes_in_elem);
     Kokkos::fence();
 

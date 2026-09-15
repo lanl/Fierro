@@ -177,11 +177,16 @@ public:
     CArrayKokkos<double> elem_det_jac;// (num_elems, num_qpts_in_elem, "elem_det_jacobian");
     CArrayKokkos<double> inv_jac_ijq; //(num_elems, elem_dims, elem_dims, num_qpts_in_elem, "inv_jac_ijq");
 
-    // Calculate RHS_surf_flux
-    CArrayKokkos <double> RHS_surf_flux; //(num_elems, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux"); // used to build RHS vector 
-    CArrayKokkos <double> RHS_elem; //(num_elems, num_nodes_in_elem, "RHS_elem"); // RHS vector 
+    // Mesh velocity dotted with the area normal, side 0 ordering
+    CArrayKokkos<double> surf_vn; //(num_surfs, num_qpts_in_surf, "surf_vn");
 
-    CArrayKokkos<double> qpt_vol_flux; //(num_elems, num_qpts_in_elem, elem_dims, "qpt_vol_flux");
+    // Calculate RHS_surf_flux
+    DRaggedRightArrayKokkos <double> RHS_surf_flux; //(num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux"); // used to build RHS vector, access as (mat_id, mat_elem_sid, face_lid, qpt_lid)
+    DRaggedRightArrayKokkos <double> RHS_corner; //(num_material_corners_buffer, "RHS_corner"), access as (mat_id, corner_sid); // RHS vector 
+
+    CArrayKokkos<double> qpt_adv_vel; //(num_elems, num_qpts_in_elem, elem_dims, "qpt_adv_vel");
+
+    DRaggedRightArrayKokkos<double> mat_qpt_field; //(num_mat_elems_buffer, num_qpts_in_elem, "mat_qpt_field"), scratch for assemble_rhs
 
 
     CArrayKokkos<double> mesh_node_target_coords; //(num_nodes, num_dims, "mesh_node_target_coords");
