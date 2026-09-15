@@ -684,9 +684,14 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 State.MaterialCorners.velocity(mat_id, corner_sid, 1) = State.node.vel(node_gid, 1);
                 State.MaterialCorners.velocity(mat_id, corner_sid, 2) = State.node.vel(node_gid, 2);
 
+                // Normalize the velocity vector
+                double magnitude = sqrt(2.0*ske);
+                for(int i = 0; i < mesh.num_dims; i++){
+                    State.MaterialCorners.velocity(mat_id, corner_sid, i) /= magnitude;
+                }
 
                 // Speed from magnitude of nodal velocity
-                State.MaterialCorners.speed(mat_id, corner_sid) = sqrt(2.0*ske);
+                State.MaterialCorners.speed(mat_id, corner_sid) = magnitude;
             });
         }
 
@@ -739,7 +744,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.MaterialCorners.velocity_n0(mat_id, corner_sid, 2) = State.MaterialCorners.velocity(mat_id, corner_sid, 2); // Note: this is the velocity normal vector
                     State.MaterialCorners.speed_n0(mat_id, corner_sid) = State.MaterialCorners.speed(mat_id, corner_sid); // Note: this is the speed of the corner (magnitude of the velocity normal vector)
 
-                    
                 });
             }
 
