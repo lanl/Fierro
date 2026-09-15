@@ -112,11 +112,15 @@ static void build_element_geometry(const swage::Mesh_t& Mesh,
         const double det = det_3x3(j00, j01, j02, j10, j11, j12, j20, j21, j22);
         elem_det_jac(elem_gid, qpt_lid) = det;
 
-        double i00; double i01; double i02;
-        double i10; double i11; double i12;
-        double i20; double i21; double i22;
-        invert_3x3(det, j00, j01, j02, j10, j11, j12, j20, j21, j22,
-        i00, i01, i02, i10, i11, i12, i20, i21, i22);
+        double i00 = 0.0; double i01 = 0.0; double i02 = 0.0;
+        double i10 = 0.0; double i11 = 0.0; double i12 = 0.0;
+        double i20 = 0.0; double i21 = 0.0; double i22 = 0.0;
+        invert_3x3(det, j00, j01, j02, 
+                        j10, j11, j12, 
+                        j20, j21, j22,
+                        i00, i01, i02, 
+                        i10, i11, i12, 
+                        i20, i21, i22);
 
         inv_jac_ijq(elem_gid, 0, 0, qpt_lid) = i00;
         inv_jac_ijq(elem_gid, 0, 1, qpt_lid) = i01;

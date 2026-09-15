@@ -94,8 +94,9 @@ namespace SGH3D_State
         material_corner_state::force,
         material_corner_state::density,
         material_corner_state::specific_internal_energy,
-        material_corner_state::kinetic_energy,
-        material_corner_state::velocity
+        material_corner_state::specific_kinetic_energy,
+        material_corner_state::velocity,
+        material_corner_state::speed
     };
 
     // Corner state to be initialized for the SGH solver
@@ -103,7 +104,7 @@ namespace SGH3D_State
     { 
         corner_state::force,
         corner_state::mass,
-        corner_state::volume
+        corner_state::volume,
     };
 
     // --- checks on fill instructions ---

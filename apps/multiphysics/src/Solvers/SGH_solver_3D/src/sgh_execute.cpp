@@ -617,15 +617,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         });
         
 
-        // ================================================================
-        // Step 1: build the volume matrix for nodal DG at tau=0
-        // ================================================================
-        build_element_geometry(mesh, tables, State.node.coords, this->elem_det_jac, this->inv_jac_ijq,
-            mesh.num_elems, Quad.num_qpts_in_elem, mesh.num_nodes_in_elem);
-        build_lumped_volume(FERefElem, Quad, tables, elem_det_jac, State.corner.volume,
-            mesh.num_elems, Quad.num_qpts_in_elem, mesh.num_nodes_in_elem);
-        Kokkos::fence();
-            
 
         // 2. Compute advection CFL, and pseudo DT. Solver embedded inside of the solver.
         // -----------------------------------------------------
@@ -645,6 +636,61 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         const size_t num_qpts_in_surf = SurfQuad.num_qpts_in_surf;
         const size_t num_surfs_in_elem = mesh.num_surfs_in_elem;
         const size_t elem_dims = mesh.num_dims;
+        
+
+        const size_t max_cycles = 100;
+
+        // Initialize corner data with results from lagrange step
+        // First, geometric quantities
+
+        // ================================================================
+        // Step 1: build the volume matrix for nodal DG at tau=0
+        // ================================================================
+        build_element_geometry(mesh, tables, State.node.coords, this->elem_det_jac, this->inv_jac_ijq,
+            mesh.num_elems, num_qpts_in_elem, num_nodes_in_elem);
+        build_lumped_volume(FERefElem, Quad, tables, this->elem_det_jac, State.corner.volume,
+            mesh.num_elems, num_qpts_in_elem, num_nodes_in_elem);
+        Kokkos::fence();
+
+        // Second, material quantities
+        for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
+
+            FOR_ALL(mat_elem_sid, 0, num_mat_elems,
+                    node_lid, 0, mesh.num_nodes_in_elem, {
+
+                const size_t corner_sid = State.corners_in_mat_elem(mat_elem_sid, node_lid);
+
+                const size_t elem_gid = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, mat_elem_sid);
+                const size_t corner_gid = mesh.corners_in_elem(elem_gid, node_lid);
+                const size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
+                
+                // Desnity
+                State.MaterialCorners.density(mat_id, corner_sid) = State.corner.mass(corner_gid) / State.corner.volume(corner_gid);
+                
+                // Specific internal energy (element average)
+                State.MaterialCorners.specific_internal_energy(mat_id, corner_sid) = State.MaterialPoints.sie(mat_id, mat_elem_sid);
+
+                // Specific kinetic energy (v^2)
+                double ske = (State.node.vel(node_gid, 0)*State.node.vel(node_gid, 0)) +
+                             (State.node.vel(node_gid, 1)*State.node.vel(node_gid, 1)) +
+                             (State.node.vel(node_gid, 2)*State.node.vel(node_gid, 2));
+
+                State.MaterialCorners.specific_kinetic_energy(mat_id, corner_sid) = 0.5 * ske;
+
+                // Velocity from nodal velocity
+                State.MaterialCorners.velocity(mat_id, corner_sid, 0) = State.node.vel(node_gid, 0);
+                State.MaterialCorners.velocity(mat_id, corner_sid, 1) = State.node.vel(node_gid, 1);
+                State.MaterialCorners.velocity(mat_id, corner_sid, 2) = State.node.vel(node_gid, 2);
+
+
+                // Speed from magnitude of nodal velocity
+                State.MaterialCorners.speed(mat_id, corner_sid) = sqrt(2.0*ske);
+            });
+        }
+
+
 
         // 3. Do Time integrator with multiple RK stages until a time of 1.
 
@@ -658,26 +704,47 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // --------------------------------------------------
             // Step 1a: Store time level n state
+            // Start with mesh centric entities (eg. volume)
+            // Note, make this equivalent to the RK init function
+            FOR_ALL(elem_gid, 0, mesh.num_elems,
+                    node_lid, 0, mesh.num_nodes_in_elem, {
 
-            FOR_ALL(idx, 0, num_elems*num_nodes_in_elem, {
+                const size_t corner_gid = mesh.corners_in_elem(elem_gid, node_lid);
 
-                const size_t elem_gid = idx / num_nodes_in_elem;
-                const size_t node_lid = idx % num_nodes_in_elem;
+                State.corner.volume_n0(corner_gid) = State.corner.volume(corner_gid);
 
-                elem_corner_vol_n(elem_gid, node_lid) = elem_corner_vol(elem_gid, node_lid);
-
-                const size_t corner_gid = Mesh.corners_in_elem(elem_gid, node_lid);
-                corner_field_n(corner_gid) = corner_field(corner_gid);
             });
 
-            FOR_ALL(node_gid, 0, num_nodes, {
-                for(size_t dim=0; dim<elem_dims; dim++){
-                    node_coords_n(node_gid, dim)   = node_coords(node_gid, dim);
-                    node_velocity_n(node_gid, dim) = node_velocity(node_gid, dim);
-                }
-            });
+            // Now save material centric entities
+            for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+
+                size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
+
+                FOR_ALL(mat_elem_sid, 0, num_mat_elems,
+                        node_lid, 0, mesh.num_nodes_in_elem, {
+
+                    const size_t corner_sid = State.corners_in_mat_elem(mat_elem_sid, node_lid);
+
+                    // Note: these must be computed above: 
+                    // corner mass and corner volume used to get corner density
+                    // corner SIE from cell average (or least squares fit neighbors)
+                    // ADD: kinetic energy velocity squared (specific kinetic energy)
+                    // 
+                    State.MaterialCorners.density_n0(mat_id, corner_sid) = State.MaterialCorners.density(mat_id, corner_sid);
+                    State.MaterialCorners.specific_internal_energy_n0(mat_id, corner_sid) = State.MaterialCorners.specific_internal_energy(mat_id, corner_sid);
+                    State.MaterialCorners.specific_kinetic_energy_n0(mat_id, corner_sid) = State.MaterialCorners.specific_kinetic_energy(mat_id, corner_sid);
+
+                    State.MaterialCorners.velocity_n0(mat_id, corner_sid, 0) = State.MaterialCorners.velocity(mat_id, corner_sid, 0); // Note: this is the velocity normal vector
+                    State.MaterialCorners.velocity_n0(mat_id, corner_sid, 1) = State.MaterialCorners.velocity(mat_id, corner_sid, 1); // Note: this is the velocity normal vector
+                    State.MaterialCorners.velocity_n0(mat_id, corner_sid, 2) = State.MaterialCorners.velocity(mat_id, corner_sid, 2); // Note: this is the velocity normal vector
+                    State.MaterialCorners.speed_n0(mat_id, corner_sid) = State.MaterialCorners.speed(mat_id, corner_sid); // Note: this is the speed of the corner (magnitude of the velocity normal vector)
+
+                    
+                });
+            }
 
 
+            /*
             // ------------------------------------------------------
             // Step 1b: get CFL time step for moving mesh
 
@@ -786,7 +853,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // ================================================================
             // Step 7: update time
             time += dt;
-
+            */
             
         } // end loop over cycle
 

@@ -763,8 +763,9 @@ enum class material_corner_state
     heat_transfer,
     density,
     specific_internal_energy,
-    kinetic_energy,
-    velocity
+    specific_kinetic_energy,
+    velocity,
+    speed
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -784,9 +785,15 @@ struct MaterialCorner_t
 
     // Material state arrays for remap
     DRaggedRightArrayKokkos<double> density;  ///< Density used for remap
+    DRaggedRightArrayKokkos<double> density_n0;  ///< Density at beginning of RK stage for DG scheme
     DRaggedRightArrayKokkos<double> specific_internal_energy;  ///< Specific internal energy used for remap
-    DRaggedRightArrayKokkos<double> kinetic_energy;  ///< Kinetic energy used for remap
+    DRaggedRightArrayKokkos<double> specific_internal_energy_n0;  ///< Specific internal energy at beginning of RK stage for DG scheme
+    DRaggedRightArrayKokkos<double> specific_kinetic_energy;  ///< Specific kinetic energy used for remap
+    DRaggedRightArrayKokkos<double> specific_kinetic_energy_n0;  ///< Specific kinetic energy at beginning of RK stage for DG scheme
     DRaggedRightArrayKokkos<double> velocity;  ///< Velocity used for remap
+    DRaggedRightArrayKokkos<double> velocity_n0;  ///< Velocity at beginning of RK stage for DG scheme
+    DRaggedRightArrayKokkos<double> speed;  ///< Speed used for remap
+    DRaggedRightArrayKokkos<double> speed_n0;  ///< Speed at beginning of RK stage for DG scheme
     
     void initialize_num_mats(size_t num_mats)
     {
@@ -815,15 +822,23 @@ struct MaterialCorner_t
                     break;
                 case material_corner_state::density:
                     if (density.size() == 0) this->density = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_density");
+                    if (density_n0.size() == 0) this->density_n0 = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_density_n0");
                     break;
                 case material_corner_state::specific_internal_energy:
                     if (specific_internal_energy.size() == 0) this->specific_internal_energy = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_specific_internal_energy");
+                    if (specific_internal_energy_n0.size() == 0) this->specific_internal_energy_n0 = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_specific_internal_energy_n0");
                     break;
-                case material_corner_state::kinetic_energy:
-                    if (kinetic_energy.size() == 0) this->kinetic_energy = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_kinetic_energy");
+                case material_corner_state::specific_kinetic_energy:
+                    if (specific_kinetic_energy.size() == 0) this->specific_kinetic_energy = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_specific_kinetic_energy");
+                    if (specific_kinetic_energy_n0.size() == 0) this->specific_kinetic_energy_n0 = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_specific_kinetic_energy_n0");
                     break;
                 case material_corner_state::velocity:
                     if (velocity.size() == 0) this->velocity = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, num_dims, "material_corner_velocity");
+                    if (velocity_n0.size() == 0) this->velocity_n0 = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, num_dims, "material_corner_velocity_n0");
+                    break;
+                case material_corner_state::speed:
+                    if (speed.size() == 0) this->speed = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_speed");
+                    if (speed_n0.size() == 0) this->speed_n0 = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_speed_n0");
                     break;
                 default:
                     std::cout<<"Desired material corner state not understood in MaterialCorner_t initialize"<<std::endl;
@@ -842,7 +857,8 @@ enum class corner_state
     mass,
     heat_transfer,
     normal,
-    volume
+    volume,
+    velocity
 };
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -858,6 +874,7 @@ struct corner_t
     DCArrayKokkos<double> q_transfer;  ///< Corner heat transfer
     DCArrayKokkos<double> normal; ///< Corner normal
     DCArrayKokkos<double> volume; ///< Corner volume
+    DCArrayKokkos<double> volume_n0; ///< Corner volume at beginning of RK stage for DG scheme
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners, size_t num_dims, std::vector<corner_state> corner_states)
@@ -879,6 +896,7 @@ struct corner_t
                     break;
                 case corner_state::volume:
                     if (volume.size() == 0) this->volume  = DCArrayKokkos<double>(num_corners, "corner_volume");
+                    if (volume_n0.size() == 0) this->volume_n0 = DCArrayKokkos<double>(num_corners, "corner_volume_n0");
                     break;
                 default:
                     std::cout<<"Desired corner state not understood in corner_t initialize"<<std::endl;
