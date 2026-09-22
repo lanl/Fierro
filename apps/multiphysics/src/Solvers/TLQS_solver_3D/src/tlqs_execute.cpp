@@ -289,6 +289,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // dirichlet (displacement) type
             boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
+            //boundary_stress(mesh, BoundaryConditions, F_elem, ref_elem, dt, time_value, time_start, time_end);
 
             auto point_A = std::chrono::steady_clock::now();
             auto elapsed_A = std::chrono::duration_cast<std::chrono::milliseconds>(point_A - start_time).count();
