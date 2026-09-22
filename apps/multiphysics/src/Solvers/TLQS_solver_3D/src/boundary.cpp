@@ -39,7 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn boundary_position
+/// \fn boundary_displacement
 ///
 /// \brief Evolves the boundary according to a given displacement
 ///
@@ -86,6 +86,66 @@ void TLQS3D::boundary_displacement(const swage::Mesh_t& mesh,
                 time_end,
                 bdy_node_gid,
                 bdy_set);
+        }); // end for bdy_node_lid
+    } // end for bdy_set
+
+    return;
+} // end boundary_displacement function
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn boundary_displacement
+///
+/// \brief Evolves the boundary according to a given displacement
+///
+/// \param mesh The simulation mesh
+/// \param BoundaryConditions Boundary contains arrays of information about BCs
+/// \param node_disp The nodal displacement array
+/// \param time_value The current simulation time
+///
+/////////////////////////////////////////////////////////////////////////////
+void TLQS3D::boundary_stress(const swage::Mesh_t& mesh,
+    const BoundaryCondition_t& BoundaryConditions,
+    const CArrayKokkos<double>& F_elem,
+    const elements::ReferenceElement_t ref_elem,
+    const double dt,
+    const double time_value,
+    const double time_start,
+    const double time_end) const
+{
+    size_t num_stress_bdy_sets = BoundaryConditions.num_qstatx_stress_bdy_sets_in_solver.host(this->solver_id);
+
+    // Loop over the qstatx_stress boundary sets
+    for (size_t bc_lid = 0; bc_lid < num_stress_bdy_sets; bc_lid++) {
+        
+        size_t bdy_set = BoundaryConditions.qstatx_stress_bdy_sets_in_solver.host(this->solver_id, bc_lid);
+        
+        // Loop over boundary surfaces in a boundary set
+        FOR_ALL(bdy_surf_lid, 0, mesh.num_bdy_surfs_in_set.host(bdy_set), {
+            // get the global index for this surface on the boundary
+            size_t bdy_surf_gid = mesh.bdy_surfs_in_set(bdy_set, bdy_surf_lid);
+
+            // making temp variables on the thread
+            double traction_arr[3];
+            double surf_normal_arr[3];
+            double qpt_coords_arr[3];
+            ViewCArrayKokkos <double> traction(&traction_arr[0], 3);
+            ViewCArrayKokkos <double> surf_normal(&surf_normal_arr[0], 3);
+            ViewCArrayKokkos <double> qpt_coords(&qpt_coords_arr[0], 3);
+
+            // evaluate displacement on this boundary node
+            BoundaryConditions.BoundaryConditionFunctions(bdy_set).qstatx_stress(
+                mesh,
+                BoundaryConditions.BoundaryConditionEnums,
+                BoundaryConditions.qstatx_stress_bc_global_vars,
+                BoundaryConditions.bc_state_vars,
+                traction,
+                surf_normal,
+                dt,
+                time_value,
+                time_start,
+                time_end,
+                qpt_coords);
         }); // end for bdy_node_lid
     } // end for bdy_set
 

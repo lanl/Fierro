@@ -32,14 +32,14 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_QSTATX_STRESS_CYCLIC_H
-#define BOUNDARY_QSTATX_STRESS_CYCLIC_H
+#ifndef BOUNDARY_QSTATX_STRESS_PRESSURE_H
+#define BOUNDARY_QSTATX_STRESS_PRESSURE_H
 
 #include "boundary_conditions.hpp"
 
 struct BoundaryConditionEnums_t;
 
-namespace CyclicQstatxStressBC
+namespace ConstantPressureQstatxStressBC
 {
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -70,6 +70,10 @@ static void qstatx_stress(const swage::Mesh_t& mesh,
         const double time_end,
         const ViewCArrayKokkos <double>& qpt_coords)
 {
+    std::cout << "INSIDE CONSTANT PRESSURE BC" << std::endl;
+    std::cout << "X COMPONENT OF TRACTION: " << qstatx_stress_bc_global_vars(0, 0) << std::endl;
+    std::cout << "Y COMPONENT OF TRACTION: " << qstatx_stress_bc_global_vars(0, 1) << std::endl;
+    std::cout << "Z COMPONENT OF TRACTION: " << qstatx_stress_bc_global_vars(0, 2) << std::endl;
     Kokkos::abort("ERROR: qstatx stress boundary conditions not yet supported.");
 
     return;

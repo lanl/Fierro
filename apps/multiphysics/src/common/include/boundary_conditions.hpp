@@ -112,6 +112,7 @@ enum BCQstatxStressModels
     linearQstatxStressBC = 2,
     cyclicQstatxStressBC = 3,
     userDefinedQstatxStressBC = 4,
+    constantPressureQstatxStressBC = 5,
 };                  
 
 enum BCFcnLocation
@@ -194,6 +195,7 @@ static std::map<std::string, boundary_conditions::BCQstatxStressModels> bc_qstat
     { "linear", boundary_conditions::linearQstatxStressBC },
     { "cyclic", boundary_conditions::cyclicQstatxStressBC },
     { "user_defined", boundary_conditions::userDefinedQstatxStressBC },
+    { "constant_pressure", boundary_conditions::constantPressureQstatxStressBC },
 };
 
 
@@ -322,11 +324,13 @@ struct BoundaryConditionFunctions_t
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& qstatx_stress_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
-        const ViewCArrayKokkos <double>& corner_surf_force,
-        const ViewCArrayKokkos <double>& corner_surf_normal,
+        ViewCArrayKokkos <double>& traction,
+        const ViewCArrayKokkos <double>& surf_normal,
+        const double dt,
         const double time_value,
-        const size_t bdy_node_gid,
-        const size_t bdy_set) = NULL;
+        const double time_state,
+        const double time_end,
+        const ViewCArrayKokkos <double>& qpt_coords) = NULL;
 
 
 }; // end boundary condition fcns

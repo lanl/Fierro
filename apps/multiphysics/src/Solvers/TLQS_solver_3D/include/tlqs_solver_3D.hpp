@@ -221,6 +221,15 @@ public:
     const double time_start,
     const double time_end) const;
 
+    void boundary_stress(const swage::Mesh_t& mesh,
+    const BoundaryCondition_t& BoundaryConditions,
+    const CArrayKokkos<double>& F_elem,
+    const elements::ReferenceElement_t ref_elem,
+    const double dt,
+    const double time_value,
+    const double time_start,
+    const double time_end) const;
+
     // **** Functions defined in time_integration.cpp **** //
     void timestep_init(
         MPICArrayKokkos<double>& node_coords,
