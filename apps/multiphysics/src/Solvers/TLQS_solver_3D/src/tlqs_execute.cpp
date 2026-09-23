@@ -101,6 +101,16 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                                   reference_space::LagrangeLobatto,
                                   Quad,
                                   SimulationParamaters.MeshInput.p_order);
+    
+    // initializing the reference surface
+    elements::SurfaceQuadrature_t SurfQuad;
+    SurfQuad.initialize_quadrature(reference_space::GaussLegendre,
+                                   2*SimulationParamaters.MeshInput.p_order,
+                                   3);
+    elements::ReferenceSurface_t ref_surf;
+    ref_surf.initialize_ref_surf(SurfQuad,
+                                 ref_elem);
+
 
     int num_qpt_in_elem = ref_elem.qpt_grad_basis.dims(0);
     
@@ -289,7 +299,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // dirichlet (displacement) type
             boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
-            //boundary_stress(mesh, BoundaryConditions, F_elem, ref_elem, dt, time_value, time_start, time_end);
 
             auto point_A = std::chrono::steady_clock::now();
             auto elapsed_A = std::chrono::duration_cast<std::chrono::milliseconds>(point_A - start_time).count();
@@ -418,6 +427,18 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // getting r0 = (02F - 01F) - K * displacement_iter_k
             get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
+
+            // apply traction conditions
+            boundary_stress(mesh, BoundaryConditions, rk, ref_surf, SurfQuad, State.node.coords, dt, time_value, time_start, time_end);
+            /* std::cout << "START TEST OUTPUTS" << std::endl;
+            for (int r0 = 0; r0 < rk.dims(0); r0++) {
+                for (int r1 = 0; r1 < 3; r1++) {
+                    std::cout << rk(r0,r1) << "   ";
+                }
+                std::cout << std::endl;
+            }
+            std::cout << "END TEST OUTPUTS" << std::endl;
+            Kokkos::abort("END OF TESTING RUN"); */
 
             // smoothing with chebyshev polynomial
             apply_chebyshev_preconditioner(rk, zk, D_inv, zk, delta_z, temporary, K_elem, 

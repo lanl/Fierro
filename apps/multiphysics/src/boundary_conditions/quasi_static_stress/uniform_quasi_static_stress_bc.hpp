@@ -66,11 +66,14 @@ static void qstatx_stress(const swage::Mesh_t& mesh,
         const ViewCArrayKokkos <double>& surf_normal,
         const double dt,
         const double time_value,
-        const double time_state,
+        const double time_start,
         const double time_end,
-        const ViewCArrayKokkos <double>& qpt_coords)
+        const ViewCArrayKokkos <double>& qpt_coords,
+        const size_t bdy_set)
 {
-    Kokkos::abort("ERROR: qstatx stress boundary conditions not yet supported.");
+    traction(0) = qstatx_stress_bc_global_vars(bdy_set, 0) * (time_value+dt - time_start) / (time_end - time_start);
+    traction(1) = qstatx_stress_bc_global_vars(bdy_set, 1) * (time_value+dt - time_start) / (time_end - time_start);
+    traction(2) = qstatx_stress_bc_global_vars(bdy_set, 2) * (time_value+dt - time_start) / (time_end - time_start);
 
 
     return;

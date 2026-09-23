@@ -328,9 +328,10 @@ struct BoundaryConditionFunctions_t
         const ViewCArrayKokkos <double>& surf_normal,
         const double dt,
         const double time_value,
-        const double time_state,
+        const double time_start,
         const double time_end,
-        const ViewCArrayKokkos <double>& qpt_coords) = NULL;
+        const ViewCArrayKokkos <double>& qpt_coords,
+        const size_t bdy_set) = NULL;
 
 
 }; // end boundary condition fcns

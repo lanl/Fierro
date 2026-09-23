@@ -94,9 +94,9 @@ void TLQS3D::boundary_displacement(const swage::Mesh_t& mesh,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn boundary_displacement
+/// \fn boundary_stress
 ///
-/// \brief Evolves the boundary according to a given displacement
+/// \brief Evolves the boundary according to a given traction
 ///
 /// \param mesh The simulation mesh
 /// \param BoundaryConditions Boundary contains arrays of information about BCs
@@ -106,8 +106,10 @@ void TLQS3D::boundary_displacement(const swage::Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void TLQS3D::boundary_stress(const swage::Mesh_t& mesh,
     const BoundaryCondition_t& BoundaryConditions,
-    const CArrayKokkos<double>& F_elem,
-    const elements::ReferenceElement_t ref_elem,
+    const MPICArrayKokkos<double>& cg_residual,
+    const elements::ReferenceSurface_t ref_surf,
+    const elements::SurfaceQuadrature_t SurfQuad,
+    const MPICArrayKokkos<double> node_coords,
     const double dt,
     const double time_value,
     const double time_start,
@@ -124,6 +126,10 @@ void TLQS3D::boundary_stress(const swage::Mesh_t& mesh,
         FOR_ALL(bdy_surf_lid, 0, mesh.num_bdy_surfs_in_set.host(bdy_set), {
             // get the global index for this surface on the boundary
             size_t bdy_surf_gid = mesh.bdy_surfs_in_set(bdy_set, bdy_surf_lid);
+            
+            // needed for the tally to the global residual vector
+            const size_t elem_gid = mesh.elems_in_surf(bdy_surf_gid, 0);
+            const size_t face_lid = mesh.faces_in_surf(bdy_surf_gid, 0);
 
             // making temp variables on the thread
             double traction_arr[3];
@@ -132,22 +138,51 @@ void TLQS3D::boundary_stress(const swage::Mesh_t& mesh,
             ViewCArrayKokkos <double> traction(&traction_arr[0], 3);
             ViewCArrayKokkos <double> surf_normal(&surf_normal_arr[0], 3);
             ViewCArrayKokkos <double> qpt_coords(&qpt_coords_arr[0], 3);
+            double qpt_weighted_area;
+            double jac_arr[3][3];
+            ViewCArrayKokkos<double> jac(&jac_arr[0][0], 3, 3);
+            double inv_jac_arr[3][3];
+            ViewCArrayKokkos<double> inv_jac(&inv_jac_arr[0][0], 3, 3);
 
-            // evaluate displacement on this boundary node
-            BoundaryConditions.BoundaryConditionFunctions(bdy_set).qstatx_stress(
-                mesh,
-                BoundaryConditions.BoundaryConditionEnums,
-                BoundaryConditions.qstatx_stress_bc_global_vars,
-                BoundaryConditions.bc_state_vars,
-                traction,
-                surf_normal,
-                dt,
-                time_value,
-                time_start,
-                time_end,
-                qpt_coords);
-        }); // end for bdy_node_lid
+            for (int qpt_lid = 0; qpt_lid < ref_surf.qpt_basis.dims(1); qpt_lid++) {
+                
+                // getting normals, area, and qpt location in real space
+                get_qpt_area_normal(mesh, ref_surf, SurfQuad, node_coords, qpt_lid, bdy_surf_gid, jac, inv_jac, surf_normal, qpt_weighted_area);
+                get_surf_qpt_coords(mesh, ref_surf, node_coords, qpt_lid, bdy_surf_gid, qpt_coords);
+
+                // getting the traction at this quadrature point
+                BoundaryConditions.BoundaryConditionFunctions(bdy_set).qstatx_stress(
+                    mesh,
+                    BoundaryConditions.BoundaryConditionEnums,
+                    BoundaryConditions.qstatx_stress_bc_global_vars,
+                    BoundaryConditions.bc_state_vars,
+                    traction,
+                    surf_normal,
+                    dt,
+                    time_value,
+                    time_start,
+                    time_end,
+                    qpt_coords,
+                    bdy_set);
+
+                // talling to global residual vector
+                for (size_t node_elem_lid = 0; node_elem_lid < mesh.num_nodes_in_elem; node_elem_lid++) {
+        
+                    const size_t node_gid = mesh.nodes_in_elem(elem_gid, node_elem_lid);
+                    const double phi = ref_surf.qpt_basis(face_lid, qpt_lid, node_elem_lid);
+
+                    for (size_t dim = 0; dim < 3; dim++) {
+                        const double force_val = phi * traction(dim) * qpt_weighted_area;
+
+                        // Direct accumulation into global residual vector (requires atomic add if multi-threaded)
+                        Kokkos::atomic_add(&cg_residual(node_gid, dim), force_val);
+                    }
+                }
+
+            }
+            
+        }); // end for bdy_surf_lid
     } // end for bdy_set
 
     return;
-} // end boundary_displacement function
+} // end boundary_stress function
