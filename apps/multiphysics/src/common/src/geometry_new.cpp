@@ -792,14 +792,14 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     } // end for bdy_set
 
     // temporary array allocation for tracking which surfaces are in the set
-    DynamicRaggedRightArrayKokkos<size_t> temp_bdy_surfs_in_set (mesh.num_bdy_sets, mesh.num_surfs, "temp_bdy_surfs_in_set");
+    CArrayKokkos<size_t> temp_bdy_surfs_in_set (mesh.num_bdy_sets, mesh.num_surfs, "temp_bdy_surfs_in_set");
     temp_bdy_surfs_in_set.set_values(0);
 
     // getting number of unique surfaces that appear in bdy_patches_in_set
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
 
         FOR_ALL(patch_lid, 0, mesh.num_bdy_patches_in_set.host(bdy_set), {
-            size_t surf_gid = mesh.surf_in_patch(mesh.bdy_patches_in_set(bdy_set, patch_lid));
+            const size_t surf_gid = mesh.surf_in_patch(mesh.bdy_patches_in_set(bdy_set, patch_lid));
             Kokkos::atomic_store(&temp_bdy_surfs_in_set(bdy_set, surf_gid), 1);
         });
 
