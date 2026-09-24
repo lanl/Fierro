@@ -29,7 +29,7 @@ if (num_ranks == 1):
             "sie_expansion_test", "confined_preload", "unconfined_preload",\
             "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact",\
             "TaylorAnvil_Contact", "fracture_mode_1", "fracture_mode_2", \
-            "fracture_reorientation", "TLQS_cantilever_beam"] #"TLQS_uniaxial"]
+            "fracture_reorientation", "TLQS_cantilever_beam", "TLQS_triaxial"] #"TLQS_uniaxial"]
             # TLQS_uniaxial commented out due to persistent git actions issues that can't be recreated locally: 8-28-26
 else:
     # fracture and contact can't be run with more than one rank: 8-26-26
@@ -38,7 +38,7 @@ else:
             "Compaction_rz", "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
             "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", "Pressure_bc_box",\
             "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
-            "SGTM_cooling_cube", "TLQS_cantilever_beam"]
+            "SGTM_cooling_cube", "TLQS_cantilever_beam", "TLQS_triaxial"]
 
 
 #,"SGTM_cooling_cube" currently broken
