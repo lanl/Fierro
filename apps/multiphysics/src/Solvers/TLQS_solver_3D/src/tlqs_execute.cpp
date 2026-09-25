@@ -521,18 +521,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // apply traction conditions
             boundary_stress(mesh, BoundaryConditions, rk, ref_surf, SurfQuad, State.node.coords_t0, dt, time_value, time_start, time_end);
-            
-            /*RUN({
-                printf("START TEST OUTPUTS\n");
-                for (int r0 = 0; r0 < rk.dims(0); r0++) {
-                    for (int r1 = 0; r1 < 3; r1++) {
-                        printf("%f   ", rk(r0, r1));
-                    }
-                    printf("\n");
-                }
-                printf("END TEST OUTPUTS\n");
-                Kokkos::abort("END OF TESTING RUN");
-            });*/
 
             // smoothing with chebyshev polynomial
             apply_chebyshev_preconditioner(rk, zk, D_inv, zk, delta_z, temporary, K_elem, 
