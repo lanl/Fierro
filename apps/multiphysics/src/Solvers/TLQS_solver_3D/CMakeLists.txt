@@ -29,5 +29,6 @@ ${CMAKE_CURRENT_SOURCE_DIR}/src/tlqs_initialize.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/post_process.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/qr_solver.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/chebyshev_smoothing.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/surface.cpp
 PARENT_SCOPE
 )

@@ -59,16 +59,31 @@ namespace LinearQstatxStressBC
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 static void qstatx_stress(const swage::Mesh_t& mesh,
-    const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
-    const DCArrayKokkos<double>& bc_state_vars,
-    const ViewCArrayKokkos <double>& corner_surf_force,
-    const ViewCArrayKokkos <double>& corner_surf_normal,
-    const double time_value,
-    const size_t bdy_node_gid,
-    const size_t bdy_set)
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const RaggedRightArrayKokkos<double>& qstatx_stress_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        ViewCArrayKokkos <double>& traction,
+        const ViewCArrayKokkos <double>& surf_normal,
+        const double dt,
+        const double time_value,
+        const double time_start,
+        const double time_end,
+        const ViewCArrayKokkos <double>& qpt_coords,
+        const size_t bdy_set)
 {
-    Kokkos::abort("ERROR: qstatx stress boundary conditions not yet supported.");
+    // y = m * x + b -> traction = slope * axis + intercept
+    const double slope = qstatx_stress_bc_global_vars(bdy_set, 0);
+    const double intercept = qstatx_stress_bc_global_vars(bdy_set, 1);
+    const int axis = int(qstatx_stress_bc_global_vars(bdy_set, 2));
+    const int dir = int(qstatx_stress_bc_global_vars(bdy_set, 3));
+
+    // resetting traction output vector
+    traction(0) = 0.0;
+    traction(1) = 0.0;
+    traction(2) = 0.0;
+
+    // assigning the linearly interpolated value
+    traction(dir) = (slope * qpt_coords(axis) + intercept) * (time_value+dt - time_start) / (time_end - time_start);
 
 
     return;

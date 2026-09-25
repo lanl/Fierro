@@ -221,6 +221,40 @@ public:
     const double time_start,
     const double time_end) const;
 
+    void boundary_stress(const swage::Mesh_t& mesh,
+    const BoundaryCondition_t& BoundaryConditions,
+    const MPICArrayKokkos<double>& cg_residual,
+    const elements::ReferenceSurface_t ref_surf,
+    const elements::SurfaceQuadrature_t SurfQuad,
+    const MPICArrayKokkos<double> node_coords,
+    const double dt,
+    const double time_value,
+    const double time_start,
+    const double time_end) const;
+
+    // **** Functions defined in surface.cpp **** //
+    KOKKOS_FUNCTION
+    void get_qpt_area_normal(
+        const swage::Mesh_t& mesh,
+        const elements::ReferenceSurface_t& ref_surf,
+        const elements::SurfaceQuadrature_t& SurfQuad,
+        const MPICArrayKokkos<double>& node_coords,
+        const size_t qpt_lid,
+        const size_t surf_gid,
+        const ViewCArrayKokkos<double>& jac,
+        const ViewCArrayKokkos<double>& inv_jac,
+        ViewCArrayKokkos<double>& normal,
+        double& qpt_weighted_area) const;
+
+    KOKKOS_FUNCTION
+    void get_surf_qpt_coords(
+        const swage::Mesh_t& mesh,
+        const elements::ReferenceSurface_t ref_surf,
+        const MPICArrayKokkos<double>& node_coords,
+        const size_t qpt_lid,
+        const size_t surf_gid,
+        ViewCArrayKokkos<double>& qpt_coords) const;
+
     // **** Functions defined in time_integration.cpp **** //
     void timestep_init(
         MPICArrayKokkos<double>& node_coords,

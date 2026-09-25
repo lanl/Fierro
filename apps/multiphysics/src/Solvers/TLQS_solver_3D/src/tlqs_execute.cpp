@@ -101,6 +101,16 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                                   reference_space::LagrangeLobatto,
                                   Quad,
                                   SimulationParamaters.MeshInput.p_order);
+    
+    // initializing the reference surface
+    elements::SurfaceQuadrature_t SurfQuad;
+    SurfQuad.initialize_quadrature(reference_space::GaussLegendre,
+                                   2*SimulationParamaters.MeshInput.p_order,
+                                   3);
+    elements::ReferenceSurface_t ref_surf;
+    ref_surf.initialize_ref_surf(SurfQuad,
+                                 ref_elem);
+
 
     int num_qpt_in_elem = ref_elem.qpt_grad_basis.dims(0);
     
@@ -289,6 +299,55 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // dirichlet (displacement) type
             boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
+            // TESTING FOR LINEAR VARYING TRACTION
+            // Hardcoded rigid-body-mode removal (interior nodes, so not reachable via tagging)
+            /* struct RBMFix { size_t node_gid; int num_constrained; int dofs[3]; };
+            const RBMFix rbm_fixes[3] = {
+                { 62,  3, {0, 1, 2} },  // center node: Ux, Uy, Uz (translations)
+                { 72,  2, {0, 2, 0} },  // Ux, Uz (kills rotations about z and x)
+                { 112, 1, {0, 0, 0} }   // Ux (kills rotation about y)
+            };
+
+            const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
+            const size_t num_dof_in_elem   = 3 * num_nodes_in_elem;
+
+            for (int f = 0; f < 3; f++) {
+                const size_t node_gid = rbm_fixes[f].node_gid;
+                const size_t num_elems_in_node = mesh.elems_in_node.stride(node_gid);
+
+                for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
+                    const size_t elem_gid = mesh.elems_in_node(node_gid, elem_lid);
+
+                    // Find local node index of node_gid within this element
+                    size_t local_node_lid = num_nodes_in_elem; // sentinel
+                    for (size_t a = 0; a < num_nodes_in_elem; a++) {
+                        if (mesh.nodes_in_elem(elem_gid, a) == node_gid) {
+                            local_node_lid = a;
+                            break;
+                        }
+                    }
+
+                    for (int i = 0; i < rbm_fixes[f].num_constrained; i++) {
+                        const size_t p = rbm_fixes[f].dofs[i];
+                        const size_t constrained_dof = 3 * local_node_lid + p;
+
+                        // Zero out the row
+                        for (size_t col = 0; col < num_dof_in_elem; col++) {
+                            Kokkos::atomic_store(&K_elem(elem_gid, constrained_dof, col), 0.0);
+                        }
+                        // Zero out the column
+                        for (size_t row = 0; row < num_dof_in_elem; row++) {
+                            Kokkos::atomic_store(&K_elem(elem_gid, row, constrained_dof), 0.0);
+                        }
+
+                        // Scale diagonal so the assembled diagonal sums to 1
+                        K_elem(elem_gid, constrained_dof, constrained_dof) = 1.0 / (double)num_elems_in_node;
+                        // Zero force RHS entry
+                        F_elem(elem_gid, constrained_dof) = 0.0;
+                    }
+                }
+            } */
+            // END TESTING FOR LINEAR VARYING TRACTION
 
             auto point_A = std::chrono::steady_clock::now();
             auto elapsed_A = std::chrono::duration_cast<std::chrono::milliseconds>(point_A - start_time).count();
@@ -352,6 +411,48 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // dirichlet (displacement) type
             boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
+
+            // TESTING FOR LINEAR VARYING TRACTION
+            // Hardcoded rigid-body-mode removal (interior nodes, so not reachable via tagging)
+
+            /* for (int f = 0; f < 3; f++) {
+                const size_t node_gid = rbm_fixes[f].node_gid;
+                const size_t num_elems_in_node = mesh.elems_in_node.stride(node_gid);
+
+                for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
+                    const size_t elem_gid = mesh.elems_in_node(node_gid, elem_lid);
+
+                    // Find local node index of node_gid within this element
+                    size_t local_node_lid = num_nodes_in_elem; // sentinel
+                    for (size_t a = 0; a < num_nodes_in_elem; a++) {
+                        if (mesh.nodes_in_elem(elem_gid, a) == node_gid) {
+                            local_node_lid = a;
+                            break;
+                        }
+                    }
+
+                    for (int i = 0; i < rbm_fixes[f].num_constrained; i++) {
+                        const size_t p = rbm_fixes[f].dofs[i];
+                        const size_t constrained_dof = 3 * local_node_lid + p;
+
+                        // Zero out the row
+                        for (size_t col = 0; col < num_dof_in_elem; col++) {
+                            Kokkos::atomic_store(&K_elem(elem_gid, constrained_dof, col), 0.0);
+                        }
+                        // Zero out the column
+                        for (size_t row = 0; row < num_dof_in_elem; row++) {
+                            Kokkos::atomic_store(&K_elem(elem_gid, row, constrained_dof), 0.0);
+                        }
+
+                        // Scale diagonal so the assembled diagonal sums to 1
+                        K_elem(elem_gid, constrained_dof, constrained_dof) = 1.0 / (double)num_elems_in_node;
+                        // Zero force RHS entry
+                        F_elem(elem_gid, constrained_dof) = 0.0;
+                    }
+                }
+            } */
+            // END TESTING FOR LINEAR VARYING TRACTION
+
             auto point_C = std::chrono::steady_clock::now();
             auto elapsed_C = std::chrono::duration_cast<std::chrono::milliseconds>(point_C - point_B).count();
             //std::cout << "Time elapsed for second bc: " << elapsed_C << " ms\n";
@@ -417,6 +518,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // getting r0 = (02F - 01F) - K * displacement_iter_k
             get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
+
+            // apply traction conditions
+            boundary_stress(mesh, BoundaryConditions, rk, ref_surf, SurfQuad, State.node.coords_t0, dt, time_value, time_start, time_end);
 
             // smoothing with chebyshev polynomial
             apply_chebyshev_preconditioner(rk, zk, D_inv, zk, delta_z, temporary, K_elem, 

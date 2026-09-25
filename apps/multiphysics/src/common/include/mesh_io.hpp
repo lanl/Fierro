@@ -4469,7 +4469,7 @@ public:
                             node_vector_fields(node_coord_id, node_gid, 2) = 0.0;
                         }
                         else{
-                            node_vector_fields(node_coord_id, node_coord_id, 2) = Node.coords(node_gid, 2);
+                            node_vector_fields(node_coord_id, node_gid, 2) = Node.coords(node_gid, 2);
                         } // end if
 
                     }); // end parallel for
