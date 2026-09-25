@@ -84,7 +84,6 @@ static void qstatx_stress(const swage::Mesh_t& mesh,
 
     // assigning the linearly interpolated value
     traction(dir) = (slope * qpt_coords(axis) + intercept) * (time_value+dt - time_start) / (time_end - time_start);
-    std::cout << traction(dir) << std::endl;
 
 
     return;
