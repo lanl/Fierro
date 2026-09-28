@@ -1,5 +1,5 @@
 /**********************************************************************************************
-© 2020. Triad National Security, LLC. All rights reserved.
+� 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -32,58 +32,48 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "tlqs_solver_3D.hpp"
-#include "region_fill.hpp"
-#include "material.hpp"
+#ifndef BOUNDARY_QSTATX_STRESS_NONE_H
+#define BOUNDARY_QSTATX_STRESS_NONE_H
+
 #include "boundary_conditions.hpp"
-#include "state.hpp"
-#include "simulation_parameters.hpp"
-#include "geometry_new.hpp"
 
+struct BoundaryConditionEnums_t;
 
-
-
-/////////////////////////////////////////////////////////////////////////////
-///
-/// \fn setup the TLQS method
-///
-/// \brief Allocate state, setup models, and fill mesh regions per the YAML input
-///
-/////////////////////////////////////////////////////////////////////////////
-void TLQS3D::setup(SimulationParameters_t& SimulationParamaters, 
-                Material_t& Materials, 
-                swage::Mesh_t& mesh, 
-                BoundaryCondition_t& Boundary,
-                State_t& State)
+namespace GlobalContactQstatxStressBC
 {
-    // add a flag on whether TLQS was set up, if(TLQS_setup_already==false)
-    
-    const size_t num_mats = Materials.num_mats; // the number of materials on the mesh
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn Boundary stress does not exist, its a free surface
+///
+/// \brief This is a function for a free surface, the default case
+///
+/// \param Mesh object
+/// \param Boundary condition enums to select options
+/// \param Boundary condition global variables array
+/// \param Boundary condition state variables array
+/// \param Node force
+/// \param Time of the simulation
+/// \param Boundary global index for the surface node
+/// \param Boundary set local id
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+static void qstatx_stress(const swage::Mesh_t& mesh,
+        const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
+        const RaggedRightArrayKokkos<double>& qstatx_stress_bc_global_vars,
+        const DCArrayKokkos<double>& bc_state_vars,
+        ViewCArrayKokkos <double>& traction,
+        const ViewCArrayKokkos <double>& surf_normal,
+        const double dt,
+        const double time_value,
+        const double time_start,
+        const double time_end,
+        const ViewCArrayKokkos <double>& qpt_coords,
+        const size_t bdy_set)
+{
 
-    // calculate pressure, sound speed, and stress for each material
-    for (int mat_id = 0; mat_id < num_mats; mat_id++) {
-
-        // call the initialization function for state vars
-        init_state_vars(Materials,
-                        mesh,
-                        State.MaterialPoints.eos_state_vars,
-                        State.MaterialPoints.strength_state_vars,
-                        State.MaterialToMeshMaps.elem_in_mat_elem,
-                        State.MaterialPoints.num_material_points.host(mat_id),
-                        mat_id);
-
-    } // for loop over mat_id
-
-    // Setting up contact
-    if (log) log->info("Setting up contact\n");
-    for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
-        if (Boundary.allow_contact) {
-            if (log) log->info("Setting up global contact\n");
-            doing_contact = true;
-            std::cout << "CONTACT IS ON" << std::endl;
-            break;
-        }
-    }
-    
     return;
-} // end TLQS setup
+} // end qstatx stress
+} // end namespace
+
+#endif // end Header Guard

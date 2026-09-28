@@ -63,6 +63,12 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
 
+    // setting up contact if it was called
+    if (doing_contact) {
+        std::cout << "MAX GLOBAL CONTACT IERS: " << BoundaryConditions.contact_max_global_iter << std::endl;
+        std::cout << "MAX LOCAL CONTACT IERS: " << BoundaryConditions.contact_max_local_iter << std::endl;
+    }
+
     // Conveinent local variables
     double fuzz  = SimulationParamaters.DynamicOptions.fuzz;
     double tiny  = SimulationParamaters.DynamicOptions.tiny;

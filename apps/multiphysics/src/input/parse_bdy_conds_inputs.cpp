@@ -97,6 +97,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cyclic_quasi_static_stress_bc.hpp"
 #include "user_defined_quasi_static_stress_bc.hpp"
 #include "uniform_pressure_quasi_static_stress_bc.hpp"
+#include "qstatx_global_contact.hpp"
 
 
 
@@ -679,6 +680,11 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::uniformPressureQstatxStressBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &UniformPressureQstatxStressBC::qstatx_stress;
                             });
+                            break;
+
+                        case boundary_conditions::globalContactQstatxStressBC:
+                            if (verbose) std::cout << "Setting contact bc " << std::endl;
+                            BoundaryConditions.allow_contact = true;
                             break;
 
                         default:

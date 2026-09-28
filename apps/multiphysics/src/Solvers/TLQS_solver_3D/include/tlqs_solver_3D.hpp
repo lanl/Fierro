@@ -127,6 +127,8 @@ class TLQS3D : public Solver
 {
 public:
 
+    bool doing_contact = false;  // Condition used in tlqs_execute
+
     TLQS3D()  : Solver()
     {
     }

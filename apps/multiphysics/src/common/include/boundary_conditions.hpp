@@ -113,6 +113,7 @@ enum BCQstatxStressModels
     cyclicQstatxStressBC = 3,
     userDefinedQstatxStressBC = 4,
     uniformPressureQstatxStressBC = 5,
+    globalContactQstatxStressBC = 6,
 };                  
 
 enum BCFcnLocation
@@ -196,6 +197,7 @@ static std::map<std::string, boundary_conditions::BCQstatxStressModels> bc_qstat
     { "cyclic", boundary_conditions::cyclicQstatxStressBC },
     { "user_defined", boundary_conditions::userDefinedQstatxStressBC },
     { "uniform_pressure", boundary_conditions::uniformPressureQstatxStressBC },
+    { "global_contact", boundary_conditions::globalContactQstatxStressBC },
 };
 
 
