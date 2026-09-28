@@ -96,6 +96,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "linear_quasi_static_stress_bc.hpp"
 #include "cyclic_quasi_static_stress_bc.hpp"
 #include "user_defined_quasi_static_stress_bc.hpp"
+#include "uniform_pressure_quasi_static_stress_bc.hpp"
 
 
 
@@ -671,6 +672,15 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             });
                             break;
 
+                        case boundary_conditions::uniformPressureQstatxStressBC:
+                            std::cout << "Setting qstatx stress bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::uniformPressureQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &UniformPressureQstatxStressBC::qstatx_stress;
+                            });
+                            break;
+
                         default:
 
                             std::cout << "ERROR: invalid qstatx stress boundary condition input: " << qstatx_stress_model << std::endl;
@@ -860,7 +870,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     BoundaryConditions.num_displacement_bc_global_vars(bc_id) = num_global_vars;
                 });
 
-                // store the global eos model parameters
+                // store the global displacement parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     std::string var_str = bc_yaml[bc_id]["boundary_condition"]["displacement_bc_global_vars"][global_var_id].As<std::string>();
 
@@ -974,10 +984,41 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     BoundaryConditions.num_qstatx_stress_bc_global_vars(bc_id) = num_global_vars;
                 });
 
-                // store the qstatx stress  model parameters
+                // store the qstatx stress parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double qstatx_stress_bc_var = bc_yaml[bc_id]["boundary_condition"]["qstatx_stress_bc_global_vars"][global_var_id].As<double>();
+                    std::string var_str = bc_yaml[bc_id]["boundary_condition"]["qstatx_stress_bc_global_vars"][global_var_id].As<std::string>();
 
+                    double qstatx_stress_bc_var = 0.0;
+
+                    if (var_str == "x" || var_str == "X") {
+                        qstatx_stress_bc_var = 0.0;
+                    }
+                    else if (var_str == "y" || var_str == "Y") {
+                        qstatx_stress_bc_var = 1.0;
+                    }
+                    else if (var_str == "z" || var_str == "Z") {
+                        qstatx_stress_bc_var = 2.0;
+                    }
+                    else {
+                        // 2. If it's not x, y, or z, try to parse it as a number
+                        try {
+                            size_t idx;
+                            qstatx_stress_bc_var = std::stod(var_str, &idx);
+
+                            // Check for trailing garbage (e.g., "2E-5abc" or "10xyz")
+                            if (idx < var_str.size()) {
+                                throw std::invalid_argument("Trailing characters");
+                            }
+                        }
+                        catch (const std::exception& e) {
+                            // 3. Fall through to an error if std::stod fails or trailing characters exist
+                            std::cerr << "ERROR: Invalid displacement boundary condition variable value '" << var_str << "' encountered.\n"
+                                    << "Allowed values are 'x', 'y', 'z', or any valid number.\n";
+
+                            // Crash/exit gracefully depending on your framework's error handling
+                            throw std::runtime_error("Invalid YAML configuration value: " + var_str);
+                        }
+                    }
 
                     RUN({
                         tempQstatxStressBCGlobalVars(bc_id, global_var_id) = qstatx_stress_bc_var;

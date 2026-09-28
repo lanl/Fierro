@@ -716,6 +716,9 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_coords)
 {
+    // size and initialize the number of boundary surfaces in set
+    mesh.num_bdy_surfs_in_set = DCArrayKokkos<size_t> (mesh.num_bdy_sets);
+    mesh.num_bdy_surfs_in_set.set_values(0);
 
     // create a temporary storage for the bdy patches in a set
     DynamicRaggedRightArrayKokkos<size_t> temp_bdy_patches_in_set (mesh.num_bdy_sets, mesh.num_bdy_patches, "temp_bdy_patches_in_set");
@@ -787,6 +790,47 @@ void tag_bdys(const BoundaryCondition_t& boundary,
         }); // end FOR_ALL over all pathces
 
     } // end for bdy_set
+
+    // temporary array allocation for tracking which surfaces are in the set
+    CArrayKokkos<size_t> temp_bdy_surfs_in_set (mesh.num_bdy_sets, mesh.num_surfs, "temp_bdy_surfs_in_set");
+    temp_bdy_surfs_in_set.set_values(0);
+
+    // getting number of unique surfaces that appear in bdy_patches_in_set
+    for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
+
+        FOR_ALL(patch_lid, 0, mesh.num_bdy_patches_in_set.host(bdy_set), {
+            const size_t surf_gid = mesh.surf_in_patch(mesh.bdy_patches_in_set(bdy_set, patch_lid));
+            Kokkos::atomic_store(&temp_bdy_surfs_in_set(bdy_set, surf_gid), 1);
+        });
+
+        size_t sum = 0;
+        size_t sum_lcl = 0;
+
+        FOR_REDUCE_SUM(i, 0, mesh.num_surfs, sum_lcl, {
+            sum_lcl += temp_bdy_surfs_in_set(bdy_set, i);
+        }, sum);
+
+        mesh.num_bdy_surfs_in_set.host(bdy_set) = sum;
+
+    }
+    mesh.num_bdy_surfs_in_set.update_device();
+
+    // sizing bdy_surfs_in_set
+    mesh.bdy_surfs_in_set = RaggedRightArrayKokkos<size_t>(mesh.num_bdy_surfs_in_set, " bdy_surfs_in_set");
+
+    // getting the surface ids
+    for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
+        FOR_ALL(surf_lid, 0, mesh.num_bdy_surfs_in_set.host(bdy_set), {
+            size_t tally = 0;
+            for (size_t i = 0; i < mesh.num_surfs; i++) {
+                tally += temp_bdy_surfs_in_set(bdy_set, i);
+                if (tally == surf_lid+1) {
+                    mesh.bdy_surfs_in_set(bdy_set, surf_lid) = i;
+                    break;
+                }
+            }
+        });
+    }
 
     return;
 } // end tag
