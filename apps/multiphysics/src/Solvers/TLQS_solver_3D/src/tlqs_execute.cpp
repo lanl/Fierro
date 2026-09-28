@@ -40,6 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.hpp"
 #include "geometry_new.hpp"
 #include "mesh_io.hpp"
+#include "AO_contact.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -65,8 +66,18 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // setting up contact if it was called
     if (doing_contact) {
-        std::cout << "MAX GLOBAL CONTACT IERS: " << BoundaryConditions.contact_max_global_iter << std::endl;
-        std::cout << "MAX LOCAL CONTACT IERS: " << BoundaryConditions.contact_max_local_iter << std::endl;
+        AO_contact_state_t AO_contact_state;
+        AO_contact_initialize(AO_contact_state.bdy_node_coords, mesh.num_bdy_nodes);
+
+        // TESTING SECTION
+        AO_contact_sort(AO_contact_state.bdy_node_coords, mesh.num_bdy_nodes, State.node.coords, mesh.bdy_nodes);
+        for (int i = 0; i < mesh.num_bdy_nodes; i++) {
+            std::cout << "NODE GID: " << mesh.bdy_nodes(i) << "   ";
+            for (int j = 0; j < 3; j++) {
+                std::cout << AO_contact_state.bdy_node_coords(i,j) << "   ";
+            }
+            std::cout << std::endl;
+        }
     }
 
     // Conveinent local variables
