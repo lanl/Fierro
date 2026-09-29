@@ -1154,7 +1154,7 @@ public:
         //------------------------------------
         // allocate mesh class nodes and elems
         mesh.initialize_nodes(num_nodes);
-        if(HexN){
+        if (HexN || Pn_order > 1) {
             mesh.initialize_elems_Pn(num_elems, Pn_order, 2*Pn_order);
         } else {
             mesh.initialize_elems(num_elems);
@@ -1374,9 +1374,11 @@ public:
                             // convert this_node index to the FE index convention
                             int order[3] = {Pn_order, Pn_order, Pn_order};
                             int this_index = PointIndexFromIJK(i, j, k, order);
-                            
-                            // store the points in this elem according the the finite
-                            // element numbering convention
+
+                            // Table maps IJK_lex -> VTK_slot (used as the connectivity
+                            // index in the writeback below). For p=1 the map is self-
+                            // inverse so an inverted build went undetected; p>1 needs
+                            // this direction explicitly.
                             convert_pn_vtk_to_ijk.host(this_node) = this_index;
                             
                             // increment the point counting index
@@ -1466,11 +1468,11 @@ public:
             }
         }
         else if (SimulationParamaters.MeshInput.num_dims == 3) {
-            if (!HexN) {
-                build_3d_box(mesh, node_coords, SimulationParamaters);
+            if (HexN || SimulationParamaters.MeshInput.p_order > 1) {
+                build_3d_HexN_box(mesh, node_coords, SimulationParamaters);
             }
             else {
-                build_3d_HexN_box(mesh, node_coords, SimulationParamaters);
+                build_3d_box(mesh, node_coords, SimulationParamaters);
             }
         }
         else{
@@ -1854,6 +1856,8 @@ public:
                            MPICArrayKokkos<double>& node_coords,
                            SimulationParameters_t& SimulationParamaters) const
     {
+        printf("Creating a 3D high order box mesh \n");
+
         const int num_dim = 3;
 
         // SimulationParamaters.MeshInput.length.update_host();
@@ -1940,8 +1944,8 @@ public:
         node_coords.update_device();
 
 
-        // initialize elem variables
-        mesh.initialize_elems_Pn(num_elems, SimulationParamaters.MeshInput.p_order, 2*SimulationParamaters.MeshInput.p_order);
+        // initialize elem variables, (Pn_order+1)^3 nodes per element
+        mesh.initialize_elems_Pn(num_elems, Pn_order, 2*Pn_order);
 
         // --- Build elems  ---
         

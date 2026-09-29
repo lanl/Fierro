@@ -56,7 +56,7 @@ option(ELEMENTS_BUILD_DOCS "Build Elements docs" OFF)
 
 # --- PT-Scotch Dependencies --- (note, move this to ELEMENTS)
 # Check for Bison 3.2 or newer
-find_package(BISON 3.2 REQUIRED)
+find_package(BISON 3.0 REQUIRED)
 if(BISON_FOUND)
   message(STATUS "Found Bison: ${BISON_VERSION}")
 else()

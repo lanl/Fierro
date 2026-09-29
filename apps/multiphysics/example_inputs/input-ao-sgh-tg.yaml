@@ -1,0 +1,143 @@
+# AO_SGH3D Taylor-Green vortex (Laghos problem 0). gamma = 5/3, rho = 1,
+# v = (sin(pi x)cos(pi y), -cos(pi x)sin(pi y), 0), e = 1.5 + (3/8)(cos(2pi x) + cos(2pi y)).
+# The analytic fields are the IC only; an energy source cancels the p div(v)
+# work so that state is an exact steady solution. Viscosity is off, and the
+# run reports L1/L2 velocity and sie error against the analytic fields.
+
+dynamic_options:
+    time_final: 0.5
+    dt_min: 1.0e-8
+    dt_max: 1.0e-2
+    dt_start: 1.0e-4
+    dt_cfl: 0.25
+    cycle_stop: 5000
+
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1.0, 1.0, 0.125]
+    num_elems: [8, 8, 1]
+    polynomial_order: 3
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: viz
+    graphics_time_step: 0.05
+    node_field_outputs:
+        - vel
+
+solver_options:
+  - solver:
+        method: ao_dynx_FE
+        id: 0
+        # options: ssprk3 (explicit RK3) | rk2avg | rk3hc
+        # (rk2avg / rk3hc are conservative IMEX, 2nd / 3rd order; default rk3hc)
+        time_integration: rk3hc
+
+boundary_conditions:
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 0.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1
+            - 0
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 1.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1
+            - 0
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 0.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 1
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 1.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 1
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 0.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 0
+            - 1
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 0.125
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 0
+            - 1
+
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0
+            - 1.0
+            - 1.333
+            - 1.333
+            - 0
+            - 1.0
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0e-14
+            - 1.0
+
+regions:
+    - region:
+        id: 0
+        volume:
+            type: global
+        solver_id: 0
+
+initial_conditions:
+    - initial_condition:
+        region_id: 0
+        material_id: 0
+        density:
+            type: uniform
+            value: 1.0
+        specific_internal_energy:
+            type: tg_vortex
+            value: 1.5
+        velocity:
+            type: tg_vortex

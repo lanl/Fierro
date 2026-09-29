@@ -1,0 +1,110 @@
+# AO_SGH3D Noh implosion (octant). gamma = 5/3, rho = 1, v = -r_hat, sie ~ 0.
+# Exact at t = 0.6: shock at r = 0.2, post-shock rho = 64, upstream rho = (1 + t/r)^2.
+# Slip on the origin planes only; outer faces are free. dt_max is capped because
+# the CFL is sound-speed based and c ~ 0 at t = 0.
+
+dynamic_options:
+    time_final: 0.6
+    dt_min: 1.0e-9
+    dt_max: 5.0e-3
+    dt_start: 1.0e-5
+    dt_cfl: 0.25
+    cycle_stop: 100000
+
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1.0, 1.0, 1.0]
+    num_elems: [16, 16, 16]
+    polynomial_order: 2
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: viz
+    graphics_time_step: 0.1
+    node_field_outputs:
+        - vel
+
+solver_options:
+  - solver:
+        method: ao_dynx_FE
+        id: 0
+        # options: ssprk3 (explicit RK3) | rk2avg | rk3hc
+        # (rk2avg / rk3hc are conservative IMEX, 2nd / 3rd order; default rk3hc)
+        time_integration: rk2avg
+
+boundary_conditions:
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 0.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1
+            - 0
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 0.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 1
+            - 0
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 0.0
+            tolerance: 1.0e-5
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0
+            - 0
+            - 1
+
+materials:
+    - material:
+        id: 0
+        eos_model_type: decoupled
+        eos_model: gamma_law_gas
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0
+            - 1.0
+            - 1.333
+            - 1.333
+            - 0
+            - 1.0
+        eos_global_vars:
+            - 1.666666666666667
+            - 1.0e-14
+            - 1.0
+
+regions:
+    - region:
+        id: 0
+        volume:
+            type: global
+        solver_id: 0
+
+initial_conditions:
+    - initial_condition:
+        region_id: 0
+        material_id: 0
+        density:
+            type: uniform
+            value: 1.0
+        specific_internal_energy:
+            type: uniform
+            value: 1.0e-10
+        velocity:
+            type: spherical
+            speed: -1.0

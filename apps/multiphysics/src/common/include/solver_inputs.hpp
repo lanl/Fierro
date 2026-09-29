@@ -47,17 +47,19 @@ namespace solver_input
         SGHRZ = 2,
         SGTM3D = 3,
         levelSet = 4,
-        TLQS3D = 5
+        TLQS3D = 5,
+        AOSGH3D = 6
     };
 } // end of namespace
 
 static std::map<std::string, solver_input::method> solver_map
 {
-    { "dynx_FE",    solver_input::SGH3D },
-    { "dynx_FE_rz", solver_input::SGHRZ },
-    { "thrmex_FE",  solver_input::SGTM3D },
+    { "dynx_FE",     solver_input::SGH3D },
+    { "dynx_FE_rz",  solver_input::SGHRZ },
+    { "thrmex_FE",   solver_input::SGTM3D },
     { "level_set",   solver_input::levelSet },
-    { "qstatx_FE",   solver_input::TLQS3D }
+    { "qstatx_FE",   solver_input::TLQS3D },
+    { "ao_dynx_FE",  solver_input::AOSGH3D }
 };
 // quasi-static mechanics FE (qz-FE)
 // quasi-static thermal-mechanical FE  (qz-thmec-FE)
@@ -78,6 +80,9 @@ struct solver_input_t
     double time_end = 0.0;
 
     bool use_moving_heat_source = false;
+
+    // Time integrator (AO_SGH3D): ssprk3 | rk2avg | rk3hc
+    std::string time_integration = "rk3hc";
 }; // solver_input_t
 
 // ----------------------------------
@@ -88,7 +93,8 @@ static std::vector<std::string> str_solver_inps
     "method",
     "id",
     "time_end",
-    "use_moving_heat_source"
+    "use_moving_heat_source",
+    "time_integration"
 };
 
 // ----------------------------------
