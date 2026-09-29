@@ -67,9 +67,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGH3D::update_state(
     const Material_t& Materials,
     const swage::Mesh_t&     mesh,
-    const MPICArrayKokkos<double>& node_coords,
-    const MPICArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& GaussPoints_vel_grad,
+    const MPICArrayKokkos<double> & node_coords,
+    const MPICArrayKokkos<double> & node_coords_t0,
+    const MPICArrayKokkos<double> & node_vel,
+    const DCArrayKokkos<double>   & GaussPoints_vel_grad,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
@@ -187,6 +188,7 @@ void SGH3D::update_state(
             Materials.MaterialFunctions(mat_id).calc_stress(
                                         GaussPoints_vel_grad,
                                         node_coords,
+                                        node_coords_t0,
                                         node_vel,
                                         mesh.nodes_in_elem,
                                         MaterialPoints_pres,
@@ -294,6 +296,7 @@ void SGH3D::update_stress(
     const swage::Mesh_t& mesh,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const MPICArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& node_coords_t0,
     const MPICArrayKokkos<double>& node_vel,
     const DCArrayKokkos<double>& GaussPoints_vel_grad,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
@@ -348,6 +351,7 @@ void SGH3D::update_stress(
             Materials.MaterialFunctions.host(mat_id).calc_stress(
                                             GaussPoints_vel_grad,
                                             node_coords,
+                                            node_coords_t0,
                                             node_vel,
                                             mesh.nodes_in_elem,
                                             MaterialPoints_pres,
@@ -398,6 +402,7 @@ void SGH3D::update_stress(
             Materials.MaterialFunctions(mat_id).calc_stress(
                                             GaussPoints_vel_grad,
                                             node_coords,
+                                            node_coords_t0,
                                             node_vel,
                                             mesh.nodes_in_elem,
                                             MaterialPoints_pres,
