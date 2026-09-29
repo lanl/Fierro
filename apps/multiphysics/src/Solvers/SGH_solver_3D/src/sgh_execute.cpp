@@ -609,18 +609,44 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // 1. Compute the mesh velocity. Final location minus current (from Lagrange)/(dt (d\tau = 1).  (maybe make DT = 1, pseudotime).
         // Communicate the mesh velocity from the lagrangian step 
-        std::cout << "Computing mesh velocity" << std::endl;
+        // std::cout << "Computing mesh velocity" << std::endl;
         FOR_ALL(node_gid, 0, mesh.num_nodes, {
             for(size_t dim = 0; dim < mesh.num_dims; dim++){
                 this->mesh_node_velocity(node_gid, dim) = (this->mesh_node_target_coords(node_gid, dim) - State.node.coords(node_gid, dim)) / 1.0; // dt = 1.0 for now
             }
         });
+
+
         
 
 
         // 2. Compute advection CFL, and pseudo DT. Solver embedded inside of the solver.
         // -----------------------------------------------------
-        const double max_vel = 1.0; // the CFL velocity used for calculating d_tau
+
+        // double max_vel = 0.0;
+        // FOR_REDUCE_MAX(node_gid, 0, mesh.num_nodes, max_vel, {
+
+        //     double speed = 0.0;
+        //     for(size_t dim = 0; dim < mesh.num_dims; dim++){
+        //         speed += this->mesh_node_velocity(node_gid, dim)*this->mesh_node_velocity(node_gid, dim);
+        //     }
+        //     speed = sqrt(speed);
+        //     max_vel = std::max(max_vel, speed);
+        // });
+
+
+        double loc_sum = 0;
+        double max_vel  = 0;
+        FOR_REDUCE_SUM(node_gid, 0, mesh.num_nodes,
+                       loc_sum, {
+            double speed = 0.0;
+            for(size_t dim = 0; dim < mesh.num_dims; dim++){
+                speed += this->mesh_node_velocity(node_gid, dim)*this->mesh_node_velocity(node_gid, dim);
+            }
+            speed = sqrt(speed);
+            loc_sum += speed;
+        }, max_vel);
+
         double h_cfl = 1.e-6;       // the CFL length scale for calculating d_tau
         double dt_tau = 1.e-6;          // dt_tau from CFL at start, this time is pseudo time
         double tau = 0.0; 
@@ -638,7 +664,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         const size_t elem_dims = mesh.num_dims;
         
 
-        const size_t max_cycles = 1;
+        const size_t max_cycles = 10000;
 
         // Initialize corner data with results from lagrange step
         // First, geometric quantities
@@ -702,9 +728,27 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         // --------------------------------------------------
         // Time integration loop
         // WARNING: Be careful to not use intermediate state from remapped fields in not yet remapped fields.
+
+        // Conservation Check
+        double sum_elem = 0.0;
+        double domain_mass_t0 = 0.0;
+        for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
+            FOR_REDUCE_SUM(mat_elem_sid, 0, num_mat_elems, sum_elem, {
+                const size_t elem_gid = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, mat_elem_sid);
+                for(size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
+                    const size_t corner_gid = mesh.corners_in_elem(elem_gid, node_lid);
+                    const size_t corner_sid = State.corners_in_mat_elem(mat_elem_sid, node_lid);
+                    sum_elem += State.corner.volume(corner_gid)*State.MaterialCorners.density(mat_id, corner_sid);
+                }
+            }, domain_mass_t0);
+        }
+
+    
+
         for(size_t cycle = 0; cycle < max_cycles; cycle++){
             
-            if(cycle%10 == 0) printf(" time = %.4f \n", tau);
+            if(cycle%100 == 0) printf(" tau = %.4f \n", tau);
 
 
             // --------------------------------------------------
@@ -747,6 +791,12 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 });
             }
 
+            FOR_ALL(node_gid, 0, num_nodes, {
+                for(size_t dim = 0; dim < mesh.num_dims; dim++){
+                    State.node.coords_n0(node_gid, dim) = State.node.coords(node_gid, dim);
+                }
+            });
+
 
 
             // ------------------------------------------------------
@@ -766,14 +816,17 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             }, min_vol_qpt);
             h_cfl = pow(min_vol_qpt, 0.3333333);
 
-            dt = 0.1*h_cfl/max_vel; // pseudo time step used for the remap
+            dt_tau = 0.1*h_cfl/max_vel; // pseudo time step used for the remap
 
-            std::cout << "CFL time step: " << dt << std::endl;
+            double overstep = tau_final - tau;
+            dt_tau = std::min(dt_tau, overstep);
+
+            // std::cout << "CFL time step: " << dt_tau << std::endl;
 
             // A tangled element gives a non-positive quadrature volume, so the CFL
             // length becomes NaN. NaN then defeats both the max_time test and the
             // mass conservation check below, so the run has to stop here.
-            if(!(dt > 0.0)){
+            if(!(dt_tau > 0.0)){
                 printf("\n STOPPING at time = %.6f, cycle %zu: CFL length is %g,"
                     " the mesh has tangled.\n", tau, cycle, h_cfl);
                 break;
@@ -802,10 +855,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 // });
 
 
-                // ----------------------------------------------------------
-                // Step 3: Calculate the surface fluxes at quadrature points
+
 
                 // geometry is shared by all materials and fields
+                // These two function compute a value of units volume/delta_tau for a representative swept volume over the time step
                 build_surface_vn(mesh, RefSurf, SurfQuad, tables, State.node.coords, this->mesh_node_velocity,
                                  this->surf_vn, num_surfs, num_qpts_in_surf, num_nodes_in_elem);
                 build_qpt_advection_velocity(mesh, Quad, tables, this->elem_det_jac, this->inv_jac_ijq,
@@ -817,50 +870,149 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
                     size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
 
+                    
+                    group_surface_flux(mesh, tables, this->surf_vn, this->surf_qpt_qpt_map,
+                        State.MaterialToMeshMaps.elem_in_mat_elem,
+                        State.MeshtoMaterialMaps.mats_in_elem,
+                        State.MeshtoMaterialMaps.mat_elems_in_elem,
+                        State.corners_in_mat_elem,
+                        State.MaterialCorners.density,
+                        State.MaterialCorners.specific_internal_energy,
+                        State.MaterialCorners.specific_kinetic_energy,
+                        this->ALE_state,
+                        mat_id, num_mat_elems,
+                        num_surfs_in_elem, num_qpts_in_surf, num_nodes_in_elem);
+
+                    // ----------------------------------------------------------
+                    // Step 3: Calculate the surface fluxes and RHS
                     // Density
-                    build_surface_flux(mesh, tables, this->surf_vn, this->surf_qpt_qpt_map,
-                                       State.MaterialToMeshMaps.elem_in_mat_elem,
-                                       State.MeshtoMaterialMaps.mats_in_elem,
-                                       State.MeshtoMaterialMaps.mat_elems_in_elem,
-                                       State.corners_in_mat_elem,
-                                       State.MaterialCorners.density,
-                                       this->RHS_surf_flux,
-                                       mat_id, num_mat_elems,
-                                       num_surfs_in_elem, num_qpts_in_surf, num_nodes_in_elem);
+                    // build_surface_flux(mesh, tables, this->surf_vn, this->surf_qpt_qpt_map,
+                    //                    State.MaterialToMeshMaps.elem_in_mat_elem,
+                    //                    State.MeshtoMaterialMaps.mats_in_elem,
+                    //                    State.MeshtoMaterialMaps.mat_elems_in_elem,
+                    //                    State.corners_in_mat_elem,
+                    //                    State.MaterialCorners.density,
+                    //                    this->RHS_surf_flux_density,
+                    //                    mat_id, num_mat_elems,
+                    //                    num_surfs_in_elem, num_qpts_in_surf, num_nodes_in_elem);
+
+                    assemble_rhs(mesh, tables, this->qpt_adv_vel, this->RHS_surf_flux_density,
+                                State.corner.volume_n0,
+                                State.MaterialToMeshMaps.elem_in_mat_elem,
+                                State.corners_in_mat_elem,
+                                State.MaterialCorners.density,
+                                State.MaterialCorners.density_n0,
+                                this->mat_qpt_field, this->RHS_corner_density,
+                                rk_alpha, dt, mat_id, num_mat_elems,
+                                num_nodes_in_elem, num_qpts_in_elem,
+                                num_surfs_in_elem, num_qpts_in_surf, elem_dims);
+
+                    // Specific internal energy
+                    // build_surface_flux(mesh, tables, this->surf_vn, this->surf_qpt_qpt_map,
+                    //                     State.MaterialToMeshMaps.elem_in_mat_elem,
+                    //                     State.MeshtoMaterialMaps.mats_in_elem,
+                    //                     State.MeshtoMaterialMaps.mat_elems_in_elem,
+                    //                     State.corners_in_mat_elem,
+                    //                     State.MaterialCorners.specific_internal_energy,
+                    //                     this->RHS_surf_flux_sie,
+                    //                     mat_id, num_mat_elems,
+                    //                     num_surfs_in_elem, num_qpts_in_surf, num_nodes_in_elem);
+
+                    assemble_rhs(mesh, tables, this->qpt_adv_vel, this->RHS_surf_flux_sie,
+                        State.corner.volume_n0,
+                        State.MaterialToMeshMaps.elem_in_mat_elem,
+                        State.corners_in_mat_elem,
+                        State.MaterialCorners.specific_internal_energy,
+                        State.MaterialCorners.specific_internal_energy_n0,
+                        this->mat_qpt_field, this->RHS_corner_sie,
+                        rk_alpha, dt, mat_id, num_mat_elems,
+                        num_nodes_in_elem, num_qpts_in_elem,
+                        num_surfs_in_elem, num_qpts_in_surf, elem_dims);
+
+
+                    // Specific kinetic energy
+                    // build_surface_flux(mesh, tables, this->surf_vn, this->surf_qpt_qpt_map,
+                    //     State.MaterialToMeshMaps.elem_in_mat_elem,
+                    //     State.MeshtoMaterialMaps.mats_in_elem,
+                    //     State.MeshtoMaterialMaps.mat_elems_in_elem,
+                    //     State.corners_in_mat_elem,
+                    //     State.MaterialCorners.specific_kinetic_energy,
+                    //     this->RHS_surf_flux_ske,
+                    //     mat_id, num_mat_elems,
+                    //     num_surfs_in_elem, num_qpts_in_surf, num_nodes_in_elem);
+
+                    assemble_rhs(mesh, tables, this->qpt_adv_vel, this->RHS_surf_flux_ske,
+                        State.corner.volume_n0,
+                        State.MaterialToMeshMaps.elem_in_mat_elem,
+                        State.corners_in_mat_elem,
+                        State.MaterialCorners.specific_kinetic_energy,
+                        State.MaterialCorners.specific_kinetic_energy_n0,
+                        this->mat_qpt_field, this->RHS_corner_ske,
+                        rk_alpha, dt, mat_id, num_mat_elems,
+                        num_nodes_in_elem, num_qpts_in_elem,
+                        num_surfs_in_elem, num_qpts_in_surf, elem_dims);
+                    
+                    
+                    // // Speed
+                    // build_surface_flux(mesh, tables, this->surf_vn, this->surf_qpt_qpt_map,
+                    //     State.MaterialToMeshMaps.elem_in_mat_elem,
+                    //     State.MeshtoMaterialMaps.mats_in_elem,
+                    //     State.MeshtoMaterialMaps.mat_elems_in_elem,
+                    //     State.corners_in_mat_elem,
+                    //     State.MaterialCorners.speed,
+                    //     this->RHS_surf_flux_speed,
+                    //     mat_id, num_mat_elems,
+                    //     num_surfs_in_elem, num_qpts_in_surf, num_nodes_in_elem);
+
+                    // assemble_rhs(mesh, tables, this->qpt_adv_vel, this->RHS_surf_flux_speed,
+                    //     State.corner.volume_n0,
+                    //     State.MaterialToMeshMaps.elem_in_mat_elem,
+                    //     State.corners_in_mat_elem,
+                    //     State.MaterialCorners.speed,
+                    //     State.MaterialCorners.speed_n0,
+                    //     this->mat_qpt_field, this->RHS_corner_speed,
+                    //     rk_alpha, dt, mat_id, num_mat_elems,
+                    //     num_nodes_in_elem, num_qpts_in_elem,
+                    //     num_surfs_in_elem, num_qpts_in_surf, elem_dims);
+
+
+                    // Normalized velocity vector
+                    // Vector quadrature storage flattens (qpt_lid, dim) as
+                    // qpt_lid*elem_dims + dim inside the vector helpers.
+                    // build_surface_flux_vector(mesh, tables, this->surf_vn, this->surf_qpt_qpt_map,
+                    //     State.MaterialToMeshMaps.elem_in_mat_elem,
+                    //     State.MeshtoMaterialMaps.mats_in_elem,
+                    //     State.MeshtoMaterialMaps.mat_elems_in_elem,
+                    //     State.corners_in_mat_elem,
+                    //     State.MaterialCorners.velocity,
+                    //     this->RHS_surf_flux_velocity,
+                    //     mat_id, num_mat_elems,
+                    //     num_surfs_in_elem, num_qpts_in_surf, num_nodes_in_elem, elem_dims);
+
+                    // assemble_rhs_vector(mesh, tables, this->qpt_adv_vel, this->RHS_surf_flux_velocity,
+                    //     State.corner.volume_n0,
+                    //     State.MaterialToMeshMaps.elem_in_mat_elem,
+                    //     State.corners_in_mat_elem,
+                    //     State.MaterialCorners.velocity,
+                    //     State.MaterialCorners.velocity_n0,
+                    //     this->mat_qpt_field, this->RHS_corner_velocity,
+                    //     rk_alpha, dt, mat_id, num_mat_elems,
+                    //     num_nodes_in_elem, num_qpts_in_elem,
+                    //     num_surfs_in_elem, num_qpts_in_surf, elem_dims);
 
                 } // end for mat_id
 
-
-                // -------------------------------------------------
-                // Step 4: Build RHS of DG equations in the element
-
-                for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-
-                    size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
-
-                    // Density
-                    assemble_rhs(mesh, tables, this->qpt_adv_vel, this->RHS_surf_flux,
-                                 State.corner.volume_n0,
-                                 State.MaterialToMeshMaps.elem_in_mat_elem,
-                                 State.corners_in_mat_elem,
-                                 State.MaterialCorners.density,
-                                 State.MaterialCorners.density_n0,
-                                 this->mat_qpt_field, this->RHS_corner,
-                                 rk_alpha, dt, mat_id, num_mat_elems,
-                                 num_nodes_in_elem, num_qpts_in_elem,
-                                 num_surfs_in_elem, num_qpts_in_surf, elem_dims);
-
-                } // end for mat_id
 
 
                 // ================================================================
                 // Step 5: Move the mesh to the new location
-                // FOR_ALL(node_gid, 0, num_nodes,{
-                //     // new position of the mesh
-                //     node_coords(node_gid, 0) = node_coords_n(node_gid, 0) + 0.5*(node_velocity(node_gid, 0)+node_velocity_n(node_gid, 0)) * rk_alpha * dt; 
-                //     node_coords(node_gid, 1) = node_coords_n(node_gid, 1) + 0.5*(node_velocity(node_gid, 1)+node_velocity_n(node_gid, 1)) * rk_alpha * dt;
-                //     // z-coords never change
-                // });
+                FOR_ALL(node_gid, 0, num_nodes,{
+                    // new position of the mesh
+                    State.node.coords(node_gid, 0) = State.node.coords_n0(node_gid, 0) + 0.5*(this->mesh_node_velocity(node_gid, 0)+this->mesh_node_velocity(node_gid, 0)) * rk_alpha * dt_tau;
+                    State.node.coords(node_gid, 1) = State.node.coords_n0(node_gid, 1) + 0.5*(this->mesh_node_velocity(node_gid, 1)+this->mesh_node_velocity(node_gid, 1)) * rk_alpha * dt_tau;
+                    State.node.coords(node_gid, 2) = State.node.coords_n0(node_gid, 2) + 0.5*(this->mesh_node_velocity(node_gid, 2)+this->mesh_node_velocity(node_gid, 2)) * rk_alpha * dt_tau;
+
+                });
 
 
                 // ================================================================
@@ -874,7 +1026,6 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 // -----------------------------------------------------
                 // 7. Solve M * u^{n+1} = RHS where M is diagonal
-                const auto RHS_corner_loc = this->RHS_corner;
                 for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
                     size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
@@ -887,24 +1038,65 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                         const size_t corner_gid = mesh.corners_in_elem(elem_gid, dof_lid);
                         const size_t corner_sid = State.corners_in_mat_elem(mat_elem_sid, dof_lid);
 
-                        State.MaterialCorners.density(mat_id, corner_sid) = RHS_corner_loc(mat_id, corner_sid)/State.corner.volume(corner_gid);
+                        State.MaterialCorners.density(mat_id, corner_sid) = RHS_corner_density(mat_id, corner_sid)/State.corner.volume(corner_gid);
                     });
                 } // end for mat_id
 
-
-                // -----------------------------------------------------
-                // 8. A slope/bound limiter would be applied to corner_field here;
-                //    see limit_corner_field in remap_dg_lumped_test.cpp.
-
             } // end Runge Kutta time level loop
 
-
+        
             // ================================================================
             // Step 7: update time
-            tau += dt;
+            tau += dt_tau;
+
+
+            // Conservation Check
+            double sum_elem = 0.0;
+            double domain_mass_time = 0.0;
+            for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+                size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
+                FOR_REDUCE_SUM(mat_elem_sid, 0, num_mat_elems, sum_elem, {
+                    const size_t elem_gid = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, mat_elem_sid);
+                    for(size_t node_lid=0; node_lid<num_nodes_in_elem; node_lid++){
+                        const size_t corner_gid = mesh.corners_in_elem(elem_gid, node_lid);
+                        const size_t corner_sid = State.corners_in_mat_elem(mat_elem_sid, node_lid);
+                        sum_elem += State.corner.volume(corner_gid)*State.MaterialCorners.density(mat_id, corner_sid);
+                    }
+                }, domain_mass_time);
+            }
+
+            //printf("Domain mass error = %.17g (domain_mass_time = %.17g, domain_mass_t0 = %.17g)\n", domain_mass_time - domain_mass_t0, domain_mass_time, domain_mass_t0);
+       
+            if(fabs(domain_mass_time-domain_mass_t0)>1.e-12) Kokkos::abort("ERROR: Mass is not conserved");
+
             
+            if (tau >= tau_final){
+                break;
+            }
+
             
         } // end loop over cycle
+
+        // Integrate the fields from the Eulerian step to be the new fields for the next lagrangian step.
+        for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
+
+            size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
+
+            // Density of the material point from the remapped corner density
+            integrate_corner_field_to_mat_points(Quad, tables, this->elem_det_jac,
+                State.MaterialToMeshMaps.elem_in_mat_elem, State.corners_in_mat_elem,
+                State.MaterialCorners.density, State.MaterialPoints.den,
+                mat_id, num_mat_elems, num_nodes_in_elem, num_qpts_in_elem);
+
+            // Specific internal energy of the material point from the remapped corner SIE
+            integrate_corner_field_to_mat_points(Quad, tables, this->elem_det_jac,
+                State.MaterialToMeshMaps.elem_in_mat_elem, State.corners_in_mat_elem,
+                State.MaterialCorners.specific_internal_energy, State.MaterialPoints.sie,
+                mat_id, num_mat_elems, num_nodes_in_elem, num_qpts_in_elem);
+
+        } // end for mat_id
+        Kokkos::fence(); 
+        
 
         
 

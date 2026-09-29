@@ -43,6 +43,30 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using namespace mtr;
 
 
+struct ALE_state_t
+{
+    // Calculate RHS_surf_flux
+    DRaggedRightArrayKokkos <double> RHS_surf_flux_density; //(num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux_density"); 
+    DRaggedRightArrayKokkos <double> RHS_corner_density; //(num_material_corners_buffer, "RHS_corner_density"), access as (mat_id, corner_sid); 
+    
+    DRaggedRightArrayKokkos <double> RHS_surf_flux_sie; //(num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux_sie"); 
+    DRaggedRightArrayKokkos <double> RHS_corner_sie; //(num_material_corners_buffer, "RHS_corner_sie"), access as (mat_id, corner_sid); 
+
+    DRaggedRightArrayKokkos <double> RHS_surf_flux_ske; // Specific kinetic energy
+    DRaggedRightArrayKokkos <double> RHS_corner_ske; // Specific kinetic energy
+
+    // Velocity flux: (mat_id, mat_elem_sid, face_lid, qpt_lid*elem_dims + dim).
+    DRaggedRightArrayKokkos <double> RHS_surf_flux_vel_x; //(num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux_vel_x"); 
+    DRaggedRightArrayKokkos <double> RHS_surf_flux_vel_y; //(num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux_vel_y"); 
+    DRaggedRightArrayKokkos <double> RHS_surf_flux_vel_z; //(num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux_vel_z"); 
+    DRaggedRightArrayKokkos <double> RHS_corner_vel_x; //(num_material_corners_buffer, "RHS_corner_vel_x"); 
+    DRaggedRightArrayKokkos <double> RHS_corner_vel_y; //(num_material_corners_buffer, "RHS_corner_vel_y"); 
+    DRaggedRightArrayKokkos <double> RHS_corner_vel_z; //(num_material_corners_buffer, "RHS_corner_vel_z"); 
+
+    CArrayKokkos<double> qpt_adv_vel; //(num_elems, num_qpts_in_elem, elem_dims, "qpt_adv_vel");
+};
+
+
 
 // ============================================================================
 // Reference-element tables replicated in the layouts the GPU kernels want.
@@ -161,7 +185,7 @@ static void build_lumped_volume(const swage::Mesh_t& Mesh,
             const double vol_qpt = elem_det_jac(elem_gid, qpt_lid)*Quad.qpt_weights(qpt_lid);
             vol += tables.basis_row_sum(qpt_lid)*FERefElem.qpt_basis(qpt_lid, node_lid)*vol_qpt;
         }
-        corner_vol(Mesh.corners_in_elem(elem_gid, node_lid)) = vol;
+        corconer_vol(Mesh.corners_in_elem(elem_gid, node_lid)) = vol;
     });
 } // end build_lumped_volume
 
@@ -327,6 +351,191 @@ static void build_surface_flux(const swage::Mesh_t& Mesh,
 } // end build_surface_flux
 
 
+KOKKOS_FORCEINLINE_FUNCTION
+static void compute_field_flux(
+    const swage::Mesh_t& Mesh,
+    const DRaggedRightArrayKokkos<double>& corner_field,
+    const DRaggedRightArrayKokkos<double>& RHS_flux,
+    const double normal_dot_vel,
+    const DCArrayKokkos<size_t>& mats_in_elem,
+    const CArrayKokkos<int>& surf_qpt_qpt_map,
+    const DCArrayKokkos<size_t>& mat_elems_in_elem,
+    const corners_in_mat_t& corners_in_mat_elem,
+    const BasisTables_t& tables,
+    const size_t side,
+    const size_t mat_elem_sid, 
+    const size_t face_lid,
+    const size_t qpt_lid,
+    const size_t elem_gid, 
+    const size_t surf_gid,
+    const size_t mat_id,
+    const size_t num_nodes_in_elem){
+
+    double qpt_field = 0.0;
+    for(size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+        qpt_field += tables.surf_basis_fdq(face_lid, node_lid, qpt_lid)
+                    *corner_field(mat_id, corners_in_mat_elem(mat_elem_sid, node_lid));
+    }
+
+    // neighbor state, defaults to own state on boundaries and material interfaces
+    double nbr_qpt_field = qpt_field;
+    if(Mesh.num_elems_in_surf(surf_gid) == 2){
+
+        const size_t nbr_side = 1 - side;
+        const size_t nbr_elem_gid = Mesh.elems_in_surf(surf_gid, nbr_side);
+
+        if(mats_in_elem(nbr_elem_gid, 0) == mat_id){
+
+            const size_t nbr_face_lid = Mesh.faces_in_surf(surf_gid, nbr_side);
+            const size_t nbr_qpt_lid  = surf_qpt_qpt_map(surf_gid, side, qpt_lid);
+            const size_t nbr_mat_elem_sid = mat_elems_in_elem(nbr_elem_gid, 0);
+
+            nbr_qpt_field = 0.0;
+            for(size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+                nbr_qpt_field += tables.surf_basis_fdq(nbr_face_lid, node_lid, nbr_qpt_lid)
+                                *corner_field(mat_id, corners_in_mat_elem(nbr_mat_elem_sid, node_lid));
+            }
+        } // end if neighbor is the same material
+    } // end if interior surface
+
+    RHS_flux(mat_id, mat_elem_sid, face_lid, qpt_lid) =
+                0.5*(qpt_field + nbr_qpt_field)*normal_dot_vel
+            - 0.5*fabs(normal_dot_vel)*(qpt_field - nbr_qpt_field);
+
+}
+
+
+static void group_surface_flux(const swage::Mesh_t& Mesh,
+    const BasisTables_t& tables,
+    const CArrayKokkos<double>& surf_vn,
+    const CArrayKokkos<int>& surf_qpt_qpt_map,
+    const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
+    const DCArrayKokkos<size_t>& mats_in_elem,
+    const DCArrayKokkos<size_t>& mat_elems_in_elem,
+    const corners_in_mat_t& corners_in_mat_elem,
+    const DRaggedRightArrayKokkos<double>& density_corner_field,
+    const DRaggedRightArrayKokkos<double>& sie_corner_field,
+    const DRaggedRightArrayKokkos<double>& ske_corner_field,
+    ALE_state_t& ALE_state,
+    const size_t mat_id,
+    const size_t num_mat_elems,
+    const size_t num_surfs_in_elem,
+    const size_t num_qpts_in_surf,
+    const size_t num_nodes_in_elem)
+{
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems,
+            face_lid, 0, num_surfs_in_elem,
+            qpt_lid, 0, num_qpts_in_surf, {
+
+        const size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+        const size_t surf_gid = Mesh.surfs_in_elem(elem_gid, face_lid);
+
+        // which side of the surface this element face is on
+        const size_t side = (Mesh.elems_in_surf(surf_gid, 0) == (int)elem_gid &&
+                             Mesh.faces_in_surf(surf_gid, 0) == (int)face_lid) ? 0 : 1;
+
+        const double normal_dot_vel = (side == 0) ?
+                 surf_vn(surf_gid, qpt_lid) :
+                -surf_vn(surf_gid, surf_qpt_qpt_map(surf_gid, 1, qpt_lid));
+
+        compute_field_flux(Mesh, density_corner_field, ALE_state.RHS_surf_flux_density, normal_dot_vel,
+            mats_in_elem, surf_qpt_qpt_map, mat_elems_in_elem, corners_in_mat_elem, tables, side,
+            mat_elem_sid, face_lid, qpt_lid, elem_gid, surf_gid, mat_id, Mesh.num_nodes_in_elem);
+
+        compute_field_flux(Mesh, sie_corner_field, ALE_state.RHS_surf_flux_sie, normal_dot_vel,
+            mats_in_elem, surf_qpt_qpt_map, mat_elems_in_elem, corners_in_mat_elem, tables, side,
+            mat_elem_sid, face_lid, qpt_lid, elem_gid, surf_gid, mat_id, Mesh.num_nodes_in_elem);
+
+        compute_field_flux(Mesh, ske_corner_field, ALE_state.RHS_surf_flux_ske, normal_dot_vel,
+            mats_in_elem, surf_qpt_qpt_map, mat_elems_in_elem, corners_in_mat_elem, tables, side,
+            mat_elem_sid, face_lid, qpt_lid, elem_gid, surf_gid, mat_id, Mesh.num_nodes_in_elem);
+
+        compute_field_flux(Mesh, density_corner_field, ALE_state.RHS_surf_flux_density, normal_dot_vel,
+            mats_in_elem, surf_qpt_qpt_map, mat_elems_in_elem, corners_in_mat_elem, tables, side,
+            mat_elem_sid, face_lid, qpt_lid, elem_gid, surf_gid, mat_id, Mesh.num_nodes_in_elem);
+        
+    });
+} // end build_surface_flux
+
+static void build_surface_flux_vector(const swage::Mesh_t& Mesh,
+    const BasisTables_t& tables,
+    const CArrayKokkos<double>& surf_vn,
+    const CArrayKokkos<int>& surf_qpt_qpt_map,
+    const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
+    const DCArrayKokkos<size_t>& mats_in_elem,
+    const DCArrayKokkos<size_t>& mat_elems_in_elem,
+    const corners_in_mat_t& corners_in_mat_elem,
+    const DRaggedRightArrayKokkos<double>& mat_corner_field,     // (mat_id, corner_sid, dim)
+    const DRaggedRightArrayKokkos<double>& RHS_surf_flux_vector, // (mat_id, mat_elem_sid, face_lid, qpt_lid*num_dims + dim)
+    const size_t mat_id,
+    const size_t num_mat_elems,
+    const size_t num_surfs_in_elem,
+    const size_t num_qpts_in_surf,
+    const size_t num_nodes_in_elem,
+    const size_t num_dims)
+{
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems,
+            face_lid, 0, num_surfs_in_elem,
+            qpt_lid, 0, num_qpts_in_surf, {
+
+        const size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+        const size_t surf_gid = Mesh.surfs_in_elem(elem_gid, face_lid);
+
+        // which side of the surface this element face is on
+        const size_t side = (Mesh.elems_in_surf(surf_gid, 0) == (int)elem_gid &&
+                             Mesh.faces_in_surf(surf_gid, 0) == (int)face_lid) ? 0 : 1;
+
+        const double normal_dot_vel = (side == 0) ?
+                 surf_vn(surf_gid, qpt_lid) :
+                -surf_vn(surf_gid, surf_qpt_qpt_map(surf_gid, 1, qpt_lid));
+
+        // Neighbor topology is shared by every vector component.
+        bool has_same_material_neighbor = false;
+        size_t nbr_face_lid = 0;
+        size_t nbr_qpt_lid = 0;
+        size_t nbr_mat_elem_sid = 0;
+        if(Mesh.num_elems_in_surf(surf_gid) == 2){
+
+            const size_t nbr_side = 1 - side;
+            const size_t nbr_elem_gid = Mesh.elems_in_surf(surf_gid, nbr_side);
+
+            if(mats_in_elem(nbr_elem_gid, 0) == mat_id){
+                has_same_material_neighbor = true;
+                nbr_face_lid = Mesh.faces_in_surf(surf_gid, nbr_side);
+                nbr_qpt_lid = surf_qpt_qpt_map(surf_gid, side, qpt_lid);
+                nbr_mat_elem_sid = mat_elems_in_elem(nbr_elem_gid, 0);
+            }
+        }
+
+        for(size_t dim = 0; dim < num_dims; dim++){
+            double qpt_field = 0.0;
+            for(size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+                qpt_field += tables.surf_basis_fdq(face_lid, node_lid, qpt_lid)
+                           * mat_corner_field(mat_id, corners_in_mat_elem(mat_elem_sid, node_lid), dim);
+            }
+
+            // Boundaries and material interfaces use the element's own state.
+            double nbr_qpt_field = qpt_field;
+            if(has_same_material_neighbor){
+                nbr_qpt_field = 0.0;
+                for(size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+                    nbr_qpt_field += tables.surf_basis_fdq(nbr_face_lid, node_lid, nbr_qpt_lid)
+                                   * mat_corner_field(mat_id, corners_in_mat_elem(nbr_mat_elem_sid, node_lid), dim);
+                }
+            }
+
+            // The ragged array has no fifth index, so (qpt_lid, dim) is flattened
+            // with dim contiguous: qpt_dim_lid = qpt_lid*num_dims + dim.
+            const size_t qpt_dim_lid = qpt_lid*num_dims + dim;
+            RHS_surf_flux_vector(mat_id, mat_elem_sid, face_lid, qpt_dim_lid) =
+                      0.5*(qpt_field + nbr_qpt_field)*normal_dot_vel
+                    - 0.5*fabs(normal_dot_vel)*(qpt_field - nbr_qpt_field);
+        }
+    });
+} // end build_surface_flux_vector
+
+
+
 // ============================================================================
 // Mapped, integration weighted mesh velocity at every volume quadrature point,
 // qpt_adv_vel(elem, qpt, j) = [ sum_i Jinv(j,i) v_i ] * detJ * w.
@@ -457,6 +666,176 @@ static void assemble_rhs(const swage::Mesh_t& Mesh,
         RHS_corner(mat_id, corner_sid) = rhs;
     });
 } // end assemble_rhs
+
+
+static void assemble_rhs_vector(const swage::Mesh_t& Mesh,
+    const BasisTables_t& tables,
+    const CArrayKokkos<double>& qpt_adv_vel,
+    const DRaggedRightArrayKokkos<double>& RHS_surf_flux, // (mat_id, mat_elem_sid, face_lid, qpt_lid*elem_dims + dim)
+    const DCArrayKokkos<double>& corner_volume_n0,
+    const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
+    const corners_in_mat_t& corners_in_mat_elem,
+    const DRaggedRightArrayKokkos<double>& mat_corner_field,    // (mat_id, corner_sid, dim)
+    const DRaggedRightArrayKokkos<double>& mat_corner_field_n0, // (mat_id, corner_sid, dim)
+    const DRaggedRightArrayKokkos<double>& mat_qpt_field,       // (mat_id, mat_elem_sid, qpt_lid*elem_dims + dim)
+    const DRaggedRightArrayKokkos<double>& RHS_corner,          // (mat_id, corner_sid, dim)
+    const double rk_alpha,
+    const double dt,
+    const size_t mat_id,
+    const size_t num_mat_elems,
+    const size_t num_nodes_in_elem,
+    const size_t num_qpts_in_elem,
+    const size_t num_surfs_in_elem,
+    const size_t num_qpts_in_surf,
+    const size_t elem_dims)
+{
+    // Pass 1: reconstruct each vector component at each quadrature point.
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems,
+            qpt_lid, 0, num_qpts_in_elem,
+            dim, 0, elem_dims, {
+
+        double qpt_field = 0.0;
+        for(size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+            qpt_field += tables.basis_dq(node_lid, qpt_lid)
+                       *mat_corner_field(mat_id, corners_in_mat_elem(mat_elem_sid, node_lid), dim);
+        }
+        // Flatten (qpt_lid, dim) because DRaggedRightArrayKokkos supports only
+        // one remaining index after (mat_id, mat_elem_sid) for this scratch field.
+        const size_t qpt_dim_lid = qpt_lid*elem_dims + dim;
+        mat_qpt_field(mat_id, mat_elem_sid, qpt_dim_lid) = qpt_field;
+    });
+    // Pass 2 reads what pass 1 wrote into mat_qpt_field.
+    Kokkos::fence();
+
+    // Pass 2: one thread per (material element, DOF, vector component).
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems,
+            dof_lid, 0, num_nodes_in_elem,
+            dim, 0, elem_dims, {
+
+        const size_t elem_gid   = elem_in_mat_elem(mat_id, mat_elem_sid);
+        const size_t corner_gid = Mesh.corners_in_elem(elem_gid, dof_lid);
+        const size_t corner_sid = corners_in_mat_elem(mat_elem_sid, dof_lid);
+
+        // 4a. the M*u^n term; remember node_lid = dof_lid = corner_lid
+        double rhs = corner_volume_n0(corner_gid)*mat_corner_field_n0(mat_id, corner_sid, dim);
+
+        // 4b. subtract the VOLUME integral: \int (\nabla phi_q) J^{-1} (v U) dV
+        double vol_integral = 0.0;
+        for(size_t qpt_lid = 0; qpt_lid < num_qpts_in_elem; qpt_lid++){
+            double grad_dot_vel = 0.0;
+            for(size_t j = 0; j < elem_dims; j++){
+                grad_dot_vel += tables.grad_basis_qjd(qpt_lid, j, dof_lid)*qpt_adv_vel(elem_gid, qpt_lid, j);
+            }
+            const size_t qpt_dim_lid = qpt_lid*elem_dims + dim;
+            vol_integral += grad_dot_vel*mat_qpt_field(mat_id, mat_elem_sid, qpt_dim_lid);
+        }
+        rhs -= rk_alpha*dt*vol_integral;
+
+        // 4c. add the SURFACE flux contribution
+        double surf_integral = 0.0;
+        for(size_t face_lid = 0; face_lid < num_surfs_in_elem; face_lid++){
+            for(size_t qpt_lid = 0; qpt_lid < num_qpts_in_surf; qpt_lid++){
+                const size_t qpt_dim_lid = qpt_lid*elem_dims + dim;
+                surf_integral += RHS_surf_flux(mat_id, mat_elem_sid, face_lid, qpt_dim_lid)
+                    * tables.surf_basis_fdq(face_lid, dof_lid, qpt_lid);
+            }
+        }
+        rhs += rk_alpha*dt*surf_integral;
+
+        RHS_corner(mat_id, corner_sid, dim) = rhs;
+    });
+} // end assemble_rhs_vector
+
+
+// ============================================================================
+// Integrates a corner field over each material element with the reference
+// element quadrature:
+//   out = sum_q w_q detJ(e,q) u(q),  where u(q) = sum_n phi_n(q) u_n
+// Writes one value per material element, which for SGH is the cell-centered
+// material point (mat_point_sid == mat_elem_sid).  Divide by the element
+// volume afterwards if an average is wanted.
+//
+// With row-sum lumping the result equals sum_n corner_vol(n)*u_n, so the
+// integral of a density is exactly the mass conserved by the remap.
+// elem_det_jac must hold the current geometry.
+// ============================================================================
+static void integrate_corner_field_to_mat_points(
+    const elements::Quadrature_t& Quad,
+    const BasisTables_t& tables,
+    const CArrayKokkos<double>& elem_det_jac,
+    const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
+    const corners_in_mat_t& corners_in_mat_elem,
+    const DRaggedRightArrayKokkos<double>& mat_corner_field, // (mat_id, corner_sid)
+    const DRaggedRightArrayKokkos<double>& mat_point_field,  // (mat_id, mat_point_sid)
+    const size_t mat_id,
+    const size_t num_mat_elems,
+    const size_t num_nodes_in_elem,
+    const size_t num_qpts_in_elem)
+{
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+
+        const size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+
+        double integral = 0.0;
+        double volume = 0.0;
+        for(size_t qpt_lid = 0; qpt_lid < num_qpts_in_elem; qpt_lid++){
+
+            const double vol_qpt = elem_det_jac(elem_gid, qpt_lid)*Quad.qpt_weights(qpt_lid);
+            volume += vol_qpt;
+            double qpt_field = 0.0;
+            for(size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+                qpt_field += tables.basis_dq(node_lid, qpt_lid)
+                           *mat_corner_field(mat_id, corners_in_mat_elem(mat_elem_sid, node_lid));
+            }
+            integral += qpt_field*vol_qpt;
+        }
+
+        mat_point_field(mat_id, mat_elem_sid) = integral / volume;
+    });
+} // end integrate_corner_field_to_mat_points
+
+
+// ============================================================================
+// Vector valued version, mat_corner_field(mat_id, corner_sid, comp) is
+// integrated into mat_point_field(mat_id, mat_point_sid, comp).
+// ============================================================================
+static void integrate_corner_field_to_mat_points(
+    const elements::Quadrature_t& Quad,
+    const BasisTables_t& tables,
+    const CArrayKokkos<double>& elem_det_jac,
+    const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
+    const corners_in_mat_t& corners_in_mat_elem,
+    const DRaggedRightArrayKokkos<double>& mat_corner_field, // (mat_id, corner_sid, comp)
+    const DRaggedRightArrayKokkos<double>& mat_point_field,  // (mat_id, mat_point_sid, comp)
+    const size_t mat_id,
+    const size_t num_mat_elems,
+    const size_t num_nodes_in_elem,
+    const size_t num_qpts_in_elem,
+    const size_t num_comps)
+{
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+
+        const size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+
+        for(size_t comp = 0; comp < num_comps; comp++){
+
+            double integral = 0.0;
+            for(size_t qpt_lid = 0; qpt_lid < num_qpts_in_elem; qpt_lid++){
+
+                const double vol_qpt = elem_det_jac(elem_gid, qpt_lid)*Quad.qpt_weights(qpt_lid);
+
+                double qpt_field = 0.0;
+                for(size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
+                    qpt_field += tables.basis_dq(node_lid, qpt_lid)
+                               *mat_corner_field(mat_id, corners_in_mat_elem(mat_elem_sid, node_lid), comp);
+                }
+                integral += qpt_field*vol_qpt;
+            }
+
+            mat_point_field(mat_id, mat_elem_sid, comp) = integral;
+        }
+    });
+} // end integrate_corner_field_to_mat_points
 
 
 #endif // ALE_HELPERS_HPP

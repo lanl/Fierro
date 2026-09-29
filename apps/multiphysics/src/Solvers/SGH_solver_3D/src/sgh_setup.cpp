@@ -245,11 +245,33 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     this->inv_jac_ijq = CArrayKokkos<double>(mesh.num_elems, elem_dims, elem_dims, num_qpts_in_elem, "inv_jac_ijq");
     
     this->surf_vn = CArrayKokkos<double>(mesh.num_surfs, num_qpts_in_surf, "surf_vn");
-    this->RHS_surf_flux = DRaggedRightArrayKokkos<double>(State.MaterialToMeshMaps.num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux");
-    this->RHS_corner = DRaggedRightArrayKokkos<double>(State.MaterialCorners.num_material_corners_buffer, "RHS_corner");
+    
+    // Desnity related RHS fluxes and fields
+    this->ALE_state.RHS_surf_flux_density = DRaggedRightArrayKokkos<double>(State.MaterialToMeshMaps.num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux_density");
+    this->ALE_state.RHS_corner_density = DRaggedRightArrayKokkos<double>(State.MaterialCorners.num_material_corners_buffer, "RHS_corner_density");
+
+    this->ALE_state.RHS_surf_flux_sie = DRaggedRightArrayKokkos<double>(State.MaterialToMeshMaps.num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux_sie");
+    this->ALE_state.RHS_corner_sie = DRaggedRightArrayKokkos<double>(State.MaterialCorners.num_material_corners_buffer, "RHS_corner_sie");
+
+    this->ALE_state.RHS_surf_flux_ske = DRaggedRightArrayKokkos<double>(State.MaterialToMeshMaps.num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux_ske");
+    this->ALE_state.RHS_corner_ske = DRaggedRightArrayKokkos<double>(State.MaterialCorners.num_material_corners_buffer, "RHS_corner_ske");
+
+    this->ALE_state.RHS_surf_flux_vel_x = DRaggedRightArrayKokkos<double>(State.MaterialToMeshMaps.num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux_vel_x");
+    this->ALE_state.RHS_surf_flux_vel_y = DRaggedRightArrayKokkos<double>(State.MaterialToMeshMaps.num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux_vel_y");
+    this->ALE_state.RHS_surf_flux_vel_z = DRaggedRightArrayKokkos<double>(State.MaterialToMeshMaps.num_mat_elems_buffer, num_surfs_in_elem, num_qpts_in_surf, "RHS_surf_flux_vel_z");
+    this->ALE_state.RHS_corner_vel_x = DRaggedRightArrayKokkos<double>(State.MaterialCorners.num_material_corners_buffer, "RHS_corner_vel_x");
+    this->ALE_state.RHS_corner_vel_y = DRaggedRightArrayKokkos<double>(State.MaterialCorners.num_material_corners_buffer, "RHS_corner_vel_y");
+    this->ALE_state.RHS_corner_vel_z = DRaggedRightArrayKokkos<double>(State.MaterialCorners.num_material_corners_buffer, "RHS_corner_vel_z");
+
+
 
     this->qpt_adv_vel = CArrayKokkos<double>(mesh.num_elems, num_qpts_in_elem, elem_dims, "qpt_adv_vel");
-    this->mat_qpt_field = DRaggedRightArrayKokkos<double>(State.MaterialToMeshMaps.num_mat_elems_buffer, num_qpts_in_elem, "mat_qpt_field");
+    // Shared scalar/vector scratch. Scalar assembly uses qpt_lid; vector assembly
+    // uses qpt_dim_lid = qpt_lid*elem_dims + dim.
+    this->mat_qpt_field = DRaggedRightArrayKokkos<double>(
+        State.MaterialToMeshMaps.num_mat_elems_buffer,
+        num_qpts_in_elem*elem_dims,
+        "mat_qpt_field");
 
     // Setup the basis tables
     tables.basis_row_sum = CArrayKokkos<double>(num_qpts_in_elem, "basis_row_sum");
