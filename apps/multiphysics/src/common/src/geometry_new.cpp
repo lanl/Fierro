@@ -61,7 +61,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 KOKKOS_FUNCTION
 void geometry::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
-    const DCArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 8;
@@ -269,7 +269,7 @@ void geometry::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
 KOKKOS_FUNCTION
 void geometry::get_vol_quad(const DCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
-    const DCArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     elem_vol(elem_gid) = 0.0;
@@ -315,7 +315,7 @@ void geometry::get_vol_quad(const DCArrayKokkos<double>& elem_vol,
 KOKKOS_FUNCTION
 void geometry::get_vol_hex(const DCArrayKokkos<double>& elem_vol,
     const size_t elem_gid,
-    const DCArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 8;
@@ -365,8 +365,8 @@ void geometry::get_vol_hex(const DCArrayKokkos<double>& elem_vol,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void geometry::get_vol(const DCArrayKokkos<double>& elem_vol,
-    const DCArrayKokkos<double>& node_coords,
-    const swage::Mesh& mesh)
+    const MPICArrayKokkos<double>& node_coords,
+    const swage::Mesh_t& mesh)
 {
     const size_t num_dims = mesh.num_dims;
 
@@ -406,7 +406,7 @@ void geometry::get_vol(const DCArrayKokkos<double>& elem_vol,
 KOKKOS_FUNCTION
 void geometry::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
-    const DCArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 4;
@@ -481,7 +481,7 @@ void geometry::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 double geometry::get_area_quad(const size_t   elem_gid,
-    const DCArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     double elem_area = 0.0;
@@ -567,7 +567,7 @@ double geometry::heron(const double x1,
 KOKKOS_FUNCTION
 void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
     const size_t elem_gid,
-    const DCArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<double>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 4;
@@ -630,8 +630,8 @@ size_t check_bdy(const size_t patch_gid,
     const double  orig_x,
     const double  orig_y,
     const double  orig_z,
-    const swage::Mesh& mesh,
-    const DCArrayKokkos<double>& node_coords)
+    const swage::Mesh_t& mesh,
+    const MPICArrayKokkos<double>& node_coords)
 {
     size_t num_dims = mesh.num_dims;
 
@@ -647,7 +647,7 @@ size_t check_bdy(const size_t patch_gid,
         size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
 
         for (size_t dim = 0; dim < num_dims; dim++) {
-            these_patch_coords[dim] = node_coords(node_gid, dim);  // (rk, node_gid, dim)
+            these_patch_coords[dim] = node_coords(node_gid, dim); 
         } // end for dim
 
         // a x-plane
@@ -713,17 +713,18 @@ size_t check_bdy(const size_t patch_gid,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void tag_bdys(const BoundaryCondition_t& boundary,
-    swage::Mesh& mesh,
-    const DCArrayKokkos<double>& node_coords)
+    swage::Mesh_t& mesh,
+    const MPICArrayKokkos<double>& node_coords)
 {
+    // size and initialize the number of boundary surfaces in set
+    mesh.num_bdy_surfs_in_set = DCArrayKokkos<size_t> (mesh.num_bdy_sets);
+    mesh.num_bdy_surfs_in_set.set_values(0);
 
     // create a temporary storage for the bdy patches in a set
     DynamicRaggedRightArrayKokkos<size_t> temp_bdy_patches_in_set (mesh.num_bdy_sets, mesh.num_bdy_patches, "temp_bdy_patches_in_set");
     
     // initialize the number of bdy patches in a set to zero
     mesh.num_bdy_patches_in_set.set_values(0.0); // array length is num_bdy_sets
-
-    std::cout<<"Number of boundary sets = "<<mesh.num_bdy_sets<<std::endl;
 
     // If no boundaries, return
     if(mesh.num_bdy_sets == 0) return;
@@ -790,6 +791,47 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 
     } // end for bdy_set
 
+    // temporary array allocation for tracking which surfaces are in the set
+    CArrayKokkos<size_t> temp_bdy_surfs_in_set (mesh.num_bdy_sets, mesh.num_surfs, "temp_bdy_surfs_in_set");
+    temp_bdy_surfs_in_set.set_values(0);
+
+    // getting number of unique surfaces that appear in bdy_patches_in_set
+    for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
+
+        FOR_ALL(patch_lid, 0, mesh.num_bdy_patches_in_set.host(bdy_set), {
+            const size_t surf_gid = mesh.surf_in_patch(mesh.bdy_patches_in_set(bdy_set, patch_lid));
+            Kokkos::atomic_store(&temp_bdy_surfs_in_set(bdy_set, surf_gid), 1);
+        });
+
+        size_t sum = 0;
+        size_t sum_lcl = 0;
+
+        FOR_REDUCE_SUM(i, 0, mesh.num_surfs, sum_lcl, {
+            sum_lcl += temp_bdy_surfs_in_set(bdy_set, i);
+        }, sum);
+
+        mesh.num_bdy_surfs_in_set.host(bdy_set) = sum;
+
+    }
+    mesh.num_bdy_surfs_in_set.update_device();
+
+    // sizing bdy_surfs_in_set
+    mesh.bdy_surfs_in_set = RaggedRightArrayKokkos<size_t>(mesh.num_bdy_surfs_in_set, " bdy_surfs_in_set");
+
+    // getting the surface ids
+    for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
+        FOR_ALL(surf_lid, 0, mesh.num_bdy_surfs_in_set.host(bdy_set), {
+            size_t tally = 0;
+            for (size_t i = 0; i < mesh.num_surfs; i++) {
+                tally += temp_bdy_surfs_in_set(bdy_set, i);
+                if (tally == surf_lid+1) {
+                    mesh.bdy_surfs_in_set(bdy_set, surf_lid) = i;
+                    break;
+                }
+            }
+        });
+    }
+
     return;
 } // end tag
 
@@ -802,7 +844,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 /// \brief Build sets of boundary nodes
 ///
 /////////////////////////////////////////////////////////////////////////////
-void build_boundry_node_sets(swage::Mesh& mesh)
+void build_boundry_node_sets(swage::Mesh_t& mesh)
 {
     // build boundary nodes in each boundary set
 

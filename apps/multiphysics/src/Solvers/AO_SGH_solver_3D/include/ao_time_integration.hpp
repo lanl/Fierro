@@ -181,8 +181,8 @@ public:
 
     // Stage velocity for the viscosity gradient (Y_i's u-component) and the
     // implicit stage velocity for the energy RHS.
-    DCArrayKokkos<double>& u_curr() { return u_curr_; }
-    DCArrayKokkos<double>& V_curr() { return V_curr_; }
+    MPICArrayKokkos<double>& u_curr() { return u_curr_; }
+    MPICArrayKokkos<double>& V_curr() { return V_curr_; }
     DCArrayKokkos<double>& f_stage()  { return f_stage_; }
     DCArrayKokkos<double>& de_stage() { return de_stage_; }
 
@@ -194,8 +194,8 @@ public:
     //   apply_bc() : velocity BCs on State.node.vel (full steps only)
     template<class ApplyBCFn, class RefreshFn, class RHSFFn, class RHSDEFn>
     void evolve(double                           dt,
-                DCArrayKokkos<double>&           coords,
-                DCArrayKokkos<double>&           vel,
+                MPICArrayKokkos<double>&           coords,
+                MPICArrayKokkos<double>&           vel,
                 DRaggedRightArrayKokkos<double>& sie,
                 const size_t                     mat_id,
                 ApplyBCFn                        apply_bc,
@@ -218,8 +218,8 @@ public:
         refresh();
     }
 
-    void snapshot(const DCArrayKokkos<double>&           coords,
-                  const DCArrayKokkos<double>&           vel,
+    void snapshot(const MPICArrayKokkos<double>&           coords,
+                  const MPICArrayKokkos<double>&           vel,
                   const DRaggedRightArrayKokkos<double>& sie,
                   const size_t                           mat_id)
     {
@@ -249,7 +249,7 @@ public:
     // Load Y_i into the State (x, e) and the stage buffers (u).
     void build_stage_y(int                              i,
                        double                           dt,
-                       DCArrayKokkos<double>&           coords,
+                       MPICArrayKokkos<double>&           coords,
                        DRaggedRightArrayKokkos<double>& sie,
                        const size_t                     mat_id)
     {
@@ -333,8 +333,8 @@ public:
 
 
     void final_combine(double                           dt,
-                       DCArrayKokkos<double>&           coords,
-                       DCArrayKokkos<double>&           vel,
+                       MPICArrayKokkos<double>&           coords,
+                       MPICArrayKokkos<double>&           vel,
                        DRaggedRightArrayKokkos<double>& sie,
                        const size_t                     mat_id)
     {
@@ -398,8 +398,8 @@ private:
     DCArrayKokkos<double> u_stage_;
     DCArrayKokkos<double> f_stage_;
     DCArrayKokkos<double> de_stage_;
-    DCArrayKokkos<double> u_curr_;
-    DCArrayKokkos<double> V_curr_;
+    MPICArrayKokkos<double> u_curr_;
+    MPICArrayKokkos<double> V_curr_;
 
     DCArrayKokkos<double> AI_;
     DCArrayKokkos<double> AE_;
@@ -453,8 +453,8 @@ public:
 
 
     // Snapshot y_n from State at the start of the step.
-    void snapshot(const DCArrayKokkos<double>&           coords,
-                  const DCArrayKokkos<double>&           vel,
+    void snapshot(const MPICArrayKokkos<double>&           coords,
+                  const MPICArrayKokkos<double>&           vel,
                   const DRaggedRightArrayKokkos<double>& sie,
                   const size_t                           mat_id)
     {
@@ -492,8 +492,8 @@ public:
     // energy update never lags behind the matching position state.
     void combine(int                              row_idx,
                  double                           dt,
-                 DCArrayKokkos<double>&           coords,
-                 DCArrayKokkos<double>&           vel,
+                 MPICArrayKokkos<double>&           coords,
+                 MPICArrayKokkos<double>&           vel,
                  DRaggedRightArrayKokkos<double>& sie,
                  const size_t                     mat_id)
     {
@@ -562,8 +562,8 @@ public:
     //   rhs(s)      : fills stage_v(s), stage_a(s), stage_de(s) at Y_s
     template<class ApplyBCFn, class RefreshFn, class RHSFn>
     void evolve(double                           dt,
-                DCArrayKokkos<double>&           coords,
-                DCArrayKokkos<double>&           vel,
+                MPICArrayKokkos<double>&           coords,
+                MPICArrayKokkos<double>&           vel,
                 DRaggedRightArrayKokkos<double>& sie,
                 const size_t                     mat_id,
                 ApplyBCFn                        apply_bc,

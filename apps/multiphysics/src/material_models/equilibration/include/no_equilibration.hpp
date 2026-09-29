@@ -42,7 +42,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace NoEquilibrationModel {
 
     static void equilbration(Material_t& Materials, 
-        swage::Mesh& mesh, 
+        swage::Mesh_t& mesh, 
         State_t& State);
 
 

@@ -67,6 +67,7 @@ void parse_regions(Yaml::Node& root,
                    const size_t num_solvers)
 
 {
+    bool verbose = false; 
     // allocate memory
     num_reg_fills_in_solver = DCArrayKokkos<size_t>(num_solvers, "sim_param.region_setup.num_reg_fills_in_solver");
     num_reg_fills_in_solver.set_values(0);
@@ -250,6 +251,24 @@ void parse_regions(Yaml::Node& root,
                             region_fills(reg_id).z2 = z2;
                         });
                     } // z2
+                    else if (a_subfield_word.compare("half_angle") == 0) {
+                        // half angle
+
+                        double half_angle = root["regions"][r_id]["region"]["volume"]["half_angle"].As<double>();
+
+                        RUN({
+                            region_fills(reg_id).half_angle = half_angle;
+                        });
+                    } // half angle
+                    else if (a_subfield_word.compare("length") == 0) {
+                        // half angle
+
+                        double length = root["regions"][r_id]["region"]["volume"]["length"].As<double>();
+
+                        RUN({
+                            region_fills(reg_id).length = length;
+                        });
+                    } // length
                     else if (a_subfield_word.compare("scale_x") == 0) {
                         // outer plane
 
@@ -300,7 +319,7 @@ void parse_regions(Yaml::Node& root,
                             switch(region_type_map[type]){
 
                                 case region::global:
-                                    std::cout << "Setting volume fill type to global " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to global " << std::endl;
                                     region_fills_host(reg_id).volume = region::global;
                                     RUN({
                                         region_fills(reg_id).volume = region::global;
@@ -308,7 +327,7 @@ void parse_regions(Yaml::Node& root,
                                     break;
 
                                 case region::box:
-                                    std::cout << "Setting volume fill type to box " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to box " << std::endl;
                                     region_fills_host(reg_id).volume = region::box;
                                     RUN({
                                         region_fills(reg_id).volume = region::box;
@@ -316,7 +335,7 @@ void parse_regions(Yaml::Node& root,
                                     break;
 
                                 case region::cylinder:
-                                    std::cout << "Setting volume fill type to cylinder " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to cylinder " << std::endl;
                                     region_fills_host(reg_id).volume = region::cylinder;
                                     RUN({
                                         region_fills(reg_id).volume = region::cylinder;
@@ -324,15 +343,21 @@ void parse_regions(Yaml::Node& root,
                                     break;
 
                                 case region::sphere:
-                                    std::cout << "Setting volume fill type to sphere " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to sphere " << std::endl;
                                     region_fills_host(reg_id).volume = region::sphere;
                                     RUN({
                                         region_fills(reg_id).volume = region::sphere;
                                     });
                                     break;
-
+                                case region::cone:
+                                    if (verbose) std::cout << "Setting volume fill type to cone " << std::endl;
+                                    region_fills_host(reg_id).volume = region::cone;
+                                    RUN({
+                                        region_fills(reg_id).volume = region::cone;
+                                    });
+                                    break;
                                 case region::readVoxelFile:
-                                    std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to readVoxelFile " << std::endl;
                                     region_fills_host(reg_id).volume = region::readVoxelFile;
                                     RUN({
                                         region_fills(reg_id).volume = region::readVoxelFile;
@@ -348,14 +373,14 @@ void parse_regions(Yaml::Node& root,
                                     break;
 
                                 case region::readVTUFile:
-                                    std::cout << "Setting volume fill type to readVTUFile " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to readVTUFile " << std::endl;
                                     region_fills_host(reg_id).volume = region::readVTUFile;
                                     RUN({
                                         region_fills(reg_id).volume = region::readVTUFile;
                                     });
                                     break;
                                 case region::no_volume:
-                                    std::cout << "Setting volume fill type to none " << std::endl;
+                                    if (verbose) std::cout << "Setting volume fill type to none " << std::endl;
                                     region_fills_host(reg_id).volume = region::no_volume;
                                     RUN({
                                         region_fills(reg_id).volume = region::no_volume;
@@ -391,6 +416,30 @@ void parse_regions(Yaml::Node& root,
 
                     } // end file path
                     //
+                    else if (a_subfield_word.compare("unit_vector") == 0) {
+                        std::string unit_vector = root["regions"][r_id]["region"]["volume"]["unit_vector"].As<std::string>();
+
+                        // get the origin numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(unit_vector, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+                        RUN({
+                            region_fills(reg_id).unit_vector[0] = x1;
+                            region_fills(reg_id).unit_vector[1] = y1;
+                            region_fills(reg_id).unit_vector[2] = z1;
+                        });
+                    } // unit vector
                     else if (a_subfield_word.compare("origin") == 0) {
                         std::string origin = root["regions"][r_id]["region"]["volume"]["origin"].As<std::string>();
 

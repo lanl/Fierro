@@ -52,13 +52,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::nodal_gradient(
-        const swage::Mesh mesh,
-        const DCArrayKokkos<double>& node_coords,
-        const DCArrayKokkos<double>& node_level_set_vel,
+        const swage::Mesh_t mesh,
+        const MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_level_set_vel,
         const DCArrayKokkos<double>& node_grad_level_set,
         const DCArrayKokkos<double>& corner_normal,
         const DCArrayKokkos<double>& corner_volume,
-        const DCArrayKokkos<double>& GaussPoints_level_set,
+        const MPICArrayKokkos<double>& GaussPoints_level_set,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const double fuzz) const
 {
@@ -199,12 +199,12 @@ void LevelSet::nodal_gradient(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::update_level_set(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     const Material_t& Materials,
-    const DCArrayKokkos<double>& node_level_set_vel,
+    const MPICArrayKokkos<double>& node_level_set_vel,
     const DCArrayKokkos<double>& node_grad_level_set,
-    const DCArrayKokkos<double>& GaussPoints_level_set,
-    const DCArrayKokkos<double>& GaussPoints_level_set_n0,
+    const MPICArrayKokkos<double>& GaussPoints_level_set,
+    const MPICArrayKokkos<double>& GaussPoints_level_set_n0,
     const DCArrayKokkos<double>& GaussPoints_vol,
     const DCArrayKokkos<double>& corner_normal,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,

@@ -14,7 +14,7 @@ namespace ao_sgh
 // equispaced to GLL via Q1 trilinear of the 8 element corners. Operates
 // on the IJK-lex layout produced by Fierro's read_vtu_mesh.
 void equispaced_to_gll(DCArrayKokkos<size_t>& nodes_in_elem,
-                       DCArrayKokkos<double>& coords,
+                       MPICArrayKokkos<double>& coords,
                        const size_t           num_elems,
                        const size_t           p_order);
 
@@ -23,7 +23,7 @@ void equispaced_to_gll(DCArrayKokkos<size_t>& nodes_in_elem,
 // separate buffer without mutating gll_coords. Used by the kine VTU
 // writer so ParaView's type-72 (equispaced) renderer matches.
 void gll_to_equispaced(const DCArrayKokkos<size_t>& nodes_in_elem,
-                       const DCArrayKokkos<double>& gll_coords,
+                       const MPICArrayKokkos<double>& gll_coords,
                        DCArrayKokkos<double>&       equi_coords,
                        const size_t                 num_elems,
                        const size_t                 p_order);

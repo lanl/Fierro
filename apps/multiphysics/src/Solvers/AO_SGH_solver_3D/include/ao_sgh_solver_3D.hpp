@@ -81,26 +81,26 @@ public:
 
     void initialize(SimulationParameters_t& SimulationParamaters,
                     Material_t& Materials,
-                    swage::Mesh& mesh,
+                    swage::Mesh_t& mesh,
                     BoundaryCondition_t& Boundary,
                     State_t& State) const override;
 
     void initialize_material_state(SimulationParameters_t& SimulationParamaters,
                                    Material_t& Materials,
-                                   swage::Mesh& mesh,
+                                   swage::Mesh_t& mesh,
                                    BoundaryCondition_t& Boundary,
                                    State_t& State) const override;
 
     void setup(SimulationParameters_t& SimulationParamaters,
                Material_t& Materials,
-               swage::Mesh& mesh,
+               swage::Mesh_t& mesh,
                BoundaryCondition_t& Boundary,
                State_t& State) override;
 
     void execute(SimulationParameters_t& SimulationParamaters,
                  Material_t& Materials,
                  BoundaryCondition_t& Boundary,
-                 swage::Mesh& mesh,
+                 swage::Mesh_t& mesh,
                  State_t& State) override;
 
     void finalize(SimulationParameters_t& SimulationParamaters,
@@ -109,15 +109,15 @@ public:
 
     // Slip / reflected-velocity / user BCs on the nodal velocity. Dispatches
     // through Fierro's per-set BoundaryConditionFunctions like SGH3D.
-    void boundary_velocity(const swage::Mesh&         mesh,
+    void boundary_velocity(const swage::Mesh_t&         mesh,
                            const BoundaryCondition_t& Boundary,
-                           DCArrayKokkos<double>&     node_vel,
+                           MPICArrayKokkos<double>&     node_vel,
                            const double               time_value) const;
 
     // Zero the wall-normal component of the assembled nodal force at every
     // velocity-BC boundary node, so stage_a stays bounded by physics rather
     // than wall traction. Mirrors the reflected-velocity slip projection.
-    void boundary_force(const swage::Mesh&         mesh,
+    void boundary_force(const swage::Mesh_t&         mesh,
                         const BoundaryCondition_t& Boundary,
                         DCArrayKokkos<double>&     node_force) const;
 };

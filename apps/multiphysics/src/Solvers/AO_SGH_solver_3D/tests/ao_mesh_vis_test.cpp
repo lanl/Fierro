@@ -56,7 +56,7 @@ static void check_true(const bool cond, const std::string& label)
 
 // Equispaced (nx, ny, nz) Pn box on [0,1]^3 with IJK-lex per-elem connectivity.
 static void build_equispaced_box(DCArrayKokkos<size_t>& nodes_in_elem,
-                                 DCArrayKokkos<double>& coords,
+                                 MPICArrayKokkos<double>& coords,
                                  const size_t nx,
                                  const size_t ny,
                                  const size_t nz,
@@ -75,7 +75,7 @@ static void build_equispaced_box(DCArrayKokkos<size_t>& nodes_in_elem,
     const double dye = 1.0 / (ny * p_order);
     const double dze = 1.0 / (nz * p_order);
 
-    coords        = DCArrayKokkos<double>(num_nodes, 3, "vis_test_coords");
+    coords        = MPICArrayKokkos<double>(num_nodes, 3, "vis_test_coords");
     nodes_in_elem = DCArrayKokkos<size_t>(num_elems, npe, "vis_test_nodes_in_elem");
 
     for (size_t k = 0; k < npk; ++k) {
@@ -114,8 +114,8 @@ static void build_equispaced_box(DCArrayKokkos<size_t>& nodes_in_elem,
 
 
 // Canonical tg_vortex velocity IC.
-static void apply_tg_vortex_inline(const DCArrayKokkos<double>& coords,
-                                   DCArrayKokkos<double>&       vel,
+static void apply_tg_vortex_inline(const MPICArrayKokkos<double>& coords,
+                                   MPICArrayKokkos<double>&       vel,
                                    const size_t                 num_nodes)
 {
     const double PI = 3.14159265358979323846;
@@ -154,7 +154,7 @@ static void test_full_pipeline_2x2x2_p3()
     const size_t p  = 3;
 
     DCArrayKokkos<size_t> nodes_in_elem;
-    DCArrayKokkos<double> coords;
+    MPICArrayKokkos<double> coords;
     build_equispaced_box(nodes_in_elem, coords, nx, ny, nz, p);
 
     const size_t n1d = p + 1;
@@ -164,7 +164,7 @@ static void test_full_pipeline_2x2x2_p3()
 
     equispaced_to_gll(nodes_in_elem, coords, num_elems, p);
 
-    DCArrayKokkos<double> vel(num_nodes, 3, "vis_test_vel");
+    MPICArrayKokkos<double> vel(num_nodes, 3, "vis_test_vel");
     apply_tg_vortex_inline(coords, vel, num_nodes);
 
     {

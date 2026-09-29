@@ -104,7 +104,7 @@ void mat_mult_3x3(const double A[3][3], const double B[3][3], double C[3][3]) {
 ///
 /////////////////////////////////////////////////////////////////////////////
 inline void prescribe_reorientation_kinematics(
-    const swage::Mesh& mesh,
+    const swage::Mesh_t& mesh,
     State_t& State,
     const CArrayKokkos<double>& initial_coords,
     const CArrayKokkos<int>&    cz_b_side_flag,

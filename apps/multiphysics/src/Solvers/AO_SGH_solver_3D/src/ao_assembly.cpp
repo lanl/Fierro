@@ -347,7 +347,7 @@ void apply_force_mult(const DCArrayKokkos<size_t>& nodes_in_elem,
 
 void apply_force_mult_transpose(const DCArrayKokkos<size_t>& nodes_in_elem,
                                 const DCArrayKokkos<double>& stress_jinvt,
-                                const DCArrayKokkos<double>& velocity_node,
+                                const MPICArrayKokkos<double>& velocity_node,
                                 const ref_elem_t&            kine_ref,
                                 const ref_elem_t&            thermo_ref,
                                 const quadrature_t&          quad,

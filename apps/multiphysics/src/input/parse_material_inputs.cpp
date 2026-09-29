@@ -73,6 +73,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "host_user_defined_strength.hpp"
 #include "host_ann_strength.hpp"
 #include "decoupled_plasticity.hpp"
+#include "QS_iso_lin_elastic.hpp"
 
 // ----
 #if __has_include("decoupled_strength.hpp")
@@ -106,10 +107,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // =================================================================================
 void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_dims)    
 {
+    bool verbose = false; 
     Yaml::Node& material_yaml = root["materials"];
 
     size_t num_materials = material_yaml.Size();
-    std::cout << "Number of materials =  "<< num_materials << std::endl;
 
     // Verify that at least one material is specified
     if (num_materials == 0) {
@@ -226,7 +227,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                     // eos_type_map[type] returns enum value, e.g., model::decoupled
                     switch(eos_type_map[type]){
                         case model::decoupledEOSType:
-                            std::cout << "Setting EOS type to decoupled " << std::endl;
+                            if (verbose) std::cout << "Setting EOS type to decoupled " << std::endl;
                             RUN({
                                 Materials.MaterialEnums(mat_id).EOSType = model::decoupledEOSType;
                             });
@@ -235,7 +236,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                             break;
 
                         case model::coupledEOSType:
-                            std::cout << "Setting EOS type to coupled " << std::endl;
+                            if (verbose) std::cout << "Setting EOS type to coupled " << std::endl;
                             RUN({
                                 Materials.MaterialEnums(mat_id).EOSType = model::coupledEOSType;
                             });
@@ -411,7 +412,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 // set the strength
                 if (strength_models_map.find(strength_model) != strength_models_map.end()) {
 
-                    std::cout << "strength model = \n" << strength_models_map[strength_model] << std::endl;
+                    if (verbose) std::cout << "strength model = \n" << strength_models_map[strength_model] << std::endl;
                     
                     switch(strength_models_map[strength_model]){
 
@@ -494,7 +495,27 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                             Materials.MaterialFunctions.host(mat_id).init_strength_state_vars = &HypoPlasticityRZModel::init_strength_state_vars;
                             // note: default run location for initialization is always host
 
-                            break;  
+                            break;
+                        
+                        case model::QSIsotropicLinearElastic:
+
+                            if(num_dims == 2){
+                                std::cout << "ERROR: specified 2D but this is a 3D strength model: " << strength_model << std::endl;
+                                throw std::runtime_error("**** Strength model is not valid in 2D ****");
+                            }
+
+                            // set the stress function
+                            RUN({
+                                Materials.MaterialFunctions(mat_id).calc_stress = &QSIsotropicLinearElastic::calc_stress;
+                                Materials.MaterialFunctions(mat_id).fill_C_matrix = &QSIsotropicLinearElastic::fill_C_matrix;
+                            });
+                            // note: default run location for strength is device
+
+                            // set the strength initialization function
+                            Materials.MaterialFunctions.host(mat_id).init_strength_state_vars = &QSIsotropicLinearElastic::init_strength_state_vars;
+                            // note: default run location for initialization is always host
+
+                            break;
 
                         // add other elastic plastic models here, e.g., Johnson-Cook strength etc.
                         // ....
@@ -669,6 +690,38 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 } // end if
 
             } // dissipation model 
+            // extract ALE model
+            else if (a_word.compare("ale_model") == 0) {
+                std::string ale_model = root["materials"][m_id]["material"]["ale_model"].As<std::string>();
+
+                // set the ALE model
+                if (ale_model_map.find(ale_model) != ale_model_map.end()) {
+                    switch(ale_model_map[ale_model]){
+                        case model::noALE:
+                            Materials.MaterialEnums.host(mat_id).ALEType = model::noALE;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).ALEType = model::noALE;
+                            });
+                            break;
+                        case model::ALE:
+                            std::cout << "ALE model: " << ale_model << std::endl;
+                            Materials.MaterialEnums.host(mat_id).ALEType = model::ALE;
+                            RUN({
+                                Materials.MaterialEnums(mat_id).ALEType = model::ALE;
+                            });
+                            break;
+                        default:
+                            std::cout << "ERROR: invalid ALE input: " << ale_model << std::endl;
+                            throw std::runtime_error("**** ALE model Not Understood ****");
+                            break;
+                    } // end switch
+                } 
+                else{
+                    std::cout << "ERROR: invalid ALE type input: " << ale_model << std::endl;
+                    throw std::runtime_error("**** ALE model Not Understood ****");
+                    break;
+                }
+            }
             // level set model
             else if (a_word.compare("level_set_type") == 0) {
                 std::string level_set_type = root["materials"][m_id]["material"]["level_set_type"].As<std::string>();
@@ -746,8 +799,6 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     double eos_var = root["materials"][m_id]["material"]["eos_global_vars"][global_var_id].As<double>();
-                    
-
                     RUN({
                         tempGlobalEOSVars(mat_id, global_var_id) = eos_var;
                     });

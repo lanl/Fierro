@@ -6,7 +6,7 @@ namespace ao_sgh
 {
 
 double compute_total_volume(const DCArrayKokkos<size_t>& nodes_in_elem,
-                            const DCArrayKokkos<double>& node_coords,
+                            const MPICArrayKokkos<double>& node_coords,
                             const ref_elem_t&            kine_ref,
                             const quadrature_t&          quad,
                             const size_t                 num_elems)
@@ -93,7 +93,7 @@ double compute_total_volume(const DCArrayKokkos<size_t>& nodes_in_elem,
 
 
 void compute_reference_qpt_data(const DCArrayKokkos<size_t>& nodes_in_elem,
-                                const DCArrayKokkos<double>& node_coords,
+                                const MPICArrayKokkos<double>& node_coords,
                                 const ref_elem_t&            kine_ref,
                                 const quadrature_t&          quad,
                                 const size_t                 num_elems,
@@ -277,7 +277,7 @@ double compute_total_mass(const DCArrayKokkos<double>& rho0_detj0_w,
 
 
 void compute_jacobian_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
-                              const DCArrayKokkos<double>& node_coords,
+                              const MPICArrayKokkos<double>& node_coords,
                               const ref_elem_t&            kine_ref,
                               const quadrature_t&          quad,
                               const size_t                 num_elems,
@@ -414,7 +414,7 @@ void compute_jacobian_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
 
 
 void compute_position_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
-                              const DCArrayKokkos<double>& node_coords,
+                              const MPICArrayKokkos<double>& node_coords,
                               const ref_elem_t&            kine_ref,
                               const quadrature_t&          quad,
                               const size_t                 num_elems,
@@ -497,7 +497,7 @@ void compute_position_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
 
 
 void compute_velocity_gradient_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
-                                       const DCArrayKokkos<double>& node_vel,
+                                       const MPICArrayKokkos<double>& node_vel,
                                        const DCArrayKokkos<double>& jac_inv,
                                        const ref_elem_t&            kine_ref,
                                        const quadrature_t&          quad,

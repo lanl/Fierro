@@ -49,9 +49,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::boundary_velocity_rz(const swage::Mesh&      mesh,
+void SGHRZ::boundary_velocity_rz(const swage::Mesh_t&      mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
-                                 DCArrayKokkos<double>& node_vel,
+                                 MPICArrayKokkos<double>& node_vel,
                                  const double time_value) const
 {
 
@@ -100,9 +100,9 @@ void SGHRZ::boundary_velocity_rz(const swage::Mesh&      mesh,
 /// \param The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::boundary_contact_rz(const swage::Mesh& mesh,
+void SGHRZ::boundary_contact_rz(const swage::Mesh_t& mesh,
                                 const BoundaryCondition_t& BoundaryConditions,
-                                DCArrayKokkos<double>& node_vel,
+                                MPICArrayKokkos<double>& node_vel,
                                 const double time_value) const
 {
     return;

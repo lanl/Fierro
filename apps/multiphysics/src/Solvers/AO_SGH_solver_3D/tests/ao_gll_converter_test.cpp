@@ -39,7 +39,7 @@ static void check_close(const double actual,
 
 // Equispaced (nx, ny, nz) Pn box on [0,1]^3 with IJK-lex per-elem connectivity.
 static void build_equispaced_box(DCArrayKokkos<size_t>& nodes_in_elem,
-                                 DCArrayKokkos<double>& coords,
+                                 MPICArrayKokkos<double>& coords,
                                  const size_t nx,
                                  const size_t ny,
                                  const size_t nz,
@@ -58,7 +58,7 @@ static void build_equispaced_box(DCArrayKokkos<size_t>& nodes_in_elem,
     const double dye = 1.0 / (ny * p_order);
     const double dze = 1.0 / (nz * p_order);
 
-    coords        = DCArrayKokkos<double>(num_nodes, 3, "test_coords");
+    coords        = MPICArrayKokkos<double>(num_nodes, 3, "test_coords");
     nodes_in_elem = DCArrayKokkos<size_t>(num_elems, npe, "test_nodes_in_elem");
 
     for (size_t k = 0; k < npk; ++k) {
@@ -104,7 +104,7 @@ static void test_single_element_p3()
     const size_t p = 3;
     const size_t n1d = p + 1;
     DCArrayKokkos<size_t> nodes_in_elem;
-    DCArrayKokkos<double> coords;
+    MPICArrayKokkos<double> coords;
     build_equispaced_box(nodes_in_elem, coords, 1, 1, 1, p);
 
     equispaced_to_gll(nodes_in_elem, coords, /*num_elems*/ 1, p);
@@ -187,7 +187,7 @@ static void test_shared_face_consistency_2x1x1_p3()
     const size_t n1d = p + 1;
 
     DCArrayKokkos<size_t> nodes_in_elem;
-    DCArrayKokkos<double> coords;
+    MPICArrayKokkos<double> coords;
     build_equispaced_box(nodes_in_elem, coords, 2, 1, 1, p);
 
     equispaced_to_gll(nodes_in_elem, coords, /*num_elems*/ 2, p);
@@ -231,7 +231,7 @@ static void test_roundtrip_equi_gll_equi_2x1x1_p3()
 
     const size_t p = 3;
     DCArrayKokkos<size_t> nodes_in_elem;
-    DCArrayKokkos<double> equi_in;
+    MPICArrayKokkos<double> equi_in;
     build_equispaced_box(nodes_in_elem, equi_in, 2, 1, 1, p);
 
     // Take a snapshot of the original equispaced coords for comparison.

@@ -109,7 +109,7 @@ namespace
 
 void AO_SGH3D::initialize(SimulationParameters_t& SimulationParamaters,
                           Material_t& /*Materials*/,
-                          swage::Mesh& mesh,
+                          swage::Mesh_t& mesh,
                           BoundaryCondition_t& /*Boundary*/,
                           State_t& State) const
 {
@@ -161,7 +161,7 @@ void AO_SGH3D::initialize(SimulationParameters_t& SimulationParamaters,
 
 void AO_SGH3D::initialize_material_state(SimulationParameters_t& /*SimulationParamaters*/,
                                          Material_t& /*Materials*/,
-                                         swage::Mesh& /*mesh*/,
+                                         swage::Mesh_t& /*mesh*/,
                                          BoundaryCondition_t& /*Boundary*/,
                                          State_t& State) const
 {
@@ -236,8 +236,8 @@ inline std::vector<double> build_B_kine_at_thermo(const ref_elem_t& kine_ref,
 // via the kine basis evaluated at the thermo 1D reference nodes.
 template<class FieldFn>
 void interpolate_at_thermo_dofs(FieldFn                            f,
-                                const swage::Mesh&                 mesh,
-                                const DCArrayKokkos<double>&       node_coords,
+                                const swage::Mesh_t&                 mesh,
+                                const MPICArrayKokkos<double>&       node_coords,
                                 const ref_elem_t&                  kine_ref,
                                 const ref_elem_t&                  thermo_ref,
                                 const size_t                       mat_id,
@@ -282,8 +282,8 @@ void interpolate_at_thermo_dofs(FieldFn                            f,
 // Per-DoF set of the analytic TG velocity at the kine GLL nodes. tg_velocity
 // is called by name (a direct device call); routing it through a function
 // pointer would capture the host address and misbehave on the GPU backends.
-void set_tg_velocity(const DCArrayKokkos<double>&   node_coords,
-                     DCArrayKokkos<double>&         node_vel,
+void set_tg_velocity(const MPICArrayKokkos<double>&   node_coords,
+                     MPICArrayKokkos<double>&         node_vel,
                      const size_t                   num_nodes)
 {
     FOR_ALL(n, 0, num_nodes, {
@@ -414,7 +414,7 @@ double compute_cfl_dt(const DCArrayKokkos<double>&            jac_inv,
 //   detj, jac_inv at every qpt; density via pointwise formula;
 //   qpt physical coords (for the viz dump); sie at qpts (gather/reconstruct);
 //   pressure & sound speed via EOS dispatch.
-void update_state_from_coords(const swage::Mesh&     mesh,
+void update_state_from_coords(const swage::Mesh_t&     mesh,
                               const ref_elem_t&      kine_ref,
                               const ref_elem_t&      thermo_ref,
                               const quadrature_t&    quad,
@@ -475,7 +475,7 @@ void update_state_from_coords(const swage::Mesh&     mesh,
 
 // Build the per-element L2 viz coefficients (sie, pres, den) and write the
 // kine + thermo .vtu pair tagged with the current cycle.
-void dump_viz(const swage::Mesh&    mesh,
+void dump_viz(const swage::Mesh_t&    mesh,
               const ref_elem_t&     kine_ref,
               const ref_elem_t&     thermo_ref,
               const quadrature_t&   quad,
@@ -529,7 +529,7 @@ void dump_viz(const swage::Mesh&    mesh,
 
 void AO_SGH3D::setup(SimulationParameters_t& SimulationParamaters,
                      Material_t& Materials,
-                     swage::Mesh& mesh,
+                     swage::Mesh_t& mesh,
                      BoundaryCondition_t& /*Boundary*/,
                      State_t& State)
 {
@@ -652,7 +652,7 @@ void AO_SGH3D::setup(SimulationParameters_t& SimulationParamaters,
 void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                        Material_t& Materials,
                        BoundaryCondition_t& Boundary,
-                       swage::Mesh& mesh,
+                       swage::Mesh_t& mesh,
                        State_t& State)
 {
     const size_t mat_id = 0;
@@ -811,7 +811,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // sigma(Y) [+ viscosity from vel_for_visc] -> stress_jinvt -> clamped
     // F.1 into State.node.force. stress_jinvt persists for the F^T apply.
-    auto assemble_forces = [&](DCArrayKokkos<double>& vel_for_visc) {
+    auto assemble_forces = [&](MPICArrayKokkos<double>& vel_for_visc) {
         build_sigma_from_pressure(State.MaterialPoints.pres, num_gauss_pts, mat_id, sigma_qpt);
 
         if (use_viscosity) {

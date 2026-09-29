@@ -70,6 +70,15 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "user_defined_velocity_bc.hpp"
 #include "zero_velocity_bc.hpp"
 
+// displacement bc files
+#include "no_displacement_bc.hpp"
+#include "reflected_displacement_bc.hpp"
+#include "user_defined_displacement_bc.hpp"
+#include "fixed_displacement_bc.hpp"
+#include "total_displacement_bc.hpp"
+#include "piston_displacement_bc.hpp"
+#include "cyclic_displacement_bc.hpp"
+
 
 // temperature bc files
 #include "constant_temp_bc.hpp"
@@ -80,6 +89,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "time_varying_stress_bc.hpp"
 #include "user_defined_stress_bc.hpp"
 #include "fracture_stress_bc.hpp"
+
+// quasi static stress bc files
+#include "no_quasi_static_stress_bc.hpp"
+#include "uniform_quasi_static_stress_bc.hpp"
+#include "linear_quasi_static_stress_bc.hpp"
+#include "cyclic_quasi_static_stress_bc.hpp"
+#include "user_defined_quasi_static_stress_bc.hpp"
+#include "uniform_pressure_quasi_static_stress_bc.hpp"
 
 
 
@@ -96,14 +113,13 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const size_t num_solvers)
 {
 
+    bool verbose = false; 
+
     Yaml::Node& bc_yaml = root["boundary_conditions"];
 
     size_t num_bcs = bc_yaml.Size();
 
-    std::cout<<"Number of boundary conditions = " << num_bcs << std::endl;
-
     BoundaryConditions.num_bcs = num_bcs;
-
     BoundaryConditions.BoundaryConditionSetup = CArrayKokkos <BoundaryConditionSetup_t>(num_bcs, "bc_setup_vars");
 
     // device functions
@@ -114,18 +130,19 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
     // --- BC velocity ---
     // stores the velocity bdy node lists per solver, in the future, this needs to be a DualRaggedRight
-    BoundaryConditions.vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "vel_bdy_sets_in_solver");  
+    BoundaryConditions.vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "vel_bdy_sets_in_solver");
+    BoundaryConditions.disp_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "disp_bdy_sets_in_solver");
     BoundaryConditions.temperature_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "temperature_bdy_sets_in_solver");
-    // this stores the number of bdy sets for a solver
    
-
     // this stores the number of vel bdy sets for a solver
-    BoundaryConditions.num_vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_vel_bdy_sets_in_solver");   
+    BoundaryConditions.num_vel_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_vel_bdy_sets_in_solver");
+    BoundaryConditions.num_disp_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_disp_bdy_sets_in_solver");
     BoundaryConditions.num_temperature_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_temperature_bdy_sets_in_solver");
     
     // set the storage counter to zero
     for(size_t solver_id=0; solver_id<num_solvers; solver_id++){
         BoundaryConditions.num_vel_bdy_sets_in_solver.host(solver_id) = 0;
+        BoundaryConditions.num_disp_bdy_sets_in_solver.host(solver_id) = 0;
         BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id) = 0;
     } // end for
 
@@ -139,17 +156,30 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
         BoundaryConditions.num_stress_bdy_sets_in_solver.host(solver_id) = 0;
     } // end for
 
+    // stores the quasi static stress bdy node lists per solver, in the future, this needs to be a DualRaggedRight
+    BoundaryConditions.qstatx_stress_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, num_bcs, "qstatx_stress_bdy_sets_in_solver");  
+    // this stores the number of stess bdy sets for a solver
+    BoundaryConditions.num_qstatx_stress_bdy_sets_in_solver = DCArrayKokkos<size_t> (num_solvers, "num_qstatx_stress_bdy_sets_in_solver");   
+    // set the storage counter to zero
+    for(size_t solver_id=0; solver_id<num_solvers; solver_id++){
+        BoundaryConditions.num_qstatx_stress_bdy_sets_in_solver.host(solver_id) = 0;
+    } // end for
+
 
     // temporary arrays for boundary condition variables
     DCArrayKokkos<double> tempVelocityBCGlobalVars (num_bcs, 100, "temporary_velocity_bc_global_values");
+    DCArrayKokkos<double> tempDisplacementBCGlobalVars (num_bcs, 100, "temporary_displacement_bc_global_values");
 
     DCArrayKokkos<double> tempTemperatureBCGlobalVars (num_bcs, 100, "temporary_temperature_bc_global_values");
     DCArrayKokkos<double> tempStressBCGlobalVars (num_bcs, 100, "temporary_stress_bc_global_values");
+    DCArrayKokkos<double> tempQstatxStressBCGlobalVars (num_bcs, 100, "temporary_qstatx_stress_bc_global_values");
     // DCArrayKokkos<double> tempHeatFluxBCGlobalVars (num_bcs, 100, "temporary_heat_flux_bc_global_values");
     
-    BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars"); 
+    BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars");
+    BoundaryConditions.num_displacement_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_displacement_bc_global_vars");
     BoundaryConditions.num_temperature_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_temperature_bc_global_vars");
     BoundaryConditions.num_stress_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_stress_bc_global_vars");
+    BoundaryConditions.num_qstatx_stress_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_qstatx_stress_bc_global_vars");
     // BoundaryConditions.num_heat_flux_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_heat_flux_bc_global_vars"); 
 
     
@@ -159,9 +189,11 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     // initialize the num of global vars to 0 for all models
     FOR_ALL(bc_id, 0, num_bcs, {
         BoundaryConditions.num_velocity_bc_global_vars(bc_id) = 0;
+        BoundaryConditions.num_displacement_bc_global_vars(bc_id) = 0;
 
         BoundaryConditions.num_temperature_bc_global_vars(bc_id) = 0;
         BoundaryConditions.num_stress_bc_global_vars(bc_id) = 0;
+        BoundaryConditions.num_qstatx_stress_bc_global_vars(bc_id) = 0;
         // BoundaryConditions.num_heat_flux_bc_global_vars(bc_id) = 0;
     }); // end parallel for
 
@@ -242,8 +274,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     switch(map[velocity_model]){
 
                         case boundary_conditions::constantVelocityBC :
-                            std::cout << "Setting constant velocity bc " << std::endl;
-                            
+                            if (verbose) std::cout << "Setting constant velocity bc " << std::endl;
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::constantVelocityBC ;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ConstantVelocityBC::velocity;
@@ -251,7 +282,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::timeVaryingVelocityBC:
-                            std::cout << "Setting time varying velocity bc " << std::endl;
+                            if (verbose) std::cout << "Setting time varying velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::timeVaryingVelocityBC;
@@ -260,7 +291,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
                         
                         case boundary_conditions::reflectedVelocityBC:
-                            std::cout << "Setting reflected velocity bc " << std::endl;
+                            if (verbose) std::cout << "Setting reflected velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::reflectedVelocityBC;
@@ -269,7 +300,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::zeroVelocityBC:
-                            std::cout << "Setting zero velocity bc " << std::endl;
+                            if (verbose) std::cout << "Setting zero velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::zeroVelocityBC;
@@ -277,7 +308,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             });
                             break;
                         case boundary_conditions::userDefinedVelocityBC:
-                            std::cout << "Setting user defined velocity bc " << std::endl;
+                            if (verbose) std::cout << "Setting user defined velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::userDefinedVelocityBC;
@@ -285,13 +316,21 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             });
                             break;
                         case boundary_conditions::pistonVelocityBC:
-                            std::cout << "Setting piston velocity bc " << std::endl;
+                            if (verbose) std::cout << "Setting piston velocity bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::pistonVelocityBC;
                                 BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &PistonVelocityBC::velocity;
                             });
-                            break;                        
+                            break;
+                        case boundary_conditions::rollerVelocityBC:
+                            std::cout << "Setting piston velocity bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCVelocityModel = boundary_conditions::reflectedVelocityBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).velocity = &ReflectedVelocityBC::velocity;
+                            });
+                            break;                     
                         default:
                             
                             std::cout << "ERROR: invalid velocity boundary condition input: " << velocity_model << std::endl;
@@ -313,18 +352,115 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 } // end if
             } // type
 
-            else if (a_word.compare("temperature_model") == 0) {
-                std::cout << "Inside temperature_model check" << std::endl;
+            else if (a_word.compare("displacement_model") == 0) {
 
                 // Note: solver_id was retrieved at the top of the bc_id loop
 
-                std::cout<<"Solver id = " << solver_id << std::endl;
-                std::cout<<"bc_id = " << bc_id << std::endl;
+                // find out how many displacement bdy sets have been saved 
+                size_t num_saved = BoundaryConditions.num_disp_bdy_sets_in_solver.host(solver_id);
+                BoundaryConditions.disp_bdy_sets_in_solver.host(solver_id, num_saved) = bc_id;
+                BoundaryConditions.num_disp_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
+
+                std::string displacement_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+
+                auto map = bc_displacement_model_map; 
+
+                // set the displacement_model
+                if (map.find(displacement_model) != map.end()) {
+                    auto bc_displacement_model = map[displacement_model];
+
+                    // bc_displacement_model_map[displacement_model] returns enum value, e.g., boundary_conditions::displacement_constant
+                    switch(map[displacement_model]){
+
+                        case boundary_conditions::totalDisplacementBC :
+                            std::cout << "Setting total displacement bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::totalDisplacementBC ;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &TotalDisplacementBC::displacement;
+                            });
+                            break;
+
+                        case boundary_conditions::reflectedDisplacementBC:
+                            std::cout << "Setting reflected displacement bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::reflectedDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &ReflectedDisplacementBC::displacement;
+                            });
+                            break;
+
+                        case boundary_conditions::fixedDisplacementBC:
+                            std::cout << "Setting fixed displacement bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::fixedDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &FixedDisplacementBC::displacement;
+                            });
+                            break;
+                        case boundary_conditions::userDefinedDisplacementBC:
+                            std::cout << "Setting user defined displacement bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::userDefinedDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &UserDefinedDisplacementBC::displacement;
+                            });
+                            break;
+                        case boundary_conditions::pistonDisplacementBC:
+                            std::cout << "Setting piston displacement bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::pistonDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &PistonDisplacementBC::displacement;
+                            });
+                            break;
+                        case boundary_conditions::rollerDisplacementBC:
+                            std::cout << "Setting roller displacement bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::reflectedDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &ReflectedDisplacementBC::displacement;
+                            });
+                            break;
+                        case boundary_conditions::cyclicDisplacementBC:
+                            std::cout << "Setting cyclic displacement bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCDisplacementModel = boundary_conditions::cyclicDisplacementBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).displacement = &CyclicDisplacementBC::displacement;
+                            });
+                            break;                   
+                        default:
+
+                            std::cout << "ERROR: invalid displacement boundary condition input: " << displacement_model << std::endl;
+                            throw std::runtime_error("**** Displacement BC model Not Understood ****");
+                            break;
+
+                    } // end switch
+
+                }
+                else{
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << displacement_model << std::endl;
+                    std::cout << "Valid options are: " << std::endl;
+
+                    for (const auto& pair : map) {
+                        std::cout << "\t" << pair.first << std::endl;
+                    }
+
+                    throw std::runtime_error("**** Boundary Condition Displacement Model Not Understood ****");
+                } // end if
+            } // type
+
+            else if (a_word.compare("temperature_model") == 0) {
+                if (verbose) std::cout << "Inside temperature_model check" << std::endl;
+
+                // Note: solver_id was retrieved at the top of the bc_id loop
+
+                if (verbose) std::cout<<"Solver id = " << solver_id << std::endl;
+                if (verbose) std::cout<<"bc_id = " << bc_id << std::endl;
 
                 // find out how many temperature bdy sets have been saved 
                 size_t num_saved = BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id);
-
-                std::cout<<"num_saved = " << num_saved << std::endl;
 
                 BoundaryConditions.temperature_bdy_sets_in_solver.host(solver_id,num_saved) = bc_id;
                 BoundaryConditions.num_temperature_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
@@ -332,15 +468,13 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 std::string temperature_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
 
                 auto map = bc_temperature_model_map; 
-                std::cout<<"Before map check" << std::endl;
                 // set the temperature_model
                 if (map.find(temperature_model) != map.end()) {
-                    std::cout<<"Inside map check" << std::endl;
                     auto bc_temperature_model = map[temperature_model];
                     
                     switch(map[temperature_model]){
                         case boundary_conditions::constantTemperatureBC:
-                            std::cout << "Setting constant temperature bc " << std::endl;
+                            if (verbose) std::cout << "Setting constant temperature bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCTemperatureModel = boundary_conditions::constantTemperatureBC;
@@ -349,7 +483,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::convectionTemperatureBC:
-                            std::cout << "Setting convection bc " << std::endl;
+                            if (verbose) std::cout << "Setting convection bc " << std::endl;
                             
                             RUN({   
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCTemperatureModel = boundary_conditions::convectionTemperatureBC;
@@ -358,7 +492,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::radiationTemperatureBC:
-                            std::cout << "Setting radiation bc " << std::endl;
+                            if (verbose) std::cout << "Setting radiation bc " << std::endl;
                             
                             RUN({   
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCTemperatureModel = boundary_conditions::radiationTemperatureBC;
@@ -397,7 +531,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     switch(map[stress_model]){
 
                         case boundary_conditions::constantStressBC :
-                            std::cout << "Setting stress bc " << std::endl;
+                            if (verbose) std::cout << "Setting stress bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::constantStressBC ;
@@ -406,7 +540,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::timeVaryingStressBC:
-                            std::cout << "Setting stress bc " << std::endl;
+                            if (verbose) std::cout << "Setting stress bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::timeVaryingStressBC;
@@ -415,7 +549,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::userDefinedStressBC:
-                            std::cout << "Setting stress bc " << std::endl;
+                            if (verbose) std::cout << "Setting stress bc " << std::endl;
                             
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::userDefinedStressBC;
@@ -424,18 +558,18 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                             break;
 
                         case boundary_conditions::globalContact:
-                            std::cout << "Setting contact bc " << std::endl;
+                            if (verbose) std::cout << "Setting contact bc " << std::endl;
                             BoundaryConditions.allow_contact = true;
                             break;
 
                         case boundary_conditions::preloadContact:
-                            std::cout << "Setting preload contact bc " << std::endl;
+                            if (verbose) std::cout << "Setting preload contact bc " << std::endl;
                             BoundaryConditions.allow_preload = true;
                             BoundaryConditions.allow_contact = true;
                             break;
 
                         case boundary_conditions::fractureStressBC:                                  // case of setting up global fracture stress bc
-                            std::cout << "Setting global fracture stress bc " << std::endl;
+                            if (verbose) std::cout << "Setting global fracture stress bc " << std::endl;
                             BoundaryConditions.allow_fracture = true;
                             RUN({
                                 BoundaryConditions.BoundaryConditionEnums(bc_id).BCStressModel = boundary_conditions::fractureStressBC;
@@ -473,6 +607,101 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     throw std::runtime_error("**** Boundary Condition Stress Model Not Understood ****");
                 } // end if
             } // type of stress model
+
+            else if (a_word.compare("qstatx_stress_model") == 0) {
+
+                // Note: solver_id was retrieved at the top of the bc_id loop
+
+                // find out how many stress bdy sets have been saved 
+                size_t num_saved = BoundaryConditions.num_qstatx_stress_bdy_sets_in_solver.host(solver_id);
+                BoundaryConditions.qstatx_stress_bdy_sets_in_solver.host(solver_id, num_saved) = bc_id;
+                BoundaryConditions.num_qstatx_stress_bdy_sets_in_solver.host(solver_id) += 1;  // increment saved counter
+
+                std::string qstatx_stress_model = bc_yaml[bc_id]["boundary_condition"][a_word].As<std::string>();
+
+                auto map = bc_qstatx_stress_model_map; 
+
+                // set the stress_model
+                if (map.find(qstatx_stress_model) != map.end()) {
+                    auto bc_qstatx_stress_model = map[qstatx_stress_model];
+
+                    switch(map[qstatx_stress_model]){
+
+                        case boundary_conditions::noQstatxStressBC :
+                            std::cout << "Setting qstatx stress bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::noQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &NoQstatxStressBC::qstatx_stress;
+                            });
+                            break;
+
+                        case boundary_conditions::uniformQstatxStressBC :
+                            std::cout << "Setting qstatx stress bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::uniformQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &UniformQstatxStressBC::qstatx_stress;
+                            });
+                            break;
+
+                        case boundary_conditions::linearQstatxStressBC:
+                            std::cout << "Setting qstatx stress bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::linearQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &LinearQstatxStressBC::qstatx_stress;
+                            });
+                            break;
+
+                        case boundary_conditions::cyclicQstatxStressBC:
+                            std::cout << "Setting qstatx stress bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::cyclicQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &CyclicQstatxStressBC::qstatx_stress;
+                            });
+                            break;
+
+                        case boundary_conditions::userDefinedQstatxStressBC:
+                            std::cout << "Setting qstatx stress bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::userDefinedQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &UserDefinedQstatxStressBC::qstatx_stress;
+                            });
+                            break;
+
+                        case boundary_conditions::uniformPressureQstatxStressBC:
+                            std::cout << "Setting qstatx stress bc " << std::endl;
+
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::uniformPressureQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &UniformPressureQstatxStressBC::qstatx_stress;
+                            });
+                            break;
+
+                        default:
+
+                            std::cout << "ERROR: invalid qstatx stress boundary condition input: " << qstatx_stress_model << std::endl;
+                            throw std::runtime_error("**** qstatx stress BC model Not Understood ****");
+                            break;
+
+                    } // end switch
+
+                }
+                else{
+                    std::cout << "ERROR: invalid boundary condition option input in YAML file: " << qstatx_stress_model << std::endl;
+                    std::cout << "Valid options are: " << std::endl;
+
+                    for (const auto& pair : map) {
+                        std::cout << "\t" << pair.first << std::endl;
+                    }
+
+
+                    throw std::runtime_error("**** Boundary Condition Qstatx Stress Model Not Understood ****");
+                } // end if
+            } // type of qstatx stress model
 
             // get boundary condition location -- host or device
             else if (a_word.compare("location") == 0) {
@@ -627,10 +856,67 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 } // end loop over global vars
             } // end else if on velocity_bc_global_vars
 
+            // Set the global variables for displacement boundary condition models
+            else if (a_word.compare("displacement_bc_global_vars") == 0) {
+                Yaml::Node & disp_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+
+                size_t num_global_vars = disp_bc_global_vars_yaml.Size();
+
+                if(num_global_vars > 100){
+                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 displacement global vars in the input file ****");
+                } // end check on num_global_vars
+
+                RUN({ 
+                    BoundaryConditions.num_displacement_bc_global_vars(bc_id) = num_global_vars;
+                });
+
+                // store the global displacement parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    std::string var_str = bc_yaml[bc_id]["boundary_condition"]["displacement_bc_global_vars"][global_var_id].As<std::string>();
+
+                    double displacement_bc_var = 0.0;
+
+                    if (var_str == "x" || var_str == "X") {
+                        displacement_bc_var = 0.0;
+                    }
+                    else if (var_str == "y" || var_str == "Y") {
+                        displacement_bc_var = 1.0;
+                    }
+                    else if (var_str == "z" || var_str == "Z") {
+                        displacement_bc_var = 2.0;
+                    }
+                    else {
+                        // 2. If it's not x, y, or z, try to parse it as a number
+                        try {
+                            size_t idx;
+                            displacement_bc_var = std::stod(var_str, &idx);
+
+                            // Check for trailing garbage (e.g., "2E-5abc" or "10xyz")
+                            if (idx < var_str.size()) {
+                                throw std::invalid_argument("Trailing characters");
+                            }
+                        }
+                        catch (const std::exception& e) {
+                            // 3. Fall through to an error if std::stod fails or trailing characters exist
+                            std::cerr << "ERROR: Invalid displacement boundary condition variable value '" << var_str << "' encountered.\n"
+                                    << "Allowed values are 'x', 'y', 'z', or any valid number.\n";
+
+                            // Crash/exit gracefully depending on your framework's error handling
+                            throw std::runtime_error("Invalid YAML configuration value: " + var_str);
+                        }
+                    }
+
+                    RUN({
+                        tempDisplacementBCGlobalVars(bc_id, global_var_id) = displacement_bc_var;
+                    });
+
+                } // end loop over global vars
+            } // end else if on displacement_bc_global_vars
+
             
             // Set the global variables for temperature boundary condition models
             else if (a_word.compare("temperature_bc_global_vars") == 0) {
-                std::cout << "Inside temperature_bc_global_vars" << std::endl;
+                if (verbose) std::cout << "Inside temperature_bc_global_vars" << std::endl;
                 Yaml::Node & temp_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
 
                 size_t num_global_vars = temp_bc_global_vars_yaml.Size();
@@ -667,7 +953,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 } // end check on num_global_vars
 
                 RUN({ 
-                    printf("num global stress vars = %zu \n", num_global_vars);
+                    if (verbose) printf("num global stress vars = %zu \n", num_global_vars);
                     BoundaryConditions.num_stress_bc_global_vars(bc_id) = num_global_vars;
                 });
 
@@ -679,9 +965,67 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     RUN({
                         tempStressBCGlobalVars(bc_id, global_var_id) = stress_bc_var;
                     });
-
                 } // end loop over global vars
             } // end else if on stress_bc_global_vars
+
+            // set the qstatx stress global values
+            else if (a_word.compare("qstatx_stress_bc_global_vars") == 0) {
+
+                Yaml::Node & qstatx_stress_bc_global_vars_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+
+                size_t num_global_vars = qstatx_stress_bc_global_vars_yaml.Size();
+
+                if(num_global_vars>100){
+                    throw std::runtime_error("**** Per boundary condition, the code only supports up to 100 qstatx stress global vars in the input file ****");
+                } // end check on num_global_vars
+
+                RUN({ 
+                    printf("num global qstatx stress vars = %zu \n", num_global_vars);
+                    BoundaryConditions.num_qstatx_stress_bc_global_vars(bc_id) = num_global_vars;
+                });
+
+                // store the qstatx stress parameters
+                for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
+                    std::string var_str = bc_yaml[bc_id]["boundary_condition"]["qstatx_stress_bc_global_vars"][global_var_id].As<std::string>();
+
+                    double qstatx_stress_bc_var = 0.0;
+
+                    if (var_str == "x" || var_str == "X") {
+                        qstatx_stress_bc_var = 0.0;
+                    }
+                    else if (var_str == "y" || var_str == "Y") {
+                        qstatx_stress_bc_var = 1.0;
+                    }
+                    else if (var_str == "z" || var_str == "Z") {
+                        qstatx_stress_bc_var = 2.0;
+                    }
+                    else {
+                        // 2. If it's not x, y, or z, try to parse it as a number
+                        try {
+                            size_t idx;
+                            qstatx_stress_bc_var = std::stod(var_str, &idx);
+
+                            // Check for trailing garbage (e.g., "2E-5abc" or "10xyz")
+                            if (idx < var_str.size()) {
+                                throw std::invalid_argument("Trailing characters");
+                            }
+                        }
+                        catch (const std::exception& e) {
+                            // 3. Fall through to an error if std::stod fails or trailing characters exist
+                            std::cerr << "ERROR: Invalid displacement boundary condition variable value '" << var_str << "' encountered.\n"
+                                    << "Allowed values are 'x', 'y', 'z', or any valid number.\n";
+
+                            // Crash/exit gracefully depending on your framework's error handling
+                            throw std::runtime_error("Invalid YAML configuration value: " + var_str);
+                        }
+                    }
+
+                    RUN({
+                        tempQstatxStressBCGlobalVars(bc_id, global_var_id) = qstatx_stress_bc_var;
+                    });
+
+                } // end loop over global vars
+            } // end else if on qstax_stress_bc_global_vars
 
             // set contact ieration variables
             else if (a_word.compare("contact_bc_vars") == 0) {
@@ -718,9 +1062,13 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
      // allocate ragged right memory to hold the model global variables
     BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
 
+    BoundaryConditions.displacement_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_displacement_bc_global_vars, "BoundaryConditions.displacement_bc_global_vars");
+
     BoundaryConditions.temperature_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_temperature_bc_global_vars, "BoundaryConditions.temperature_bc_global_vars");
 
     BoundaryConditions.stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_stress_bc_global_vars, "BoundaryConditions.stress_bc_global_vars");
+
+    BoundaryConditions.qstatx_stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_qstatx_stress_bc_global_vars, "BoundaryConditions.qstatx_stress_bc_global_vars");
    
 
     // ... allocate other bc global vars here
@@ -732,12 +1080,20 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             BoundaryConditions.velocity_bc_global_vars(bc_id, var_lid) = tempVelocityBCGlobalVars(bc_id, var_lid);
         } // end for eos var_lid
 
+        for (size_t var_lid = 0; var_lid < BoundaryConditions.num_displacement_bc_global_vars(bc_id); var_lid++){
+            BoundaryConditions.displacement_bc_global_vars(bc_id, var_lid) = tempDisplacementBCGlobalVars(bc_id, var_lid);
+        } // end for eos var_lid
+
         for (size_t var_lid = 0; var_lid < BoundaryConditions.num_temperature_bc_global_vars(bc_id); var_lid++){
             BoundaryConditions.temperature_bc_global_vars(bc_id, var_lid) = tempTemperatureBCGlobalVars(bc_id, var_lid);
         } // end for var_lid
       
         for (size_t var_lid=0; var_lid<BoundaryConditions.num_stress_bc_global_vars(bc_id); var_lid++){
             BoundaryConditions.stress_bc_global_vars(bc_id, var_lid) = tempStressBCGlobalVars(bc_id, var_lid);
+        } // end for eos var_lid
+
+        for (size_t var_lid=0; var_lid<BoundaryConditions.num_qstatx_stress_bc_global_vars(bc_id); var_lid++){
+            BoundaryConditions.qstatx_stress_bc_global_vars(bc_id, var_lid) = tempQstatxStressBCGlobalVars(bc_id, var_lid);
         } // end for eos var_lid
 
 
@@ -747,7 +1103,5 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
     // copy the enum values to the host 
     BoundaryConditions.BoundaryConditionEnums.update_host();
-
-
 
 } // end of function to parse bdy conditions

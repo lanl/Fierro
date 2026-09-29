@@ -20,3 +20,5 @@ apps/multiphysics/*.vtu
 apps/multiphysics/*.pvd
 apps/multiphysics/TrplPnt3D_batch_output
 apps/multiphysics/cuda_build
+*Fierro_log*
+

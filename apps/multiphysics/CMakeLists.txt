@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Set build type if not already set
 if (NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo) # RelWithDebInfo, Debug
 endif()
 
 # Set module path

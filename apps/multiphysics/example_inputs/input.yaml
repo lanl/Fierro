@@ -27,7 +27,7 @@
 # ---------------------------------------------------------------------------
 dynamic_options:
 
-    time_final: 100.0 # Final simulation time (microseconds).
+    time_final: 10.0 # Final simulation time (microseconds).
     dt_min: 1.e-8 # Minimum adaptive timestep bound (microseconds).
     dt_max: 1.e-2 # Maximum adaptive timestep bound (microseconds).
     dt_start: 1.e-5 # Initial timestep guess (microseconds).
@@ -56,7 +56,7 @@ output_options:
     # Output format for visualization.
     output_file_format: viz # only options are viz or viz_and_state
     # Amount of simulated time between visualization dumps (microseconds).
-    graphics_time_step: 0.05
+    graphics_time_step: 0.5
     # graphics_iteration_step: 10
     elem_field_outputs:
         - den
@@ -174,7 +174,7 @@ materials:
             - 1.0   # q1ex
             - 1.333 # q2
             - 1.333 # q2ex
-            - 0.0   # phi_min
+            - 1.0   # phi_min
             - 1.0   # pin_curl_min
 
 
@@ -254,4 +254,3 @@ initial_conditions:
             # Single-material case: 1 everywhere.
             type: uniform
             value: 1.0
-

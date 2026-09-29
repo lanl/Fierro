@@ -39,7 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 void SGTM3D::initialize(SimulationParameters_t& SimulationParamaters, 
                 	   Material_t& Materials, 
-                	   swage::Mesh& mesh, 
+                	   swage::Mesh_t& mesh, 
                 	   BoundaryCondition_t& Boundary,
                 	   State_t& State) const
 {
@@ -72,7 +72,7 @@ void SGTM3D::initialize(SimulationParameters_t& SimulationParamaters,
 
 void SGTM3D::initialize_material_state(SimulationParameters_t& SimulationParamaters, 
                 	                  Material_t& Materials, 
-                	                  swage::Mesh& mesh, 
+                	                  swage::Mesh_t& mesh, 
                 	                  BoundaryCondition_t& Boundary,
                 	                  State_t& State) const
 {

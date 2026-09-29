@@ -25,7 +25,8 @@ output_options:
     timer_output_level: thorough
     output_file_format: state
     graphics_time_step: 1.0
-    # graphics_iteration_step: 1
+    mat_pt_field_outputs:
+      - heat_flux
 
 solver_options:
   - solver:

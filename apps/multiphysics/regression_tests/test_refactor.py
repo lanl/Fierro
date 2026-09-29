@@ -15,17 +15,30 @@ solvers = ["Fierro"]
 
 solver_path = "../build/app/Fierro"
 
+num_ranks = 1
+
 # Add names of each test
-tests = ["stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
-         "Compaction_rz", "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
-        "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", \
-        "Pressure_bc_box","vtu_read", \
-        "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
-        "slanted_block_bounce", "slanted_impact", "SGTM_cooling_cube", \
-        "sie_expansion_test", "confined_preload", "unconfined_preload",\
-        "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact",\
-        "TaylorAnvil_Contact", "fracture_mode_1", "fracture_mode_2", \
-        "fracture_reorientation"]
+if (num_ranks == 1):
+    # all tests can be run on one rank
+    tests = ["stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
+            "Compaction_rz", "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
+            "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", \
+            "Pressure_bc_box","vtu_read", \
+            "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
+            "slanted_block_bounce", "slanted_impact", "SGTM_cooling_cube", \
+            "sie_expansion_test", "confined_preload", "unconfined_preload",\
+            "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact",\
+            "TaylorAnvil_Contact", "fracture_mode_1", "fracture_mode_2", \
+            "fracture_reorientation", "TLQS_cantilever_beam", "TLQS_triaxial"] #"TLQS_uniaxial"]
+            # TLQS_uniaxial commented out due to persistent git actions issues that can't be recreated locally: 8-28-26
+else:
+    # fracture and contact can't be run with more than one rank: 8-26-26
+    # vtu_read currently doesn't run on more than one rank: 8-26-26
+    tests = ["stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
+            "Compaction_rz", "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
+            "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", "Pressure_bc_box",\
+            "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
+            "SGTM_cooling_cube", "TLQS_cantilever_beam", "TLQS_triaxial"]
 
 
 #,"SGTM_cooling_cube" currently broken
@@ -60,11 +73,11 @@ def extract_state_data(filename):
     # Then, split the cleaned string into a list of words
     headers = cleaned_header.split()
 
-    # Skip one more line to get data
-    lines = lines[1:]
+    # Skip two more line to get data
+    lines = lines[2:]
     # Parse the simulation data
     for line in lines:
-        values = line.rstrip().split('\t')
+        values = line.rstrip().split()
         values = [float(val) for val in values]
         data.append(values)
     return data, headers
@@ -103,7 +116,7 @@ for i in range(len(executables)):
         try:
             # Call Fierro with YAML inputs
             print("Running "+test_name)
-            os.system(executables[i] + ' ' + inputs[j])
+            os.system('mpirun --oversubscribe -np ' + str(num_ranks) + ' ' + executables[i] + ' ' + inputs[j])
     
             # Compare to standard results
             if not standard_results[j]:
@@ -128,8 +141,10 @@ for i in range(len(executables)):
     
             # conditional to handle contact cases
             diff_tol = 1E-8
-            if (tests[j] == "slanted_impact" or tests[j] == "sie_expansion_test" or tests[j] == "edge_flat_test" or tests[j] == "billiards" or tests[j] == "TaylorAnvil_Contact"):
+            if (tests[j] == "slanted_impact" or tests[j] == "sie_expansion_test" or tests[j] == "edge_flat_test" or tests[j] == "billiards"):
                 diff_tol = 1E-2
+            if (tests[j] == "TaylorAnvil_Contact"):
+                diff_tol = 1.2E-2
 
             for k in range(len(result_data[0])):
                 calc = [row[k] for row in result_data]

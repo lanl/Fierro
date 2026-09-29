@@ -8,7 +8,9 @@ elseif (HIP)
   add_definitions(-DHAVE_HIP=1)
 elseif (OPENMP)
   add_definitions(-DHAVE_OPENMP=1)
-elseif (THREADS)
+# Note: gate on FIERRO_ENABLE_PTHREADS, not THREADS -- PT-Scotch sets a THREADS
+# cache var, which would leak HAVE_THREADS into the standalone test targets below.
+elseif (FIERRO_ENABLE_PTHREADS)
   add_definitions(-DHAVE_THREADS=1)
 endif()
 

@@ -51,6 +51,13 @@ namespace model
         stateBased = 2,     ///<  Model is based on the state after each stage of the time step
     };
 
+    // ALE model types
+    enum ALEType
+    {
+        noALE = 0, ///<  No ALE model used
+        ALE = 1, ///<  ALE model used
+    };
+
     // Specific strength models
     enum StrengthModels
     {
@@ -61,6 +68,7 @@ namespace model
         hostANNStrength = 4,
         hypoElasticPlasticStrength = 5,
         hypoElasticPlasticStrengthRZ = 6,
+        QSIsotropicLinearElastic = 7,
     };
 
     // EOS model types
@@ -163,6 +171,12 @@ static std::map<std::string, model::StrengthType> strength_type_map
     { "state_based", model::stateBased },
 };
 
+static std::map<std::string, model::ALEType> ale_type_map
+{
+    { "no_ale", model::noALE },
+    { "ALE", model::ALE },
+};
+
 
 static std::map<std::string, model::StrengthModels> strength_models_map
 {
@@ -173,6 +187,7 @@ static std::map<std::string, model::StrengthModels> strength_models_map
     { "hypo_elastic_plastic_strength", model::hypoElasticPlasticStrength },
     { "hypo_elastic_plastic_strength_rz", model::hypoElasticPlasticStrengthRZ },
     { "host_ann_strength", model::hostANNStrength },
+    { "qstatx_isotropic_linear_elastic", model::QSIsotropicLinearElastic},
 };
 
 
@@ -220,6 +235,12 @@ static std::map<std::string, model::DissipationModels> dissipation_model_map
     { "directional_MARS_rz", model::directionalMARSRZ },
 };
 
+
+static std::map<std::string, model::ALEType> ale_model_map
+{
+    { "no_ALE", model::noALE },
+    { "ALE", model::ALE },
+};
 
 static std::map<std::string, model::levelSetType> level_set_type_map
 {
@@ -296,6 +317,9 @@ struct MaterialEnums_t
     // Erosion model type: none or basic
     model::ErosionModels ErosionModels = model::noErosion;
 
+    // ALE model type: none or ALE
+    model::ALEType ALEType = model::noALE;
+
 
     // -- dissipation --
 
@@ -355,8 +379,8 @@ struct MaterialFunctions_t
     // Material strength model function pointers
     void (*calc_stress)(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
-        const DCArrayKokkos<double>  &node_coords,
-        const DCArrayKokkos<double>  &node_vel,
+        const MPICArrayKokkos<double>  &node_coords,
+        const MPICArrayKokkos<double>  &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
@@ -389,6 +413,10 @@ struct MaterialFunctions_t
         const size_t num_material_points,
         const size_t mat_id) = NULL;
 
+     void (*fill_C_matrix) (
+        const RaggedRightArrayKokkos <double> &strength_global_vars,
+        double C[6][6],
+        const size_t mat_id) = NULL;
 
     // -- Erosion --
 
@@ -413,8 +441,9 @@ struct MaterialFunctions_t
         const ViewCArrayKokkos<size_t> elem_node_gids,
         const RaggedRightArrayKokkos <double>& dissipation_global_vars,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
+        const MPICArrayKokkos<double>& GaussPoints_shock_detector,
         const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-        const DCArrayKokkos<double>& node_vel,
+        const MPICArrayKokkos<double>& node_vel,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         const ViewCArrayKokkos<double>& disp_corner_forces,
@@ -562,6 +591,7 @@ static std::vector<std::string> str_material_inps
     "normal_velocity",
     "curvature_velocity",
     "tabular_model",
+    "ale_model",
 };
 
 // ----------------------------------

@@ -47,8 +47,9 @@ namespace MARSDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
+                                  const MPICArrayKokkos<double>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-                                  const DCArrayKokkos<double>& node_vel,
+                                  const MPICArrayKokkos<double>& node_vel,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,
@@ -89,8 +90,6 @@ namespace MARSDissipationModel {
         // Riemann velocity
         double vel_star_array[3];
         ViewCArrayKokkos<double> vel_star(vel_star_array, num_dims);
-
-
 
         double div = GaussPoints_vel_grad(elem_gid, 0, 0) + 
                      GaussPoints_vel_grad(elem_gid, 1, 1) + 
@@ -136,8 +135,8 @@ namespace MARSDissipationModel {
             sum(i) = 0.0;
         }
 
-        double mag;       // magnitude of the area normal
-        double mag_vel;   // magnitude of velocity
+        double mag = 0.0;       // magnitude of the area normal
+        double mag_vel = 0.0;   // magnitude of velocity
 
         // loop over the nodes of the elem
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -212,6 +211,8 @@ namespace MARSDissipationModel {
             }
         } // end if
 
+
+        // WARNING: This needs to be its own kernel pulled out of here (from here to 282 (include curl limiter()))
         // ---- Calculate the shock detector for the Riemann-solver ----
         //
         // The dissipation from the Riemann problem is limited by phi
@@ -225,46 +226,55 @@ namespace MARSDissipationModel {
         //      phi = 1 first order solution
         //
 
-        double phi    = 0.0;  // the shock detector
-        double r_face = 1.0;  // the ratio on the face
-        double r_min  = 1.0;  // the min ratio for the cell
-        double r_coef = 0.9;  // 0.9; the coefficient on the ratio
-                              //   (1=minmod and 2=superbee)
-        double n_coef = 1.0;  // the power on the limiting coefficient
-                              //   (1=nominal, and n_coeff > 1 oscillatory)
+        // double phi    = 0.0;  // the shock detector
+        // double r_face = 1.0;  // the ratio on the face
+        // double r_min  = 1.0;  // the min ratio for the cell
+        // double r_coef = 0.9;  // 0.9; the coefficient on the ratio
+        //                       //   (1=minmod and 2=superbee)
+        // double n_coef = 1.0;  // the power on the limiting coefficient
+        //                       //   (1=nominal, and n_coeff > 1 oscillatory)
 
-        // loop over the neighboring cells
-        for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++) {
-            // Get global index for neighboring cell
-            size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
+        // // loop over the neighboring cells
+        // // r_min calculation becomes loop over nodes in the element
+        // // Communicate nodal velocity divergence
+        // for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++) {
+        //     // Get global index for neighboring cell
+        //     size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
 
-            // calculate the velocity divergence in neighbor
-            double div_neighbor = GaussPoints_vel_grad(neighbor_gid, 0, 0) + 
-                                  GaussPoints_vel_grad(neighbor_gid, 1, 1) + 
-                                  GaussPoints_vel_grad(neighbor_gid, 2, 2);
+        //     // calculate the velocity divergence in neighbor
+        //     double div_neighbor = GaussPoints_vel_grad(neighbor_gid, 0, 0) + 
+        //                           GaussPoints_vel_grad(neighbor_gid, 1, 1) + 
+        //                           GaussPoints_vel_grad(neighbor_gid, 2, 2);
 
-            r_face = r_coef * (div_neighbor + small) / (div + small);
+        //     r_face = r_coef * (div_neighbor + small) / (div + small);
 
-            // store the smallest face ratio
-            r_min = fmin(r_face, r_min);
-        } // end for elem_lid
+        //     // store the smallest face ratio
+        //     r_min = fmin(r_face, r_min);
+        // } // end for elem_lid
 
-        // calculate standard shock detector
-        phi = 1.0 - fmax(0.0, r_min);
-        phi = pow(phi, n_coef);
+        // // calculate standard shock detector
+        // phi = 1.0 - fmax(0.0, r_min);
+        // phi = pow(phi, n_coef);
 
-        //  Mach number shock detector
-        double omega    = 20.0; // 20.0;    // weighting factor on Mach number
-        double third    = 1.0 / 3.0;
-        double c_length = pow(vol, third); // characteristic length
-        double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
+        // // ---- Mach number shock detector ----
+        // double omega    = 20.0; // 20.0;    // weighting factor on Mach number
+        // double third    = 1.0 / 3.0;
+        // double c_length = pow(vol, third); // characteristic length
+        // double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 
-        // use Mach based detector with standard shock detector
+        // // use Mach based detector with standard shock detector
 
-        // turn off dissipation in expansion
-        // alpha = fmax(-fabs(div0)/div0 * alpha, 0.0);  // this should be if(div0<0) alpha=alpha else alpha=0
+        // // turn off dissipation in expansion
+        // // alpha = fmax(-fabs(div0)/div0 * alpha, 0.0);  // this should be if(div0<0) alpha=alpha else alpha=0
 
-        phi = alpha * phi;
+        // phi = alpha * phi;
+
+        // size_t gauss_gid = elem_gid;
+
+        // GaussPoints_shock_detector(gauss_gid) = phi;
+        size_t gauss_gid = elem_gid;
+        double phi = GaussPoints_shock_detector(gauss_gid);
+        
 
         // curl limiter on Q
         double phi_curl = fmin(1.0, 1.0 * fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
@@ -274,6 +284,7 @@ namespace MARSDissipationModel {
         // if phi_floor>0, ensure a small amount of dissipation is present
         phi = fmax(phi_floor, phi);
 
+        GaussPoints_shock_detector(gauss_gid) = phi;
 
         // loop over the each corner in the element
         for (size_t corner_lid = 0; corner_lid < num_nodes_in_elem; corner_lid++) {
@@ -363,8 +374,9 @@ namespace DirMARSDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
+                                  const MPICArrayKokkos<double>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-                                  const DCArrayKokkos<double>& node_vel,
+                                  const MPICArrayKokkos<double>& node_vel,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,
@@ -658,8 +670,9 @@ namespace MARSRZDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
+                                  const MPICArrayKokkos<double>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-                                  const DCArrayKokkos<double>& node_vel,
+                                  const MPICArrayKokkos<double>& node_vel,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,
@@ -828,54 +841,70 @@ namespace MARSRZDissipationModel {
     //      phi = 1 first order solution
     //
 
-    double phi    = 0.0;  // the shock detector
-    double r_face = 1.0;  // the ratio on the face
-    double r_min  = 1.0;  // the min ratio for the cell
-    double r_coef = 0.9;  // 0.9; the coefficient on the ratio
-                            //   (1=minmod and 2=superbee)
-    double n_coef = 1.0;  // the power on the limiting coefficient
-                            //   (1=nominal, and n_coeff > 1 oscillatory)
+    // double phi    = 0.0;  // the shock detector
+    // double r_face = 1.0;  // the ratio on the face
+    // double r_min  = 1.0;  // the min ratio for the cell
+    // double r_coef = 0.9;  // 0.9; the coefficient on the ratio
+    //                         //   (1=minmod and 2=superbee)
+    // double n_coef = 1.0;  // the power on the limiting coefficient
+    //                         //   (1=nominal, and n_coeff > 1 oscillatory)
 
-    // loop over the neighboring cells
-    for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++) {
-        // Get global index for neighboring cell
-        size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
+    // // loop over the neighboring cells
+    // for (size_t elem_lid = 0; elem_lid < num_elems_in_elem(elem_gid); elem_lid++) {
+    //     // Get global index for neighboring cell
+    //     size_t neighbor_gid = elems_in_elem(elem_gid, elem_lid);
 
-        // calculate the velocity divergence in neighbor
-        double div_neighbor = GaussPoints_vel_grad(neighbor_gid, 0, 0) + 
-                                GaussPoints_vel_grad(neighbor_gid, 1, 1) + 
-                                GaussPoints_vel_grad(neighbor_gid, 2, 2);
+    //     // calculate the velocity divergence in neighbor
+    //     double div_neighbor = GaussPoints_vel_grad(neighbor_gid, 0, 0) + 
+    //                             GaussPoints_vel_grad(neighbor_gid, 1, 1) + 
+    //                             GaussPoints_vel_grad(neighbor_gid, 2, 2);
 
-        r_face = r_coef * (div_neighbor + small) / (div + small);
+    //     r_face = r_coef * (div_neighbor + small) / (div + small);
 
-        // store the smallest face ratio
-        r_min = fmin(r_face, r_min);
-    } // end for elem_lid
+    //     // store the smallest face ratio
+    //     r_min = fmin(r_face, r_min);
+    // } // end for elem_lid
 
-    // calculate standard shock detector
-    phi = 1.0 - fmax(0.0, r_min);
-    phi = pow(phi, n_coef);
+    // // calculate standard shock detector
+    // phi = 1.0 - fmax(0.0, r_min);
+    // phi = pow(phi, n_coef);
 
-    //  Mach number shock detector
-    double omega    = 20.0; // 20.0;    // weighting factor on Mach number
-    double c_length = sqrt(elem_area); // characteristic length
-    double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
+    // //  Mach number shock detector
+    // double omega    = 20.0; // 20.0;    // weighting factor on Mach number
+    // double c_length = sqrt(elem_area); // characteristic length
+    // double alpha    = fmin(1.0, omega * (c_length * fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 
-    // use Mach based detector with standard shock detector
+    // // use Mach based detector with standard shock detector
 
-    // turn off dissipation in expansion
-    // alpha = fmax(-fabs(div0)/div0 * alpha, 0.0);  // this should be if(div0<0) alpha=alpha else alpha=0
+    // // turn off dissipation in expansion
+    // // alpha = fmax(-fabs(div0)/div0 * alpha, 0.0);  // this should be if(div0<0) alpha=alpha else alpha=0
 
-    phi = alpha * phi;
+    // phi = alpha * phi;
 
-    // curl limiter on Q
-    double phi_curl = fmin(1.0, 4.0 * fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
-    phi_curl = fmax(phi_curl, phi_curl_floor); // dissables when phi_curl_floor = 1
-    phi = fmin(phi, phi_curl);
+    // // curl limiter on Q
+    // double phi_curl = fmin(1.0, 4.0 * fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
+    // phi_curl = fmax(phi_curl, phi_curl_floor); // dissables when phi_curl_floor = 1
+    // phi = fmin(phi, phi_curl);
 
     
     // if phi_floor>0, ensure a small amount of dissipation is present
+    // phi = fmax(phi_floor, phi);
+
+
+    // // GaussPoints_shock_detector(gauss_gid) = phi;
+    size_t gauss_gid = elem_gid;
+    double phi = GaussPoints_shock_detector(gauss_gid);
+    
+
+    // curl limiter on Q
+    double phi_curl = fmin(1.0, 1.0 * fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
+    phi_curl = fmax(phi_curl, phi_curl_floor); // dissables when phi_curl_floor = 1
+    phi = fmin(phi, phi_curl);
+
+    // if phi_floor>0, ensure a small amount of dissipation is present
     phi = fmax(phi_floor, phi);
+
+    GaussPoints_shock_detector(gauss_gid) = phi;
         
     // loop over the each corner in the element
     for (size_t corner_lid = 0; corner_lid < num_nodes_in_elem; corner_lid++) {
@@ -931,8 +960,9 @@ namespace DirMARSRZDissipationModel {
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
                                   const RaggedRightArrayKokkos <double>& dissipation_global_vars,
                                   const DCArrayKokkos<double>& GaussPoints_vel_grad,
+                                  const MPICArrayKokkos<double>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-                                  const DCArrayKokkos<double>& node_vel,
+                                  const MPICArrayKokkos<double>& node_vel,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
                                   const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,
