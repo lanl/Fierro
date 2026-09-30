@@ -1430,6 +1430,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     } // end serial for loop over all elements
     State.MaterialToMeshMaps.elem_in_mat_elem.update_device();
     State.MeshtoMaterialMaps.mat_elems_in_elem.update_device();
+    Kokkos::fence();
 
 
     
@@ -1443,28 +1444,29 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
         if (State.MaterialPoints.deformation_grad.size()>0){
 
             const size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems(mat_id);
-            FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
 
-                const size_t elem_gid = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, mat_elem_sid);
-
+            // loop over all material points
+            FOR_ALL(mat_point_sid, 0, num_mat_elems*num_gauss_points_in_elem, {
                 for(size_t i=0; i<3; i++){
                     for(size_t j=0; j<3; j++){
-                        State.MaterialPoints.deformation_grad(elem_gid,i,j)    = 0.0;
-                        State.MaterialPoints.deformation_grad_t0(elem_gid,i,j) = 0.0;
+                        State.MaterialPoints.deformation_grad(mat_id,mat_point_sid,i,j)    = 0.0;
+                        State.MaterialPoints.deformation_grad_t0(mat_id,mat_point_sid,i,j) = 0.0;
                     } // end j
-                    State.MaterialPoints.deformation_grad(elem_gid,i,i)    = 1.0;
-                    State.MaterialPoints.deformation_grad_t0(elem_gid,i,i) = 1.0;
+                    State.MaterialPoints.deformation_grad(mat_id,mat_point_sid,i,i)    = 1.0;
+                    State.MaterialPoints.deformation_grad_t0(mat_id,mat_point_sid,i,i) = 1.0;
                 } // end i
 
             }); // end parallel for
+
             State.MaterialPoints.deformation_grad.update_host();
             State.MaterialPoints.deformation_grad_t0.update_host();
 
         } // end if deformation_grad
 
 
+        // -----
         // Add other material point variables here that are constant across the mesh
-        
+        // -----
 
     } // end for loop over mats
     
