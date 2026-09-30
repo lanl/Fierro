@@ -84,7 +84,8 @@ void SGH3D::update_state(
     const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
     const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const double time_value,
     const double dt,
@@ -137,7 +138,7 @@ void SGH3D::update_state(
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_id, mat_point_sid),
                                         MaterialPoints_sie(mat_id, mat_point_sid),
-                                        MaterialPoints_shear_modulii,
+                                        MaterialPoints_deformation_grad,
                                         Materials.eos_global_vars);
 
         }); // end parallel for over mat elem lid
@@ -169,6 +170,13 @@ void SGH3D::update_state(
     // state_based elastic plastic model
     if (Materials.MaterialEnums.host(mat_id).StrengthType == model::stateBased) {
 
+        // ---------------------------------------
+        // calculate deformation gradient here
+        // remember: Fmodel(t) = F0*F(t), where F(t) = grad(displacment)
+
+
+
+
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_sid, 0, num_material_elems, {
             // get elem gid
@@ -199,7 +207,7 @@ void SGH3D::update_state(
                                         MaterialPoints_strength_state_vars,
                                         MaterialPoints_den(mat_id, mat_point_sid),
                                         MaterialPoints_sie(mat_id, mat_point_sid),
-                                        MaterialPoints_shear_modulii,
+                                        MaterialPoints_deformation_grad,
                                         elem_in_mat_elem,
                                         Materials.eos_global_vars,
                                         Materials.strength_global_vars,
@@ -307,7 +315,8 @@ void SGH3D::update_stress(
     const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const size_t num_mat_elems,
     const size_t mat_id,
@@ -362,7 +371,7 @@ void SGH3D::update_stress(
                                             MaterialPoints_strength_state_vars,
                                             MaterialPoints_den(mat_id, mat_point_sid),
                                             MaterialPoints_sie(mat_id, mat_point_sid),
-                                            MaterialPoints_shear_modulii,
+                                            MaterialPoints_deformation_grad,
                                             elem_in_mat_elem,
                                             Materials.eos_global_vars,
                                             Materials.strength_global_vars,
@@ -413,7 +422,7 @@ void SGH3D::update_stress(
                                             MaterialPoints_strength_state_vars,
                                             MaterialPoints_den(mat_id, mat_point_sid),
                                             MaterialPoints_sie(mat_id, mat_point_sid),
-                                            MaterialPoints_shear_modulii,
+                                            MaterialPoints_deformation_grad,
                                             elem_in_mat_elem,
                                             Materials.eos_global_vars,
                                             Materials.strength_global_vars,
