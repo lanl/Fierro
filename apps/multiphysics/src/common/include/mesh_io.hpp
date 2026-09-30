@@ -5686,7 +5686,7 @@ public:
         DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
 
-        concatenate_nodal_fields(State.node,
+        /*concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
                                  node_vector_fields,
                                  SimulationParamaters.OutputOptions.output_node_state,
@@ -5699,7 +5699,7 @@ public:
                                  node_coord_id,
                                  node_grad_level_set_id,
                                  node_temp_id,
-                                 node_disp_id);
+                                 node_disp_id);*/
 
 
         Kokkos::fence();
