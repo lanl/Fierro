@@ -115,11 +115,35 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // setting up contact if it was called
     if (doing_contact) {
         AO_contact_state_t AO_contact_state;
-        AO_contact_initialize(AO_contact_state.bdy_node_coords, mesh.num_bdy_nodes, AO_contact_state.num_nodes_in_bounding_boxes, mesh.num_bdy_surfs, ref_elem,
+        AO_contact_initialize(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels, mesh.num_bdy_nodes,
+                              AO_contact_state.num_nodes_in_bounding_boxes, mesh.num_bdy_surfs, ref_elem,
                               AO_contact_state.lebesgue_overshoot, AO_contact_state.bounding_boxes);
 
+        // zeroing out bdy_node_velocities since this solver doesn't carry full node state velocity or evolve velocity
+        // will be updated during picard iterations
+        AO_contact_state.bdy_node_vels.set_values(0);
+
+        // zeroing out bdy_node_accels since this solver assumes no acceleration
+        AO_contact_state.bdy_node_accels.set_values(0);
+
         // TESTING SECTION
-        AO_contact_sort(AO_contact_state.bdy_node_coords, mesh.num_bdy_nodes, State.node.coords, mesh.bdy_nodes, AO_contact_state.bdy_node_point_cloud, AO_contact_state.num_bins, dt);
+        AO_contact_sort(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels, mesh.num_bdy_nodes,
+                        State.node.coords, mesh.bdy_nodes, AO_contact_state.bdy_node_point_cloud, AO_contact_state.num_bins, 
+                        mesh.num_bdy_surfs, mesh.num_nodes_in_surf, dt, mesh.bdy_nodes_in_bdy_surf, AO_contact_state.bounding_boxes,
+                        AO_contact_state.lebesgue_overshoot, AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes);
+
+        for (int i = 0; i < mesh.num_bdy_surfs; i++) {
+            std::cout << "SURF NODES: ";
+            for (int j = 0; j < mesh.num_nodes_in_surf; j++) {
+                std::cout << mesh.bdy_nodes(mesh.bdy_nodes_in_bdy_surf(i,j)) << "   ";
+            }
+            std::cout << std::endl;
+            std::cout << "NODES IN THE BOUNDING BOX: ";
+            for (int j = 0; j < AO_contact_state.num_nodes_in_bounding_boxes(i); j++) {
+                std::cout << mesh.bdy_nodes(AO_contact_state.nodes_in_bounding_boxes(i,j)) << "   ";
+            }
+            std::cout << std::endl << std::endl;
+        }
 
     }
 

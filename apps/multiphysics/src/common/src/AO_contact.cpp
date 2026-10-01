@@ -88,7 +88,10 @@ void get_surf_overshoot_factor(const elements::ReferenceElement_t& ref_elem, dou
     return;
 } // end get_surf_overshoot_factor
 
+// sizes necessary arrays and gets static variables
 void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
+                           CArrayKokkos <double>& bdy_node_vels,
+                           CArrayKokkos <double>& bdy_node_accels,
                            const size_t num_bdy_nodes,
                            DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
                            const size_t num_bdy_surfs,
@@ -98,6 +101,8 @@ void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
 {
     // allocating member variables that are statically sized
     bdy_node_coords = DCArrayKokkos <double> (num_bdy_nodes, 3, "bdy_node_coords");
+    bdy_node_vels = CArrayKokkos <double> (num_bdy_nodes, 3, "bdy_node_vels");
+    bdy_node_accels = CArrayKokkos <double> (num_bdy_nodes, 3, "bdy_node_accels");
     num_nodes_in_bounding_boxes = DCArrayKokkos <size_t> (num_bdy_surfs, "num_nodes_in_bounding_boxes");
     bounding_boxes = CArrayKokkos <double> (num_bdy_surfs, 2, 3, "bounding_boxes");
 
@@ -144,13 +149,11 @@ void get_max_vel_and_accel(double& vx_max, double& vy_max, double& vz_max,
     vx_max = fmax(vx_max, 1E-2);
     vy_max = fmax(vy_max, 1E-2);
     vz_max = fmax(vz_max, 1E-2);
-    ax_max = fmax(ax_max, 1E-2);
-    ay_max = fmax(ay_max, 1E-2);
-    az_max = fmax(az_max, 1E-2);
 
     return;
 } // end get_max_vel_and_accel
 
+// gets the bounding box for all boundary surfaces
 void get_bounding_boxes(const DCArrayKokkos <double>& bdy_node_coords,
                         const CArrayKokkos <double>& bdy_node_vels,
                         const CArrayKokkos <double>& bdy_node_accels,
@@ -227,13 +230,23 @@ void get_bounding_boxes(const DCArrayKokkos <double>& bdy_node_coords,
     return;
 } // end get_bounding_boxes
 
+// updates bdy_node_coords and nodes_in_bounding_boxes
 void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
+                     const CArrayKokkos <double>& bdy_node_vels,
+                     const CArrayKokkos <double>& bdy_node_accels,
                      const size_t num_bdy_nodes,
                      const MPICArrayKokkos <double>& node_coords,
                      const CArrayKokkos <size_t>& bdy_nodes,
                      swage::PointCloud_t& bdy_node_point_cloud,
                      const size_t num_bins,
-                     const double dt)
+                     const size_t num_bdy_surfs,
+                     const size_t num_nodes_in_surf,
+                     const double dt,
+                     const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
+                     CArrayKokkos <double>& bounding_boxes,
+                     const double lebesgue_overshoot,
+                     DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
+                     RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes)
 {
     // updating bdy_node_coords
     FOR_ALL(i, 0, (int)num_bdy_nodes,
@@ -261,7 +274,10 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                                         num_bins, num_bins, num_bins);
 
     // getting a bounding box for each boundary surface
+    get_bounding_boxes(bdy_node_coords, bdy_node_vels, bdy_node_accels, num_bdy_surfs, num_nodes_in_surf, dt, lebesgue_overshoot, bdy_nodes_in_bdy_surf, bounding_boxes);
 
+    // getting the points to be checked for penetration of the surfaces
+    bdy_node_point_cloud.get_points_in_box(bdy_node_coords, nodes_in_bounding_boxes, num_nodes_in_bounding_boxes, bounding_boxes);
 
     return;
 } // end AO_contact_sort

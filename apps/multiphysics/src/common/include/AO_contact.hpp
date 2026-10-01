@@ -42,6 +42,8 @@ using namespace mtr;
 struct AO_contact_state_t
 {
     DCArrayKokkos <double> bdy_node_coords;                     // subset of coords only including boundary nodes
+    CArrayKokkos <double> bdy_node_vels;                        // subset of coords only including boundary nodes
+    CArrayKokkos <double> bdy_node_accels;                      // subset of coords only including boundary nodes
     CArrayKokkos <double> bounding_boxes;                       // coords of bounding box of each boundary surface
     RaggedRightArrayKokkos <size_t> nodes_in_bounding_boxes;    // nodes that lie in the bounding box of each boundary surface
     DCArrayKokkos <size_t> num_nodes_in_bounding_boxes;         // stride array for nodes_in_bounding_boxes
@@ -58,8 +60,10 @@ double get_lebesgue_constant_1d(const elements::ReferenceElement_t& ref_elem,
 // getting the overshoot factor for sizing bounding boxes
 void get_surf_overshoot_factor(const elements::ReferenceElement_t& ref_elem, double& lebesgue_overshoot);
 
-// sizes necessary arrays
+// sizes necessary arrays and gets static variables
 void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
+                           CArrayKokkos <double>& bdy_node_vels,
+                           CArrayKokkos <double>& bdy_node_accels,
                            const size_t num_bdy_nodes,
                            DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
                            const size_t num_bdy_surfs,
@@ -80,16 +84,26 @@ void get_bounding_boxes(const DCArrayKokkos <double>& bdy_node_coords,
                         const size_t num_bdy_surfs,
                         const size_t num_nodes_in_surf,
                         const double dt,
+                        const double lebesgue_overshoot,
                         const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
                         CArrayKokkos <double>& bounding_boxes);
 
 // updates bdy_node_coords and nodes_in_bounding_boxes
 void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
+                     const CArrayKokkos <double>& bdy_node_vels,
+                     const CArrayKokkos <double>& bdy_node_accels,
                      const size_t num_bdy_nodes,
                      const MPICArrayKokkos <double>& node_coords,
                      const CArrayKokkos <size_t>& bdy_nodes,
                      swage::PointCloud_t& bdy_node_point_cloud,
                      const size_t num_bins,
-                     const double dt);
+                     const size_t num_bdy_surfs,
+                     const size_t num_nodes_in_surf,
+                     const double dt,
+                     const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
+                     CArrayKokkos <double>& bounding_boxes,
+                     const double lebesgue_overshoot,
+                     DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
+                     RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes);
 
 #endif  // AO_CONTACT_H
