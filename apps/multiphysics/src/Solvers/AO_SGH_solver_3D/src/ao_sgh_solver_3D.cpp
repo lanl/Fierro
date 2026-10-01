@@ -466,7 +466,7 @@ void update_state_from_coords(const swage::Mesh_t&     mesh,
                         State.MaterialPoints.den,
                         State.MaterialPoints.sie,
                         State.MaterialPoints.eos_state_vars,
-                        State.MaterialPoints.shear_modulii,
+                        State.MaterialPoints.deformation_grad,
                         State.MaterialPoints.pres,
                         State.MaterialPoints.sspd,
                         State.MaterialPoints.stress);
