@@ -695,6 +695,10 @@ namespace HypoPlasticityRZModel {
 
     } // end of user mat
 
+
+    // Add calc_shear_modulus function here
+
+
 } // end namespace
 
 
