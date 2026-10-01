@@ -64,24 +64,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
 
-    // setting up contact if it was called
-    if (doing_contact) {
-        AO_contact_state_t AO_contact_state;
-        AO_contact_initialize(AO_contact_state.bdy_node_coords, mesh.num_bdy_nodes, AO_contact_state.num_nodes_in_bounding_boxes, mesh.num_bdy_surfs, AO_contact_state.bounding_boxes);
-
-        // TESTING SECTION
-        AO_contact_sort(AO_contact_state.bdy_node_coords, mesh.num_bdy_nodes, State.node.coords, mesh.bdy_nodes, AO_contact_state.bdy_node_point_cloud, AO_contact_state.num_bins);
-
-    }
-    
-    for (int i = 0; i < mesh.num_bdy_surfs; i++) {
-        std::cout << "BDY SURF: " << i << "   NODES: ";
-        for (int j = 0; j < mesh.num_nodes_in_surf; j++) {
-            std::cout << mesh.bdy_nodes(mesh.bdy_nodes_in_bdy_surf(i,j)) << "   ";
-        }
-        std::cout << std::endl;
-    }
-
     // Conveinent local variables
     double fuzz  = SimulationParamaters.DynamicOptions.fuzz;
     double tiny  = SimulationParamaters.DynamicOptions.tiny;
@@ -130,12 +112,22 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     ref_surf.initialize_ref_surf(SurfQuad,
                                  ref_elem);
 
+    // setting up contact if it was called
+    if (doing_contact) {
+        AO_contact_state_t AO_contact_state;
+        AO_contact_initialize(AO_contact_state.bdy_node_coords, mesh.num_bdy_nodes, AO_contact_state.num_nodes_in_bounding_boxes, mesh.num_bdy_surfs, ref_elem,
+                              AO_contact_state.lebesgue_overshoot, AO_contact_state.bounding_boxes);
+
+        // TESTING SECTION
+        AO_contact_sort(AO_contact_state.bdy_node_coords, mesh.num_bdy_nodes, State.node.coords, mesh.bdy_nodes, AO_contact_state.bdy_node_point_cloud, AO_contact_state.num_bins, dt);
+
+    }
 
     int num_qpt_in_elem = ref_elem.qpt_grad_basis.dims(0);
     
     // element stiffness and force arrays
     CArrayKokkos <double> K_elem(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem); /// K1 + K2
-    CArrayKokkos <double> F_elem(mesh.num_elems,3*mesh.num_nodes_in_elem); /// F02 - F01
+    CArrayKokkos <double> F_elem(mesh.num_elems,3*mesh.num_nodes_in_elem); /// - F01    note: F02 added directly to cg residual from traction conditions
 
     // additive schwarz preconditioning variables
     /* CArrayKokkos <double> K_elem_inv(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);

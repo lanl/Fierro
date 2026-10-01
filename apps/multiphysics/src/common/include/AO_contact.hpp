@@ -46,23 +46,42 @@ struct AO_contact_state_t
     RaggedRightArrayKokkos <size_t> nodes_in_bounding_boxes;    // nodes that lie in the bounding box of each boundary surface
     DCArrayKokkos <size_t> num_nodes_in_bounding_boxes;         // stride array for nodes_in_bounding_boxes
     const size_t num_bins = 10; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    double lebesgue_overshoot;
     swage::PointCloud_t bdy_node_point_cloud;
 
 };
+
+// gets the max of the lebesgue function
+double get_lebesgue_constant_1d(const elements::ReferenceElement_t& ref_elem,
+                                const size_t num_samples = 100001);
+
+// getting the overshoot factor for sizing bounding boxes
+void get_surf_overshoot_factor(const elements::ReferenceElement_t& ref_elem, double& lebesgue_overshoot);
 
 // sizes necessary arrays
 void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
                            const size_t num_bdy_nodes,
                            DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
                            const size_t num_bdy_surfs,
+                           const elements::ReferenceElement_t& ref_elem,
+                           double& lebesgue_overshoot,
                            CArrayKokkos <double>& bounding_boxes);
+
+// uses a kokkos parallel reduce to get the max values in one kernel launch
+void get_max_vel_and_accel(double& vx_max, double& vy_max, double& vz_max,
+                           double& ax_max, double& ay_max, double& az_max,
+                           const CArrayKokkos <double>& bdy_node_vels,
+                           const CArrayKokkos <double>& bdy_node_accels);
 
 // gets the bounding box for all boundary surfaces
 void get_bounding_boxes(const DCArrayKokkos <double>& bdy_node_coords,
                         const CArrayKokkos <double>& bdy_node_vels,
                         const CArrayKokkos <double>& bdy_node_accels,
-                        const CArrayKokkos <size_t>& bdy_surfs,
-                        const CArrayKokkos <size_t>& nodes_in_surf);
+                        const size_t num_bdy_surfs,
+                        const size_t num_nodes_in_surf,
+                        const double dt,
+                        const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
+                        CArrayKokkos <double>& bounding_boxes);
 
 // updates bdy_node_coords and nodes_in_bounding_boxes
 void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
@@ -70,6 +89,7 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      const MPICArrayKokkos <double>& node_coords,
                      const CArrayKokkos <size_t>& bdy_nodes,
                      swage::PointCloud_t& bdy_node_point_cloud,
-                     const size_t num_bins);
+                     const size_t num_bins,
+                     const double dt);
 
 #endif  // AO_CONTACT_H
