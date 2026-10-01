@@ -34,27 +34,62 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "AO_contact.hpp"
 
-void AO_contact_initialize(CArrayKokkos <double>& bdy_node_coords,
-                           const size_t num_bdy_nodes)
+void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
+                           const size_t num_bdy_nodes,
+                           DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
+                           const size_t num_bdy_surfs,
+                           CArrayKokkos <double>& bounding_boxes)
 {
     // allocating member variables that are statically sized
-    bdy_node_coords = CArrayKokkos <double> (num_bdy_nodes, 3, "bdy_node_coords");
+    bdy_node_coords = DCArrayKokkos <double> (num_bdy_nodes, 3, "bdy_node_coords");
+    num_nodes_in_bounding_boxes = DCArrayKokkos <size_t> (num_bdy_surfs, "num_nodes_in_bounding_boxes");
+    bounding_boxes = CArrayKokkos <double> (num_bdy_surfs, 6, "bounding_boxes");
+
+    
 
     return;
 } // end AO_contact_initialize
 
-void AO_contact_sort(CArrayKokkos <double>& bdy_node_coords,
+void get_bounding_boxes(
+                            )
+{
+    
+}
+
+void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      const size_t num_bdy_nodes,
                      const MPICArrayKokkos <double>& node_coords,
-                     const CArrayKokkos <size_t>& bdy_nodes)
+                     const CArrayKokkos <size_t>& bdy_nodes,
+                     swage::PointCloud_t& bdy_node_point_cloud,
+                     const size_t num_bins)
 {
-
     // updating bdy_node_coords
     FOR_ALL(i, 0, (int)num_bdy_nodes,
             j, 0, 3, 
             {
                 bdy_node_coords(i,j) = node_coords(bdy_nodes(i), j);
             });
+    Kokkos::fence();
+
+    // getting domain bounds
+    bdy_node_point_cloud.get_bounds_point_cloud(bdy_node_point_cloud.xmin, bdy_node_point_cloud.ymin, bdy_node_point_cloud.zmin,
+                                                bdy_node_point_cloud.xmax, bdy_node_point_cloud.ymax, bdy_node_point_cloud.zmax,
+                                                bdy_node_coords);
+
+    // building underlying bin mesh
+    const double bin_mesh_sizing_factor_x = (bdy_node_point_cloud.xmax - bdy_node_point_cloud.xmin) / num_bins * 0.1; // setting bin mesh to extend 10 percent of a bin
+    const double bin_mesh_sizing_factor_y = (bdy_node_point_cloud.ymax - bdy_node_point_cloud.ymin) / num_bins * 0.1; // setting bin mesh to extend 10 percent of a bin
+    const double bin_mesh_sizing_factor_z = (bdy_node_point_cloud.zmax - bdy_node_point_cloud.zmin) / num_bins * 0.1; // setting bin mesh to extend 10 percent of a bin
+    bdy_node_point_cloud.build_bin_mesh(bdy_node_point_cloud.xmin - bin_mesh_sizing_factor_x,
+                                        bdy_node_point_cloud.ymin - bin_mesh_sizing_factor_y,
+                                        bdy_node_point_cloud.zmin - bin_mesh_sizing_factor_z,
+                                        bdy_node_point_cloud.xmax + bin_mesh_sizing_factor_x,
+                                        bdy_node_point_cloud.ymax + bin_mesh_sizing_factor_y,
+                                        bdy_node_point_cloud.zmax + bin_mesh_sizing_factor_z,
+                                        num_bins, num_bins, num_bins);
+
+    // getting a bounding box for each boundary surface
+
 
     return;
 } // end AO_contact_sort

@@ -41,21 +41,35 @@ using namespace mtr;
 
 struct AO_contact_state_t
 {
-    CArrayKokkos <double> bdy_node_coords;                      // subset of coords only including boundary nodes
+    DCArrayKokkos <double> bdy_node_coords;                     // subset of coords only including boundary nodes
+    CArrayKokkos <double> bounding_boxes;                       // coords of bounding box of each boundary surface
     RaggedRightArrayKokkos <size_t> nodes_in_bounding_boxes;    // nodes that lie in the bounding box of each boundary surface
     DCArrayKokkos <size_t> num_nodes_in_bounding_boxes;         // stride array for nodes_in_bounding_boxes
-    CArrayKokkos <double> bounding_boxes;                       // coords of bounding box of each boundary surface
+    const size_t num_bins = 10; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    swage::PointCloud_t bdy_node_point_cloud;
 
 };
 
 // sizes necessary arrays
-void AO_contact_initialize(CArrayKokkos <double>& bdy_node_coords,
-                           const size_t num_bdy_nodes);
+void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
+                           const size_t num_bdy_nodes,
+                           DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
+                           const size_t num_bdy_surfs,
+                           CArrayKokkos <double>& bounding_boxes);
+
+// gets the bounding box for all boundary surfaces
+void get_bounding_boxes(const DCArrayKokkos <double>& bdy_node_coords,
+                        const CArrayKokkos <double>& bdy_node_vels,
+                        const CArrayKokkos <double>& bdy_node_accels,
+                        const CArrayKokkos <size_t>& bdy_surfs,
+                        const CArrayKokkos <size_t>& nodes_in_surf);
 
 // updates bdy_node_coords and nodes_in_bounding_boxes
-void AO_contact_sort(CArrayKokkos <double>& bdy_node_coords,
+void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      const size_t num_bdy_nodes,
                      const MPICArrayKokkos <double>& node_coords,
-                     const CArrayKokkos <size_t>& bdy_nodes);
+                     const CArrayKokkos <size_t>& bdy_nodes,
+                     swage::PointCloud_t& bdy_node_point_cloud,
+                     const size_t num_bins);
 
 #endif  // AO_CONTACT_H
