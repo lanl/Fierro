@@ -71,7 +71,7 @@ namespace OrthotropicLinearElasticStrengthModel {
     KOKKOS_INLINE_FUNCTION
     void matmul3x3(const T1& A,
                    const T1& B,
-                   T1& C) {
+                   const T1& C) {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 double sum = 0.0;
@@ -87,7 +87,8 @@ namespace OrthotropicLinearElasticStrengthModel {
     // B = A^T for 3x3
     template <typename T1>
     KOKKOS_INLINE_FUNCTION
-    void transpose3x3(const T1& A, T1& B) {
+    void transpose3x3(const T1& A, 
+                      const T1& B) {
         for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++){
                 B(i,j) = A(j,i);
@@ -100,8 +101,8 @@ namespace OrthotropicLinearElasticStrengthModel {
     KOKKOS_INLINE_FUNCTION
     void matmulNxN(const T1& A,
                    const T1& B,
-                   T1& C,
-                   int N) {
+                   const T1& C,
+                   const int N) {
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 double sum = 0.0;
@@ -117,7 +118,9 @@ namespace OrthotropicLinearElasticStrengthModel {
     // B = A^T for NxN
     template <typename T1>
     KOKKOS_INLINE_FUNCTION
-    void transposeNxN(const T1& A, T1& B, int N) {
+    void transposeNxN(const T1& A, 
+                      const T1& B, 
+                      const int N) {
         for (int i = 0; i < N; i++)
         for (int j = 0; j < N; j++){
                 B(i,j) = A(j,i);
@@ -133,9 +136,9 @@ namespace OrthotropicLinearElasticStrengthModel {
     *        A is overwritten during iteration (pass a copy if you need to keep it).
     */
     KOKKOS_INLINE_FUNCTION
-    void jacobiEigenSolve3x3(ViewCArrayKokkos<double> A,       // 3x3 symmetric, copied
-                             ViewCArrayKokkos<double>& eigval, // size 3
-                             ViewCArrayKokkos<double>& eigvec) // 3x3, columns = eigenvectors
+    void jacobiEigenSolve3x3(const ViewCArrayKokkos<double> A,       // 3x3 symmetric, copied
+                             const ViewCArrayKokkos<double>& eigval, // size 3
+                             const ViewCArrayKokkos<double>& eigvec) // 3x3, columns = eigenvectors
     {
         // Initialize eigvec to identity
         for (int i = 0; i < 3; i++)
@@ -206,7 +209,7 @@ namespace OrthotropicLinearElasticStrengthModel {
     */
     KOKKOS_INLINE_FUNCTION
     void computeRotationFromF(const ViewCArrayKokkos<double>& F, 
-                              ViewCArrayKokkos<double>& R) {
+                              const ViewCArrayKokkos<double>& R) {
 
         double Ft_1D[9];
         ViewCArrayKokkos<double>Ft(&Ft_1D[0],3,3);
@@ -285,7 +288,7 @@ namespace OrthotropicLinearElasticStrengthModel {
     */
     KOKKOS_INLINE_FUNCTION
     void buildBondMatrix(const ViewCArrayKokkos<double>& R, 
-                                ViewCArrayKokkos<double>& M) {
+                         const ViewCArrayKokkos<double>& M) {
 
         // Convenience aliases for rotation matrix components
         double R11=R(0,0); 
@@ -362,7 +365,7 @@ namespace OrthotropicLinearElasticStrengthModel {
     */
     inline void rotateStiffnessFromF(const ViewCArrayKokkos<double>& C_ref,
                                      const ViewCArrayKokkos<double>& F,
-                                     ViewCArrayKokkos<double>& C_current) {
+                                     const ViewCArrayKokkos<double>& C_current) {
 
         double R_1D[9];
         ViewCArrayKokkos<double>R(&R_1D[0],3,3);
@@ -386,6 +389,102 @@ namespace OrthotropicLinearElasticStrengthModel {
         matmulNxN(temporary, Mt, C_current, 6);     // C_current = temp * M^T
     } // end function
 
+
+    /*
+        // routines needed to calculate things like the wave speed in a material
+
+        // Reference stiffness tensor (e.g., cubic crystal, Voigt notation)
+        double C_ref_1D[36];
+        ViewCArrayKokkos<double> C_ref(&C_ref_1D[0],6,6);
+        // ... fill C_ref with your material's reference stiffness values ...
+
+        // Deformation gradient from your solver (already a MATAR RaggeCArray)
+
+        ViewCArrayKokkos<double> F(&Deformation_Grad(...),3,3);
+        F(0,0)=1.05; F(0,1)=0.02; F(0,2)=0.00;
+        F(1,0)=0.00; F(1,1)=0.98; F(1,2)=0.01;
+        F(2,0)=0.01; F(2,1)=0.00; F(2,2)=1.00;
+
+        double C_current_1D[36];
+        ViewCArrayKokkos<double> C_current(&C_current_1D[0],6,6);
+
+        rotateStiffnessFromF(C_ref, F, C_current);
+
+        // C_current now holds the stiffness tensor rotated into the
+        // current lab-frame orientation, ready for use in the acoustic
+        // tensor Q(n) to compute directional sound speed.
+    */
+
+
+    /**
+    * @brief Compute Green-Lagrange strain E = 1/2(F^T F - I)
+    */
+    KOKKOS_INLINE_FUNCTION
+    void computeGreenLagrangeStrain(const ViewCArrayKokkos<double>& F,
+                                    const ViewCArrayKokkos<double>& E) {
+        
+        double Ft_1D[9];
+        ViewCArrayKokkos<double>Ft(&Ft_1D[0],3,3);
+
+        double C_1D[9];
+        ViewCArrayKokkos<double>C(&C_1D[0],3,3);
+
+        transpose3x3(F, Ft);
+        matmul3x3(Ft, F, C);   // C = F^T F
+
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                E(i,j) = 0.5 * (C(i,j) - (i == j ? 1.0 : 0.0));
+            }
+        }
+    } // end function
+
+    /**
+    * @brief Convert symmetric 3x3 strain tensor to 6x1 Voigt vector
+    *        using engineering strain convention for shear terms.
+    */
+    KOKKOS_INLINE_FUNCTION
+    void strainTensorToVoigt(const ViewCArrayKokkos<double>& E, 
+                             const ViewCArrayKokkos<double>& E_voigt) {
+        E_voigt(0) = E(0,0);          // E11
+        E_voigt(1) = E(1,1);          // E22
+        E_voigt(2) = E(2,2);          // E33
+        E_voigt(3) = 2.0 * E(1,2);    // 2*E23
+        E_voigt(4) = 2.0 * E(0,2);    // 2*E13
+        E_voigt(5) = 2.0 * E(0,1);    // 2*E12
+    }
+
+
+    /**
+    * @brief Compute 2nd Piola-Kirchhoff stress (Voigt) from reference
+    *        stiffness and Green-Lagrange strain (Voigt).
+    *           S = C_ref * E
+    */
+    KOKKOS_INLINE_FUNCTION
+    void computeSecondPKStressVoigt(const ViewCArrayKokkos<double>& C_ref,
+                                    const ViewCArrayKokkos<double>& E_voigt,
+                                    const ViewCArrayKokkos<double>& S_voigt) {
+
+        for (int i = 0; i < 6; i++) {
+            double sum = 0.0;
+            for (int j = 0; j < 6; j++) {
+                sum += C_ref(i,j) * E_voigt(j);
+            }
+            S_voigt(i) = sum;
+        }
+    } // end function
+
+
+    KOKKOS_INLINE_FUNCTION
+    void stressVoigtToTensor(const ViewCArrayKokkos<double>& S_voigt, 
+                             const ViewCArrayKokkos<double>& S) {
+        S(0,0) = S_voigt(0);
+        S(1,1) = S_voigt(1);
+        S(2,2) = S_voigt(2);
+        S(1,2) = S_voigt(3);  S(2,1) = S_voigt(3);
+        S(0,2) = S_voigt(4);  S(2,0) = S_voigt(4);
+        S(0,1) = S_voigt(5);  S(1,0) = S_voigt(5);
+    }
 
 
     static void init_strength_state_vars(
