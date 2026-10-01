@@ -83,14 +83,47 @@ namespace OrthotropicLinearElasticStrengthModel {
         }
     } // end function
 
+
     // B = A^T for 3x3
     template <typename T1>
     KOKKOS_INLINE_FUNCTION
     void transpose3x3(const T1& A, T1& B) {
         for (int i = 0; i < 3; i++)
-            for (int j = 0; j < 3; j++)
+        for (int j = 0; j < 3; j++){
                 B(i,j) = A(j,i);
+        }
     } // end function
+
+
+    // Generic NxN matrix multiply helper (used for 6x6 here)
+    template <typename T1>
+    KOKKOS_INLINE_FUNCTION
+    void matmulNxN(const T1& A,
+                   const T1& B,
+                   T1& C,
+                   int N) {
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                double sum = 0.0;
+                for (int k = 0; k < N; k++) {
+                    sum += A(i,k) * B(k,j);
+                }
+                C(i,j) = sum;
+            }
+        }
+    } // end fucntion
+
+
+    // B = A^T for NxN
+    template <typename T1>
+    KOKKOS_INLINE_FUNCTION
+    void transposeNxN(const T1& A, T1& B, int N) {
+        for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++){
+                B(i,j) = A(j,i);
+        }
+    }   
+
 
 
     /**
@@ -123,12 +156,12 @@ namespace OrthotropicLinearElasticStrengthModel {
             for (auto& pq : pairs) {
                 int p = pq[0], q = pq[1];
 
-                if (std::fabs(A(p,q)) < 1.0e-18) continue;
+                if (fabs(A(p,q)) < 1.0e-18) continue;
 
                 double theta = (A(q,q) - A(p,p)) / (2.0 * A(p,q));
                 double t = (theta >= 0.0 ? 1.0 : -1.0) /
-                        (std::fabs(theta) + std::sqrt(theta*theta + 1.0));
-                double c = 1.0 / std::sqrt(t*t + 1.0);
+                        (fabs(theta) + sqrt(theta*theta + 1.0));
+                double c = 1.0 / sqrt(t*t + 1.0);
                 double s = t * c;
 
                 double App = A(p,p), Aqq = A(q,q), Apq = A(p,q);
@@ -246,7 +279,112 @@ namespace OrthotropicLinearElasticStrengthModel {
 
     } // end function
 
+    /**
+    * @brief Build the 6x6 Bond stress-transformation matrix M from a 3x3 rotation R.
+    *        Rotates Voigt-notation stiffness via: C_current = M * C_ref * M^T
+    */
+    KOKKOS_INLINE_FUNCTION
+    void buildBondMatrix(const ViewCArrayKokkos<double>& R, 
+                                ViewCArrayKokkos<double>& M) {
 
+        // Convenience aliases for rotation matrix components
+        double R11=R(0,0); 
+        double R12=R(0,1); 
+        double R13=R(0,2);
+
+        double R21=R(1,0); 
+        double R22=R(1,1); 
+        double R23=R(1,2);
+
+        double R31=R(2,0); 
+        double R32=R(2,1); 
+        double R33=R(2,2);
+
+        // Row 1
+        M(0,0)=R11*R11; 
+        M(0,1)=R12*R12; 
+        M(0,2)=R13*R13;
+        M(0,3)=2.0*R12*R13; 
+        M(0,4)=2.0*R13*R11; 
+        M(0,5)=2.0*R11*R12;
+
+        // Row 2
+        M(1,0)=R21*R21; 
+        M(1,1)=R22*R22; 
+        M(1,2)=R23*R23;
+        M(1,3)=2.0*R22*R23; 
+        M(1,4)=2.0*R23*R21; 
+        M(1,5)=2.0*R21*R22;
+
+        // Row 3
+        M(2,0)=R31*R31; 
+        M(2,1)=R32*R32; 
+        M(2,2)=R33*R33;
+        M(2,3)=2.0*R32*R33; 
+        M(2,4)=2.0*R33*R31; 
+        M(2,5)=2.0*R31*R32;
+
+        // Row 4
+        M(3,0)=R21*R31; 
+        M(3,1)=R22*R32; 
+        M(3,2)=R23*R33;
+        M(3,3)=R22*R33+R23*R32; 
+        M(3,4)=R23*R31+R21*R33; 
+        M(3,5)=R21*R32+R22*R31;
+
+        // Row 5
+        M(4,0)=R31*R11; 
+        M(4,1)=R32*R12; 
+        M(4,2)=R33*R13;
+        M(4,3)=R32*R13+R33*R12; 
+        M(4,4)=R33*R11+R31*R13; 
+        M(4,5)=R31*R12+R32*R11;
+
+        // Row 6
+        M(5,0)=R11*R21; 
+        M(5,1)=R12*R22; 
+        M(5,2)=R13*R23;
+        M(5,3)=R12*R23+R13*R22; 
+        M(5,4)=R13*R21+R11*R23; 
+        M(5,5)=R11*R22+R12*R21;
+    } // end function
+
+
+
+    /**
+    * @brief Rotate a 6x6 Voigt-notation stiffness matrix from reference to
+    *        current configuration using the deformation gradient F. We seek
+    *        C_current = M * C_ref * M^T
+    *
+    * @param C_ref       Reference stiffness matrix (6x6, Voigt notation)
+    * @param F           Deformation gradient (3x3)
+    * @param C_current   Output: rotated stiffness matrix (6x6)
+    */
+    inline void rotateStiffnessFromF(const ViewCArrayKokkos<double>& C_ref,
+                                     const ViewCArrayKokkos<double>& F,
+                                     ViewCArrayKokkos<double>& C_current) {
+
+        double R_1D[9];
+        ViewCArrayKokkos<double>R(&R_1D[0],3,3);
+
+        computeRotationFromF(F, R);
+
+        double M_1D[36];
+        ViewCArrayKokkos<double>M(&M_1D[0],6,6);
+
+        double Mt_1D[36];
+        ViewCArrayKokkos<double>Mt(&Mt_1D[0],6,6);
+
+        double temporary_1D[36];
+        ViewCArrayKokkos<double>temporary(&temporary_1D[0],6,6);
+
+
+        buildBondMatrix(R, M);
+        transposeNxN(M, Mt, 6);
+
+        matmulNxN(M, C_ref, temporary, 6);          // temp = M * C_ref
+        matmulNxN(temporary, Mt, C_current, 6);     // C_current = temp * M^T
+    } // end function
 
 
 
