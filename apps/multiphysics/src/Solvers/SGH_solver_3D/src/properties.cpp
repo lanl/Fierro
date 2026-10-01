@@ -181,7 +181,6 @@ void SGH3D::update_state(
                              elem_in_mat_elem,
                              num_material_elems, 
                              mat_id);
-        
 
 
         // loop over all the elements the material lives in
@@ -196,10 +195,19 @@ void SGH3D::update_state(
             // for this method, gauss point is equal to elem_gid
             size_t gauss_gid = elem_gid;
 
-            // cut out the node_gids for this element
-            ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
+            // acocunt for the reference deformation 
+            double F_total[3][3];
+            for (size_t i=0; i<3; i++)
+            for (size_t j=0; j<3; j++)
+            for (size_t k=0; k<3; k++){
+                F_total[i][j] += MaterialPoints_deformation_grad_t0(i,k)*MaterialPoints_deformation_grad(k,j); 
+            }
 
-
+            // save the total elastic deformation gradient
+            for (size_t i=0; i<3; i++)
+            for (size_t j=0; j<3; j++){
+                MaterialPoints_deformation_grad(i,j) = F_total[i][j];
+            }
 
             // --- call strength model ---
             Materials.MaterialFunctions(mat_id).calc_stress(
@@ -229,6 +237,7 @@ void SGH3D::update_state(
                                         mat_id,
                                         gauss_gid,
                                         elem_gid);
+
         }); // end parallel for over mat elem lid
     } // end if state_based strength model
 
