@@ -378,7 +378,7 @@ public:
         const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
         const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
+        DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const double time_value,
@@ -415,6 +415,17 @@ public:
         const double dt,
         const double rk_alpha,
         const size_t cycle) const;
+
+    void get_deformation_grad(
+        DRaggedRightArrayKokkos<double>& elem_deformation_grad,
+        const swage::Mesh_t& mesh,
+        const MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords_t0,
+        const DCArrayKokkos<double>& elem_vol,
+        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
+        const size_t num_mat_elems,
+        const size_t mat_id) const;
+
 
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
