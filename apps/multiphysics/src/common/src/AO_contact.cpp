@@ -34,6 +34,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "AO_contact.hpp"
 
+// ********************************************************
+// STARTING FUNCTIONS FOR INITIALIZATION OF CONTACT STATE
+// ********************************************************
+
 // gets the max of the lebesgue function
 double get_lebesgue_constant_1d(const elements::ReferenceElement_t& ref_elem,
                                 const size_t num_samples)
@@ -110,6 +114,16 @@ void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
 
     return;
 } // end AO_contact_initialize
+
+// ********************************************************
+// ENDING FUNCTIONS FOR INITIALIZATION OF CONTACT STATE
+// ********************************************************
+
+
+
+// ********************************************************
+// STARTING FUNCTIONS FOR SORTING NODES FOR PAIRING
+// ********************************************************
 
 // uses a kokkos parallel reduce to get the max values in one kernel launch
 void get_max_vel_and_accel(double& vx_max, double& vy_max, double& vz_max,
@@ -281,3 +295,173 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
 
     return;
 } // end AO_contact_sort
+
+// ********************************************************
+// ENDING FUNCTIONS FOR SORTING NODES FOR PAIRING
+// ********************************************************
+
+
+
+// ********************************************************
+// STARTING FUNCTIONS FOR CHECKING PENETRATION
+// ********************************************************
+
+// 1D Lagrange basis function a and its first derivative at x
+KOKKOS_FUNCTION
+void lagrange_1D(const CArrayKokkos<double>& dof_positions_1d,
+                 const size_t num_dofs_1d,
+                 const size_t a,
+                 const double x,
+                 double& val,
+                 double& dval)
+{
+    const double xa = dof_positions_1d(a);
+
+    double num  = 1.0;  // prod_{b != a} (x - x_b)
+    double dnum = 0.0;  // derivative of num
+    double den  = 1.0;  // prod_{b != a} (x_a - x_b)
+
+    for (size_t b = 0; b < num_dofs_1d; b++) {
+        if (b == a) continue;
+        const double xb = dof_positions_1d(b);
+
+        dnum = dnum*(x - xb) + num;   // product rule (safe when x == xb)
+        num *= (x - xb);
+        den *= (xa - xb);
+    } // end for b
+
+    val  = num/den;
+    dval = dnum/den;
+} // end lagrange_1D
+
+
+// build the cross product to get the normal direction
+KOKKOS_FUNCTION
+void get_normal(const CArrayKokkos<double>& dof_positions_1d,
+                const ViewCArrayKokkos<size_t>& nodes_in_the_elem,
+                const MPICArrayKokkos<double>& node_coords,
+                const size_t face_lid,
+                const double xi,
+                const double eta,
+                double* normal)
+{
+    const size_t num_dofs_1d = dof_positions_1d.dims(0);
+
+    // fixed and free volume reference directions for this face
+    // fixed_val also equals the reference outward sign (even faces -1, odd faces +1)
+    const size_t fixed_dim = face_lid/2;
+    const double fixed_val = (face_lid % 2 == 0) ? -1.0 : 1.0;
+    const size_t xi_dim    = (fixed_dim == 0) ? 1 : 0;   // volume dir that surface xi maps to
+    const size_t eta_dim   = (fixed_dim == 2) ? 1 : 2;   // volume dir that surface eta maps to
+
+    // surface tangents (free columns of J)
+    double dx_dxi[3];
+    double dx_deta[3];
+    for (int i = 0; i < 3; i++) {
+        dx_dxi[i] = 0;
+        dx_deta[i] = 0;
+    }
+
+    // loop over dof indices in the fixed direction
+    for (size_t c = 0; c < num_dofs_1d; c++) {
+
+        double w_fixed, dw_fixed;
+        lagrange_1D(dof_positions_1d, num_dofs_1d, c, fixed_val, w_fixed, dw_fixed);
+
+        // exactly 0 for non-face dof layers with GLL DOFs
+        if (w_fixed == 0.0) continue;
+
+        // loop over dof indices in the surface xi direction
+        for (size_t a = 0; a < num_dofs_1d; a++) {
+
+            double l_xi, dl_xi;
+            lagrange_1D(dof_positions_1d, num_dofs_1d, a, xi, l_xi, dl_xi);
+
+            // loop over dof indices in the surface eta direction
+            for (size_t b = 0; b < num_dofs_1d; b++) {
+
+                double l_eta, dl_eta;
+                lagrange_1D(dof_positions_1d, num_dofs_1d, b, eta, l_eta, dl_eta);
+
+                const double dN_dxi  = dl_xi*l_eta*w_fixed;
+                const double dN_deta = l_xi*dl_eta*w_fixed;
+
+                // map (c, a, b) back to the volume (i, j, k) indices
+                size_t idx[3];
+                idx[fixed_dim] = c;
+                idx[xi_dim]    = a;
+                idx[eta_dim]   = b;
+
+                const size_t node_lid = elements::get_dof_rid(idx[0], idx[1], idx[2], num_dofs_1d);
+                const size_t node_gid = nodes_in_the_elem(node_lid);
+
+                for (size_t dim = 0; dim < 3; dim++) {
+                    const double x = node_coords(node_gid, dim);
+                    dx_dxi[dim]  += x*dN_dxi;
+                    dx_deta[dim] += x*dN_deta;
+                }
+            } // end for b
+        } // end for a
+    } // end for c
+
+    // n da = sign * (a_{d+1} x a_{d+2}); for the eta faces the cyclic order (n da = cof(J) N dA = +- cof(J)) e_d)
+    // (mu, xi) is the reverse of the surface (xi, eta) ordering, hence the flip
+    const double orient = (fixed_dim == 1) ? -1.0 : 1.0; // only eta is flipped bc of cofactor definition in 3 by 3 matrix context
+    const double sign   = fixed_val*orient;
+
+    normal[0] = sign*(dx_dxi[1]*dx_deta[2] - dx_dxi[2]*dx_deta[1]);
+    normal[1] = sign*(dx_dxi[2]*dx_deta[0] - dx_dxi[0]*dx_deta[2]);
+    normal[2] = sign*(dx_dxi[0]*dx_deta[1] - dx_dxi[1]*dx_deta[0]);
+
+    // normalize (guard against a degenerate surface point)
+    const double mag = sqrt(normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2]);
+
+    if (mag > 0.0) {
+        for (size_t dim = 0; dim < 3; dim++) {
+            normal[dim] /= mag;
+        }
+    }
+
+} // end get_normal
+
+// check filters before worrying about checking penetration
+void check_filters()
+{
+
+};
+
+// is the node penetrating the surface
+bool is_penetrating()
+{
+
+};
+
+// find contact pairs from nodes_in_bounding_boxes
+void penetration_sweep(){
+    // // map boundary surface lid to the global surface id
+    // const size_t surf_gid = bdy_surfs(bdy_surf_lid);
+    // // element that owns this surface and the surface's local face id in it
+    // const size_t elem_gid = mesh.elems_in_surf(surf_gid, 0);
+    // const size_t face_lid = mesh.faces_in_surf(surf_gid, 0);
+    // // view into the element's global node ids
+    // ViewCArrayKokkos<size_t> nodes_in_the_elem(&mesh.nodes_in_elem(elem_gid, 0), mesh.num_nodes_in_elem);
+    // double normal[3];
+    // double xi  = 0.0;
+    // double eta = 0.0;
+    // get_normal(dof_positions_1d, nodes_in_the_elem, node_coords, face_lid, xi, eta, normal);
+    // uniformly spaced test points in each surface direction
+};
+
+// ********************************************************
+// ENDING FUNCTIONS FOR CHECKING PENETRATION
+// ********************************************************
+
+
+
+// ********************************************************
+// STARTING FUNCTIONS FOR GETTING CONTACT FORCES
+// ********************************************************
+
+// ********************************************************
+// ENDING FUNCTIONS FOR GETTING CONTACT FORCES
+// ********************************************************

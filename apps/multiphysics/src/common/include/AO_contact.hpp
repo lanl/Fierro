@@ -53,6 +53,10 @@ struct AO_contact_state_t
 
 };
 
+// ********************************************************
+// STARTING FUNCTIONS FOR INITIALIZATION OF CONTACT STATE
+// ********************************************************
+
 // gets the max of the lebesgue function
 double get_lebesgue_constant_1d(const elements::ReferenceElement_t& ref_elem,
                                 const size_t num_samples = 100001);
@@ -70,6 +74,16 @@ void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
                            const elements::ReferenceElement_t& ref_elem,
                            double& lebesgue_overshoot,
                            CArrayKokkos <double>& bounding_boxes);
+
+// ********************************************************
+// ENDING FUNCTIONS FOR INITIALIZATION OF CONTACT STATE
+// ********************************************************
+
+
+
+// ********************************************************
+// STARTING FUNCTIONS FOR SORTING NODES FOR PAIRING
+// ********************************************************
 
 // uses a kokkos parallel reduce to get the max values in one kernel launch
 void get_max_vel_and_accel(double& vx_max, double& vy_max, double& vz_max,
@@ -105,5 +119,56 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      const double lebesgue_overshoot,
                      DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
                      RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes);
+
+// ********************************************************
+// ENDING FUNCTIONS FOR SORTING NODES FOR PAIRING
+// ********************************************************
+
+
+
+// ********************************************************
+// STARTING FUNCTIONS FOR CHECKING PENETRATION
+// ********************************************************
+
+// 1D Lagrange basis values and first derivatives at x
+KOKKOS_FUNCTION
+void lagrange_val_and_deriv_1D(double* val,
+                               double* dval,
+                               const CArrayKokkos<double>& dof_positions_1d,
+                               const size_t num_dofs_1d,
+                               const double x);
+
+// build the cross product to get the normal direction
+KOKKOS_FUNCTION
+void get_normal(const CArrayKokkos<double>& dof_positions_1d,
+                const ViewCArrayKokkos<size_t>& nodes_in_the_elem,
+                const MPICArrayKokkos<double>& node_coords,
+                const size_t face_lid,
+                const double xi,
+                const double eta,
+                double* normal);
+
+// check filters before worrying about checking penetration
+void check_filters();
+
+// is the node penetrating the surface
+bool is_penetrating();
+
+// find contact pairs from nodes_in_bounding_boxes
+void penetration_sweep();
+
+// ********************************************************
+// ENDING FUNCTIONS FOR CHECKING PENETRATION
+// ********************************************************
+
+
+
+// ********************************************************
+// STARTING FUNCTIONS FOR GETTING CONTACT FORCES
+// ********************************************************
+
+// ********************************************************
+// ENDING FUNCTIONS FOR GETTING CONTACT FORCES
+// ********************************************************
 
 #endif  // AO_CONTACT_H

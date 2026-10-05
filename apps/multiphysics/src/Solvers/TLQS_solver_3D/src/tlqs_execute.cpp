@@ -132,18 +132,48 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         mesh.num_bdy_surfs, mesh.num_nodes_in_surf, dt, mesh.bdy_nodes_in_bdy_surf, AO_contact_state.bounding_boxes,
                         AO_contact_state.lebesgue_overshoot, AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes);
 
-        for (int i = 0; i < mesh.num_bdy_surfs; i++) {
-            std::cout << "SURF NODES: ";
-            for (int j = 0; j < mesh.num_nodes_in_surf; j++) {
-                std::cout << mesh.bdy_nodes(mesh.bdy_nodes_in_bdy_surf(i,j)) << "   ";
+        /* const size_t num_pts_1d = 3;
+        const double pt_spacing = 2.0/(double)(num_pts_1d - 1);
+
+        for (size_t bdy_surf_lid = 0; bdy_surf_lid < mesh.num_bdy_surfs; bdy_surf_lid++) {
+
+            // map boundary surface lid to the global surface id
+            const size_t surf_gid = mesh.bdy_surfs(bdy_surf_lid);
+
+            // element that owns this surface and the surface's local face id in it
+            const size_t elem_gid = mesh.elems_in_surf(surf_gid, 0);
+            const size_t face_lid = mesh.faces_in_surf(surf_gid, 0);
+
+            // view into the element's global node ids
+            ViewCArrayKokkos<size_t> nodes_in_the_elem(&mesh.nodes_in_elem(elem_gid, 0), mesh.num_nodes_in_elem);
+
+            // print the nodes in this surface
+            printf("bdy surf %lu (surf_gid %lu, face_lid %lu) nodes:",
+                (unsigned long)bdy_surf_lid, (unsigned long)surf_gid, (unsigned long)face_lid);
+            for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_surf; node_lid++) {
+                printf(" %lu", (unsigned long)mesh.nodes_in_surf(surf_gid, node_lid));
             }
-            std::cout << std::endl;
-            std::cout << "NODES IN THE BOUNDING BOX: ";
-            for (int j = 0; j < AO_contact_state.num_nodes_in_bounding_boxes(i); j++) {
-                std::cout << mesh.bdy_nodes(AO_contact_state.nodes_in_bounding_boxes(i,j)) << "   ";
-            }
-            std::cout << std::endl << std::endl;
-        }
+            printf("\n");
+
+            // print the normal at each test point
+            for (size_t j = 0; j < num_pts_1d; j++) {
+                for (size_t i = 0; i < num_pts_1d; i++) {
+
+                    const double xi  = -1.0 + i*pt_spacing;
+                    const double eta = -1.0 + j*pt_spacing;
+
+                    double normal[3];
+                    get_normal(ref_elem.dof_positions_1d, nodes_in_the_elem, State.node.coords,
+                            face_lid, xi, eta, normal);
+
+                    printf("  (xi, eta) = (%+.3f, %+.3f)   normal = (%+.6f, %+.6f, %+.6f)\n",
+                        xi, eta, normal[0], normal[1], normal[2]);
+                } // end for i
+            } // end for j
+
+            printf("\n");
+
+        } // end for bdy_surf_lid */
 
     }
 
