@@ -117,7 +117,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         AO_contact_state_t AO_contact_state;
         AO_contact_initialize(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels, mesh.num_bdy_nodes,
                               AO_contact_state.num_nodes_in_bounding_boxes, mesh.num_bdy_surfs, ref_elem,
-                              AO_contact_state.lebesgue_overshoot, AO_contact_state.bounding_boxes);
+                              AO_contact_state.lebesgue_overshoot, AO_contact_state.bounding_boxes, AO_contact_state.bdy_surf_node_normals,
+                              mesh.num_nodes_in_surf);
 
         // zeroing out bdy_node_velocities since this solver doesn't carry full node state velocity or evolve velocity
         // will be updated during picard iterations
@@ -132,7 +133,54 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         mesh.num_bdy_surfs, mesh.num_nodes_in_surf, dt, mesh.bdy_nodes_in_bdy_surf, AO_contact_state.bounding_boxes,
                         AO_contact_state.lebesgue_overshoot, AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes);
 
-        /* const size_t num_pts_1d = 3;
+        // TESTING NORMALS
+
+        /* // ---------------------------------------------------------------
+        // rotation settings: change these
+        // ---------------------------------------------------------------
+        const double angle_deg = 45.0;
+        const double axis[3]   = {0.0, 0.0, 1.0};   // any length, normalized below
+        const double center[3] = {0.5, 0.5, 0.5};
+
+        // unit rotation axis
+        const double axis_mag = sqrt(axis[0]*axis[0] + axis[1]*axis[1] + axis[2]*axis[2]);
+        const double kx = axis[0]/axis_mag;
+        const double ky = axis[1]/axis_mag;
+        const double kz = axis[2]/axis_mag;
+
+        const double theta = angle_deg*acos(-1.0)/180.0;
+        const double cos_t = cos(theta);
+        const double sin_t = sin(theta);
+        const double v     = 1.0 - cos_t;
+
+        // Rodrigues: R = cos I + sin [k]x + (1 - cos) k k^T
+        double R[3][3];
+        R[0][0] = cos_t + kx*kx*v;     R[0][1] = kx*ky*v - kz*sin_t;  R[0][2] = kx*kz*v + ky*sin_t;
+        R[1][0] = ky*kx*v + kz*sin_t;  R[1][1] = cos_t + ky*ky*v;     R[1][2] = ky*kz*v - kx*sin_t;
+        R[2][0] = kz*kx*v - ky*sin_t;  R[2][1] = kz*ky*v + kx*sin_t;  R[2][2] = cos_t + kz*kz*v;
+
+        // rotate all nodes about the center: x' = c + R (x - c)
+        for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
+            double rel[3];
+            for (size_t dim = 0; dim < 3; dim++) {
+                rel[dim] = State.node.coords(node_gid, dim) - center[dim];
+            }
+            for (size_t i = 0; i < 3; i++) {
+                State.node.coords(node_gid, i) = center[i] + R[i][0]*rel[0] + R[i][1]*rel[1] + R[i][2]*rel[2];
+            }
+        } // end for node_gid
+
+        // refresh boundary coords from the rotated global coords
+        for (size_t bdy_node_lid = 0; bdy_node_lid < mesh.num_bdy_nodes; bdy_node_lid++) {
+            for (size_t dim = 0; dim < 3; dim++) {
+                AO_contact_state.bdy_node_coords(bdy_node_lid, dim) = State.node.coords(mesh.bdy_nodes(bdy_node_lid), dim);
+            }
+        } // end for bdy_node_lid
+
+        // ---------------------------------------------------------------
+        // normal test (boundary space)
+        // ---------------------------------------------------------------
+        const size_t num_pts_1d = 3;
         const double pt_spacing = 2.0/(double)(num_pts_1d - 1);
 
         for (size_t bdy_surf_lid = 0; bdy_surf_lid < mesh.num_bdy_surfs; bdy_surf_lid++) {
@@ -140,18 +188,17 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // map boundary surface lid to the global surface id
             const size_t surf_gid = mesh.bdy_surfs(bdy_surf_lid);
 
-            // element that owns this surface and the surface's local face id in it
-            const size_t elem_gid = mesh.elems_in_surf(surf_gid, 0);
+            // surface's local face id in its element (orientation sign only)
             const size_t face_lid = mesh.faces_in_surf(surf_gid, 0);
 
-            // view into the element's global node ids
-            ViewCArrayKokkos<size_t> nodes_in_the_elem(&mesh.nodes_in_elem(elem_gid, 0), mesh.num_nodes_in_elem);
+            // view into this surface's boundary node lids
+            ViewCArrayKokkos<size_t> bdy_nodes_in_the_surf(&mesh.bdy_nodes_in_bdy_surf(bdy_surf_lid, 0), mesh.num_nodes_in_surf);
 
-            // print the nodes in this surface
-            printf("bdy surf %lu (surf_gid %lu, face_lid %lu) nodes:",
+            // print the nodes in this surface (boundary lids)
+            printf("bdy surf %lu (surf_gid %lu, face_lid %lu) bdy nodes:",
                 (unsigned long)bdy_surf_lid, (unsigned long)surf_gid, (unsigned long)face_lid);
             for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_surf; node_lid++) {
-                printf(" %lu", (unsigned long)mesh.nodes_in_surf(surf_gid, node_lid));
+                printf(" %lu", (unsigned long)bdy_nodes_in_the_surf(node_lid));
             }
             printf("\n");
 
@@ -163,7 +210,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     const double eta = -1.0 + j*pt_spacing;
 
                     double normal[3];
-                    get_normal(ref_elem.dof_positions_1d, nodes_in_the_elem, State.node.coords,
+                    get_normal(ref_elem.dof_positions_1d, bdy_nodes_in_the_surf, AO_contact_state.bdy_node_coords,
                             face_lid, xi, eta, normal);
 
                     printf("  (xi, eta) = (%+.3f, %+.3f)   normal = (%+.6f, %+.6f, %+.6f)\n",
@@ -173,7 +220,29 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             printf("\n");
 
-        } // end for bdy_surf_lid */
+        } // end for bdy_surf_lid
+
+        // ---------------------------------------------------------------
+        // undo the rotation: x = c + R^T (x' - c)
+        // ---------------------------------------------------------------
+        for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
+            double rel[3];
+            for (size_t dim = 0; dim < 3; dim++) {
+                rel[dim] = State.node.coords(node_gid, dim) - center[dim];
+            }
+            for (size_t i = 0; i < 3; i++) {
+                State.node.coords(node_gid, i) = center[i] + R[0][i]*rel[0] + R[1][i]*rel[1] + R[2][i]*rel[2];
+            }
+        } // end for node_gid
+
+        // refresh boundary coords from the restored global coords
+        for (size_t bdy_node_lid = 0; bdy_node_lid < mesh.num_bdy_nodes; bdy_node_lid++) {
+            for (size_t dim = 0; dim < 3; dim++) {
+                AO_contact_state.bdy_node_coords(bdy_node_lid, dim) = State.node.coords(mesh.bdy_nodes(bdy_node_lid), dim);
+            }
+        } // end for bdy_node_lid */
+
+        // END TESTING NORMALS
 
     }
 

@@ -41,15 +41,23 @@ using namespace mtr;
 
 struct AO_contact_state_t
 {
+    // bounding node variables
     DCArrayKokkos <double> bdy_node_coords;                     // subset of coords only including boundary nodes
     CArrayKokkos <double> bdy_node_vels;                        // subset of coords only including boundary nodes
     CArrayKokkos <double> bdy_node_accels;                      // subset of coords only including boundary nodes
+
+    // sort variables
     CArrayKokkos <double> bounding_boxes;                       // coords of bounding box of each boundary surface
     RaggedRightArrayKokkos <size_t> nodes_in_bounding_boxes;    // nodes that lie in the bounding box of each boundary surface
     DCArrayKokkos <size_t> num_nodes_in_bounding_boxes;         // stride array for nodes_in_bounding_boxes
     const size_t num_bins = 10; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     double lebesgue_overshoot;
     swage::PointCloud_t bdy_node_point_cloud;
+
+    // pairing variables
+    DRaggedRightArrayKokkos <double> pairing_check_vars;        // stores min(distance_to_surf), xi, and eta for a node compared to a surface
+    CArrayKokkos<double> bdy_surf_node_normals;                 // stores outward normal at each node in surface to avoid redundant calculations
+    const double filter_tol = 0.0;
 
 };
 
@@ -73,7 +81,9 @@ void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
                            const size_t num_bdy_surfs,
                            const elements::ReferenceElement_t& ref_elem,
                            double& lebesgue_overshoot,
-                           CArrayKokkos <double>& bounding_boxes);
+                           CArrayKokkos <double>& bounding_boxes,
+                           CArrayKokkos<double>& bdy_surf_node_normals,
+                           const size_t num_nodes_in_elem);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR INITIALIZATION OF CONTACT STATE
@@ -141,21 +151,49 @@ void lagrange_val_and_deriv_1D(double* val,
 // build the cross product to get the normal direction
 KOKKOS_FUNCTION
 void get_normal(const CArrayKokkos<double>& dof_positions_1d,
-                const ViewCArrayKokkos<size_t>& nodes_in_the_elem,
-                const MPICArrayKokkos<double>& node_coords,
+                const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
+                const DCArrayKokkos<double>& bdy_node_coords,
                 const size_t face_lid,
                 const double xi,
                 const double eta,
                 double* normal);
 
-// check filters before worrying about checking penetration
-void check_filters();
+// outward unit normal at each GLL node of each boundary surface
+void get_bdy_surf_node_normals(const swage::Mesh_t& mesh,
+                               const CArrayKokkos<double>& dof_positions_1d,
+                               const DCArrayKokkos<double>& bdy_node_coords,
+                               const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
+                               const size_t num_bdy_surfs,
+                               const size_t num_nodes_in_surf,
+                               CArrayKokkos<double>& bdy_surf_node_normals);
+
+// returns true if the node should proceed to the Newton solve
+// filter 1: node is part of this surface's connectivity         -> reject
+// filter 2: node is outside the tangent plane at every
+//           surface node by more than filter_tol                -> reject
+KOKKOS_FUNCTION
+bool check_filters(const size_t bdy_node_lid,
+                   const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
+                   const ViewCArrayKokkos<double>& surf_node_normals,
+                   const DCArrayKokkos<double>& bdy_node_coords,
+                   const size_t num_nodes_in_surf,
+                   const double filter_tol);
 
 // is the node penetrating the surface
-bool is_penetrating();
+void penetration_check();
 
 // find contact pairs from nodes_in_bounding_boxes
-void penetration_sweep();
+void penetration_sweep(const swage::Mesh_t& mesh,
+                       const CArrayKokkos <double>& dof_positions_1d,
+                       const RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes,
+                       DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
+                       DRaggedRightArrayKokkos <double>& pairing_check_vars,
+                       const DCArrayKokkos <double>& bdy_node_coords,
+                       const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
+                       CArrayKokkos <double>& bdy_surf_node_normals,
+                       const size_t num_bdy_surfs,
+                       const size_t num_nodes_in_surf,
+                       const double filter_tol);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR CHECKING PENETRATION

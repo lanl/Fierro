@@ -101,7 +101,9 @@ void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
                            const size_t num_bdy_surfs,
                            const elements::ReferenceElement_t& ref_elem,
                            double& lebesgue_overshoot,
-                           CArrayKokkos <double>& bounding_boxes)
+                           CArrayKokkos <double>& bounding_boxes,
+                           CArrayKokkos<double>& bdy_surf_node_normals,
+                           const size_t num_nodes_in_surf)
 {
     // allocating member variables that are statically sized
     bdy_node_coords = DCArrayKokkos <double> (num_bdy_nodes, 3, "bdy_node_coords");
@@ -109,6 +111,7 @@ void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
     bdy_node_accels = CArrayKokkos <double> (num_bdy_nodes, 3, "bdy_node_accels");
     num_nodes_in_bounding_boxes = DCArrayKokkos <size_t> (num_bdy_surfs, "num_nodes_in_bounding_boxes");
     bounding_boxes = CArrayKokkos <double> (num_bdy_surfs, 2, 3, "bounding_boxes");
+    bdy_surf_node_normals = CArrayKokkos <double> (num_bdy_surfs, num_nodes_in_surf, 3, "bdy_surf_node_normals");
 
     get_surf_overshoot_factor(ref_elem, lebesgue_overshoot);
 
@@ -337,9 +340,10 @@ void lagrange_1D(const CArrayKokkos<double>& dof_positions_1d,
 
 // build the cross product to get the normal direction
 KOKKOS_FUNCTION
+KOKKOS_FUNCTION
 void get_normal(const CArrayKokkos<double>& dof_positions_1d,
-                const ViewCArrayKokkos<size_t>& nodes_in_the_elem,
-                const MPICArrayKokkos<double>& node_coords,
+                const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
+                const DCArrayKokkos<double>& bdy_node_coords,
                 const size_t face_lid,
                 const double xi,
                 const double eta,
@@ -347,67 +351,45 @@ void get_normal(const CArrayKokkos<double>& dof_positions_1d,
 {
     const size_t num_dofs_1d = dof_positions_1d.dims(0);
 
-    // fixed and free volume reference directions for this face
-    // fixed_val also equals the reference outward sign (even faces -1, odd faces +1)
-    const size_t fixed_dim = face_lid/2;
-    const double fixed_val = (face_lid % 2 == 0) ? -1.0 : 1.0;
-    const size_t xi_dim    = (fixed_dim == 0) ? 1 : 0;   // volume dir that surface xi maps to
-    const size_t eta_dim   = (fixed_dim == 2) ? 1 : 2;   // volume dir that surface eta maps to
-
-    // surface tangents (free columns of J)
+    // surface tangents
     double dx_dxi[3];
     double dx_deta[3];
     for (int i = 0; i < 3; i++) {
-        dx_dxi[i] = 0;
-        dx_deta[i] = 0;
+        dx_dxi[i] = 0.0;
+        dx_deta[i] = 0.0;
     }
 
-    // loop over dof indices in the fixed direction
-    for (size_t c = 0; c < num_dofs_1d; c++) {
+    // loop over dof indices in the surface xi direction
+    for (size_t a = 0; a < num_dofs_1d; a++) {
 
-        double w_fixed, dw_fixed;
-        lagrange_1D(dof_positions_1d, num_dofs_1d, c, fixed_val, w_fixed, dw_fixed);
+        double l_xi, dl_xi;
+        lagrange_1D(dof_positions_1d, num_dofs_1d, a, xi, l_xi, dl_xi);
 
-        // exactly 0 for non-face dof layers with GLL DOFs
-        if (w_fixed == 0.0) continue;
+        // loop over dof indices in the surface eta direction
+        for (size_t b = 0; b < num_dofs_1d; b++) {
 
-        // loop over dof indices in the surface xi direction
-        for (size_t a = 0; a < num_dofs_1d; a++) {
+            double l_eta, dl_eta;
+            lagrange_1D(dof_positions_1d, num_dofs_1d, b, eta, l_eta, dl_eta);
 
-            double l_xi, dl_xi;
-            lagrange_1D(dof_positions_1d, num_dofs_1d, a, xi, l_xi, dl_xi);
+            const double dN_dxi  = dl_xi*l_eta;
+            const double dN_deta = l_xi*dl_eta;
 
-            // loop over dof indices in the surface eta direction
-            for (size_t b = 0; b < num_dofs_1d; b++) {
+            const size_t bdy_node_lid = bdy_nodes_in_the_surf(elements::get_dof_rid(a, b, num_dofs_1d));
 
-                double l_eta, dl_eta;
-                lagrange_1D(dof_positions_1d, num_dofs_1d, b, eta, l_eta, dl_eta);
+            for (size_t dim = 0; dim < 3; dim++) {
+                const double x = bdy_node_coords(bdy_node_lid, dim);
+                dx_dxi[dim]  += x*dN_dxi;
+                dx_deta[dim] += x*dN_deta;
+            }
+        } // end for b
+    } // end for a
 
-                const double dN_dxi  = dl_xi*l_eta*w_fixed;
-                const double dN_deta = l_xi*dl_eta*w_fixed;
-
-                // map (c, a, b) back to the volume (i, j, k) indices
-                size_t idx[3];
-                idx[fixed_dim] = c;
-                idx[xi_dim]    = a;
-                idx[eta_dim]   = b;
-
-                const size_t node_lid = elements::get_dof_rid(idx[0], idx[1], idx[2], num_dofs_1d);
-                const size_t node_gid = nodes_in_the_elem(node_lid);
-
-                for (size_t dim = 0; dim < 3; dim++) {
-                    const double x = node_coords(node_gid, dim);
-                    dx_dxi[dim]  += x*dN_dxi;
-                    dx_deta[dim] += x*dN_deta;
-                }
-            } // end for b
-        } // end for a
-    } // end for c
-
-    // n da = sign * (a_{d+1} x a_{d+2}); for the eta faces the cyclic order (n da = cof(J) N dA = +- cof(J)) e_d)
-    // (mu, xi) is the reverse of the surface (xi, eta) ordering, hence the flip
-    const double orient = (fixed_dim == 1) ? -1.0 : 1.0; // only eta is flipped bc of cofactor definition in 3 by 3 matrix context
-    const double sign   = fixed_val*orient;
+    // orientation from the face: fixed_val is the reference outward sign (even -1, odd +1),
+    // and eta faces flip because cyclic order (mu, xi) reverses the surface (xi, eta) order
+    const size_t fixed_dim = face_lid/2;
+    const double fixed_val = (face_lid % 2 == 0) ? -1.0 : 1.0;
+    const double orient    = (fixed_dim == 1) ? -1.0 : 1.0;
+    const double sign      = fixed_val*orient;
 
     normal[0] = sign*(dx_dxi[1]*dx_deta[2] - dx_dxi[2]*dx_deta[1]);
     normal[1] = sign*(dx_dxi[2]*dx_deta[0] - dx_dxi[0]*dx_deta[2]);
@@ -424,32 +406,130 @@ void get_normal(const CArrayKokkos<double>& dof_positions_1d,
 
 } // end get_normal
 
-// check filters before worrying about checking penetration
-void check_filters()
+// outward unit normal at each GLL node of each boundary surface
+void get_bdy_surf_node_normals(const swage::Mesh_t& mesh,
+                               const CArrayKokkos<double>& dof_positions_1d,
+                               const DCArrayKokkos<double>& bdy_node_coords,
+                               const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
+                               const size_t num_bdy_surfs,
+                               const size_t num_nodes_in_surf,
+                               CArrayKokkos<double>& bdy_surf_node_normals)
 {
+    const size_t num_dofs_1d = dof_positions_1d.dims(0);
 
-};
+    FOR_ALL(bdy_surf_lid, 0, num_bdy_surfs, {
+
+        const size_t face_lid = mesh.faces_in_surf(mesh.bdy_surfs(bdy_surf_lid), 0);
+        ViewCArrayKokkos<size_t> bdy_nodes_in_the_surf(&bdy_nodes_in_bdy_surf(bdy_surf_lid, 0), num_nodes_in_surf);
+
+        for (size_t b = 0; b < num_dofs_1d; b++) {
+            for (size_t a = 0; a < num_dofs_1d; a++) {
+
+                double normal[3];
+                get_normal(dof_positions_1d, bdy_nodes_in_the_surf, bdy_node_coords,
+                           face_lid, dof_positions_1d(a), dof_positions_1d(b), normal);
+
+                const size_t surf_node_rid = elements::get_dof_rid(a, b, num_dofs_1d);
+                for (size_t dim = 0; dim < 3; dim++) {
+                    bdy_surf_node_normals(bdy_surf_lid, surf_node_rid, dim) = normal[dim];
+                }
+            } // end for a
+        } // end for b
+    });
+    Kokkos::fence();
+
+} // end get_bdy_surf_node_normals
+
+// returns true if the node should proceed to the Newton solve
+// filter 1: node is part of this surface's connectivity         -> reject
+// filter 2: node is outside the tangent plane at every
+//           surface node by more than filter_tol                -> reject
+KOKKOS_FUNCTION
+bool check_filters(const size_t bdy_node_lid,
+                   const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
+                   const ViewCArrayKokkos<double>& surf_node_normals,
+                   const DCArrayKokkos<double>& bdy_node_coords,
+                   const size_t num_nodes_in_surf,
+                   const double filter_tol)
+{
+    double x_node[3];
+    x_node[0] = bdy_node_coords(bdy_node_lid, 0);
+    x_node[1] = bdy_node_coords(bdy_node_lid, 1);
+    x_node[2] = bdy_node_coords(bdy_node_lid, 2);
+
+    bool outside_all = true;
+
+    for (size_t surf_node_rid = 0; surf_node_rid < num_nodes_in_surf; surf_node_rid++) {
+
+        const size_t surf_bdy_node_lid = bdy_nodes_in_the_surf(surf_node_rid);
+
+        // filter 1: node belongs to this surface
+        if (surf_bdy_node_lid == bdy_node_lid) return false;
+
+        // filter 2: is the node outside wrt this surface node by more than filter_tol?
+        // (skipped once any surface node shows the node is not outside)
+        if (outside_all) {
+            double dot = 0.0;
+            for (size_t dim = 0; dim < 3; dim++) {
+                dot += (x_node[dim] - bdy_node_coords(surf_bdy_node_lid, dim))*surf_node_normals(surf_node_rid, dim);
+            }
+
+            if (dot <= filter_tol) outside_all = false;
+        }
+    } // end for surf_node_rid
+
+    return !outside_all;
+
+} // end check_filters
 
 // is the node penetrating the surface
-bool is_penetrating()
+void penetration_check()
 {
 
 };
 
 // find contact pairs from nodes_in_bounding_boxes
-void penetration_sweep(){
-    // // map boundary surface lid to the global surface id
-    // const size_t surf_gid = bdy_surfs(bdy_surf_lid);
-    // // element that owns this surface and the surface's local face id in it
-    // const size_t elem_gid = mesh.elems_in_surf(surf_gid, 0);
-    // const size_t face_lid = mesh.faces_in_surf(surf_gid, 0);
-    // // view into the element's global node ids
-    // ViewCArrayKokkos<size_t> nodes_in_the_elem(&mesh.nodes_in_elem(elem_gid, 0), mesh.num_nodes_in_elem);
-    // double normal[3];
-    // double xi  = 0.0;
-    // double eta = 0.0;
-    // get_normal(dof_positions_1d, nodes_in_the_elem, node_coords, face_lid, xi, eta, normal);
-    // uniformly spaced test points in each surface direction
+void penetration_sweep(const swage::Mesh_t& mesh,
+                       const CArrayKokkos <double>& dof_positions_1d,
+                       const RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes,
+                       DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
+                       DRaggedRightArrayKokkos <double>& pairing_check_vars,
+                       const DCArrayKokkos <double>& bdy_node_coords,
+                       const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
+                       CArrayKokkos <double>& bdy_surf_node_normals,
+                       const size_t num_bdy_surfs,
+                       const size_t num_nodes_in_surf,
+                       const double filter_tol)
+{
+    // nodal normals for every boundary surface from the current bdy_node_coords
+    get_bdy_surf_node_normals(mesh, dof_positions_1d, bdy_node_coords, bdy_nodes_in_bdy_surf,
+                              num_bdy_surfs, num_nodes_in_surf, bdy_surf_node_normals);
+
+    // getting memory onto host side NOT SURE IF THIS IS NECESSARY UNCOMMENT IF THINGS BREAK ON GPU
+    //num_nodes_in_bounding_boxes.update_host();
+    
+    // allocating and initializing the write point for penetration_check
+    pairing_check_vars = DRaggedRightArrayKokkos <double> (num_nodes_in_bounding_boxes, 3, "pairing_check_vars"); // stores gap, xi, and eta for a node compared to a surface
+    pairing_check_vars.set_values(100000.0);
+
+    // checking for penetration across nodes_in_bounding_boxes
+    FOR_FIRST(bdy_surf_lid, 0, num_bdy_surfs, {
+
+    ViewCArrayKokkos<size_t> bdy_nodes_in_the_surf(&bdy_nodes_in_bdy_surf(bdy_surf_lid, 0), num_nodes_in_surf);
+    ViewCArrayKokkos<double> surf_node_normals(&bdy_surf_node_normals(bdy_surf_lid, 0, 0), num_nodes_in_surf, 3);
+
+    FOR_SECOND(node_lid, 0, nodes_in_bounding_boxes.stride(bdy_surf_lid), {
+
+        const size_t bdy_node_lid = nodes_in_bounding_boxes(bdy_surf_lid, node_lid);
+
+        if (!check_filters(bdy_node_lid, bdy_nodes_in_the_surf, surf_node_normals,
+                           bdy_node_coords, num_nodes_in_surf, filter_tol)) return;
+
+        // Newton solve, checks, and writes go here
+
+    }); // end FOR_SECOND
+}); // end FOR_FIRST
+Kokkos::fence();
 };
 
 // ********************************************************
