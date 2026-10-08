@@ -289,6 +289,8 @@ public:
     );
 
     // inputs: material_matrix, displacement gradient, inverse Jacobian, basis gradients wrt master element, current PK2 stress
+    //         scratch views (per thread) for the global basis gradients (num_nodes x 3), B1 (6 x 3*num_nodes)
+    //         and one row of the geometric stiffness K2 (3*num_nodes)
     // outputs: updated element stiffness matrix, updated element force vector
     KOKKOS_FUNCTION
     static void tally_elem_arrays(
@@ -300,16 +302,89 @@ public:
         const double PK2_curr_config[6],
         ViewCArrayKokkos <double>& Kel,
         ViewCArrayKokkos <double>& Fel,
-        const double vol_frac
+        const double vol_frac,
+        ViewCArrayKokkos <double>& glob_grad,
+        ViewCArrayKokkos <double>& B1,
+        ViewCArrayKokkos <double>& K2_row
     );
 
     // **** Functions defined in cgm_functions.cpp **** //
+
+    // builds node_lid_in_elem(node_gid, elem_lid): the local index of node_gid inside elems_in_node(node_gid, elem_lid)
+    void build_node_lid_in_elem(
+        const size_t num_nodes,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        CArrayKokkos<size_t>& num_elems_in_node,
+        RaggedRightArrayKokkos<size_t>& node_lid_in_elem
+    );
+
+    /////////////////////////////////////////////////////////////////////////////
+    ///
+    /// \fn node_K_times_x
+    ///
+    /// \brief Matrix-free product (K * x) for the 3 global dofs of node_gid, gathered
+    ///        from the element stiffness arrays of every element containing the node.
+    ///
+    /// The 3 dof rows are accumulated together so x is gathered once and the 3
+    /// independent sums overlap. Each sum is still accumulated in the order
+    /// (elem_lid, b, q), so the result is identical to a per-dof gather.
+    /// val0, val1, val2 are accumulated into (callers initialize them).
+    ///
+    /////////////////////////////////////////////////////////////////////////////
+    template <typename XArray>
+    KOKKOS_INLINE_FUNCTION
+    static void node_K_times_x(
+        const size_t node_gid,
+        const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
+        const size_t num_nodes_in_elem,
+        const DCArrayKokkos<size_t>& nodes_in_elem,
+        const CArrayKokkos<double>& K_elem,
+        const XArray& x,
+        double& val0,
+        double& val1,
+        double& val2)
+    {
+        const size_t num_dof_in_elem   = 3 * num_nodes_in_elem;
+        const size_t num_elems_in_node = elems_in_node.stride(node_gid);
+
+        for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
+            const size_t elem_gid  = elems_in_node(node_gid, elem_lid);
+            const size_t local_dof = 3 * node_lid_in_elem(node_gid, elem_lid);
+
+            const double* K_row0 = &K_elem(elem_gid, local_dof, 0);
+            const double* K_row1 = K_row0 + num_dof_in_elem;
+            const double* K_row2 = K_row1 + num_dof_in_elem;
+
+            for (size_t b = 0; b < num_nodes_in_elem; b++) {
+                const size_t node_gid_b = nodes_in_elem(elem_gid, b);
+                const double x0 = x(node_gid_b, 0);
+                const double x1 = x(node_gid_b, 1);
+                const double x2 = x(node_gid_b, 2);
+
+                val0 += K_row0[3*b] * x0;
+                val0 += K_row0[3*b+1] * x1;
+                val0 += K_row0[3*b+2] * x2;
+
+                val1 += K_row1[3*b] * x0;
+                val1 += K_row1[3*b+1] * x1;
+                val1 += K_row1[3*b+2] * x2;
+
+                val2 += K_row2[3*b] * x0;
+                val2 += K_row2[3*b+1] * x1;
+                val2 += K_row2[3*b+2] * x2;
+            }
+        }
+    }
 
     // inputs: mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter
     // outputs: initial cgm residual: r0
     void get_r0(
         const size_t num_nodes,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
         const CArrayKokkos<double>& F_elem,
@@ -319,12 +394,13 @@ public:
     );
 
     // inputs: mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p
-    // outputs: alpha for cgm
+    // outputs: alpha for cgm, temporary = K * p
     double get_alpha(
         const size_t num_nodes,
         const size_t num_nodes_in_elem,
         const size_t num_owned_nodes,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
         const CArrayKokkos<double>& K_elem,
         const double rktrk,
@@ -333,14 +409,12 @@ public:
         const DCArrayKokkos<bool> shared_tally_owned_nodes
     );
 
+    // inputs: rk, Kp = K * p (computed by get_alpha), alpha
+    // outputs: rkp1 = rk - alpha * K * p
     void get_rkp1(
         const size_t num_nodes,
-        const RaggedRightArrayKokkos<size_t>& elems_in_node,
-        const size_t num_nodes_in_elem,
-        const DCArrayKokkos<size_t>& nodes_in_elem,
-        const CArrayKokkos<double>& K_elem,
         const MPICArrayKokkos<double>& rk,
-        const CArrayKokkos<double>& p,
+        const MPICArrayKokkos<double>& Kp,
         const double alpha,
         MPICArrayKokkos<double>& rkp1
     );
@@ -418,6 +492,7 @@ public:
         const CArrayKokkos<double>& K_elem,
         const size_t num_nodes,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
         const double alpha,
@@ -429,6 +504,7 @@ public:
         const CArrayKokkos<double>& K_elem,
         const size_t num_nodes,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem
     );
@@ -439,6 +515,7 @@ public:
         const CArrayKokkos<double>& K_elem,
         const size_t num_nodes,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
+        const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
         MPICArrayKokkos<double>& v_scratch,
