@@ -231,7 +231,7 @@ namespace HostANNStrengthModel {
         const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,

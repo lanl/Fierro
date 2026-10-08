@@ -107,7 +107,7 @@ namespace QSIsotropicLinearElastic {
      * @param MaterialPoints_strength_state_vars   State variables for the strength model at material points.
      * @param MaterialPoints_den   Density at the material point.
      * @param MaterialPoints_sie   Specific internal energy at the material point.
-     * @param MaterialPoints_shear_modulii   Shear modulus at material points.
+     * @param MaterialPoints_deformationa_grad   Deformation gradient at material points.
      * @param elem_in_mat_elem   Mapping from material points to mesh elements.
      * @param eos_global_vars   Global variables for the equation of state.
      * @param strength_global_vars   Global variables for the strength model.
@@ -136,7 +136,7 @@ namespace QSIsotropicLinearElastic {
         const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos <double> &eos_global_vars,
         const RaggedRightArrayKokkos <double> &strength_global_vars,

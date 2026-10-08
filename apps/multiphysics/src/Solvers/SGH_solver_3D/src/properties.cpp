@@ -84,7 +84,8 @@ void SGH3D::update_state(
     const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
     const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+    DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const double time_value,
     const double dt,
@@ -137,7 +138,7 @@ void SGH3D::update_state(
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_id, mat_point_sid),
                                         MaterialPoints_sie(mat_id, mat_point_sid),
-                                        MaterialPoints_shear_modulii,
+                                        MaterialPoints_deformation_grad,
                                         Materials.eos_global_vars);
 
         }); // end parallel for over mat elem lid
@@ -169,6 +170,19 @@ void SGH3D::update_state(
     // state_based elastic plastic model
     if (Materials.MaterialEnums.host(mat_id).StrengthType == model::stateBased) {
 
+        // ---------------------------------------
+        // calculate deformation gradient for these models
+        // remember: Fmodel(t) = F0*F(t), where F(t) = grad(displacment)
+        get_deformation_grad(MaterialPoints_deformation_grad,
+                             mesh,
+                             node_coords,
+                             node_coords_t0,
+                             GaussPoints_vol, // remember: GaussPoint = Elem with this solver
+                             elem_in_mat_elem,
+                             num_material_elems, 
+                             mat_id);
+
+
         // loop over all the elements the material lives in
         FOR_ALL(mat_elem_sid, 0, num_material_elems, {
             // get elem gid
@@ -181,8 +195,19 @@ void SGH3D::update_state(
             // for this method, gauss point is equal to elem_gid
             size_t gauss_gid = elem_gid;
 
-            // cut out the node_gids for this element
-            ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
+            // acocunt for the reference deformation 
+            double F_total[3][3];
+            for (size_t i=0; i<3; i++)
+            for (size_t j=0; j<3; j++)
+            for (size_t k=0; k<3; k++){
+                F_total[i][j] += MaterialPoints_deformation_grad_t0(i,k)*MaterialPoints_deformation_grad(k,j); 
+            }
+
+            // save the total elastic deformation gradient
+            for (size_t i=0; i<3; i++)
+            for (size_t j=0; j<3; j++){
+                MaterialPoints_deformation_grad(i,j) = F_total[i][j];
+            }
 
             // --- call strength model ---
             Materials.MaterialFunctions(mat_id).calc_stress(
@@ -199,7 +224,7 @@ void SGH3D::update_state(
                                         MaterialPoints_strength_state_vars,
                                         MaterialPoints_den(mat_id, mat_point_sid),
                                         MaterialPoints_sie(mat_id, mat_point_sid),
-                                        MaterialPoints_shear_modulii,
+                                        MaterialPoints_deformation_grad,
                                         elem_in_mat_elem,
                                         Materials.eos_global_vars,
                                         Materials.strength_global_vars,
@@ -212,6 +237,7 @@ void SGH3D::update_state(
                                         mat_id,
                                         gauss_gid,
                                         elem_gid);
+
         }); // end parallel for over mat elem lid
     } // end if state_based strength model
 
@@ -307,7 +333,8 @@ void SGH3D::update_stress(
     const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const size_t num_mat_elems,
     const size_t mat_id,
@@ -362,7 +389,7 @@ void SGH3D::update_stress(
                                             MaterialPoints_strength_state_vars,
                                             MaterialPoints_den(mat_id, mat_point_sid),
                                             MaterialPoints_sie(mat_id, mat_point_sid),
-                                            MaterialPoints_shear_modulii,
+                                            MaterialPoints_deformation_grad,
                                             elem_in_mat_elem,
                                             Materials.eos_global_vars,
                                             Materials.strength_global_vars,
@@ -413,7 +440,7 @@ void SGH3D::update_stress(
                                             MaterialPoints_strength_state_vars,
                                             MaterialPoints_den(mat_id, mat_point_sid),
                                             MaterialPoints_sie(mat_id, mat_point_sid),
-                                            MaterialPoints_shear_modulii,
+                                            MaterialPoints_deformation_grad,
                                             elem_in_mat_elem,
                                             Materials.eos_global_vars,
                                             Materials.strength_global_vars,
@@ -432,3 +459,123 @@ void SGH3D::update_stress(
     } // end if run on device
 
 }; // end function to increment stress tensor
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_deformation_grad
+///
+/// \brief This function calculates the element average deformation gradient
+///
+/// \param deformation gradient
+/// \param mesh object
+/// \param node coordinates
+/// \param node_t0 coordinates at initial, reference configuration
+/// \param The volume of the particular element
+///
+/////////////////////////////////////////////////////////////////////////////
+void SGH3D::get_deformation_grad(
+    DRaggedRightArrayKokkos<double>& elem_deformation_grad,
+    const swage::Mesh_t& mesh,
+    const MPICArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<double>& node_coords_t0,
+    const DCArrayKokkos<double>& elem_vol,
+    const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
+    const size_t num_mat_elems,
+    const size_t mat_id) const
+{
+    const size_t num_nodes_in_elem = 8;
+    const size_t num_dims = 3;
+
+    // --- loop over material elems ---
+    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+
+        // get elem gid
+        size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
+
+        // the material point storage index = the material elem index for a 1-point element
+        size_t mat_point_sid = mat_elem_sid;
+
+        // displacements in x, y, z directions at the nodes
+        double u_array[num_nodes_in_elem];
+        double v_array[num_nodes_in_elem];
+        double w_array[num_nodes_in_elem];
+
+        ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir displacement component
+        ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir displacement component
+        ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-dir displacement component
+
+        // cut out the node_gids for this element
+        ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
+
+        // The b_matrix are the outward corner area normals
+        double b_matrix_array[24];
+        ViewCArrayKokkos<double> b_matrix(b_matrix_array, num_nodes_in_elem, num_dims);
+        geometry::get_bmatrix(b_matrix, elem_gid, node_coords, elem_node_gids);
+
+        // get the vertex displacments for the elem
+        for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+            // Get node gid
+            size_t node_gid = elem_node_gids(node_lid);
+
+            u(node_lid) = node_coords(node_gid, 0) - node_coords_t0(node_gid, 0);
+            v(node_lid) = node_coords(node_gid, 1) - node_coords_t0(node_gid, 1);
+            w(node_lid) = node_coords(node_gid, 2) - node_coords_t0(node_gid, 2);
+        } // end for
+
+        // --- calculate the velocity gradient terms ---
+        double inverse_vol = 1.0 / elem_vol(elem_gid);
+        // x-dir
+        elem_deformation_grad(mat_point_sid, 0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
+            + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)
+            + u(4) * b_matrix(4, 0) + u(5) * b_matrix(5, 0)
+            + u(6) * b_matrix(6, 0) + u(7) * b_matrix(7, 0)) * inverse_vol;
+
+        elem_deformation_grad(mat_point_sid, 0, 1) = (u(0) * b_matrix(0, 1) + u(1) * b_matrix(1, 1)
+            + u(2) * b_matrix(2, 1) + u(3) * b_matrix(3, 1)
+            + u(4) * b_matrix(4, 1) + u(5) * b_matrix(5, 1)
+            + u(6) * b_matrix(6, 1) + u(7) * b_matrix(7, 1)) * inverse_vol;
+
+        elem_deformation_grad(mat_point_sid, 0, 2) = (u(0) * b_matrix(0, 2) + u(1) * b_matrix(1, 2)
+            + u(2) * b_matrix(2, 2) + u(3) * b_matrix(3, 2)
+            + u(4) * b_matrix(4, 2) + u(5) * b_matrix(5, 2)
+            + u(6) * b_matrix(6, 2) + u(7) * b_matrix(7, 2)) * inverse_vol;
+
+        // y-dir
+        elem_deformation_grad(mat_point_sid, 1, 0) = (v(0) * b_matrix(0, 0) + v(1) * b_matrix(1, 0)
+            + v(2) * b_matrix(2, 0) + v(3) * b_matrix(3, 0)
+            + v(4) * b_matrix(4, 0) + v(5) * b_matrix(5, 0)
+            + v(6) * b_matrix(6, 0) + v(7) * b_matrix(7, 0)) * inverse_vol;
+
+        elem_deformation_grad(mat_point_sid, 1, 1) = (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
+            + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)
+            + v(4) * b_matrix(4, 1) + v(5) * b_matrix(5, 1)
+            + v(6) * b_matrix(6, 1) + v(7) * b_matrix(7, 1)) * inverse_vol;
+        elem_deformation_grad(mat_point_sid, 1, 2) = (v(0) * b_matrix(0, 2) + v(1) * b_matrix(1, 2)
+            + v(2) * b_matrix(2, 2) + v(3) * b_matrix(3, 2)
+            + v(4) * b_matrix(4, 2) + v(5) * b_matrix(5, 2)
+            + v(6) * b_matrix(6, 2) + v(7) * b_matrix(7, 2)) * inverse_vol;
+
+        // z-dir
+        elem_deformation_grad(mat_point_sid, 2, 0) = (w(0) * b_matrix(0, 0) + w(1) * b_matrix(1, 0)
+            + w(2) * b_matrix(2, 0) + w(3) * b_matrix(3, 0)
+            + w(4) * b_matrix(4, 0) + w(5) * b_matrix(5, 0)
+            + w(6) * b_matrix(6, 0) + w(7) * b_matrix(7, 0)) * inverse_vol;
+
+        elem_deformation_grad(mat_point_sid, 2, 1) = (w(0) * b_matrix(0, 1) + w(1) * b_matrix(1, 1)
+            + w(2) * b_matrix(2, 1) + w(3) * b_matrix(3, 1)
+            + w(4) * b_matrix(4, 1) + w(5) * b_matrix(5, 1)
+            + w(6) * b_matrix(6, 1) + w(7) * b_matrix(7, 1)) * inverse_vol;
+
+        elem_deformation_grad(mat_point_sid, 2, 2) = (w(0) * b_matrix(0, 2) + w(1) * b_matrix(1, 2)
+            + w(2) * b_matrix(2, 2) + w(3) * b_matrix(3, 2)
+            + w(4) * b_matrix(4, 2) + w(5) * b_matrix(5, 2)
+            + w(6) * b_matrix(6, 2) + w(7) * b_matrix(7, 2)) * inverse_vol;
+
+    });  // end parallel for over mat elems
+    Kokkos::fence();
+
+
+    return;
+} // end subroutine

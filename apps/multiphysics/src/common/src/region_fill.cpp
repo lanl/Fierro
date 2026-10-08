@@ -1386,6 +1386,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                                 fillGaussState.specific_heat.host(gauss_gid,a_mat_in_elem); 
                 }
 
+
                 // --- other material point state here ---
 
 
@@ -1429,15 +1430,49 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
     } // end serial for loop over all elements
     State.MaterialToMeshMaps.elem_in_mat_elem.update_device();
     State.MeshtoMaterialMaps.mat_elems_in_elem.update_device();
+    Kokkos::fence();
 
 
-    // copy the state to the device
+    
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
         if(verbose) std::cout << "Number of elements = " << 
             State.MaterialToMeshMaps.num_mat_elems.host(mat_id) << " for material " << mat_id << "\n";
-    
+
+
+        // Caution: if residual stresses are applied, skip this coding
+        if (State.MaterialPoints.deformation_grad.size()>0){
+
+            const size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems(mat_id);
+
+            // loop over all material points
+            FOR_ALL(mat_point_sid, 0, num_mat_elems*num_gauss_points_in_elem, {
+                for(size_t i=0; i<3; i++){
+                    for(size_t j=0; j<3; j++){
+                        State.MaterialPoints.deformation_grad(mat_id,mat_point_sid,i,j)    = 0.0;
+                        State.MaterialPoints.deformation_grad_t0(mat_id,mat_point_sid,i,j) = 0.0;
+                    } // end j
+                    State.MaterialPoints.deformation_grad(mat_id,mat_point_sid,i,i)    = 1.0;
+                    State.MaterialPoints.deformation_grad_t0(mat_id,mat_point_sid,i,i) = 1.0;
+                } // end i
+
+            }); // end parallel for
+
+            State.MaterialPoints.deformation_grad.update_host();
+            State.MaterialPoints.deformation_grad_t0.update_host();
+
+        } // end if deformation_grad
+
+
+        // -----
+        // Add other material point variables here that are constant across the mesh
+        // -----
+
     } // end for loop over mats
+    
+
+    // ---------------------------------
+    // copy the state to the device
 
     State.MaterialPoints.mat_volfrac.update_device();
     State.MaterialPoints.geo_volfrac.update_device();
