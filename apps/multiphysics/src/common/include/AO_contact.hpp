@@ -57,7 +57,8 @@ struct AO_contact_state_t
     // pairing variables
     DRaggedRightArrayKokkos <double> pairing_check_vars;        // stores min(distance_to_surf), xi, and eta for a node compared to a surface
     CArrayKokkos<double> bdy_surf_node_normals;                 // stores outward normal at each node in surface to avoid redundant calculations
-    const double filter_tol = 0.0;
+    const double filter_tol = 0.0; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    double max_gap;
 
 };
 
@@ -112,6 +113,13 @@ void get_bounding_boxes(const DCArrayKokkos <double>& bdy_node_coords,
                         const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
                         CArrayKokkos <double>& bounding_boxes);
 
+double get_min_bdy_elem_edge_length(const size_t num_bdy_surfs,
+                                    const size_t num_dofs_1d,
+                                    const CArrayKokkos<size_t>& bdy_surfs,
+                                    const CArrayKokkos<int>& elems_in_surf,
+                                    const DCArrayKokkos<size_t>& nodes_in_elem,
+                                    const MPICArrayKokkos<double>& node_coords);
+
 // updates bdy_node_coords and nodes_in_bounding_boxes
 void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      const CArrayKokkos <double>& bdy_node_vels,
@@ -128,7 +136,13 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      CArrayKokkos <double>& bounding_boxes,
                      const double lebesgue_overshoot,
                      DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
-                     RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes);
+                     RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes,
+                     const size_t num_dofs_1d,
+                     const CArrayKokkos<size_t>& bdy_surfs,
+                     const CArrayKokkos<int>& elems_in_surf,
+                     const DCArrayKokkos<size_t>& nodes_in_elem,
+                     double& max_gap,
+                     DRaggedRightArrayKokkos<double>& pairing_check_vars);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR SORTING NODES FOR PAIRING
@@ -159,12 +173,13 @@ void get_normal(const CArrayKokkos<double>& dof_positions_1d,
                 double* normal);
 
 // outward unit normal at each GLL node of each boundary surface
-void get_bdy_surf_node_normals(const swage::Mesh_t& mesh,
+void get_bdy_surf_node_normals(const size_t num_bdy_surfs,
+                               const size_t num_nodes_in_surf,
+                               const DCArrayKokkos<size_t>& bdy_surfs,
+                               const CArrayKokkos<size_t>& faces_in_surf,
+                               const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
                                const CArrayKokkos<double>& dof_positions_1d,
                                const DCArrayKokkos<double>& bdy_node_coords,
-                               const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
-                               const size_t num_bdy_surfs,
-                               const size_t num_nodes_in_surf,
                                CArrayKokkos<double>& bdy_surf_node_normals);
 
 // returns true if the node should proceed to the Newton solve
@@ -179,21 +194,74 @@ bool check_filters(const size_t bdy_node_lid,
                    const size_t num_nodes_in_surf,
                    const double filter_tol);
 
+KOKKOS_FUNCTION
+void get_face_dims(const size_t face_lid,
+                   const size_t num_dofs_1d,
+                   size_t& fixed_dim,
+                   size_t& xi_dim,
+                   size_t& eta_dim,
+                   size_t& face_layer);
+
+KOKKOS_FUNCTION
+void lagrange_1D_d2(const CArrayKokkos<double>& dof_positions_1d,
+                    const size_t num_dofs_1d,
+                    const size_t a,
+                    const double x,
+                    double& val,
+                    double& dval,
+                    double& ddval);
+
+KOKKOS_FUNCTION
+void get_surf_point_and_derivs(const CArrayKokkos<double>& dof_positions_1d,
+                               const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
+                               const DCArrayKokkos<double>& bdy_node_coords,
+                               const double xi,
+                               const double eta,
+                               double* x_s,
+                               double* x_xi,
+                               double* x_eta,
+                               double* x_xixi,
+                               double* x_xieta,
+                               double* x_etaeta);
+
+KOKKOS_FUNCTION
+bool closest_point_projected_newton(const double* x_I,
+                                    const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
+                                    const DCArrayKokkos<double>& bdy_node_coords,
+                                    const CArrayKokkos<double>& dof_positions_1d,
+                                    double& xi,
+                                    double& eta,
+                                    double& f);
+
 // is the node penetrating the surface
-void penetration_check();
+KOKKOS_FUNCTION
+void penetration_check(const size_t bdy_node_lid,
+                       const size_t bdy_surf_lid,
+                       const size_t node_lid,
+                       const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
+                       const DCArrayKokkos<double>& bdy_node_coords,
+                       const CArrayKokkos<double>& dof_positions_1d,
+                       const CArrayKokkos<double>& surf_qpt_basis,
+                       const CArrayKokkos<double>& surf_qpt_positions,
+                       const size_t face_lid,
+                       const double max_gap,
+                       const DRaggedRightArrayKokkos<double>& pairing_check_vars);
 
 // find contact pairs from nodes_in_bounding_boxes
-void penetration_sweep(const swage::Mesh_t& mesh,
-                       const CArrayKokkos <double>& dof_positions_1d,
-                       const RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes,
-                       DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
-                       DRaggedRightArrayKokkos <double>& pairing_check_vars,
-                       const DCArrayKokkos <double>& bdy_node_coords,
-                       const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
-                       CArrayKokkos <double>& bdy_surf_node_normals,
-                       const size_t num_bdy_surfs,
+void penetration_sweep(const size_t num_bdy_surfs,
                        const size_t num_nodes_in_surf,
-                       const double filter_tol);
+                       const DCArrayKokkos<size_t>& bdy_surfs,
+                       const CArrayKokkos<size_t>& faces_in_surf,
+                       const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
+                       const CArrayKokkos<double>& dof_positions_1d,
+                       const CArrayKokkos<double>& surf_qpt_basis,
+                       const CArrayKokkos<double>& surf_qpt_positions,
+                       const DCArrayKokkos<double>& bdy_node_coords,
+                       const CArrayKokkos<double>& bdy_surf_node_normals,
+                       const RaggedRightArrayKokkos<size_t>& nodes_in_bounding_boxes,
+                       const double filter_tol,
+                       const double max_gap,                                  // TODO: set from the load step motion estimate (motion_factor*d_max)
+                       DRaggedRightArrayKokkos<double>& pairing_check_vars);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR CHECKING PENETRATION

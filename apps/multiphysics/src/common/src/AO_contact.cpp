@@ -190,13 +190,15 @@ void get_bounding_boxes(const DCArrayKokkos <double>& bdy_node_coords,
     double az_max = 0.0;
     get_max_vel_and_accel(vx_max, vy_max, vz_max, ax_max, ay_max, az_max, bdy_node_vels, bdy_node_accels);
 
-    // kinematic padding, amplified by the surface Lebesgue constant
-    // (the surface between nodes can move up to Lambda times the max nodal displacement)
-    const double lambda_surf = 1.0 + 2.0*lebesgue_overshoot;
+    // kinematic padding over the load step
+    // the node can move d toward the surface while the surface moves up to lambda_surf*d toward the node
+    // (the surface between nodes can move up to lambda_surf times the max nodal displacement)
+    const double lambda_surf   = 1.0 + 2.0*lebesgue_overshoot;
+    const double motion_factor = 1.0 + lambda_surf;
 
-    const double kin_pad_x = lambda_surf*(vx_max*dt + 0.5*ax_max*dt*dt);
-    const double kin_pad_y = lambda_surf*(vy_max*dt + 0.5*ay_max*dt*dt);
-    const double kin_pad_z = lambda_surf*(vz_max*dt + 0.5*az_max*dt*dt);
+    const double kin_pad_x = motion_factor*(vx_max*dt + 0.5*ax_max*dt*dt);
+    const double kin_pad_y = motion_factor*(vy_max*dt + 0.5*ay_max*dt*dt);
+    const double kin_pad_z = motion_factor*(vz_max*dt + 0.5*az_max*dt*dt);
 
     FOR_ALL(bdy_surf_lid, 0, num_bdy_surfs, {
 
@@ -247,6 +249,95 @@ void get_bounding_boxes(const DCArrayKokkos <double>& bdy_node_coords,
     return;
 } // end get_bounding_boxes
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_min_bdy_elem_edge_length
+///
+/// \brief Minimum corner-to-corner edge length over all elements that own a
+///        boundary surface, using current coordinates.
+///
+/// A hex has 12 edges: 4 along each reference direction. With get_dof_rid(i, j, k)
+/// ordering, the corners are at i, j, k in {0, p}. An edge along direction dir
+/// joins the corners with index 0 and p in dir, with the other two indices each
+/// fixed at 0 or p. All 12 are checked so that both the in-surface size and the
+/// thickness under the surface are included.
+///
+/// Edge length is the chord between corner vertices (<= arc length on curved edges).
+/// Elements owning several boundary surfaces are visited once per surface, which
+/// doesn't affect the minimum.
+///
+/// \param num_bdy_surfs number of boundary surfaces
+/// \param num_dofs_1d   nodes per direction, p + 1
+/// \param bdy_surfs     bdy surf lid -> surf gid
+/// \param elems_in_surf surf gid -> owning elem gid (column 0)
+/// \param nodes_in_elem (num_elems, num_nodes_in_elem) node gids, get_dof_rid(i, j, k) ordering
+/// \param node_coords   (num_nodes, 3) current node coordinates
+///
+/// \return minimum edge length over boundary elements
+///
+/////////////////////////////////////////////////////////////////////////////
+double get_min_bdy_elem_edge_length(const size_t num_bdy_surfs,
+                                    const size_t num_dofs_1d,
+                                    const CArrayKokkos<size_t>& bdy_surfs,
+                                    const CArrayKokkos<int>& elems_in_surf,
+                                    const DCArrayKokkos<size_t>& nodes_in_elem,
+                                    const MPICArrayKokkos<double>& node_coords)
+{
+    const size_t p = num_dofs_1d - 1;
+
+    double min_edge_length = 0.0;
+    double loc_min = 0.0;
+
+    FOR_REDUCE_MIN(bdy_surf_lid, 0, num_bdy_surfs, loc_min, {
+
+        // element that owns this boundary surface
+        const size_t surf_gid = bdy_surfs(bdy_surf_lid);
+        const size_t elem_gid = elems_in_surf(surf_gid, 0);
+
+        // loop over the 3 edge directions
+        for (size_t dir = 0; dir < 3; dir++) {
+
+            // the other two directions
+            const size_t dir1 = (dir + 1) % 3;
+            const size_t dir2 = (dir + 2) % 3;
+
+            // 4 edges along dir: other two indices each at 0 or p
+            for (size_t c1 = 0; c1 < 2; c1++) {
+                for (size_t c2 = 0; c2 < 2; c2++) {
+
+                    size_t idx_a[3];
+                    size_t idx_b[3];
+
+                    idx_a[dir]  = 0;      
+                    idx_b[dir]  = p;
+                    idx_a[dir1] = c1*p; 
+
+                    idx_b[dir1] = c1*p;
+                    idx_a[dir2] = c2*p;   
+                    idx_b[dir2] = c2*p;
+
+                    const size_t node_a = nodes_in_elem(elem_gid, elements::get_dof_rid(idx_a[0], idx_a[1], idx_a[2], num_dofs_1d));
+                    const size_t node_b = nodes_in_elem(elem_gid, elements::get_dof_rid(idx_b[0], idx_b[1], idx_b[2], num_dofs_1d));
+
+                    // chord length between the two corner vertices
+                    double len2 = 0.0;
+                    for (size_t dim = 0; dim < 3; dim++) {
+                        const double diff = node_coords(node_b, dim) - node_coords(node_a, dim);
+                        len2 += diff*diff;
+                    }
+
+                    const double len = sqrt(len2);
+                    if (len < loc_min) loc_min = len;
+                } // end for c2
+            } // end for c1
+        } // end for dir
+
+    }, min_edge_length);
+
+    return min_edge_length;
+
+} // end get_min_bdy_elem_edge_length
+
 // updates bdy_node_coords and nodes_in_bounding_boxes
 void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      const CArrayKokkos <double>& bdy_node_vels,
@@ -263,7 +354,13 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      CArrayKokkos <double>& bounding_boxes,
                      const double lebesgue_overshoot,
                      DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
-                     RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes)
+                     RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes,
+                     const size_t num_dofs_1d,
+                     const CArrayKokkos<size_t>& bdy_surfs,
+                     const CArrayKokkos<int>& elems_in_surf,
+                     const DCArrayKokkos<size_t>& nodes_in_elem,
+                     double& max_gap,
+                     DRaggedRightArrayKokkos<double>& pairing_check_vars)
 {
     // updating bdy_node_coords
     FOR_ALL(i, 0, (int)num_bdy_nodes,
@@ -295,6 +392,18 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
 
     // getting the points to be checked for penetration of the surfaces
     bdy_node_point_cloud.get_points_in_box(bdy_node_coords, nodes_in_bounding_boxes, num_nodes_in_bounding_boxes, bounding_boxes);
+
+    // ---------------------------------------------------------------
+    // max admissible penetration depth for this load step
+    // conservative control target: no node should move more than a fraction of the
+    // smallest boundary element per load step; time step control will enforce this later
+    // ---------------------------------------------------------------
+    const double max_gap_frac = 0.4;   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    max_gap = max_gap_frac*get_min_bdy_elem_edge_length(num_bdy_surfs, num_dofs_1d,
+                                                        bdy_surfs, elems_in_surf,
+                                                        nodes_in_elem, node_coords);
+    
+    pairing_check_vars = DRaggedRightArrayKokkos <double> (num_nodes_in_bounding_boxes, 3, "pairing_check_vars"); // stores gap, xi, and eta for a node compared to a surface
 
     return;
 } // end AO_contact_sort
@@ -406,22 +515,43 @@ void get_normal(const CArrayKokkos<double>& dof_positions_1d,
 
 } // end get_normal
 
-// outward unit normal at each GLL node of each boundary surface
-void get_bdy_surf_node_normals(const swage::Mesh_t& mesh,
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_bdy_surf_node_normals
+///
+/// \brief Computes the outward unit normal at each GLL node of each boundary
+///        surface, used by the tangent plane filter in check_filters.
+///
+/// \param num_bdy_surfs         number of boundary surfaces
+/// \param num_nodes_in_surf     nodes per surface, (p+1)^2
+/// \param bdy_surfs             bdy surf lid -> surf gid
+/// \param faces_in_surf         surf gid -> local face id in its owning element
+/// \param bdy_nodes_in_bdy_surf (num_bdy_surfs, num_nodes_in_surf) boundary node lids, get_dof_rid(a, b) ordering
+/// \param dof_positions_1d      ref_elem.dof_positions_1d
+/// \param bdy_node_coords       boundary node coordinates
+/// \param bdy_surf_node_normals output (num_bdy_surfs, num_nodes_in_surf, 3)
+///
+/////////////////////////////////////////////////////////////////////////////
+void get_bdy_surf_node_normals(const size_t num_bdy_surfs,
+                               const size_t num_nodes_in_surf,
+                               const DCArrayKokkos<size_t>& bdy_surfs,
+                               const CArrayKokkos<size_t>& faces_in_surf,
+                               const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
                                const CArrayKokkos<double>& dof_positions_1d,
                                const DCArrayKokkos<double>& bdy_node_coords,
-                               const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
-                               const size_t num_bdy_surfs,
-                               const size_t num_nodes_in_surf,
                                CArrayKokkos<double>& bdy_surf_node_normals)
 {
     const size_t num_dofs_1d = dof_positions_1d.dims(0);
 
     FOR_ALL(bdy_surf_lid, 0, num_bdy_surfs, {
 
-        const size_t face_lid = mesh.faces_in_surf(mesh.bdy_surfs(bdy_surf_lid), 0);
+        // local face id of this surface in its owning element (normal orientation)
+        const size_t face_lid = faces_in_surf(bdy_surfs(bdy_surf_lid), 0);
+
+        // this surface's boundary node lids
         ViewCArrayKokkos<size_t> bdy_nodes_in_the_surf(&bdy_nodes_in_bdy_surf(bdy_surf_lid, 0), num_nodes_in_surf);
 
+        // normal at each surface GLL node (a, b)
         for (size_t b = 0; b < num_dofs_1d; b++) {
             for (size_t a = 0; a < num_dofs_1d; a++) {
 
@@ -482,55 +612,625 @@ bool check_filters(const size_t bdy_node_lid,
 
 } // end check_filters
 
-// is the node penetrating the surface
-void penetration_check()
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_face_dims
+///
+/// \brief Maps a local face id of a hex to the volume directions that are
+///        held fixed and that act as the surface xi and eta directions.
+///
+/// Matches the SurfaceQuadrature_t layout:
+///   faces 0/1 (xi  = -1/+1): surface (xi, eta) = volume (eta, mu)
+///   faces 2/3 (eta = -1/+1): surface (xi, eta) = volume (xi,  mu)
+///   faces 4/5 (mu  = -1/+1): surface (xi, eta) = volume (xi,  eta)
+///
+/// \param face_lid    local face id in the element (0-5)
+/// \param num_dofs_1d number of dofs per direction (p + 1)
+/// \param fixed_dim   volume direction held constant on the face
+/// \param xi_dim      volume direction that is surface xi
+/// \param eta_dim     volume direction that is surface eta
+/// \param face_layer  dof index along fixed_dim of the face's layer (0 or p)
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void get_face_dims(const size_t face_lid,
+                   const size_t num_dofs_1d,
+                   size_t& fixed_dim,
+                   size_t& xi_dim,
+                   size_t& eta_dim,
+                   size_t& face_layer)
 {
+    fixed_dim  = face_lid/2;
+    xi_dim     = (fixed_dim == 0) ? 1 : 0;
+    eta_dim    = (fixed_dim == 2) ? 1 : 2;
+    face_layer = (face_lid % 2 == 0) ? 0 : num_dofs_1d - 1;
+} // end get_face_dims
 
-};
 
-// find contact pairs from nodes_in_bounding_boxes
-void penetration_sweep(const swage::Mesh_t& mesh,
-                       const CArrayKokkos <double>& dof_positions_1d,
-                       const RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes,
-                       DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
-                       DRaggedRightArrayKokkos <double>& pairing_check_vars,
-                       const DCArrayKokkos <double>& bdy_node_coords,
-                       const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
-                       CArrayKokkos <double>& bdy_surf_node_normals,
-                       const size_t num_bdy_surfs,
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn lagrange_1D_d2
+///
+/// \brief Evaluates the 1D Lagrange basis function a and its first and
+///        second derivatives at x.
+///
+/// Builds the numerator prod_{b != a} (x - x_b) one factor at a time,
+/// carrying its first and second derivatives with the product rule:
+///   (P (x - x_b))'  = P'  (x - x_b) +   P
+///   (P (x - x_b))'' = P'' (x - x_b) + 2 P'
+///
+/// \param dof_positions_1d GLL dof positions in [-1, 1]
+/// \param num_dofs_1d      number of dofs (p + 1)
+/// \param a                index of the basis function
+/// \param x                evaluation point
+/// \param val              l_a(x)
+/// \param dval             l_a'(x)
+/// \param ddval            l_a''(x)
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void lagrange_1D_d2(const CArrayKokkos<double>& dof_positions_1d,
+                    const size_t num_dofs_1d,
+                    const size_t a,
+                    const double x,
+                    double& val,
+                    double& dval,
+                    double& ddval)
+{
+    const double xa = dof_positions_1d(a);
+
+    double num   = 1.0;  // prod_{b != a} (x - x_b)
+    double dnum  = 0.0;  // first derivative of num
+    double ddnum = 0.0;  // second derivative of num
+    double den   = 1.0;  // prod_{b != a} (x_a - x_b)
+
+    for (size_t b = 0; b < num_dofs_1d; b++) {
+        if (b == a) continue;
+
+        const double dx = x - dof_positions_1d(b);
+
+        // update highest derivative first so each line uses the previous lower derivatives
+        ddnum = ddnum*dx + 2.0*dnum;
+        dnum  = dnum*dx  + num;
+        num  *= dx;
+
+        den *= (xa - dof_positions_1d(b));
+    } // end for b
+
+    val   = num/den;
+    dval  = dnum/den;
+    ddval = ddnum/den;
+} // end lagrange_1D_d2
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_surf_point_and_derivs
+///
+/// \brief Evaluates the surface position x_S(xi, eta) and its first and
+///        second derivatives using only the surface's GLL nodes (boundary space).
+///
+/// x_S(xi, eta) = sum_ab l_a(xi) l_b(eta) x_ab
+///
+/// \param dof_positions_1d      GLL dof positions in [-1, 1]
+/// \param bdy_nodes_in_the_surf boundary node lids of the surface, get_dof_rid(a, b) ordering
+/// \param bdy_node_coords       boundary node coordinates
+/// \param xi, eta               surface coordinates of the evaluation point
+/// \param x_s                   x_S
+/// \param x_xi, x_eta           first derivatives (surface tangents)
+/// \param x_xixi, x_xieta, x_etaeta second derivatives
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void get_surf_point_and_derivs(const CArrayKokkos<double>& dof_positions_1d,
+                               const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
+                               const DCArrayKokkos<double>& bdy_node_coords,
+                               const double xi,
+                               const double eta,
+                               double* x_s,
+                               double* x_xi,
+                               double* x_eta,
+                               double* x_xixi,
+                               double* x_xieta,
+                               double* x_etaeta)
+{
+    const size_t num_dofs_1d = dof_positions_1d.dims(0);
+
+    for (size_t dim = 0; dim < 3; dim++) {
+        x_s[dim]      = 0.0;
+        x_xi[dim]     = 0.0;
+        x_eta[dim]    = 0.0;
+        x_xixi[dim]   = 0.0;
+        x_xieta[dim]  = 0.0;
+        x_etaeta[dim] = 0.0;
+    }
+
+    // loop over dofs in the surface xi direction
+    for (size_t a = 0; a < num_dofs_1d; a++) {
+
+        double l_xi, dl_xi, ddl_xi;
+        lagrange_1D_d2(dof_positions_1d, num_dofs_1d, a, xi, l_xi, dl_xi, ddl_xi);
+
+        // loop over dofs in the surface eta direction
+        for (size_t b = 0; b < num_dofs_1d; b++) {
+
+            double l_eta, dl_eta, ddl_eta;
+            lagrange_1D_d2(dof_positions_1d, num_dofs_1d, b, eta, l_eta, dl_eta, ddl_eta);
+
+            // tensor-product basis N_ab = l_a(xi) l_b(eta) and its derivatives
+            const double N         = l_xi*l_eta;
+            const double dN_dxi    = dl_xi*l_eta;
+            const double dN_deta   = l_xi*dl_eta;
+            const double d2N_dxi2  = ddl_xi*l_eta;
+            const double d2N_dxide = dl_xi*dl_eta;
+            const double d2N_deta2 = l_xi*ddl_eta;
+
+            const size_t bdy_node_lid = bdy_nodes_in_the_surf(elements::get_dof_rid(a, b, num_dofs_1d));
+
+            for (size_t dim = 0; dim < 3; dim++) {
+                const double x = bdy_node_coords(bdy_node_lid, dim);
+                x_s[dim]      += x*N;
+                x_xi[dim]     += x*dN_dxi;
+                x_eta[dim]    += x*dN_deta;
+                x_xixi[dim]   += x*d2N_dxi2;
+                x_xieta[dim]  += x*d2N_dxide;
+                x_etaeta[dim] += x*d2N_deta2;
+            }
+        } // end for b
+    } // end for a
+
+} // end get_surf_point_and_derivs
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn closest_point_projected_newton
+///
+/// \brief Finds the constrained closest point on a surface (eq. 3.5) in the
+///        basin of the seed (xi, eta), with |xi|, |eta| <= 1.
+///
+/// Solves the stationarity conditions (eqs. 3.6, 3.7 from Kent Danielson 2022)
+///   F = [x_xi . d, x_eta . d] = 0,   d = x_I - x_S(xi, eta)
+/// with Newton's method on f = 1/2 |d|^2, where
+///   H = [ x_xi.x_xi   - x_xixi.d    x_xi.x_eta   - x_xieta.d  ]
+///       [ x_xi.x_eta  - x_xieta.d   x_eta.x_eta  - x_etaeta.d ]
+///
+/// Safeguards:
+///   - every iterate is clamped to the face, so the polynomial is never
+///     evaluated (extrapolated) off the face
+///   - active set: a coordinate pinned at a bound whose descent direction
+///     points off the face is frozen (edge -> 1D Newton, corner -> done)
+///   - Gauss-Newton fallback (metric only) if H is not positive definite
+///   - backtracking line search: every accepted step decreases f, so the
+///     result is never farther than the seed
+///
+/// \param x_I                   position of the node being checked
+/// \param bdy_nodes_in_the_surf boundary node lids of the surface
+/// \param bdy_node_coords       boundary node coordinates
+/// \param dof_positions_1d      GLL dof positions
+/// \param xi, eta               in: seed, out: constrained minimizer
+/// \param f                     out: 1/2 |d|^2 at the minimizer
+///
+/// \return true if converged, false otherwise (degenerate face or max iters)
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+bool closest_point_projected_newton(const double* x_I,
+                                    const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
+                                    const DCArrayKokkos<double>& bdy_node_coords,
+                                    const CArrayKokkos<double>& dof_positions_1d,
+                                    double& xi,
+                                    double& eta,
+                                    double& f)
+{
+    const size_t max_iters    = 25;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const size_t max_ls_iters = 5;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const double newton_tol   = 1.0e-12; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+
+    double x_s[3], x_xi[3], x_eta[3], x_xixi[3], x_xieta[3], x_etaeta[3];
+    double d[3];
+
+    // surface state and objective at the seed
+    get_surf_point_and_derivs(dof_positions_1d, bdy_nodes_in_the_surf, bdy_node_coords,
+                              xi, eta, x_s, x_xi, x_eta, x_xixi, x_xieta, x_etaeta);
+    f = 0.0;
+    for (size_t dim = 0; dim < 3; dim++) {
+        d[dim] = x_I[dim] - x_s[dim];
+        f += 0.5*d[dim]*d[dim];
+    }
+
+    for (size_t iter = 0; iter < max_iters; iter++) {
+
+        // residual F (= -grad f), surface metric g, curvature terms k
+        double F0 = 0.0, F1 = 0.0;
+        double g00 = 0.0, g01 = 0.0, g11 = 0.0;
+        double k00 = 0.0, k01 = 0.0, k11 = 0.0;
+        for (size_t dim = 0; dim < 3; dim++) {
+            F0  += x_xi[dim]*d[dim];
+            F1  += x_eta[dim]*d[dim];
+            g00 += x_xi[dim]*x_xi[dim];
+            g01 += x_xi[dim]*x_eta[dim];
+            g11 += x_eta[dim]*x_eta[dim];
+            k00 += x_xixi[dim]*d[dim];
+            k01 += x_xieta[dim]*d[dim];
+            k11 += x_etaeta[dim]*d[dim];
+        }
+
+        // active set: freeze a coordinate at a bound if descent (+F) pushes it off the face
+        const bool xi_active  = (xi  <= -1.0 && F0 < 0.0) || (xi  >= 1.0 && F0 > 0.0);
+        const bool eta_active = (eta <= -1.0 && F1 < 0.0) || (eta >= 1.0 && F1 > 0.0);
+
+        // corner minimum: constrained optimality satisfied
+        if (xi_active && eta_active) return true;
+
+        // Newton step on the free coordinates
+        double dxi  = 0.0;
+        double deta = 0.0;
+
+        if (!xi_active && !eta_active) {
+            // full 2x2 Newton
+            double H00 = g00 - k00;
+            double H01 = g01 - k01;
+            double H11 = g11 - k11;
+            double det = H00*H11 - H01*H01;
+
+            // not positive definite: fall back to Gauss-Newton (linearized surface metric)
+            if (!(H00 > 0.0 && det > 0.0)) {
+                H00 = g00;
+                H01 = g01;
+                H11 = g11;
+                det = H00*H11 - H01*H01;
+            }
+
+            // degenerate surface (collapsed tangents)
+            if (det <= 1.0e-14*g00*g11) return false;
+
+            // Cramer's rule for H dX = F
+            dxi  = ( H11*F0 - H01*F1)/det;
+            deta = (-H01*F0 + H00*F1)/det;
+        }
+        else if (xi_active) {
+            // on a xi = +-1 edge: 1D Newton along eta
+            double H11 = g11 - k11;
+            if (!(H11 > 0.0)) H11 = g11;   // Gauss-Newton fallback
+            if (H11 <= 0.0) return false;  // degenerate edge
+            deta = F1/H11;
+        }
+        else {
+            // on an eta = +-1 edge: 1D Newton along xi
+            double H00 = g00 - k00;
+            if (!(H00 > 0.0)) H00 = g00;   // Gauss-Newton fallback
+            if (H00 <= 0.0) return false;  // degenerate edge
+            dxi = F0/H00;
+        }
+
+        // predicted step is negligible: take it and stop
+        // (f can't resolve a decrease this small through roundoff, so a line search
+        //  here would just burn max_ls_iters evaluations on noise)
+        if (fabs(dxi) + fabs(deta) < newton_tol) {
+            xi  = fmin(1.0, fmax(-1.0, xi  + dxi));
+            eta = fmin(1.0, fmax(-1.0, eta + deta));
+            return true;
+        }
+
+        // backtracking line search on the clamped trial point
+        double step     = 1.0;
+        double xi_new   = xi;
+        double eta_new  = eta;
+        bool   accepted = false;
+
+        for (size_t ls = 0; ls < max_ls_iters; ls++) {
+
+            xi_new  = fmin(1.0, fmax(-1.0, xi  + step*dxi));
+            eta_new = fmin(1.0, fmax(-1.0, eta + step*deta));
+
+            // note: derivatives are fine to calculate here as they will be used for the following iteration
+            get_surf_point_and_derivs(dof_positions_1d, bdy_nodes_in_the_surf, bdy_node_coords,
+                                      xi_new, eta_new, x_s, x_xi, x_eta, x_xixi, x_xieta, x_etaeta);
+
+            double f_new = 0.0;
+            for (size_t dim = 0; dim < 3; dim++) {
+                d[dim] = x_I[dim] - x_s[dim];
+                f_new += 0.5*d[dim]*d[dim];
+            }
+
+            if (f_new <= f) {
+                f = f_new;
+                accepted = true;
+                break;
+            }
+
+            step *= 0.5;
+        } // end for ls
+
+        // no step decreases f: at the minimum to roundoff
+        // (xi, eta, f are unchanged; the caller re-evaluates the surface state)
+        if (!accepted) return true;
+
+        // accepted: surface state arrays hold the new iterate
+        const double moved = fabs(xi_new - xi) + fabs(eta_new - eta);
+        xi  = xi_new;
+        eta = eta_new;
+
+        // converged when the projected update is negligible
+        if (moved < newton_tol) return true;
+    } // end for iter
+
+    printf("FINDING CLOSEST POINT ON SURFACE FAILED TO CONVERGE!!!!!");
+    return false;   // not converged within max_iters
+
+} // end closest_point_projected_newton
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn penetration_check
+///
+/// \brief Checks one boundary node against one boundary surface and, if the
+///        node penetrates the surface, stores the gap and closest point.
+///
+/// 1. seed: the closest of the surface's GLL nodes and surface quadrature
+///    points (Gauss-Legendre, strictly interior) to x_I
+/// 2. refine with clamped projected Newton -> constrained closest point (eq. 3.5)
+/// 3. checks at the closest point:
+///      side:  d . n < 0          (node is inside)
+///      depth: |d| <= max_gap     (can't be deeper than one load step's relative motion)
+/// if all pass, writes (gap, xi, eta) to pairing_check_vars(bdy_surf_lid, node_lid, 0..2)
+/// any rejected node leaves the pre-initialized sentinel untouched
+///
+/// \param bdy_node_lid          boundary lid of the node being checked
+/// \param bdy_surf_lid          boundary lid of the surface
+/// \param node_lid              node's position in this surface's box list (write index)
+/// \param bdy_nodes_in_the_surf boundary node lids of the surface
+/// \param bdy_node_coords       boundary node coordinates
+/// \param dof_positions_1d      ref_elem.dof_positions_1d
+/// \param surf_qpt_basis        ref_surf.qpt_basis      (faces, surf qpts, vol dofs)
+/// \param surf_qpt_positions    SurfQuad.qpt_positions  (faces, surf qpts, 3)
+/// \param face_lid              local face id of the surface in its element
+/// \param max_gap               max admissible penetration depth over the load step
+/// \param pairing_check_vars    output (gap, xi, eta) per surface/box node
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+void penetration_check(const size_t bdy_node_lid,
+                       const size_t bdy_surf_lid,
+                       const size_t node_lid,
+                       const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
+                       const DCArrayKokkos<double>& bdy_node_coords,
+                       const CArrayKokkos<double>& dof_positions_1d,
+                       const CArrayKokkos<double>& surf_qpt_basis,
+                       const CArrayKokkos<double>& surf_qpt_positions,
+                       const size_t face_lid,
+                       const double max_gap,
+                       const DRaggedRightArrayKokkos<double>& pairing_check_vars)
+{
+    const size_t num_dofs_1d      = dof_positions_1d.dims(0);
+    const size_t num_qpts_in_surf = surf_qpt_basis.dims(1);
+
+    // mapping between the volume indexing of the reference arrays and
+    // the surface indexing of bdy_nodes_in_the_surf
+    size_t fixed_dim, xi_dim, eta_dim, face_layer;
+    get_face_dims(face_lid, num_dofs_1d, fixed_dim, xi_dim, eta_dim, face_layer);
+
+    // position of the node being checked, x_I
+    double x_I[3];
+    x_I[0] = bdy_node_coords(bdy_node_lid,0);
+    x_I[1] = bdy_node_coords(bdy_node_lid,1);
+    x_I[2] = bdy_node_coords(bdy_node_lid,2);
+
+    // ---------------------------------------------------------------
+    // 1. seed: closest candidate among surface nodes and surface quadrature points
+    // ---------------------------------------------------------------
+    double seed_xi    = 0.0;
+    double seed_eta   = 0.0;
+    double seed_dist2 = 1.0e300;
+
+    // surface GLL nodes (covers edges and corners)
+    for (size_t b = 0; b < num_dofs_1d; b++) {
+        for (size_t a = 0; a < num_dofs_1d; a++) {
+
+            const size_t surf_bdy_node_lid = bdy_nodes_in_the_surf(elements::get_dof_rid(a, b, num_dofs_1d));
+
+            double dist2 = 0.0;
+            for (size_t dim = 0; dim < 3; dim++) {
+                const double diff = x_I[dim] - bdy_node_coords(surf_bdy_node_lid, dim);
+                dist2 += diff*diff;
+            }
+
+            if (dist2 < seed_dist2) {
+                seed_dist2 = dist2;
+                seed_xi    = dof_positions_1d(a);
+                seed_eta   = dof_positions_1d(b);
+            }
+        } // end for a
+    } // end for b
+
+    // surface quadrature points (strictly interior, interleaved with the nodes)
+    for (size_t qpt = 0; qpt < num_qpts_in_surf; qpt++) {
+
+        // physical position: x_q = sum over face nodes N(xi_q, eta_q) x_node
+        // (with GLL dofs every off-face volume basis is zero on the face,
+        //  so summing over the face nodes only is exact)
+        double x_q[3];
+        x_q[0] = 0.0;
+        x_q[1] = 0.0;
+        x_q[2] = 0.0;
+
+        for (size_t b = 0; b < num_dofs_1d; b++) {
+            for (size_t a = 0; a < num_dofs_1d; a++) {
+
+                // volume dof index of surface node (a, b) on this face
+                size_t idx[3];
+                idx[fixed_dim] = face_layer;
+                idx[xi_dim]    = a;
+                idx[eta_dim]   = b;
+                const size_t vol_rid = elements::get_dof_rid(idx[0], idx[1], idx[2], num_dofs_1d);
+
+                const double N = surf_qpt_basis(face_lid, qpt, vol_rid);
+                const size_t surf_bdy_node_lid = bdy_nodes_in_the_surf(elements::get_dof_rid(a, b, num_dofs_1d));
+
+                for (size_t dim = 0; dim < 3; dim++) {
+                    x_q[dim] += N*bdy_node_coords(surf_bdy_node_lid, dim);
+                }
+            } // end for a
+        } // end for b
+
+        double dist2 = 0.0;
+        for (size_t dim = 0; dim < 3; dim++) {
+            const double diff = x_I[dim] - x_q[dim];
+            dist2 += diff*diff;
+        }
+
+        if (dist2 < seed_dist2) {
+            seed_dist2 = dist2;
+            // surface (xi, eta) are the xi_dim and eta_dim components of the volume qpt position
+            seed_xi    = surf_qpt_positions(face_lid, qpt, xi_dim);
+            seed_eta   = surf_qpt_positions(face_lid, qpt, eta_dim);
+        }
+    } // end for qpt
+
+    // ---------------------------------------------------------------
+    // 2. refine with clamped projected Newton from the seed
+    // ---------------------------------------------------------------
+    double xi  = seed_xi;
+    double eta = seed_eta;
+    double f   = 0.0;
+
+    if (!closest_point_projected_newton(x_I, bdy_nodes_in_the_surf, bdy_node_coords,
+                                        dof_positions_1d, xi, eta, f)) return;
+
+    // ---------------------------------------------------------------
+    // 3. d at the closest point, normal, and checks
+    // ---------------------------------------------------------------
+    double x_s[3], x_xi[3], x_eta[3], x_xixi[3], x_xieta[3], x_etaeta[3];
+    get_surf_point_and_derivs(dof_positions_1d, bdy_nodes_in_the_surf, bdy_node_coords,
+                              xi, eta, x_s, x_xi, x_eta, x_xixi, x_xieta, x_etaeta);
+
+    // vector from the closest point to the node
+    double d[3];
+    double dist2 = 0.0;
+    for (size_t dim = 0; dim < 3; dim++) {
+        d[dim] = x_I[dim] - x_s[dim];
+        dist2 += d[dim]*d[dim];
+    }
+    const double dist = sqrt(dist2);
+
+    // node is on the surface to roundoff: no penetration
+    if (dist <= 1.0e-14) return;
+
+    // outward unit normal at the closest point
+    double normal[3];
+    get_normal(dof_positions_1d, bdy_nodes_in_the_surf, bdy_node_coords,
+               face_lid, xi, eta, normal);
+
+    // side check: d . n < 0 means the node is inside
+    double gap = 0.0;
+    for (size_t dim = 0; dim < 3; dim++) {
+        gap += d[dim]*normal[dim];
+    }
+    if (gap >= 0.0) return;
+
+    // depth check: can't be deeper than one load step's relative motion
+    if (dist > max_gap) return;
+
+    // ---------------------------------------------------------------
+    // penetrating: store the signed gap (negative) and the closest point's surface coords
+    // ---------------------------------------------------------------
+    pairing_check_vars(bdy_surf_lid, node_lid, 0) = gap;
+    pairing_check_vars(bdy_surf_lid, node_lid, 1) = xi;
+    pairing_check_vars(bdy_surf_lid, node_lid, 2) = eta;
+
+} // end penetration_check
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn penetration_sweep
+///
+/// \brief For every boundary surface, checks every node in its bounding box
+///        for penetration and stores (gap, xi, eta) in pairing_check_vars.
+///
+/// Per surface/node pair:
+///   1. check_filters: cheap rejects (own node, outside all nodal tangent planes)
+///   2. penetration_check: closest point, side, and depth checks
+/// Entries not written keep the sentinel (no penetration).
+///
+/// Must be called after AO_contact_sort and get_bdy_surf_node_normals so the
+/// boxes, bdy_node_coords, and nodal normals are current.
+///
+/// \param num_bdy_surfs           number of boundary surfaces
+/// \param num_nodes_in_surf       nodes per surface, (p+1)^2
+/// \param bdy_surfs               bdy surf lid -> surf gid
+/// \param faces_in_surf           surf gid -> local face id in its owning element
+/// \param bdy_nodes_in_bdy_surf   (num_bdy_surfs, num_nodes_in_surf) boundary node lids, get_dof_rid(a, b) ordering
+/// \param dof_positions_1d        ref_elem.dof_positions_1d
+/// \param surf_qpt_basis          ref_surf.qpt_basis      (faces, surf qpts, vol dofs)
+/// \param surf_qpt_positions      SurfQuad.qpt_positions  (faces, surf qpts, 3)
+/// \param bdy_node_coords         boundary node coordinates
+/// \param bdy_surf_node_normals   (num_bdy_surfs, num_nodes_in_surf, 3) outward nodal normals
+/// \param nodes_in_bounding_boxes candidate boundary node lids per surface
+/// \param filter_tol              tolerance for the tangent plane filter
+/// \param max_gap                 max admissible penetration depth over the load step
+/// \param pairing_check_vars      output (gap, xi, eta) per surface/box node
+///
+/////////////////////////////////////////////////////////////////////////////
+void penetration_sweep(const size_t num_bdy_surfs,
                        const size_t num_nodes_in_surf,
-                       const double filter_tol)
+                       const DCArrayKokkos<size_t>& bdy_surfs,
+                       const CArrayKokkos<size_t>& faces_in_surf,
+                       const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
+                       const CArrayKokkos<double>& dof_positions_1d,
+                       const CArrayKokkos<double>& surf_qpt_basis,
+                       const CArrayKokkos<double>& surf_qpt_positions,
+                       const DCArrayKokkos<double>& bdy_node_coords,
+                       const CArrayKokkos<double>& bdy_surf_node_normals,
+                       const RaggedRightArrayKokkos<size_t>& nodes_in_bounding_boxes,
+                       const double filter_tol,
+                       const double max_gap,                                  // TODO: set from the load step motion estimate (motion_factor*d_max)
+                       DRaggedRightArrayKokkos<double>& pairing_check_vars)
 {
-    // nodal normals for every boundary surface from the current bdy_node_coords
-    get_bdy_surf_node_normals(mesh, dof_positions_1d, bdy_node_coords, bdy_nodes_in_bdy_surf,
-                              num_bdy_surfs, num_nodes_in_surf, bdy_surf_node_normals);
+    const double no_pair_sentinel = 100000.0;  // must match the selection step's "no pair" test
 
-    // getting memory onto host side NOT SURE IF THIS IS NECESSARY UNCOMMENT IF THINGS BREAK ON GPU
-    //num_nodes_in_bounding_boxes.update_host();
-    
-    // allocating and initializing the write point for penetration_check
-    pairing_check_vars = DRaggedRightArrayKokkos <double> (num_nodes_in_bounding_boxes, 3, "pairing_check_vars"); // stores gap, xi, and eta for a node compared to a surface
-    pairing_check_vars.set_values(100000.0);
+    // ---------------------------------------------------------------
+    // reset: every entry starts as "no penetration"
+    // pairing_check_vars is sized by AO_contact_sort (once per load step);
+    // the sweep can run several times per step, so values from a previous
+    // sweep are cleared here
+    // ---------------------------------------------------------------
+    pairing_check_vars.set_values(no_pair_sentinel);
+    Kokkos::fence();
 
-    // checking for penetration across nodes_in_bounding_boxes
+    // ---------------------------------------------------------------
+    // sweep: surfaces across teams, box nodes across threads
+    // ---------------------------------------------------------------
     FOR_FIRST(bdy_surf_lid, 0, num_bdy_surfs, {
 
-    ViewCArrayKokkos<size_t> bdy_nodes_in_the_surf(&bdy_nodes_in_bdy_surf(bdy_surf_lid, 0), num_nodes_in_surf);
-    ViewCArrayKokkos<double> surf_node_normals(&bdy_surf_node_normals(bdy_surf_lid, 0, 0), num_nodes_in_surf, 3);
+        // local face id of this surface in its owning element (normal orientation, qpt layout)
+        const size_t face_lid = faces_in_surf(bdy_surfs(bdy_surf_lid), 0);
 
-    FOR_SECOND(node_lid, 0, nodes_in_bounding_boxes.stride(bdy_surf_lid), {
+        // this surface's boundary node lids and nodal normals
+        ViewCArrayKokkos<size_t> bdy_nodes_in_the_surf(&bdy_nodes_in_bdy_surf(bdy_surf_lid, 0), num_nodes_in_surf);
+        ViewCArrayKokkos<double> surf_node_normals(&bdy_surf_node_normals(bdy_surf_lid, 0, 0), num_nodes_in_surf, 3);
 
-        const size_t bdy_node_lid = nodes_in_bounding_boxes(bdy_surf_lid, node_lid);
+        FOR_SECOND(node_lid, 0, nodes_in_bounding_boxes.stride(bdy_surf_lid), {
 
-        if (!check_filters(bdy_node_lid, bdy_nodes_in_the_surf, surf_node_normals,
-                           bdy_node_coords, num_nodes_in_surf, filter_tol)) return;
+            const size_t bdy_node_lid = nodes_in_bounding_boxes(bdy_surf_lid, node_lid);
 
-        // Newton solve, checks, and writes go here
+            // cheap rejects before the closest point solve
+            if (!check_filters(bdy_node_lid, bdy_nodes_in_the_surf, surf_node_normals,
+                               bdy_node_coords, num_nodes_in_surf, filter_tol)) return;
 
-    }); // end FOR_SECOND
-}); // end FOR_FIRST
-Kokkos::fence();
-};
+            // closest point, side, and depth checks; writes pairing_check_vars if penetrating
+            penetration_check(bdy_node_lid, bdy_surf_lid, node_lid, bdy_nodes_in_the_surf,
+                              bdy_node_coords, dof_positions_1d,
+                              surf_qpt_basis, surf_qpt_positions,
+                              face_lid, max_gap, pairing_check_vars);
+
+        }); // end FOR_SECOND
+    }); // end FOR_FIRST
+    Kokkos::fence();
+
+    // make results available on the host for the selection step / debugging
+    pairing_check_vars.update_host();
+
+} // end penetration_sweep
 
 // ********************************************************
 // ENDING FUNCTIONS FOR CHECKING PENETRATION

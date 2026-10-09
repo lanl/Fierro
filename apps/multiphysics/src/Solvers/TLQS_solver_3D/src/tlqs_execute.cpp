@@ -131,7 +131,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         AO_contact_sort(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels, mesh.num_bdy_nodes,
                         State.node.coords, mesh.bdy_nodes, AO_contact_state.bdy_node_point_cloud, AO_contact_state.num_bins, 
                         mesh.num_bdy_surfs, mesh.num_nodes_in_surf, dt, mesh.bdy_nodes_in_bdy_surf, AO_contact_state.bounding_boxes,
-                        AO_contact_state.lebesgue_overshoot, AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes);
+                        AO_contact_state.lebesgue_overshoot, AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes,
+                        ref_elem.num_dofs_1d, mesh.bdy_surfs, mesh.elems_in_surf, mesh.nodes_in_elem, AO_contact_state.max_gap, AO_contact_state.pairing_check_vars);
 
         // TESTING NORMALS
 
@@ -243,6 +244,145 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         } // end for bdy_node_lid */
 
         // END TESTING NORMALS
+
+        // TESTING FILTERS
+
+        /* // ---------------------------------------------------------------
+        // test settings: change per case
+        // ---------------------------------------------------------------
+        const size_t watch_gid  = 31;     // B bottom-face center
+        const double watch_dz   = 0.05;
+        const bool   bulge_on   = true;
+        const size_t bulge_gid  = 22;     // A top-face center
+        const double bulge_dz   = 0.1;
+        const double test_dt    = 1.0;    // inflates kin_pad so perturbed nodes are candidates
+
+        // filter_tol is const in the struct, so override locally for case 4 (e.g. 0.01)
+        const double filter_tol = AO_contact_state.filter_tol;
+
+        // ---------------------------------------------------------------
+        // mesh-level maps and sizes (adjust if these don't live on mesh)
+        // ---------------------------------------------------------------
+        const size_t num_bdy_surfs     = mesh.num_bdy_surfs;
+        const size_t num_bdy_nodes     = mesh.num_bdy_nodes;
+        const size_t num_nodes_in_surf = mesh.num_nodes_in_surf;
+        const CArrayKokkos<size_t> bdy_nodes             = mesh.bdy_nodes;
+        const CArrayKokkos<size_t> bdy_nodes_in_bdy_surf = mesh.bdy_nodes_in_bdy_surf;
+
+        // perturb and confirm the ids point at the intended nodes
+        RUN({
+            State.node.coords(watch_gid, 2) += watch_dz;
+            if (bulge_on) State.node.coords(bulge_gid, 2) += bulge_dz;
+
+            printf("watch gid %lu at (%+.4f, %+.4f, %+.4f)\n", (unsigned long)watch_gid,
+                   State.node.coords(watch_gid, 0), State.node.coords(watch_gid, 1), State.node.coords(watch_gid, 2));
+            printf("bulge gid %lu at (%+.4f, %+.4f, %+.4f)\n\n", (unsigned long)bulge_gid,
+                   State.node.coords(bulge_gid, 0), State.node.coords(bulge_gid, 1), State.node.coords(bulge_gid, 2));
+        });
+        Kokkos::fence();
+
+        // rebuild candidates and nodal normals from the perturbed coords
+        AO_contact_sort(AO_contact_state.bdy_node_coords,
+                        AO_contact_state.bdy_node_vels,
+                        AO_contact_state.bdy_node_accels,
+                        num_bdy_nodes,
+                        State.node.coords,
+                        bdy_nodes,
+                        AO_contact_state.bdy_node_point_cloud,
+                        AO_contact_state.num_bins,
+                        num_bdy_surfs,
+                        num_nodes_in_surf,
+                        test_dt,
+                        bdy_nodes_in_bdy_surf,
+                        AO_contact_state.bounding_boxes,
+                        AO_contact_state.lebesgue_overshoot,
+                        AO_contact_state.num_nodes_in_bounding_boxes,
+                        AO_contact_state.nodes_in_bounding_boxes);
+
+        get_bdy_surf_node_normals(mesh,
+                                  ref_elem.dof_positions_1d,
+                                  AO_contact_state.bdy_node_coords,
+                                  bdy_nodes_in_bdy_surf,
+                                  num_bdy_surfs,
+                                  num_nodes_in_surf,
+                                  AO_contact_state.bdy_surf_node_normals);
+
+        // ---------------------------------------------------------------
+        // local shallow copies for device capture (alias the struct's memory)
+        // ---------------------------------------------------------------
+        const DCArrayKokkos<double>           bdy_node_coords         = AO_contact_state.bdy_node_coords;
+        const CArrayKokkos<double>            bdy_surf_node_normals   = AO_contact_state.bdy_surf_node_normals;
+        const RaggedRightArrayKokkos<size_t>  nodes_in_bounding_boxes = AO_contact_state.nodes_in_bounding_boxes;
+
+        // ---------------------------------------------------------------
+        // print every candidate, check_filters vs an independent evaluation
+        // ---------------------------------------------------------------
+        RUN({
+            for (size_t bdy_surf_lid = 0; bdy_surf_lid < num_bdy_surfs; bdy_surf_lid++) {
+
+                const size_t surf_gid = mesh.bdy_surfs(bdy_surf_lid);
+                const size_t elem_gid = mesh.elems_in_surf(surf_gid, 0);
+                const size_t face_lid = mesh.faces_in_surf(surf_gid, 0);
+
+                ViewCArrayKokkos<size_t> bdy_nodes_in_the_surf(&bdy_nodes_in_bdy_surf(bdy_surf_lid, 0), num_nodes_in_surf);
+                ViewCArrayKokkos<double> surf_node_normals(&bdy_surf_node_normals(bdy_surf_lid, 0, 0), num_nodes_in_surf, 3);
+
+                const size_t num_in_box = nodes_in_bounding_boxes.stride(bdy_surf_lid);
+
+                printf("bdy surf %lu (elem %lu, face_lid %lu): %lu nodes in box\n",
+                       (unsigned long)bdy_surf_lid, (unsigned long)elem_gid,
+                       (unsigned long)face_lid, (unsigned long)num_in_box);
+
+                for (size_t node_lid = 0; node_lid < num_in_box; node_lid++) {
+
+                    const size_t bdy_node_lid = nodes_in_bounding_boxes(bdy_surf_lid, node_lid);
+                    const size_t node_gid     = bdy_nodes(bdy_node_lid);
+
+                    // independent evaluation: filter 1 membership and the minimum dot
+                    bool   own     = false;
+                    double min_dot = 1.0e300;
+                    size_t min_rid = 0;
+
+                    for (size_t surf_node_rid = 0; surf_node_rid < num_nodes_in_surf; surf_node_rid++) {
+                        const size_t surf_bdy_node_lid = bdy_nodes_in_the_surf(surf_node_rid);
+                        if (surf_bdy_node_lid == bdy_node_lid) own = true;
+
+                        double dot = 0.0;
+                        for (size_t dim = 0; dim < 3; dim++) {
+                            dot += (bdy_node_coords(bdy_node_lid, dim) - bdy_node_coords(surf_bdy_node_lid, dim))
+                                   *surf_node_normals(surf_node_rid, dim);
+                        }
+                        if (dot < min_dot) { min_dot = dot; min_rid = surf_node_rid; }
+                    } // end for surf_node_rid
+
+                    // outside all <=> min dot > filter_tol
+                    const bool expected = !own && !(min_dot > filter_tol);
+
+                    const bool result = check_filters(bdy_node_lid, bdy_nodes_in_the_surf, surf_node_normals,
+                                                      bdy_node_coords, num_nodes_in_surf, filter_tol);
+
+                    printf("  gid %3lu (bdy %3lu) x = (%+.4f, %+.4f, %+.4f)  %s min dot = %+.4e (surf rid %lu)  -> %s%s%s\n",
+                           (unsigned long)node_gid, (unsigned long)bdy_node_lid,
+                           bdy_node_coords(bdy_node_lid, 0), bdy_node_coords(bdy_node_lid, 1), bdy_node_coords(bdy_node_lid, 2),
+                           own ? "OWN" : "   ", min_dot, (unsigned long)min_rid,
+                           result ? "PASS  " : "REJECT",
+                           (result != expected) ? "  ** MISMATCH **" : "",
+                           (node_gid == watch_gid) ? "  <-- watched" : "");
+                } // end for node_lid
+
+                printf("\n");
+            } // end for bdy_surf_lid
+        });
+        Kokkos::fence();
+
+        // undo perturbations (bdy_node_coords is refreshed on the next AO_contact_sort)
+        RUN({
+            State.node.coords(watch_gid, 2) -= watch_dz;
+            if (bulge_on) State.node.coords(bulge_gid, 2) -= bulge_dz;
+        });
+        Kokkos::fence(); */
+
+        // END TESTING FILTERS
 
     }
 
