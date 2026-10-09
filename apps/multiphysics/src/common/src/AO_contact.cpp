@@ -1128,6 +1128,21 @@ void penetration_check(const size_t bdy_node_lid,
     }
     if (gap >= 0.0) return;
 
+    // ---------------------------------------------------------------
+    // collinearity check: at a true closest point d is parallel to n (eqs. 3.6, 3.7)
+    // a tangential component means the clamp is active and the node lies beyond
+    // this face's edge, so it is not penetrating this face
+    // (tangent part computed explicitly; sqrt(dist^2 - gap^2) loses precision)
+    // ---------------------------------------------------------------
+    const double collinear_tol = 1.0e-6;   // relative to |d|, TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+
+    double tang2 = 0.0;
+    for (size_t dim = 0; dim < 3; dim++) {
+        const double t = d[dim] - gap*normal[dim];   // tangential part of d
+        tang2 += t*t;
+    }
+    if (sqrt(tang2) > collinear_tol*dist) return;
+
     // depth check: can't be deeper than one load step's relative motion
     if (dist > max_gap) return;
 
