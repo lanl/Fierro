@@ -103,7 +103,11 @@ void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
                            double& lebesgue_overshoot,
                            CArrayKokkos <double>& bounding_boxes,
                            CArrayKokkos<double>& bdy_surf_node_normals,
-                           const size_t num_nodes_in_surf)
+                           const size_t num_nodes_in_surf,
+                           DCArrayKokkos <size_t>& num_surfs_in_node_boxes,
+                           CArrayKokkos <size_t>& num_pen_surfs_in_node,
+                           CArrayKokkos <size_t>& pen_nodes,
+                           DCArrayKokkos <size_t>& num_pen_nodes)
 {
     // allocating member variables that are statically sized
     bdy_node_coords = DCArrayKokkos <double> (num_bdy_nodes, 3, "bdy_node_coords");
@@ -112,6 +116,10 @@ void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
     num_nodes_in_bounding_boxes = DCArrayKokkos <size_t> (num_bdy_surfs, "num_nodes_in_bounding_boxes");
     bounding_boxes = CArrayKokkos <double> (num_bdy_surfs, 2, 3, "bounding_boxes");
     bdy_surf_node_normals = CArrayKokkos <double> (num_bdy_surfs, num_nodes_in_surf, 3, "bdy_surf_node_normals");
+    num_surfs_in_node_boxes = DCArrayKokkos<size_t>(num_bdy_nodes, "num_surfs_in_node_boxes");
+    num_pen_surfs_in_node   = CArrayKokkos<size_t>(num_bdy_nodes, "num_pen_surfs_in_node");
+    pen_nodes               = CArrayKokkos<size_t>(num_bdy_nodes, "pen_nodes");
+    num_pen_nodes = DCArrayKokkos<size_t>(1, "num_pen_nodes");
 
     get_surf_overshoot_factor(ref_elem, lebesgue_overshoot);
 
@@ -338,6 +346,90 @@ double get_min_bdy_elem_edge_length(const size_t num_bdy_surfs,
 
 } // end get_min_bdy_elem_edge_length
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn invert_bounding_boxes
+///
+/// \brief Builds the node-major inverse of nodes_in_bounding_boxes: for each
+///        boundary node, the surfaces whose box contains it and the column of
+///        pairing_check_vars holding that (surface, node) entry.
+///
+/// Candidates are fixed for the load step, so this runs once at the end of
+/// AO_contact_sort. The pairing step reads pairing_check_vars through it
+/// after every sweep without atomics or reallocation.
+///
+/// Main Outputs:
+/// num_surfs_in_node_boxes(node)   -> How many surface boxes contain this node (the row length)
+/// surfs_in_node_boxes(node, slot) -> A surface whose box contains this node, i.e. a surface it could penetrate
+/// cols_in_node_boxes(node, slot)  -> The column where this node appears in that surface's row of nodes_in_bounding_boxes
+///                                    and pairing_check_vars
+///
+/// \param num_bdy_surfs           number of boundary surfaces
+/// \param num_bdy_nodes           number of boundary nodes
+/// \param nodes_in_bounding_boxes (bdy surf, node_lid) -> bdy node lid
+/// \param num_surfs_in_node_boxes output (num_bdy_nodes) row lengths
+/// \param surfs_in_node_boxes     output (bdy node, k) -> bdy_surf_lid
+/// \param cols_in_node_boxes      output (bdy node, k) -> node_lid column in pairing_check_vars
+///
+/////////////////////////////////////////////////////////////////////////////
+void invert_bounding_boxes(const size_t num_bdy_surfs,
+                           const size_t num_bdy_nodes,
+                           const RaggedRightArrayKokkos<size_t>& nodes_in_bounding_boxes,
+                           DCArrayKokkos<size_t>& num_surfs_in_node_boxes,
+                           RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
+                           RaggedRightArrayKokkos<size_t>& cols_in_node_boxes)
+{
+    // ---------------------------------------------------------------
+    // count: boxes containing each node
+    // ---------------------------------------------------------------
+    num_surfs_in_node_boxes.set_values(0);
+    Kokkos::fence();
+
+    FOR_ALL(bdy_surf_lid, 0, num_bdy_surfs, {
+        for (size_t node_lid = 0; node_lid < nodes_in_bounding_boxes.stride(bdy_surf_lid); node_lid++) {
+            const size_t bdy_node_lid = nodes_in_bounding_boxes(bdy_surf_lid, node_lid);
+            Kokkos::atomic_add(&num_surfs_in_node_boxes(bdy_node_lid), (size_t)1);
+        }
+    });
+    Kokkos::fence();
+
+    // ---------------------------------------------------------------
+    // allocate with those strides (ragged constructor reads them on the host)
+    // ---------------------------------------------------------------
+    num_surfs_in_node_boxes.update_host();
+    surfs_in_node_boxes = RaggedRightArrayKokkos<size_t>(num_surfs_in_node_boxes, "surfs_in_node_boxes");
+    cols_in_node_boxes  = RaggedRightArrayKokkos<size_t>(num_surfs_in_node_boxes, "cols_in_node_boxes");
+
+    // ---------------------------------------------------------------
+    // fill: write each (surface, column) entry into its node's row
+    //
+    // num_surfs_filled_in_node_boxes(node) counts the entries written to that
+    // node's row so far, which is also the index of the next empty slot.
+    // several surfaces can share a node, so the slot is claimed atomically:
+    // atomic_fetch_add returns the current count (this thread's slot) and
+    // increments it in one indivisible step, so no two threads get the same slot.
+    // when done, num_surfs_filled_in_node_boxes == num_surfs_in_node_boxes for every node
+    // ---------------------------------------------------------------
+    CArrayKokkos<size_t> num_surfs_filled_in_node_boxes(num_bdy_nodes, "num_surfs_filled_in_node_boxes");
+    num_surfs_filled_in_node_boxes.set_values(0);
+    Kokkos::fence();
+
+    FOR_ALL(bdy_surf_lid, 0, num_bdy_surfs, {
+        for (size_t node_lid = 0; node_lid < nodes_in_bounding_boxes.stride(bdy_surf_lid); node_lid++) {
+
+            const size_t bdy_node_lid = nodes_in_bounding_boxes(bdy_surf_lid, node_lid);
+
+            // claim the next empty slot in this node's row
+            const size_t slot = Kokkos::atomic_fetch_add(&num_surfs_filled_in_node_boxes(bdy_node_lid), (size_t)1); // read current slot and then increment for next thread in line
+
+            surfs_in_node_boxes(bdy_node_lid, slot) = bdy_surf_lid;   // surface whose box contains the node
+            cols_in_node_boxes(bdy_node_lid, slot)  = node_lid;       // node's column in pairing_check_vars for that surface
+        }
+    });
+    Kokkos::fence();
+
+} // end invert_bounding_boxes
+
 // updates bdy_node_coords and nodes_in_bounding_boxes
 void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      const CArrayKokkos <double>& bdy_node_vels,
@@ -360,7 +452,10 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      const CArrayKokkos<int>& elems_in_surf,
                      const DCArrayKokkos<size_t>& nodes_in_elem,
                      double& max_gap,
-                     DRaggedRightArrayKokkos<double>& pairing_check_vars)
+                     DRaggedRightArrayKokkos<double>& pairing_check_vars,
+                     DCArrayKokkos<size_t>& num_surfs_in_node_boxes,
+                     RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
+                     RaggedRightArrayKokkos<size_t>& cols_in_node_boxes)
 {
     // updating bdy_node_coords
     FOR_ALL(i, 0, (int)num_bdy_nodes,
@@ -404,6 +499,16 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                                                         nodes_in_elem, node_coords);
     
     pairing_check_vars = DRaggedRightArrayKokkos <double> (num_nodes_in_bounding_boxes, 3, "pairing_check_vars"); // stores gap, xi, and eta for a node compared to a surface
+
+    // ---------------------------------------------------------------
+    // node-major inverse of the candidate lists for the pairing step
+    // ---------------------------------------------------------------
+    invert_bounding_boxes(num_bdy_surfs,
+                          num_bdy_nodes,
+                          nodes_in_bounding_boxes,
+                          num_surfs_in_node_boxes,
+                          surfs_in_node_boxes,
+                          cols_in_node_boxes);
 
     return;
 } // end AO_contact_sort
@@ -1020,9 +1125,11 @@ double seed_vel_alignment(const double* x_I,
 /// \param max_gap               max admissible penetration depth over the load step
 /// \param pairing_check_vars    output (gap, xi, eta) per surface/box node
 ///
+/// \return true if the node penetrates this surface and the entry was written
+///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void penetration_check(const size_t bdy_node_lid,
+bool penetration_check(const size_t bdy_node_lid,
                        const size_t bdy_surf_lid,
                        const size_t node_lid,
                        const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
@@ -1085,7 +1192,7 @@ void penetration_check(const size_t bdy_node_lid,
                 seed_dist2 = dist2;
                 seed_xi    = dof_positions_1d(a);
                 seed_eta   = dof_positions_1d(b);
-                seed_align = seed_vel_alignment(x_I, x_c, v_I, v_mag); // TODO: SHOULD THIS BE RELATIVE VELOCITY INSTEAD OF CANDIDATE NODE?
+                seed_align = seed_vel_alignment(x_I, x_c, v_I, v_mag); // TODO: SHOULD THIS BE RELATIVE VELOCITY INSTEAD OF JUST CANDIDATE NODE?
             }
             else if (dist2 == seed_dist2) {
                 // tie: keep the candidate more collinear with the velocity
@@ -1161,7 +1268,7 @@ void penetration_check(const size_t bdy_node_lid,
     double f   = 0.0;
 
     if (!closest_point_projected_newton(x_I, bdy_nodes_in_the_surf, bdy_node_coords,
-                                        dof_positions_1d, xi, eta, f)) return;
+                                        dof_positions_1d, xi, eta, f)) return false;
 
     // ---------------------------------------------------------------
     // 3. d at the closest point, normal, and checks
@@ -1180,7 +1287,7 @@ void penetration_check(const size_t bdy_node_lid,
     const double dist = sqrt(dist2);
 
     // node is on the surface to roundoff: no penetration
-    if (dist <= 1.0e-14) return;
+    if (dist <= 1.0e-14) return false;
 
     // outward unit normal at the closest point
     double normal[3];
@@ -1192,7 +1299,7 @@ void penetration_check(const size_t bdy_node_lid,
     for (size_t dim = 0; dim < 3; dim++) {
         gap += d[dim]*normal[dim];
     }
-    if (gap >= 0.0) return;
+    if (gap >= 0.0) return false;
 
     // ---------------------------------------------------------------
     // collinearity check: at a true closest point d is parallel to n
@@ -1223,10 +1330,10 @@ void penetration_check(const size_t bdy_node_lid,
 
     const double theta_deg = acos(cos_theta)*180.0/pi;
 
-    if (theta_deg > collinear_tol) return;
+    if (theta_deg > collinear_tol) return false;
 
     // depth check: can't be deeper than one load step's relative motion
-    if (dist > max_gap) return;
+    if (dist > max_gap) return false;
 
     // ---------------------------------------------------------------
     // penetrating: store the signed gap (negative) and the closest point's surface coords
@@ -1234,6 +1341,8 @@ void penetration_check(const size_t bdy_node_lid,
     pairing_check_vars(bdy_surf_lid, node_lid, 0) = gap;
     pairing_check_vars(bdy_surf_lid, node_lid, 1) = xi;
     pairing_check_vars(bdy_surf_lid, node_lid, 2) = eta;
+
+    return true;
 
 } // end penetration_check
 
@@ -1243,16 +1352,25 @@ void penetration_check(const size_t bdy_node_lid,
 ///
 /// \brief For every boundary surface, checks every node in its bounding box
 ///        for penetration and stores (gap, xi, eta) in pairing_check_vars.
+///        Penetrating nodes are appended to pen_nodes during the sweep.
 ///
 /// Per surface/node pair:
 ///   1. check_filters: cheap rejects (own node, outside all nodal tangent planes)
-///   2. penetration_check: closest point, side, and depth checks
+///   2. penetration_check: closest point, side, collinearity, and depth checks
 /// Entries not written keep the sentinel (no penetration).
+///
+/// Each write increments num_pen_surfs_in_node for that node. The first
+/// surface to claim a node (previous count 0) appends it to pen_nodes, so
+/// each penetrating node appears exactly once.
+///
+/// pen_nodes order is NOT deterministic (atomic arrival order). Consumers
+/// must be order-independent.
 ///
 /// Must be called after AO_contact_sort and get_bdy_surf_node_normals so the
 /// boxes, bdy_node_coords, and nodal normals are current.
 ///
 /// \param num_bdy_surfs           number of boundary surfaces
+/// \param num_bdy_nodes           number of boundary nodes
 /// \param num_nodes_in_surf       nodes per surface, (p+1)^2
 /// \param bdy_surfs               bdy surf lid -> surf gid
 /// \param faces_in_surf           surf gid -> local face id in its owning element
@@ -1261,14 +1379,19 @@ void penetration_check(const size_t bdy_node_lid,
 /// \param surf_qpt_basis          ref_surf.qpt_basis      (faces, surf qpts, vol dofs)
 /// \param surf_qpt_positions      SurfQuad.qpt_positions  (faces, surf qpts, 3)
 /// \param bdy_node_coords         boundary node coordinates
+/// \param bdy_node_vels           boundary node velocities (seed tie-break)
 /// \param bdy_surf_node_normals   (num_bdy_surfs, num_nodes_in_surf, 3) outward nodal normals
 /// \param nodes_in_bounding_boxes candidate boundary node lids per surface
 /// \param filter_tol              tolerance for the tangent plane filter
 /// \param max_gap                 max admissible penetration depth over the load step
 /// \param pairing_check_vars      output (gap, xi, eta) per surface/box node
+/// \param num_pen_surfs_in_node   output (num_bdy_nodes) surfaces each node penetrates
+/// \param pen_nodes               output (num_bdy_nodes) list of penetrating bdy node lids, valid to num_pen_nodes(0)
+/// \param num_pen_nodes           output (1) device counter, length of pen_nodes; host copy updated on return
 ///
 /////////////////////////////////////////////////////////////////////////////
 void penetration_sweep(const size_t num_bdy_surfs,
+                       const size_t num_bdy_nodes,
                        const size_t num_nodes_in_surf,
                        const CArrayKokkos<size_t>& bdy_surfs,
                        const CArrayKokkos<int>& faces_in_surf,
@@ -1281,10 +1404,13 @@ void penetration_sweep(const size_t num_bdy_surfs,
                        const CArrayKokkos<double>& bdy_surf_node_normals,
                        const RaggedRightArrayKokkos<size_t>& nodes_in_bounding_boxes,
                        const double filter_tol,
-                       const double max_gap,                                  // TODO: set from the load step motion estimate (motion_factor*d_max)
-                       DRaggedRightArrayKokkos<double>& pairing_check_vars)
+                       const double max_gap,
+                       DRaggedRightArrayKokkos<double>& pairing_check_vars,
+                       CArrayKokkos<size_t>& num_pen_surfs_in_node,
+                       CArrayKokkos<size_t>& pen_nodes,
+                       DCArrayKokkos<size_t>& num_pen_nodes)
 {
-    const double no_pair_sentinel = 100000.0;  // must match the selection step's "no pair" test
+    const double no_pair_sentinel = 100000.0;  // must match the pairing step's "no pair" test
 
     // ---------------------------------------------------------------
     // reset: every entry starts as "no penetration"
@@ -1293,6 +1419,11 @@ void penetration_sweep(const size_t num_bdy_surfs,
     // sweep are cleared here
     // ---------------------------------------------------------------
     pairing_check_vars.set_values(no_pair_sentinel);
+    num_pen_surfs_in_node.set_values(0);
+
+    // penetrating node counter: host write + copy, no kernel launch
+    num_pen_nodes.host(0) = 0;
+    num_pen_nodes.update_device();
     Kokkos::fence();
 
     // ---------------------------------------------------------------
@@ -1315,18 +1446,28 @@ void penetration_sweep(const size_t num_bdy_surfs,
             if (!check_filters(bdy_node_lid, bdy_nodes_in_the_surf, surf_node_normals,
                                bdy_node_coords, num_nodes_in_surf, filter_tol)) return;
 
-            // closest point, side, and depth checks; writes pairing_check_vars if penetrating
-            penetration_check(bdy_node_lid, bdy_surf_lid, node_lid, bdy_nodes_in_the_surf,
-                              bdy_node_coords, bdy_node_vels, dof_positions_1d,
-                              surf_qpt_basis, surf_qpt_positions,
-                              face_lid, max_gap, pairing_check_vars);
+            // closest point, side, collinearity, and depth checks; writes pairing_check_vars if penetrating
+            if (penetration_check(bdy_node_lid, bdy_surf_lid, node_lid, bdy_nodes_in_the_surf,
+                                  bdy_node_coords, bdy_node_vels, dof_positions_1d,
+                                  surf_qpt_basis, surf_qpt_positions,
+                                  face_lid, max_gap, pairing_check_vars)) {
+
+                // count before this write; 0 means this is the node's first penetrating surface
+                const size_t prev = Kokkos::atomic_fetch_add(&num_pen_surfs_in_node(bdy_node_lid), (size_t)1);
+
+                // first surface to claim the node appends it to the list (exactly once per node)
+                if (prev == 0) {
+                    const size_t slot = Kokkos::atomic_fetch_add(&num_pen_nodes(0), (size_t)1);
+                    pen_nodes(slot) = bdy_node_lid;
+                }
+            }
 
         }); // end FOR_SECOND
     }); // end FOR_FIRST
     Kokkos::fence();
 
-    // make results available on the host for the selection step / debugging
-    pairing_check_vars.update_host();
+    // host needs the list length to size the pairing launch (or skip it)
+    num_pen_nodes.update_host();
 
 } // end penetration_sweep
 

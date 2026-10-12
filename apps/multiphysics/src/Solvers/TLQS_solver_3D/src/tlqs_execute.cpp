@@ -118,7 +118,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         AO_contact_initialize(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels, mesh.num_bdy_nodes,
                               AO_contact_state.num_nodes_in_bounding_boxes, mesh.num_bdy_surfs, ref_elem,
                               AO_contact_state.lebesgue_overshoot, AO_contact_state.bounding_boxes, AO_contact_state.bdy_surf_node_normals,
-                              mesh.num_nodes_in_surf);
+                              mesh.num_nodes_in_surf, AO_contact_state.num_surfs_in_node_boxes, AO_contact_state.num_pen_surfs_in_node,
+                              AO_contact_state.pen_nodes, AO_contact_state.num_pen_nodes);
 
         // zeroing out bdy_node_velocities since this solver doesn't carry full node state velocity or evolve velocity
         // will be updated during picard iterations
@@ -132,7 +133,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         State.node.coords, mesh.bdy_nodes, AO_contact_state.bdy_node_point_cloud, AO_contact_state.num_bins, 
                         mesh.num_bdy_surfs, mesh.num_nodes_in_surf, dt, mesh.bdy_nodes_in_bdy_surf, AO_contact_state.bounding_boxes,
                         AO_contact_state.lebesgue_overshoot, AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes,
-                        ref_elem.num_dofs_1d, mesh.bdy_surfs, mesh.elems_in_surf, mesh.nodes_in_elem, AO_contact_state.max_gap, AO_contact_state.pairing_check_vars);
+                        ref_elem.num_dofs_1d, mesh.bdy_surfs, mesh.elems_in_surf, mesh.nodes_in_elem, AO_contact_state.max_gap, AO_contact_state.pairing_check_vars,
+                        AO_contact_state.num_surfs_in_node_boxes, AO_contact_state.surfs_in_node_boxes, AO_contact_state.cols_in_node_boxes);
 
         // TESTING NORMALS
 
@@ -245,9 +247,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // END TESTING NORMALS
 
-        /* // TESTING PENETRATION CHECK
+        // TESTING PENETRATION CHECK
 
-        // ---------------------------------------------------------------
+        /* // ---------------------------------------------------------------
         // test settings: change per case
         //   1: uniform overlap  (B bottom nodes 27-35: z -= delta)
         //   2: center bulge     (A top center node 22: z += delta)
@@ -260,7 +262,14 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
         const size_t b_bottom_first = 27; // B bottom face gids 27-35
         const size_t b_bottom_last  = 35;
+        const size_t a_top_first    = 18; // A top face gids 18-26
+        const size_t a_top_last     = 26;
         const size_t a_top_center   = 22; // A top face center gid
+        const size_t b_bottom_center = 31; // B bottom face center gid
+
+        // bdy surf lids of the contact faces for this mesh (from earlier output)
+        const size_t surf_a_top    = 5;   // elem 0, face_lid 5: penetrated by B bottom nodes
+        const size_t surf_b_bottom = 10;  // elem 1, face_lid 4: penetrated by A top nodes
 
         // ---------------------------------------------------------------
         // local shallow copies so kernels don't capture mesh/State/AO_contact_state
@@ -269,9 +278,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         const size_t num_bdy_nodes     = mesh.num_bdy_nodes;
         const size_t num_nodes_in_surf = mesh.num_nodes_in_surf;
         const auto   bdy_nodes         = mesh.bdy_nodes;
-        const auto   bdy_surfs         = mesh.bdy_surfs;
-        const auto   elems_in_surf     = mesh.elems_in_surf;
-        const auto   faces_in_surf     = mesh.faces_in_surf;
         const auto   node_coords       = State.node.coords;
 
         // ---------------------------------------------------------------
@@ -295,13 +301,14 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         Kokkos::fence();
 
         // ---------------------------------------------------------------
-        // rebuild candidates, max_gap, pairing storage, and nodal normals
+        // rebuild candidates, max_gap, pairing storage, inverse map, and nodal normals
         // ---------------------------------------------------------------
         AO_contact_sort(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels, num_bdy_nodes,
                         State.node.coords, mesh.bdy_nodes, AO_contact_state.bdy_node_point_cloud, AO_contact_state.num_bins,
                         num_bdy_surfs, num_nodes_in_surf, test_dt, mesh.bdy_nodes_in_bdy_surf, AO_contact_state.bounding_boxes,
                         AO_contact_state.lebesgue_overshoot, AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes,
-                        ref_elem.num_dofs_1d, mesh.bdy_surfs, mesh.elems_in_surf, mesh.nodes_in_elem, AO_contact_state.max_gap, AO_contact_state.pairing_check_vars);
+                        ref_elem.num_dofs_1d, mesh.bdy_surfs, mesh.elems_in_surf, mesh.nodes_in_elem, AO_contact_state.max_gap, AO_contact_state.pairing_check_vars,
+                        AO_contact_state.num_surfs_in_node_boxes, AO_contact_state.surfs_in_node_boxes, AO_contact_state.cols_in_node_boxes);
 
         get_bdy_surf_node_normals(num_bdy_surfs,
                                   num_nodes_in_surf,
@@ -316,6 +323,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         // penetration sweep
         // ---------------------------------------------------------------
         penetration_sweep(num_bdy_surfs,
+                          num_bdy_nodes,
                           num_nodes_in_surf,
                           mesh.bdy_surfs,
                           mesh.faces_in_surf,
@@ -329,62 +337,184 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                           AO_contact_state.nodes_in_bounding_boxes,
                           AO_contact_state.filter_tol,
                           AO_contact_state.max_gap,
-                          AO_contact_state.pairing_check_vars);
+                          AO_contact_state.pairing_check_vars,
+                          AO_contact_state.num_pen_surfs_in_node,
+                          AO_contact_state.pen_nodes,
+                          AO_contact_state.num_pen_nodes);
 
         // ---------------------------------------------------------------
-        // local copies AFTER the sort (it reassigns pairing_check_vars)
+        // local copies AFTER the sort (it reassigns the ragged arrays)
         // ---------------------------------------------------------------
         const auto   bdy_node_coords         = AO_contact_state.bdy_node_coords;
         const auto   nodes_in_bounding_boxes = AO_contact_state.nodes_in_bounding_boxes;
         const auto   pairing_check_vars      = AO_contact_state.pairing_check_vars;
+        const auto   num_surfs_in_node_boxes = AO_contact_state.num_surfs_in_node_boxes;
+        const auto   surfs_in_node_boxes     = AO_contact_state.surfs_in_node_boxes;
+        const auto   cols_in_node_boxes      = AO_contact_state.cols_in_node_boxes;
+        const auto   num_pen_surfs_in_node   = AO_contact_state.num_pen_surfs_in_node;
+        const auto   pen_nodes               = AO_contact_state.pen_nodes;
+        const auto   num_pen_nodes           = AO_contact_state.num_pen_nodes;
         const double max_gap                 = AO_contact_state.max_gap;
 
+        // scratch: how many times each node appears in pen_nodes (check B)
+        CArrayKokkos<size_t> times_in_pen_nodes(num_bdy_nodes, "times_in_pen_nodes");
+        times_in_pen_nodes.set_values(0);
+        Kokkos::fence();
+
         // ---------------------------------------------------------------
-        // print every written pair (gap != sentinel)
+        // checks and by-node print
         // ---------------------------------------------------------------
         RUN({
-            printf("penetration test case %d, delta = %.4e, max_gap = %.4e\n\n", test_case, delta, max_gap);
+            const size_t n_pen = num_pen_nodes(0);
+            size_t num_fail = 0;
 
-            size_t total_writes = 0;
+            printf("penetration test case %d, delta = %.4e, max_gap = %.4e\n", test_case, delta, max_gap);
+            printf("num_pen_nodes = %lu\n\n", (unsigned long)n_pen);
 
-            for (size_t bdy_surf_lid = 0; bdy_surf_lid < num_bdy_surfs; bdy_surf_lid++) {
+            // -----------------------------------------------------------
+            // A. inverse map: row lengths and back-pointers
+            // -----------------------------------------------------------
+            for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes; bdy_node_lid++) {
 
-                const size_t surf_gid   = bdy_surfs(bdy_surf_lid);
-                const size_t elem_gid   = elems_in_surf(surf_gid, 0);
-                const size_t face_lid   = faces_in_surf(surf_gid, 0);
-                const size_t num_in_box = nodes_in_bounding_boxes.stride(bdy_surf_lid);
+                const size_t num_cand = surfs_in_node_boxes.stride(bdy_node_lid);
 
-                size_t surf_writes = 0;
+                if (num_cand != num_surfs_in_node_boxes(bdy_node_lid)) {
+                    printf("  FAIL A: bdy node %lu row length %lu != count %lu\n",
+                           (unsigned long)bdy_node_lid, (unsigned long)num_cand,
+                           (unsigned long)num_surfs_in_node_boxes(bdy_node_lid));
+                    num_fail++;
+                }
 
-                for (size_t node_lid = 0; node_lid < num_in_box; node_lid++) {
+                for (size_t slot = 0; slot < num_cand; slot++) {
+                    const size_t bdy_surf_lid = surfs_in_node_boxes(bdy_node_lid, slot);
+                    const size_t col          = cols_in_node_boxes(bdy_node_lid, slot);
 
-                    const double gap = pairing_check_vars(bdy_surf_lid, node_lid, 0);
-                    if (gap > 0.5*no_pair_sentinel) continue;   // not written
-
-                    if (surf_writes == 0) {
-                        printf("bdy surf %lu (elem %lu, face_lid %lu): %lu nodes in box\n",
-                               (unsigned long)bdy_surf_lid, (unsigned long)elem_gid,
-                               (unsigned long)face_lid, (unsigned long)num_in_box);
+                    if (col >= nodes_in_bounding_boxes.stride(bdy_surf_lid) ||
+                        nodes_in_bounding_boxes(bdy_surf_lid, col) != bdy_node_lid) {
+                        printf("  FAIL A: bdy node %lu slot %lu -> (surf %lu, col %lu) does not point back\n",
+                               (unsigned long)bdy_node_lid, (unsigned long)slot,
+                               (unsigned long)bdy_surf_lid, (unsigned long)col);
+                        num_fail++;
                     }
+                }
+            } // end for bdy_node_lid
 
-                    const size_t bdy_node_lid = nodes_in_bounding_boxes(bdy_surf_lid, node_lid);
-                    const size_t node_gid     = bdy_nodes(bdy_node_lid);
+            // -----------------------------------------------------------
+            // B. pen_nodes: every node with a nonzero count, exactly once
+            // -----------------------------------------------------------
+            if (n_pen > num_bdy_nodes) {
+                printf("  FAIL B: num_pen_nodes %lu > num_bdy_nodes %lu\n",
+                       (unsigned long)n_pen, (unsigned long)num_bdy_nodes);
+                num_fail++;
+            }
+            else {
+                for (size_t pen_lid = 0; pen_lid < n_pen; pen_lid++) {
+                    times_in_pen_nodes(pen_nodes(pen_lid)) += 1;
+                }
+                for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes; bdy_node_lid++) {
+                    const size_t expected_times = (num_pen_surfs_in_node(bdy_node_lid) > 0) ? 1 : 0;
+                    if (times_in_pen_nodes(bdy_node_lid) != expected_times) {
+                        printf("  FAIL B: gid %lu appears %lu times in pen_nodes, expected %lu\n",
+                               (unsigned long)bdy_nodes(bdy_node_lid),
+                               (unsigned long)times_in_pen_nodes(bdy_node_lid),
+                               (unsigned long)expected_times);
+                        num_fail++;
+                    }
+                }
+            }
 
-                    printf("  gid %3lu  x = (%+.4f, %+.4f, %+.4f)   gap = %+.8e   (xi, eta) = (%+.8f, %+.8f)\n",
-                           (unsigned long)node_gid,
-                           bdy_node_coords(bdy_node_lid, 0), bdy_node_coords(bdy_node_lid, 1), bdy_node_coords(bdy_node_lid, 2),
-                           gap,
-                           pairing_check_vars(bdy_surf_lid, node_lid, 1),
-                           pairing_check_vars(bdy_surf_lid, node_lid, 2));
+            // -----------------------------------------------------------
+            // C. surface-major writes == sum of per-node counts
+            // -----------------------------------------------------------
+            size_t total_writes = 0;
+            for (size_t bdy_surf_lid = 0; bdy_surf_lid < num_bdy_surfs; bdy_surf_lid++) {
+                for (size_t node_lid = 0; node_lid < nodes_in_bounding_boxes.stride(bdy_surf_lid); node_lid++) {
+                    if (pairing_check_vars(bdy_surf_lid, node_lid, 0) < 0.5*no_pair_sentinel) total_writes++;
+                }
+            }
+            size_t total_counts = 0;
+            for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes; bdy_node_lid++) {
+                total_counts += num_pen_surfs_in_node(bdy_node_lid);
+            }
+            if (total_writes != total_counts) {
+                printf("  FAIL C: %lu surface-major writes != %lu summed node counts\n",
+                       (unsigned long)total_writes, (unsigned long)total_counts);
+                num_fail++;
+            }
 
-                    surf_writes++;
-                } // end for node_lid
+            // -----------------------------------------------------------
+            // D. per node: surfaces found through the inverse map vs expected
+            //    (ascending bdy node lid order for readability; pen_nodes order is arbitrary)
+            // -----------------------------------------------------------
+            for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes; bdy_node_lid++) {
 
-                if (surf_writes > 0) printf("\n");
-                total_writes += surf_writes;
-            } // end for bdy_surf_lid
+                const size_t gid = bdy_nodes(bdy_node_lid);
 
-            printf("total writes: %lu\n\n", (unsigned long)total_writes);
+                // expected penetrated surface for this case (-1 = none)
+                long expected_surf = -1;
+                const bool on_a_top    = (gid >= a_top_first    && gid <= a_top_last);
+                const bool on_b_bottom = (gid >= b_bottom_first && gid <= b_bottom_last);
+
+                if (test_case == 1) {
+                    if (on_a_top)    expected_surf = (long)surf_b_bottom;
+                    if (on_b_bottom) expected_surf = (long)surf_a_top;
+                }
+                else if (test_case == 2) {
+                    if (gid == a_top_center)    expected_surf = (long)surf_b_bottom;
+                    if (gid == b_bottom_center) expected_surf = (long)surf_a_top;
+                }
+                else if (test_case == 3) {
+                    // nodes at x = 0 (every third gid) lie on the other face: no write
+                    if (on_a_top    && (gid - a_top_first)    % 3 != 0) expected_surf = (long)surf_b_bottom;
+                    if (on_b_bottom && (gid - b_bottom_first) % 3 != 0) expected_surf = (long)surf_a_top;
+                }
+
+                // walk the candidate row, collect penetrated surfaces
+                const size_t num_cand = surfs_in_node_boxes.stride(bdy_node_lid);
+                size_t num_hits   = 0;
+                bool   found_expected = false;
+
+                for (size_t slot = 0; slot < num_cand; slot++) {
+                    const size_t bdy_surf_lid = surfs_in_node_boxes(bdy_node_lid, slot);
+                    const size_t col          = cols_in_node_boxes(bdy_node_lid, slot);
+                    const double gap          = pairing_check_vars(bdy_surf_lid, col, 0);
+                    if (gap > 0.5*no_pair_sentinel) continue;   // candidate, not penetrating
+
+                    if (num_hits == 0) {
+                        printf("  gid %3lu (bdy %3lu)  x = (%+.4f, %+.4f, %+.4f)  %lu of %lu candidates:\n",
+                               (unsigned long)gid, (unsigned long)bdy_node_lid,
+                               bdy_node_coords(bdy_node_lid, 0), bdy_node_coords(bdy_node_lid, 1), bdy_node_coords(bdy_node_lid, 2),
+                               (unsigned long)num_pen_surfs_in_node(bdy_node_lid), (unsigned long)num_cand);
+                    }
+                    printf("      surf %3lu  gap = %+.8e  (xi, eta) = (%+.8f, %+.8f)\n",
+                           (unsigned long)bdy_surf_lid, gap,
+                           pairing_check_vars(bdy_surf_lid, col, 1),
+                           pairing_check_vars(bdy_surf_lid, col, 2));
+
+                    if ((long)bdy_surf_lid == expected_surf) found_expected = true;
+                    num_hits++;
+                } // end for slot
+
+                // count from the sweep must match what the row shows
+                if (num_hits != num_pen_surfs_in_node(bdy_node_lid)) {
+                    printf("  FAIL D: gid %lu row shows %lu hits, sweep counted %lu\n",
+                           (unsigned long)gid, (unsigned long)num_hits,
+                           (unsigned long)num_pen_surfs_in_node(bdy_node_lid));
+                    num_fail++;
+                }
+
+                // every expected case penetrates exactly one surface
+                const size_t expected_hits = (expected_surf >= 0) ? 1 : 0;
+                if (num_hits != expected_hits || (expected_surf >= 0 && !found_expected)) {
+                    printf("  FAIL D: gid %lu penetrates %lu surfs, expected %lu (surf %ld)\n",
+                           (unsigned long)gid, (unsigned long)num_hits,
+                           (unsigned long)expected_hits, expected_surf);
+                    num_fail++;
+                }
+            } // end for bdy_node_lid
+
+            printf("\ntotal writes: %lu\n", (unsigned long)total_writes);
+            printf("%s: %lu failures\n\n", (num_fail == 0) ? "PASS" : "FAIL", (unsigned long)num_fail);
         });
         Kokkos::fence();
 
