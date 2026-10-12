@@ -233,6 +233,11 @@ bool closest_point_projected_newton(const double* x_I,
                                     double& eta,
                                     double& f);
 
+double seed_vel_alignment(const double* x_I,
+                          const double* x_c,
+                          const double* v,
+                          const double  v_mag);
+
 // is the node penetrating the surface
 KOKKOS_FUNCTION
 void penetration_check(const size_t bdy_node_lid,
@@ -240,6 +245,7 @@ void penetration_check(const size_t bdy_node_lid,
                        const size_t node_lid,
                        const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
                        const DCArrayKokkos<double>& bdy_node_coords,
+                       const CArrayKokkos<double>& bdy_node_vels,
                        const CArrayKokkos<double>& dof_positions_1d,
                        const CArrayKokkos<double>& surf_qpt_basis,
                        const CArrayKokkos<double>& surf_qpt_positions,
@@ -257,6 +263,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
                        const CArrayKokkos<double>& surf_qpt_basis,
                        const CArrayKokkos<double>& surf_qpt_positions,
                        const DCArrayKokkos<double>& bdy_node_coords,
+                       const CArrayKokkos<double>& bdy_node_vels,
                        const CArrayKokkos<double>& bdy_surf_node_normals,
                        const RaggedRightArrayKokkos<size_t>& nodes_in_bounding_boxes,
                        const double filter_tol,

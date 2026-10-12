@@ -962,6 +962,38 @@ bool closest_point_projected_newton(const double* x_I,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
+/// \fn seed_vel_alignment
+///
+/// \brief |cos| of the angle between (x_c - x_I) and the node velocity.
+///        1 = collinear, 0 = perpendicular. Used to break ties between
+///        equidistant seed candidates.
+///
+/// Returns 0 if the node has zero velocity or the candidate coincides with
+/// the node, so ties are then left to the first candidate found.
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+double seed_vel_alignment(const double* x_I,
+                          const double* x_c,
+                          const double* v,
+                          const double  v_mag)
+{
+    double dot   = 0.0;
+    double mag2  = 0.0;
+    for (size_t dim = 0; dim < 3; dim++) {
+        const double diff = x_c[dim] - x_I[dim];
+        dot  += diff*v[dim];
+        mag2 += diff*diff;
+    }
+
+    if (v_mag <= 1.0e-14 || mag2 <= 1.0e-28) return 0.0;
+
+    return fabs(dot)/(sqrt(mag2)*v_mag);
+
+} // end seed_vel_alignment
+
+/////////////////////////////////////////////////////////////////////////////
+///
 /// \fn penetration_check
 ///
 /// \brief Checks one boundary node against one boundary surface and, if the
@@ -995,6 +1027,7 @@ void penetration_check(const size_t bdy_node_lid,
                        const size_t node_lid,
                        const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
                        const DCArrayKokkos<double>& bdy_node_coords,
+                       const CArrayKokkos<double>& bdy_node_vels,
                        const CArrayKokkos<double>& dof_positions_1d,
                        const CArrayKokkos<double>& surf_qpt_basis,
                        const CArrayKokkos<double>& surf_qpt_positions,
@@ -1018,10 +1051,21 @@ void penetration_check(const size_t bdy_node_lid,
 
     // ---------------------------------------------------------------
     // 1. seed: closest candidate among surface nodes and surface quadrature points
+    //    ties (equal dist2) go to the candidate most collinear with the node velocity
     // ---------------------------------------------------------------
     double seed_xi    = 0.0;
     double seed_eta   = 0.0;
     double seed_dist2 = 1.0e300;
+    double seed_align = 0.0;   // |cos| between (seed - x_I) and the node velocity
+
+    // node velocity, used only to break ties
+    double v_I[3];
+    double v_mag2 = 0.0;
+    for (size_t dim = 0; dim < 3; dim++) {
+        v_I[dim] = bdy_node_vels(bdy_node_lid, dim);
+        v_mag2  += v_I[dim]*v_I[dim];
+    }
+    const double v_mag = sqrt(v_mag2);
 
     // surface GLL nodes (covers edges and corners)
     for (size_t b = 0; b < num_dofs_1d; b++) {
@@ -1029,9 +1073,11 @@ void penetration_check(const size_t bdy_node_lid,
 
             const size_t surf_bdy_node_lid = bdy_nodes_in_the_surf(elements::get_dof_rid(a, b, num_dofs_1d));
 
+            double x_c[3];
             double dist2 = 0.0;
             for (size_t dim = 0; dim < 3; dim++) {
-                const double diff = x_I[dim] - bdy_node_coords(surf_bdy_node_lid, dim);
+                x_c[dim] = bdy_node_coords(surf_bdy_node_lid, dim);
+                const double diff = x_I[dim] - x_c[dim];
                 dist2 += diff*diff;
             }
 
@@ -1039,6 +1085,16 @@ void penetration_check(const size_t bdy_node_lid,
                 seed_dist2 = dist2;
                 seed_xi    = dof_positions_1d(a);
                 seed_eta   = dof_positions_1d(b);
+                seed_align = seed_vel_alignment(x_I, x_c, v_I, v_mag); // TODO: SHOULD THIS BE RELATIVE VELOCITY INSTEAD OF CANDIDATE NODE?
+            }
+            else if (dist2 == seed_dist2) {
+                // tie: keep the candidate more collinear with the velocity
+                const double align = seed_vel_alignment(x_I, x_c, v_I, v_mag);
+                if (align > seed_align) {
+                    seed_xi    = dof_positions_1d(a);
+                    seed_eta   = dof_positions_1d(b);
+                    seed_align = align;
+                }
             }
         } // end for a
     } // end for b
@@ -1084,6 +1140,16 @@ void penetration_check(const size_t bdy_node_lid,
             // surface (xi, eta) are the xi_dim and eta_dim components of the volume qpt position
             seed_xi    = surf_qpt_positions(face_lid, qpt, xi_dim);
             seed_eta   = surf_qpt_positions(face_lid, qpt, eta_dim);
+            seed_align = seed_vel_alignment(x_I, x_q, v_I, v_mag);
+        }
+        else if (dist2 == seed_dist2) {
+            // tie: keep the candidate more collinear with the velocity
+            const double align = seed_vel_alignment(x_I, x_q, v_I, v_mag);
+            if (align > seed_align) {
+                seed_xi    = surf_qpt_positions(face_lid, qpt, xi_dim);
+                seed_eta   = surf_qpt_positions(face_lid, qpt, eta_dim);
+                seed_align = align;
+            }
         }
     } // end for qpt
 
@@ -1129,19 +1195,35 @@ void penetration_check(const size_t bdy_node_lid,
     if (gap >= 0.0) return;
 
     // ---------------------------------------------------------------
-    // collinearity check: at a true closest point d is parallel to n (eqs. 3.6, 3.7)
+    // collinearity check: at a true closest point d is parallel to n
     // a tangential component means the clamp is active and the node lies beyond
     // this face's edge, so it is not penetrating this face
-    // (tangent part computed explicitly; sqrt(dist^2 - gap^2) loses precision)
+    //
+    // normal part of d:  d_n = (d . n) n
+    // angle between d and its normal part:
+    //   cos(theta) = (d . d_n) / (|d| |d_n|)
+    // theta = 0 for pure normal penetration
     // ---------------------------------------------------------------
-    const double collinear_tol = 1.0e-6;   // relative to |d|, TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const double collinear_tol = 5.0;   // degrees, TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const double pi = acos(-1.0);
 
-    double tang2 = 0.0;
+    double d_n[3];
+    double d_n_mag2 = 0.0;
+    double d_dot_dn = 0.0;
     for (size_t dim = 0; dim < 3; dim++) {
-        const double t = d[dim] - gap*normal[dim];   // tangential part of d
-        tang2 += t*t;
+        d_n[dim]  = gap*normal[dim];        // normal part of d
+        d_n_mag2 += d_n[dim]*d_n[dim];
+        d_dot_dn += d[dim]*d_n[dim];
     }
-    if (sqrt(tang2) > collinear_tol*dist) return;
+    const double d_n_mag = sqrt(d_n_mag2);
+
+    // clamp guards acos against roundoff pushing cos slightly past 1
+    double cos_theta = d_dot_dn/(dist*d_n_mag);
+    cos_theta = fmin(1.0, fmax(-1.0, cos_theta));
+
+    const double theta_deg = acos(cos_theta)*180.0/pi;
+
+    if (theta_deg > collinear_tol) return;
 
     // depth check: can't be deeper than one load step's relative motion
     if (dist > max_gap) return;
@@ -1195,6 +1277,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
                        const CArrayKokkos<double>& surf_qpt_basis,
                        const CArrayKokkos<double>& surf_qpt_positions,
                        const DCArrayKokkos<double>& bdy_node_coords,
+                       const CArrayKokkos<double>& bdy_node_vels,
                        const CArrayKokkos<double>& bdy_surf_node_normals,
                        const RaggedRightArrayKokkos<size_t>& nodes_in_bounding_boxes,
                        const double filter_tol,
@@ -1234,7 +1317,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
 
             // closest point, side, and depth checks; writes pairing_check_vars if penetrating
             penetration_check(bdy_node_lid, bdy_surf_lid, node_lid, bdy_nodes_in_the_surf,
-                              bdy_node_coords, dof_positions_1d,
+                              bdy_node_coords, bdy_node_vels, dof_positions_1d,
                               surf_qpt_basis, surf_qpt_positions,
                               face_lid, max_gap, pairing_check_vars);
 
