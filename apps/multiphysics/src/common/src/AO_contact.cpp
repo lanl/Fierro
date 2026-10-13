@@ -107,7 +107,8 @@ void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
                            DCArrayKokkos <size_t>& num_surfs_in_node_boxes,
                            CArrayKokkos <size_t>& num_pen_surfs_in_node,
                            CArrayKokkos <size_t>& pen_nodes,
-                           DCArrayKokkos <size_t>& num_pen_nodes)
+                           DCArrayKokkos <size_t>& num_pen_nodes,
+                           CArrayKokkos <size_t>& num_pairs_in_node)
 {
     // allocating member variables that are statically sized
     bdy_node_coords = DCArrayKokkos <double> (num_bdy_nodes, 3, "bdy_node_coords");
@@ -119,7 +120,8 @@ void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
     num_surfs_in_node_boxes = DCArrayKokkos<size_t>(num_bdy_nodes, "num_surfs_in_node_boxes");
     num_pen_surfs_in_node   = CArrayKokkos<size_t>(num_bdy_nodes, "num_pen_surfs_in_node");
     pen_nodes               = CArrayKokkos<size_t>(num_bdy_nodes, "pen_nodes");
-    num_pen_nodes = DCArrayKokkos<size_t>(1, "num_pen_nodes");
+    num_pairs_in_node = CArrayKokkos<size_t>(num_bdy_nodes, "num_pairs_in_node");
+    num_pen_nodes     = DCArrayKokkos<size_t>(2, "num_pen_nodes");
 
     get_surf_overshoot_factor(ref_elem, lebesgue_overshoot);
 
@@ -455,7 +457,9 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      DRaggedRightArrayKokkos<double>& pairing_check_vars,
                      DCArrayKokkos<size_t>& num_surfs_in_node_boxes,
                      RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
-                     RaggedRightArrayKokkos<size_t>& cols_in_node_boxes)
+                     RaggedRightArrayKokkos<size_t>& cols_in_node_boxes,
+                     RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
+                     DRaggedRightArrayKokkos<double>& contact_pair_vars)
 {
     // updating bdy_node_coords
     FOR_ALL(i, 0, (int)num_bdy_nodes,
@@ -510,6 +514,12 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                           surfs_in_node_boxes,
                           cols_in_node_boxes);
 
+    // ---------------------------------------------------------------
+    // contact pair storage: at most one pair per candidate surface
+    // ---------------------------------------------------------------
+    contact_pair_surfs = RaggedRightArrayKokkos<size_t>(num_surfs_in_node_boxes, "contact_pair_surfs");
+    contact_pair_vars  = DRaggedRightArrayKokkos<double>(num_surfs_in_node_boxes, 7, "contact_pair_vars");
+
     return;
 } // end AO_contact_sort
 
@@ -553,7 +563,6 @@ void lagrange_1D(const CArrayKokkos<double>& dof_positions_1d,
 
 
 // build the cross product to get the normal direction
-KOKKOS_FUNCTION
 KOKKOS_FUNCTION
 void get_normal(const CArrayKokkos<double>& dof_positions_1d,
                 const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
@@ -1350,79 +1359,116 @@ bool penetration_check(const size_t bdy_node_lid,
 ///
 /// \fn penetration_sweep
 ///
-/// \brief For every boundary surface, checks every node in its bounding box
-///        for penetration and stores (gap, xi, eta) in pairing_check_vars.
-///        Penetrating nodes are appended to pen_nodes during the sweep.
+/// \brief Detects node/surface penetrations and builds the contact pairs.
 ///
-/// Per surface/node pair:
+/// Sweep (surfaces across teams, box nodes across threads):
 ///   1. check_filters: cheap rejects (own node, outside all nodal tangent planes)
-///   2. penetration_check: closest point, side, collinearity, and depth checks
-/// Entries not written keep the sentinel (no penetration).
+///   2. penetration_check: closest point, side, collinearity, and depth checks;
+///      writes (gap, xi, eta) to pairing_check_vars
+///   Each write increments num_pen_surfs_in_node. The first surface to claim a
+///   node (previous count 0) appends it to pen_nodes, so each penetrating node
+///   appears exactly once. Entries not written keep the sentinel.
 ///
-/// Each write increments num_pen_surfs_in_node for that node. The first
-/// surface to claim a node (previous count 0) appends it to pen_nodes, so
-/// each penetrating node appears exactly once.
+/// Pairing (one thread per penetrating node, serial over its candidate row):
+///   1. direction into the node's own body: node -> mean of its own element centroids
+///   2. target outward normal at (xi, eta) must face that direction (n_S . v > -dir_tol)
+///   3. per distinct target element, keep the passing surface with the smallest |gap|
+///      (exact ties -> lower bdy_surf_lid)
+///   4. store one pair per target element: xi, eta, nx, ny, nz, F_tot, f_inc
 ///
-/// pen_nodes order is NOT deterministic (atomic arrival order). Consumers
-/// must be order-independent.
+/// pen_nodes and the pair order within a node are NOT deterministic (atomic
+/// arrival order). The selected pairs are, since selection is by value.
+///
+/// num_pen_nodes(0) = valid length of pen_nodes
+/// num_pen_nodes(1) = penetrating nodes with no valid pair or a degenerate
+///                    direction reference (should be 0; nonzero means an upstream problem)
+/// Both host copies are current on return.
 ///
 /// Must be called after AO_contact_sort and get_bdy_surf_node_normals so the
-/// boxes, bdy_node_coords, and nodal normals are current.
+/// boxes, inverse map, pair storage, bdy_node_coords, and nodal normals are current.
 ///
 /// \param num_bdy_surfs           number of boundary surfaces
 /// \param num_bdy_nodes           number of boundary nodes
 /// \param num_nodes_in_surf       nodes per surface, (p+1)^2
+/// \param num_nodes_in_elem       nodes per element, (p+1)^3
 /// \param bdy_surfs               bdy surf lid -> surf gid
 /// \param faces_in_surf           surf gid -> local face id in its owning element
+/// \param elems_in_surf           surf gid -> owning elem gid
+/// \param bdy_nodes               bdy node lid -> node gid
+/// \param elems_in_node           node gid -> elem gids containing the node
+/// \param nodes_in_elem           elem gid -> node gids
 /// \param bdy_nodes_in_bdy_surf   (num_bdy_surfs, num_nodes_in_surf) boundary node lids, get_dof_rid(a, b) ordering
 /// \param dof_positions_1d        ref_elem.dof_positions_1d
 /// \param surf_qpt_basis          ref_surf.qpt_basis      (faces, surf qpts, vol dofs)
 /// \param surf_qpt_positions      SurfQuad.qpt_positions  (faces, surf qpts, 3)
+/// \param node_coords             all node coordinates (centroids need interior nodes)
 /// \param bdy_node_coords         boundary node coordinates
 /// \param bdy_node_vels           boundary node velocities (seed tie-break)
 /// \param bdy_surf_node_normals   (num_bdy_surfs, num_nodes_in_surf, 3) outward nodal normals
 /// \param nodes_in_bounding_boxes candidate boundary node lids per surface
+/// \param surfs_in_node_boxes     (bdy node, slot) -> bdy_surf_lid of a candidate surface
+/// \param cols_in_node_boxes      (bdy node, slot) -> column in pairing_check_vars
 /// \param filter_tol              tolerance for the tangent plane filter
 /// \param max_gap                 max admissible penetration depth over the load step
 /// \param pairing_check_vars      output (gap, xi, eta) per surface/box node
 /// \param num_pen_surfs_in_node   output (num_bdy_nodes) surfaces each node penetrates
-/// \param pen_nodes               output (num_bdy_nodes) list of penetrating bdy node lids, valid to num_pen_nodes(0)
-/// \param num_pen_nodes           output (1) device counter, length of pen_nodes; host copy updated on return
+/// \param pen_nodes               output (num_bdy_nodes) penetrating bdy node lids, valid to num_pen_nodes(0)
+/// \param num_pen_nodes           output (2) device counters, see above
+/// \param num_pairs_in_node       output (num_bdy_nodes) pairs per penetrating node
+/// \param contact_pair_surfs      output (bdy node, pair) -> target bdy_surf_lid
+/// \param contact_pair_vars       output (bdy node, pair, 7) -> xi, eta, nx, ny, nz, F_tot, f_inc
 ///
 /////////////////////////////////////////////////////////////////////////////
 void penetration_sweep(const size_t num_bdy_surfs,
                        const size_t num_bdy_nodes,
                        const size_t num_nodes_in_surf,
+                       const size_t num_nodes_in_elem,
                        const CArrayKokkos<size_t>& bdy_surfs,
                        const CArrayKokkos<int>& faces_in_surf,
+                       const CArrayKokkos<int>& elems_in_surf,
+                       const CArrayKokkos<size_t>& bdy_nodes,
+                       const RaggedRightArrayKokkos<size_t>& elems_in_node,
+                       const DCArrayKokkos<size_t>& nodes_in_elem,
                        const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
                        const CArrayKokkos<double>& dof_positions_1d,
                        const CArrayKokkos<double>& surf_qpt_basis,
                        const CArrayKokkos<double>& surf_qpt_positions,
+                       const MPICArrayKokkos<double>& node_coords,
                        const DCArrayKokkos<double>& bdy_node_coords,
                        const CArrayKokkos<double>& bdy_node_vels,
                        const CArrayKokkos<double>& bdy_surf_node_normals,
                        const RaggedRightArrayKokkos<size_t>& nodes_in_bounding_boxes,
+                       const RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
+                       const RaggedRightArrayKokkos<size_t>& cols_in_node_boxes,
                        const double filter_tol,
                        const double max_gap,
                        DRaggedRightArrayKokkos<double>& pairing_check_vars,
                        CArrayKokkos<size_t>& num_pen_surfs_in_node,
                        CArrayKokkos<size_t>& pen_nodes,
-                       DCArrayKokkos<size_t>& num_pen_nodes)
+                       DCArrayKokkos<size_t>& num_pen_nodes,
+                       CArrayKokkos<size_t>& num_pairs_in_node,
+                       RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
+                       DRaggedRightArrayKokkos<double>& contact_pair_vars)
 {
-    const double no_pair_sentinel = 100000.0;  // must match the pairing step's "no pair" test
+    const double no_pair_sentinel = 100000.0;  // TODO: define once (shared with the test block)
+    const double dir_angle_tol = 90.0;   // degrees, TODO: YAML or mesh-based
+    const double pi            = acos(-1.0);
+    const double dir_cos_min   = cos(dir_angle_tol*PI/180.0);
 
     // ---------------------------------------------------------------
     // reset: every entry starts as "no penetration"
-    // pairing_check_vars is sized by AO_contact_sort (once per load step);
-    // the sweep can run several times per step, so values from a previous
-    // sweep are cleared here
+    // pairing_check_vars and the pair storage are sized by AO_contact_sort
+    // (once per load step); the sweep can run several times per step, so
+    // values from a previous sweep are cleared here.
+    // num_pairs_in_node and the pair arrays are not reset: every penetrating
+    // node overwrites its own entries, and other nodes' entries are never read.
     // ---------------------------------------------------------------
     pairing_check_vars.set_values(no_pair_sentinel);
     num_pen_surfs_in_node.set_values(0);
 
-    // penetrating node counter: host write + copy, no kernel launch
+    // [0] penetrating node count, [1] pairing error count: host write + copy, no kernel launch
     num_pen_nodes.host(0) = 0;
+    num_pen_nodes.host(1) = 0;
     num_pen_nodes.update_device();
     Kokkos::fence();
 
@@ -1468,6 +1514,157 @@ void penetration_sweep(const size_t num_bdy_surfs,
 
     // host needs the list length to size the pairing launch (or skip it)
     num_pen_nodes.update_host();
+    const size_t num_pen = num_pen_nodes.host(0);
+    if (num_pen == 0) return;   // nothing in contact; error count is already 0
+
+    // ---------------------------------------------------------------
+    // pairing: one thread per penetrating node, serial over its short candidate row
+    //
+    // during selection, contact_pair_surfs(node, pair) holds the winning CANDIDATE SLOT
+    // (so surface, column, and gap can be re-read for comparisons); it is converted
+    // to bdy_surf_lid at the end
+    // ---------------------------------------------------------------
+    FOR_ALL(pen_lid, 0, num_pen, {
+
+        const size_t bdy_node_lid = pen_nodes(pen_lid);
+        const size_t node_gid     = bdy_nodes(bdy_node_lid);
+
+        // -----------------------------------------------------------
+        // 1. direction from the node into its own body:
+        //    node -> mean over own elements of the element node-mean centroid
+        //    (all elements have num_nodes_in_elem nodes, so this is one flat mean)
+        // -----------------------------------------------------------
+        double centroid[3];
+        centroid[0] = 0.0;
+        centroid[1] = 0.0;
+        centroid[2] = 0.0;
+
+        const size_t num_own_elems = elems_in_node.stride(node_gid);
+        for (size_t e = 0; e < num_own_elems; e++) {
+            const size_t elem_gid = elems_in_node(node_gid, e);
+            for (size_t a = 0; a < num_nodes_in_elem; a++) {
+                const size_t elem_node_gid = nodes_in_elem(elem_gid, a);
+                for (size_t dim = 0; dim < 3; dim++) {
+                    centroid[dim] += node_coords(elem_node_gid, dim);
+                }
+            }
+        }
+
+        double to_body[3];
+        double to_body_mag2 = 0.0;
+        for (size_t dim = 0; dim < 3; dim++) {
+            centroid[dim] /= (double)(num_own_elems*num_nodes_in_elem);
+            to_body[dim]   = centroid[dim] - bdy_node_coords(bdy_node_lid, dim);
+            to_body_mag2  += to_body[dim]*to_body[dim];
+        }
+        const double to_body_mag = sqrt(to_body_mag2);
+
+        // degenerate own element(s): direction undefined
+        if (to_body_mag <= 1.0e-14) {
+            num_pairs_in_node(bdy_node_lid) = 0;
+            Kokkos::atomic_add(&num_pen_nodes(1), (size_t)1);
+            return;
+        }
+        for (size_t dim = 0; dim < 3; dim++) {
+            to_body[dim] /= to_body_mag;
+        }
+
+        // -----------------------------------------------------------
+        // 2-4. walk the candidate row, select one surface per target element
+        // -----------------------------------------------------------
+        size_t num_pairs = 0;
+
+        for (size_t slot = 0; slot < surfs_in_node_boxes.stride(bdy_node_lid); slot++) {
+
+            const size_t bdy_surf_lid = surfs_in_node_boxes(bdy_node_lid, slot);
+            const size_t col          = cols_in_node_boxes(bdy_node_lid, slot);
+
+            const double gap = pairing_check_vars(bdy_surf_lid, col, 0);
+            if (gap > 0.5*no_pair_sentinel) continue;   // candidate, not penetrating
+
+            const double xi  = pairing_check_vars(bdy_surf_lid, col, 1);
+            const double eta = pairing_check_vars(bdy_surf_lid, col, 2);
+
+            // target surface outward normal at the contact point
+            const size_t surf_gid = bdy_surfs(bdy_surf_lid);
+            const size_t face_lid = faces_in_surf(surf_gid, 0);
+            ViewCArrayKokkos<size_t> target_surf_nodes(&bdy_nodes_in_bdy_surf(bdy_surf_lid, 0), num_nodes_in_surf);
+
+            double n_S[3];
+            get_normal(dof_positions_1d, target_surf_nodes, bdy_node_coords, face_lid, xi, eta, n_S);
+
+            // 2. direction filter: target outward normal must face the node's body
+            double dot = 0.0;
+            for (size_t dim = 0; dim < 3; dim++) {
+                dot += n_S[dim]*to_body[dim];
+            }
+            if (dot <= dir_cos_min) continue;
+
+            // 3. find this target element among the pairs so far
+            const size_t target_elem = elems_in_surf(surf_gid, 0);   // element owning this surface
+
+            size_t pair = num_pairs;   // default: "not found", which is the next free pair index
+            for (size_t p = 0; p < num_pairs; p++) {
+
+                const size_t p_slot = contact_pair_surfs(bdy_node_lid, p);          // pair p's best candidate slot
+                const size_t p_surf = surfs_in_node_boxes(bdy_node_lid, p_slot);    // that slot's bdy_surf_lid
+                const size_t p_elem = elems_in_surf(bdy_surfs(p_surf), 0);          // that surface's element
+
+                if (p_elem == target_elem) {
+                    pair = p;   // same element: this surface competes for pair p
+                    break;
+                }
+            } // end for p
+
+            bool take = false;
+            if (pair == num_pairs) {
+                // first passing surface of this element
+                take = true;
+                num_pairs++;
+            }
+            else {
+                // compare against the current best for this element
+                const size_t best_slot = contact_pair_surfs(bdy_node_lid, pair);
+                const size_t best_surf = surfs_in_node_boxes(bdy_node_lid, best_slot);
+                const size_t best_col  = cols_in_node_boxes(bdy_node_lid, best_slot);
+                const double best_abs  = fabs(pairing_check_vars(best_surf, best_col, 0));
+                const double this_abs  = fabs(gap);
+
+                take = (this_abs < best_abs) || (this_abs == best_abs && bdy_surf_lid < best_surf);
+            }
+
+            // 4. store (or overwrite) this element's pair
+            if (take) {
+                contact_pair_surfs(bdy_node_lid, pair)   = slot;     // converted to bdy_surf_lid below
+                contact_pair_vars(bdy_node_lid, pair, 0) = xi;
+                contact_pair_vars(bdy_node_lid, pair, 1) = eta;
+                contact_pair_vars(bdy_node_lid, pair, 2) = n_S[0];
+                contact_pair_vars(bdy_node_lid, pair, 3) = n_S[1];
+                contact_pair_vars(bdy_node_lid, pair, 4) = n_S[2];
+                contact_pair_vars(bdy_node_lid, pair, 5) = 0.0;      // F_tot (resolution step)
+                contact_pair_vars(bdy_node_lid, pair, 6) = 0.0;      // f_inc (resolution step)
+            }
+        } // end for slot
+
+        // candidate slot -> target bdy_surf_lid
+        for (size_t p = 0; p < num_pairs; p++) {
+            contact_pair_surfs(bdy_node_lid, p) = surfs_in_node_boxes(bdy_node_lid, contact_pair_surfs(bdy_node_lid, p));
+        }
+        num_pairs_in_node(bdy_node_lid) = num_pairs;
+
+        // penetrating but every surface failed the direction filter: upstream problem
+        if (num_pairs == 0) {
+            Kokkos::atomic_add(&num_pen_nodes(1), (size_t)1);
+        }
+    });
+    Kokkos::fence();
+
+    // error count back to the host
+    num_pen_nodes.update_host();
+    if (num_pen_nodes.host(1) > 0) {
+        printf("WARNING: penetration_sweep: %lu penetrating nodes with no valid pair\n",
+               (unsigned long)num_pen_nodes.host(1));
+    }
 
 } // end penetration_sweep
 

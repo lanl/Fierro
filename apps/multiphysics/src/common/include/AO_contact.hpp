@@ -64,7 +64,10 @@ struct AO_contact_state_t
     double max_gap;
     CArrayKokkos<size_t> num_pen_surfs_in_node;    // (num_bdy_nodes) surfaces each node penetrates this sweep
     CArrayKokkos<size_t> pen_nodes;                // (num_bdy_nodes) compact list of penetrating bdy node lids
-    DCArrayKokkos<size_t> num_pen_nodes;       // valid length of pen_nodes
+    DCArrayKokkos<size_t> num_pen_nodes;           // (2) [0] valid length of pen_nodes, [1] pairing error count
+    CArrayKokkos<size_t>            num_pairs_in_node;    // (num_bdy_nodes) pairs for each penetrating node
+    RaggedRightArrayKokkos<size_t>  contact_pair_surfs;   // (bdy node, pair) -> target bdy_surf_lid
+    DRaggedRightArrayKokkos<double> contact_pair_vars;    // (bdy node, pair, 7) -> xi, eta, nx, ny, nz, F_tot, f_inc
 
 };
 
@@ -94,7 +97,8 @@ void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
                            DCArrayKokkos <size_t>& num_surfs_in_node_boxes,
                            CArrayKokkos <size_t>& num_pen_surfs_in_node,
                            CArrayKokkos <size_t>& pen_nodes,
-                           DCArrayKokkos <size_t>& num_pen_nodes);
+                           DCArrayKokkos <size_t>& num_pen_nodes,
+                           CArrayKokkos <size_t>& num_pairs_in_node);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR INITIALIZATION OF CONTACT STATE
@@ -162,7 +166,9 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      DRaggedRightArrayKokkos<double>& pairing_check_vars,
                      DCArrayKokkos<size_t>& num_surfs_in_node_boxes,
                      RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
-                     RaggedRightArrayKokkos<size_t>& cols_in_node_boxes);
+                     RaggedRightArrayKokkos<size_t>& cols_in_node_boxes,
+                     RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
+                     DRaggedRightArrayKokkos<double>& contact_pair_vars);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR SORTING NODES FOR PAIRING
@@ -277,22 +283,33 @@ bool penetration_check(const size_t bdy_node_lid,
 void penetration_sweep(const size_t num_bdy_surfs,
                        const size_t num_bdy_nodes,
                        const size_t num_nodes_in_surf,
+                       const size_t num_nodes_in_elem,
                        const CArrayKokkos<size_t>& bdy_surfs,
                        const CArrayKokkos<int>& faces_in_surf,
+                       const CArrayKokkos<int>& elems_in_surf,
+                       const CArrayKokkos<size_t>& bdy_nodes,
+                       const RaggedRightArrayKokkos<size_t>& elems_in_node,
+                       const DCArrayKokkos<size_t>& nodes_in_elem,
                        const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
                        const CArrayKokkos<double>& dof_positions_1d,
                        const CArrayKokkos<double>& surf_qpt_basis,
                        const CArrayKokkos<double>& surf_qpt_positions,
+                       const MPICArrayKokkos<double>& node_coords,
                        const DCArrayKokkos<double>& bdy_node_coords,
                        const CArrayKokkos<double>& bdy_node_vels,
                        const CArrayKokkos<double>& bdy_surf_node_normals,
                        const RaggedRightArrayKokkos<size_t>& nodes_in_bounding_boxes,
+                       const RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
+                       const RaggedRightArrayKokkos<size_t>& cols_in_node_boxes,
                        const double filter_tol,
                        const double max_gap,
                        DRaggedRightArrayKokkos<double>& pairing_check_vars,
                        CArrayKokkos<size_t>& num_pen_surfs_in_node,
                        CArrayKokkos<size_t>& pen_nodes,
-                       DCArrayKokkos<size_t>& num_pen_nodes);
+                       DCArrayKokkos<size_t>& num_pen_nodes,
+                       CArrayKokkos<size_t>& num_pairs_in_node,
+                       RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
+                       DRaggedRightArrayKokkos<double>& contact_pair_vars);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR CHECKING PENETRATION
