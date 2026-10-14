@@ -825,3 +825,98 @@ two. CPU/GPU L2 error norms are identical across placements. The inspected
 PNG/SVG plot and full three-time results are under
 `work/figures/flux-output-convergence` and
 `work/flux-output-convergence-summary.json`.
+
+
+History/property fusion is accepted, relative to checkpoint
+`516fad66` (`flux-output`). Completed-step history is updated while properties
+already traverse the same material-cell corner temperatures. Initial and intermediate
+RK calls leave history unchanged. Activation retains its commit before incoming
+material is mixed and its internal commit. No headers or arrays are added.
+
+All 266 numerical cases in 29 suites pass across CPU/CUDA direct, CPU/CUDA two ranks,
+and two physical GPUs, including extra RK1/RK3 controls. Saved-output comparison covers
+130 cases, 340 nodal files and 375 material files (793820 numeric comparisons).
+All nodal values are identical. Cooling-case MPI material flux differences are at most
+1.02e-10 and match variation independently observed between two baseline runs.
+The supplemental output audit uses absolute 1e-9 plus relative 1e-12 tolerance and
+retains the stricter initial check and independent roundoff investigation. Physics
+test tolerances are unchanged.
+
+| GPU profile / 1000 steps | Separate property + history, ms | Fused property + remaining history, ms | Reduction in combined device time |
+| --- | ---: | ---: | ---: |
+| 32³ phase / activation | 104.284085 | 102.834440 | 1.39% |
+| 64³ melting tables | 1037.120324 | 1011.861242 | 2.44% |
+| 64³ cold tables | 466.552827 | 438.148673 | 6.09% |
+
+Each case removes 1000 history launches; the activation case retains 1001 other
+history launches. Properties use 64 rather than 70 registers per thread, with
+zero stack bytes and zero reported LOCAL bytes before and after. The property
+kernel itself is slightly slower because it now includes the history update;
+combined work is the appropriate comparison. Other major kernel times remain stable.
+These single instrumented samples do not establish total SGTM speedups. The paired
+uninstrumented CPU/GPU/MPI timing matrix below provides the acceptance evidence.
+
+One default-event-trace Nsight profile stalled in a CUDA/CUPTI lock while the GPU
+was idle (PROF-001). The partial trace and backtrace are retained. An unprofiled
+64³ control passes three times, and all four matched 64³ profiles complete after
+setting `--cuda-event-trace=false` for both versions. The 32³ pair uses the original
+default setting on both versions. No comparisons mix these profiling settings.
+The recovered probe has 43 successful completed jobs; the original stopped attempt
+and an initial prelaunch command-argument error remain separately documented.
+Evidence: `work/history-property-fusion-profile-review.json`,
+`work/history-property-fusion-probe-complete.json`,
+`work/history-property-fusion-output-audit.json`, and
+`work/history-property-fusion-output-roundoff-audit.json`.
+
+A read-only audit of the matched phase32 trace also finds 1000 fewer
+`cudaLaunchKernel` calls and 1000 fewer `cudaMemcpyAsync` calls in the integration
+interval. Specifically, 56992-byte host-to-device copies fall from 2001 to 1001;
+each is followed by the history kernel on the same stream. Removing those passes
+therefore also removes about 54.35 MiB of launch-data uploads per 1000 steps.
+This supports reduced launch/setup work as an additional benefit beyond device
+kernel duration; it does not isolate all host costs. The history lambda captures
+`State`, whereas the property kernel captures its individual arguments. Evidence:
+`work/history-property-fusion-launch-audit.json`. Trace interval boundaries are
+recorded explicitly and exclude application/mesh startup.
+
+The complete matrix passes all 40 jobs (one warmup plus three measured runs per
+version/configuration), with matching four-core affinity masks and 1000 steps.
+The following times are SGTM calculation time, including output and excluding
+mesh/process startup. Ranges are the observed three-sample minimum and maximum;
+they are not confidence intervals.
+
+| Backend / N / ranks / GPUs / case | Before median [range], s | After median [range], s | Time change | Ranges overlap |
+| --- | ---: | ---: | ---: | :---: |
+| cpu / 32 / 1 / - / phase | 9.128692 [9.095417, 9.130334] | 9.098796 [9.047250, 9.162686] | -0.33% | yes |
+| cpu / 32 / 1 / - / variable | 12.318741 [12.295250, 12.366646] | 12.293455 [12.287024, 12.470182] | -0.21% | yes |
+| cpu / 32 / 1 / - / variable_cold | 9.982283 [9.956287, 10.077299] | 10.094691 [9.953018, 10.132572] | +1.13% | yes |
+| cpu / 32 / 1 / - / cosine | 2.657131 [2.648324, 2.733500] | 2.701636 [2.650545, 2.759764] | +1.67% | yes |
+| cuda / 32 / 1 / 1 / phase | 0.801129 [0.799699, 0.806877] | 0.772910 [0.771729, 0.774013] | -3.52% | no |
+| cuda / 32 / 1 / 1 / variable | 0.832639 [0.832590, 0.833286] | 0.807982 [0.804519, 0.809732] | -2.96% | no |
+| cuda / 32 / 1 / 1 / variable_cold | 0.702666 [0.699505, 0.704315] | 0.671587 [0.670406, 0.671644] | -4.42% | no |
+| cuda / 32 / 1 / 1 / cosine | 0.414992 [0.413667, 0.418326] | 0.414929 [0.414509, 0.416361] | -0.02% | yes |
+| cpu / 32 / 2 / - / phase | 5.320779 [5.278686, 5.334569] | 5.270720 [5.241055, 5.290670] | -0.94% | yes |
+| cpu / 32 / 2 / - / variable | 7.147093 [7.030563, 7.190825] | 7.041300 [7.007438, 7.049867] | -1.48% | yes |
+| cuda / 32 / 2 / 1 / phase | 3.867540 [3.864792, 3.880610] | 3.677875 [3.659499, 3.794818] | -4.90% | no |
+| cuda / 32 / 2 / 1 / variable | 3.502725 [3.481898, 3.514052] | 3.308292 [3.255268, 3.329259] | -5.55% | no |
+| cuda / 32 / 2 / 0,1 / phase | 1.240752 [1.216038, 1.328982] | 1.237220 [1.180371, 1.281085] | -0.28% | yes |
+| cuda / 32 / 2 / 0,1 / variable | 1.054784 [1.052303, 1.057729] | 1.055707 [1.054972, 1.090559] | +0.09% | yes |
+| cuda / 32 / 2 / 0,1 / variable_cold | 0.992799 [0.991033, 0.997177] | 0.955644 [0.954806, 0.962576] | -3.74% | no |
+| cuda / 32 / 2 / 0,1 / cosine | 0.743252 [0.743007, 0.746913] | 0.723607 [0.722964, 0.728405] | -2.64% | no |
+| cuda / 64 / 1 / 1 / variable | 3.674170 [3.653920, 3.677002] | 3.607301 [3.601894, 3.624707] | -1.82% | no |
+| cuda / 64 / 1 / 1 / variable_cold | 2.936401 [2.932913, 2.946822] | 2.889452 [2.882346, 2.913904] | -1.60% | no |
+| cuda / 64 / 2 / 0,1 / variable | 4.068811 [4.060684, 4.120633] | 4.030245 [4.021744, 4.047670] | -0.95% | no |
+| cuda / 64 / 2 / 0,1 / variable_cold | 3.777849 [3.657656, 3.818142] | 3.673323 [3.670888, 3.674153] | -2.77% | yes |
+
+Accepted for direct-GPU phase/table gains of 1.6–4.4%, consistent with the kernel
+and launch-count evidence, and shared-GPU MPI gains of 4.9–5.6% in this matrix.
+All CPU ranges overlap; no CPU improvement is claimed. Separate-GPU results are
+mixed: the constant-property cosine control also improves despite having no
+phase history to eliminate, so all two-GPU gains cannot be attributed to fusion.
+No nonoverlapping regression appears. Whole-process wall times are recorded in
+the JSON summary; solver speedups must not be presented as application speedups.
+For example, direct-GPU phase wall medians are 3.319 and 3.269 seconds with
+overlapping ranges. Source and both binary hashes match the measured snapshots.
+Evidence: `work/history-property-fusion-gate-complete.json`,
+`work/history-property-fusion-gate-timing-summary.json`, and
+`work/checkpoints/history-property-fusion`.

@@ -137,15 +137,15 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         }
     }
     const auto maximum_temperature = State.MaterialPoints.thermal_maximum_temperature;
-    auto refresh_properties = [&]() {
+    auto refresh_properties = [&](const bool commit_history) {
         for (size_t mat = 0; mat < num_mats; ++mat)
             update_properties(Materials, mesh, State.node.temp, State.MaterialPoints.den,
                 State.MaterialPoints.conductivity, State.MaterialPoints.specific_heat,
                 State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.MaterialToMeshMaps.num_mat_elems.host(mat), mat, maximum_temperature,
-                State.MaterialPoints.thermal_active);
+                State.MaterialPoints.thermal_active, commit_history);
     };
-    refresh_properties();
+    refresh_properties(false);
 
     // Saved fluxes use the same temperature and properties as the output.
     auto refresh_flux_output = [&]() {
@@ -299,7 +299,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             State.corner.q_transfer.set_values(0.0);
             // Stage zero uses the initial or completed-step properties, already
             // refreshed after history and activation. Later stages see new T.
-            if (rk_stage > 0) refresh_properties();
+            if (rk_stage > 0) refresh_properties(false);
 
             // ---- Calculate the corner heat flux from conduction per material ---- //
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
@@ -414,17 +414,17 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             
         } // end of RK loop
 
-        // Commit completed-step history before cold material enters the domain.
-        commit_thermal_history(Materials, mesh, State);
+        // Preserve history before activation can mix in cold material.
+        if (thermal_models.has_activation) commit_thermal_history(Materials, mesh, State);
         time_value += dt;
         // The global event limit identifies steps that reach new material.
         if (dt >= step_limits[1]) activate_materials(Materials, mesh, State, time_value);
         if (thermal_models.has_activation) {
             boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value, State.node.thermal_mass);
             State.node.temp.communicate();
-            commit_thermal_history(Materials, mesh, State);
         }
-        refresh_properties();
+        // History and properties consume the same completed nodal state.
+        refresh_properties(true);
 
         // ---- Move heat source ---- //
         if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source &&

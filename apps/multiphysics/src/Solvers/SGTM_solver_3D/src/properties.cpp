@@ -71,7 +71,8 @@ void SGTM3D::update_properties(
     const size_t num_material_elems,
     const size_t mat_id,
     const DRaggedRightArrayKokkos<double>& maximum_temperature,
-    const DRaggedRightArrayKokkos<unsigned char>& active) const
+    const DRaggedRightArrayKokkos<unsigned char>& active,
+    const bool commit_history) const
 {
     const auto models = Materials.thermal;
     if (!models.has_tables) return;
@@ -85,6 +86,9 @@ void SGTM3D::update_properties(
         for (size_t local_node = 0; local_node < mesh.num_nodes_in_elem; ++local_node) {
             const size_t node = mesh.nodes_in_elem(elem, local_node);
             const double temperature = node_temp(node);
+            if (commit_history && models.has_phase_change)
+                maximum_temperature(mat_id, sid, local_node) = Kokkos::max(
+                    maximum_temperature(mat_id, sid, local_node), temperature);
             const double history = models.has_phase_change ? maximum_temperature(mat_id, sid, local_node) : temperature;
             density += thermal::property(model, models.data, thermal::density,
                 temperature, history, MaterialPoints_den(mat_id, sid));

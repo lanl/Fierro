@@ -396,7 +396,8 @@ public:
         const size_t num_material_elems,
         const size_t mat_id,
         const DRaggedRightArrayKokkos<double>& maximum_temperature,
-    const DRaggedRightArrayKokkos<unsigned char>& active) const;
+        const DRaggedRightArrayKokkos<unsigned char>& active,
+        const bool commit_history) const;
 
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
