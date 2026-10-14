@@ -287,3 +287,18 @@ The existing mesh VTK writer also includes unused halo points, whose mass may
 contain only a partial local cell-star sum. Evaluate nodal mass on points
 connected to the emitted owned cells. The integration tests verify shared
 values, metadata, VTK references and connected nodal/material fields.
+
+`thermal_radiation.py` verifies time integration of the existing radiation
+boundary independently of conduction. On a unit cube with a uniform N×N×N
+mesh, rho=Cp=1 and k=0, the lumped capacity of the nodes on one external face
+per unit area is 1/(2N). With the existing emissivity epsilon=0.2,
+sigma=5.67037442e-8 and zero ambient absolute temperature, their heat balance is
+`dT/dt = -2 N epsilon sigma T^4`. Its exact solution is
+`T(t)=T0/[1+6 N epsilon sigma T0^3 t]^(1/3)`. All other nodes remain at T0.
+The exact total energy change is `[T(t)-T0]/(2N)`. This is an exact solution of
+the lumped spatial system used to check nonlinear time integration and boundary
+ownership; it is not a continuum spatial convergence study of radiative
+conduction. The test also checks mass, surface capacity, uniform cooling,
+positive temperatures and unchanged insulated nodes. Radiation's legacy
+parameters remain hard-coded; this validation does not introduce a parameter
+interface or a finite-ambient model.

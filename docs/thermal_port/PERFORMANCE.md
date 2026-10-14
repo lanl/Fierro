@@ -524,3 +524,57 @@ Evidence uses the preserved `4b686f8f` convection checkpoint under
 `work/moving-diffusion-convection-input-complete.json`. Some accuracy runs
 overlapped compilation; their elapsed times are not performance evidence.
 The standalone figure is `work/figures/moving-diffusion-convergence.{png,svg}`.
+
+The subsequent lookup experiments did not provide a portable replacement for
+the endpoint shortcut. A combined endpoint return used 133 CUDA nodal registers
+and a shared table-selection path used 135; their 64³ nodal profiles remained
+slower than the pre-endpoint kernel. Conditional value evaluation reduced nodal
+registers to 126 and restored its kernel time, but using this only in the nodal
+calculation while retaining direct endpoints in property refresh still regressed
+CPU performance. All 29 correctness jobs and 24 matched timing jobs passed
+numerical checks; this candidate is rejected on performance grounds.
+
+| Matched workload | Preserved baseline median (range), s | Candidate median (range), s | Assessment |
+| --- | --- | --- | --- |
+| CPU 32³ phase | 9.129740 (9.127823–9.136092) | 9.381517 (9.362774–9.391996) | 2.8% slower |
+| CPU 32³ melting tables | 12.424659 (12.377370–12.430563) | 12.938208 (12.918478–13.023440) | 4.1% slower |
+| CPU 32³ cold tables | 10.027250 (10.010878–10.178047) | 10.421670 (10.383163–10.429357) | 3.9% slower |
+| One GPU 64³ melting tables | 3.941494 (3.926339–3.953470) | 3.885956 (3.877619–3.897418) | 1.4% faster |
+| One GPU 64³ cold tables | 3.134724 (3.131727–3.138748) | 3.079768 (3.067003–3.080781) | 1.8% faster |
+| Two GPUs 64³ melting tables | 4.661779 (4.658406–4.895756) | 4.726845 (4.706947–5.012093) | Overlapping ranges |
+| Two GPUs 64³ cold tables | 4.151143 (4.143700–4.191748) | 4.267199 (4.264416–4.298613) | 2.8% slower |
+
+These use four OpenMP threads per rank, 1000 completed steps, one warm-up and
+three measured runs. All four 32³ GPU pairs and the CPU cosine control had
+overlapping ranges. Baseline binaries are `convection-input`; candidate binaries
+are `endpoint-kernel-choice`. Evidence is in
+`work/endpoint-kernel-choice-gate-timing-summary.json`, which records all twelve
+pairs, ranges, completed-step agreement and paths to validated results. These
+small samples describe observed timings, not formal statistical significance.
+The production endpoint implementation remains unchanged by this rejected
+experiment. PERF-003 remains open while a direct cached-enthalpy path is tested.
+
+A separate direct cached-enthalpy experiment removes the unused Gaussian
+reference integration from the production nodal kernel. It builds on both
+backends and passes six CTests per backend and all nine phase cases in each
+CPU/GPU × direct/two-rank configuration. Nevertheless, its 64³ profiles do not
+resolve PERF-003: nodal registers fall from 136 to 94 but melting/cold nodal
+times are 386.025/303.771 microseconds per call, versus 367.439/297.179 for the
+accepted endpoint baseline. Property times are 631.312/312.618 microseconds.
+No full matched performance gate was run for this candidate; it is rejected as
+a remedy for the nodal slowdown. This illustrates why register count alone
+is insufficient acceptance evidence. The eight-job probe and profiles are
+preserved under `work/cached-enthalpy-path-probe*` and
+`work/profiles/cached-enthalpy-path`.
+
+The added radiation validation uses the accepted `convection-input` binaries.
+For N=2, T0=1000 and final time 0.01, the exact face temperature is
+751.0025719352291. RK2 at timesteps 0.001, 0.0005 and 0.00025 gives weighted
+L2 errors 0.223029592885, 0.0526757145325 and 0.0128016258334, with orders
+2.0820 and 2.0408. Errors agree at printed precision on CPU and CUDA, directly
+and with two ranks, including separate GPUs. Rotating the radiating face to x
+or y on two GPUs gives the same results. An RK1 CPU control gives orders
+1.0402 and 1.0194; changing to N=4 with two CPU ranks gives RK2 orders 2.1493
+and 2.0739 with the changed surface capacity. All 27 cases pass, insulated
+nodes remain unchanged and the surface stays uniform. These are time-accuracy
+measurements, not performance timings. Evidence: `work/radiation-convection-input*`.
