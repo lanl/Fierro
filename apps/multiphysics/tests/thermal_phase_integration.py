@@ -124,10 +124,14 @@ def run_case(args, case):
     directory = args.output / case
     directory.mkdir()
     initial, target, expected_energy, enthalpy, expected_mass = prepare(directory, case)
+    if args.rk_stages is not None:
+        path = directory/'input.yaml'
+        path.write_text(path.read_text().replace('dynamic_options:\n',
+                        f'dynamic_options:\n    rk_num_stages: {args.rk_stages}\n'))
     command = [str(args.executable), 'input.yaml']
     if args.ranks > 1:
         command = [args.mpiexec, '-np', str(args.ranks)] + command
-    result = dict(case=case, ranks=args.ranks, status='FAIL', command=command)
+    result = dict(case=case, ranks=args.ranks, rk_stages=args.rk_stages, status='FAIL', command=command)
     start = time.monotonic()
     try:
         with (directory / 'run.log').open('w') as log:
@@ -191,7 +195,10 @@ def main():
     parser.add_argument('--mpiexec', default='mpirun')
     parser.add_argument('--timeout', type=int, default=180)
     parser.add_argument('--case', choices=['all'] + CASES, default='all')
+    parser.add_argument('--rk-stages', type=int, help='Override the solver RK stage count')
     args = parser.parse_args()
+    if args.rk_stages is not None and args.rk_stages < 1:
+        parser.error('RK stage count must be positive')
     args.executable = args.executable.resolve(strict=True)
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)

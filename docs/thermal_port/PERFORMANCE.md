@@ -268,3 +268,41 @@ physical GPU, wall time falls to about 29 seconds, compared with about 10 second
 for one GPU rank. These are correctness-run diagnostics, not repeated performance
 benchmarks; GPU 0 also serves the desktop. The recorded stack and source loops
 locate the cost in ELEMENTS corner-connectivity construction.
+
+Stage zero now reuses the property values already computed for the initial or
+completed-step state. Later RK stages still refresh after their temperature
+changes; each completed step still refreshes after history and activation.
+This removes a redundant evaluation without adding state or includes.
+
+| Workload | Before stage-zero reuse | After stage-zero reuse | Observed ratio |
+|---|---:|---:|---:|
+| CPU phase/deposition | 11.183394 s | 10.042555 s | 1.11× |
+| CPU student tables | 16.038459 s | 13.345009 s | 1.20× |
+| GPU phase/deposition | 0.993594 s | 0.945437 s | 1.05× |
+| GPU student tables | 0.949488 s | 0.830538 s | 1.14× |
+
+Matched CPU ranges are 10.033744–10.102387 s (phase) and
+13.312388–13.390031 s (student tables); GPU ranges are
+0.940280–0.946167 s and 0.830258–0.833859 s. Constant-property cosine remains
+within prior variation: CPU median 2.639377 s [2.623841,2.640752], GPU
+0.405634 s [0.403903,0.408482]. Nsight confirms 2001 property kernels instead
+of 3001 for 1000 steps. Variable-table property time falls from 316.88 to
+210.17 ms in matched profiles; its per-call cost and nodal-kernel cost remain
+unchanged. Evidence uses `property-reuse-*` and `benchmark-property-reuse-*`.
+
+The full component, refined Stefan, steady conduction, example, MPI cooling
+and physical two-GPU suites pass. An additional 72 phase runs exercise one
+and three RK stages across CPU/CUDA direct/two-rank execution. These include
+partial legacy tables, powder cycling, cooling and a step spanning the full
+melt interval. Every repeated benchmark passes its analytic checks.
+
+The nonlinear diffusion reference in PHYSICS.md also passes on all five
+backend/rank placements, plus the preserved pre-change CPU binary. With
+Cp(T)=k(T)=1+(T-300), rho=1 and the existing cosine temperature initialization,
+N=8,16,32 gives L2 errors 0.00737719, 0.00181269 and 0.000451098 K at t=0.02.
+Refinement orders are 2.02494 and 2.00662. The initial mean enthalpy is exactly
+0.0703125 within output precision; maximum accumulated enthalpy drift is below
+5.6e-9. Initial/final states, the temperature bounds and shared-node values are
+checked. The before/after errors agree to printed precision, confirming that
+stage-zero reuse preserves variable-property conduction as well as uniform
+heating. Evidence is under `work/runs/nonlinear-*`.

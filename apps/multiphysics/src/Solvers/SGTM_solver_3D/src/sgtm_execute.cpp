@@ -283,7 +283,9 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             }); // end for parallel for over nodes
 
             State.corner.q_transfer.set_values(0.0);
-            refresh_properties();
+            // Stage zero uses the initial or completed-step properties, already
+            // refreshed after history and activation. Later stages see new T.
+            if (rk_stage > 0) refresh_properties();
 
             // ---- Calculate the corner heat flux from conduction per material ---- //
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){

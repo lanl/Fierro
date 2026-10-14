@@ -93,6 +93,21 @@ Global energy increases by q t per unit area. Current component tests use a
 coarse mesh and explicit tolerance; systematic spatial/time convergence follows
 the complete port and checkpoint. The phase component tests below additionally check latent-energy accounting.
 
+`tests/thermal_nonlinear.py` couples variable conductivity and Cp in an exact
+transient reference. With rho=1, theta=T-300 and Cp(T)=k(T)=1+theta, the enthalpy
+`u=theta+theta²/2` satisfies the linear heat equation `u_t=laplacian(u)`.
+The existing initial condition is theta=a[cos(2 pi x)+cos(2 pi y)], a=3/8.
+Its exact enthalpy on the insulated unit box is
+
+    u = a²/2 + a[cos(2 pi x)+cos(2 pi y)] exp(-4 pi² t)
+        + a²/4 [cos(4 pi x)+cos(4 pi y)] exp(-16 pi² t)
+        + a² cos(2 pi x) cos(2 pi y) exp(-8 pi² t).
+
+Invert with `T=300+2u/[1+sqrt(1+2u)]`. The initial temperature range keeps Cp
+strictly positive, and the conserved mean enthalpy is a²/2=0.0703125. This
+reference checks nonlinear diffusion without a source or additional solver
+initial-condition code. Linear property tables span the full temperature range.
+
 ## Thermal material tables and phase change
 
 Each material may supply its own `tabular_model`, with `type:
