@@ -682,3 +682,32 @@ Evidence: `work/mpi-temp-n0-gate-complete.json`,
 `work/mpi-temp-n0-gate-timing-summary.json`,
 `work/mpi-temp-n0-nodal-output-audit.json` and
 `work/checkpoints/mpi-temp-n0` (patch, source/binary hashes and commit record).
+
+Imported-mesh analytic validation now passes all 30 cases on the preserved
+accepted `heat-flux-help` baseline: affine and smoothly distorted hexahedra at
+N=8/16/32, across CPU direct/two ranks, CUDA direct/two ranks sharing GPU 1,
+and two ranks on separate GPUs. The exact flux-slab reference and geometry are
+described in PHYSICS.md. These are correctness runs, not timing comparisons.
+
+| N | Affine L2 error (K) | Distorted L2 error (K) | Distorted transverse spread (K) |
+| ---: | ---: | ---: | ---: |
+| 8 | 0.02290905341 | 0.02292839822 | 0.01550805854 |
+| 16 | 0.005668212443 | 0.005672206566 | 0.003378651479 |
+| 32 | 0.001413558381 | 0.001414509865 | 0.000822559040 |
+
+Spatial orders are 2.01495/2.00356 (affine) and 2.01515/2.00361 (distorted).
+Maximum mass and energy errors over all placements are 1.10e-14 and 7.15e-12;
+L2 errors differ across placements by at most 5.39e-15 K. Evidence is in
+`work/skew-flux-heat-flux-help-complete.json` and `work/skew-flux-summary.json`.
+The inspected PNG/SVG figure is `work/figures/skew-flux-convergence`.
+
+All 30 material-output cases (125 saved outputs) also pass on the accepted
+`mpi-temp-n0` binaries across the same five placements. Independent nodal-law
+averages agree with saved density, conductivity and apparent Cp within 2.08e-13;
+analytic temperature and energy errors are at most 6.00e-10 K and 1.97e-9.
+The second student dataset's below-solidus example separately passes all five
+placements: T=600 K at t=0.1 within 1.01e-9 K, exact total mass 7.67873e-9,
+and relative energy error 1.01e-11. The original file bytes are preserved.
+Its alloy label is unverified; see DATA-002. Evidence:
+`work/extra-table-output-mpi-temp-n0-complete.json` and
+`work/extra-table-output-summary.json`. These checks add no solver changes.

@@ -302,3 +302,34 @@ conduction. The test also checks mass, surface capacity, uniform cooling,
 positive temperatures and unchanged insulated nodes. Radiation's legacy
 parameters remain hard-coded; this validation does not introduce a parameter
 interface or a finite-ambient model.
+
+`thermal_skew_flux.py` extends the exact Neumann flux slab to imported VTK
+hexahedra. With u,v,zeta in [0,1], the coordinates are
+`x=2+u+0.4v+w(u,v), y=-1+0.7v, z=3+zeta`. The affine case uses w=0 and a
+2×2×N mesh. The distorted case uses `w=0.12 sin(pi u) sin(pi v)` and an N³
+mesh; w vanishes on the exterior boundary. The mapping stays orientation
+preserving because `dx/du >= 1-0.12 pi > 0`. Both domains are the same sheared
+prism, with cross-section area and volume 0.7. The generator independently
+checks positive polygon areas and their total before writing standard VTK
+hexahedron connectivity.
+
+For rho=Cp=k=1, initial 300 K, inward flux 10 at z=3 and insulated remaining
+faces, the exact temperature depends only on zeta:
+`T=300+10[t+1/3-zeta+zeta²/2-(2/pi²) sum_{m>=1} cos(m pi zeta) exp(-m² pi² t)/m²]`.
+It satisfies the heat equation, zero initial temperature increment, slope -10
+at zeta=0 and zero slope at zeta=1. Its total energy increase is `10*0.7*t`,
+so the expected mass and energy at t=0.05 are 0.7 and 0.35. Using
+`dt_max=0.02/N²` makes the RK2 temporal error higher order than the spatial
+error. Tests refine N=8,16,32, verify every nodal state and conservation, and
+measure mass-weighted L2 error. Non-affine corner mass lumping can produce a
+small transverse temperature variation; that error decreases with refinement.
+
+`thermal_property_output.py` independently checks material diagnostics at
+initial, intermediate and terminal output, including a seven-cycle exit at
+t=0.07 before the requested final time. It averages the prescribed density,
+conductivity and apparent-Cp laws over each cell's eight actual nodal
+temperatures. Cases cover full legacy tables, two mixed materials, absent-Cp
+tables with different region constants, partial melting, powder heating and
+consolidated cooling. Additional analytic nodal-temperature, mass and enthalpy
+checks ensure that diagnostic agreement does not hide a changed thermal state.
+Table density is an output property; these cases also verify conserved mass.

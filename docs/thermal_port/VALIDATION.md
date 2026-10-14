@@ -112,3 +112,16 @@ Help appears once, lists constant and exits successfully. No headers were added.
 Evidence: `work/heat-flux-help-gate-complete.json`.
 
 The previous-step MPI exchange optimization passes 30 correctness jobs and 13 matched timing pairs after both CPU/CUDA builds. Phase and activation run directly and with two ranks on both backends; RK1/RK3 phase controls run on two ranks. Nonlinear and moving-source conduction, radiation, source integration and the original cooling regression remain correct. Separate-GPU phase/activation/nonlinear/moving-source checks also pass. All 88 saved phase/activation cases agree exactly with accepted pre-change nodal output (153944 values at all saved times, excluding partition-local IDs). Evidence and timings are recorded in PERFORMANCE.md and work/mpi-temp-n0-gate-complete.json.
+
+Additional geometry and output coverage passes all five placements:
+`thermal_skew_flux.py` imports translated/sheared and smoothly distorted
+hexahedra, checks exact slab energy and second-order spatial convergence
+(30 cases), and `thermal_property_output.py` checks independent density/k/Cp
+averages at 125 initial/intermediate/terminal outputs (30 cases). The latter
+includes mixed materials, missing-Cp fallbacks, latent heat, irreversible
+consolidation and a cycle-limited exit. Detailed errors and evidence are in
+PERFORMANCE.md. The sixth portable example preserves the student's unused
+ER70S-labelled dataset and independently verifies constant-solid-property
+heating and energy on all five placements; the label remains unverified.
+
+The expanded six-example driver also passes CPU direct and two ranks on separate GPUs. All final nodal fields agree with the CPU reference to a maximum scaled difference of 3.41e-15 across the six cases. Evidence: work/expanded-examples-complete.json (12 application runs).

@@ -2,6 +2,7 @@
 """Run the portable example decks and optionally compare complete nodal fields."""
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import shutil
@@ -51,6 +52,19 @@ def main():
                 raise ValueError('Negative absolute temperature')
             if example.name == 'uniform_sphere' and max(abs(t-310) for t in temperatures) > 1.e-9:
                 raise ValueError('Uniform heating analytic solution mismatch')
+            if example.name == 'student_er70s_table_loading':
+                # Constant solid Cp below the melt interval: q*t = rho*Cp*dT.
+                # These are supplied table values, not an alloy calibration.
+                mass = math.fsum(row['mass'] for row in nodes.values())
+                energy = math.fsum(row['mass']*435000000.0*(row['temp']-500.0)
+                                   for row in nodes.values())
+                temperature_error = max(abs(t-600.0) for t in temperatures)
+                result.update(max_temperature_error=temperature_error,
+                              mass_relative_error=mass/7.67873e-9-1.0,
+                              energy_relative_error=energy/334.024755-1.0)
+                if (temperature_error > 1.e-7 or abs(result['mass_relative_error']) > 1.e-10 or
+                        abs(result['energy_relative_error']) > 1.e-9):
+                    raise ValueError('Student solid-table analytic solution mismatch')
             if args.reference:
                 reference = read_nodes(args.reference / example.name / 'state', 0.1)
                 if nodes.keys() != reference.keys():
