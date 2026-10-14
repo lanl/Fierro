@@ -17,7 +17,7 @@ int main(int argc, char** argv)
         model.solidus = 300.0;
         model.liquidus = 320.0;
         model.latent_heat = 120.0;
-        mtr::DCArrayKokkos<double> data(6, 3, "thermal_test_tables");
+        mtr::DCArrayKokkos<double> data(36, 3, "thermal_test_tables");
         // Nonmatching piecewise-linear Cp grids for each phase.
         const double temperatures[6] = {200, 400, 250, 310, 305, 350};
         const double cp[6] = {2, 4, 4, 8, 6, 7};
@@ -42,12 +42,26 @@ int main(int argc, char** argv)
             tabular.tables[thermal::powder][thermal::specific_heat] = {0,2};
             tabular.tables[thermal::solid][thermal::specific_heat] = {2,2};
             tabular.tables[thermal::liquid][thermal::specific_heat] = {4,2};
+            auto cached = tabular;
+            cached.enthalpy_intervals[0].offset = 6;
+            cached.enthalpy_intervals[1].offset = 21;
+            thermal::cache_enthalpy(cached, data);
+            double maximum_error = 0.0;
+            for (int state = 0; state < 2; ++state) {
+                const double history = state == 0 ? 280.0 : 400.0;
+                for (int i = 0; i <= 800; ++i) {
+                    const double t = 200.0 + 0.25*i;
+                    maximum_error = Kokkos::max(maximum_error, Kokkos::abs(
+                        thermal::enthalpy(cached,data,t,history,2) - thermal::enthalpy(tabular,data,t,history,2)));
+                }
+            }
+            result(18) = maximum_error;
             const double checks[7] = {250,300,305,310,319,320,350};
             constexpr double delta = 1e-4;
             for (int i=0; i<7; ++i) {
                 const double t = checks[i];
-                const double numerical = (thermal::enthalpy(tabular,data,t+delta,280,2) -
-                                          thermal::enthalpy(tabular,data,t-delta,280,2))/(2*delta);
+                const double numerical = (thermal::enthalpy(cached,data,t+delta,280,2) -
+                                          thermal::enthalpy(cached,data,t-delta,280,2))/(2*delta);
                 result(5+i) = numerical - thermal::capacity(tabular,data,t,280,2);
             }
             result(12) = thermal::enthalpy(tabular,data,325,280,2) -
@@ -71,6 +85,8 @@ int main(int argc, char** argv)
             throw std::runtime_error("Powder/solid enthalpy matching or history is wrong");
         if (result.host(14) != 2 || result.host(15) != 4 || result.host(16) != 250 || result.host(17) != -200)
             throw std::runtime_error("Tabular interpolation, primitive or endpoint clamping is wrong");
+        if (result.host(18) > 2.e-12)
+            throw std::runtime_error("Cached phase enthalpy differs from independent Gaussian integration");
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         status = 1;

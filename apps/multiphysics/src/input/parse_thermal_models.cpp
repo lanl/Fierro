@@ -203,11 +203,19 @@ thermal::Database parse_thermal_models(Yaml::Node& root)
             }
             database.has_tables = true;
         }
-        if (model.phase_change)
+        if (model.phase_change) {
             for (int state = model.initially_powder ? thermal::powder : thermal::solid; state <= thermal::liquid; ++state)
                 for (int field = 0; field < 3; ++field)
                     if (model.tables[state][field].rows == 0)
                         throw std::runtime_error("Phase change requires density, conductivity and Cp tables for each participating phase");
+            for (int state = model.initially_powder ? thermal::powder : thermal::solid; state <= thermal::solid; ++state) {
+                model.enthalpy_intervals[state - thermal::powder].offset = data.size();
+                // At most one interval per knot of either Cp table, plus one.
+                const size_t intervals = model.tables[state][thermal::specific_heat].rows +
+                    model.tables[thermal::liquid][thermal::specific_heat].rows + 1;
+                data.resize(data.size() + 3*intervals);
+            }
+        }
     }
     database.materials = mtr::DCArrayKokkos<thermal::Material>(models.size(), "thermal_materials");
     for (size_t i = 0; i < models.size(); ++i) database.materials.host(i) = models[i];
@@ -219,5 +227,14 @@ thermal::Database parse_thermal_models(Yaml::Node& root)
         database.data.host(i,2) = data[i].primitive;
     }
     database.data.update_device();
+    if (database.has_phase_change) {
+        const auto material_data = database.materials;
+        const auto table_data = database.data;
+        Kokkos::parallel_for("cache_thermal_enthalpy", models.size(), KOKKOS_LAMBDA(size_t id) {
+            thermal::cache_enthalpy(material_data(id), table_data);
+        });
+        database.materials.update_host();
+        database.data.update_host();
+    }
     return database;
 }

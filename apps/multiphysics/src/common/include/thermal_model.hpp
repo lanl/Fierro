@@ -6,7 +6,8 @@ namespace thermal {
 enum Property { density = 0, conductivity = 1, specific_heat = 2 };
 enum Phase { legacy = 0, powder = 1, solid = 2, liquid = 3 };
 
-// Tables share a flat allocation of [temperature, value, primitive] rows.
+// Property tables use [temperature, value, primitive] rows in a shared allocation.
+// Additional rows in that allocation hold cached phase-enthalpy polynomials.
 // Metadata contains only values, so no host container enters a device kernel.
 struct Table {
     size_t offset = 0;
@@ -26,6 +27,11 @@ struct Material {
     double latent_heat = 0.0;
     double minimum_specific_heat = 0.0;
     double maximum_conductivity = 0.0;
+    // Powder/solid sensible enthalpy polynomials share the property allocation.
+    Table enthalpy_intervals[2];
+    double solidus_primitive[2] = {};
+    double liquidus_primitive = 0.0;
+    bool enthalpy_cached = false;
 };
 
 struct Database {
@@ -160,12 +166,85 @@ double sensible_transition_integral(const Material& model,
 }
 
 KOKKOS_INLINE_FUNCTION
+void cache_enthalpy(Material& model, const mtr::DCArrayKokkos<double>& data)
+{
+    // Called once for validated phase tables. The parser reserves three rows
+    // per possible interval at each enthalpy_intervals offset before this call.
+    if (!model.phase_change) return;
+    const Table fluid = model.tables[liquid][specific_heat];
+    model.liquidus_primitive = primitive(fluid, data, model.liquidus, 0.0);
+    for (int phase = model.initially_powder ? powder : solid; phase <= solid; ++phase) {
+        const Table condensed = model.tables[phase][specific_heat];
+        auto& cache = model.enthalpy_intervals[phase - powder];
+        model.solidus_primitive[phase - powder] = primitive(condensed, data, model.solidus, 0.0);
+        double start = model.solidus;
+        double integral = 0.0;
+        cache.rows = 0;
+        while (start < model.liquidus) {
+            const double stop = next_knot(fluid, data, start,
+                next_knot(condensed, data, start, model.liquidus));
+            const double span = stop - start;
+            const double width = model.liquidus - model.solidus;
+            const double x = (start - model.solidus)/width;
+            const double dx = span/width;
+            const double b0 = value(condensed, data, start, 0.0);
+            const double b1 = value(condensed, data, stop, 0.0) - b0;
+            const double l0 = value(fluid, data, start, 0.0);
+            const double d0 = l0 - b0;
+            const double d1 = value(fluid, data, stop, 0.0) - l0 - b1;
+            const double f0 = x*x*(3.0 - 2.0*x);
+            const double f1 = 6.0*x*(1.0 - x)*dx;
+            const double f2 = 3.0*(1.0 - 2.0*x)*dx*dx;
+            const double f3 = -2.0*dx*dx*dx;
+            // Integrate Cp_base + (Cp_liquid-Cp_base)*fraction in local u=[0,1].
+            // Each segment uses three rows: [start,stop,h], [a1,a2,a3], [a4,a5,0].
+            const size_t row = cache.offset + 3*cache.rows++;
+            data(row,0) = start;
+            data(row,1) = stop;
+            data(row,2) = integral;
+            data(row+1,0) = span*(b0 + d0*f0);
+            data(row+1,1) = 0.5*span*(b1 + d0*f1 + d1*f0);
+            data(row+1,2) = span/3.0*(d0*f2 + d1*f1);
+            data(row+2,0) = 0.25*span*(d0*f3 + d1*f2);
+            data(row+2,1) = 0.2*span*d1*f3;
+            integral += data(row+1,0) + data(row+1,1) + data(row+1,2) +
+                        data(row+2,0) + data(row+2,1);
+            start = stop;
+        }
+        // Set the same reference as the direct integral: sensible h(T_liquidus)=0.
+        for (size_t i = 0; i < cache.rows; ++i) data(cache.offset + 3*i,2) -= integral;
+    }
+    model.enthalpy_cached = true;
+}
+
+KOKKOS_INLINE_FUNCTION
 double enthalpy(const Material& model, const mtr::DCArrayKokkos<double>& data,
                 double temperature, double maximum_temperature, double fallback)
 {
     if (!model.phase_change)
         return primitive(model.tables[legacy][specific_heat], data, temperature, fallback);
     const Table fluid = model.tables[liquid][specific_heat];
+    if (model.enthalpy_cached) {
+        if (temperature >= model.liquidus)
+            return model.latent_heat + primitive(fluid, data, temperature, fallback) - model.liquidus_primitive;
+        const Phase base = condensed_phase(model, maximum_temperature);
+        const Table cache = model.enthalpy_intervals[base - powder];
+        if (temperature <= model.solidus)
+            return data(cache.offset,2) + primitive(model.tables[base][specific_heat], data, temperature, fallback) -
+                   model.solidus_primitive[base - powder];
+        size_t lo = 0;
+        size_t hi = cache.rows;
+        while (lo + 1 < hi) {
+            const size_t mid = lo + (hi - lo)/2;
+            if (data(cache.offset + 3*mid,0) <= temperature) lo = mid;
+            else hi = mid;
+        }
+        const size_t row = cache.offset + 3*lo;
+        const double u = (temperature - data(row,0))/(data(row,1) - data(row,0));
+        const double sensible = data(row,2) + u*(data(row+1,0) + u*(data(row+1,1) +
+            u*(data(row+1,2) + u*(data(row+2,0) + u*data(row+2,1)))));
+        return model.latent_heat*fraction(model, temperature) + sensible;
+    }
     if (temperature >= model.liquidus)
         return model.latent_heat + primitive(fluid, data, temperature, fallback) -
                                   primitive(fluid, data, model.liquidus, fallback);

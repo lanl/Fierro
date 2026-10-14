@@ -151,3 +151,47 @@ Before enthalpy caching, matched warmup+three-run medians are 155.093245 s
 Every run completes 1000 steps, with maximum temperature error 4.80e-10 K and
 relative energy error 1.09e-12. Evidence:
 `work/runs/benchmark-cache-before-variable-{cpu,cuda}-r1`.
+
+Enthalpy evaluation now caches the exact sensible integrals during material
+initialization. The union of each condensed/liquid Cp knot set splits the melt
+interval into quartic Cp pieces. Their quintic primitives use local coordinates
+within each interval, sharing the existing flat Kokkos allocation. Both condensed
+histories retain the same enthalpy reference at liquidus. The smooth latent term,
+heat-capacity law and bracketed nodal solve are unchanged. No C++ include was
+added. The uncached Gaussian calculation remains available as an independent
+reference for the device test.
+
+| Workload | Before cache median | Cached median | Observed ratio |
+|---|---:|---:|---:|
+| CPU phase/deposition | 43.068078 s | 22.705195 s | 1.90× |
+| GPU phase/deposition | 1.507133 s | 1.191068 s | 1.27× |
+| CPU student tables | 155.093245 s | 33.523976 s | 4.63× |
+| GPU student tables | 2.990906 s | 1.368569 s | 2.19× |
+
+All use 32³ cells, 1000 requested steps, four CPU threads or GPU 1, one warmup and
+three measured repetitions. Cached CPU ranges are 22.570847–22.705890 s (phase)
+and 33.515065–33.661734 s (student tables); GPU ranges are 1.190503–1.193921 s
+and 1.368427–1.390795 s. All accuracy/energy checks pass. Variable-property
+results retain the same printed maximum temperature and relative energy errors.
+The constant-property cosine case remains within previous variation: CPU median
+2.666627 s [2.649772,2.716500], GPU 0.404217 s [0.403458,0.405099].
+
+The device test compares cached and original enthalpy at 801 temperatures for
+both histories, including nonmatching Cp knots, clamped endpoints and apparent
+Cp derivatives. Parser tests verify cache initialization and independent material
+offsets. All phase/deposition/example tests pass on CPU/CUDA directly and with
+two ranks; all 36 Stefan L2 errors agree with their pre-cache values to reduction roundoff
+(maximum difference 3.5e-17 K). Smaller student-
+table workloads pass with MPI with two ranks, including one rank on each physical GPU. Uniform-source phase cases,
+cosine/flux analytic checks and the original cooling regression also pass.
+Evidence uses `cache-*`, `benchmark-cache-*` and `emptymerge-*` prefixes. The
+pure-cache binaries are preserved separately from the subsequent OUTPUT-005 fix.
+
+Matched Nsight runs use the same 1000-step inputs and independently validate the
+output. Mean GPU nodal-temperature kernel time falls 323.02→168.55 microseconds
+for the phase case and 1103.10→289.52 microseconds for student tables. Registers
+per thread change 133→136, with no reported local-memory allocation. Property
+refresh is now a larger fraction of the remaining work. These instrumented
+kernel measurements diagnose cost; the unprofiled repetitions above establish
+end-to-end SGTM calculation timings. Reports are under
+`work/profiles/{event-recovery,enthalpy-cache}/{phase,variable}32`.

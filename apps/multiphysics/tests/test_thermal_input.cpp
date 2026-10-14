@@ -60,7 +60,9 @@ void check_input()
     const auto database = parse(first + second);
     if (!database.has_tables || !database.has_phase_change)
         throw std::runtime_error("Thermal database flags missing");
-    mtr::DCArrayKokkos<double> values(4, "thermal_input_values");
+    if (!database.materials.host(0).enthalpy_cached || database.materials.host(1).enthalpy_cached)
+        throw std::runtime_error("Phase enthalpy cache initialization is incorrect");
+    mtr::DCArrayKokkos<double> values(6, "thermal_input_values");
     const auto models = database.materials;
     const auto data = database.data;
     Kokkos::parallel_for("read_thermal_inputs", 1, KOKKOS_LAMBDA(int) {
@@ -68,9 +70,14 @@ void check_input()
         values(1) = thermal::capacity(models(1), data, 310, 290, 0);
         values(2) = thermal::property(models(1), data, thermal::density, 500, 500, 0);
         values(3) = thermal::property(models(1), data, thermal::conductivity, 100, 100, 1);
+        values(4) = thermal::enthalpy(models(0), data, 310, 290, 0) -
+                    thermal::enthalpy(models(0), data, 280, 290, 0);
+        values(5) = thermal::enthalpy(models(1), data, 310, 290, 0) -
+                    thermal::enthalpy(models(1), data, 290, 290, 0);
     });
     values.update_host();
-    if (values.host(0) != 11 || values.host(1) != 3 || values.host(2) != 4 || values.host(3) != 0)
+    if (values.host(0) != 11 || values.host(1) != 3 || values.host(2) != 4 || values.host(3) != 0 ||
+        values.host(4) != 120 || values.host(5) != 60)
         throw std::runtime_error("Per-material thermal tables overlap or interpolate incorrectly");
     auto constant = parse("materials:\n  - material:\n      id: 0\n");
     if (constant.has_tables || constant.has_phase_change)

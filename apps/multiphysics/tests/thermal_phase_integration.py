@@ -10,7 +10,7 @@ import subprocess
 import time
 from thermal_integration import heating_input, two_material_input, read_nodes, limit_solver_output
 
-CASES = ['tabular_cp', 'tabular_multimat', 'phase_sensible', 'phase_partial',
+CASES = ['tabular_cp', 'tabular_multimat', 'partial_cp_regions', 'phase_sensible', 'phase_partial',
          'phase_melt', 'phase_large_step', 'phase_cooling', 'powder_cycle']
 
 
@@ -48,6 +48,24 @@ def prepare(directory, case):
                 f'*SPECIFIC HEAT\n{scale}, 300\n{2*scale}, 400\n')
         enthalpy = lambda t: 2.5 * ((t - 300.0) + 0.005 * (t - 300.0)**2)
         expected_mass = 1.5
+    elif case == 'partial_cp_regions':
+        # One material, two initial-condition regions, and no Cp table. The
+        # fallback Cp differs between adjacent cells sharing the interface node.
+        original_material = text.split('materials:\n', 1)[1].split('regions:\n', 1)[0]
+        split = two_material_input(text, False)
+        before, material_and_regions = split.split('materials:\n', 1)
+        regions = material_and_regions.split('regions:\n', 1)[1]
+        text = before+'materials:\n'+original_material+'regions:\n'+regions
+        text = text.replace('material_id: 1', 'material_id: 0')
+        text = text.replace('density:\n            type: uniform\n            value: 2.0',
+                            'density:\n            type: uniform\n            value: 1.0')
+        text = text.replace('specific_heat:\n            type: uniform\n            value: 0.5',
+                            'specific_heat:\n            type: uniform\n            value: 2.0')
+        config = table_config('tables.inp').replace('              - density\n', '').replace('              - specific_heat\n', '')
+        text = text.replace('        id: 0\n        eos_model_type:', '        id: 0\n'+config+'        eos_model_type:')
+        (directory/'tables.inp').write_text('*CONDUCTIVITY\n0,300\n')
+        enthalpy = lambda t: t-300.0
+        expected_mass = 1.0
     elif case == 'tabular_cp':
         text = text.replace('        id: 0\n        eos_model_type:',
                             '        id: 0\n' + table_config('tables.inp') + '        eos_model_type:')
@@ -90,7 +108,7 @@ def prepare(directory, case):
             energy = 0.0
             source = 4800.0
     else:
-        energy = enthalpy(target) - enthalpy(initial)
+        energy = 10.0 if case == 'partial_cp_regions' else enthalpy(target) - enthalpy(initial)
         source = energy / 0.1
     sphere_volume = 4.0 * math.pi * 2.0**3 / 3.0
     (directory / 'laser.csv').write_text(f'0,0.5,0.5,0.5,{source*sphere_volume:.17g}\n'
@@ -142,6 +160,10 @@ def run_case(args, case):
             energy = math.fsum(row['mass'] * (10.0 + 2.0*(row['temp'] - 300.0))
                                for row in nodes.values())
         error = max(abs(row['temp'] - target) for row in nodes.values()) if target is not None else None
+        if case == 'partial_cp_regions':
+            cp = lambda x: 1.0 if x < 0.5 else (2.0 if x > 0.5 else 1.5)
+            error = max(abs(row['temp']-(300.0+10.0/cp(point[0]))) for point,row in nodes.items())
+            energy = math.fsum(row['mass']*cp(point[0])*(row['temp']-300.0) for point,row in nodes.items())
         result.update(total_mass=mass, energy_increase=energy, expected_energy=expected_energy,
                       target_temperature=target, max_temperature_error=error,
                       min_temperature=min(row['temp'] for row in nodes.values()),
