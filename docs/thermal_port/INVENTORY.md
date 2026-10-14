@@ -6,25 +6,28 @@ The destination is branch `AM_Updates`, initially `03e26b50` (2026-10-07).
 The student delta contains 58 files, 5617 added lines and 447 removed lines.
 This is a functionality port, not a merge of that branch.
 
-| Addition | Student implementation | Port requirements |
+| Addition | Student implementation | Current port and validation |
 |---|---|---|
-| Laser paths from CSV | `additive_data.hpp`, `parse_laser.cpp`; five columns: time,x,y,z,power; linear interpolation | Validate file contents, finite values, ordering and row width; retain single-point paths and existing table interpolation semantics; optional section must not break old inputs. |
-| YAML source parameters | New `laser.hpp`, `laser_options` section in simulation parameters | Support spherical radius and Goldak absorptivity/front/rear/minor/depth parameters; initialize all values; separate host strings from data captured by device kernels. |
-| Goldak double ellipsoid | `heat_flux.cpp`; front/rear fractions, orientation inferred from the moving path, Gaussian volume source | Test normalization, symmetry, orientation, stationary segments, source power and timestep dependence. Define the intended surface/half-space normalization explicitly. |
-| Configurable spherical source | Source dispatch in `heat_flux.cpp` | Preserve the existing default source when old moving-source inputs omit new options; verify volume-integrated input power under refinement. |
-| Layer activation | `sgtm_execute.cpp`, `heat_flux.cpp`, `temperature_sgtm.cpp`, `properties.cpp`; active element/node flags and compact lists | Make optional; use device-safe state; handle every material independently and account for MPI ownership/ghosts. Avoid shared host-mutated dynamic lists. |
-| Substrate initialization | `num_layers_substrate` in mesh input; substrate marked active and solidified | Use physical z coordinates, not rank-local element numbering; validate layer count and support translated boxes. Keep mechanical erosion distinct from solidification. |
-| Powder/solid/liquid thermal tables | Nine property tables and function pointers; extended material parsing and JMatPro data | Retain existing density/conductivity/specific-heat fields and old material inputs. Store phase data per material; reject incomplete tables rather than dereferencing null functions. |
-| Apparent heat capacity | Hard-coded melt interval and latent heat in `properties.cpp` | Make parameters explicit and ensure integrated excess heat capacity equals latent heat. Use liquid properties above liquidus; check cooling/remelting and solidification history. |
-| Constant heat flux boundary | New model enum, parser, function pointer and `constant_heat_flux_bc.hpp` | Replace nonconservative nodal assignment with additive face-area integration, including edge/corner weights, overlapping faces and MPI boundaries. |
-| Activation/solidification visualization | New node and material activation fields, nodal eroded flag, VTK output edits | Preserve the current output system; expose activation/solidification without changing mechanical erosion semantics. Include useful state output for automated comparisons. |
-| Examples and validation inputs | Thin-wall deposition, scaling, rotating source, constant flux and mesh-refinement inputs; two steel datasets and tool-path files | Make paths portable and distinguish examples from verified analytic tests. Several supplied paths reference the student's `/var/tmp` tree or missing files. |
+| Laser paths from CSV | `additive_data.hpp`, `parse_laser.cpp`; five columns: time,x,y,z,power; linear interpolation | Implemented in the existing additive-data interfaces and host CSV loader: strict finite five-column input, nondecreasing times, clamped interpolation, single-point and duplicate-time transitions. Focused input/path tests and source integration checks pass on CPU/GPU. |
+| YAML source parameters | New `laser.hpp`, `laser_options` section in simulation parameters | Optional `laser_options` parsing uses existing `additive_data.hpp` numeric source records; no separate laser header was added. Missing options preserve old inputs. Invalid dimensions, coefficients and paths are tested. |
+| Goldak double ellipsoid | `heat_flux.cpp`; front/rear fractions, orientation inferred from the moving path, Gaussian volume source | Implemented a documented lower-half-space source, incoming-segment orientation and RK stage-time sampling. Independent normalization, moving-source/latent-heat integration, directional controls and joint source/diffusion convergence pass. |
+| Configurable spherical source | Source dispatch in `heat_flux.cpp` | Configured radius and CSV power drive a conservative per-cell source; the legacy source remains available when new options are absent. Uniform and ramped heating pass independent temperature/energy checks. |
+| Layer activation | `sgtm_execute.cpp`, `heat_flux.cpp`, `temperature_sgtm.cpp`, `properties.cpp`; active element/node flags and compact lists | Per-material device state activates at the first physical height crossing, clips global timesteps to events and conservatively mixes deposited enthalpy. No shared host-mutated activation lists. Thirteen integration cases cover CPU/GPU, MPI and separate GPUs. |
+| Substrate initialization | `num_layers_substrate` in mesh input; substrate marked active and solidified | Uses an explicit physical `substrate_height`, with translated geometry, preconsolidated substrate and cold powder history tested. Thermal consolidation remains separate from mechanical erosion. |
+| Powder/solid/liquid thermal tables | Nine property tables and function pointers; extended material parsing and JMatPro data | Per-material legacy or phase tables, strict input validation and constant-property fallback are implemented. Student data values/provenance are retained. Partial legacy tables and multiple materials are tested; DATA-001 records uncertain alloy attribution. |
+| Apparent heat capacity | Hard-coded melt interval and latent heat in `properties.cpp` | Explicit solidus, liquidus and latent heat define consistent capacity/enthalpy, with liquid properties above liquidus and irreversible powder consolidation. Dense constitutive checks, heating/cooling, latent deposition, nonlinear diffusion and Stefan validation pass. |
+| Constant heat flux boundary | New model enum, parser, function pointer and `constant_heat_flux_bc.hpp` | Signed inward flux adds integrated physical-face contributions using bilinear quadrature, including edge/corner sharing. Zero/combined/translated flux, skewed-face quadrature, energy balance and MPI checks pass. |
+| Activation/solidification visualization | New node and material activation fields, nodal eroded flag, VTK output edits | Current node/material state and VTK outputs expose active capacity, activation, liquid fraction, consolidation and constitutive fields. Combined VTK/text outputs and MPI metadata are tested; existing unused-halo conventions are documented. |
+| Examples and validation inputs | Thin-wall deposition, scaling, rotating source, constant flux and mesh-refinement inputs; two steel datasets and tool-path files | Five portable example directories cover sphere heating, prescribed flux, deposition, a turning Goldak path and student tables. Separate analytic drivers retain inputs, output states, logs and independent error/energy checks. |
 
 The student also added a missing `break` in nodal temperature state allocation.
-Check the current implementation before applying such small fixes; do not copy
-driver whitespace, debug prints, unrelated example edits or obsolete regression
-paths. The main branch has newer mesh types, output formats and MPI fixes that
-must be retained.
+A follow-up review of both overloads found that the communication-plan overload
+still needs this fix (STATE-001). The normal SGTM setup uses the other overload,
+so the application tests did not exercise the missing case. A focused test will
+cover allocation, repeated initialization and actual temperature ghost exchange.
+Driver whitespace, debug prints, unrelated example edits and obsolete regression
+paths are excluded. The main branch's newer mesh types, output formats and MPI
+fixes are retained.
 
 ## Defects identified before the port
 
