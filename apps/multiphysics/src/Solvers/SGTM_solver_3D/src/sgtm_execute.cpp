@@ -402,7 +402,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // Commit completed-step history before cold material enters the domain.
         commit_thermal_history(Materials, mesh, State);
         time_value += dt;
-        activate_materials(Materials, mesh, State, time_value);
+        // The global event limit identifies steps that reach new material.
+        if (dt >= step_limits[1]) activate_materials(Materials, mesh, State, time_value);
         if (thermal_models.has_activation) {
             boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value, State.node.thermal_mass);
             State.node.temp.communicate();

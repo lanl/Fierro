@@ -306,3 +306,34 @@ Refinement orders are 2.02494 and 2.00662. The initial mean enthalpy is exactly
 checked. The before/after errors agree to printed precision, confirming that
 stage-zero reuse preserves variable-property conduction as well as uniform
 heating. Evidence is under `work/runs/nonlinear-*`.
+
+Deposition bookkeeping now runs only when the step reaches the globally reduced
+activation-event limit. End-of-step boundary conditions, communication and
+thermal history retain their previous schedule. Initial activation still occurs
+before integration. This removes repeated scans, active-mass reconstruction and
+extra synchronization on steps with no new material; no headers or state are
+added (PERF-002).
+
+| Phase/deposition workload | Before event-only bookkeeping | After | Observed ratio |
+|---|---:|---:|---:|
+| CPU, 1000 requested steps | 10.042555 s | 9.492304 s | 1.06× |
+| GPU, 1000 requested steps | 0.945437 s | 0.784621 s | 1.20× |
+| CPU, 500 requested steps | 5.182162 s | 4.945314 s | 1.05× |
+| GPU, 500 requested steps | 0.540860 s | 0.459381 s | 1.18× |
+
+Each uses the same 32³ workload, one warmup and three measured repetitions.
+The 1000-step ranges are CPU 9.473916–9.679038 s and GPU
+0.782633–0.785069 s; the 500-step ranges are CPU 4.922920–4.965212 s and GPU
+0.458977–0.460023 s. All temperature, energy and completed-step checks pass.
+The 500-requested-step case retains 501 completed steps before and after.
+Non-deposition sentinels remain within earlier variation: student tables
+CPU/GPU 13.327288/0.831673 s, cosine CPU/GPU 2.661502/0.403495 s.
+
+All 13 activation cases, nine phase cases and five examples pass on CPU/CUDA,
+directly and with two ranks. The clipped-step regression also passes with
+coincident graphics output in all four configurations; phase/activation pass
+with one rank per physical GPU. Nsight confirms one activation call rather
+than 1000, two active-geometry refreshes rather than 1001, and 2001 history
+commits rather than 3000. The single actual activation still performs its
+conservative enthalpy mixing. Evidence is under `activation-event-only-*`,
+`benchmark-activation-event-only-*` and `benchmark-event500-*`.
