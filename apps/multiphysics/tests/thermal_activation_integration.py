@@ -153,8 +153,8 @@ def prepare(directory, case, output_format="state"):
     return expected, initial, 1.5 if case == 'mixed_materials' else 1.0, expected_materials, origin
 
 
-def read_material(directory, material):
-    path = directory / f'mat_pt_state_t_1.0000e-01_mat_id_{material}.txt'
+def read_material(directory, material, final_time=0.1):
+    path = directory / f'mat_pt_state_t_{final_time:6.4e}_mat_id_{material}.txt'
     header = None
     declared_count = None
     rows = []

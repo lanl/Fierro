@@ -8152,18 +8152,21 @@ public:
 
                     if (probe_line[0] == '#') {
                         header_lines.push_back(probe_line);
+                        // The schema exists even when this rank owns no cells
+                        // of the material (or the material is globally empty).
+                        if (probe_line.compare(0, 10, "# elem_gid") == 0) {
+                            std::istringstream names(probe_line.substr(1));
+                            std::string name;
+                            while (names >> name) num_columns++;
+                        }
                         continue;
                     }
-
-                    std::istringstream iss(probe_line);
-                    std::string tok;
-                    while (iss >> tok) num_columns++;
-                    break; // only need the first data row for the column count
+                    break; // all header lines precede the first data row
                 }
                 probe_in.close();
 
                 if (num_columns == 0) {
-                    std::cerr << "concatenate mat_pt state: no data rows found in "
+                    std::cerr << "concatenate mat_pt state: no column header found in "
                             << probe_filename << std::endl;
                     continue;
                 }
@@ -8798,18 +8801,21 @@ public:
 
                     if (probe_line[0] == '#') {
                         header_lines.push_back(probe_line);
+                        // The schema exists even when this rank owns no cells
+                        // of the material (or the material is globally empty).
+                        if (probe_line.compare(0, 10, "# elem_gid") == 0) {
+                            std::istringstream names(probe_line.substr(1));
+                            std::string name;
+                            while (names >> name) num_columns++;
+                        }
                         continue;
                     }
-
-                    std::istringstream iss(probe_line);
-                    std::string tok;
-                    while (iss >> tok) num_columns++;
-                    break; // only need the first data row for the column count
+                    break; // all header lines precede the first data row
                 }
                 probe_in.close();
 
                 if (num_columns == 0) {
-                    std::cerr << "concatenate mat_pt state: no data rows found in "
+                    std::cerr << "concatenate mat_pt state: no column header found in "
                             << probe_filename << std::endl;
                     continue;
                 }

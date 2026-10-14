@@ -195,3 +195,15 @@ refresh is now a larger fraction of the remaining work. These instrumented
 kernel measurements diagnose cost; the unprofiled repetitions above establish
 end-to-end SGTM calculation timings. Reports are under
 `work/profiles/{event-recovery,enthalpy-cache}/{phase,variable}32`.
+
+`tests/thermal_steady.py` adds two steady references with rho*Cp=1 and end
+temperatures 400/300 K. For k(T)=1+0.01(T−300), the exact profile is
+T=300+100[sqrt(4−3x)−1] and heat flux is 150. Two half-length layers with
+k1=1,k2=4 have heat flux 160 and interface temperature 320 K. These profiles are
+exact at aligned mesh nodes once the transient decays. N=8/16 runs to t=2 pass
+on CPU/CUDA directly and with two ranks; N=8 also passes across both physical
+GPUs. Maximum temperature and flux errors are 3.51e-11 K and 3.48e-10 in the test
+units. The driver also checks globally empty material outputs. It exposed
+OUTPUT-005: rank 0 had no cells of material 0, so the old merge code discarded
+that material. Counting columns from the schema header fixes this without
+changing numerical integration. Before/after evidence is retained.
