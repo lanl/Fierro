@@ -93,3 +93,30 @@ builds establish the correctness of untested student thermal physics.
   exercise distributed execution; add a two-GPU run when resources permit.
 - Performance comparisons require warm-up, repetitions and matched problem sizes.
   Report noise and hardware contention rather than claiming unsupported speedups.
+
+## Kernel-fusion experiments identified on 2026-10-14
+
+These are proposed experiments, not accepted performance changes. Complete the
+metadata-reference comparison and correct OUTPUT-007 before applying a fusion.
+Keep each candidate separate, preserve its baseline binaries, and compare total
+SGTM time on CPU/CUDA direct and two MPI ranks as well as device resource use.
+
+| Candidate | Reuse / launch reduction | Required invariant |
+| --- | --- | --- |
+| RK initialization and first-stage nodal heat-transfer reset | One fewer node traversal and launch per step | Later stages still clear their accumulators before boundary contributions. |
+| Completed-step history and property refresh | Reuse material-cell corner temperatures; remove one history pass | Preserve the history commit before activation mixes incoming enthalpy and the activation routine's own history commit. Initial and intermediate RK property calls must not commit history. |
+| Element conduction and configured laser source | Reuse coordinates/centroid work and one launch | The source is added once per mesh element, including mixed materials and partial activation. Existing kernels have different material-cell and mesh-cell iteration domains. |
+| Intermediate-stage properties and conduction | Reuse node temperatures and conductivity without an intermediate round trip | Keep completed properties needed for timestep/output; inspect register use, occupancy and spilling before accepting. |
+
+The current property-reference variable64 GPU profile (1000 steps) reports
+30.968 ms in history, 68.403 ms in the laser source, 4.218 ms in all nodal
+resets, 1006.782 ms in properties, and 458.183 ms in conduction. Those costs
+are not achievable-savings estimates: fused kernels retain necessary work.
+Conduction already uses 156 registers per thread and properties use 70
+separately. Small fusion gains are plausible; larger combinations may regress.
+
+Do not naively fuse element conduction and the nodal temperature update. Each
+node gathers completed contributions from neighboring elements, while conduction
+reads the old nodal temperature. This requires a global producer/consumer
+boundary in the present algorithm. A team barrier or an in-kernel Kokkos fence
+cannot replace it. MPI exchanges and host reductions also constrain fusion.

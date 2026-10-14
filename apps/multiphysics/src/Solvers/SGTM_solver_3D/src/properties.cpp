@@ -77,7 +77,7 @@ void SGTM3D::update_properties(
     if (!models.has_tables) return;
     FOR_ALL(sid, 0, num_material_elems, {
         if (models.has_activation && active(mat_id, sid) == 0) return;
-        const auto model = models.materials(mat_id);
+        const auto& model = models.materials(mat_id);
         const size_t elem = elem_in_mat_elem(mat_id, sid);
         double density = 0.0;
         double conductivity = 0.0;

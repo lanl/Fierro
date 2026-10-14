@@ -711,3 +711,71 @@ and relative energy error 1.01e-11. The original file bytes are preserved.
 Its alloy label is unverified; see DATA-002. Evidence:
 `work/extra-table-output-mpi-temp-n0-complete.json` and
 `work/extra-table-output-summary.json`. These checks add no solver changes.
+
+Material metadata reference, 2026-10-14: the candidate changes one local material
+metadata binding in `update_properties` from a value to a const reference.
+It adds no headers or storage and preserves the constitutive calculations.
+CUDA resource reporting changes from 95 to 70 registers per thread and from
+328 to zero stack bytes; reported LOCAL bytes are zero in both versions.
+The resource change combines reduced copying/register use and stack allocation;
+these measurements do not isolate a stack-only effect.
+
+Instrumented 64³ property-kernel means fall from 621.408 to 503.140 microseconds
+for melting tables (19.0%) and 305.585 to 218.116 for cold tables (28.6%). Nodal
+update and conduction means are essentially unchanged. Independent uninstrumented
+SGTM timing uses preserved `mpi-temp-n0` and `property-reference` binaries,
+one warmup plus three measured repetitions, 1000 steps, and the same physical
+CPU masks and device placements as the preceding comparison. Every run validates
+its temperature, energy and step count. These are incremental comparisons.
+
+| Placement | Mesh / case | Before median [range], s | After median [range], s | Time change | Ranges overlap |
+| --- | --- | ---: | ---: | ---: | --- |
+| CPU direct | 32³ / phase | 9.289886 [9.287308, 9.355558] | 9.305013 [9.275419, 9.348740] | +0.16% | Yes |
+| CPU direct | 32³ / variable | 12.504482 [12.501962, 12.546007] | 12.499567 [12.350224, 12.692456] | -0.04% | Yes |
+| CPU direct | 32³ / variable_cold | 10.054719 [10.040859, 10.155820] | 9.996784 [9.965815, 10.103055] | -0.58% | Yes |
+| CPU direct | 32³ / cosine | 2.758379 [2.730060, 2.762930] | 2.734319 [2.657193, 2.737975] | -0.87% | Yes |
+| CUDA direct | 32³ / phase | 0.799472 [0.798872, 0.799926] | 0.797058 [0.796428, 0.801552] | -0.30% | Yes |
+| CUDA direct | 32³ / variable | 0.835070 [0.835054, 0.835296] | 0.834073 [0.833340, 0.839204] | -0.12% | Yes |
+| CUDA direct | 32³ / variable_cold | 0.700578 [0.700544, 0.701011] | 0.702134 [0.700975, 0.708692] | +0.22% | Yes |
+| CUDA direct | 32³ / cosine | 0.414216 [0.413246, 0.415033] | 0.413656 [0.412466, 0.415873] | -0.14% | Yes |
+| CPU 2 ranks | 32³ / phase | 5.322531 [5.293012, 5.549468] | 5.388838 [5.297814, 5.527846] | +1.25% | Yes |
+| CPU 2 ranks | 32³ / variable | 7.128278 [7.107223, 7.293041] | 7.057930 [7.009056, 7.060251] | -0.99% | No |
+| CUDA 2 ranks, shared GPU | 32³ / phase | 3.857406 [3.836633, 3.868258] | 3.806755 [3.801294, 3.955749] | -1.31% | Yes |
+| CUDA 2 ranks, shared GPU | 32³ / variable | 3.470992 [3.360344, 3.487515] | 3.467276 [3.449689, 3.477604] | -0.11% | Yes |
+| CUDA 2 ranks, separate GPUs | 32³ / phase | 1.233678 [1.215747, 1.253573] | 1.301573 [1.239869, 1.328401] | +5.50% | Yes |
+| CUDA 2 ranks, separate GPUs | 32³ / variable | 1.056285 [1.053133, 1.064118] | 1.071415 [1.061254, 1.109602] | +1.43% | Yes |
+| CUDA 2 ranks, separate GPUs | 32³ / variable_cold | 0.980491 [0.977253, 0.985910] | 0.991469 [0.982940, 0.994405] | +1.12% | Yes |
+| CUDA 2 ranks, separate GPUs | 32³ / cosine | 0.735133 [0.709539, 0.748053] | 0.717881 [0.717131, 0.730192] | -2.35% | Yes |
+| CUDA direct | 64³ / variable | 3.956774 [3.935436, 3.964275] | 3.655510 [3.655192, 3.670762] | -7.61% | No |
+| CUDA direct | 64³ / variable_cold | 3.127506 [3.126244, 3.131433] | 2.970798 [2.964443, 3.000003] | -5.01% | No |
+| CUDA 2 ranks, separate GPUs | 64³ / variable | 4.345224 [4.285525, 4.527077] | 4.048422 [3.978218, 4.138576] | -6.83% | No |
+| CUDA 2 ranks, separate GPUs | 64³ / variable_cold | 3.804499 [3.744656, 3.938841] | 3.583195 [3.564386, 3.611869] | -5.82% | No |
+
+The four 64³ GPU comparisons show reductions of 5.0–7.6%, with nonoverlapping
+observed ranges. Most smaller/CPU comparisons overlap; their median shifts are
+not claimed as demonstrated speedups. The two-GPU 32³ phase median initially
+rises 5.5% despite overlapping ranges, motivating a separate ABBA-order repeat
+before deciding whether to accept the candidate. GPU 0 also runs the desktop.
+Three measured repetitions are descriptive ranges, not formal significance tests.
+
+All 28 probe jobs pass (two builds, twenty correctness suites, two resource dumps
+and four profiles), followed by all 40 timing jobs. Correctness covers phase,
+activation with state/VTK output, nonlinear conduction, and material diagnostics
+on CPU/CUDA direct, two ranks sharing GPU 1, and two physical GPUs. The paused
+probe's incomplete final correctness run was retained and rerun into a new
+`resume1` directory after the user resumed hardware work.
+
+Evidence: `work/property-reference-probe-complete.json`,
+`work/property-reference-profile-comparison.json`,
+`work/property-reference-gate-complete.json`,
+`work/property-reference-gate-timing-summary.json`, and
+`work/checkpoints/property-reference`. The phase confirmation is recorded
+separately in `work/property-reference-phase-confirm*`.
+
+The four-job ABBA confirmation passes all independent checks. Its six measured
+samples per version give baseline 1.227022 [1.219957, 1.295499] s and candidate
+1.228285 [1.207118, 1.276043] s: a 0.10% median increase with broad overlap.
+The initial 5.5% phase slowdown is not reproduced. This one-line candidate is
+accepted for the measured large-GPU gains; no speedup is claimed for phase32,
+most other small cases, or CPU direct execution. All 72 probe/timing/confirmation
+jobs pass. Future changes still require their own matched baselines.
