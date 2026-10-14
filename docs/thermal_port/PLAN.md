@@ -83,6 +83,9 @@ builds establish the correctness of untested student thermal physics.
 - Add headers only when required. Keep standard-library file/string parsing in
   host implementation files; device numerical helpers use Kokkos/MATAR. Prefer
   existing declaration headers and plain numeric structs/arrays.
+- Use MATAR containers and dispatch/reduction/runtime macros wherever available,
+  including tests. Retain explicit Kokkos primitives only where pinned MATAR has
+  no equivalent; the reviewed exceptions are recorded in BUILDING.md.
 - Preserve existing YAML spellings and default behavior. New AM physics is opt-in.
 - Avoid replacing the current solver with the student's older implementation.
 - Record each failure's input, backend, rank count, expected/observed behavior,
@@ -96,8 +99,9 @@ builds establish the correctness of untested student thermal physics.
 
 ## Kernel-fusion experiments identified on 2026-10-14
 
-These are proposed experiments, not accepted performance changes. Complete the
-metadata-reference comparison and correct OUTPUT-007 before applying a fusion.
+Metadata-reference optimization and OUTPUT-007 are accepted. Completed-step
+history/property fusion is also accepted in `bd2f8f3b` after its numerical,
+resource and timing checks. The other candidates below remain experiments.
 Keep each candidate separate, preserve its baseline binaries, and compare total
 SGTM time on CPU/CUDA direct and two MPI ranks as well as device resource use.
 

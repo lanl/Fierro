@@ -230,9 +230,9 @@ thermal::Database parse_thermal_models(Yaml::Node& root)
     if (database.has_phase_change) {
         const auto material_data = database.materials;
         const auto table_data = database.data;
-        Kokkos::parallel_for("cache_thermal_enthalpy", models.size(), KOKKOS_LAMBDA(size_t id) {
+        FOR_ALL(id, 0, models.size(), {
             thermal::cache_enthalpy(material_data(id), table_data);
-        });
+        }, "cache_thermal_enthalpy");
         database.materials.update_host();
         database.data.update_host();
     }

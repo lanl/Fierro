@@ -8,7 +8,7 @@ int main(int argc, char** argv)
         MPI_Finalize();
         return 1;
     }
-    Kokkos::initialize(argc, argv);
+    MATAR_INITIALIZE(argc, argv);
     int result = 0;
     try {
         int rank = 0;
@@ -21,10 +21,10 @@ int main(int argc, char** argv)
         plan.initialize(MPI_COMM_WORLD);
         plan.initialize_graph_communicator(1, &next, 1, &previous);
         CArrayKokkos<size_t> counts(1, "thermal_test_neighbor_counts");
-        Kokkos::parallel_for("thermal_test_counts", 1, KOKKOS_LAMBDA(int) {
+        RUN({
             counts(0) = 1;
-        });
-        Kokkos::fence();
+        }, "thermal_test_counts");
+        MATAR_FENCE();
         DRaggedRightArrayKokkos<int> sends(counts, "thermal_test_send_indices");
         DRaggedRightArrayKokkos<int> receives(counts, "thermal_test_recv_indices");
         sends.host(0, 0) = 0;
@@ -41,11 +41,11 @@ int main(int argc, char** argv)
             throw std::runtime_error("Node initialization did not allocate the requested fields");
         const auto temperature = nodes.temp;
         const auto initial = nodes.temp_n0;
-        Kokkos::parallel_for("thermal_test_fill", 2, KOKKOS_LAMBDA(int node) {
+        FOR_ALL(node, 0, 2, {
             temperature(node) = node == 0 ? 300.0 + rank : -1.0;
             initial(node) = node == 0 ? 200.0 + rank : -1.0;
-        });
-        Kokkos::fence();
+        }, "thermal_test_fill");
+        MATAR_FENCE();
         nodes.initialize(2, 3, fields, plan);
         if (nodes.temp.device_pointer() != temperature.device_pointer() ||
             nodes.temp_n0.device_pointer() != initial.device_pointer())
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
     }
     int global_result = 0;
     MPI_Allreduce(&result, &global_result, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-    Kokkos::finalize();
+    MATAR_FINALIZE();
     MPI_Finalize();
     return global_result;
 }

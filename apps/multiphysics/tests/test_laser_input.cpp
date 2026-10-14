@@ -44,15 +44,17 @@ void run_tests()
     write_path("# time,x,y,z,power\n\n 0, 1, 2, 3, 10\n2, 3, 6, 7, 30 # end\n");
     auto path = ToolPathInfo::load_laser_path(path_file.c_str());
     mtr::DCArrayKokkos<double> samples(5, 4, "path_samples");
-    Kokkos::parallel_for("sample_laser_path", 5, KOKKOS_LAMBDA(int i) {
+    FOR_ALL(i, 0, 5, {
         const double t = i - 1.0;
-        double x, y, z;
+        double x;
+        double y;
+        double z;
         path.get_position(t, x, y, z);
         samples(i, 0) = x;
         samples(i, 1) = y;
         samples(i, 2) = z;
         samples(i, 3) = path.get_power(t);
-    });
+    }, "sample_laser_path");
     samples.update_host();
     const double expected[5][4] = {{1,2,3,10}, {1,2,3,10}, {2,4,5,20},
                                     {3,6,7,30}, {3,6,7,30}};
@@ -111,7 +113,7 @@ void run_tests()
 
 int main(int argc, char** argv)
 {
-    Kokkos::initialize(argc, argv);
+    MATAR_INITIALIZE(argc, argv);
     int status = 0;
     try { run_tests(); }
     catch (const std::exception& error) {
@@ -119,6 +121,6 @@ int main(int argc, char** argv)
         status = 1;
     }
     std::remove(path_file.c_str());
-    Kokkos::finalize();
+    MATAR_FINALIZE();
     return status;
 }

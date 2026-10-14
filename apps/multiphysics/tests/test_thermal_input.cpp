@@ -65,7 +65,7 @@ void check_input()
     mtr::DCArrayKokkos<double> values(6, "thermal_input_values");
     const auto models = database.materials;
     const auto data = database.data;
-    Kokkos::parallel_for("read_thermal_inputs", 1, KOKKOS_LAMBDA(int) {
+    RUN({
         values(0) = thermal::capacity(models(0), data, 310, 290, 0);
         values(1) = thermal::capacity(models(1), data, 310, 290, 0);
         values(2) = thermal::property(models(1), data, thermal::density, 500, 500, 0);
@@ -74,7 +74,7 @@ void check_input()
                     thermal::enthalpy(models(0), data, 280, 290, 0);
         values(5) = thermal::enthalpy(models(1), data, 310, 290, 0) -
                     thermal::enthalpy(models(1), data, 290, 290, 0);
-    });
+    }, "read_thermal_inputs");
     values.update_host();
     if (values.host(0) != 11 || values.host(1) != 3 || values.host(2) != 4 || values.host(3) != 0 ||
         values.host(4) != 120 || values.host(5) != 60)
@@ -128,12 +128,12 @@ void check_input()
 
 int main(int argc, char** argv)
 {
-    Kokkos::initialize(argc, argv);
+    MATAR_INITIALIZE(argc, argv);
     int status = 0;
     try { check_input(); }
     catch (const std::exception& error) { std::cerr << error.what() << '\n'; status = 1; }
     std::remove(phase_path.c_str());
     std::remove(legacy_path.c_str());
-    Kokkos::finalize();
+    MATAR_FINALIZE();
     return status;
 }

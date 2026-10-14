@@ -30,21 +30,21 @@ void check_sources()
     constexpr int n = 64;
     constexpr int cells = 2*n*n*n;
     double integrated_power = 0;
-    Kokkos::parallel_reduce("integrate_goldak", cells,
-        KOKKOS_LAMBDA(int index, double& sum) {
-            const int side = index / (n*n*n);
-            const int i = index % n;
-            const int j = (index / n) % n;
-            const int k = (index / (n*n)) % n;
-            const double a = side == 0 ? source.goldak.major_front : source.goldak.major_rear;
-            const double dx = 4*a/n;
-            const double dy = 8*source.goldak.minor/n;
-            const double dz = 4*source.goldak.depth/n;
-            const double x = (side == 0 ? 1.0 : -1.0) * (i + 0.5) * dx;
-            const double y = -4*source.goldak.minor + (j + 0.5) * dy;
-            const double z = -(k + 0.5) * dz;
-            sum += laser_power_density(source, x, y, z) * dx*dy*dz;
-        }, integrated_power);
+    double sum = 0.0;
+    FOR_REDUCE_SUM(index, 0, cells, sum, {
+        const int side = index / (n*n*n);
+        const int i = index % n;
+        const int j = (index / n) % n;
+        const int k = (index / (n*n)) % n;
+        const double a = side == 0 ? source.goldak.major_front : source.goldak.major_rear;
+        const double dx = 4*a/n;
+        const double dy = 8*source.goldak.minor/n;
+        const double dz = 4*source.goldak.depth/n;
+        const double x = (side == 0 ? 1.0 : -1.0) * (i + 0.5) * dx;
+        const double y = -4*source.goldak.minor + (j + 0.5) * dy;
+        const double z = -(k + 0.5) * dz;
+        sum += laser_power_density(source, x, y, z) * dx*dy*dz;
+    }, integrated_power, "integrate_goldak");
     if (std::abs(integrated_power - 700.0) > 1e-8)
         throw std::runtime_error("Goldak volume integral does not equal absorbed power");
 
@@ -55,7 +55,7 @@ void check_sources()
     auto sphere = source;
     sphere.model = LaserModelType::SPHERICAL;
     sphere.spherical.radius = 2;
-    Kokkos::parallel_for("source_values", 1, KOKKOS_LAMBDA(int) {
+    RUN({
         values(0) = laser_power_density(source, 1, 0.2, -0.1);
         values(1) = laser_power_density(rotated, -0.2, 1, -0.1);
         values(2) = laser_power_density(source, 0, 0, 0.1);
@@ -64,7 +64,7 @@ void check_sources()
         auto off = source;
         off.power = 0;
         values(5) = laser_power_density(off, 0, 0, -0.1);
-    });
+    }, "source_values");
     values.update_host();
     constexpr double pi = 3.14159265358979323846;
     if (std::abs(values.host(0)-values.host(1)) > 1e-12 || values.host(2) != 0 ||
@@ -83,14 +83,14 @@ void check_height_crossing()
     path.set_data_point(4, 3, 0, 0, 10, 0);
     path.update_device();
     mtr::DCArrayKokkos<double> times(6, "height_crossing_times");
-    Kokkos::parallel_for("height_crossing", 1, KOKKOS_LAMBDA(int) {
+    RUN({
         path.first_height_crossing(11, 0, times(0));
         path.first_height_crossing(12.5, 0, times(1));
         times(2) = path.first_height_crossing(14, 0, times(2)) ? 1 : 0;
         path.first_height_crossing(11, 1.5, times(3));
         path.first_height_crossing(11.5, 1.75, times(4));
         path.first_height_crossing(10, 5, times(5));
-    });
+    }, "height_crossing");
     times.update_host();
     const double expected[] = {0.5, 2, 0, 1.5, 2, 5};
     for (int i = 0; i < 6; ++i)
@@ -100,13 +100,13 @@ void check_height_crossing()
 
 int main(int argc, char** argv)
 {
-    Kokkos::initialize(argc, argv);
+    MATAR_INITIALIZE(argc, argv);
     int result = 0;
     try { check_sources(); check_height_crossing(); }
     catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         result = 1;
     }
-    Kokkos::finalize();
+    MATAR_FINALIZE();
     return result;
 }

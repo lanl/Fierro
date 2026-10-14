@@ -89,3 +89,45 @@ Complete commands, solver logs, outputs and JSON results are under `work/runs`.
 `work/regression.py` checks return status, output existence/schema, finite values,
 global element keys and reference tolerances. It handles both state-file formats,
 preserves failed runs, limits log growth, and terminates timed-out process groups.
+
+## MATAR interface review
+
+The thermal port uses MATAR for data containers, kernel dispatch, reductions,
+fences, and runtime initialization/finalization wherever the pinned version
+provides an interface. Review covers all additions relative to original main
+`03e26b50`, including tests. `DCArrayKokkos`, `CArrayKokkos`,
+`DRaggedRightArrayKokkos`, and `MPICArrayKokkos` are MATAR types.
+
+| Added direct Kokkos use | Before cleanup | After cleanup | MATAR interface |
+| --- | ---: | ---: | --- |
+| Kernel launches/reductions | 12 | 0 | `FOR_ALL`, `RUN`, `FOR_REDUCE_SUM` |
+| Explicit lambda annotations | 12 | 0 | Supplied by the dispatch macros |
+| Initialization/finalization | 14 | 0 | `MATAR_INITIALIZE`, `MATAR_FINALIZE` |
+| Fences | 3 | 0 | `MATAR_FENCE` |
+| Raw View/DualView types in application/tests | 0 | 0 | Existing MATAR containers |
+
+The cleanup changes one production enthalpy-cache initialization loop and seven
+test files. Kernel labels, iteration bounds, numerical assertions and MPI
+initialization/finalization are preserved. Comma-containing constant test data
+is declared outside macro bodies to avoid preprocessor argument splitting. No
+headers are added.
+
+The remaining explicit Kokkos uses are device function annotations, portable
+math and infinity constants, one atomic accumulation, and device failure
+diagnostics. The pinned MATAR headers expose no equivalent interfaces. Keep
+these primitives explicit instead of introducing local wrapper headers or
+standard-library calls in device code. The three-constructor MATAR compatibility
+repair necessarily operates on Kokkos internals inside MATAR; its CMake patch
+is separate from application code. One `deep_copy` occurrence in that patch is
+the old source text being replaced, not a new execution call.
+
+Reproducible inventories: `work/matar-readability-audit-before.json` and
+`work/matar-readability-audit-after.json`. Full CPU/CUDA rebuilds and existing
+focused/integration checks pass in `work/matar-readability-gate-complete.json`:
+all eight CTests on each backend, 110 phase/activation cases across CPU/CUDA
+direct, CPU MPI2, shared-GPU MPI2 and separate-GPU MPI2, plus explicit node
+communication on two GPUs. Saved-output comparison finds all 352870 numeric
+values identical in 225 nodal and 245 material outputs across those 110 cases.
+Evidence: `work/matar-readability-output-audit.json`. Source/binary hashes are
+recorded in `work/checkpoints/matar-readability`. This is an interface cleanup;
+no new performance claim is attached to it.

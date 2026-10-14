@@ -8,10 +8,10 @@
 void check_constructors()
 {
     mtr::CArrayKokkos<size_t> strides(3, "test_strides");
-    Kokkos::parallel_for("initialize_strides", 3, KOKKOS_LAMBDA(int i) {
+    FOR_ALL(i, 0, 3, {
         strides(i) = i + 1;
-    });
-    Kokkos::fence();
+    }, "initialize_strides");
+    MATAR_FENCE();
 
     mtr::DRaggedRightArrayKokkos<double> scalar(strides, "scalar");
     mtr::DRaggedRightArrayKokkos<double> vector(strides, 2, "vector");
@@ -19,7 +19,7 @@ void check_constructors()
     if (scalar.size() != 6 || vector.size() != 12 || tensor.size() != 24) {
         throw std::runtime_error("incorrect ragged allocation size");
     }
-    Kokkos::parallel_for("fill_ragged", 3, KOKKOS_LAMBDA(int i) {
+    FOR_ALL(i, 0, 3, {
         for (size_t j = 0; j < strides(i); ++j) {
             scalar(i, j) = 10 * i + j;
             for (int k = 0; k < 2; ++k) {
@@ -29,7 +29,7 @@ void check_constructors()
                 }
             }
         }
-    });
+    }, "fill_ragged");
     scalar.update_host();
     vector.update_host();
     tensor.update_host();
@@ -54,7 +54,7 @@ void check_constructors()
 
 int main(int argc, char** argv)
 {
-    Kokkos::initialize(argc, argv);
+    MATAR_INITIALIZE(argc, argv);
     int result = 0;
     try {
         check_constructors();
@@ -62,6 +62,6 @@ int main(int argc, char** argv)
         std::cerr << error.what() << '\n';
         result = 1;
     }
-    Kokkos::finalize();
+    MATAR_FINALIZE();
     return result;
 }

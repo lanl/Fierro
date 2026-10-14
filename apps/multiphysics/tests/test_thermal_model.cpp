@@ -6,7 +6,7 @@
 
 int main(int argc, char** argv)
 {
-    Kokkos::initialize(argc, argv);
+    MATAR_INITIALIZE(argc, argv);
     int status = 0;
     try {
         static_assert(std::is_trivially_copyable<thermal::Material>::value,
@@ -29,7 +29,12 @@ int main(int argc, char** argv)
         }
         data.update_device();
         mtr::DCArrayKokkos<double> result(20, "thermal_checks");
-        Kokkos::parallel_for("thermal_model_checks", 1, KOKKOS_LAMBDA(int) {
+        auto tabular = model;
+        tabular.tables[thermal::powder][thermal::specific_heat] = {0,2};
+        tabular.tables[thermal::solid][thermal::specific_heat] = {2,2};
+        tabular.tables[thermal::liquid][thermal::specific_heat] = {4,2};
+        const double checks[7] = {250,300,305,310,319,320,350};
+        RUN({
             // Constant fallback Cp=2 makes the latent heat integral independent
             // of transition shape and gives an exact 240-unit heating budget.
             result(0) = thermal::enthalpy(model,data,340,280,2) -
@@ -38,10 +43,6 @@ int main(int argc, char** argv)
             result(2) = thermal::fraction(model,290);
             result(3) = thermal::fraction(model,310);
             result(4) = thermal::fraction(model,330);
-            auto tabular = model;
-            tabular.tables[thermal::powder][thermal::specific_heat] = {0,2};
-            tabular.tables[thermal::solid][thermal::specific_heat] = {2,2};
-            tabular.tables[thermal::liquid][thermal::specific_heat] = {4,2};
             auto cached = tabular;
             cached.enthalpy_intervals[0].offset = 6;
             cached.enthalpy_intervals[1].offset = 21;
@@ -56,7 +57,6 @@ int main(int argc, char** argv)
                 }
             }
             result(18) = maximum_error;
-            const double checks[7] = {250,300,305,310,319,320,350};
             constexpr double delta = 1e-4;
             for (int i=0; i<7; ++i) {
                 const double t = checks[i];
@@ -72,7 +72,7 @@ int main(int argc, char** argv)
             result(15) = thermal::value({0,2},data,500,0);
             result(16) = thermal::primitive({0,2},data,300,0);
             result(17) = thermal::primitive({0,2},data,100,0);
-        });
+        }, "thermal_model_checks");
         result.update_host();
         const double expected[5] = {240,11,0,0.5,1};
         for (int i=0; i<5; ++i)
@@ -91,6 +91,6 @@ int main(int argc, char** argv)
         std::cerr << error.what() << '\n';
         status = 1;
     }
-    Kokkos::finalize();
+    MATAR_FINALIZE();
     return status;
 }
