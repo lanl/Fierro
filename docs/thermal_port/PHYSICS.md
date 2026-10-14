@@ -74,6 +74,38 @@ enthalpy references coincide. Cp>=1 also makes the source-energy error bound
 a temperature-error bound. Refined cases require both cold and fully molten
 nodes; the separate powder-cycle tests cover cooling and consolidation history.
 
+`tests/thermal_moving_diffusion.py` combines source motion and conduction.
+It uses a symmetric Goldak source with all axes a=0.2, absorbed power P=1,
+rho=Cp=1, k=0.02, initial T=300 and the same straight path x_s=-0.2+4s.
+Convolving a Gaussian with the heat kernel and integrating the source history
+gives the half-space solution
+
+    T(x,y,z,t)-300 = integral from 0 to t of
+        2P / [pi W(s)]^(3/2) exp(-[(x-x_s)^2+y^2+z^2]/W(s)) ds,
+    W(s) = a^2/3 + 4 alpha (t-s),   alpha=k/(rho Cp).
+
+This is a case-specific application of the heat-kernel/Duhamel construction in
+[Stanford's heat-equation notes, section 2.7](https://web.stanford.edu/class/math220b/handouts/heateqn.pdf).
+The factor 2 enforces the source's lower-half-space normalization and the
+insulated z=0 plane. Independent 16- and 32-point Gauss-Legendre integration
+must agree within 1e-10 K at every distinct sampled position.
+
+For the finite insulated box [-1,1]^2 x [-1,0] at t=0.1, reflected Gaussian
+images have distance at least 0.8+2j in x and 1+2j in y/z, j>=0. Bound each
+one-dimensional image tail by
+`S(d,W)=2 exp(-d^2/W)/(1-exp(-(4d+4)/W))`. The product
+`(1+S_x)(1+S_y)(1+S_z)-1` bounds all nonprimary images. Multiplying by
+`t*2P/[pi*(a^2/3)]^(3/2)`, first at maximum W and then at initial W, bounds
+the temperature images and their excess forcing in the box, respectively.
+Their sum is 4.3661e-12 K, below the quadrature tolerance. The source energy
+omitted outside the box is negligible at the reported precision.
+
+The driver refines N×N×N/2 meshes with dt=0.128/N². It separately checks
+energy against the exact time integral of the cell-centroid source, allowing
+the analytic midpoint-rule curvature bound. Thus the temperature convergence
+test includes conduction, while the energy check remains independent of the
+diffusion discretization. This test has constant properties and no phase change.
+
 ## Prescribed boundary flux
 
 `heat_flux_model: constant` with one `heat_flux_bc_global_vars` value prescribes

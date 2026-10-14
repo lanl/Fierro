@@ -499,3 +499,28 @@ and the original cooling, source/flux, phase and activation regressions. Evidenc
 is in `work/convection-input-gate-complete.json` and `work/runs/convection-*`.
 The rendered and inspected figure `work/figures/convection-validation.{png,svg}`
 shows refinement and the before/after N=8 temperature profile.
+
+The combined moving-source/conduction check uses symmetric Goldak axes 0.2,
+absorbed power 1, rho=Cp=1, conductivity 0.02, and a source moving from x=-0.2
+to 0.2 in 0.1 time units. Its independent heat-kernel integral and finite-box
+bound are derived in PHYSICS.md and implemented in `thermal_moving_diffusion.py`.
+
+| Mesh N×N×N/2 | Maximum dt | Temperature L2 error | Maximum error | Energy error |
+|---|---:|---:|---:|---:|
+| 16×16×8 | 0.0005 | 0.0907095 K | 3.84523 K | -8.53939e-5 |
+| 32×32×16 | 0.000125 | 0.0201838 K | 1.07579 K | -1.35279e-12 |
+| 64×64×32 | 0.00003125 | 0.00503944 K | 0.267504 K | -8.79824e-13 |
+
+The spatial orders are 2.16805 and 2.00186. CPU direct/two-rank and CUDA
+direct/two-rank runs, including one rank per physical GPU, pass all 15 cases
+and agree to roundoff. Reference quadrature differences are below 2.7e-15 K;
+the finite-box correction bound is 4.3661e-12 K. At N=16 the energy error
+comes from coarse source quadrature: the solver differs from the exact
+cell-centroid source integral by only 1.08194e-9, inside the independent
+midpoint-rule bound. Conduction conserves total energy to this source accuracy.
+
+Evidence uses the preserved `4b686f8f` convection checkpoint under
+`work/runs/moving-diffusion-convection-input-*` and
+`work/moving-diffusion-convection-input-complete.json`. Some accuracy runs
+overlapped compilation; their elapsed times are not performance evidence.
+The standalone figure is `work/figures/moving-diffusion-convergence.{png,svg}`.
