@@ -21,12 +21,16 @@ This is a functionality port, not a merge of that branch.
 | Examples and validation inputs | Thin-wall deposition, scaling, rotating source, constant flux and mesh-refinement inputs; two steel datasets and tool-path files | Five portable example directories cover sphere heating, prescribed flux, deposition, a turning Goldak path and student tables. Separate analytic drivers retain inputs, output states, logs and independent error/energy checks. |
 
 The student also added a missing `break` in nodal temperature state allocation.
-A follow-up review of both overloads found that the communication-plan overload
-still needs this fix (STATE-001). The normal SGTM setup uses the other overload,
-so the application tests did not exercise the missing case. A focused test will
-cover allocation, repeated initialization and actual temperature ghost exchange.
+A follow-up review of both overloads identified and ported this missed change
+in the communication-plan overload (STATE-001). The focused test reproduces
+the original failure and now checks allocation, repeated initialization, the
+single-process communication no-op, and actual ghost exchange on two CPU/GPU
+ranks, including separate GPUs. The normal SGTM setup uses the other overload.
 Driver whitespace, debug prints, unrelated example edits and obsolete regression
-paths are excluded. The main branch's newer mesh types, output formats and MPI
+paths are excluded. The student’s argument addition in energy_sgtm.cpp belongs
+to an obsolete implementation that the current SGTM CMake source list excludes;
+the active temperature update is temperature_sgtm.cpp. A remaining help-text
+follow-up will list the supported constant heat-flux model in --help. The main branch's newer mesh types, output formats and MPI
 fixes are retained.
 
 ## Defects identified before the port

@@ -552,7 +552,7 @@ are `endpoint-kernel-choice`. Evidence is in
 pairs, ranges, completed-step agreement and paths to validated results. These
 small samples describe observed timings, not formal statistical significance.
 The production endpoint implementation remains unchanged by this rejected
-experiment. PERF-003 remains open while a direct cached-enthalpy path is tested.
+experiment. PERF-003 remains open; the subsequent experiments are recorded below.
 
 A separate direct cached-enthalpy experiment removes the unused Gaussian
 reference integration from the production nodal kernel. It builds on both
@@ -578,3 +578,28 @@ or y on two GPUs gives the same results. An RK1 CPU control gives orders
 and 2.0739 with the changed surface capacity. All 27 cases pass, insulated
 nodes remain unchanged and the surface stays uniform. These are time-accuracy
 measurements, not performance timings. Evidence: `work/radiation-convection-input*`.
+
+The final lookup trial selected the original direct endpoints on host-accessible
+execution spaces and conditional nodal evaluation on the GPU. All 29 correctness
+jobs passed, followed by twelve matched timing pairs. CPU affinity was identical
+for both binaries: four physical cores for direct runs and four disjoint cores
+per rank for two-GPU runs. No production includes or allocations were added.
+
+| Matched workload | Baseline median (range), s | Candidate median (range), s | Assessment |
+| --- | --- | --- | --- |
+| CPU 32³ cold tables | 9.978871 (9.899678–10.049853) | 10.113462 (10.094610–10.288365) | 1.3% slower |
+| One GPU 64³ melting tables | 3.936474 (3.933141–3.949862) | 3.891686 (3.890014–3.892233) | 1.1% faster |
+| One GPU 64³ cold tables | 3.139509 (3.131559–3.140094) | 3.088074 (3.076125–3.104499) | 1.6% faster |
+| Two GPUs 64³ melting tables | 4.593438 (4.574259–4.620833) | 4.725273 (4.625510–4.837267) | 2.9% slower |
+| Two GPUs 64³ cold tables | 4.031990 (4.020802–4.047818) | 4.170018 (4.101211–4.435396) | 3.4% slower |
+
+CPU melting/phase and most 32³ GPU measurements had overlapping ranges. These
+small samples support rejecting the added policy complexity: it does not offer
+consistent CPU/GPU or multi-rank gains. The accepted endpoint implementation
+has been restored, and PERF-003 remains open. Preserve the candidate, profiles,
+all 53 successful numerical/timing jobs and the complete twelve-pair summary
+under `work/checkpoints/endpoint-host-choice`, `work/profiles/endpoint-host-choice`,
+`work/endpoint-host-choice-gate-complete.json` and
+`work/endpoint-host-choice-gate-timing-summary.json`. Future work will first
+remove provably redundant exchanges and geometry calculations, with new matched
+measurements before accepting either change.

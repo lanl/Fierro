@@ -432,7 +432,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         if ((cycle + 1) % graphics_cyc_ival == 0 && cycle > 0) {
             write = 1;
         }
-        else if (cycle == cycle_stop) {
+        else if (cycle + 1 == cycle_stop) {
             write = 1;
         }
         else if (time_value >= time_final) {

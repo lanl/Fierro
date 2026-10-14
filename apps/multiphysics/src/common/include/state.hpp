@@ -376,6 +376,7 @@ struct node_t
                         this->temp_n0 = MPICArrayKokkos<double>(num_nodes, "node_temp_n0");
                         this->temp_n0.initialize_comm_plan(comm_plan);
                     }
+                    break;
 
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize with communication plan"<<std::endl;

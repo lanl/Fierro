@@ -74,12 +74,27 @@ bounded energy error; passing process exit status alone is insufficient.
 | Melting front | One-phase Stefan solution; N=128 and melt interval 0.25 K give L2 error 0.009429 K, front error −0.938%, energy error −0.0419%. Mesh and phase regularization are refined separately. | CPU/CUDA, direct and two ranks; 36 cases |
 | Nonlinear conduction | Exact transformed heat equation with Cp(T)=k(T)=1+(T−300); N=8/16/32 orders 2.02494/2.00662 and enthalpy drift below 5.6e-9. | CPU/CUDA, direct/two ranks, including two physical GPUs |
 | Moving localized heating and melting | Exact time-integrated Goldak source with independent enthalpy inversion; phase spatial orders 1.972/1.898 and temporal orders 2.020/1.995. | CPU/CUDA, direct/two ranks, with separate-GPU and directional controls |
-| Moving source with diffusion | Gaussian heat-kernel convolution; N=16/32/64 spatial orders 2.16805/2.00186, finest L2 error 0.00503944 K. Finite-box correction is bounded below 4.4e-12 K. | All five CPU/GPU/rank placements; 15 cases |
+| Moving source with diffusion | Gaussian heat-kernel convolution; N=16/32/64 spatial orders 2.16805/2.00186, finest L2 error 0.00503944 K. Finite-box correction is at most 4.4e-12 K. | All five CPU/GPU/rank placements; 15 cases |
 | Convection | Exact Robin slab eigenfunction series; configured cooling and heating approach order 2. Omitted/default, zero-film and invalid parameters are checked. | CPU/CUDA, direct/two ranks; default/configured cooling also on two physical GPUs |
 | Radiation time integration | Exact lumped T^4 cooling ODE with k=0 and legacy zero ambient; RK2 orders 2.0820/2.0408, RK1 control 1.0402/1.0194. This is a semidiscrete time check. | All five placements plus face-direction and changed-capacity controls; 27 cases |
 
 Complete derivations and parameter conventions are in PHYSICS.md; measured
 errors, evidence paths and performance comparisons are in PERFORMANCE.md.
-Later bug discoveries remain explicit in BUGS.md: the cycle-limit terminal
-output failure and the unported temperature-initializer `break` are currently
-open follow-up items, not passing checks.
+The cycle-limit terminal-output defect (OUTPUT-006) and missed student
+initializer break (STATE-001) are now fixed. Both were reproduced before the
+fix: three cycle-limit cases failed while coincident output/final-time controls
+passed, and the four-argument initializer threw on valid temperature allocation.
+The complete 30-job correction gate passes both builds, all eight CTests per
+backend, source/phase/activation/example suites on CPU/CUDA direct/two ranks,
+two-rank cooling and direct Sod. The phase suite now includes nine cases,
+including partial material heat-capacity regions. All 25 terminal-output cases
+pass across five placements; the focused node test also exchanges current and
+previous temperatures across the two physical GPUs. The two production changes
+are one line each and add no includes.
+
+Evidence: `work/thermal-state-output-fixes-gate-complete.json`,
+`work/node-initializer-baseline-complete.json` and
+`work/cycle-stop-baseline-complete.json`. The initial focused test incorrectly
+expected an exchange in a one-process communicator; MATAR explicitly treats it
+as a no-op. That assertion was corrected, and its failure is retained separately
+in `work/thermal-state-output-fixes-gate-attempt1.json`.

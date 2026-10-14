@@ -31,3 +31,13 @@ target_include_directories(fierro_thermal_input_test PRIVATE ../src/common/inclu
 target_link_libraries(fierro_thermal_input_test PRIVATE ELEMENTS)
 add_test(NAME thermal_material_input COMMAND fierro_thermal_input_test)
 set_tests_properties(thermal_material_input PROPERTIES TIMEOUT 30)
+
+add_executable(fierro_node_thermal_communication_test test_node_thermal_communication.cpp)
+target_include_directories(fierro_node_thermal_communication_test PRIVATE ../src/common/include)
+target_link_libraries(fierro_node_thermal_communication_test PRIVATE ELEMENTS)
+add_test(NAME node_thermal_communication COMMAND fierro_node_thermal_communication_test)
+add_test(NAME node_thermal_communication_mpi2
+  COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ${MPIEXEC_PREFLAGS}
+    $<TARGET_FILE:fierro_node_thermal_communication_test> ${MPIEXEC_POSTFLAGS})
+set_tests_properties(node_thermal_communication node_thermal_communication_mpi2
+  PROPERTIES TIMEOUT 30 ENVIRONMENT "OMP_NUM_THREADS=1")
