@@ -337,3 +337,20 @@ than 1000, two active-geometry refreshes rather than 1001, and 2001 history
 commits rather than 3000. The single actual activation still performs its
 conservative enthalpy mixing. Evidence is under `activation-event-only-*`,
 `benchmark-activation-event-only-*` and `benchmark-event500-*`.
+
+Localized Goldak melting (`tests/thermal_goldak.py --phase`) combines the exact
+moving-source integral with an independently inverted powder/latent-heat law.
+The default source-only case remains available and its regression passes.
+At N=16,32,64, continuum L2 temperature errors are 0.0733325, 0.0186871 and
+0.00501577 K; orders are 1.9724 and 1.8975. The N=32 temporal study at
+0.01,0.005,0.0025 gives projected L2 errors 5.34807e-4, 1.31830e-4 and
+3.30831e-5 K, with orders 2.0203 and 1.9945. CPU/CUDA direct/two-rank and
+physical two-GPU results agree to printed precision; +Y and -X paths also pass.
+
+At N=64, 109 nodes are fully liquid and 138853 remain below solidus. The coarse
+N=16 projection does not yet produce fully liquid nodes, illustrating why the
+refined checks explicitly require a resolved molten region. Total-energy error
+at N=64 is 2.49e-12 or less; all cases check mass, projected energy and the
+independent curvature bound. Evidence uses `work/runs/goldak-phase-*`, with
+plots `work/figures/goldak-phase-convergence.{png,svg}`. This is a synthetic
+zero-conductivity melting reference, not a calibrated material or melt-flow model.

@@ -4,6 +4,8 @@
 Zero conductivity, rho=Cp=1, unit absorbed power, a straight path from -0.2
 to 0.2 in 0.1 time units. The asymmetric Gaussian has front/rear axes 0.3/0.15
 and transverse/depth axes 0.2. The domain is [-1,1]^2 x [-1,0].
+With --phase, exact source energy is inverted through a powder-melting law
+with Ts=302, Tl=304, L=2 and powder/liquid Cp=1/2.
 """
 import argparse
 import json
@@ -14,6 +16,7 @@ import signal
 import subprocess
 import time
 from thermal_integration import heating_input, read_nodes, limit_solver_output
+from thermal_phase_integration import table_config
 
 
 FINAL_TIME = 0.1
@@ -21,6 +24,31 @@ SPEED = 4.0
 FRONT, REAR, MINOR, DEPTH = 0.3, 0.15, 0.2, 0.2
 ROOT_THREE = math.sqrt(3)
 AMPLITUDE = 12*ROOT_THREE/((FRONT+REAR)*MINOR*DEPTH*math.pi**1.5)
+
+
+def heating_enthalpy(temperature, phase):
+    if not phase or temperature <= 302:
+        return temperature-300
+    if temperature >= 304:
+        return 7+2*(temperature-304)
+    x = (temperature-302)/2
+    # Cp_powder=1, Cp_liquid=2, L=2 and smoothstep over [302,304].
+    return 2+2*x+6*x*x-2*x**3-x**4
+
+
+def temperature_from_energy(energy, phase):
+    if not phase or energy <= 2:
+        return 300+energy
+    if energy >= 7:
+        return 304+(energy-7)/2
+    low, high = 302.0, 304.0
+    for _ in range(55):
+        middle = (low+high)/2
+        if heating_enthalpy(middle, True) < energy:
+            low = middle
+        else:
+            high = middle
+    return (low+high)/2
 
 
 def path_integral(position):
@@ -74,7 +102,7 @@ def reference_arrays(mesh, direction):
     return continuous, projected
 
 
-def prepare(directory, mesh, dt, direction):
+def prepare(directory, mesh, dt, direction, phase=False):
     text = heating_input()
     text = text.replace('origin: [0.0, 0.0, 0.0]', 'origin: [-1.0, -1.0, -1.0]')
     text = text.replace('length: [1.0, 1.0, 1.0]', 'length: [2.0, 2.0, 1.0]')
@@ -86,6 +114,16 @@ def prepare(directory, mesh, dt, direction):
     text = text.replace('model: spherical\n    radius: 2.0',
                         f'model: goldak\n    absorptivity: 1.0\n    major_front: {FRONT}\n'
                         f'    major_rear: {REAR}\n    minor: {MINOR}\n    depth: {DEPTH}')
+    if phase:
+        config = ('        phase_change:\n            solidus: 302\n            liquidus: 304\n'
+                  '            latent_heat: 2\n            initial_phase: powder\n')
+        text = text.replace('        id: 0\n        eos_model_type:',
+                            '        id: 0\n'+config+table_config('phase.inp', True, True)+'        eos_model_type:')
+        table = ''
+        for state, cp in [('powder', 1), ('solid', 1.5), ('liquid', 2)]:
+            for field, value in [('density', 1), ('thermal_conductivity', 0), ('specific_heat', cp)]:
+                table += f'*{field.upper()}_{state.upper()}\n{value},300\n'
+        (directory/'phase.inp').write_text(table)
     (directory/'input.yaml').write_text(text)
     endpoints = {'x': [(-0.2, 0), (0.2, 0)], 'minus_x': [(0.2, 0), (-0.2, 0)],
                  'y': [(0, -0.2), (0, 0.2)]}[direction]
@@ -97,11 +135,11 @@ def prepare(directory, mesh, dt, direction):
 def run_case(args, mesh, dt, index):
     directory = args.output/f'n{mesh}-step{index}'
     directory.mkdir()
-    prepare(directory, mesh, dt, args.direction)
+    prepare(directory, mesh, dt, args.direction, args.phase)
     command = [str(args.executable), 'input.yaml']
     if args.ranks > 1:
         command = ['mpirun', '--bind-to', 'none', '-np', str(args.ranks)]+command
-    result = dict(mesh=mesh, dt_max=dt, direction=args.direction, ranks=args.ranks,
+    result = dict(mesh=mesh, dt_max=dt, direction=args.direction, ranks=args.ranks, phase_change=args.phase,
                   status='FAIL', directory=str(directory))
     start = time.monotonic()
     try:
@@ -138,9 +176,9 @@ def run_case(args, mesh, dt, index):
             if rise < -1.e-10:
                 raise ValueError('Positive source produced cooling')
             masses.append(row['mass'])
-            continuum_errors.append((row['mass'], rise-exact))
-            discrete_errors.append((row['mass'], rise-discrete))
-            energies.append(row['mass']*rise)
+            continuum_errors.append((row['mass'], row['temp']-temperature_from_energy(exact, args.phase)))
+            discrete_errors.append((row['mass'], row['temp']-temperature_from_energy(discrete, args.phase)))
+            energies.append(row['mass']*heating_enthalpy(row['temp'], args.phase))
             expected_energies.append(row['mass']*discrete)
             # For f(t)=exp[-3(x-vt)^2/a^2], |f''| <= 6 v^2/a^2.
             # Composite midpoint error <= t_final dt^2 max|f''|/24.
@@ -149,7 +187,8 @@ def run_case(args, mesh, dt, index):
             bound = (AMPLITUDE*FINAL_TIME*dt*dt*SPEED*SPEED/(4*min(FRONT, REAR)**2)*
                      projected[lateral_axis][indices[lateral_axis]]*projected[2][indices[2]])
             bounds.append((row['mass'], bound))
-            if abs(rise-discrete) > bound+1.e-10:
+            # Cp>=1 also bounds the temperature error by this energy bound.
+            if abs(discrete_errors[-1][1]) > bound+1.e-10:
                 raise ValueError('Source error exceeds the midpoint curvature bound')
         mass = math.fsum(masses)
         energy = math.fsum(energies)
@@ -169,6 +208,11 @@ def run_case(args, mesh, dt, index):
             raise ValueError('Mass or projected-energy balance failed')
         if result['projected_l2_error'] > result['projected_l2_bound']+1.e-10:
             raise ValueError('Source time-integration error exceeds bound')
+        if args.phase:
+            result['liquid_nodes'] = sum(row['temp'] >= 304 for row in nodes.values())
+            result['cold_nodes'] = sum(row['temp'] <= 302 for row in nodes.values())
+            if mesh >= 32 and (result['liquid_nodes'] == 0 or result['cold_nodes'] == 0):
+                raise ValueError('Localized phase case must include cold and fully molten nodes')
         result['status'] = 'PASS'
     except Exception as error:
         result['error'] = str(error)
@@ -186,6 +230,7 @@ def main():
     parser.add_argument('--dt', type=float, default=0.0005)
     parser.add_argument('--timesteps', type=float, nargs='+')
     parser.add_argument('--direction', choices=['x', 'y', 'minus_x'], default='x')
+    parser.add_argument('--phase', action='store_true', help='Validate localized powder melting using exact enthalpy inversion')
     parser.add_argument('--ranks', type=int, default=1)
     parser.add_argument('--timeout', type=int, default=600)
     parser.add_argument('--minimum-order', type=float, default=1.8)

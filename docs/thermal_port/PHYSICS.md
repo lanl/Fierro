@@ -59,6 +59,21 @@ the finite-box reference energy. Rotated +Y and reversed -X paths check the
 orientation of the asymmetric source. No solver changes are needed for these
 references; conduction and phase change have separate analytic tests.
 
+The same driver accepts `--phase` to validate localized powder melting. It uses
+rho=1, k=0, powder/solid/liquid Cp=1/1.5/2, Ts=302, Tl=304 and L=2, initially
+at 300 K. Along the monotone heating path, energy relative to the initial state is
+
+    H(T) = T-300                                      for T<=302,
+           2+2x+6x²-2x³-x⁴, x=(T-302)/2             for 302<T<304,
+           7+2(T-304)                                for T>=304.
+
+The driver independently inverts H by bisection after integrating the source,
+both before and after the spatial projection. Once a node consolidates it stays
+above liquidus in this heating-only problem, where the powder and solid
+enthalpy references coincide. Cp>=1 also makes the source-energy error bound
+a temperature-error bound. Refined cases require both cold and fully molten
+nodes; the separate powder-cycle tests cover cooling and consolidation history.
+
 ## Prescribed boundary flux
 
 `heat_flux_model: constant` with one `heat_flux_bc_global_vars` value prescribes
