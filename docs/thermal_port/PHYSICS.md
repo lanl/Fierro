@@ -38,6 +38,27 @@ Finite meshes and centroid quadrature introduce truncation/discretization error;
 they do not change the model normalization. The source is sampled at each RK
 stage's state time, including power ramps and source motion.
 
+`tests/thermal_goldak.py` isolates source motion with zero conductivity and
+unit density/Cp. The source travels from x=-0.2 to x=0.2 at speed v=4 over
+0.1 time units, with front/rear axes 0.3/0.15 and transverse/depth axes 0.2.
+Since f/a is the same on both sides, the common amplitude is
+`B = 12 sqrt(3) A P / [(a_front+a_rear) b c pi^(3/2)]`. Temperature rise is
+`B exp[-3(y²/b²+z²/c²)] I(x)`, where I integrates the longitudinal Gaussian.
+Split at the source crossing time `(x+0.2)/v`, clamped to the simulated interval.
+For each subinterval [t0,t1] with its front or rear width a,
+
+    I_part = a sqrt(pi)/(2 sqrt(3) v)
+             [erf(sqrt(3)(x+0.2-v t0)/a) - erf(sqrt(3)(x+0.2-v t1)/a)].
+
+The driver compares against both this continuum solution and its exact
+cell-centroid-to-node projection, which is the average over the adjacent
+uniform cells. Refining time against the projected reference isolates RK
+source sampling; refining space against the continuum reference measures
+centroid quadrature and nodal projection. Integrating erf analytically gives
+the finite-box reference energy. Rotated +Y and reversed -X paths check the
+orientation of the asymmetric source. No solver changes are needed for these
+references; conduction and phase change have separate analytic tests.
+
 ## Prescribed boundary flux
 
 `heat_flux_model: constant` with one `heat_flux_bc_global_vars` value prescribes

@@ -57,7 +57,7 @@ No failed-run evidence was overwritten. Standalone test drivers are committed in
 `apps/multiphysics/tests` and accept an executable path, a new output directory
 and rank count. Run `--help` for each driver's options.
 
-These tests establish component behavior and regression compatibility. Post-checkpoint spatial/time convergence, Stefan melting, steady conduction and
+These tests establish component behavior and regression compatibility. Post-checkpoint spatial/time convergence, Stefan melting, steady conduction, moving Goldak sources and
 matched performance measurements are recorded in PERFORMANCE.md; their drivers
 retain independent analytic checks alongside the timing data. The phase/deposition model is a fixed
 mesh thermal model; its limitations and material-data provenance are documented

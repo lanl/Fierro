@@ -241,3 +241,30 @@ microseconds for student tables. Registers fall from 136 to 123 per thread,
 with zero reported local-memory allocation. The student-table property update
 now dominates the measured thermal kernels: 105.59 microseconds per call,
 3001 calls. Profile evidence is in `work/profiles/nodal-reuse`.
+
+The moving Goldak reference in PHYSICS.md now passes CPU/CUDA, directly and
+with two ranks, including one rank per physical GPU. With zero conductivity,
+it separately checks time integration against the exact lumped-cell source
+projection and spatial convergence against the continuous temperature. For
+N=16,32,64 (N×N×N/2 cells), dt=0.0005, continuum L2 errors are
+0.140750, 0.0349895 and 0.00914583 K, giving orders 2.0081 and 1.9357.
+At N=16, dt=0.01,0.005,0.0025 produces projected L2 errors
+4.18972e-4, 1.08064e-4 and 2.63645e-5 K, with orders 1.9550 and 2.0352.
+All five backend/rank placements give identical printed errors. The +Y and
+-X orientation cases at N=32 also pass the four primary configurations.
+
+The finite-box exact energy is 0.09999999999980572; at N=64, measured energy
+differs by less than 9.5e-14. Each nodal time error is screened against the
+composite-midpoint curvature bound, using |d² exp[-3(x-vt)²/a²]/dt²|<=6v²/a².
+The original test-development tolerance was too tight at N=64 and was replaced
+by this derived bound; no source implementation change was needed. Refinement
+orders remain the tighter accuracy check. Evidence is under `goldak-v2-*`,
+with plots `work/figures/goldak-convergence.{png,svg}`.
+
+The largest two-rank case exposed PERF-001 in unchanged mesh startup, not in
+thermal integration. Two ranks sharing GPU 1 take about 116 seconds inside the
+application, of which only 1.2 seconds is SGTM integration. With one rank per
+physical GPU, wall time falls to about 29 seconds, compared with about 10 seconds
+for one GPU rank. These are correctness-run diagnostics, not repeated performance
+benchmarks; GPU 0 also serves the desktop. The recorded stack and source loops
+locate the cost in ELEMENTS corner-connectivity construction.
