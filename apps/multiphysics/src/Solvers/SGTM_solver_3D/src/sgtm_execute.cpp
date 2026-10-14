@@ -385,7 +385,8 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value, State.node.thermal_mass);
 
             State.node.temp.communicate();
-            State.node.temp_n0.communicate();
+            // RK initialization is the only writer of the previous-step field.
+            if (rk_stage == 0) State.node.temp_n0.communicate();
 
             // ---- Find the element average temperature ---- //
 

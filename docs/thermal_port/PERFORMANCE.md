@@ -628,3 +628,57 @@ the numerical work in these benchmark cases. CPU/GPU direct and two-rank
 correctness, including separate-device runs, remain passing. The unrelated
 original two-rank Sod reference discrepancy and slow ELEMENTS startup remain
 open; material-data identity remains unverified (see BUGS.md).
+
+Previous-step temperature exchange is now limited to the first RK stage. The
+field is written by RK initialization and stays fixed throughout the stages;
+current temperature still communicates after every stage. With the usual two
+stages this removes one repeated neighbor exchange per step. MATAR's exchange
+also copies the full local array to the host and back, so the change avoids
+those redundant transfers and fences. It adds no headers, arrays or dependency
+changes. The first exchange remains in place.
+
+The accepted comparison uses preserved `heat-flux-help` binaries (b5daf38c) and
+`mpi-temp-n0` binaries, one warmup plus three measured runs per case. Values are
+median SGTM calculation seconds [minimum, maximum], excluding mesh startup and
+including the existing output work. Each pair uses identical physical CPU masks:
+0,1,8,9 for a direct process, or 0,1,2,3 / 8,9,10,11 for two ranks, with four
+threads per rank. GPU 1 is the single-device placement; separate GPUs use rank
+0 on GPU 0 and rank 1 on GPU 1. GPU 0 also runs the desktop. All pairs complete
+the same number of steps and pass their independent numerical checks.
+
+| Placement | Mesh / case | Before | After | Ratio | Observed ranges overlap |
+| --- | --- | ---: | ---: | ---: | --- |
+| CPU 2 ranks | 32³ / phase | 5.277006 [5.245548, 5.326967] | 5.231728 [5.230128, 5.271635] | 1.009× | Yes |
+| CPU 2 ranks | 32³ / variable | 7.145998 [7.081134, 7.148021] | 7.055259 [6.953131, 7.082996] | 1.013× | Yes |
+| CPU 2 ranks | 32³ / cosine | 1.680900 [1.639299, 1.952911] | 1.653984 [1.648819, 1.669153] | 1.016× | Yes |
+| CUDA 2 ranks, shared GPU | 32³ / phase | 3.966505 [3.902812, 3.970642] | 3.866568 [3.782905, 3.894512] | 1.026× | No |
+| CUDA 2 ranks, shared GPU | 32³ / variable | 3.549320 [3.488506, 3.558872] | 3.471226 [3.468412, 3.500535] | 1.022× | Yes |
+| CUDA 2 ranks, shared GPU | 32³ / cosine | 2.256559 [2.226529, 2.257976] | 2.213882 [2.189782, 2.224626] | 1.019× | No |
+| CUDA 2 ranks, separate GPUs | 32³ / phase | 1.284207 [1.283471, 1.310163] | 1.205012 [1.197736, 1.270074] | 1.066× | No |
+| CUDA 2 ranks, separate GPUs | 32³ / variable | 1.144840 [1.124833, 1.155610] | 1.043550 [1.040224, 1.046226] | 1.097× | No |
+| CUDA 2 ranks, separate GPUs | 32³ / cosine | 0.792996 [0.792306, 0.794398] | 0.710289 [0.708844, 0.710450] | 1.116× | No |
+| CPU direct | 32³ / cosine | 2.718580 [2.668264, 2.727403] | 2.649823 [2.643927, 2.686684] | 1.026× | Yes |
+| CUDA direct | 32³ / cosine | 0.412529 [0.411862, 0.413147] | 0.412296 [0.412256, 0.414239] | 1.001× | Yes |
+| CUDA 2 ranks, separate GPUs | 64³ / variable | 4.570080 [4.560009, 4.641931] | 4.325015 [4.268105, 4.336350] | 1.057× | No |
+| CUDA 2 ranks, separate GPUs | 64³ / variable_cold | 4.038791 [4.036496, 4.071871] | 3.869709 [3.809608, 3.988620] | 1.044× | No |
+
+Separate-GPU solver times fall by 6.2%, 8.8% and 10.4% for the 32³ phase,
+table and cosine cases, and by 5.4%/4.2% for the 64³ melting/cold tables.
+CPU and direct-process timing ranges overlap, so their small median shifts
+are not claimed as a speedup. Shared-GPU gains are smaller. Three measured
+repetitions describe observed variation, not a formal significance estimate.
+The direct-process exchange is already a no-op in MATAR.
+
+All 59 gate jobs pass: the edit guard, two builds, 30 correctness jobs and 26
+timing jobs. Correctness covers phase/activation on CPU/CUDA direct/two ranks,
+RK1/RK3 phase controls on two ranks, nonlinear conduction, moving-source
+conduction, source integration, radiation and the original cooling regression.
+Phase, activation, nonlinear and moving-source checks also use separate GPUs.
+A readback comparison of all 88 saved phase/activation cases against the
+accepted pre-exchange-change code finds exactly identical values for all
+153,944 compared nodal fields at every saved time (partition-local IDs excluded).
+
+Evidence: `work/mpi-temp-n0-gate-complete.json`,
+`work/mpi-temp-n0-gate-timing-summary.json`,
+`work/mpi-temp-n0-nodal-output-audit.json` and
+`work/checkpoints/mpi-temp-n0` (patch, source/binary hashes and commit record).
