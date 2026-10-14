@@ -227,17 +227,20 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             // ---- save the smallest dt of all materials ---- //
             min_dt_calc = fmin(dt_mat, min_dt_calc);
         } // end for loop over all mats
-        dt = min_dt_calc;
-        const double event_time = next_activation_time(Materials, State, time_value);
-        if (Kokkos::isfinite(event_time)) dt = fmin(dt, event_time - time_value);
-
-        // Global minimum dt across MPI ranks (each rank's CFL limit is local to its partition).
+        // Keep the physical step limit separate from event clipping. Otherwise
+        // a roundoff-sized step at an event seeds hundreds of 1.1x recovery steps.
+        double step_limits[2] = {min_dt_calc,
+            next_activation_time(Materials, State, time_value) - time_value};
         {
             int init = 0;
             if (MPI_Initialized(&init) == MPI_SUCCESS && init) {
-                MPI_Allreduce(MPI_IN_PLACE, &dt, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+                MPI_Allreduce(MPI_IN_PLACE, step_limits, thermal_models.has_activation ? 2 : 1,
+                              MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
             }
         }
+        const bool activation_limited = step_limits[1] < step_limits[0];
+        const double recovery_dt = fmax(cached_pregraphics_dt, step_limits[0]);
+        dt = fmin(step_limits[0], step_limits[1]);
 
         // ---- Print the initial time step and time value ---- //
         if (cycle == 0) {
@@ -458,6 +461,10 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             graphics_time = (double)(output_id) * graphics_dt_ival;
 
         } // end if
+
+        // Newly active material is included in the next stability calculation.
+        // Restore the growth history only after integrating the clipped step.
+        if (activation_limited) dt = recovery_dt;
 
         // end of calculation
         if (time_value >= time_final) {

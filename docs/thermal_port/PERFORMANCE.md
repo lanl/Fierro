@@ -87,3 +87,17 @@ with two MPI ranks. Every benchmark repetition passes its independent analytic
 energy/temperature checks. Evidence uses `distance-*`, `baseline-cfl-*` and
 `benchmark-distance-*` run/log prefixes. Binaries from this step are preserved
 in `work/checkpoints/distance-opt` before the event-recovery fix.
+
+## Activation-event timestep recovery
+
+THERM-011 is fixed by retaining separate global stability and event limits in
+one MPI reduction. The solver integrates the clipped step, processes deposition,
+then restores the prior growth history. Newly activated material participates
+in the next stability calculation. This also handles coincident graphics events.
+
+With dt_max=0.0002, the regression drops from 781 steps to 501. Its independent
+latent-energy and temperature checks pass on CPU/CUDA, directly and with two
+ranks, including output at the activation time. All 13 activation/output cases
+and the original cooling regression also pass. The unaffected 1000-step GPU
+phase workload remains about 1.507 s, with no resolved performance change;
+speedup measurements for the roundoff-triggered case are recorded separately.

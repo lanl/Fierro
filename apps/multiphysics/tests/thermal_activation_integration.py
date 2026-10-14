@@ -6,6 +6,7 @@ import json
 import math
 import os
 from pathlib import Path
+import re
 import signal
 import subprocess
 import time
@@ -228,6 +229,15 @@ def run_case(args, case):
     directory = args.output / case
     directory.mkdir()
     expected, initial, expected_mass, expected_materials, origin = prepare(directory, case, args.format)
+    if args.dt_max is not None:
+        path = directory / 'input.yaml'
+        text = path.read_text().replace('    dt_max: 0.1\n', f'    dt_max: {args.dt_max:.17g}\n')
+        text = text.replace('    dt_start: 0.1\n', f'    dt_start: {args.dt_max:.17g}\n')
+        path.write_text(text)
+    if args.graphics_dt is not None:
+        path = directory / 'input.yaml'
+        path.write_text(path.read_text().replace('graphics_time_step: 0.1',
+                                                f'graphics_time_step: {args.graphics_dt:.17g}'))
     command = [str(args.executable), 'input.yaml']
     if args.ranks > 1:
         command = [args.mpiexec, '-np', str(args.ranks)] + command
@@ -287,6 +297,11 @@ def run_case(args, case):
                       total_mass=mass, expected_active_mass=math.fsum(state['active_mass'] for state in expected.values()))
         if error > 2.e-8 or abs(energy - exact_energy) > 1.e-8 or abs(mass - expected_mass) > 1.e-10:
             raise ValueError('Activation mass/energy/temperature check failed')
+        cycles = re.findall(r'cycle =\s*(\d+)', (directory/'run.log').read_text())
+        if cycles:
+            result['last_cycle'] = max(map(int, cycles))
+        if args.maximum_cycles is not None and (not cycles or result['last_cycle'] > args.maximum_cycles):
+            raise ValueError('Activation event caused excessive timestep recovery')
         result['status'] = 'PASS'
     except Exception as error:
         result['error'] = str(error)
@@ -305,6 +320,9 @@ def main():
     parser.add_argument('--timeout', type=int, default=180)
     parser.add_argument('--format', choices=['state', 'viz_and_state'], default='state')
     parser.add_argument('--case', choices=['all'] + CASES, default='all')
+    parser.add_argument('--dt-max', type=float, help='Override the starting/maximum timestep')
+    parser.add_argument('--maximum-cycles', type=int, help='Bound event-clipping recovery work')
+    parser.add_argument('--graphics-dt', type=float, help='Exercise coincident output/activation times')
     args = parser.parse_args()
     args.executable = args.executable.resolve(strict=True)
     args.output = args.output.resolve()
