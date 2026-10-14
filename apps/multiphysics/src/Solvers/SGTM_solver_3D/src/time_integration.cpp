@@ -136,9 +136,6 @@ void SGTM3D::get_timestep(swage::Mesh_t& mesh,
         double coords0[24];  // element coords
         ViewCArrayKokkos<double> coords(coords0, 8, 3);
 
-        double distance0[28];  // array for holding distances between each node
-        ViewCArrayKokkos<double> dist(distance0, 28);
-
         // Getting the coordinates of the element
         for (size_t node_lid = 0; node_lid < 8; node_lid++) {
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
@@ -146,39 +143,16 @@ void SGTM3D::get_timestep(swage::Mesh_t& mesh,
             } // end for dim
         } // end for loop over node_lid
 
-        // loop conditions needed for distance calculation
-        size_t countA = 0;
-        size_t countB = 1;
-        size_t a;
-        size_t b;
-        size_t loop = 0;
-
-        // Only works for 3D
-        // Solving for the magnitude of distance between each node
-        for (size_t i = 0; i < 28; i++) {
-            a = countA;
-            b = countB;
-
-            // returns magnitude of distance between each node, 28 total options
-            dist(i) = fabs(sqrt((pow((coords(b, 0) - coords(a, 0)), 2.0)
-            + pow((coords(b, 1) - coords(a, 1)), 2.0)
-            + pow((coords(b, 2) - coords(a, 2)), 2.0))));
-
-            countB++;
-            countA++;
-
-            // tricky indexing
-            if (countB > 7) {
-                loop++;
-                countB = 1 + loop;
-                countA = 0;
+        // The diffusion limit uses h squared. Reduce squared pair distances
+        // directly, avoiding 28 powers/roots and an intermediate distance array.
+        double distance_squared_min = Kokkos::Experimental::infinity_v<double>;
+        for (size_t a = 0; a < 7; ++a) {
+            for (size_t b = a + 1; b < 8; ++b) {
+                const double dx = coords(b, 0) - coords(a, 0);
+                const double dy = coords(b, 1) - coords(a, 1);
+                const double dz = coords(b, 2) - coords(a, 2);
+                distance_squared_min = fmin(distance_squared_min, dx*dx + dy*dy + dz*dz);
             }
-        } // end for i
-
-        double dist_min = dist(0);
-
-        for (int i = 0; i < 28; ++i) {
-            dist_min = fmin(dist(i), dist_min);
         }
 
         // local dt calc based on CFL
@@ -206,8 +180,7 @@ void SGTM3D::get_timestep(swage::Mesh_t& mesh,
         // h_effective = cell volume / max face area
 
         
-        double h = (dist_min); // maybe half?
-        double dt_vn = (h * h)/(2.0*3.0*alpha); 
+        double dt_vn = distance_squared_min/(2.0*3.0*alpha);
         // std::cout << "dt_vn: " << dt_vn << std::endl;
 
         dt_vn *= 0.3; // stability factor to account for BC flux terms, 
