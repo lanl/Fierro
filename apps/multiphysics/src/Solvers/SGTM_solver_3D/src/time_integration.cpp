@@ -73,6 +73,7 @@ void SGTM3D::rk_init(
             // node_vel(node_gid, i) = node_vel(node_gid, i);
         }
         node_temp_n0(node_gid) = node_temp(node_gid);
+        node_q_flux(node_gid) = 0.0;
     }); // end parallel for
 
     Kokkos::fence();

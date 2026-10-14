@@ -291,10 +291,12 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
             double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
 
-            // ---- Initialize the nodal flux to zero for this RK stage ---- //
-            FOR_ALL(node_gid, 0, mesh.num_nodes, {
-                State.node.q_transfer(node_gid) = 0.0;
-            }); // end for parallel for over nodes
+            // RK initialization already clears stage zero.
+            if (rk_stage > 0) {
+                FOR_ALL(node_gid, 0, mesh.num_nodes, {
+                    State.node.q_transfer(node_gid) = 0.0;
+                });
+            }
 
             State.corner.q_transfer.set_values(0.0);
             // Stage zero uses the initial or completed-step properties, already

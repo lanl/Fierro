@@ -544,7 +544,7 @@ numerical checks; this candidate is rejected on performance grounds.
 | Two GPUs 64³ melting tables | 4.661779 (4.658406–4.895756) | 4.726845 (4.706947–5.012093) | Overlapping ranges |
 | Two GPUs 64³ cold tables | 4.151143 (4.143700–4.191748) | 4.267199 (4.264416–4.298613) | 2.8% slower |
 
-These use four OpenMP threads per rank, 1000 completed steps, one warm-up and
+These use four OpenMP threads per rank, 1000 requested steps, one warm-up and
 three measured runs. All four 32³ GPU pairs and the CPU cosine control had
 overlapping ranges. Baseline binaries are `convection-input`; candidate binaries
 are `endpoint-kernel-choice`. Evidence is in
@@ -724,7 +724,7 @@ Instrumented 64³ property-kernel means fall from 621.408 to 503.140 microsecond
 for melting tables (19.0%) and 305.585 to 218.116 for cold tables (28.6%). Nodal
 update and conduction means are essentially unchanged. Independent uninstrumented
 SGTM timing uses preserved `mpi-temp-n0` and `property-reference` binaries,
-one warmup plus three measured repetitions, 1000 steps, and the same physical
+one warmup plus three measured repetitions, 1000 requested steps, and the same physical
 CPU masks and device placements as the preceding comparison. Every run validates
 its temperature, energy and step count. These are incremental comparisons.
 
@@ -880,7 +880,9 @@ kernel duration; it does not isolate all host costs. The history lambda captures
 recorded explicitly and exclude application/mesh startup.
 
 The complete matrix passes all 40 jobs (one warmup plus three measured runs per
-version/configuration), with matching four-core affinity masks and 1000 steps.
+version/configuration), with matching four-core affinity masks and 1000 requested steps.
+The cosine control takes 1001 completed steps in both versions; other cases take
+1000. The timing summarizer verifies matched completed-step lists.
 The following times are SGTM calculation time, including output and excluding
 mesh/process startup. Ranges are the observed three-sample minimum and maximum;
 they are not confidence intervals.
@@ -920,3 +922,41 @@ overlapping ranges. Source and both binary hashes match the measured snapshots.
 Evidence: `work/history-property-fusion-gate-complete.json`,
 `work/history-property-fusion-gate-timing-summary.json`, and
 `work/checkpoints/history-property-fusion`.
+
+RK initialization/reset fusion is under evaluation against MATAR-cleanup
+checkpoint `19ed5971`. The existing nodal initialization loop also clears the
+first-stage nodal heat-transfer accumulator; later RK stages still perform
+their reset. Corner accumulation and the pre-cycle reset are unchanged. The
+change touches two existing C++ files and adds no headers, arrays or raw
+Kokkos calls. Both builds and 291 numerical cases in 39 suites pass across
+all five hardware/rank placements, including RK1/RK3 controls. All 352870
+compared saved values across 110 phase/activation cases exactly match the
+accepted baseline. Convection spatial and radiation temporal convergence
+remain second order. Resource/profiling review passes; total SGTM timing is pending.
+Evidence: `work/rk-reset-fusion-correctness-summary.json` and
+`work/rk-reset-fusion-output-audit.json`.
+
+Matched event-trace-off profiles (both versions independently pass physics checks):
+
+| Workload | Completed steps, both versions | RK + reset before, ms | After, ms | Combined device-time change |
+| --- | ---: | ---: | ---: | ---: |
+| phase 32³ | 1000 | 4.646571 | 3.577863 | -23.00% |
+| cosine 32³ | 1001 | 4.661140 | 3.580108 | -23.19% |
+| variable 64³ | 1000 | 12.453609 | 11.066599 | -11.14% |
+
+The RK kernel grows slightly because it now performs the reset; the combined
+time decreases. Its resource usage stays at REG24, STACK0 and LOCAL0. Other
+major kernel resources and means are stable. Every completed step removes one
+nodal reset launch and its associated 52288-byte host-to-device upload: 1000
+launches/~49.87 MiB in phase/melting, 1001 in cosine. API launch/memcpy counts
+confirm the same reduction. These instrumented results authorize timing, not
+acceptance or a claim of total solver speedup. Evidence:
+`work/rk-reset-fusion-profile-comparison.json` and
+`work/rk-reset-fusion-profile-review.json`.
+
+The cosine benchmark's extra final step is present in both accepted and candidate
+versions, including earlier metadata-reference and history-fusion timing pairs.
+It results from final-time accumulation/clipping near roundoff (THERM-013).
+Earlier wording that called all benchmark runs 1000 completed steps was too broad;
+comparisons remain matched because actual completed counts were recorded and
+checked for equality. No solver stopping change is mixed into this experiment.
