@@ -333,3 +333,33 @@ tables with different region constants, partial melting, powder heating and
 consolidated cooling. Additional analytic nodal-temperature, mass and enthalpy
 checks ensure that diagnostic agreement does not hide a changed thermal state.
 Table density is an output property; these cases also verify conserved mass.
+
+## Saved Fourier-flux verification
+
+For rho=Cp=k=1 on the insulated unit cube, the cosine-diffusion reference is
+
+    T = 300 + A [cos(2 pi x) + cos(2 pi y)] exp(-4 pi² t),  A=3/8,
+    q = 2 pi A exp(-4 pi² t) [sin(2 pi x), sin(2 pi y), 0].
+
+`thermal_flux_output.py` compares saved material flux with two separate
+references. First, it reconstructs Cartesian face-average temperature differences
+from the eight saved nodal temperatures and applies the material conductivity.
+This isolates output time-level consistency from spatial discretization error.
+Second, for the cosine cases it evaluates the continuum vector above at each
+cell center. The reported analytic L2 error is the square root of the mean
+squared vector error; cells have equal volume. The mesh has N×N×2 cells because
+the solution is independent of z.
+
+With h=1/N, the discrete cosine decay rate is lambda_h=4 sin²(pi h)/h².
+For RK2 with dt=0.02/N², its amplitude after m steps is
+`[1-lambda_h dt+(lambda_h dt)²/2]^m`. The reconstructed x flux has amplitude
+`2 A sin(pi h)/h` times that decay factor, and likewise for y. The temperature
+check uses the discrete RK factor; the flux convergence study uses the continuum
+solution. RK2 temporal error is O(h⁴) under this timestep refinement, leaving
+O(h²) spatial error in the saved flux. Initial, intermediate (t=0.01), and final
+(t=0.02) fields are evaluated independently.
+
+The output refresh recomputes gradients and flux from the saved temperature and
+current properties. It does not accumulate another corner-energy contribution
+or update legacy erosion flags. Thus writing a hot initial state or a completed
+step cannot advance the physical state merely to obtain its diagnostics.

@@ -779,3 +779,49 @@ The initial 5.5% phase slowdown is not reproduced. This one-line candidate is
 accepted for the measured large-GPU gains; no speedup is claimed for phase32,
 most other small cases, or CPU direct execution. All 72 probe/timing/confirmation
 jobs pass. Future changes still require their own matched baselines.
+
+Saved-flux correction (OUTPUT-007): diagnostics are refreshed from the initial
+or completed temperature immediately before output. Diagnostic calls do not
+accumulate stage energy or update legacy erosion. No headers or arrays are
+added. All 130 focused correctness cases pass, and the independent before/after
+readback finds exactly unchanged nodal temperature and mass at 85 saved times.
+
+Three matched comparisons use the accepted `property-reference` baseline and
+`flux-output` candidate, identical affinities, four threads per rank, one warmup
+and three measured runs. All runs pass their independent numerical checks.
+
+| Placement / workload | Before median [range], s | After median [range], s |
+| --- | ---: | ---: |
+| CPU direct, 32³ melting tables | 12.365332 [12.308497, 12.385763] | 12.348767 [12.335071, 12.455156] |
+| CUDA direct, 64³ melting tables | 3.704218 [3.662400, 3.710400] | 3.663222 [3.654874, 3.669953] |
+| CUDA two ranks / two GPUs, 64³ melting tables | 4.087085 [4.018205, 4.095785] | 4.055085 [4.045371, 4.143344] |
+
+All three observed ranges overlap. The output correction shows no demonstrated
+performance penalty or speedup in these samples. These are 1000-step cases with
+initial/final output; more frequent output necessarily performs more diagnostic
+refreshes. Evidence: `work/flux-output-gate-complete.json` and
+`work/flux-output-gate-timing-summary.json`.
+
+Both original two-rank cooling regressions pass after correcting the stale
+stored reference. The replacement flux is reconstructed from the preserved
+pre-fix nodal temperatures, not copied from candidate flux. Only flux columns
+change; element identifiers, coordinates and other fields are unchanged.
+Candidate flux agrees with that independent reconstruction within 1.86e-10,
+and all 31535 before/after nodal records agree exactly. Evidence:
+`work/flux-output-fix-audit.json` and `work/flux-output-cooling-gate-complete.json`.
+
+Saved-flux analytic refinement passes across all five placements. These are
+correctness results, not timing measurements; the ten new refined runs reuse
+five existing coarse runs for the N=8/16/32 comparison.
+
+| N | L2 at t=0 | L2 at t=0.01 | L2 at t=0.02 |
+| ---: | ---: | ---: | ---: |
+| 8 | 0.06009389600 | 0.009412262392 | 0.01502134613 |
+| 16 | 0.01511062600 | 0.002198685064 | 0.003925003174 |
+| 32 | 0.003783122283 | 0.0005399359863 | 0.0009917625691 |
+
+Final orders are 1.93625 and 1.98463; initial/intermediate orders also approach
+two. CPU/GPU L2 error norms are identical across placements. The inspected
+PNG/SVG plot and full three-time results are under
+`work/figures/flux-output-convergence` and
+`work/flux-output-convergence-summary.json`.

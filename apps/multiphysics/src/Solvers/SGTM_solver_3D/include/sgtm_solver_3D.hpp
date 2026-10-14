@@ -325,7 +325,8 @@ public:
         const double small,
         const double dt,
         const double rk_alpha,
-    const DRaggedRightArrayKokkos<unsigned char>& active) const;
+        const DRaggedRightArrayKokkos<unsigned char>& active,
+        const bool diagnostic_output = false) const;
 
     void moving_flux(
         const Material_t& Materials,

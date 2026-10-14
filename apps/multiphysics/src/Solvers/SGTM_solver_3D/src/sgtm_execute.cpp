@@ -147,8 +147,22 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     };
     refresh_properties();
 
+    // Saved fluxes use the same temperature and properties as the output.
+    auto refresh_flux_output = [&]() {
+        for (size_t mat = 0; mat < num_mats; ++mat)
+            get_heat_flux(Materials, mesh, State.GaussPoints.vol, State.node.coords,
+                State.node.temp, State.MaterialPoints.q_flux,
+                State.MaterialPoints.conductivity, State.MaterialPoints.mat_volfrac,
+                State.MaterialPoints.temp_grad, State.corner.q_transfer,
+                State.corners_in_mat_elem, State.MaterialPoints.eroded,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
+                State.MaterialToMeshMaps.num_mat_elems.host(mat), mat,
+                fuzz, small, dt, 1.0, State.MaterialPoints.thermal_active, true);
+    };
+
     // ---- Write initial state at t=0 ---- 
     if (log) log->info("Writing outputs to file at %f \n", graphics_time);
+    refresh_flux_output();
     update_phase_output(Materials, mesh, State);
     mesh_writer.write_mesh(
         mesh, 
@@ -449,6 +463,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             if (log) log->info("Writing outputs to file at %f \n", graphics_time);
             if (log) log->info("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
             if (log) log->flush();
+            refresh_flux_output();
             update_phase_output(Materials, mesh, State);
             mesh_writer.write_mesh(mesh,
                                    State,

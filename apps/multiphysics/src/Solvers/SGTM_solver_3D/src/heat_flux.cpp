@@ -88,7 +88,8 @@ void SGTM3D::get_heat_flux(
     const double small,
     const double dt,
     const double rk_alpha,
-    const DRaggedRightArrayKokkos<unsigned char>& active) const
+    const DRaggedRightArrayKokkos<unsigned char>& active,
+    const bool diagnostic_output) const
 {
     const size_t num_dims = 3;
     const size_t num_nodes_in_elem = 8;
@@ -138,7 +139,7 @@ void SGTM3D::get_heat_flux(
 
 
         // ---- Change element state if above some melting temperature ---- //
-        if (!Materials.thermal.materials(mat_id).phase_change && avg_temp >= 900) {
+        if (!diagnostic_output && !Materials.thermal.materials(mat_id).phase_change && avg_temp >= 900) {
             // printf("Melted!");
             MaterialPoints_eroded(mat_id, mat_elem_sid) = true;
         } 
@@ -172,6 +173,9 @@ void SGTM3D::get_heat_flux(
         for(int dim = 0; dim < mesh.num_dims; dim++){
             MaterialPoints_q_flux(mat_id, mat_point_sid, dim) = -1.0 * conductivity * temp_grad(dim);
         }
+
+        // Output refreshes must not add another contribution to the RK stage.
+        if (diagnostic_output) return;
 
         // --- Calculate flux through each corner the corners \lambda_{c} = q_z \cdot \hat B_c   ---- //
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {

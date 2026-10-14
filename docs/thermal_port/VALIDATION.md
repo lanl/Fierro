@@ -125,3 +125,43 @@ ER70S-labelled dataset and independently verifies constant-solid-property
 heating and energy on all five placements; the label remains unverified.
 
 The expanded six-example driver also passes CPU direct and two ranks on separate GPUs. All final nodal fields agree with the CPU reference to a maximum scaled difference of 3.41e-15 across the six cases. Evidence: work/expanded-examples-complete.json (12 application runs).
+
+Saved Fourier-flux time consistency is now checked by `thermal_flux_output.py`.
+It independently reconstructs Cartesian face-average gradients from the saved
+nodal temperatures, then applies constant or temperature-dependent conductivity.
+Its seven cases are RK1/RK2/RK3 insulated cosine decay, a cycle-limited exit,
+nonlinear Cp(T)=k(T) conduction, a hot zero-step output, and the original cooling
+cube with additional nodal diagnostics. Cosine cases verify the exact discrete
+RK amplification and conserved energy; the nonlinear case checks its analytic
+reference and enthalpy. The cooling cube checks bounds, mass and its prescribed
+boundary, without claiming an analytic solution for its combined 3-D boundaries.
+The zero-step case also requires writing diagnostics to leave erosion unset.
+
+All seven cases reproduce the old flux-time defect on all five placements,
+while their temperature/energy controls pass. The repaired solver passes these
+35 cases plus 30 material-output and 65 activation cases. An independent
+before/after audit compares 85 saved outputs and 31535 node records: temperatures
+and masses are exactly unchanged. Final cooling flux matches the value derived
+from the pre-fix temperature field within 1.86e-10. Evidence is preserved in
+`work/flux-output-baseline-complete.json` and `work/flux-output-fix-audit.json`.
+The independently corrected original cooling reference passes both CPU/CUDA
+two-rank regressions (8000 compared values each, maximum error 2.01e-10).
+Paired CPU/direct-GPU/two-GPU timings overlap their baseline ranges.
+
+Example focused invocation, after loading the documented build modules:
+
+```bash
+OMP_NUM_THREADS=4 CUDA_VISIBLE_DEVICES=1 python3 apps/multiphysics/tests/thermal_flux_output.py --executable /absolute/path/to/Fierro --output /absolute/path/to/new-results --ranks 2
+```
+
+The optional `--size` argument also supports spatial refinement of this flux
+check. N=8/16/32 with dt=0.02/N² passes at t=0, 0.01 and 0.02 across all five
+placements: ten new N=16/32 runs plus readback of the five existing N=8 cases.
+Initial flux orders are 1.99166/1.99791, intermediate orders 2.09790/2.02578,
+and final orders 1.93625/1.98463. Final L2 errors are 0.01502134613,
+0.003925003174 and 0.0009917625691. All backend error norms are identical;
+flux agrees with gradients reconstructed from saved temperatures within 2.64e-11.
+The continuum reference and error norm are derived in PHYSICS.md. Evidence:
+`work/flux-output-convergence-gate-complete.json`,
+`work/flux-output-convergence-summary.json`, and the rendered/inspected
+`work/figures/flux-output-convergence.png` and `.svg`.
