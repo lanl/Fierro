@@ -89,9 +89,13 @@ def main():
     parser.add_argument('--ranks', type=int, default=1)
     parser.add_argument('--repeats', type=int, default=3)
     parser.add_argument('--timeout', type=int, default=600)
+    parser.add_argument('--output-limit-mib', type=int, default=32,
+                        help='Per-file solver output limit (32 to 1024 MiB); raise for larger meshes')
     args = parser.parse_args()
     if args.size < 4 or args.size % 2 or args.steps <= 0 or args.repeats < 2:
         parser.error('Use an even size >=4, positive steps and at least two repetitions')
+    if not 32 <= args.output_limit_mib <= 1024:
+        parser.error('Use an output limit between 32 and 1024 MiB per file')
     args.executable = args.executable.resolve(strict=True)
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
@@ -108,7 +112,8 @@ def main():
         try:
             with (directory/'run.log').open('w') as log:
                 process = subprocess.Popen(command, cwd=directory, stdout=log, stderr=subprocess.STDOUT,
-                                           start_new_session=True, preexec_fn=limit_solver_output)
+                                           start_new_session=True,
+                                           preexec_fn=lambda: limit_solver_output(args.output_limit_mib))
                 try:
                     process.wait(timeout=args.timeout)
                 except subprocess.TimeoutExpired:
@@ -134,6 +139,7 @@ def main():
         print(json.dumps(result), flush=True)
     measured = [row['solver_seconds'] for row in results[1:] if row['status'] == 'PASS']
     summary = dict(case=args.case, size=args.size, steps=args.steps, ranks=args.ranks,
+                   output_limit_mib=args.output_limit_mib,
                    executable=str(args.executable), omp_threads=os.environ.get('OMP_NUM_THREADS'),
                    visible_gpus=os.environ.get('CUDA_VISIBLE_DEVICES'), results=results,
                    status='PASS' if all(row['status'] == 'PASS' for row in results) else 'FAIL')

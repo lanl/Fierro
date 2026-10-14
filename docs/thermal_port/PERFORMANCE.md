@@ -393,3 +393,36 @@ from 123 to 136 per thread, with zero reported local memory; its measured mean
 time changes by less than 1%. This register increase warrants larger-mesh
 measurements before extrapolating the small-workload GPU results. Reports are
 under `work/profiles/{activation-event-only,endpoint}/{variable,variable_cold}32`.
+
+CPU strong scaling at checkpoint `fd3d6f42` uses the same 32³ meshes and 1000
+steps, with one warmup and three measured repetitions per layout. Physical
+cores are pinned explicitly; SMT siblings are excluded. One-rank layouts with
+at least two threads span both L3 domains, and two-rank layouts place one rank
+in each domain with disjoint core masks. Logs include actual OpenMP affinity.
+All sixteen benchmark jobs pass temperature, energy and completed-step checks.
+
+| Physical cores | MPI ranks × threads | Phase/deposition median | Student-table median |
+|---|---|---:|---:|
+| 1 | 1 × 1 | 25.818151 s | 46.873449 s |
+| 2 | 1 × 2 | 17.719026 s | 24.136068 s |
+| 4 | 1 × 4 | 9.155618 s | 12.459596 s |
+| 4 | 2 × 2 | 9.704140 s | 13.259437 s |
+| 8 | 1 × 8 | 4.890385 s | 6.586274 s |
+| 8 | 2 × 4 | 5.273861 s | 7.033316 s |
+| 16 | 1 × 16 | 2.790595 s | 3.700685 s |
+| 16 | 2 × 8 | 3.005909 s | 4.052301 s |
+
+The sixteen-core single-rank speedups over one core are 9.25× and 12.67×,
+respectively. Its measured ranges are 2.789666–2.811879 s and
+3.618574–3.916418 s. The corresponding two-rank ranges are
+2.994928–3.011843 s and 3.991185–4.072630 s. At equal total core counts,
+two ranks take 6.0–7.8% longer for phase/deposition and 6.4–9.5% longer for
+the table-driven workload. This measures MPI overhead at this problem size;
+it does not establish the best layout for larger meshes or other machines.
+Timers include initial/final state output, as in the earlier benchmarks.
+
+Reproduce with `work/cpu-scaling.py --checkpoint endpoint --after-gate
+endpoint-gate` only in a fresh evidence directory. The script refuses to
+overwrite existing results. Core masks, binary SHA-256 and results are in
+`work/cpu-scaling-endpoint*.json` and `work/runs/cpu-scaling-endpoint-*`;
+`work/cpu-affinity.py` enforces the placements.

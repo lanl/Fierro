@@ -17,9 +17,9 @@ import subprocess
 import time
 
 
-def limit_solver_output():
+def limit_solver_output(max_file_mib=32):
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    resource.setrlimit(resource.RLIMIT_FSIZE, (32 * 1024**2, 32 * 1024**2))
+    resource.setrlimit(resource.RLIMIT_FSIZE, (max_file_mib * 1024**2, max_file_mib * 1024**2))
 
 
 def heating_input():
