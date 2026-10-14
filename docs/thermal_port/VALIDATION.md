@@ -98,3 +98,15 @@ Evidence: `work/thermal-state-output-fixes-gate-complete.json`,
 expected an exchange in a one-process communicator; MATAR explicitly treats it
 as a no-op. That assertion was corrected, and its failure is retained separately
 in `work/thermal-state-output-fixes-gate-attempt1.json`.
+
+The saved terminal-output matrix was also checked independently through the
+VTK collection/multiblock/piece hierarchy. All 25 cases have the final time,
+finite fields, the expected per-rank pieces and all connected nodes. Terminal
+VTK temperatures/masses agree with text state within 1.14e-13; evidence is
+`work/cycle-limit-vtk-audit.json`. This check reads the already completed runs.
+
+The restored heat-flux help and MPI finalization fix pass an 18-job gate: both
+builds, full/quit/EOF help on CPU/CUDA direct and two ranks, full/quit across
+separate GPUs, and normal prescribed-flux runs on CPU/CUDA with two ranks.
+Help appears once, lists constant and exits successfully. No headers were added.
+Evidence: `work/heat-flux-help-gate-complete.json`.

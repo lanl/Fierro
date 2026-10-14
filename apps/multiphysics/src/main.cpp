@@ -75,8 +75,10 @@ int main(int argc, char* argv[])
 
         if (std::string(argv[1]) == "--help"){
 
-            print_inputs();
+            if (rank == 0) print_inputs();
 
+            MATAR_FINALIZE();
+            MPI_Finalize();
             return 0;
         }
 

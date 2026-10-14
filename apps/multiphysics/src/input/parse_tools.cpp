@@ -273,6 +273,9 @@ void print_inputs()
             }
             std::cout << "\n";
         }
+        else if(field.compare("heat_flux_model") == 0){
+            std::cout << "          heat_flux_model: <constant>\n";
+        }
         else if(contains_word(field, "global_vars")){
             std::cout << "          " << field <<":\n";
             std::cout << "             - double/int \n";

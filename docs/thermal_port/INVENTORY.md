@@ -29,8 +29,10 @@ ranks, including separate GPUs. The normal SGTM setup uses the other overload.
 Driver whitespace, debug prints, unrelated example edits and obsolete regression
 paths are excluded. The student’s argument addition in energy_sgtm.cpp belongs
 to an obsolete implementation that the current SGTM CMake source list excludes;
-the active temperature update is temperature_sgtm.cpp. A remaining help-text
-follow-up will list the supported constant heat-flux model in --help. The main branch's newer mesh types, output formats and MPI
+the active temperature update is temperature_sgtm.cpp. The student’s
+heat-flux help entry is also restored: --help lists the supported constant model
+and now prints once and exits cleanly with MPI. This uses existing declarations
+and adds no includes or model-map storage. The main branch's newer mesh types, output formats and MPI
 fixes are retained.
 
 ## Defects identified before the port
