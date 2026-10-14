@@ -85,7 +85,11 @@ def validate(nodes, target=TARGET):
     mass = math.fsum(row['mass'] for row in nodes.values())
     temperature_error = max(abs(row['temp']-target) for row in nodes.values())
     expected_energy = expected_mass*energy(target, tables)
-    measured_energy = math.fsum(row['mass']*energy(row['temp'], tables) for row in nodes.values())
+    # Uniform-heating benchmarks repeat the same temperatures at many nodes.
+    # Cache only the reference evaluation; retain every original weighted term.
+    energies = {temperature: energy(temperature, tables) for temperature in
+                {row['temp'] for row in nodes.values()}}
+    measured_energy = math.fsum(row['mass']*energies[row['temp']] for row in nodes.values())
     relative_error = (measured_energy-expected_energy)/expected_energy
     if abs(mass/expected_mass-1) > 1.e-10 or temperature_error > 2.e-6 or abs(relative_error) > 1.e-8:
         raise ValueError(f'Variable-property accuracy/energy mismatch: mass={mass}, T={temperature_error}, E={relative_error}')

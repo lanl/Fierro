@@ -426,3 +426,48 @@ endpoint-gate` only in a fresh evidence directory. The script refuses to
 overwrite existing results. Core masks, binary SHA-256 and results are in
 `work/cpu-scaling-endpoint*.json` and `work/runs/cpu-scaling-endpoint-*`;
 `work/cpu-affinity.py` enforces the placements.
+
+The standalone CPU scaling figure is `work/figures/cpu-scaling.{png,svg}`.
+It shows speedups and repetition ranges for both workloads; it has been rendered
+and visually checked.
+
+Larger 64³ comparisons use the preserved pre-endpoint and endpoint binaries,
+1000 steps, one warmup and three measured repetitions. The benchmark's explicit
+`--output-limit-mib 128` accommodates state files larger than the default 32 MiB
+cap. The one-GPU runs use GPU 1; two-rank runs assign one physical GPU to each
+rank. All twelve timing jobs and four matched profiles pass analytic checks.
+
+| Workload / placement | Before endpoint selection | After | Before range | After range |
+|---|---:|---:|---:|---:|
+| Phase, one GPU | 2.844726 s | 2.857546 s | 2.842928–2.848550 | 2.843915–2.858641 |
+| Melting tables, one GPU | 3.865624 s | 3.883681 s | 3.861985–3.906750 | 3.867291–3.941244 |
+| Cold tables, one GPU | 3.105134 s | 3.118859 s | 3.076773–3.114935 | 3.099300–3.135184 |
+| Phase, two GPUs | 4.695696 s | 4.680855 s | 4.690381–4.722580 | 4.564146–4.768180 |
+| Melting tables, two GPUs | 4.813359 s | 4.792999 s | 4.723605–4.843211 | 4.630324–4.926476 |
+| Cold tables, two GPUs | 4.249397 s | 4.180994 s | 4.243928–4.302419 | 4.166178–4.195609 |
+
+Single-GPU overall timing changes are below 0.5%, with overlapping ranges.
+The two-GPU cold case is 1.6% faster; the other two-GPU ranges overlap.
+Two GPUs are slower than one at this mesh size. These timings include SGTM's
+state output and MPI costs. Full application wall times are roughly 20 seconds
+on one GPU and 60 seconds on two, dominated by the separately documented mesh
+startup issue PERF-001. Evidence is under `work/runs/endpoint-large-gpu-*`.
+
+Profiling exposes a tradeoff that the overall timings obscure (PERF-003).
+For melting tables, property refresh improves from 671.302 to 651.592 microseconds
+per call, but nodal temperature update worsens from 337.373 to 367.439
+microseconds. For cold tables, the respective changes are 353.606→304.547
+and 272.796→297.179 microseconds. There are 2001 property and 2000 nodal calls.
+The nodal regression is about 9% in both cases, accompanying the increase from
+123 to 136 registers per thread; no local memory is reported. Conduction and
+timestep kernel times remain nearly unchanged. A combined endpoint branch is
+the next candidate to reduce duplicated inlined lookup code while keeping the
+CPU gains. Profiles are under `work/profiles/{activation-event-only,endpoint}`.
+
+After completing these measurements, the Python uniform-heating reference now
+caches its exact integral for repeated identical temperatures. It retains every
+per-node weighted term and the original `math.fsum` order. Revalidating the four
+64³ endpoint melting/cold outputs with one and two ranks gives exactly the same
+reported temperature and energy errors. Each has 274625 nodes but one distinct
+temperature. This speeds validation without changing the solver or any timing
+already reported; evidence is `work/reference-cache-validation.json`.
