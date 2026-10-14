@@ -52,6 +52,12 @@ NodalEnergy nodal_energy(const swage::Mesh_t& mesh, const MeshtoMaterialMap_t& m
     const DRaggedRightArrayKokkos<unsigned char>& active)
 {
     NodalEnergy result;
+    // Adjacent corners commonly share one constitutive law. Reuse its values,
+    // while retaining the original corner-by-corner weighted accumulation.
+    size_t cached_material = models.materials.size();
+    thermal::Phase cached_phase = thermal::legacy;
+    double cached_fallback = 0.0;
+    NodalEnergy specific;
     for (size_t local_elem = 0; local_elem < mesh.num_corners_in_node(node); ++local_elem) {
         const size_t elem = mesh.elems_in_node(node, local_elem);
         const size_t corner = mesh.corners_in_node(node, local_elem) % mesh.num_nodes_in_elem;
@@ -59,15 +65,26 @@ NodalEnergy nodal_energy(const swage::Mesh_t& mesh, const MeshtoMaterialMap_t& m
             const size_t mat = map.mats_in_elem(elem, local_mat);
             const size_t sid = map.mat_elems_in_elem(elem, local_mat);
             if (models.has_activation && active(mat, sid) == 0) continue;
-            const auto model = models.materials(mat);
+            const auto& model = models.materials(mat);
             const double history = models.has_phase_change ? maximum_temperature(mat, sid, corner) : initial;
+            const thermal::Phase phase = model.phase_change ? thermal::condensed_phase(model, history) : thermal::legacy;
+            // Complete Cp tables ignore the fallback. A missing legacy Cp table
+            // must retain each cell's initial-condition Cp, even for the same material.
+            const double fallback = !model.phase_change && model.tables[thermal::legacy][thermal::specific_heat].rows == 0 ?
+                specific_heat(mat, sid) : 0.0;
+            if (mat != cached_material || phase != cached_phase || fallback != cached_fallback) {
+                specific.change = thermal::enthalpy(model, models.data, temperature, history, fallback) -
+                                  thermal::enthalpy(model, models.data, initial, history, fallback);
+                specific.capacity = thermal::capacity(model, models.data, temperature, history, fallback);
+                specific.minimum_capacity = model.minimum_specific_heat > 0.0 ? model.minimum_specific_heat : fallback;
+                cached_material = mat;
+                cached_phase = phase;
+                cached_fallback = fallback;
+            }
             const double weight = mass(mat, sid) / mesh.num_nodes_in_elem;
-            const double fallback = specific_heat(mat, sid);
-            result.change += weight * (thermal::enthalpy(model, models.data, temperature, history, fallback) -
-                                        thermal::enthalpy(model, models.data, initial, history, fallback));
-            result.capacity += weight * thermal::capacity(model, models.data, temperature, history, fallback);
-            result.minimum_capacity += weight * (model.minimum_specific_heat > 0.0 ?
-                                                  model.minimum_specific_heat : fallback);
+            result.change += weight * specific.change;
+            result.capacity += weight * specific.capacity;
+            result.minimum_capacity += weight * specific.minimum_capacity;
         }
     }
     return result;

@@ -207,3 +207,37 @@ units. The driver also checks globally empty material outputs. It exposed
 OUTPUT-005: rank 0 had no cells of material 0, so the old merge code discarded
 that material. Counting columns from the schema header fixes this without
 changing numerical integration. Before/after evidence is retained.
+
+The next optimization reuses identical constitutive evaluations within a nodal
+enthalpy call. Its single-entry cache is keyed by material, condensed phase and,
+only when a legacy Cp table is absent, the cell's fallback Cp. Initial and trial
+temperatures are constant during that call. Corner masses are still accumulated
+in the original order. It adds no includes, allocations or persistent state.
+The partial-Cp-region regression verifies that different cell constants belonging
+to the same material are not accidentally combined.
+
+| Workload | Before nodal reuse | After nodal reuse | Observed ratio |
+|---|---:|---:|---:|
+| CPU phase/deposition | 22.705195 s | 11.183394 s | 2.03× |
+| CPU student tables | 33.523976 s | 16.038459 s | 2.09× |
+| GPU phase/deposition | 1.191068 s | 0.993594 s | 1.20× |
+| GPU student tables | 1.368569 s | 0.949488 s | 1.44× |
+
+These are the same 32³/1000-step workloads, four CPU threads or GPU 1,
+with one warmup and three measured repetitions. CPU ranges are
+11.148492–11.216052 s (phase) and 16.004208–16.159213 s (student tables);
+GPU ranges are 0.991319–0.994569 s and 0.948838–0.949565 s. The cosine case
+remains within prior variation: CPU 2.701719 s [2.669860,2.779662],
+GPU 0.405267 s [0.404294,0.406063]. All benchmark accuracy checks pass.
+Phase, activation, examples, refined Stefan melting and steady conduction pass
+CPU/CUDA directly and with two ranks. The original cooling and smaller variable
+workloads pass with two ranks; phase/activation also pass across both physical
+GPUs. Evidence uses `nodal-reuse-*` and `benchmark-nodal-reuse-*`; preserved
+binaries and hashes are in `work/checkpoints/nodal-reuse`.
+
+Matched GPU profiles confirm that nodal-kernel mean time falls from
+168.55 to 69.85 microseconds for phase/deposition and from 289.52 to 72.17
+microseconds for student tables. Registers fall from 136 to 123 per thread,
+with zero reported local-memory allocation. The student-table property update
+now dominates the measured thermal kernels: 105.59 microseconds per call,
+3001 calls. Profile evidence is in `work/profiles/nodal-reuse`.
