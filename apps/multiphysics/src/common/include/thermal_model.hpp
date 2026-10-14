@@ -117,6 +117,8 @@ double property(const Material& model, const mtr::DCArrayKokkos<double>& data,
     if (!model.phase_change) return value(model.tables[legacy][field], data, temperature, fallback);
     const double f = fraction(model, temperature);
     const Phase base = condensed_phase(model, maximum_temperature);
+    if (f == 0.0) return value(model.tables[base][field], data, temperature, fallback);
+    if (f == 1.0) return value(model.tables[liquid][field], data, temperature, fallback);
     return (1.0 - f)*value(model.tables[base][field], data, temperature, fallback) +
            f*value(model.tables[liquid][field], data, temperature, fallback);
 }

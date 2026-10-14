@@ -26,9 +26,10 @@ def make_case(directory, args):
         text = text.replace(f'num_elems: [{args.size}, {args.size}, 2]',
                             f'num_elems: [{args.size}, {args.size}, {args.size}]')
         (directory/'input.yaml').write_text(text)
-    elif args.case == 'variable':
+    elif args.case in ('variable', 'variable_cold'):
         final_time = 0.1
-        thermal_variable_properties.prepare(directory, args.size, args.steps)
+        target = 1650.0 if args.case == 'variable_cold' else thermal_variable_properties.TARGET
+        thermal_variable_properties.prepare(directory, args.size, args.steps, target)
     else:
         final_time = 0.1
         prepare(directory, 'latent_deposition')
@@ -44,8 +45,9 @@ def validate(directory, args, final_time):
     nodes = read_nodes(directory/'state', final_time)
     if len(nodes) != (args.size+1)**3:
         raise ValueError('Unexpected unique node count')
-    if args.case == 'variable':
-        return thermal_variable_properties.validate(nodes)
+    if args.case in ('variable', 'variable_cold'):
+        target = 1650.0 if args.case == 'variable_cold' else thermal_variable_properties.TARGET
+        return thermal_variable_properties.validate(nodes, target)
     mass = math.fsum(row['mass'] for row in nodes.values())
     if abs(mass-1) > 1.e-10:
         raise ValueError('Benchmark mass mismatch')
@@ -81,7 +83,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--executable', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--case', choices=['cosine', 'phase', 'variable'], default='cosine')
+    parser.add_argument('--case', choices=['cosine', 'phase', 'variable', 'variable_cold'], default='cosine')
     parser.add_argument('--size', type=int, default=32)
     parser.add_argument('--steps', type=int, default=1000)
     parser.add_argument('--ranks', type=int, default=1)

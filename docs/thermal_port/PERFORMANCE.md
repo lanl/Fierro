@@ -354,3 +354,42 @@ at N=64 is 2.49e-12 or less; all cases check mass, projected energy and the
 independent curvature bound. Evidence uses `work/runs/goldak-phase-*`, with
 plots `work/figures/goldak-phase-convergence.{png,svg}`. This is a synthetic
 zero-conductivity melting reference, not a calibrated material or melt-flow model.
+
+Property evaluation now reads only the selected phase table when liquid fraction
+is exactly zero or one. The transition blend is unchanged. This adds two
+conditionals, with no includes or allocations. A new `variable_cold` benchmark
+uses the same student tables and 32³ mesh, heating powder from 1600 to 1650 K
+without reaching solidus; the original `variable` target remains 1750 K.
+
+| Workload | Before endpoint selection | After | Observed ratio |
+|---|---:|---:|---:|
+| CPU phase/deposition | 9.492304 s | 9.139586 s | 1.04× |
+| CPU student tables, melting | 13.327288 s | 12.387584 s | 1.08× |
+| CPU student tables, cold powder | 11.387280 s | 9.998947 s | 1.14× |
+| GPU phase/deposition | 0.784621 s | 0.787622 s | 0.4% longer |
+| GPU student tables, melting | 0.831673 s | 0.831601 s | No resolved change |
+| GPU student tables, cold powder | 0.706294 s | 0.693571 s | 1.02× |
+
+Warmup+three-run CPU ranges are 9.120233–9.249735 s (phase),
+12.358055–12.436913 s (melting tables), and 9.960923–10.054045 s (cold tables).
+GPU ranges are 0.787394–0.789036 s, 0.827437–0.831854 s and
+0.692856–0.694906 s. The cosine sentinel is CPU 2.635771 s
+[2.628553,2.726611] and GPU 0.406553 s [0.406269,0.408819], versus the previous
+2.661502/0.403495 s. No GPU speedup is claimed for phase or cosine; their
+measured changes are below 1%. The gains primarily benefit the CPU workloads.
+
+All six focused CTests per backend and the phase, activation, examples, refined
+Stefan, localized Goldak melting and nonlinear diffusion checks pass directly
+and with two MPI ranks. Cold-table MPI workloads, the original cooling
+regression and selected checks across both physical GPUs also pass. Cold-table
+benchmarks reproduce target temperature and energy exactly at printed precision.
+Evidence uses `endpoint-*` and `benchmark-endpoint-*`; the prior binaries remain
+in `work/checkpoints/activation-event-only`.
+
+Matched GPU profiles show cold-table property evaluation falling from
+56.46 to 50.58 microseconds per kernel (2001 calls), and the melting-table case
+from 105.07 to 102.77 microseconds. The nodal kernel's register count increases
+from 123 to 136 per thread, with zero reported local memory; its measured mean
+time changes by less than 1%. This register increase warrants larger-mesh
+measurements before extrapolating the small-workload GPU results. Reports are
+under `work/profiles/{activation-event-only,endpoint}/{variable,variable_cold}32`.

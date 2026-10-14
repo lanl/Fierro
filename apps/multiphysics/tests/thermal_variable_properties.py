@@ -60,7 +60,7 @@ def energy(temperature, tables):
     return integral+LATENT*x*x*(3-2*x)
 
 
-def prepare(directory, size, steps):
+def prepare(directory, size, steps, target=TARGET):
     tables = read_tables()
     rho = interpolate(tables['DENSITY_POWDER'], INITIAL)
     text = (SOURCE/'input.yaml').read_text()
@@ -72,21 +72,21 @@ def prepare(directory, size, steps):
     text = text.replace('value: 5.111790e-9', f'value: {rho:.17g}')
     radius = LENGTH
     text = text.replace('radius: 2.0', f'radius: {radius}')
-    power = energy(TARGET, tables)*rho/0.1 * (4*math.pi*radius**3/3)
+    power = energy(target, tables)*rho/0.1 * (4*math.pi*radius**3/3)
     center = LENGTH/2
     (directory/'laser.csv').write_text(''.join(f'{t},{center},{center},{center},{power:.17g}\n' for t in [0, 0.1]))
     (directory/'student_thermal_tables.inp').write_text((SOURCE/'student_thermal_tables.inp').read_text())
     (directory/'input.yaml').write_text(text)
 
 
-def validate(nodes):
+def validate(nodes, target=TARGET):
     tables = read_tables()
     expected_mass = interpolate(tables['DENSITY_POWDER'], INITIAL)*LENGTH**3
     mass = math.fsum(row['mass'] for row in nodes.values())
-    temperature_error = max(abs(row['temp']-TARGET) for row in nodes.values())
-    expected_energy = expected_mass*energy(TARGET, tables)
+    temperature_error = max(abs(row['temp']-target) for row in nodes.values())
+    expected_energy = expected_mass*energy(target, tables)
     measured_energy = math.fsum(row['mass']*energy(row['temp'], tables) for row in nodes.values())
     relative_error = (measured_energy-expected_energy)/expected_energy
     if abs(mass/expected_mass-1) > 1.e-10 or temperature_error > 2.e-6 or abs(relative_error) > 1.e-8:
         raise ValueError(f'Variable-property accuracy/energy mismatch: mass={mass}, T={temperature_error}, E={relative_error}')
-    return dict(max_temperature_error=temperature_error, energy_relative_error=relative_error)
+    return dict(target_temperature=target, max_temperature_error=temperature_error, energy_relative_error=relative_error)
