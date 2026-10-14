@@ -206,9 +206,10 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
             const double fraction = activation ? active_fraction(mesh.elems_in_patch(patch_gid, 0)) : 1.0;
             double patch_area = surface_area/4.0 * fraction;
 
-            // NOTE: Add parsing to the following variables
-            double ref_temp = 293.15; // room temp in Kelvin
-            double h_film = 100.0;
+            // An omitted list retains the legacy ambient and film coefficient.
+            const bool configured = BoundaryConditions.num_temperature_bc_global_vars(bdy_set) == 2;
+            const double ref_temp = configured ? BoundaryConditions.temperature_bc_global_vars(bdy_set, 0) : 293.15;
+            const double h_film = configured ? BoundaryConditions.temperature_bc_global_vars(bdy_set, 1) : 100.0;
 
             // ---- Calculate the flux through each patch ---- //
             for(int node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){

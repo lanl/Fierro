@@ -90,6 +90,26 @@ coordinate-axis projection is used. Constant-temperature conditions applied
 after the temperature update can remove supplied energy and represent an
 external reservoir; insulated energy tests do not combine them with flux.
 
+For convection, `temperature_model: convection` accepts
+`temperature_bc_global_vars: [ambient_temperature, film_coefficient]`. The inward
+flux is `h (T_ambient-T)`. Both values must be finite and h must be nonnegative;
+zero h is insulated. Omitting the list retains the historical ambient 293.15
+and h=100. Use consistent units, for example h in W/(m² K) with SI inputs.
+The explicit timestep must resolve boundary cooling as well as diffusion.
+
+`tests/thermal_convection.py` checks the transient unit slab with rho=Cp=k=1,
+an insulated face at z=0 and convection at z=1. For initially uniform T_i,
+
+    T(z,t)-T_ambient = (T_i-T_ambient) sum A_n cos(mu_n z) exp(-mu_n² t),
+    mu_n tan(mu_n) = h,
+    A_n = 4 sin(mu_n)/(2 mu_n + sin(2 mu_n)).
+
+Integrating each cosine replaces it with `sin(mu_n)/mu_n`, giving an independent
+volume-mean temperature and thermal-energy reference. The driver computes roots
+by bisection, checks the initial condition, mass and temperature bounds, and
+refines 2×2×N meshes with N=8,16,32. It covers cooling, heating, zero film and
+omitted defaults. `--invalid-inputs` checks malformed/nonfinite parameter lists.
+
 ## Current verification
 
 Focused C++ tests exercise source normalization, orientation, interpolation,

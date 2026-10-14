@@ -248,6 +248,14 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
         } // end check on m_id range
 
 
+        const auto& temperature_model_yaml = inps_yaml["temperature_model"];
+        const bool convection_input = temperature_model_yaml.IsScalar() &&
+            temperature_model_yaml.As<std::string>() == "convection";
+        const auto& temperature_vars_yaml = inps_yaml["temperature_bc_global_vars"];
+        if (convection_input && !temperature_vars_yaml.IsNone() &&
+            (!temperature_vars_yaml.IsSequence() || temperature_vars_yaml.Size() != 2))
+            throw std::runtime_error("convection requires temperature_bc_global_vars: [ambient, film_coefficient]");
+
         // Constant flux uses one signed scalar: positive supplies heat to the
         // selected physical surface. Validate independently of YAML key order.
         auto& flux_model = inps_yaml["heat_flux_model"];
@@ -964,7 +972,27 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 // Store the global temperature boundary condition variables
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double temperature_bc_var = bc_yaml[bc_id]["boundary_condition"]["temperature_bc_global_vars"][global_var_id].As<double>();
+                    double temperature_bc_var;
+                    if (convection_input) {
+                        const auto& value_yaml = temp_bc_global_vars_yaml[global_var_id];
+                        if (!value_yaml.IsScalar())
+                            throw std::runtime_error("convection parameters must be numeric scalars");
+                        auto text = value_yaml.As<std::string>();
+                        const auto last = text.find_last_not_of(" \t\r\n");
+                        if (last != std::string::npos) text.erase(last + 1);
+                        size_t used = 0;
+                        try { temperature_bc_var = std::stod(text, &used); }
+                        catch (const std::exception&) {
+                            throw std::runtime_error("convection parameters must be numeric");
+                        }
+                        if (used != text.size() || !Kokkos::isfinite(temperature_bc_var))
+                            throw std::runtime_error("convection parameters must be finite numbers");
+                        if (global_var_id == 1 && temperature_bc_var < 0.0)
+                            throw std::runtime_error("convection film coefficient must be nonnegative");
+                    }
+                    else {
+                        temperature_bc_var = temp_bc_global_vars_yaml[global_var_id].As<double>();
+                    }
                     
                     RUN({
                         tempTemperatureBCGlobalVars(bc_id, global_var_id) = temperature_bc_var;

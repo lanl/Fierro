@@ -471,3 +471,31 @@ per-node weighted term and the original `math.fsum` order. Revalidating the four
 reported temperature and energy errors. Each has 274625 nodes but one distinct
 temperature. This speeds validation without changing the solver or any timing
 already reported; evidence is `work/reference-cache-validation.json`.
+
+Robin-slab validation found and fixed THERM-012: supplied convection parameters
+were parsed but ignored. The defect also reproduces on the original main CPU
+build with Kokkos 4.3, independently of the thermal port. At N=8, the supplied
+ambient=300 and h=1 case had maximum temperature error 13.7883 K and cooled below
+the supplied ambient. The fix reads the existing parameter array and validates
+its two values; an omitted list keeps the legacy defaults. No headers or state
+allocations are added.
+
+| Convection case | N=32 L2 error | Spatial orders (8→16→32) | N=32 energy error |
+|---|---:|---|---:|
+| Omitted defaults, T_i=310 | 0.00205449 K | 1.9961, 1.9991 | -0.00366323 |
+| Cooling, ambient=300, h=1, T_i=310 | 0.000527156 K | 2.0091, 2.0023 | -0.000258842 |
+| Heating, ambient=320, h=2, T_i=290 | 0.00158675 K | 2.0102, 2.0026 | +0.00198318 |
+
+All use unit rho/Cp/k, final time 0.1 and the independent series in PHYSICS.md.
+Energy error compares the mass-weighted numerical mean against the continuum
+integral and converges with the mesh; it includes spatial quadrature error.
+The reported L2 errors agree exactly across CPU/CUDA direct/two-rank layouts,
+and across the two physical GPUs for defaults and configured cooling. The
+omitted-default errors are identical before and after the fix. Zero-film and
+ten malformed-input cases also pass in all four backend/rank combinations.
+
+The complete 44-job gate includes both builds, six focused CTests per backend,
+and the original cooling, source/flux, phase and activation regressions. Evidence
+is in `work/convection-input-gate-complete.json` and `work/runs/convection-*`.
+The rendered and inspected figure `work/figures/convection-validation.{png,svg}`
+shows refinement and the before/after N=8 temperature profile.
