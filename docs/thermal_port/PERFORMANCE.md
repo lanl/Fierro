@@ -603,3 +603,28 @@ under `work/checkpoints/endpoint-host-choice`, `work/profiles/endpoint-host-choi
 `work/endpoint-host-choice-gate-timing-summary.json`. Future work will first
 remove provably redundant exchanges and geometry calculations, with new matched
 measurements before accepting either change.
+
+Requested checkpoint snapshot, 2026-10-14: accepted source is b5daf38c, including
+state/output fixes241a7a57 and restored MPI-safe heat-flux help. The current
+previous-step MPI exchange experiment is preserved separately in
+`work/checkpoints/mpi-temp-n0`; its 30 correctness jobs pass, but matched timing
+is still running and the candidate is not accepted or included in this checkpoint.
+
+| 32³ workload | CPU baseline → accepted, s | CPU speedup | GPU baseline → accepted, s | GPU speedup |
+| --- | ---: | ---: | ---: | ---: |
+| Constant-property conduction | 2.916607 → 2.635771 | 1.11× | 0.885831 → 0.406553 | 2.18× |
+| Phase/deposition | 43.291299 → 9.139586 | 4.74× | 1.987946 → 0.787622 | 2.52× |
+| Student thermal tables | 155.093245 → 12.387584 | 12.52× | 2.990906 → 0.831601 | 3.60× |
+
+These are the first measured and accepted endpoint medians already documented
+above: one warmup plus three repetitions, four CPU threads or physical GPU1,
+and 1000 requested steps on the same workload. The student-table baseline was
+first measured before enthalpy caching, after the initial timestep optimizations;
+it is not a measurement of the original student executable. Timings cover SGTM
+including initial/final output and exclude mesh startup. They are cumulative
+workload comparisons across the recorded experiments, not a fresh paired run of
+both versions in this checkpoint. Subsequent correctness/help fixes do not change
+the numerical work in these benchmark cases. CPU/GPU direct and two-rank
+correctness, including separate-device runs, remain passing. The unrelated
+original two-rank Sod reference discrepancy and slow ELEMENTS startup remain
+open; material-data identity remains unverified (see BUGS.md).
