@@ -421,7 +421,6 @@ public:
         const swage::Mesh_t& mesh,
         const MPICArrayKokkos<double>& node_coords,
         const MPICArrayKokkos<double>& node_coords_t0,
-        const DCArrayKokkos<double>& elem_vol,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id) const;

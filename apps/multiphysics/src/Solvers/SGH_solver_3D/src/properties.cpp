@@ -172,12 +172,11 @@ void SGH3D::update_state(
 
         // ---------------------------------------
         // calculate deformation gradient for these models
-        // remember: Fmodel(t) = F0*F(t), where F(t) = grad(displacment)
+        // remember: Fmodel(t) = F0*F(t), where F(t) = grad_X0(displacment)
         get_deformation_grad(MaterialPoints_deformation_grad,
                              mesh,
                              node_coords,
                              node_coords_t0,
-                             GaussPoints_vol, // remember: GaussPoint = Elem with this solver
                              elem_in_mat_elem,
                              num_material_elems, 
                              mat_id);
@@ -200,13 +199,13 @@ void SGH3D::update_state(
             for (size_t i=0; i<3; i++)
             for (size_t j=0; j<3; j++)
             for (size_t k=0; k<3; k++){
-                F_total[i][j] += MaterialPoints_deformation_grad_t0(i,k)*MaterialPoints_deformation_grad(k,j); 
+                F_total[i][j] += MaterialPoints_deformation_grad_t0(mat_id,mat_point_sid,i,k)*MaterialPoints_deformation_grad(mat_id,mat_point_sid,k,j); 
             }
 
             // save the total elastic deformation gradient
             for (size_t i=0; i<3; i++)
             for (size_t j=0; j<3; j++){
-                MaterialPoints_deformation_grad(i,j) = F_total[i][j];
+                MaterialPoints_deformation_grad(mat_id,mat_point_sid,i,j) = F_total[i][j];
             }
 
             // --- call strength model ---
@@ -480,13 +479,16 @@ void SGH3D::get_deformation_grad(
     const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_coords,
     const MPICArrayKokkos<double>& node_coords_t0,
-    const DCArrayKokkos<double>& elem_vol,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const size_t num_mat_elems,
     const size_t mat_id) const
 {
     const size_t num_nodes_in_elem = 8;
     const size_t num_dims = 3;
+
+    DCArrayKokkos<double> elem_vol_t0(mesh.num_elems); // This will hold the intial elem volumes
+
+    geometry::get_vol(elem_vol_t0, node_coords_t0, mesh);
 
     // --- loop over material elems ---
     FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
@@ -502,9 +504,9 @@ void SGH3D::get_deformation_grad(
         double v_array[num_nodes_in_elem];
         double w_array[num_nodes_in_elem];
 
-        ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir displacement component
-        ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir displacement component
-        ViewCArrayKokkos<double> w(w_array, num_nodes_in_elem); // z-dir displacement component
+        ViewCArrayKokkos<double> u(&u_array[0], num_nodes_in_elem); // x-dir displacement component
+        ViewCArrayKokkos<double> v(&v_array[0], num_nodes_in_elem); // y-dir displacement component
+        ViewCArrayKokkos<double> w(&w_array[0], num_nodes_in_elem); // z-dir displacement component
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
@@ -512,7 +514,7 @@ void SGH3D::get_deformation_grad(
         // The b_matrix are the outward corner area normals
         double b_matrix_array[24];
         ViewCArrayKokkos<double> b_matrix(b_matrix_array, num_nodes_in_elem, num_dims);
-        geometry::get_bmatrix(b_matrix, elem_gid, node_coords, elem_node_gids);
+        geometry::get_bmatrix(b_matrix, elem_gid, node_coords_t0, elem_node_gids);  // Bmatrix must use initial coords
 
         // get the vertex displacments for the elem
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -524,8 +526,8 @@ void SGH3D::get_deformation_grad(
             w(node_lid) = node_coords(node_gid, 2) - node_coords_t0(node_gid, 2);
         } // end for
 
-        // --- calculate the velocity gradient terms ---
-        double inverse_vol = 1.0 / elem_vol(elem_gid);
+        // --- calculate the deformation gradient terms ---
+        double inverse_vol = 1.0 / elem_vol_t0(elem_gid);
         // x-dir
         elem_deformation_grad(mat_point_sid, 0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
             + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)

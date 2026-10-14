@@ -35,6 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef USER_LINEAR_ELASTIC_H
 #define USER_LINEAR_ELASTIC_H
 
+#include "cramers_rule.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -62,6 +63,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 namespace OrthotropicLinearElasticStrengthModel {
+
 
     // ------------------------
     // helper functions 
@@ -461,14 +463,14 @@ namespace OrthotropicLinearElasticStrengthModel {
     *           S = C_ref * E
     */
     KOKKOS_INLINE_FUNCTION
-    void computeSecondPKStressVoigt(const ViewCArrayKokkos<double>& C_ref,
+    void computeSecondPKStressVoigt(const double C_ref[6][6],
                                     const ViewCArrayKokkos<double>& E_voigt,
                                     const ViewCArrayKokkos<double>& S_voigt) {
 
         for (int i = 0; i < 6; i++) {
             double sum = 0.0;
             for (int j = 0; j < 6; j++) {
-                sum += C_ref(i,j) * E_voigt(j);
+                sum += C_ref[i][j] * E_voigt(j);
             }
             S_voigt(i) = sum;
         }
@@ -487,6 +489,62 @@ namespace OrthotropicLinearElasticStrengthModel {
     }
 
 
+
+    /**
+    * @brief Build the 6x6 orthotropic stiffness matrix (Voigt notation)
+    *        in the material's reference/principal frame from the 9
+    *        standard engineering constants.
+    *
+    *        Normal-normal 3x3 block is built by inverting the
+    *        corresponding compliance sub-block; shear terms are
+    *        decoupled and diagonal.
+    */
+    KOKKOS_INLINE_FUNCTION
+    void buildOrthotropicStiffness(const double E1, const double E2, const double E3,
+                                   const double nu12, const double nu13, const double nu23,
+                                   const double G12, const double G13, const double G23,
+                                   double C_ref[6][6]) {
+
+        for (int i = 0; i < 6; i++)
+            for (int j = 0; j < 6; j++)
+                C_ref[i][j] = 0.0;
+
+        // Compliance sub-block (normal-normal), using symmetry nu_ij/E_i = nu_ji/E_j
+        const double S11 =  1.0 / E1;
+        const double S22 =  1.0 / E2;
+        const double S33 =  1.0 / E3;
+        const double S12 = -nu12 / E1;   // = -nu21/E2
+        const double S13 = -nu13 / E1;   // = -nu31/E3
+        const double S23 = -nu23 / E2;   // = -nu32/E3
+
+        // Invert the symmetric 3x3 compliance block analytically
+        const double detS = S11*(S22*S33 - S23*S23)
+                          - S12*(S12*S33 - S23*S13)
+                          + S13*(S12*S23 - S22*S13);
+
+        const double inv_detS = 1.0 / detS;
+
+        C_ref[0][0] = (S22*S33 - S23*S23) * inv_detS;
+        C_ref[1][1] = (S11*S33 - S13*S13) * inv_detS;
+        C_ref[2][2] = (S11*S22 - S12*S12) * inv_detS;
+
+        C_ref[0][1] = (S13*S23 - S12*S33) * inv_detS;
+        C_ref[1][0] = C_ref[0][1];
+
+        C_ref[0][2] = (S12*S23 - S13*S22) * inv_detS;
+        C_ref[2][0] = C_ref[0][2];
+
+        C_ref[1][2] = (S12*S13 - S11*S23) * inv_detS;
+        C_ref[2][1] = C_ref[1][2];
+
+        // Shear terms are decoupled and simply the inverse of the shear modulus
+        C_ref[3][3] = G23;
+        C_ref[4][4] = G13;
+        C_ref[5][5] = G12;
+
+    } // end function
+
+
     static void init_strength_state_vars(
         const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
@@ -496,9 +554,30 @@ namespace OrthotropicLinearElasticStrengthModel {
         const size_t num_material_points,
         const size_t mat_id)
     {
-
+       
 
     }  // end of init_strength_state_vars
+
+
+
+    KOKKOS_FUNCTION
+    static void fill_C_matrix(const RaggedRightArrayKokkos <double> &strength_global_vars,
+                              double C_ref[6][6],
+                              const size_t mat_id)
+    {
+        const double E1   = strength_global_vars(mat_id, 0);
+        const double E2   = strength_global_vars(mat_id, 1);
+        const double E3   = strength_global_vars(mat_id, 2);
+        const double nu12 = strength_global_vars(mat_id, 3);
+        const double nu13 = strength_global_vars(mat_id, 4);
+        const double nu23 = strength_global_vars(mat_id, 5);
+        const double G12  = strength_global_vars(mat_id, 6);
+        const double G13  = strength_global_vars(mat_id, 7);
+        const double G23  = strength_global_vars(mat_id, 8);
+
+        buildOrthotropicStiffness(E1, E2, E3, nu12, nu13, nu23, G12, G13, G23, C_ref);
+
+    } // end of fill_C_matrix
 
 
     KOKKOS_FUNCTION
@@ -525,14 +604,73 @@ namespace OrthotropicLinearElasticStrengthModel {
         const double rk_alpha,
         const double time,
         const size_t cycle,
-        const size_t MaterialPoints_lid,
+        const size_t MaterialPoints_sid,
         const size_t mat_id,
         const size_t gauss_gid,
         const size_t elem_gid)
     {
 
-        double C[6][6];
+        // -----------------------------------------------------------
+        // 0) Access deform_grad (input) and stress (output) for this
+        //    material point, wrapped as 3x3 views
+        // -----------------------------------------------------------
+        ViewCArrayKokkos <double> F(&MaterialPoints_deformation_grad(mat_id,MaterialPoints_sid,0,0), 3, 3);
+        ViewCArrayKokkos <double> sigma(&MaterialPoints_stress(mat_id,MaterialPoints_sid,0,0), 3, 3);
 
+        // -----------------------------------------------------------
+        // 1) Build the reference (material-frame) orthotropic
+        //    stiffness matrix from the engineering constants.
+        //    NOTE: if C_ref doesn't change in time, consider caching
+        //    this in MaterialPoints_strength_state_vars instead of
+        //    rebuilding it every call.
+        // -----------------------------------------------------------
+        double C_ref[6][6];
+        fill_C_matrix(strength_global_vars, C_ref, mat_id);
+
+
+        // -----------------------------------------------------------
+        // 2) Green-Lagrange strain:  E = 1/2 (F^T F - I)
+        // -----------------------------------------------------------
+        double strain_1D[9];
+        ViewCArrayKokkos <double> strain(&strain_1D[0], 3, 3);
+        computeGreenLagrangeStrain(F, strain);
+        
+        // -----------------------------------------------------------
+        // 3) Strain tensor -> Voigt -> 2nd PK stress (Voigt) -> tensor
+        // -----------------------------------------------------------
+        double E_voigt_1D[6];
+        ViewCArrayKokkos<double> E_voigt(&E_voigt_1D[0], 6);
+        strainTensorToVoigt(strain, E_voigt);
+
+        double S_voigt_1D[6];
+        ViewCArrayKokkos<double> S_voigt(&S_voigt_1D[0], 6);
+        computeSecondPKStressVoigt(C_ref, E_voigt, S_voigt);
+
+        double S_1D[9];
+        ViewCArrayKokkos<double> S(&S_1D[0], 3, 3);
+        stressVoigtToTensor(S_voigt, S);
+
+        // -----------------------------------------------------------
+        // 4) Push forward 2nd PK stress S to Cauchy stress sigma:
+        //        sigma = (1/J) * F * S * F^T
+        // -----------------------------------------------------------
+        double J = det_3x3(F);
+
+        double FS_1D[9];
+        ViewCArrayKokkos<double> FS(&FS_1D[0], 3, 3);
+
+        double Ft_1D[9];
+        ViewCArrayKokkos<double> Ft(&Ft_1D[0], 3, 3);
+
+        matmul3x3(F, S, FS);
+        transpose3x3(F, Ft);
+        matmul3x3(FS, Ft, sigma);   // writes directly into MaterialPoints_stress
+
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                sigma(i,j) /= J;
+            }
+        }
 
         return;
     } // end of user mat
