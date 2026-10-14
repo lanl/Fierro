@@ -49,7 +49,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "parse_tools.hpp"
 #include "parse_material_inputs.hpp"
 #include "table.hpp"
-#include "read_abaqus_files.hpp"
 
 
 
@@ -93,8 +92,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // fracture files
 #include "user_defined_fracture.hpp"
 
-// tabular files
-#include "tabular_material_model.hpp"
 
 // ==============================================================================
 //   Function Definitions
@@ -878,94 +875,9 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                 } // end loop over global vars
 
             } // end else if
-            else if (a_word.compare("tabular_model") == 0) {
-                std::string tabular_model_type = root["materials"][m_id]["material"]["tabular_model"]["type"].As<std::string>();
-
-                // check that the tabular model is valid
-                if (tabular_model_type_map.find(tabular_model_type) == tabular_model_type_map.end()) {
-                    std::cout << "ERROR: invalid tabular model input: " << tabular_model_type << std::endl;
-                    std::cout << "Valid options are: " << std::endl;
-                    for (const auto& element : str_tabular_model_inps) {
-                        std::cout << element << std::endl;
-                    }
-                    throw std::runtime_error("**** Tabular model Not Understood ****");
-                    break;
-                } // end if
-
-                // Get the file path from the yaml input file
-                std::string file_path = root["materials"][m_id]["material"]["tabular_model"]["tabular_data"].As<std::string>();
-
-                // Get the file format from the yaml input file
-                std::string file_format = root["materials"][m_id]["material"]["tabular_model"]["file_format"].As<std::string>();
-
-                // Check that the file format is valid
-                if (file_format != "Abaqus_jmatpro") {
-                    std::cout << "ERROR: invalid file format input: " << file_format << std::endl;
-                    throw std::runtime_error("**** File format Not Understood, currently only Abaqus_jmatpro is supported ****");
-                    break;
-                } // end if
-
-                // Get the number of fields from the yaml input file by counting the inputs under tabular_model
-                size_t num_fields = root["materials"][m_id]["material"]["tabular_model"]["fields"].Size();
-                if(num_fields == 0){
-                    std::cout << "ERROR: No fields were specified for the tabular model: " << tabular_model_type << std::endl;
-                    throw std::runtime_error("**** Tabular model must have at least two fields ****");
-                    break;
-                } // end if
-
-                
-
-                // Loop over the fields and read the data from the Abaqus JMatPro file
-                for (size_t field_id = 0; field_id < num_fields; field_id++) {
-                    std::string field_name = root["materials"][m_id]["material"]["tabular_model"]["fields"][field_id].As<std::string>();
-
-
-                    if(field_name.compare("density") == 0){
-
-                        // Read the data from the Abaqus JMatPro file
-                        AbaqusReader::read_tabular_jmatpro_file(file_path, field_name,  Materials.density_table);
-                        // Copy the table to the device
-                        Materials.density_table.update_device();
-
-                        RUN({
-                            Materials.MaterialFunctions(mat_id).get_density_from_temperature = &TabularMaterialModel::get_density_from_temperature;
-                        });
-                    }
-                    else if(field_name.compare("thermal_conductivity") == 0){
-                        // Read the data from the Abaqus JMatPro file
-                        AbaqusReader::read_tabular_jmatpro_file(file_path, field_name, Materials.thermal_conductivity_table);
-
-                        Materials.thermal_conductivity_table.update_device();
-
-                        RUN({
-                            Materials.MaterialFunctions(mat_id).get_thermal_conductivity_from_temperature = &TabularMaterialModel::get_thermal_conductivity_from_temperature;
-                        });
-
-                    }
-                    else if(field_name.compare("specific_heat") == 0){
-                        // Read the data from the Abaqus JMatPro file
-                        AbaqusReader::read_tabular_jmatpro_file(file_path, field_name, Materials.specific_heat_table);
-
-                        Materials.specific_heat_table.update_device();
-
-                        RUN({
-                            Materials.MaterialFunctions(mat_id).get_specific_heat_from_temperature = &TabularMaterialModel::get_specific_heat_from_temperature;
-                        });
-                    }
-                    else{
-                        std::cout << "ERROR: invalid tabular field name: " << field_name << std::endl;
-                        std::cout << "Valid options are: " << std::endl;
-                        for (const auto& element : str_tabular_model_valid_fields) {
-                            std::cout << element << std::endl;
-                        }
-                        throw std::runtime_error("**** Tabular field name Not Understood ****");
-                        break;
-                    }
-                } // end for over fields
-
-
-
-            } // end else if
+            else if (a_word == "tabular_model" || a_word == "phase_change" || a_word == "activation") {
+                // Validated together after all material identifiers are known.
+            }
             //
             // print and error because text is unknown
             else {
@@ -979,6 +891,8 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             }
         } // end for words in material
     } // end loop over materials
+
+    Materials.thermal = parse_thermal_models(root);
 
     // allocate ragged right memory to hold the model global variables
     Materials.eos_global_vars = RaggedRightArrayKokkos <double> (Materials.num_eos_global_vars, "Materials.eos_global_vars");

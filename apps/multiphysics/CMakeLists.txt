@@ -66,11 +66,35 @@ endif()
 # Elements (includes Kokkos, Matar, Scotch)
 # Using relative path to lib/Elements
 
+# The first FetchContent declaration wins over declarations in ELEMENTS.
+# Kokkos 4.7 adds Blackwell support while retaining our C++17 baseline.
+include(FetchContent)
+set(FIERRO_KOKKOS_VERSION "4.7.04" CACHE STRING "Kokkos release to build")
+FetchContent_Declare(Kokkos
+  GIT_REPOSITORY https://github.com/kokkos/kokkos
+  GIT_TAG ${FIERRO_KOKKOS_VERSION}
+  GIT_SHALLOW TRUE)
+
+# Pin MATAR to the revision used by this Fierro branch. Its CPU DualView
+# construction needs a small compatibility repair for Kokkos 4.7.
+FetchContent_Declare(MATAR
+  GIT_REPOSITORY https://github.com/lanl/MATAR
+  GIT_TAG 9926149c7819e112420e51e30df3b62ea85cbe09
+  GIT_SUBMODULES ""
+  PATCH_COMMAND ${CMAKE_COMMAND} -DMATAR_SOURCE_DIR=<SOURCE_DIR>
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/PatchMatarKokkos47.cmake)
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../lib/Elements ${CMAKE_BINARY_DIR}/lib/Elements)
 
 
 # Main Fierro multiphysics target
 add_subdirectory(src)
+
+option(FIERRO_BUILD_TESTS "Build focused Fierro unit tests" OFF)
+if(FIERRO_BUILD_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
 
 # --- Output Directory ---
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

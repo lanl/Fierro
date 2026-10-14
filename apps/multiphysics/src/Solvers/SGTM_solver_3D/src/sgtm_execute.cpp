@@ -89,7 +89,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     double graphics_time = this->time_start; // the times for writing graphics dump, was zero
     size_t output_id=0; // the id for the outputs written
     
-    boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value); // Time value = 0.0;
 
     double cached_pregraphics_dt = fuzz;
 
@@ -114,19 +113,43 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
 
 
-    // Print the material tables
-    for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-        if (log) log->info("Material %lu density table:\n", mat_id);
-        if (log) Materials.density_table.print_table();
-        if (log) log->info("Material %lu thermal conductivity table:\n", mat_id);
-        if (log) Materials.thermal_conductivity_table.print_table();
-        if (log) log->info("Material %lu specific heat table:\n", mat_id);
-        if (log) Materials.specific_heat_table.print_table();
-        if (log) log->flush();
-    } // end for mat_id
+    const auto thermal_models = Materials.thermal;
+    initialize_activation(Materials, SimulationParamaters.Laser, mesh, State, time_value);
+    boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value, State.node.thermal_mass);
+    if (thermal_models.has_phase_change && State.MaterialPoints.thermal_maximum_temperature.size() == 0) {
+        State.MaterialPoints.thermal_maximum_temperature = DRaggedRightArrayKokkos<double>(
+            State.MaterialPoints.num_material_points_buffer, mesh.num_nodes_in_elem, "thermal_maximum_temperature");
+        for (size_t mat = 0; mat < num_mats; ++mat) {
+            FOR_ALL(sid, 0, State.MaterialToMeshMaps.num_mat_elems.host(mat), {
+                const size_t elem = State.MaterialToMeshMaps.elem_in_mat_elem(mat, sid);
+                const auto model = thermal_models.materials(mat);
+                double height = 0.0;
+                for (size_t corner = 0; corner < mesh.num_nodes_in_elem; ++corner)
+                    height += State.node.coords(mesh.nodes_in_elem(elem, corner), 2) / mesh.num_nodes_in_elem;
+                const bool substrate = model.activation && model.has_substrate && height <= model.substrate_height;
+                for (size_t corner = 0; corner < mesh.num_nodes_in_elem; ++corner) {
+                    const double temperature = State.node.temp(mesh.nodes_in_elem(elem, corner));
+                    // Substrate is pre-consolidated, independently of surrounding powder.
+                    State.MaterialPoints.thermal_maximum_temperature(mat, sid, corner) =
+                        substrate ? Kokkos::max(temperature, model.liquidus) : temperature;
+                }
+            });
+        }
+    }
+    const auto maximum_temperature = State.MaterialPoints.thermal_maximum_temperature;
+    auto refresh_properties = [&]() {
+        for (size_t mat = 0; mat < num_mats; ++mat)
+            update_properties(Materials, mesh, State.node.temp, State.MaterialPoints.den,
+                State.MaterialPoints.conductivity, State.MaterialPoints.specific_heat,
+                State.MaterialToMeshMaps.elem_in_mat_elem,
+                State.MaterialToMeshMaps.num_mat_elems.host(mat), mat, maximum_temperature,
+                State.MaterialPoints.thermal_active);
+    };
+    refresh_properties();
 
     // ---- Write initial state at t=0 ---- 
     if (log) log->info("Writing outputs to file at %f \n", graphics_time);
+    update_phase_output(Materials, mesh, State);
     mesh_writer.write_mesh(
         mesh, 
         State,
@@ -157,22 +180,6 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         State.node.q_transfer(node_gid) = 0.0;
     }); // end for parallel for over nodes
 
-    // ---- Update the material properties ---- //
-    if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source) {
-        for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
-            update_properties(
-                Materials, 
-                mesh, 
-                State.node.temp, 
-                State.MaterialPoints.den, 
-                State.MaterialPoints.conductivity, 
-                State.MaterialPoints.specific_heat, 
-                State.MaterialToMeshMaps.elem_in_mat_elem, 
-                State.MaterialToMeshMaps.num_mat_elems.host(mat_id), 
-                mat_id);
-        } // end for mat_id
-    }
-
     // ---- loop over the max number of time integration cycles ---- //
     for (size_t cycle = 0; cycle < cycle_stop; cycle++) {
 
@@ -192,6 +199,9 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             double dt_mat = dt;
             // ---- get the stable time step, both from CFL and Von Neumann stability ---- //
             get_timestep(mesh,
+                         thermal_models,
+                         State.MaterialPoints.mass,
+                         State.MaterialPoints.mat_volfrac,
                          State.node.coords,
                          State.node.vel,
                          State.GaussPoints.vol,
@@ -211,12 +221,15 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                          dt_mat,
                          fuzz,
                          tiny,
-                         mat_id);
+                         mat_id,
+                         State.MaterialPoints.thermal_active);
 
             // ---- save the smallest dt of all materials ---- //
             min_dt_calc = fmin(dt_mat, min_dt_calc);
         } // end for loop over all mats
         dt = min_dt_calc;
+        const double event_time = next_activation_time(Materials, State, time_value);
+        if (Kokkos::isfinite(event_time)) dt = fmin(dt, event_time - time_value);
 
         // Global minimum dt across MPI ranks (each rank's CFL limit is local to its partition).
         {
@@ -266,6 +279,9 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                 State.node.q_transfer(node_gid) = 0.0;
             }); // end for parallel for over nodes
 
+            State.corner.q_transfer.set_values(0.0);
+            refresh_properties();
+
             // ---- Calculate the corner heat flux from conduction per material ---- //
             for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
@@ -277,6 +293,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.node.temp,  // fixed to use current time level
                     State.MaterialPoints.q_flux,
                     State.MaterialPoints.conductivity,
+                    State.MaterialPoints.mat_volfrac,
                     State.MaterialPoints.temp_grad,
                     State.corner.q_transfer,
                     State.corners_in_mat_elem,
@@ -287,11 +304,12 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                     fuzz,
                     small,
                     dt, 
-                    rk_alpha);
+                    rk_alpha, State.MaterialPoints.thermal_active);
 
                 // ---- Calculate the corner heat flux from moving volumetric heat source ----
-                if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source) {
-                    double power = path.get_power(time_value);
+                if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source &&
+                    !SimulationParamaters.Laser.configured) {
+                    double power = path.tool_path_table.linear_interpolation_host(time_value, ToolPathInfo::power);
                     moving_flux(
                         Materials,
                         mesh,
@@ -313,19 +331,32 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
             } // end for mat_id
 
+            if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source &&
+                SimulationParamaters.Laser.configured) {
+                // Stage zero evaluates at t_n; later stages use the time of
+                // the state produced by the preceding RK stage.
+                const double stage_time = time_value + (rk_stage == 0 ? 0.0 :
+                    dt / (rk_num_stages - rk_stage + 1.0));
+                const auto source = sample_laser_source(SimulationParamaters.Laser, stage_time);
+                apply_laser_source(mesh, State.GaussPoints.vol, State.node.coords,
+                                   State.corner.q_transfer, source, State.GaussPoints.thermal_active_fraction);
+            }
+
             // ---- apply flux boundary conditions (convection/radiation)  ---- //
+            boundary_heat_flux(mesh, BoundaryConditions, State.node.coords,
+                               State.node.q_transfer, State.GaussPoints.thermal_active_fraction);
             boundary_convection(mesh, 
                                 BoundaryConditions, 
                                 State.node.temp, // fixed to use current time level
                                 State.node.q_transfer, 
                                 State.node.coords, // fixed to use current time level
-                                time_value);
+                                time_value, State.GaussPoints.thermal_active_fraction);
             boundary_radiation(mesh, 
                                BoundaryConditions, 
                                State.node.temp, 
                                State.node.q_transfer, 
                                State.node.coords, 
-                               time_value);
+                               time_value, State.GaussPoints.thermal_active_fraction);
 
             // ---- Update nodal temperature ---- //
             update_temperature(
@@ -333,15 +364,20 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                 State.corner.q_transfer,
                 State.node.temp,
                 State.node.temp_n0,
-                State.node.mass,
                 State.node.q_transfer,
-                State.MaterialPoints.specific_heat, // Note: Need to make this a node field, and calculate in the material loop
+                State.MaterialPoints.specific_heat,
+                State.MaterialPoints.mass,
+                State.MeshtoMaterialMaps,
+                thermal_models,
+                maximum_temperature,
+                State.MaterialPoints.thermal_active,
+                State.node.thermal_mass,
                 rk_alpha,
                 dt);
 
 
             // ---- apply temperature boundary conditions to the boundary patches----
-            boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value);
+            boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value, State.node.thermal_mass);
 
             State.node.temp.communicate();
             State.node.temp_n0.communicate();
@@ -358,15 +394,20 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             
         } // end of RK loop
 
-        // ---- Activate new elements, if needed ---- //
-
-
-        
+        // Commit completed-step history before cold material enters the domain.
+        commit_thermal_history(Materials, mesh, State);
         time_value += dt;
-
+        activate_materials(Materials, mesh, State, time_value);
+        if (thermal_models.has_activation) {
+            boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value, State.node.thermal_mass);
+            State.node.temp.communicate();
+            commit_thermal_history(Materials, mesh, State);
+        }
+        refresh_properties();
 
         // ---- Move heat source ---- //
-        if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source) {
+        if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source &&
+            !SimulationParamaters.Laser.configured) {
             RUN({
                 double x = 0.0;
                 double y = 0.0;
@@ -401,6 +442,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
             if (log) log->info("Writing outputs to file at %f \n", graphics_time);
             if (log) log->info("cycle = %lu, time = %f, time step = %f \n", cycle, time_value, dt);
             if (log) log->flush();
+            update_phase_output(Materials, mesh, State);
             mesh_writer.write_mesh(mesh,
                                    State,
                                    SimulationParamaters,

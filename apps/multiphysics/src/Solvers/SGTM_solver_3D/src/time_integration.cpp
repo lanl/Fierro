@@ -33,6 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgtm_solver_3D.hpp"
+#include "thermal_model.hpp"
 //#include "mesh.hpp""
 
 /////////////////////////////////////////////////////////////////////////////
@@ -98,6 +99,9 @@ void SGTM3D::rk_init(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::get_timestep(swage::Mesh_t& mesh,
+        const thermal::Database& thermal_models,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
                        MPICArrayKokkos<double>& node_coords,
                        MPICArrayKokkos<double>& node_vel,
                        DCArrayKokkos<double>& GaussPoints_vol,
@@ -117,7 +121,8 @@ void SGTM3D::get_timestep(swage::Mesh_t& mesh,
                        double&      dt,
                        const double fuzz,
                        const double tiny,
-                       const size_t mat_id) const
+                       const size_t mat_id,
+    const DRaggedRightArrayKokkos<unsigned char>& active) const
 {
     // increase dt by 10%, that is the largest dt value
     dt = dt * 1.1;
@@ -125,6 +130,7 @@ void SGTM3D::get_timestep(swage::Mesh_t& mesh,
     double dt_lcl;
     double min_dt_calc;
     FOR_REDUCE_MIN(mat_elem_sid, 0, num_mat_elems, dt_lcl, {
+        if (thermal_models.has_activation && active(mat_id, mat_elem_sid) == 0) return;
         size_t elem_gid = elem_mat_elem(mat_id, mat_elem_sid);
 
         double coords0[24];  // element coords
@@ -182,7 +188,18 @@ void SGTM3D::get_timestep(swage::Mesh_t& mesh,
         double alpha = MaterialPoints_conductivity(mat_id, mat_elem_sid) / 
             (MaterialPoints_density(mat_id, mat_elem_sid)*MaterialPoints_specific_heat(mat_id, mat_elem_sid));
 
-        // std::cout << "alpha: " << alpha << std::endl;
+        if (thermal_models.has_tables) {
+            const auto model = thermal_models.materials(mat_id);
+            const double cp_min = model.minimum_specific_heat > 0.0 ? model.minimum_specific_heat :
+                MaterialPoints_specific_heat(mat_id, mat_elem_sid);
+            const bool tabulated_conductivity = model.phase_change ||
+                model.tables[thermal::legacy][thermal::conductivity].rows != 0;
+            const double conductivity_max = tabulated_conductivity ? model.maximum_conductivity :
+                MaterialPoints_conductivity(mat_id, mat_elem_sid);
+            const double density = MaterialPoints_mass(mat_id, mat_elem_sid) /
+                (GaussPoints_vol(elem_gid) * MaterialPoints_volfrac(mat_id, mat_elem_sid));
+            alpha = conductivity_max / (density * cp_min);
+        }
 
         // Local dt calc based on thermal conductivity (VN Stability)
         // WARNING: There is a better definition of h that should be used here

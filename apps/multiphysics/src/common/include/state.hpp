@@ -265,7 +265,9 @@ enum class node_state
     heat_transfer,
     force,
     gradient_level_set,
-    displacement
+    displacement,
+    thermal_mass,
+    thermal_active
 };
 
 
@@ -285,6 +287,7 @@ struct node_t
     MPICArrayKokkos<double> vel_n0;     ///< Nodal velocity at tn=0 of time integration
     DCArrayKokkos<double> mass;       ///< Nodal mass
     DCArrayKokkos<double> force;      ///< Nodal force
+    DCArrayKokkos<double> thermal_mass; ///< Active thermal mass at each node
     MPICArrayKokkos<double> temp;       ///< Nodal temperature
     MPICArrayKokkos<double> temp_n0;    ///< Nodal temperature at tn=0 of time integration
     DCArrayKokkos<double> q_transfer; ///< Nodal heat flux
@@ -309,6 +312,10 @@ struct node_t
                     break;
                 case node_state::force:
                     if (force.size() == 0) this->force = DCArrayKokkos<double>(num_nodes, num_dims, "node_force");
+                    break;
+                case node_state::thermal_mass:
+                case node_state::thermal_active:
+                    // Allocated by SGTM when activation is enabled.
                     break;
                 case node_state::mass:
                     if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_nodes, "node_mass");
@@ -405,6 +412,7 @@ enum class gauss_pt_state
 struct GaussPoint_t
 {
 
+    DCArrayKokkos<double> thermal_active_fraction; ///< Sum of active material volume fractions
     DCArrayKokkos<double> vol;  ///< GaussPoint volume
     DCArrayKokkos<double> div;  ///< GaussPoint divergence of velocity
     DCArrayKokkos<double> vel_grad;  ///< GaussPoint velocity gradient tensor
@@ -578,7 +586,10 @@ enum class material_pt_state
     poisson_ratios,
     thermal_conductivity,
     specific_heat,
-    coords  // physical position at the material point (= qpt for single-material)
+    coords, // physical position at the material point (= qpt for single-material)
+    thermal_active,
+    liquid_fraction,
+    consolidated_fraction
 };
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -609,6 +620,11 @@ struct MaterialPoint_t
     DRaggedRightArrayKokkos<double> q_flux; ///< Divergence of heat flux
     DRaggedRightArrayKokkos<double> conductivity;  ///< Thermal conductivity
     DRaggedRightArrayKokkos<double> specific_heat; ///< Specific Heat
+    DRaggedRightArrayKokkos<double> thermal_maximum_temperature; ///< Per-material corner phase history
+    DRaggedRightArrayKokkos<unsigned char> thermal_active; ///< 0 inactive, 1 active, 2 newly deposited
+    DRaggedRightArrayKokkos<double> thermal_activation_time; ///< First tool-height crossing time
+    DRaggedRightArrayKokkos<double> liquid_fraction; ///< Mean nodal liquid fraction
+    DRaggedRightArrayKokkos<double> consolidated_fraction; ///< Fraction of corners initially solid or fully melted
 
     DRaggedRightArrayKokkos<double> elastic_modulii;  ///<  MaterialPoint elastic modulii Exx, Eyy, Ezz
     DRaggedRightArrayKokkos<double> shear_modulii;    ///<  MaterialPoint shear modulii Gxy, Gxz, Gyz
@@ -701,6 +717,11 @@ struct MaterialPoint_t
                     break;
                 case material_pt_state::specific_heat:
                     if (specific_heat.size() == 0) this->specific_heat = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_specific_heat");
+                    break;
+                case material_pt_state::thermal_active:
+                case material_pt_state::liquid_fraction:
+                case material_pt_state::consolidated_fraction:
+                    // Optional thermal state is allocated by SGTM.
                     break;
                 case material_pt_state::eroded_flag:
                     if (eroded.size() == 0) this->eroded = DRaggedRightArrayKokkos<bool>(this->num_material_points_buffer, "material_point_eroded");

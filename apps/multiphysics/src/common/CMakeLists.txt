@@ -18,6 +18,7 @@ include_directories(src)
 message("\n ****** ADDING COMMON SOURCE FILES ******** \n ")
 
 set(COMMON_Files 
+${CMAKE_CURRENT_SOURCE_DIR}/src/additive_data.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/region_fill.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry_new.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/stl_to_volfrac.cpp

@@ -77,6 +77,8 @@ static std::map<std::string, node_state> node_outputs_map
     { "vel",    node_state::velocity },
     { "temp",   node_state::temp },
     { "mass",   node_state::mass },
+    { "thermal_mass", node_state::thermal_mass },
+    { "thermal_active", node_state::thermal_active },
     { "force",  node_state::force },
     { "grad_level_set", node_state::gradient_level_set},
     { "disp", node_state::displacement}
@@ -103,6 +105,11 @@ static std::map<std::string, material_pt_state> mat_pt_outputs_map
     { "mass",    material_pt_state::mass},
     { "volfrac", material_pt_state::volume_fraction},
     { "eroded",  material_pt_state::eroded_flag},
+    { "thermal_active", material_pt_state::thermal_active },
+    { "liquid_fraction", material_pt_state::liquid_fraction },
+    { "consolidated_fraction", material_pt_state::consolidated_fraction },
+    { "thermal_conductivity", material_pt_state::thermal_conductivity },
+    { "specific_heat", material_pt_state::specific_heat },
     { "heat_flux",  material_pt_state::heat_flux}
 };
 

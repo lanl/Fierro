@@ -120,6 +120,12 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     size_t num_bcs = bc_yaml.Size();
 
     BoundaryConditions.num_bcs = num_bcs;
+    BoundaryConditions.prescribed_heat_flux = DCArrayKokkos<double>(num_bcs, "prescribed_heat_flux");
+    BoundaryConditions.prescribed_heat_flux_solver = DCArrayKokkos<int>(num_bcs, "prescribed_heat_flux_solver");
+    for (size_t bc = 0; bc < num_bcs; ++bc) {
+        BoundaryConditions.prescribed_heat_flux.host(bc) = 0.0;
+        BoundaryConditions.prescribed_heat_flux_solver.host(bc) = -1;
+    }
     BoundaryConditions.BoundaryConditionSetup = CArrayKokkos <BoundaryConditionSetup_t>(num_bcs, "bc_setup_vars");
 
     // device functions
@@ -242,10 +248,37 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
         } // end check on m_id range
 
 
+        // Constant flux uses one signed scalar: positive supplies heat to the
+        // selected physical surface. Validate independently of YAML key order.
+        auto& flux_model = inps_yaml["heat_flux_model"];
+        auto& flux_vars = inps_yaml["heat_flux_bc_global_vars"];
+        if (!flux_model.IsNone() || !flux_vars.IsNone()) {
+            if (!flux_model.IsScalar() || flux_model.As<std::string>() != "constant")
+                throw std::runtime_error("heat_flux_model must be constant");
+            if (!flux_vars.IsSequence() || flux_vars.Size() != 1 || !flux_vars[0].IsScalar())
+                throw std::runtime_error("constant heat flux requires one heat_flux_bc_global_vars value");
+            auto text = flux_vars[0].As<std::string>();
+            const auto last = text.find_last_not_of(" \t\r\n");
+            if (last != std::string::npos) text.erase(last + 1);
+            size_t used = 0;
+            double flux;
+            try { flux = std::stod(text, &used); }
+            catch (const std::exception&) {
+                throw std::runtime_error("constant heat flux must be numeric");
+            }
+            if (used != text.size() || !Kokkos::isfinite(flux))
+                throw std::runtime_error("constant heat flux must be finite");
+            BoundaryConditions.prescribed_heat_flux.host(bc_id) = flux;
+            BoundaryConditions.prescribed_heat_flux_solver.host(bc_id) = solver_id;
+        }
+
         // loop over the words in the boundary condition input definition
         for (auto& a_word : user_str_bc_inps) {
             
             Yaml::Node& inps_yaml = bc_yaml[bc_id]["boundary_condition"][a_word];
+
+            if (a_word == "heat_flux_model" || a_word == "heat_flux_bc_global_vars")
+                continue; // validated and stored together above
 
             // get solver for this boundary condition
             if (a_word.compare("solver_id") == 0) {

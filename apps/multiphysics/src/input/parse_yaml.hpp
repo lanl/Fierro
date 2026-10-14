@@ -48,6 +48,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 struct SimulationParameters_t;
 struct solver_input_t;
+struct Laser_t;
+void parse_laser(Yaml::Node& root, Laser_t& laser);
+
 struct Material_t;
 struct BoundaryCondition_t;
 

@@ -48,6 +48,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "matar.h"
 
 #include "parse_yaml.hpp"
+#include "parse_yaml.hpp"
 
 #include "parse_tools.hpp"
 #include "parse_regions.hpp"
@@ -117,8 +118,8 @@ void parse_yaml(Yaml::Node& root, SimulationParameters_t& SimulationParamaters, 
     // parse the material yaml text into a vector of materials
     parse_materials(root, Materials, SimulationParamaters.MeshInput.num_dims);
     parse_multimaterial_options(root, Materials);
+    parse_laser(root, SimulationParamaters.Laser);
 }
-
 
 
 

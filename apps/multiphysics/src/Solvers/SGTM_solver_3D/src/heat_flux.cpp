@@ -33,6 +33,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgtm_solver_3D.hpp"
+#include "additive_data.hpp"
 #include "material.hpp"
 //#include "mesh.hpp""
 #include "state.hpp"
@@ -75,6 +76,7 @@ void SGTM3D::get_heat_flux(
     const MPICArrayKokkos<double>& node_temp,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_q_flux,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
+    const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
     const DRaggedRightArrayKokkos<double>& MaterialPoints_temp_grad,
     const DCArrayKokkos<double>& corner_q_transfer,
     const corners_in_mat_t corners_in_mat_elem,
@@ -85,13 +87,21 @@ void SGTM3D::get_heat_flux(
     const double fuzz,
     const double small,
     const double dt,
-    const double rk_alpha) const
+    const double rk_alpha,
+    const DRaggedRightArrayKokkos<unsigned char>& active) const
 {
     const size_t num_dims = 3;
     const size_t num_nodes_in_elem = 8;
 
     // ---- calculate the forces acting on the nodes from the element ---- //
     FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+        if (Materials.thermal.has_activation && active(mat_id, mat_elem_sid) == 0) {
+            for (size_t dim = 0; dim < mesh.num_dims; ++dim) {
+                MaterialPoints_q_flux(mat_id, mat_elem_sid, dim) = 0.0;
+                MaterialPoints_temp_grad(mat_id, mat_elem_sid, dim) = 0.0;
+            }
+            return;
+        }
 
         // get elem gid
         size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
@@ -128,7 +138,7 @@ void SGTM3D::get_heat_flux(
 
 
         // ---- Change element state if above some melting temperature ---- //
-        if(avg_temp >= 900){
+        if (!Materials.thermal.materials(mat_id).phase_change && avg_temp >= 900) {
             // printf("Melted!");
             MaterialPoints_eroded(mat_id, mat_elem_sid) = true;
         } 
@@ -153,9 +163,9 @@ void SGTM3D::get_heat_flux(
         }
 
         // ---- Save the temperature gradient to the material point for writing out ---- //
-        MaterialPoints_temp_grad(mat_id, elem_gid, 0) = temp_grad(0);
-        MaterialPoints_temp_grad(mat_id, elem_gid, 1) = temp_grad(1);
-        MaterialPoints_temp_grad(mat_id, elem_gid, 2) = temp_grad(2);
+        MaterialPoints_temp_grad(mat_id, mat_point_sid, 0) = temp_grad(0);
+        MaterialPoints_temp_grad(mat_id, mat_point_sid, 1) = temp_grad(1);
+        MaterialPoints_temp_grad(mat_id, mat_point_sid, 2) = temp_grad(2);
 
         // ---- Calculate the heat flux at the material point ---- //
         double conductivity = MaterialPoints_conductivity(mat_id, mat_point_sid); // NOTE: Consider moving this to properties and evaluate instead of save
@@ -174,12 +184,11 @@ void SGTM3D::get_heat_flux(
             // Get the material corner lid
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_sid, corner_lid);
 
-            // Zero out flux at material corners
-            corner_q_transfer(corner_gid) = 0.0;
-
-            // Dot the flux into the corner normal
+            // Volume-weighted parallel conduction for materials sharing a cell.
+            // The caller clears corner storage once before all material kernels.
             for(int dim = 0; dim < mesh.num_dims; dim++){
-                corner_q_transfer(corner_gid) += MaterialPoints_q_flux(mat_id, mat_point_sid, dim) * (1.0*b_matrix(node_lid, dim));
+                corner_q_transfer(corner_gid) += MaterialPoints_volfrac(mat_id, mat_point_sid) *
+                    MaterialPoints_q_flux(mat_id, mat_point_sid, dim) * b_matrix(node_lid, dim);
             }
         }
     }); // end parallel for loop over elements associated with the given material
@@ -217,6 +226,36 @@ void SGTM3D::get_heat_flux(
 /// \param The current Runge Kutta integration alpha value
 ///
 /////////////////////////////////////////////////////////////////////////////
+void SGTM3D::apply_laser_source(const swage::Mesh_t& mesh,
+                               const DCArrayKokkos<double>& element_volume,
+                               const MPICArrayKokkos<double>& coordinates,
+                               const DCArrayKokkos<double>& corner_transfer,
+                               const LaserSource_t& source,
+    const DCArrayKokkos<double>& active_fraction) const
+{
+    const bool activation = active_fraction.size() != 0;
+    // Apply once per mesh element, independent of the number of materials.
+    // Ghost elements are evaluated locally too, for owned-node corner sums.
+    FOR_ALL(elem, 0, mesh.num_elems, {
+        double x = 0.0;
+        double y = 0.0;
+        double z = 0.0;
+        for (size_t node = 0; node < mesh.num_nodes_in_elem; ++node) {
+            const size_t gid = mesh.nodes_in_elem(elem, node);
+            x += coordinates(gid, 0);
+            y += coordinates(gid, 1);
+            z += coordinates(gid, 2);
+        }
+        const double weight = 1.0 / mesh.num_nodes_in_elem;
+        const double density = laser_power_density(source, x*weight, y*weight, z*weight);
+        const double fraction = activation ? active_fraction(elem) : 1.0;
+        const double transfer = density * element_volume(elem) * weight * fraction;
+        for (size_t node = 0; node < mesh.num_nodes_in_elem; ++node) {
+            corner_transfer(mesh.corners_in_elem(elem, node)) += transfer;
+        }
+    });
+}
+
 void SGTM3D::moving_flux(
     const Material_t& Materials,
     const swage::Mesh_t& mesh,
@@ -301,4 +340,3 @@ void SGTM3D::moving_flux(
 
     return;
 }
-

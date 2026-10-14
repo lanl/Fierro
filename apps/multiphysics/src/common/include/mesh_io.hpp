@@ -2106,6 +2106,15 @@ public:
                 case material_pt_state::eroded_flag:
                     State.MaterialPoints.eroded.update_host();
                     break;
+                case material_pt_state::thermal_active:
+                    if (State.MaterialPoints.thermal_active.size() != 0) State.MaterialPoints.thermal_active.update_host();
+                    break;
+                case material_pt_state::liquid_fraction:
+                    if (State.MaterialPoints.liquid_fraction.size() != 0) State.MaterialPoints.liquid_fraction.update_host();
+                    break;
+                case material_pt_state::consolidated_fraction:
+                    if (State.MaterialPoints.consolidated_fraction.size() != 0) State.MaterialPoints.consolidated_fraction.update_host();
+                    break;
                 // tensor vars to write out
                 case material_pt_state::stress:
                     State.MaterialPoints.stress.update_host();
@@ -2176,6 +2185,12 @@ public:
                 case node_state::mass:
                     State.node.mass.update_host();
                     break;
+                case node_state::thermal_mass:
+                    if (State.node.thermal_mass.size() != 0) State.node.thermal_mass.update_host();
+                    break;
+                case node_state::thermal_active:
+                    // The required thermal_mass field synchronizes this shared storage.
+                    break;
                 case node_state::temp:
                     State.node.temp.update_host();
                     break;
@@ -2239,6 +2254,15 @@ public:
                     num_mat_pt_scalar_vars ++; // geometric volfrac
                     break;
                 case material_pt_state::eroded_flag:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                case material_pt_state::thermal_active:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                case material_pt_state::liquid_fraction:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                case material_pt_state::consolidated_fraction:
                     num_mat_pt_scalar_vars ++;
                     break;
                 // tensor vars to write out
@@ -2392,6 +2416,9 @@ public:
         int mat_mat_volfrac_id = -1;  
         int mat_geo_volfrac_id = -1;  // geometric volume fraction of part
         int mat_eroded_id = -1;
+        int mat_thermal_active_id = -1;
+        int mat_liquid_fraction_id = -1;
+        int mat_consolidated_fraction_id = -1;
         int mat_stress_id = -1;
         int mat_strain_id = -1;
         int mat_heat_flux_id = -1;
@@ -2445,6 +2472,21 @@ public:
                 case material_pt_state::eroded_flag:
                     mat_elem_scalar_var_names[var] = "mat_eroded";
                     mat_eroded_id = var;
+                    var++;
+                    break;
+                case material_pt_state::thermal_active:
+                    mat_elem_scalar_var_names[var] = "mat_thermal_active";
+                    mat_thermal_active_id = var;
+                    var++;
+                    break;
+                case material_pt_state::liquid_fraction:
+                    mat_elem_scalar_var_names[var] = "mat_liquid_fraction";
+                    mat_liquid_fraction_id = var;
+                    var++;
+                    break;
+                case material_pt_state::consolidated_fraction:
+                    mat_elem_scalar_var_names[var] = "mat_consolidated_fraction";
+                    mat_consolidated_fraction_id = var;
                     var++;
                     break;
                 // tensor vars
@@ -2641,6 +2683,12 @@ public:
                 case node_state::mass:
                     num_node_scalar_vars ++;
                     break;
+                case node_state::thermal_mass:
+                    num_node_scalar_vars ++;
+                    break;
+                case node_state::thermal_active:
+                    num_node_scalar_vars ++;
+                    break;
                 case node_state::temp:
                     num_node_scalar_vars ++;
                     break;
@@ -2677,6 +2725,8 @@ public:
         std::vector<std::string> node_vector_var_names(num_node_vector_vars);
 
         int node_mass_id = -1;
+        int node_thermal_mass_id = -1;
+        int node_thermal_active_id = -1;
         int node_vel_id = -1;
         int node_accel_id = -1;
         int node_coord_id = -1;
@@ -2695,6 +2745,16 @@ public:
                 case node_state::mass:
                     node_scalar_var_names[var] = "node_mass";
                     node_mass_id = var;
+                    var++;
+                    break;
+                case node_state::thermal_mass:
+                    node_scalar_var_names[var] = "node_thermal_mass";
+                    node_thermal_mass_id = var;
+                    var++;
+                    break;
+                case node_state::thermal_active:
+                    node_scalar_var_names[var] = "node_thermal_active";
+                    node_thermal_active_id = var;
                     var++;
                     break;
                 case node_state::temp:
@@ -2829,6 +2889,8 @@ public:
                                  num_nodes,
                                  num_dims,
                                  node_mass_id,
+                                 node_thermal_mass_id,
+                                 node_thermal_active_id,
                                  node_vel_id,
                                  node_accel_id,
                                  node_coord_id,
@@ -2978,9 +3040,8 @@ public:
                     // only save material data if the mat lives on the mesh, ie. has state allocated
                     if (num_mat_elems>0){
 
-                        // set the nodal vars to zero size, we don't write these fields again
-                        node_scalar_var_names.clear();
-                        node_vector_var_names.clear();
+                        // Material VTK files omit nodal fields. Preserve names for text output.
+                        const std::vector<std::string> no_node_var_names;
 
                         // the arrays storing all the material field data
                         DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
@@ -3005,6 +3066,9 @@ public:
                                                mat_mat_volfrac_id,
                                                mat_geo_volfrac_id,  
                                                mat_eroded_id,
+                                               mat_thermal_active_id,
+                                               mat_liquid_fraction_id,
+                                               mat_consolidated_fraction_id,
                                                mat_stress_id,
                                                mat_strain_id,
                                                mat_conductivity_id,
@@ -3053,8 +3117,8 @@ public:
                                   mat_elem_scalar_var_names,
                                   mat_elem_tensor_var_names,
                                   mat_elem_vector_var_names,
-                                  node_scalar_var_names,
-                                  node_vector_var_names,
+                                  no_node_var_names,
+                                  no_node_var_names,
                                   mat_fields_name,
                                   graphics_id,
                                   num_mat_nodes,
@@ -3197,12 +3261,17 @@ public:
                              mat_mat_volfrac_id,
                              mat_geo_volfrac_id,
                              mat_eroded_id,
+                             mat_thermal_active_id,
+                             mat_liquid_fraction_id,
+                             mat_consolidated_fraction_id,
                              mat_stress_id,
                              mat_strain_id,
                              mat_conductivity_id,
                              mat_specific_heat_id,
                              mat_heat_flux_id,
                              node_mass_id,
+                             node_thermal_mass_id,
+                             node_thermal_active_id,
                              node_vel_id,
                              node_coord_id,
                              node_temp_id,
@@ -4276,6 +4345,9 @@ public:
                                 const int mat_mat_volfrac_id,  
                                 const int mat_geo_volfrac_id,  
                                 const int mat_eroded_id,
+                                const int mat_thermal_active_id,
+                                const int mat_liquid_fraction_id,
+                                const int mat_consolidated_fraction_id,
                                 const int mat_stress_id,
                                 const int mat_strain_id,
                                 const int mat_conductivity_id,
@@ -4339,6 +4411,21 @@ public:
                         // field
                         // this is the geometric volume fraction (interface reconstruction)
                         mat_elem_scalar_fields(mat_geo_volfrac_id, mat_elem_sid) = MaterialPoints.geo_volfrac(mat_id, mat_elem_sid);
+                    });
+                    break;
+                case material_pt_state::thermal_active:
+                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                        mat_elem_scalar_fields(mat_thermal_active_id, mat_elem_sid) = MaterialPoints.thermal_active.size() == 0 || MaterialPoints.thermal_active(mat_id, mat_elem_sid) != 0 ? 1.0 : 0.0;
+                    });
+                    break;
+                case material_pt_state::liquid_fraction:
+                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                        mat_elem_scalar_fields(mat_liquid_fraction_id, mat_elem_sid) = MaterialPoints.liquid_fraction.size() != 0 ? (double)MaterialPoints.liquid_fraction(mat_id, mat_elem_sid) : 0.0;
+                    });
+                    break;
+                case material_pt_state::consolidated_fraction:
+                    FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+                        mat_elem_scalar_fields(mat_consolidated_fraction_id, mat_elem_sid) = MaterialPoints.consolidated_fraction.size() != 0 ? (double)MaterialPoints.consolidated_fraction(mat_id, mat_elem_sid) : 1.0;
                     });
                     break;
                 case material_pt_state::eroded_flag:
@@ -4457,6 +4544,8 @@ public:
                                   const size_t num_nodes,
                                   const size_t num_dims,
                                   const int node_mass_id,
+                                  const int node_thermal_mass_id,
+                                  const int node_thermal_active_id,
                                   const int node_vel_id,
                                   const int node_accel_id,
                                   const int node_coord_id,
@@ -4467,6 +4556,18 @@ public:
         for (auto field : output_node_states){
             switch(field){
                 // scalars
+                case node_state::thermal_mass:
+                    FOR_ALL(node_gid, 0, num_nodes, {
+                        node_scalar_fields(node_thermal_mass_id, node_gid) = Node.thermal_mass.size() != 0 ?
+                            Node.thermal_mass(node_gid) : Node.mass(node_gid);
+                    });
+                    break;
+                case node_state::thermal_active:
+                    FOR_ALL(node_gid, 0, num_nodes, {
+                        node_scalar_fields(node_thermal_active_id, node_gid) =
+                            Node.thermal_mass.size() == 0 || Node.thermal_mass(node_gid) > 0.0 ? 1.0 : 0.0;
+                    });
+                    break;
                 case node_state::mass:
 
                     FOR_ALL(node_gid, 0, num_nodes, {
@@ -4985,6 +5086,15 @@ public:
                 case material_pt_state::eroded_flag:
                     State.MaterialPoints.eroded.update_host();
                     break;
+                case material_pt_state::thermal_active:
+                    if (State.MaterialPoints.thermal_active.size() != 0) State.MaterialPoints.thermal_active.update_host();
+                    break;
+                case material_pt_state::liquid_fraction:
+                    if (State.MaterialPoints.liquid_fraction.size() != 0) State.MaterialPoints.liquid_fraction.update_host();
+                    break;
+                case material_pt_state::consolidated_fraction:
+                    if (State.MaterialPoints.consolidated_fraction.size() != 0) State.MaterialPoints.consolidated_fraction.update_host();
+                    break;
                 // tensor vars to write out
                 case material_pt_state::stress:
                     State.MaterialPoints.stress.update_host();
@@ -5054,6 +5164,12 @@ public:
                 case node_state::mass:
                     State.node.mass.update_host();
                     break;
+                case node_state::thermal_mass:
+                    if (State.node.thermal_mass.size() != 0) State.node.thermal_mass.update_host();
+                    break;
+                case node_state::thermal_active:
+                    // The required thermal_mass field synchronizes this shared storage.
+                    break;
                 case node_state::temp:
                     State.node.temp.update_host();
                     break;
@@ -5117,6 +5233,15 @@ public:
                     num_mat_pt_scalar_vars ++; // geometric volfrac
                     break;
                 case material_pt_state::eroded_flag:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                case material_pt_state::thermal_active:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                case material_pt_state::liquid_fraction:
+                    num_mat_pt_scalar_vars ++;
+                    break;
+                case material_pt_state::consolidated_fraction:
                     num_mat_pt_scalar_vars ++;
                     break;
                 // tensor vars to write out
@@ -5272,6 +5397,9 @@ public:
         int mat_mat_volfrac_id = -1;  
         int mat_geo_volfrac_id = -1;  // geometric volume fraction of part
         int mat_eroded_id = -1;
+        int mat_thermal_active_id = -1;
+        int mat_liquid_fraction_id = -1;
+        int mat_consolidated_fraction_id = -1;
         int mat_stress_id = -1;
         int mat_strain_id = -1;
         int mat_heat_flux_id = -1;
@@ -5325,6 +5453,21 @@ public:
                 case material_pt_state::eroded_flag:
                     mat_elem_scalar_var_names[var] = "mat_eroded";
                     mat_eroded_id = var;
+                    var++;
+                    break;
+                case material_pt_state::thermal_active:
+                    mat_elem_scalar_var_names[var] = "mat_thermal_active";
+                    mat_thermal_active_id = var;
+                    var++;
+                    break;
+                case material_pt_state::liquid_fraction:
+                    mat_elem_scalar_var_names[var] = "mat_liquid_fraction";
+                    mat_liquid_fraction_id = var;
+                    var++;
+                    break;
+                case material_pt_state::consolidated_fraction:
+                    mat_elem_scalar_var_names[var] = "mat_consolidated_fraction";
+                    mat_consolidated_fraction_id = var;
                     var++;
                     break;
                 // tensor vars
@@ -5524,6 +5667,12 @@ public:
                 case node_state::mass:
                     num_node_scalar_vars ++;
                     break;
+                case node_state::thermal_mass:
+                    num_node_scalar_vars ++;
+                    break;
+                case node_state::thermal_active:
+                    num_node_scalar_vars ++;
+                    break;
                 case node_state::temp:
                     num_node_scalar_vars ++;
                     break;
@@ -5560,6 +5709,8 @@ public:
         std::vector<std::string> node_vector_var_names(num_node_vector_vars);
 
         int node_mass_id = -1;
+        int node_thermal_mass_id = -1;
+        int node_thermal_active_id = -1;
         int node_vel_id = -1;
         int node_accel_id = -1;
         int node_coord_id = -1;
@@ -5578,6 +5729,16 @@ public:
                 case node_state::mass:
                     node_scalar_var_names[var] = "node_mass";
                     node_mass_id = var;
+                    var++;
+                    break;
+                case node_state::thermal_mass:
+                    node_scalar_var_names[var] = "node_thermal_mass";
+                    node_thermal_mass_id = var;
+                    var++;
+                    break;
+                case node_state::thermal_active:
+                    node_scalar_var_names[var] = "node_thermal_active";
+                    node_thermal_active_id = var;
                     var++;
                     break;
                 case node_state::temp:
@@ -5714,6 +5875,8 @@ public:
                                  num_nodes,
                                  num_dims,
                                  node_mass_id,
+                                 node_thermal_mass_id,
+                                 node_thermal_active_id,
                                  node_vel_id,
                                  node_accel_id,
                                  node_coord_id,
@@ -5866,9 +6029,8 @@ public:
                     // only save material data if the mat lives on the mesh, ie. has state allocated
                     if (num_mat_elems>0){
 
-                        // set the nodal vars to zero size, we don't write these fields again
-                        node_scalar_var_names.clear();
-                        node_vector_var_names.clear();
+                        // Material VTK files omit nodal fields. Preserve names for text output.
+                        const std::vector<std::string> no_node_var_names;
 
                         // the arrays storing all the material field data
                         DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
@@ -5893,6 +6055,9 @@ public:
                                                mat_mat_volfrac_id,
                                                mat_geo_volfrac_id,  
                                                mat_eroded_id,
+                                               mat_thermal_active_id,
+                                               mat_liquid_fraction_id,
+                                               mat_consolidated_fraction_id,
                                                mat_stress_id,
                                                mat_strain_id,
                                                mat_conductivity_id,
@@ -5941,8 +6106,8 @@ public:
                                   mat_elem_scalar_var_names,
                                   mat_elem_tensor_var_names,
                                   mat_elem_vector_var_names,
-                                  node_scalar_var_names,
-                                  node_vector_var_names,
+                                  no_node_var_names,
+                                  no_node_var_names,
                                   mat_fields_name,
                                   graphics_id,
                                   num_mat_nodes,
@@ -5984,6 +6149,9 @@ public:
                                          mat_mat_volfrac_id,
                                          mat_geo_volfrac_id,
                                          mat_eroded_id,
+                                         mat_thermal_active_id,
+                                         mat_liquid_fraction_id,
+                                         mat_consolidated_fraction_id,
                                          mat_stress_id,
                                          mat_strain_id,
                                          mat_conductivity_id,
@@ -6130,11 +6298,16 @@ public:
                                 mat_mat_volfrac_id,
                                 mat_geo_volfrac_id,
                                 mat_eroded_id,
+                                mat_thermal_active_id,
+                                mat_liquid_fraction_id,
+                                mat_consolidated_fraction_id,
                                 mat_stress_id,
                                 mat_strain_id,
                                 mat_conductivity_id,
                                 mat_specific_heat_id,
                                 node_mass_id,
+                                node_thermal_mass_id,
+                                node_thermal_active_id,
                                 node_vel_id,
                                 node_coord_id,
                                 node_temp_id,
@@ -6199,6 +6372,9 @@ public:
         const int mat_mat_volfrac_id,
         const int mat_geo_volfrac_id,
         const int mat_eroded_id,
+        const int mat_thermal_active_id,
+        const int mat_liquid_fraction_id,
+        const int mat_consolidated_fraction_id,
         const int mat_stress_id,
         const int mat_strain_id,
         const int mat_conductivity_id,
@@ -7526,6 +7702,9 @@ public:
         const int mat_mat_volfrac_id,
         const int mat_geo_volfrac_id,
         const int mat_eroded_id,
+        const int mat_thermal_active_id,
+        const int mat_liquid_fraction_id,
+        const int mat_consolidated_fraction_id,
         const int mat_stress_id,
         const int mat_strain_id,
         const int mat_conductivity_id,
@@ -7533,6 +7712,8 @@ public:
         const int mat_heat_flux_id,
         // node field slot IDs (-1 means "not requested")
         const int node_mass_id,
+        const int node_thermal_mass_id,
+        const int node_thermal_active_id,
         const int node_vel_id,
         const int node_coord_id,
         const int node_temp_id,
@@ -7669,6 +7850,12 @@ public:
             if (mat_eroded_id        >= 0 && State.MaterialPoints.eroded.size() > 0)
                 fprintf(out_elem_state, "  %-22s",
                         mat_scalar_var_names[mat_eroded_id].c_str());
+            if (mat_thermal_active_id >= 0)
+                fprintf(out_elem_state, "  %-22s", mat_scalar_var_names[mat_thermal_active_id].c_str());
+            if (mat_liquid_fraction_id >= 0)
+                fprintf(out_elem_state, "  %-22s", mat_scalar_var_names[mat_liquid_fraction_id].c_str());
+            if (mat_consolidated_fraction_id >= 0)
+                fprintf(out_elem_state, "  %-22s", mat_scalar_var_names[mat_consolidated_fraction_id].c_str());
             if (mat_conductivity_id  >= 0 && State.MaterialPoints.conductivity.size() > 0)
                 fprintf(out_elem_state, "  %-22s",
                         mat_scalar_var_names[mat_conductivity_id].c_str());
@@ -7764,6 +7951,12 @@ public:
                     fprintf(out_elem_state, "  %22.14e",
                             static_cast<double>(
                                 State.MaterialPoints.eroded.host(mat_id, pt_id)));
+                if (mat_thermal_active_id >= 0)
+                    fprintf(out_elem_state, "  %22.14e", State.MaterialPoints.thermal_active.size() == 0 || State.MaterialPoints.thermal_active.host(mat_id, pt_id) != 0 ? 1.0 : 0.0);
+                if (mat_liquid_fraction_id >= 0)
+                    fprintf(out_elem_state, "  %22.14e", State.MaterialPoints.liquid_fraction.size() != 0 ? static_cast<double>(State.MaterialPoints.liquid_fraction.host(mat_id, pt_id)) : 0.0);
+                if (mat_consolidated_fraction_id >= 0)
+                    fprintf(out_elem_state, "  %22.14e", State.MaterialPoints.consolidated_fraction.size() != 0 ? static_cast<double>(State.MaterialPoints.consolidated_fraction.host(mat_id, pt_id)) : 1.0);
                 if (mat_conductivity_id  >= 0 && State.MaterialPoints.conductivity.size() > 0)
                     fprintf(out_elem_state, "  %22.14e",
                             State.MaterialPoints.conductivity.host(mat_id, pt_id));
@@ -7857,6 +8050,10 @@ public:
             if (node_mass_id           >= 0 && State.node.mass.size() > 0)
                 fprintf(out_point_state, "  %-22s",
                         node_scalar_var_names[node_mass_id].c_str());
+            if (node_thermal_mass_id >= 0)
+                fprintf(out_point_state, "  %-22s", node_scalar_var_names[node_thermal_mass_id].c_str());
+            if (node_thermal_active_id >= 0)
+                fprintf(out_point_state, "  %-22s", node_scalar_var_names[node_thermal_active_id].c_str());
             if (node_temp_id           >= 0 && State.node.temp.size() > 0)
                 fprintf(out_point_state, "  %-22s",
                         node_scalar_var_names[node_temp_id].c_str());
@@ -7903,6 +8100,12 @@ public:
                 if (node_mass_id >= 0 && State.node.mass.size() > 0)
                     fprintf(out_point_state, "  %22.14e",
                             State.node.mass.host(node_gid));
+                if (node_thermal_mass_id >= 0)
+                    fprintf(out_point_state, "  %22.14e", State.node.thermal_mass.size() != 0 ?
+                        State.node.thermal_mass.host(node_gid) : State.node.mass.host(node_gid));
+                if (node_thermal_active_id >= 0)
+                    fprintf(out_point_state, "  %22.14e", State.node.thermal_mass.size() == 0 ||
+                        State.node.thermal_mass.host(node_gid) > 0.0 ? 1.0 : 0.0);
 
                 if (node_temp_id >= 0 && State.node.temp.size() > 0)
                     fprintf(out_point_state, "  %22.14e",
@@ -8035,7 +8238,14 @@ public:
                 }
 
                 for (const std::string& hline : header_lines) {
-                    fprintf(out, "%s\n", hline.c_str());
+                    if (hline.compare(0, 16, "# num_mat_elems=") == 0) {
+                        const size_t suffix = hline.find("  num_gp_per_elem=");
+                        fprintf(out, "# num_mat_elems=%d%s\n",
+                                num_universal_mat_elems(mat_id), hline.c_str() + suffix);
+                    }
+                    else {
+                        fprintf(out, "%s\n", hline.c_str());
+                    }
                 }
 
                 // Iterate over the sorted sequential rows
@@ -8112,12 +8322,17 @@ public:
         const int mat_mat_volfrac_id,
         const int mat_geo_volfrac_id,
         const int mat_eroded_id,
+        const int mat_thermal_active_id,
+        const int mat_liquid_fraction_id,
+        const int mat_consolidated_fraction_id,
         const int mat_stress_id,
         const int mat_strain_id,
         const int mat_conductivity_id,
         const int mat_specific_heat_id,
         // node field slot IDs (-1 means "not requested")
         const int node_mass_id,
+        const int node_thermal_mass_id,
+        const int node_thermal_active_id,
         const int node_vel_id,
         const int node_coord_id,
         const int node_temp_id,
@@ -8268,6 +8483,12 @@ public:
             if (mat_eroded_id       >= 0 && State.MaterialPoints.eroded.size() > 0)
                 fprintf(out_elem_state, "  %-22s",
                         mat_scalar_var_names[mat_eroded_id].c_str());
+            if (mat_thermal_active_id >= 0)
+                fprintf(out_elem_state, "  %-22s", mat_scalar_var_names[mat_thermal_active_id].c_str());
+            if (mat_liquid_fraction_id >= 0)
+                fprintf(out_elem_state, "  %-22s", mat_scalar_var_names[mat_liquid_fraction_id].c_str());
+            if (mat_consolidated_fraction_id >= 0)
+                fprintf(out_elem_state, "  %-22s", mat_scalar_var_names[mat_consolidated_fraction_id].c_str());
             if (mat_conductivity_id >= 0 && State.MaterialPoints.conductivity.size() > 0)
                 fprintf(out_elem_state, "  %-22s",
                         mat_scalar_var_names[mat_conductivity_id].c_str());
@@ -8352,6 +8573,12 @@ public:
                         fprintf(out_elem_state, "  %22.14e",
                                 static_cast<double>(
                                     State.MaterialPoints.eroded.host(mat_id, pt_id)));
+                    if (mat_thermal_active_id >= 0)
+                        fprintf(out_elem_state, "  %22.14e", State.MaterialPoints.thermal_active.size() == 0 || State.MaterialPoints.thermal_active.host(mat_id, pt_id) != 0 ? 1.0 : 0.0);
+                    if (mat_liquid_fraction_id >= 0)
+                        fprintf(out_elem_state, "  %22.14e", State.MaterialPoints.liquid_fraction.size() != 0 ? static_cast<double>(State.MaterialPoints.liquid_fraction.host(mat_id, pt_id)) : 0.0);
+                    if (mat_consolidated_fraction_id >= 0)
+                        fprintf(out_elem_state, "  %22.14e", State.MaterialPoints.consolidated_fraction.size() != 0 ? static_cast<double>(State.MaterialPoints.consolidated_fraction.host(mat_id, pt_id)) : 1.0);
                     if (mat_conductivity_id >= 0 && State.MaterialPoints.conductivity.size() > 0)
                         fprintf(out_elem_state, "  %22.14e",
                                 State.MaterialPoints.conductivity.host(mat_id, pt_id));
@@ -8461,6 +8688,10 @@ public:
             if (node_mass_id           >= 0 && State.node.mass.size() > 0)
                 fprintf(out_point_state, "  %-22s",
                         node_scalar_var_names[node_mass_id].c_str());
+            if (node_thermal_mass_id >= 0)
+                fprintf(out_point_state, "  %-22s", node_scalar_var_names[node_thermal_mass_id].c_str());
+            if (node_thermal_active_id >= 0)
+                fprintf(out_point_state, "  %-22s", node_scalar_var_names[node_thermal_active_id].c_str());
             if (node_temp_id           >= 0 && State.node.temp.size() > 0)
                 fprintf(out_point_state, "  %-22s",
                         node_scalar_var_names[node_temp_id].c_str());
@@ -8516,6 +8747,12 @@ public:
                 if (node_mass_id >= 0 && State.node.mass.size() > 0)
                     fprintf(out_point_state, "  %22.14e",
                             State.node.mass.host(node_gid));
+                if (node_thermal_mass_id >= 0)
+                    fprintf(out_point_state, "  %22.14e", State.node.thermal_mass.size() != 0 ?
+                        State.node.thermal_mass.host(node_gid) : State.node.mass.host(node_gid));
+                if (node_thermal_active_id >= 0)
+                    fprintf(out_point_state, "  %22.14e", State.node.thermal_mass.size() == 0 ||
+                        State.node.thermal_mass.host(node_gid) > 0.0 ? 1.0 : 0.0);
     
                 if (node_temp_id >= 0 && State.node.temp.size() > 0)
                     fprintf(out_point_state, "  %22.14e",
@@ -8651,7 +8888,14 @@ public:
                 }
 
                 for (const std::string& hline : header_lines) {
-                    fprintf(out, "%s\n", hline.c_str());
+                    if (hline.compare(0, 16, "# num_mat_elems=") == 0) {
+                        const size_t suffix = hline.find("  num_gp_per_elem=");
+                        fprintf(out, "# num_mat_elems=%d%s\n",
+                                num_universal_mat_elems(mat_id), hline.c_str() + suffix);
+                    }
+                    else {
+                        fprintf(out, "%s\n", hline.c_str());
+                    }
                 }
 
                 // Iterate over the sorted sequential rows

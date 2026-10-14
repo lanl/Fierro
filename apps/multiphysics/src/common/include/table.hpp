@@ -122,7 +122,7 @@ struct Table_t{
     // Returns the interpolated value for the dependent variable in column `dependent_idx`
     // based on the independent variable value `x` in column `independent_idx`.
     // Assumes that the data in `independent_idx` is sorted in ascending order.
-    KOKKOS_INLINE_FUNCTION
+    // This accessor reads host storage and must never be compiled for a GPU.
     double linear_interpolation_host(double independent_value, size_t dependent_idx, size_t independent_idx = 0) const {
         if (num_rows == 0) return 0.0;
         

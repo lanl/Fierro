@@ -46,6 +46,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.hpp"
 #include "dynamic_options.hpp"
 #include "table.hpp"
+#include "additive_data.hpp"
 
 using namespace mtr;
 
@@ -63,6 +64,7 @@ struct SimulationParameters_t
     OutputOptions_t OutputOptions;            ///< Simulation output information
 
     DynamicOptions_t DynamicOptions;          ///< Simulation timing and dynamic options
+    Laser_t Laser;                            ///< Optional moving heat source input
 
     std::vector<solver_input_t> solver_inputs;  ///< Solvers to use during the simulation
 

@@ -32,6 +32,7 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
+#include "thermal_model.hpp"
 #include "sgtm_solver_3D.hpp"
 //#include "mesh.hpp""
 #include "boundary_conditions.hpp"
@@ -51,8 +52,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGTM3D::boundary_temperature(const swage::Mesh_t& mesh,
                                   const BoundaryCondition_t& BoundaryConditions,
                                   MPICArrayKokkos<double>& node_temp,
-                                  const double time_value) const
+                                  const double time_value,
+    const DCArrayKokkos<double>& active_mass) const
 {
+    const bool activation = active_mass.size() != 0;
     // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         
@@ -65,6 +68,7 @@ void SGTM3D::boundary_temperature(const swage::Mesh_t& mesh,
             
             // get the global index for this node on the boundary
             size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
+            if (activation && active_mass(bdy_node_gid) == 0.0) return;
 
             // evaluate temperature on this boundary node
             BoundaryConditions.BoundaryConditionFunctions(bdy_set).temperature(mesh,
@@ -103,8 +107,10 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
                                  const MPICArrayKokkos<double>& node_temp,
                                  const DCArrayKokkos<double>& node_flux,
                                  const MPICArrayKokkos<double>& node_coords,
-                                 const double time_value) const
+                                 const double time_value,
+    const DCArrayKokkos<double>& active_fraction) const
 {
+    const bool activation = active_fraction.size() != 0;
     // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         
@@ -197,7 +203,8 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
             // std::cout << "Surface area of patch " << patch_gid << " = " << surface_area << std::endl;
 
             // Partition the total surface area to the corner patches
-            double patch_area = surface_area/4.0;
+            const double fraction = activation ? active_fraction(mesh.elems_in_patch(patch_gid, 0)) : 1.0;
+            double patch_area = surface_area/4.0 * fraction;
 
             // NOTE: Add parsing to the following variables
             double ref_temp = 293.15; // room temp in Kelvin
@@ -243,8 +250,10 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
                                 const MPICArrayKokkos<double>& node_temp,
                                 const DCArrayKokkos<double>& node_flux,
                                 const MPICArrayKokkos<double>& node_coords,
-                                const double time_value) const
+                                const double time_value,
+    const DCArrayKokkos<double>& active_fraction) const
 {
+    const bool activation = active_fraction.size() != 0;
     // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         
@@ -331,7 +340,8 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
 
             double surface_area = area1+area2;
 
-            double patch_area = surface_area/4.0;
+            const double fraction = activation ? active_fraction(mesh.elems_in_patch(patch_gid, 0)) : 1.0;
+            double patch_area = surface_area/4.0 * fraction;
 
             // NOTE: Parse these in
             double emmisivity = 0.2; // rough oxidized aluminum
@@ -387,36 +397,35 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::boundary_heat_flux(const swage::Mesh_t& mesh,
-                                  const BoundaryCondition_t& BoundaryConditions,
-                                  MPICArrayKokkos<double>& node_temp,
-                                  const double time_value) const
+                              const BoundaryCondition_t& BoundaryConditions,
+                              const MPICArrayKokkos<double>& node_coords,
+                              const DCArrayKokkos<double>& node_flux,
+    const DCArrayKokkos<double>& active_fraction) const
 {
-    // // Loop over boundary sets
-    // for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
-        
-
-    //     size_t num_bdy_patches_in_set = 2; //mesh.bdy_patches_in_set.stride.host(bdy_set);
-
-    //     std::cout<<"Num bdy patches in set "<<bdy_set<<" = "<<num_bdy_patches_in_set<<std::endl;
-
-    //     // Loop over boundary nodes in a boundary set
-    //     FOR_ALL(bdy_patch_lid, 0, num_bdy_patches_in_set, {
-            
-    //         // get the global index for this node on the boundary
-    //         size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_patch_lid);
-
-    //         // // evaluate temperature on this boundary node
-    //         // BoundaryConditions.BoundaryConditionFunctions(bdy_set).heat_flux(mesh,
-    //         //                                                       BoundaryConditions.BoundaryConditionEnums,
-    //         //                                                       BoundaryConditions.bc_global_vars,
-    //         //                                                       BoundaryConditions.bc_state_vars,
-    //         //                                                       elem_flux,
-    //         //                                                       time_value,
-    //         //                                                       1, // rk_stage
-    //         //                                                       bdy_node_gid,
-    //         //                                                       bdy_set);
-    //     }); // end for bdy_node_lid
-    // } // end for bdy_set
-
-    return;
-} // end boundary_velocity function
+    const bool activation = active_fraction.size() != 0;
+    for (size_t bdy_set = 0; bdy_set < BoundaryConditions.num_bcs; ++bdy_set) {
+        if (BoundaryConditions.prescribed_heat_flux_solver.host(bdy_set) != this->solver_id)
+            continue;
+        const double flux = BoundaryConditions.prescribed_heat_flux.host(bdy_set);
+        if (flux == 0.0) continue;
+        if (mesh.num_nodes_in_patch != 4)
+            throw std::runtime_error("SGTM prescribed flux requires quadrilateral boundary patches");
+        const size_t num_patches = mesh.num_bdy_patches_in_set.host(bdy_set);
+        FOR_ALL(patch_lid, 0, num_patches, {
+            const size_t patch = mesh.bdy_patches_in_set(bdy_set, patch_lid);
+            double coordinates[4][3];
+            double weights[4];
+            for (int node = 0; node < 4; ++node) {
+                const size_t gid = mesh.nodes_in_patch(patch, node);
+                for (int dim = 0; dim < 3; ++dim)
+                    coordinates[node][dim] = node_coords(gid, dim);
+            }
+            thermal_face_weights(coordinates, weights);
+            const double fraction = activation ? active_fraction(mesh.elems_in_patch(patch, 0)) : 1.0;
+            for (int node = 0; node < 4; ++node) {
+                const size_t gid = mesh.nodes_in_patch(patch, node);
+                Kokkos::atomic_add(&node_flux(gid), flux * weights[node] * fraction);
+            }
+        });
+    }
+}

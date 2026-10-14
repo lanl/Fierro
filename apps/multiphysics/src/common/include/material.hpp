@@ -38,6 +38,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include "matar.h"
 #include "table.hpp"
+#include "thermal_model.hpp"
 
 using namespace mtr;
 
@@ -544,6 +545,8 @@ struct Material_t
     CArrayKokkos<size_t> num_dissipation_global_vars;
 
 
+    thermal::Database thermal;
+
     // -- Tabular Material Data --
     // DCArrayKokkos<MaterialTables_t> MaterialTables;
     Table_t density_table;
@@ -594,6 +597,8 @@ static std::vector<std::string> str_material_inps
     "normal_velocity",
     "curvature_velocity",
     "tabular_model",
+    "phase_change",
+    "activation",
     "ale_model",
 };
 

@@ -66,7 +66,13 @@ public:
     Table_t tool_path_table;
 
     size_t num_columns = 5;
-    
+
+    ToolPathInfo() = default;
+
+    // CSV rows are time,x,y,z,power. Equal times are permitted for instantaneous
+    // path transitions, matching the existing table interpolation convention.
+    static ToolPathInfo load_laser_path(const char* filename);
+
     // Default constructor that takes the number of data points
     ToolPathInfo(size_t npoints)
     {
@@ -101,13 +107,108 @@ public:
     } // end function
 
 
+    // Earliest time at or after start when tool elevation reaches a cell center.
+    // A false return means the path never reaches this height. Duplicate-time
+    // upward jumps activate at that timestamp; subsequent descent cannot undo it.
+    KOKKOS_INLINE_FUNCTION
+    bool first_height_crossing(double height, double start, double& event_time) const {
+        const auto& table = tool_path_table;
+        if (table.num_rows == 0) return false;
+        if (table.linear_interpolation(start, Fields::z) >= height) {
+            event_time = start;
+            return true;
+        }
+        for (size_t row = 0; row < table.num_rows; ++row) {
+            const double time = table.data(row, Fields::time);
+            const double elevation = table.data(row, Fields::z);
+            if (time < start || elevation < height) continue;
+            event_time = time;
+            if (row > 0) {
+                const double previous_time = table.data(row - 1, Fields::time);
+                const double previous_elevation = table.data(row - 1, Fields::z);
+                if (time > previous_time && previous_elevation < height)
+                    event_time = previous_time + (time - previous_time) *
+                        ((height - previous_elevation) / (elevation - previous_elevation));
+            }
+            event_time = Kokkos::max(start, event_time);
+            return true;
+        }
+        return false;
+    }
+
     // Compute current power of tool at time t, assuming linear interpolation between path points.
     // Returns the power at the time t
     KOKKOS_INLINE_FUNCTION
-    double get_power(double& t) const {
+    double get_power(const double& t) const {
         return tool_path_table.linear_interpolation(t, Fields::power, Fields::time);
     } // end function
 };
+
+enum class LaserModelType { SPHERICAL, GOLDAK };
+
+struct SphericalParams_t {
+    double radius = 8.0;  // Legacy moving-source radius.
+};
+
+struct GoldakParams_t {
+    double major_front = 0.0;
+    double major_rear = 0.0;
+    double minor = 0.0;
+    double depth = 0.0;
+    double absorptivity = 0.0;
+};
+
+// Laser configuration contains numeric parameters and MATAR tool-path views.
+struct Laser_t {
+    bool configured = false;
+    ToolPathInfo tool_path_info;
+    LaserModelType model = LaserModelType::SPHERICAL;
+    SphericalParams_t spherical;
+    GoldakParams_t goldak;
+};
+
+// Numeric source data sampled on the host once per Runge-Kutta stage. This
+// structure contains no host pointers and can be captured by a device kernel.
+struct LaserSource_t {
+    LaserModelType model = LaserModelType::SPHERICAL;
+    SphericalParams_t spherical;
+    GoldakParams_t goldak;
+    double x = 0.0, y = 0.0, z = 0.0;
+    double direction_x = 1.0, direction_y = 0.0;
+    double power = 0.0;
+};
+
+LaserSource_t sample_laser_source(const Laser_t& laser, double time);
+
+KOKKOS_INLINE_FUNCTION
+double laser_power_density(const LaserSource_t& source, double x, double y, double z)
+{
+    constexpr double pi = 3.141592653589793238462643383279502884;
+    constexpr double sqrt_three = 1.732050807568877293527446341505872367;
+    constexpr double sqrt_pi = 1.772453850905516027298167483341145183;
+    if (source.power == 0.0) return 0.0;
+    const double dx = x - source.x;
+    const double dy = y - source.y;
+    const double dz = z - source.z;
+    if (source.model == LaserModelType::SPHERICAL) {
+        const double radius = source.spherical.radius;
+        return dx*dx + dy*dy + dz*dz <= radius*radius
+            ? source.power / ((4.0/3.0) * pi * radius*radius*radius) : 0.0;
+    }
+
+    // Goldak's 6*sqrt(3) normalization deposits eta*P in the lower half-space.
+    // Without this surface restriction the same formula deposits twice eta*P.
+    if (dz > 0.0) return 0.0;
+    const double xi = dx * source.direction_x + dy * source.direction_y;
+    const double eta = -dx * source.direction_y + dy * source.direction_x;
+    const auto& p = source.goldak;
+    const double a = xi >= 0.0 ? p.major_front : p.major_rear;
+    const double fraction = 2.0 * a / (p.major_front + p.major_rear);
+    const double exponent = -3.0 * (xi*xi/(a*a) + eta*eta/(p.minor*p.minor) +
+                                     dz*dz/(p.depth*p.depth));
+    return 6.0 * sqrt_three * fraction * p.absorptivity * source.power /
+           (a * p.minor * p.depth * pi * sqrt_pi) * Kokkos::exp(exponent);
+}
 
 // ----------------------------------
 // valid inputs for additive data

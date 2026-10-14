@@ -23,16 +23,17 @@ ${CMAKE_CURRENT_SOURCE_DIR}/parse_output_options.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_dynamic_inputs.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_bdy_conds_inputs.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_material_inputs.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/parse_thermal_models.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_solver_inputs.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_mesh_inputs.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_regions.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_initial_conditions.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/parse_yaml.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/parse_laser.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/Yaml.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/read_abaqus_files.cpp
 PARENT_SCOPE
 )
-
 
 
 

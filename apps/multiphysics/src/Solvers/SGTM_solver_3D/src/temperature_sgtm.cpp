@@ -33,7 +33,81 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "sgtm_solver_3D.hpp"
+#include "material.hpp"
 #include "state.hpp"
+
+namespace {
+struct NodalEnergy {
+    double change = 0.0;
+    double capacity = 0.0;
+    double minimum_capacity = 0.0;
+};
+
+KOKKOS_INLINE_FUNCTION
+NodalEnergy nodal_energy(const swage::Mesh_t& mesh, const MeshtoMaterialMap_t& map,
+    const DRaggedRightArrayKokkos<double>& mass,
+    const DRaggedRightArrayKokkos<double>& specific_heat,
+    const thermal::Database& models, size_t node, double initial, double temperature,
+    const DRaggedRightArrayKokkos<double>& maximum_temperature,
+    const DRaggedRightArrayKokkos<unsigned char>& active)
+{
+    NodalEnergy result;
+    for (size_t local_elem = 0; local_elem < mesh.num_corners_in_node(node); ++local_elem) {
+        const size_t elem = mesh.elems_in_node(node, local_elem);
+        const size_t corner = mesh.corners_in_node(node, local_elem) % mesh.num_nodes_in_elem;
+        for (size_t local_mat = 0; local_mat < map.num_mats_in_elem(elem); ++local_mat) {
+            const size_t mat = map.mats_in_elem(elem, local_mat);
+            const size_t sid = map.mat_elems_in_elem(elem, local_mat);
+            if (models.has_activation && active(mat, sid) == 0) continue;
+            const auto model = models.materials(mat);
+            const double history = models.has_phase_change ? maximum_temperature(mat, sid, corner) : initial;
+            const double weight = mass(mat, sid) / mesh.num_nodes_in_elem;
+            const double fallback = specific_heat(mat, sid);
+            result.change += weight * (thermal::enthalpy(model, models.data, temperature, history, fallback) -
+                                        thermal::enthalpy(model, models.data, initial, history, fallback));
+            result.capacity += weight * thermal::capacity(model, models.data, temperature, history, fallback);
+            result.minimum_capacity += weight * (model.minimum_specific_heat > 0.0 ?
+                                                  model.minimum_specific_heat : fallback);
+        }
+    }
+    return result;
+}
+KOKKOS_INLINE_FUNCTION
+double solve_nodal_temperature(const swage::Mesh_t& mesh, const MeshtoMaterialMap_t& map,
+    const DRaggedRightArrayKokkos<double>& mass, const DRaggedRightArrayKokkos<double>& cp,
+    const thermal::Database& models, const DRaggedRightArrayKokkos<double>& history,
+    const DRaggedRightArrayKokkos<unsigned char>& active, size_t node, double initial, double energy)
+{
+    if (energy == 0.0) return initial;
+    const auto baseline = nodal_energy(mesh, map, mass, cp, models, node, initial, initial, history, active);
+    if (!(baseline.minimum_capacity > 0.0))
+        Kokkos::abort("SGTM requires positive nodal thermal capacity");
+    if (!models.has_tables) return initial + energy / baseline.capacity;
+    // The minimum sensible Cp bounds the root even across the entire melt interval.
+    const double limit = initial + energy / baseline.minimum_capacity;
+    double low = Kokkos::min(initial, limit);
+    double high = Kokkos::max(initial, limit);
+    double temperature = initial + energy / baseline.capacity;
+    const double tolerance = 1.0e-13 * Kokkos::max(Kokkos::abs(energy),
+        baseline.capacity * Kokkos::max(1.0, Kokkos::abs(initial)));
+    bool converged = false;
+    for (int iteration = 0; iteration < 80; ++iteration) {
+        const auto trial = nodal_energy(mesh, map, mass, cp, models, node, initial, temperature, history, active);
+        const double residual = trial.change - energy;
+        if (Kokkos::abs(residual) <= tolerance) {
+            converged = true;
+            break;
+        }
+        if (residual < 0.0) low = temperature;
+        else high = temperature;
+        const double next = temperature - residual / trial.capacity;
+        temperature = next > low && next < high ? next : 0.5 * (low + high);
+    }
+    if (!converged || !Kokkos::isfinite(temperature))
+        Kokkos::abort("SGTM nodal enthalpy solve failed to converge");
+    return temperature;
+}
+} // namespace
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -55,14 +129,20 @@ void SGTM3D::update_temperature(
     const DCArrayKokkos<double>& corner_q_transfer,
     const MPICArrayKokkos<double>& node_temp,
     const MPICArrayKokkos<double>& node_temp_n0,
-    const DCArrayKokkos<double>& node_mass,
     const DCArrayKokkos<double>& node_q_transfer,
     const DRaggedRightArrayKokkos<double>& mat_pt_specific_heat,
+    const DRaggedRightArrayKokkos<double>& mat_pt_mass,
+    const MeshtoMaterialMap_t& material_map,
+    const thermal::Database& thermal_models,
+    const DRaggedRightArrayKokkos<double>& maximum_temperature,
+    const DRaggedRightArrayKokkos<unsigned char>& active,
+    const DCArrayKokkos<double>& active_mass,
     const double rk_alpha,
     const double dt) const
 {
     // ---- loop over all the nodes in the mesh ---- //
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
+        if (thermal_models.has_activation && active_mass(node_gid) == 0.0) return;
         
         // ---- loop over all corners around the node and calculate total flux through that node (divergence) ---- //
         for (size_t corner_lid = 0; corner_lid < mesh.num_corners_in_node(node_gid); corner_lid++) {
@@ -73,19 +153,82 @@ void SGTM3D::update_temperature(
 
         } // end for corner_lid
 
-        // ---- Calculate the average specific heat for all materials surrounding a node ---- //
-        double Cp = 0.0;
-        for(int elem_lid = 0; elem_lid < mesh.num_corners_in_node(node_gid); elem_lid++){ // NOTE: num_corners_in_node = num_elems_in_node
-            size_t elem_gid = mesh.elems_in_node(node_gid, elem_lid);
-            Cp += mat_pt_specific_heat(0,elem_gid)/mesh.num_corners_in_node(node_gid);
+        const double initial = node_temp_n0(node_gid);
+        const double energy = rk_alpha * dt * node_q_transfer(node_gid);
+        if (thermal_models.has_tables) {
+            node_temp(node_gid) = solve_nodal_temperature(mesh, material_map, mat_pt_mass,
+                mat_pt_specific_heat, thermal_models, maximum_temperature, active,
+                node_gid, initial, energy);
         }
-
-        // std::cout << "Cp*mass = " << Cp * node_mass(node_gid) << std::endl;
-
-        // ---- Update the nodal temperature ---- //
-        node_temp(node_gid) = node_temp_n0(node_gid) + rk_alpha * dt * node_q_transfer(node_gid) / (node_mass(node_gid)*Cp);
+        else {
+            // Assemble sum(m_corner * Cp) using the material-local storage map.
+            // This also handles mixed cells and unequal material densities correctly.
+            double capacity = 0.0;
+            for (size_t elem_lid = 0; elem_lid < mesh.num_corners_in_node(node_gid); ++elem_lid) {
+                const size_t elem = mesh.elems_in_node(node_gid, elem_lid);
+                for (size_t local_mat = 0; local_mat < material_map.num_mats_in_elem(elem); ++local_mat) {
+                    const size_t mat = material_map.mats_in_elem(elem, local_mat);
+                    const size_t sid = material_map.mat_elems_in_elem(elem, local_mat);
+                    if (thermal_models.has_activation && active(mat, sid) == 0) continue;
+                    capacity += mat_pt_mass(mat, sid) * mat_pt_specific_heat(mat, sid) / mesh.num_nodes_in_elem;
+                }
+            }
+            if (!(capacity > 0.0)) Kokkos::abort("SGTM requires positive nodal thermal capacity");
+            node_temp(node_gid) = initial + energy / capacity;
+        }
 
     }); // end for parallel for over nodes
 
     return;
 } // end subroutine
+
+void SGTM3D::activate_materials(const Material_t& Materials, const swage::Mesh_t& mesh,
+    State_t& State, double time) const
+{
+    const auto models = Materials.thermal;
+    if (!models.has_activation) return;
+    const auto active = State.MaterialPoints.thermal_active;
+    const auto history = State.MaterialPoints.thermal_maximum_temperature;
+    for (size_t mat = 0; mat < Materials.num_mats; ++mat) {
+        FOR_ALL(sid, 0, State.MaterialToMeshMaps.num_mat_elems.host(mat), {
+            if (active(mat, sid) == 0 && State.MaterialPoints.thermal_activation_time(mat, sid) <= time) {
+                active(mat, sid) = 2;
+                if (models.has_phase_change)
+                    for (size_t corner = 0; corner < mesh.num_nodes_in_elem; ++corner)
+                        history(mat, sid, corner) = models.materials(mat).deposition_temperature;
+            }
+        });
+    }
+    refresh_active_geometry(mesh, State);
+    const auto map = State.MeshtoMaterialMaps;
+    FOR_ALL(node, 0, mesh.num_nodes, {
+        if (State.node.thermal_mass(node) == 0.0) return;
+        const double initial = State.node.temp(node);
+        double incoming_energy = 0.0;
+        for (size_t local_elem = 0; local_elem < mesh.num_corners_in_node(node); ++local_elem) {
+            const size_t elem = mesh.elems_in_node(node, local_elem);
+            const size_t corner = mesh.corners_in_node(node, local_elem) % mesh.num_nodes_in_elem;
+            for (size_t local_mat = 0; local_mat < map.num_mats_in_elem(elem); ++local_mat) {
+                const size_t mat = map.mats_in_elem(elem, local_mat);
+                const size_t sid = map.mat_elems_in_elem(elem, local_mat);
+                if (active(mat, sid) != 2) continue;
+                const auto model = models.materials(mat);
+                const double deposited = model.deposition_temperature;
+                const double maximum = models.has_phase_change ? history(mat, sid, corner) : deposited;
+                const double fallback = State.MaterialPoints.specific_heat(mat, sid);
+                incoming_energy += State.MaterialPoints.mass(mat, sid) / mesh.num_nodes_in_elem *
+                    (thermal::enthalpy(model, models.data, deposited, maximum, fallback) -
+                     thermal::enthalpy(model, models.data, initial, maximum, fallback));
+            }
+        }
+        State.node.temp(node) = solve_nodal_temperature(mesh, map, State.MaterialPoints.mass,
+            State.MaterialPoints.specific_heat, models, history, active, node, initial, incoming_energy);
+    });
+    State.node.temp.communicate();
+    commit_thermal_history(Materials, mesh, State);
+    for (size_t mat = 0; mat < Materials.num_mats; ++mat) {
+        FOR_ALL(sid, 0, State.MaterialToMeshMaps.num_mat_elems.host(mat), {
+            if (active(mat, sid) == 2) active(mat, sid) = 1;
+        });
+    }
+}

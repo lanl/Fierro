@@ -376,6 +376,10 @@ struct BoundaryCondition_t
     DCArrayKokkos<size_t> temperature_bdy_sets_in_solver;     // (solver_id, lids)
     DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver_id)
 
+    // Prescribed inward heat flux, in power/area. A solver ID of -1 disables it.
+    DCArrayKokkos<double> prescribed_heat_flux;
+    DCArrayKokkos<int> prescribed_heat_flux_solver;
+
 
     CArrayKokkos<BoundaryConditionSetup_t> BoundaryConditionSetup;  // vars to setup the bcs, accessed using (bc_id)
 

@@ -47,6 +47,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Yaml.hpp"
 
 
+namespace thermal { struct Database; }
+thermal::Database parse_thermal_models(Yaml::Node& root);
+
 struct Material_t;
 struct MaterialSetup_t;
 struct MaterialFunctions_t;
