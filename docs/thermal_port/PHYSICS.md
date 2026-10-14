@@ -118,8 +118,9 @@ linear Cp, distinct material tables, sensible heating, partial/complete melting,
 a one-step melt, and cooling without a laser. Its powder cycle uses Cp=1/2/3
 for powder/solid/liquid, melts every node, then cools every node below solidus.
 It checks the final energy against the solid branch and the initial powder
-branch. These are constitutive/conservation checks; a spatial Stefan benchmark
-and refinement study remain part of the post-checkpoint validation campaign.
+branch. These are constitutive/conservation checks. The separate spatial Stefan
+benchmark and independent mesh/melting-interval refinement are documented in
+PERFORMANCE.md, including the remaining finite-interval error.
 
 ## Deposition and substrate
 

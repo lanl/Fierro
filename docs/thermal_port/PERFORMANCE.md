@@ -54,8 +54,28 @@ The positive root satisfies
 `lambda exp(lambda²) erf(lambda) = Cp (Tw-Tm)/(L sqrt(pi))`.
 See equations 5–8 of [Ogoh and Groulx, 2010](https://www.comsol.com/paper/download/62472/groulx_paper.pdf).
 Our finite melt interval must be narrowed separately from mesh/time refinement
-when comparing against that sharp-interface solution. This study is planned;
-constitutive conservation tests alone do not establish melting-front accuracy.
+when comparing against that sharp-interface solution. `tests/thermal_stefan.py` now performs this study on 2×2×N cells with
+N=32,64,128 and melt intervals 1,0.5,0.25 K. The unit-property benchmark uses
+Tm=300 K, Tw=310 K, L=10 and final time 0.05; dt_max=0.04/N². The far boundary
+remains outside the melted region. All 36 cases pass on CPU/CUDA, directly and
+with two MPI ranks; CPU/GPU/rank differences are at roundoff level.
+
+| Melt interval at N=128 | L2 temperature error | Melt-front error | Total-energy error |
+|---|---:|---:|---:|
+| 1 K | 0.062279 K | -4.405% | -0.429% |
+| 0.5 K | 0.023957 K | -2.067% | -0.143% |
+| 0.25 K | 0.009429 K | -0.938% | -0.0419% |
+
+The analytic front is 0.27730044 and energy input is 4.07311890. The measured
+front is the interpolated T=Tm+half-interval contour. Holding the interval fixed
+while refining the mesh converges toward a regularized phase model, so sharp-front
+error need not decrease monotonically with mesh refinement. Narrowing the
+interval on the finest mesh reduces temperature error by factors 0.385 and
+0.394. The driver checks this trend as well as bounds, transverse symmetry and
+refined accuracy: front <=1.5%, L2 <=0.015 K and energy <=0.2% for N>=128 and
+interval<=0.25 K. These tolerances distinguish the refined acceptance check from
+the looser screening applied to coarse cases. Results are in
+`work/runs/stefan-refinement-{cpu,cuda}-r{1,2}`.
 
 ## Squared-distance optimization
 
@@ -101,3 +121,33 @@ ranks, including output at the activation time. All 13 activation/output cases
 and the original cooling regression also pass. The unaffected 1000-step GPU
 phase workload remains about 1.507 s, with no resolved performance change;
 speedup measurements for the roundoff-triggered case are recorded separately.
+
+Matched 32³, 500-requested-step runs quantify the affected case (one warmup and
+three measured runs, four CPU threads or GPU 1). Every run passes temperature
+and energy checks:
+
+| Backend | Before recovery fix | After recovery fix | Observed ratio |
+|---|---:|---:|---:|
+| CPU | 32.824972 s [32.801545,32.974303] | 22.887440 s [22.736467,22.901746] | 1.43× |
+| CUDA | 1.187486 s [1.186995,1.193500] | 0.846701 s [0.846323,0.848298] | 1.40× |
+
+Counts are 781 versus 501 completed steps in every repetition. The fixed run
+has maximum temperature error 3.33e-10 K and total energy error 1.49e-9. Evidence:
+`work/runs/benchmark-event500-{distance-opt,event-recovery}-{cpu,cuda}-r1`.
+
+The `variable` benchmark uses the student's preserved powder/solid/liquid tables
+in a uniformly heated 32-mm cube. Initial powder temperature is 1600 K and the
+source supplies the independently integrated energy needed to reach 1750 K in 0.1
+with 1000 steps, crossing solidus 1675 K and liquidus 1708 K. Mass is fixed from
+the interpolated initial powder density. The reference splits at all Cp and
+phase knots and uses five-point Newton–Cotes integration; it does not call the
+solver's Gaussian quadrature. The source covers the entire cube, giving a
+spatially uniform analytic enthalpy increment despite variable properties.
+This tests numerical table behavior without resolving DATA-001's material
+identity caveat.
+
+Before enthalpy caching, matched warmup+three-run medians are 155.093245 s
+[155.009988,155.412479] on CPU and 2.990906 s [2.987954,2.996866] on GPU 1.
+Every run completes 1000 steps, with maximum temperature error 4.80e-10 K and
+relative energy error 1.09e-12. Evidence:
+`work/runs/benchmark-cache-before-variable-{cpu,cuda}-r1`.

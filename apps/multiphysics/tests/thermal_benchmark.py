@@ -13,6 +13,7 @@ import time
 from thermal_analytic import make_input, reference
 from thermal_activation_integration import prepare, phase_energy
 from thermal_integration import read_nodes, limit_solver_output
+import thermal_variable_properties
 
 
 def make_case(directory, args):
@@ -25,6 +26,9 @@ def make_case(directory, args):
         text = text.replace(f'num_elems: [{args.size}, {args.size}, 2]',
                             f'num_elems: [{args.size}, {args.size}, {args.size}]')
         (directory/'input.yaml').write_text(text)
+    elif args.case == 'variable':
+        final_time = 0.1
+        thermal_variable_properties.prepare(directory, args.size, args.steps)
     else:
         final_time = 0.1
         prepare(directory, 'latent_deposition')
@@ -40,6 +44,8 @@ def validate(directory, args, final_time):
     nodes = read_nodes(directory/'state', final_time)
     if len(nodes) != (args.size+1)**3:
         raise ValueError('Unexpected unique node count')
+    if args.case == 'variable':
+        return thermal_variable_properties.validate(nodes)
     mass = math.fsum(row['mass'] for row in nodes.values())
     if abs(mass-1) > 1.e-10:
         raise ValueError('Benchmark mass mismatch')
@@ -75,7 +81,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--executable', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
-    parser.add_argument('--case', choices=['cosine', 'phase'], default='cosine')
+    parser.add_argument('--case', choices=['cosine', 'phase', 'variable'], default='cosine')
     parser.add_argument('--size', type=int, default=32)
     parser.add_argument('--steps', type=int, default=1000)
     parser.add_argument('--ranks', type=int, default=1)
@@ -110,10 +116,15 @@ def main():
             if process.returncode:
                 raise ValueError(f'Solver returned {process.returncode}')
             result['wall_seconds'] = time.monotonic()-start
-            times = re.findall(r'Calculation time in seconds:\s*([0-9.eE+-]+)', (directory/'run.log').read_text())
+            output = (directory/'run.log').read_text()
+            times = re.findall(r'Calculation time in seconds:\s*([0-9.eE+-]+)', output)
             if not times:
                 raise ValueError('No SGTM calculation timer in output')
             result['solver_seconds'] = max(map(float, times))
+            cycles = re.findall(r'cycle = (\d+),', output)
+            if not cycles:
+                raise ValueError('No cycle count in output')
+            result['completed_steps'] = max(map(int, cycles))+1
             result.update(validate(directory, args, final_time), status='PASS')
         except Exception as error:
             result['error'] = str(error)
