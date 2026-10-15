@@ -6,6 +6,10 @@ import sys
 import math
 import glob
 import argparse
+import shutil
+import subprocess
+
+IS_WINDOWS = os.name == "nt"
 
 # Builds being tested
 builds = ["serial"]
@@ -13,7 +17,9 @@ builds = ["serial"]
 # Name(s) of the solver being used
 solvers = ["Fierro"]
 
-solver_path = "../build/app/Fierro"
+solver_path = os.path.join("..", "build", "app", "Fierro.exe" if IS_WINDOWS else "Fierro")
+# If your Windows build is in a config subfolder, use instead:
+# solver_path = os.path.join("..", "build", "app", "Release", "Fierro.exe")
 
 num_ranks = 1
 
@@ -83,23 +89,35 @@ def extract_state_data(filename):
         data.append(values)
     return data, headers
 
+# Build the command used to launch the solver
+def build_run_command(exe, input_file, num_ranks):
+    exe = os.path.abspath(exe)
+    if IS_WINDOWS:
+        if num_ranks == 1:
+            # No MPI launcher needed for serial runs on Windows
+            return [exe, input_file]
+        # MS-MPI launcher
+        return ["mpiexec", "-n", str(num_ranks), exe, input_file]
+    # macOS / Linux: unchanged behavior
+    return ["mpirun", "--oversubscribe", "-np", str(num_ranks), exe, input_file]
+
 # Grab paths to executable
 executables = []
 for i in range(len(builds)):
     for j in range(len(solvers)):
         executables.append(solver_path)
-        if not os.path.exists(executables[i]):
-            raise ValueError("Executable not found in "+executables[i]+" directory")
+        if not os.path.exists(executables[-1]):
+            raise ValueError("Executable not found in " + executables[-1] + " directory")
 
 # Get paths to inputs
 inputs = []
 for i in range(len(tests)):
-    inputs.append("standard_inputs/"+tests[i]+".yaml")
+    inputs.append(os.path.join("standard_inputs", tests[i] + ".yaml"))
 
 # Grab paths to standard results
 standard_results = []
 for i in range(len(tests)):
-    pattern = "standard_results/"+tests[i]+"/state/mat_pt_state*"
+    pattern = os.path.join("standard_results", tests[i], "state", "mat_pt_state*")
     file = glob.glob(pattern)
     if not file:
         print(f"Warning: Standard result file not found for {tests[i]}")
@@ -116,30 +134,33 @@ for i in range(len(executables)):
         test_name = tests[j]
         try:
             # Call Fierro with YAML inputs
-            print("Running "+test_name)
-            os.system('mpirun --oversubscribe -np ' + str(num_ranks) + ' ' + executables[i] + ' ' + inputs[j])
-    
+            print("Running " + test_name)
+            cmd = build_run_command(executables[i], inputs[j], num_ranks)
+            proc = subprocess.run(cmd)
+            if proc.returncode != 0:
+                raise RuntimeError(f"Fierro exited with code {proc.returncode} for {test_name}")
+
             # Compare to standard results
             if not standard_results[j]:
                 raise FileNotFoundError(f"Standard result file missing for {test_name}")
 
-            pattern = "state/mat_pt_state*"
+            pattern = os.path.join("state", "mat_pt_state*")
             files = glob.glob(pattern)
-            
-            try: 
-                fileIndex = list(file.split("/")[-1] for file in files).index(standard_results[j].split("/")[-1])
+
+            try:
+                result_names = [os.path.basename(f) for f in files]
+                fileIndex = result_names.index(os.path.basename(standard_results[j]))
             except ValueError:
-                raise ValueError("State file not found for "+test_name+" test")
-    
-    
+                raise ValueError("State file not found for " + test_name + " test")
+
             file_path = files[fileIndex]
-    
+
             print(file_path)
             print(standard_results[j])
-    
+
             result_data, header1 = extract_state_data(file_path)
             standard_data, header2 = extract_state_data(standard_results[j])
-    
+
             # conditional to handle contact cases
             diff_tol = 1E-8
             if (tests[j] == "slanted_impact" or tests[j] == "sie_expansion_test" or tests[j] == "edge_flat_test" or tests[j] == "billiards"):
@@ -150,7 +171,7 @@ for i in range(len(executables)):
             for k in range(len(result_data[0])):
                 calc = [row[k] for row in result_data]
                 true = [row[k] for row in standard_data]
-    
+
                 for l in range(len(calc)):
                     diff = calc[l] - true[l]
                     diff_rel = abs(calc[l] - (true[l]+1E-8))/(true[l]+1E-8) * 100
@@ -160,7 +181,7 @@ for i in range(len(executables)):
                         print(f"{'Expected Result:':<20} {true[l]:.10e}")
                         print(f"{'Difference:':<20} {diff:.10e}")
                         raise Exception("Results do not match for "+header1[k]+" for the "+test_name+" test!")
-            
+
             print("\n******************************")
             print("\nPASSED : "+test_name+"\n")
             print("******************************\n")
@@ -170,11 +191,10 @@ for i in range(len(executables)):
             print(f"\nFAILED : {test_name}")
             print(f"Error: {e}\n")
             failed_tests.append(test_name)
-        
+
         finally:
             # Remove simulated state dump
-            if os.path.exists('state'):
-                os.system('rm -rf state')
+            shutil.rmtree('state', ignore_errors=True)
 
 print("\n" + "="*30)
 print("       TEST SUMMARY")

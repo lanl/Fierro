@@ -36,8 +36,11 @@
 #include "solver.hpp"
 
 // debug and performance includes
+#ifndef _WIN32
 #include <sys/time.h>
 #include <sys/resource.h>
+#endif
+#include <chrono>
 #include <ctime>
 
 Solver::Solver()
