@@ -391,8 +391,6 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                             });
                             Materials.MaterialEnums.host(mat_id).StrengthType = model::stateBased;
                             
-                            std::cout << "ERROR: state_based models not yet defined: " << std::endl;
-                            throw std::runtime_error("**** ERROR: state_based models not yet defined ****");
                             break;
                         default:
                             std::cout << "ERROR: invalid strength type input: " << strength_model_type << std::endl;
@@ -528,6 +526,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
                             // set the stress function
                             RUN({
                                 Materials.MaterialFunctions(mat_id).calc_stress = &OrthotropicLinearElasticStrengthModel::calc_stress;
+                                Materials.MaterialFunctions(mat_id).calc_sound_speed = &OrthotropicLinearElasticStrengthModel::calc_sound_speed;
                             });
                             // note: default run location for strength is device
 

@@ -249,7 +249,7 @@ void SGH3D::update_state(
                                         MaterialPoints_sie(mat_id, mat_point_sid),
                                         Materials.eos_global_vars,
                                         Materials.strength_global_vars);
-                                        
+
         }); // end parallel for over mat elem lid
     } // end if state_based strength model
 
@@ -540,50 +540,51 @@ void SGH3D::get_deformation_grad(
         } // end for
 
         // --- calculate the deformation gradient terms ---
+        // MaterialPoints_deformation_grad(mat_id,mat_point_sid,i,k)
         double inverse_vol = 1.0 / elem_vol_t0(elem_gid);
         // x-dir
-        elem_deformation_grad(mat_point_sid, 0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
+        elem_deformation_grad(mat_id, mat_point_sid, 0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
             + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)
             + u(4) * b_matrix(4, 0) + u(5) * b_matrix(5, 0)
             + u(6) * b_matrix(6, 0) + u(7) * b_matrix(7, 0)) * inverse_vol;
 
-        elem_deformation_grad(mat_point_sid, 0, 1) = (u(0) * b_matrix(0, 1) + u(1) * b_matrix(1, 1)
+        elem_deformation_grad(mat_id, mat_point_sid, 0, 1) = (u(0) * b_matrix(0, 1) + u(1) * b_matrix(1, 1)
             + u(2) * b_matrix(2, 1) + u(3) * b_matrix(3, 1)
             + u(4) * b_matrix(4, 1) + u(5) * b_matrix(5, 1)
             + u(6) * b_matrix(6, 1) + u(7) * b_matrix(7, 1)) * inverse_vol;
 
-        elem_deformation_grad(mat_point_sid, 0, 2) = (u(0) * b_matrix(0, 2) + u(1) * b_matrix(1, 2)
+        elem_deformation_grad(mat_id, mat_point_sid, 0, 2) = (u(0) * b_matrix(0, 2) + u(1) * b_matrix(1, 2)
             + u(2) * b_matrix(2, 2) + u(3) * b_matrix(3, 2)
             + u(4) * b_matrix(4, 2) + u(5) * b_matrix(5, 2)
             + u(6) * b_matrix(6, 2) + u(7) * b_matrix(7, 2)) * inverse_vol;
 
         // y-dir
-        elem_deformation_grad(mat_point_sid, 1, 0) = (v(0) * b_matrix(0, 0) + v(1) * b_matrix(1, 0)
+        elem_deformation_grad(mat_id, mat_point_sid, 1, 0) = (v(0) * b_matrix(0, 0) + v(1) * b_matrix(1, 0)
             + v(2) * b_matrix(2, 0) + v(3) * b_matrix(3, 0)
             + v(4) * b_matrix(4, 0) + v(5) * b_matrix(5, 0)
             + v(6) * b_matrix(6, 0) + v(7) * b_matrix(7, 0)) * inverse_vol;
 
-        elem_deformation_grad(mat_point_sid, 1, 1) = (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
+        elem_deformation_grad(mat_id, mat_point_sid, 1, 1) = (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
             + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)
             + v(4) * b_matrix(4, 1) + v(5) * b_matrix(5, 1)
             + v(6) * b_matrix(6, 1) + v(7) * b_matrix(7, 1)) * inverse_vol;
-        elem_deformation_grad(mat_point_sid, 1, 2) = (v(0) * b_matrix(0, 2) + v(1) * b_matrix(1, 2)
+        elem_deformation_grad(mat_id, mat_point_sid, 1, 2) = (v(0) * b_matrix(0, 2) + v(1) * b_matrix(1, 2)
             + v(2) * b_matrix(2, 2) + v(3) * b_matrix(3, 2)
             + v(4) * b_matrix(4, 2) + v(5) * b_matrix(5, 2)
             + v(6) * b_matrix(6, 2) + v(7) * b_matrix(7, 2)) * inverse_vol;
 
         // z-dir
-        elem_deformation_grad(mat_point_sid, 2, 0) = (w(0) * b_matrix(0, 0) + w(1) * b_matrix(1, 0)
+        elem_deformation_grad(mat_id, mat_point_sid, 2, 0) = (w(0) * b_matrix(0, 0) + w(1) * b_matrix(1, 0)
             + w(2) * b_matrix(2, 0) + w(3) * b_matrix(3, 0)
             + w(4) * b_matrix(4, 0) + w(5) * b_matrix(5, 0)
             + w(6) * b_matrix(6, 0) + w(7) * b_matrix(7, 0)) * inverse_vol;
 
-        elem_deformation_grad(mat_point_sid, 2, 1) = (w(0) * b_matrix(0, 1) + w(1) * b_matrix(1, 1)
+        elem_deformation_grad(mat_id, mat_point_sid, 2, 1) = (w(0) * b_matrix(0, 1) + w(1) * b_matrix(1, 1)
             + w(2) * b_matrix(2, 1) + w(3) * b_matrix(3, 1)
             + w(4) * b_matrix(4, 1) + w(5) * b_matrix(5, 1)
             + w(6) * b_matrix(6, 1) + w(7) * b_matrix(7, 1)) * inverse_vol;
 
-        elem_deformation_grad(mat_point_sid, 2, 2) = (w(0) * b_matrix(0, 2) + w(1) * b_matrix(1, 2)
+        elem_deformation_grad(mat_id, mat_point_sid, 2, 2) = (w(0) * b_matrix(0, 2) + w(1) * b_matrix(1, 2)
             + w(2) * b_matrix(2, 2) + w(3) * b_matrix(3, 2)
             + w(4) * b_matrix(4, 2) + w(5) * b_matrix(5, 2)
             + w(6) * b_matrix(6, 2) + w(7) * b_matrix(7, 2)) * inverse_vol;

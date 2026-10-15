@@ -84,7 +84,6 @@ namespace SGH3D_State
         material_pt_state::mass,
         material_pt_state::volume_fraction,
         material_pt_state::eroded_flag,
-        material_pt_state::shear_modulii,
         material_pt_state::deformation_grad
     };
 

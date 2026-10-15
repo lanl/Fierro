@@ -2733,34 +2733,55 @@ void init_press_sspd_stress(const Material_t& Materials,
 
 
     // --- pressure and sound speed ---
-    // loop over the material points
-    FOR_ALL(mat_point_sid, 0, num_mat_pts, {
 
-        // --- Pressure ---
-        Materials.MaterialFunctions(mat_id).calc_pressure(
-                                        MaterialPoints_pres,
-                                        MaterialPoints_stress,
-                                        mat_point_sid,
-                                        mat_id,
-                                        MaterialPoints_eos_state_vars,
-                                        MaterialPoints_sspd,
-                                        MaterialPoints_den(mat_id, mat_point_sid),
-                                        MaterialPoints_sie(mat_id, mat_point_sid),
-                                        Materials.eos_global_vars);   
+    if(Materials.MaterialEnums.host(mat_id).EOSType == model::decoupledEOSType){
+        // loop over the material points
+        FOR_ALL(mat_point_sid, 0, num_mat_pts, {
 
-        // --- Sound Speed ---                               
-        Materials.MaterialFunctions(mat_id).calc_sound_speed(
-                                        MaterialPoints_pres,
-                                        MaterialPoints_stress,
-                                        mat_point_sid,
-                                        mat_id,
-                                        MaterialPoints_eos_state_vars,
-                                        MaterialPoints_sspd,
-                                        MaterialPoints_den(mat_id, mat_point_sid),
-                                        MaterialPoints_sie(mat_id, mat_point_sid),
-                                        Materials.eos_global_vars,
-                                        Materials.strength_global_vars);
-    }); // end pressure and sound speed
+            // --- Pressure ---
+            Materials.MaterialFunctions(mat_id).calc_pressure(
+                                            MaterialPoints_pres,
+                                            MaterialPoints_stress,
+                                            mat_point_sid,
+                                            mat_id,
+                                            MaterialPoints_eos_state_vars,
+                                            MaterialPoints_sspd,
+                                            MaterialPoints_den(mat_id, mat_point_sid),
+                                            MaterialPoints_sie(mat_id, mat_point_sid),
+                                            Materials.eos_global_vars);   
+        
+            // --- Sound Speed ---                               
+            Materials.MaterialFunctions(mat_id).calc_sound_speed(
+                                            MaterialPoints_pres,
+                                            MaterialPoints_stress,
+                                            mat_point_sid,
+                                            mat_id,
+                                            MaterialPoints_eos_state_vars,
+                                            MaterialPoints_sspd,
+                                            MaterialPoints_den(mat_id, mat_point_sid),
+                                            MaterialPoints_sie(mat_id, mat_point_sid),
+                                            Materials.eos_global_vars,
+                                            Materials.strength_global_vars);
+        }); // end pressure and sound speed
+    }
+    else {
+        // loop over the material points
+        FOR_ALL(mat_point_sid, 0, num_mat_pts, { 
+        
+            // --- Sound Speed ---                               
+            Materials.MaterialFunctions(mat_id).calc_sound_speed(
+                                            MaterialPoints_pres,
+                                            MaterialPoints_stress,
+                                            mat_point_sid,
+                                            mat_id,
+                                            MaterialPoints_eos_state_vars,
+                                            MaterialPoints_sspd,
+                                            MaterialPoints_den(mat_id, mat_point_sid),
+                                            MaterialPoints_sie(mat_id, mat_point_sid),
+                                            Materials.eos_global_vars,
+                                            Materials.strength_global_vars);
+        }); // end pressure and sound speed
+    } // end if
 
 
 
