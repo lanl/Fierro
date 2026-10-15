@@ -138,8 +138,8 @@ void SGH3D::update_state(
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_id, mat_point_sid),
                                         MaterialPoints_sie(mat_id, mat_point_sid),
-                                        MaterialPoints_deformation_grad,
-                                        Materials.eos_global_vars);
+                                        Materials.eos_global_vars,
+                                        Materials.strength_global_vars);
 
         }); // end parallel for over mat elem lid
     } // if decoupled EOS
@@ -237,6 +237,19 @@ void SGH3D::update_state(
                                         gauss_gid,
                                         elem_gid);
 
+            // --- Sound Speed ---
+            Materials.MaterialFunctions(mat_id).calc_sound_speed(
+                                        MaterialPoints_pres,
+                                        MaterialPoints_stress,
+                                        mat_point_sid,
+                                        mat_id,
+                                        MaterialPoints_eos_state_vars,
+                                        MaterialPoints_sspd,
+                                        MaterialPoints_den(mat_id, mat_point_sid),
+                                        MaterialPoints_sie(mat_id, mat_point_sid),
+                                        Materials.eos_global_vars,
+                                        Materials.strength_global_vars);
+                                        
         }); // end parallel for over mat elem lid
     } // end if state_based strength model
 

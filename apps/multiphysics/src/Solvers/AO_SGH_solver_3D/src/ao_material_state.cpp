@@ -139,12 +139,12 @@ void apply_eos_decoupled(const Material_t&                       Materials,
                          const DRaggedRightArrayKokkos<double>&  mat_den,
                          const DRaggedRightArrayKokkos<double>&  mat_sie,
                          const DRaggedRightArrayKokkos<double>&  mat_eos_state_vars,
-                         const DRaggedRightArrayKokkos<double>&  mat_def_grad,
                          DRaggedRightArrayKokkos<double>&        mat_pres,
                          DRaggedRightArrayKokkos<double>&        mat_sspd,
                          DRaggedRightArrayKokkos<double>&        mat_stress)
 {
     const RaggedRightArrayKokkos<double>& eos_global_vars = Materials.eos_global_vars;
+    const RaggedRightArrayKokkos<double>& strength_global_vars = Materials.strength_global_vars;
 
     FOR_ALL(mp, 0, num_mat_pts, {
         const double den = mat_den(mat_id, mp);
@@ -158,7 +158,7 @@ void apply_eos_decoupled(const Material_t&                       Materials,
         Materials.MaterialFunctions(mat_id).calc_sound_speed(
             mat_pres, mat_stress, mp, mat_id,
             mat_eos_state_vars, mat_sspd,
-            den, sie, mat_def_grad, eos_global_vars);
+            den, sie, eos_global_vars, strength_global_vars);
     });
     Kokkos::fence();
     mat_pres.update_host();

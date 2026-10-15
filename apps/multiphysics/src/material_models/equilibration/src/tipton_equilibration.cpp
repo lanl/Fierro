@@ -170,7 +170,6 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.sspd,
                 State.MaterialPoints.mass,
                 State.MaterialPoints.stress,
-                State.MaterialPoints.shear_modulii,
                 State.MaterialPoints.eos_state_vars,
                 State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
@@ -293,7 +292,6 @@ namespace TiptonEquilibrationModel {
                 State.MaterialPoints.sspd,
                 State.MaterialPoints.mass,
                 State.MaterialPoints.stress,
-                State.MaterialPoints.shear_modulii,
                 State.MaterialPoints.eos_state_vars,
                 State.MaterialToMeshMaps.elem_in_mat_elem,
                 State.points_in_mat_elem,
@@ -509,7 +507,6 @@ namespace TiptonEquilibrationModel {
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const points_in_mat_t& points_in_mat_elem,
@@ -584,8 +581,8 @@ namespace TiptonEquilibrationModel {
                                             MaterialPoints_sspd,
                                             MaterialPoints_den(mat_id, mat_point_storage_lid),
                                             MaterialPoints_sie(mat_id, mat_point_storage_lid),
-                                            MaterialPoints_shear_modulii,
-                                            Materials.eos_global_vars);
+                                            Materials.eos_global_vars,
+                                            Materials.strength_global_vars);
 
             } // end for gauss point loop 
 

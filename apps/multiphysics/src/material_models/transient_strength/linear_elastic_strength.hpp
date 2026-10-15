@@ -365,7 +365,8 @@ namespace OrthotropicLinearElasticStrengthModel {
     * @param F           Deformation gradient (3x3)
     * @param C_current   Output: rotated stiffness matrix (6x6)
     */
-    inline void rotateStiffnessFromF(const ViewCArrayKokkos<double>& C_ref,
+    KOKKOS_INLINE_FUNCTION
+    void rotateStiffnessFromF(const ViewCArrayKokkos<double>& C_ref,
                                      const ViewCArrayKokkos<double>& F,
                                      const ViewCArrayKokkos<double>& C_current) {
 
@@ -416,6 +417,7 @@ namespace OrthotropicLinearElasticStrengthModel {
         // current lab-frame orientation, ready for use in the acoustic
         // tensor Q(n) to compute directional sound speed.
     */
+
 
 
     /**
@@ -543,6 +545,38 @@ namespace OrthotropicLinearElasticStrengthModel {
         C_ref[5][5] = G12;
 
     } // end function
+
+
+    /**
+    * @brief Compute K_max = max(C11, C22, C33) directly from the 9
+    *        orthotropic engineering constants, without assembling the
+    *        full 6x6 stiffness matrix. Only inverts the 3x3 normal block.
+    */
+    KOKKOS_INLINE_FUNCTION
+    double maxBulkModulusFromEngineeringConstants(
+        const double E1, const double E2, const double E3,
+        const double nu12, const double nu13, const double nu23) {
+
+        const double S11 = 1.0/E1;
+        const double S22 = 1.0/E2;
+        const double S33 = 1.0/E3;
+        const double S12 = -nu12/E1;
+        const double S13 = -nu13/E1;
+        const double S23 = -nu23/E2;
+
+        const double Delta = S11*S22*S33
+                           - S11*S23*S23
+                           - S22*S13*S13
+                           - S33*S12*S12
+                           + 2.0*S12*S13*S23;
+
+        const double C11 = (S22*S33 - S23*S23) / (Delta + 1.e-16);
+        const double C22 = (S11*S33 - S13*S13) / (Delta + 1.e-16);
+        const double C33 = (S11*S22 - S12*S12) / (Delta + 1.e-16);
+
+        return fmax(C11, fmax(C22, C33));
+    } // end function
+
 
 
     static void init_strength_state_vars(
@@ -676,6 +710,40 @@ namespace OrthotropicLinearElasticStrengthModel {
     } // end of user mat
 
 
+    KOKKOS_FUNCTION
+    static void calc_sound_speed(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
+                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+                                 const size_t mat_pt_lid,
+                                 const size_t mat_id,
+                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
+                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                                 const double den,
+                                 const double sie,
+                                 const RaggedRightArrayKokkos<double> &eos_global_vars,
+                                 const RaggedRightArrayKokkos<double> &strength_global_vars)
+    {
+
+        const double E1   = strength_global_vars(mat_id, 0);
+        const double E2   = strength_global_vars(mat_id, 1);
+        const double E3   = strength_global_vars(mat_id, 2);
+        const double nu12 = strength_global_vars(mat_id, 3);
+        const double nu13 = strength_global_vars(mat_id, 4);
+        const double nu23 = strength_global_vars(mat_id, 5);
+        const double G12  = strength_global_vars(mat_id, 6);
+        const double G13  = strength_global_vars(mat_id, 7);
+        const double G23  = strength_global_vars(mat_id, 8);
+        const double csmin  = strength_global_vars(mat_id, 9);
+
+        // sspd = sqrt((B + 4/3G)/rho)
+        const double B_max = maxBulkModulusFromEngineeringConstants(E1, E2, E3, nu12, nu13, nu23);
+
+        const double G_max = fmax(G12, fmax(G13, G23));
+
+        // sound speed
+        MaterialPoints_sspd(mat_id, mat_pt_lid) = fmax(csmin, sqrt((B_max + (4.0/3.0)*G_max)/den));
+
+        return;
+    } // end func
 
     
 

@@ -2709,24 +2709,9 @@ void init_press_sspd_stress(const Material_t& Materials,
                             const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
                             const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
                             const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
-                            DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
                             const size_t num_mat_pts,
                             const size_t mat_id)
 {
-
-    // --- Shear modulus ---
-    // loop over the material points
-
-    if (MaterialPoints_shear_modulii.size()>0) {
-        FOR_ALL(mat_point_sid, 0, num_mat_pts, {
-
-            // setting shear modulii to zero, corresponds to a gas
-            for(size_t i=0; i<3; i++){
-                MaterialPoints_shear_modulii(mat_id, mat_point_sid, i) = 0.0;
-            } // end for
-
-        });
-    }
 
     
     // --- stress tensor ---
@@ -2773,8 +2758,8 @@ void init_press_sspd_stress(const Material_t& Materials,
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_id, mat_point_sid),
                                         MaterialPoints_sie(mat_id, mat_point_sid),
-                                        MaterialPoints_shear_modulii,
-                                        Materials.eos_global_vars);
+                                        Materials.eos_global_vars,
+                                        Materials.strength_global_vars);
     }); // end pressure and sound speed
 
 

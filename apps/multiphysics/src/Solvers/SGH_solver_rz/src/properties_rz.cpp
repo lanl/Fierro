@@ -159,8 +159,8 @@ void SGHRZ::update_state_rz(
                                         MaterialPoints_sspd,
                                         MaterialPoints_den(mat_id, mat_point_sid),
                                         MaterialPoints_sie(mat_id, mat_point_sid), 
-                                        MaterialPoints_deformation_grad,
-                                        Materials.eos_global_vars);
+                                        Materials.eos_global_vars,
+                                        Materials.strength_global_vars);
 
         }); // end parallel for over mat elem lid
         Kokkos::fence();
