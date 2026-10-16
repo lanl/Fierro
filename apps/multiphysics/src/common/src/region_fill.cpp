@@ -1457,6 +1457,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                 } // end i
 
             }); // end parallel for
+            Kokkos::fence();
 
             State.MaterialPoints.deformation_grad.update_host();
             State.MaterialPoints.deformation_grad_t0.update_host();

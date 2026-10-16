@@ -1,0 +1,155 @@
+# num_dims: 3
+
+dynamic_options:
+    time_final: 1.0
+    dt_min: 1.e-8
+    dt_max: 0.1
+    dt_start: 1.e-6
+    cycle_stop: 10000
+
+
+# mesh_options:
+#     source: file
+#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
+
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0]
+    length: [3.81, 0.38, 0.38]
+    num_elems: [24, 12, 12]
+    #source: file
+    #file_path: ./mesh_z_taylorAnvil.geo
+    #scale_x: 0.1 # scale the mesh to be in cm units 
+    #scale_y: 0.1
+    #scale_z: 0.1
+    # Mesh = 38.1 mm (radius) x 381 mm (length)
+
+
+output_options:
+    timer_output_level: thorough
+    # Output format for visualization.
+    output_file_format: viz # only options are viz or viz_and_state
+    # Amount of simulated time between visualization dumps (microseconds).
+    graphics_time_step: 0.1
+    # graphics_iteration_step: 10
+    elem_field_outputs:
+        - den
+        - stress
+        - sie
+        - mass
+    mat_pt_field_outputs:
+        - den
+        - stress
+        - sie
+        - volfrac
+    node_field_outputs:
+        - vel
+        - mass
+
+solver_options:
+  - solver:
+        method: dynx_FE
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+boundary_conditions:
+    # Tag X plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: x_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 1   # x
+            - 0   # y
+            - 0   # z
+
+    # Tag Y plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: y_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 1   # y
+            - 0   # z
+
+            
+    # Tag z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z
+
+  
+materials:
+
+    - material:
+        id: 0  # othortopic carbon fiber plate
+
+        #------Strength
+        # values from Omairey et. al., Engineering with Computers, 2018. 
+        strength_model_type: state_based
+        strength_model: orthotropic_linear_elastic
+        strength_global_vars:
+            - 2.445 # E1  
+            - 1.435 # E2 
+            - 1.435 # E3  
+            - 0.648 # nu12 
+            - 0.648 # nu13 
+            - 0.698 # nu23 
+            - 0.175 # G12 
+            - 0.103 # G13 
+            - 0.345 # G23   
+            - 0.001 #min sound speed
+        # ------ArtVisc
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.333 # q1ex
+            - 1.0   # q2
+            - 1.333 # q2ex
+            - 0.05   # min limiter
+            - 1.0
+
+
+regions:
+    # fill with gas
+    - region:
+        id: 0
+        volume:
+            type: global
+        
+initial_conditions:
+
+    - initial_condition:
+        region_id: 0
+        material_id: 0
+        density: 
+            type: uniform
+            value: 8.93
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity:
+            type: cartesian
+            u: -0.0125  
+            v: 0.0
+            w: 0.0
+        material_volume_fraction:
+            type: uniform
+            value: 1.0
