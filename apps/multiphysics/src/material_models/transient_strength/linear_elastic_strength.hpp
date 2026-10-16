@@ -688,7 +688,7 @@ namespace OrthotropicLinearElasticStrengthModel {
         // 4) Push forward 2nd PK stress S to Cauchy stress sigma:
         //        sigma = (1/J) * F * S * F^T
         // -----------------------------------------------------------
-        double J = det_3x3(F);
+        const double detF = det_3x3(F);
 
         double FS_1D[9];
         ViewCArrayKokkos<double> FS(&FS_1D[0], 3, 3);
@@ -700,10 +700,14 @@ namespace OrthotropicLinearElasticStrengthModel {
         transpose3x3(F, Ft);
         matmul3x3(FS, Ft, sigma);   // writes directly into MaterialPoints_stress
 
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                sigma(i,j) /= J;
-            }
+        if (detF < 1.e-13) {
+            for (size_t i = 0; i < 3; i++)
+                for (size_t j = 0; j < 3; j++)
+                    sigma(i,j) = 0.0;
+        } else {
+            for (size_t i = 0; i < 3; i++)
+                for (size_t j = 0; j < 3; j++)
+                    sigma(i,j) /= detF;
         }
 
         return;

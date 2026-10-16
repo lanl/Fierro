@@ -197,9 +197,15 @@ void SGH3D::update_state(
             // acocunt for the reference deformation 
             double F_total[3][3];
             for (size_t i=0; i<3; i++)
+            for (size_t j=0; j<3; j++){
+                F_total[i][j] = 0.0;
+            }
+
+            // remember: Fmodel(t) = F(t)*F0, where F(t) = I + grad_X0(displacement)
+            for (size_t i=0; i<3; i++)
             for (size_t j=0; j<3; j++)
             for (size_t k=0; k<3; k++){
-                F_total[i][j] += MaterialPoints_deformation_grad_t0(mat_id,mat_point_sid,i,k)*MaterialPoints_deformation_grad(mat_id,mat_point_sid,k,j); 
+                F_total[i][j] += MaterialPoints_deformation_grad(mat_id,mat_point_sid,i,k)*MaterialPoints_deformation_grad_t0(mat_id,mat_point_sid,k,j); 
             }
 
             // save the total elastic deformation gradient
@@ -543,10 +549,12 @@ void SGH3D::get_deformation_grad(
         // MaterialPoints_deformation_grad(mat_id,mat_point_sid,i,k)
         double inverse_vol = 1.0 / elem_vol_t0(elem_gid);
         // x-dir
-        elem_deformation_grad(mat_id, mat_point_sid, 0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
+        elem_deformation_grad(mat_id, mat_point_sid, 0, 0) = 1.0 + (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
             + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)
             + u(4) * b_matrix(4, 0) + u(5) * b_matrix(5, 0)
             + u(6) * b_matrix(6, 0) + u(7) * b_matrix(7, 0)) * inverse_vol;
+
+printf("elem_gid = %zu, F00 = %f \n", elem_gid, elem_deformation_grad(mat_id, mat_point_sid, 0, 0));
 
         elem_deformation_grad(mat_id, mat_point_sid, 0, 1) = (u(0) * b_matrix(0, 1) + u(1) * b_matrix(1, 1)
             + u(2) * b_matrix(2, 1) + u(3) * b_matrix(3, 1)
@@ -564,10 +572,11 @@ void SGH3D::get_deformation_grad(
             + v(4) * b_matrix(4, 0) + v(5) * b_matrix(5, 0)
             + v(6) * b_matrix(6, 0) + v(7) * b_matrix(7, 0)) * inverse_vol;
 
-        elem_deformation_grad(mat_id, mat_point_sid, 1, 1) = (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
+        elem_deformation_grad(mat_id, mat_point_sid, 1, 1) = 1.0 + (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
             + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)
             + v(4) * b_matrix(4, 1) + v(5) * b_matrix(5, 1)
             + v(6) * b_matrix(6, 1) + v(7) * b_matrix(7, 1)) * inverse_vol;
+
         elem_deformation_grad(mat_id, mat_point_sid, 1, 2) = (v(0) * b_matrix(0, 2) + v(1) * b_matrix(1, 2)
             + v(2) * b_matrix(2, 2) + v(3) * b_matrix(3, 2)
             + v(4) * b_matrix(4, 2) + v(5) * b_matrix(5, 2)
@@ -584,7 +593,7 @@ void SGH3D::get_deformation_grad(
             + w(4) * b_matrix(4, 1) + w(5) * b_matrix(5, 1)
             + w(6) * b_matrix(6, 1) + w(7) * b_matrix(7, 1)) * inverse_vol;
 
-        elem_deformation_grad(mat_id, mat_point_sid, 2, 2) = (w(0) * b_matrix(0, 2) + w(1) * b_matrix(1, 2)
+        elem_deformation_grad(mat_id, mat_point_sid, 2, 2) = 1.0 + (w(0) * b_matrix(0, 2) + w(1) * b_matrix(1, 2)
             + w(2) * b_matrix(2, 2) + w(3) * b_matrix(3, 2)
             + w(4) * b_matrix(4, 2) + w(5) * b_matrix(5, 2)
             + w(6) * b_matrix(6, 2) + w(7) * b_matrix(7, 2)) * inverse_vol;
