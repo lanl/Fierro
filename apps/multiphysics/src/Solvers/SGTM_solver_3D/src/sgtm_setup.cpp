@@ -71,7 +71,6 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
                             State.MaterialPoints.sie,
                             State.MaterialPoints.eos_state_vars,    
                             State.MaterialPoints.strength_state_vars,
-                            State.MaterialPoints.shear_modulii,
                             State.MaterialPoints.num_material_points.host(mat_id),
                             mat_id);
 

@@ -104,8 +104,8 @@ namespace LinearElasticEOS {
                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
                                  const double den,
                                  const double sie,
-                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
-                                 const RaggedRightArrayKokkos<double> &eos_global_vars)
+                                 const RaggedRightArrayKokkos<double> &eos_global_vars,
+                                 const RaggedRightArrayKokkos<double> &strength_global_vars)
     {
 
         // sspd = sqrt((B + 4/3G)/rho)
