@@ -109,11 +109,14 @@ void cohesive_zones_t::initialize(
     
     // step 3: bin size and number of bins
     double extent_max = 0.0; // longest side of bounding box
+    // bin mesh is 3D grid of equal cubes (bins) laid over the boundring box
+    // Dr. Morgan's search puts every boundary node into a bin and compares it only with nodes in its own bin and neighbor bins 
+    // bins must be wider than geom_tol, so two coincident nodes are never more than one bin apart
     for (size_t k = 0; k < 3; ++k) { extent_max = fmax(extent_max, box_max[k] - box_min[k]); }
-    const double bin_size = fmax(extent_max / fmax(1.0, cbrt((double)num_bdy_nodes)),
-                                 10.0 * geom_tol); // lower limit: 10x the tolerance
+    const double bin_size = fmax(extent_max / fmax(1.0, cbrt((double)num_bdy_nodes)), // extent / cbrt(N) adjusts to mesh size automatically 
+                                 10.0 * geom_tol); // lower limit: 10x the tolerance (floor that ensures bins stay wider than the tolerance)
     size_t num_bins[3]; // number of bins in x, y, z directions
-    for (size_t k = 0; k < 3; ++k) { 
+    for (size_t k = 0; k < 3; ++k) {  
         num_bins[k] = (size_t)fmax(1.0, ceil((box_max[k] - box_min[k]) / bin_size)); // at least 1 bin in each direction
     }
 
@@ -143,9 +146,9 @@ void cohesive_zones_t::initialize(
     
     // largest number of coincident nodes at one location (2 on a crack plane, up to 8 where hex cohesive zones meet)
     // used to size the label_members rows
-    size_t max_in_label = 0;
-    size_t local_max_in_label = 0;
-    FOR_REDUCE_MAX(s, 0, num_labels, local_max_in_label, {
+    size_t max_in_label = 0; // largest label size
+    size_t local_max_in_label = 0; // per thread running max inside of reduction
+    FOR_REDUCE_MAX(s, 0, num_labels, local_max_in_label, { // find biggest number in label_count
         if (local_max_in_label < label_count(s)) {
             local_max_in_label = label_count(s);
         }
@@ -154,15 +157,17 @@ void cohesive_zones_t::initialize(
 
     // fill rows: boundary node i goes to its label's row at its slot 
     CArrayKokkos<size_t> label_members(num_labels, max_in_label, "cz_label_members"); // row s = boundary nodes with label s
-    FOR_ALL(i, 0, num_bdy_nodes, {
+    FOR_ALL(i, 0, num_bdy_nodes, { // one row per group, list nodes in that group
         label_members(label_in_bdy_node(i), slot_in_label(i)) = i;
     }); // end FOR_ALL
     Kokkos::fence();
     
-    // step 6: total number of pairs: a label with k coincident nodes gives k*(k-1)/2 pairs
-    size_t num_pairs = 0;
-    size_t local_num_pairs = 0;
-    FOR_REDUCE_SUM(s, 0, num_labels, local_num_pairs, {
+    // step 6: count how many pairs there will be, so overlapping_node_gids is allocated at the correct size 
+    // total number of pairs: a label with k coincident nodes gives k*(k-1)/2 pairs
+    // k = 1 -> 0 pairs; k = 2 -> 1 pair; etc.
+    size_t num_pairs = 0; // result: total number of pairs
+    size_t local_num_pairs = 0; // per thread running total inside reduction
+    FOR_REDUCE_SUM(s, 0, num_labels, local_num_pairs, { // add over all labels: eac thread adds its own share into local_num_pairs
         local_num_pairs += label_count(s) * (label_count(s) - 1) / 2; // 1 pair for a 2 node set, 0 for a lone node
     }, num_pairs);
     Kokkos::fence();
@@ -299,7 +304,6 @@ void cohesive_zones_t::initialize_fracture_bc(
     delta_internal_vars = CArrayKokkos<double>(npairs, width, "cz_delta_internal_vars");
     delta_internal_vars.set_values(0.0);
 
-    // this node gather map (thread safe force accumulation) algorithm will eventually be replaced by Nathaniels parallel algorithm: build_multi_node_connectivity
     // node gather map (built once) so cohesive_zone_loads can gather pairwise forces to nodes without atomics
     // each pair contributes to its A node (+F, side 0) and B node (-F, side 1)
     // a node may belong toseveral pairs (crack junctions); the map lets ONE thread own each node and sum its pairs
@@ -317,18 +321,19 @@ void cohesive_zones_t::initialize_fracture_bc(
     // every pair touches its A node (column 0) and its B node (column 1)
     // after this loop, node_count(n) = number of pairs that reference node n ()
     for (size_t i = 0; i < npairs; ++i) {             
-        node_count.host(overlapping_node_gids.host(i, 0)) += 1;
-        node_count.host(overlapping_node_gids.host(i, 1)) += 1;
+        node_count.host(overlapping_node_gids.host(i, 0)) += 1; // node A of pair i
+        node_count.host(overlapping_node_gids.host(i, 1)) += 1; // node B of pair i
     }
 
     // assign compact indices to cohesive zone nodes u = 0,1,2,... and find max share count (for allocation of gather_entries)
+    // number of pairs on any one node (max_share = row width of gather_entries)
     // serial on host: U++ is a sequential running index, so iteration order matters and must be serial
     size_t U = 0, max_share = 1;                         
     for (size_t n = 0; n < num_nodes; ++n) {
         const int c = node_count.host(n);
         if (c > 0) { // node n participates in at least one pair
             node_to_u.host(n) = static_cast<int>(U++); // give it to next compact index then increase U (U++)
-            if (static_cast<size_t>(c) > max_share) max_share = static_cast<size_t>(c); // track worst case for allocation of gather_entries
+            if (static_cast<size_t>(c) > max_share) max_share = static_cast<size_t>(c); // track largest list for allocation of gather_entries
         }
     }
 
@@ -337,9 +342,9 @@ void cohesive_zones_t::initialize_fracture_bc(
     // gather_nodes, gather_counts, gather_entries are built on host by the serial two pass connectivity algorithm below
     // they are later read on device in cohesive_zone_lads
     gather_node_count = U; // unique cohesive zone nodes 
-    gather_nodes   = DCArrayKokkos<size_t>(U, "cz_gather_nodes"); // u --> global node id
-    gather_counts  = DCArrayKokkos<int>(U, "cz_gather_counts"); // u --> # of contributions
-    gather_entries = DCArrayKokkos<int>(U, max_share, "cz_gather_entries"); // u --> list of (pair, side)
+    gather_nodes   = DCArrayKokkos<size_t>(U, "cz_gather_nodes"); // u -> global node id
+    gather_counts  = DCArrayKokkos<int>(U, "cz_gather_counts"); // u -> # of contributions
+    gather_entries = DCArrayKokkos<int>(U, max_share, "cz_gather_entries"); // u -> list of (pair, side)
     gather_entries.set_values(0);
 
     // fill node list + counts
@@ -357,20 +362,20 @@ void cohesive_zones_t::initialize_fracture_bc(
     // pass 2: serial on host; place each contribution into its node's row of gather_entries
     // entry = 2*pair + side (side 0 = A node, +F; side 1 = B node, -F)
     // place packed (pair, side) entries in gather_entries: entry = 2*pair + side (side=0 for A node, 1 for B node)
-    // node_count(...)++ acts as per node write cursor, sequential dependency that needs to be serial
+    // node_count(...)++ acts as per node write cursor, sequential dependency that needs to be serial so positions dont collide
     for (size_t i = 0; i < npairs; ++i) {            
         const size_t a = overlapping_node_gids.host(i, 0), b = overlapping_node_gids.host(i, 1);
         const size_t ua = static_cast<size_t>(node_to_u.host(a)); // compact index of A node
-        gather_entries.host(ua, static_cast<size_t>(node_count.host(a)++)) = static_cast<long>(2*i + 0);
+        gather_entries.host(ua, static_cast<size_t>(node_count.host(a)++)) = static_cast<long>(2*i + 0); // A side
         const size_t ub = static_cast<size_t>(node_to_u.host(b)); // compact index of B node
-        gather_entries.host(ub, static_cast<size_t>(node_count.host(b)++)) = static_cast<long>(2*i + 1);
+        gather_entries.host(ub, static_cast<size_t>(node_count.host(b)++)) = static_cast<long>(2*i + 1); // B side
     }
 
     // sort each node's entries by the partner node gid, so every node sums its pair forces in the same order on every run
     // (the row order of overlapping_node_gids can change between OpenMP/GPU runs; the partner node gids do not)
     for (size_t u = 0; u < U; ++u) {
         const int c = gather_counts.host(u); // entries of compact node u
-        for (int m = 1; m < c; ++m) {
+        for (int m = 1; m < c; ++m) { // insert every m into the already sorted entries
             const int entry = gather_entries.host(u, m); // entry = 2*pair + side
             const size_t key = overlapping_node_gids.host(entry >> 1, 1 - (entry & 1)); // partner node gid (other column)
             int w = m - 1;
@@ -380,7 +385,7 @@ void cohesive_zones_t::initialize_fracture_bc(
                 gather_entries.host(u, w + 1) = prev; // shift the larger partner right
                 --w;
             }
-            gather_entries.host(u, w + 1) = entry; // insert in partner-gid order
+            gather_entries.host(u, w + 1) = entry; // drop every m into its sorted position
         }
     }
 
