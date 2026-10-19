@@ -182,10 +182,8 @@ void Driver::initialize()
     mesh.num_corners = mesh.num_elems * mesh.num_nodes_in_elem;
     MPI_Barrier(MPI_COMM_WORLD);
 
-    // Report per-rank mesh information. With the Logger we no longer need a
-    // serialized-by-barriers print loop: every rank appends to its own buffer
-    // (non-collective), and the collective flush() below dumps them to stdout
-    // in rank order AND to each rank's per-rank file (Fierro_log_<rank>).
+    // Report per-rank mesh information. Every rank writes to its own log file
+    // (Fierro_log_<rank>); rank 0 also writes to stdout.
     {
         size_t num_ghost_nodes = mesh.num_nodes > mesh.num_owned_nodes ? mesh.num_nodes - mesh.num_owned_nodes : 0;
         size_t num_ghost_elems = mesh.num_elems > mesh.num_owned_elems ? mesh.num_elems - mesh.num_owned_elems : 0;
@@ -453,9 +451,7 @@ void Driver::initialize()
 
     log_.info("Driver initialization complete\n");
 
-    // Collective dump of the full initialization transcript to stdout (in rank
-    // order) and to per-rank log files (Fierro_log_<rank>). Safe: every rank
-    // reaches this point exactly once.
+    // Flush the initialization transcript to stdout and per-rank log files.
     log_.flush();
 }
 
@@ -506,9 +502,7 @@ void Driver::execute()
                         State);
     } // loop over solvers
 
-    // Collective: dump any remaining buffered output from the run. Solvers
-    // are free to call log_.flush() at their own cycle boundaries; this
-    // catches anything they didn't.
+    // Flush any remaining buffered output from the run.
     log_.flush();
 }
 
@@ -539,9 +533,7 @@ void Driver::finalize()
         delete solver;
     }
 
-    // Last collective flush before Driver destruction. ~Logger will also
-    // flush if MPI is still initialized, but doing it here keeps the
-    // observable output ordered next to the finalize phase.
+    // Flush before Driver destruction (~Logger also flushes).
     log_.flush();
 }
 

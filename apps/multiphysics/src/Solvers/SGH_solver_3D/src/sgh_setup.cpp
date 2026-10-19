@@ -39,7 +39,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.hpp"
 #include "state.hpp"
 #include "simulation_parameters.hpp"
-#include "geometry_new.hpp"
 #include "ELEMENTS.h"
 
 
@@ -105,19 +104,6 @@ void SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     for (int mat_id = 0; mat_id < num_mats; mat_id++) {
 
         if (log) log->info("Calculating corner mass for material %d\n", mat_id);
-
-        // Example of capturing a Logger::Handle by value into a kernel.
-        // Obtain `lh` on the host, then pass/capture it into the FOR_ALL.
-        // See region_fill.cpp :: log_mat_elem_probe for the actual FOR_ALL
-        // using `lh.info(...)` and `FLOG_DEV(lh, INFO, ...)`.
-        // if (log && mat_id == 0) {
-        //     auto lh = log->handle();
-        //     log_mat_elem_probe(lh,
-        //                        State.MaterialToMeshMaps.elem_in_mat_elem,
-        //                        State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
-        //                        static_cast<size_t>(mat_id),
-        //                        /* probe_gid = */ 0);
-        // }
 
         calc_corner_mass(Materials,
                          mesh,

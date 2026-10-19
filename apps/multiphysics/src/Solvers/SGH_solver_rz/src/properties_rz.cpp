@@ -35,7 +35,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "sgh_solver_rz.hpp"
 #include "material.hpp"
 //#include "mesh.hpp""
-#include "geometry_new.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
