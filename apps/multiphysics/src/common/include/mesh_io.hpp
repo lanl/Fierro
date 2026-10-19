@@ -935,167 +935,191 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void read_vtk_hexN_mesh(swage::Mesh_t& mesh,
-                       MPICArrayKokkos<double>& node_coords,
-                       MeshInput_t& mesh_inps,
-                       int num_dims)
+                            MPICArrayKokkos<double>& node_coords,
+                            MeshInput_t& mesh_inps,
+                            int num_dims)
     {
-
         std::cout << "Reading VTK HexN mesh" << std::endl;
 
-        int i;           // used for writing information to file
-        int node_gid;    // the global id for the point
-        int elem_gid;    // the global id for the elem
-
-        size_t num_nodes_in_elem = 1;
-        for (int dim = 0; dim < num_dims; dim++) {
-            num_nodes_in_elem *= (mesh_inps.p_order+1);
-        } 
-        std::string token;
-        bool found = false;
-
-        std::ifstream in;
-        in.open(mesh_file_); // Uses mesh_file_ from the class/scope
-
-
-        // --- 1. Find and Read POINTS ---
-        i = 0;
-        while (found==false) {
-            std::string str;
-            std::string delimiter = " ";
-            std::getline(in, str);
-            std::vector<std::string> v = split (str, delimiter);
-
-            if(v[0] == "POINTS"){
-                size_t num_nodes = std::stoi(v[1]);
-                printf("Number of nodes read in %zu\n", num_nodes);
-
-                mesh.initialize_nodes(num_nodes);
-                //std::vector<node_state> required_node_state = { node_state::coords };
-                //node.initialize(num_nodes, num_dims, required_node_state);
-
-                found=true;
-            }
-
-            if (i > 1000){
-                std::cerr << "ERROR: Failed to find POINTS in file" << std::endl;
-                break;
-            }
-            i++;
+        if (num_dims != 3) {
+            throw std::runtime_error("read_vtk_hexN_mesh: only 3D Lagrange hex meshes are supported");
         }
 
-        node_coords = MPICArrayKokkos<double>(mesh.num_nodes, num_dims, "Node_coordinates_in_mesh_io");
+        std::ifstream in(mesh_file_);
+        if (!in.is_open()) {
+            throw std::runtime_error("read_vtk_hexN_mesh: could not open mesh file");
+        }
 
-        // Read node coordinates and apply user scaling
-        for (node_gid=0; node_gid < mesh.num_nodes; node_gid++){
-            std::string str;
-            std::getline(in, str);
-            std::vector<std::string> v = split (str, " ");
+        // ---- whitespace-robust tokenizer (handles tabs, \r, repeated spaces) ----
+        auto tokenize = [](const std::string& line) {
+            std::vector<std::string> tok;
+            std::istringstream iss(line);
+            std::string t;
+            while (iss >> t) tok.push_back(t);
+            return tok;
+        };
 
-            node_coords.host(node_gid, 0) = mesh_inps.scale_x * std::stod(v[0]);
-            node_coords.host(node_gid, 1) = mesh_inps.scale_y * std::stod(v[1]);
-            if(num_dims == 3){
-                node_coords.host(node_gid, 2) = mesh_inps.scale_z * std::stod(v[2]);
+        // read the next NON-EMPTY line; returns false at EOF
+        auto next_tokens = [&](std::vector<std::string>& tok) -> bool {
+            std::string line;
+            while (std::getline(in, line)) {
+                tok = tokenize(line);
+                if (!tok.empty()) return true;
             }
+            return false;
+        };
+
+        // ---- 0. Header / version check ----
+        {
+            std::string header;
+            std::getline(in, header);
+            const size_t p = header.find("Version");
+            if (header.find("vtk DataFile") == std::string::npos || p == std::string::npos) {
+                throw std::runtime_error("read_vtk_hexN_mesh: missing '# vtk DataFile Version' header");
+            }
+            const double version = std::stod(header.substr(p + 7));
+            if (version >= 5.0) {
+                // 5.x uses OFFSETS/CONNECTIVITY blocks and the newer Lagrange-hex edge ordering
+                throw std::runtime_error("read_vtk_hexN_mesh: legacy VTK version 5.x is not supported; "
+                                        "save the file as version 4.2 or lower");
+            }
+        }
+
+        std::vector<std::string> tok;
+
+        // ---- 1. POINTS ----
+        bool found = false;
+        while (next_tokens(tok)) {
+            if (tok[0] == "POINTS") { found = true; break; }
+        }
+        if (!found || tok.size() < 2) {
+            throw std::runtime_error("read_vtk_hexN_mesh: POINTS not found");
+        }
+
+        const size_t num_nodes = std::stoul(tok[1]);
+        printf("Number of nodes read in %zu\n", num_nodes);
+        mesh.initialize_nodes(num_nodes);
+
+        // read 3*num_nodes values regardless of how they are split across lines
+        std::vector<double> xyz;
+        xyz.reserve(3 * num_nodes);
+        while (xyz.size() < 3 * num_nodes && next_tokens(tok)) {
+            for (const auto& t : tok) xyz.push_back(std::stod(t));
+        }
+        if (xyz.size() < 3 * num_nodes) {
+            throw std::runtime_error("read_vtk_hexN_mesh: fewer point coordinates than POINTS count");
+        }
+
+        node_coords = MPICArrayKokkos<double>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
+        for (size_t n = 0; n < num_nodes; n++) {
+            node_coords.host(n, 0) = mesh_inps.scale_x * xyz[3 * n + 0];
+            node_coords.host(n, 1) = mesh_inps.scale_y * xyz[3 * n + 1];
+            node_coords.host(n, 2) = mesh_inps.scale_z * xyz[3 * n + 2];
         }
         node_coords.update_device();
 
-
-        // --- 2. Find and Read CELLS ---
+        // ---- 2. CELLS ----
         found = false;
-        i = 0;
-        size_t num_elem = 0;
-        while (found==false) {
-            std::string str;
-            std::getline(in, str);
-            std::vector<std::string> v = split (str, " ");
-
-            if(v[0] == "CELLS"){
-                num_elem = std::stoi(v[1]);
-                printf("Number of elements read in %zu\n", num_elem);
-                mesh.initialize_elems_Pn(num_elem, mesh_inps.p_order, 2*mesh_inps.p_order);
-                found = true;
-            }
-
-            if (i > 1000){
-                printf("ERROR: Failed to find CELLS \n");
-                break;
-            }
-            i++;
+        while (next_tokens(tok)) {
+            if (tok[0] == "CELLS") { found = true; break; }
+        }
+        if (!found || tok.size() < 3) {
+            throw std::runtime_error("read_vtk_hexN_mesh: CELLS not found");
         }
 
-        // --- 3. Connectivity and Reordering ---
-        CArray <int> convert_vtk_to_fierro(num_nodes_in_elem);
-        bool map_built = false;
+        const size_t num_elem  = std::stoul(tok[1]);
+        const size_t cell_size = std::stoul(tok[2]);   // total ints in the CELLS block
+        printf("Number of elements read in %zu\n", num_elem);
 
-        for (elem_gid=0; elem_gid < num_elem; elem_gid++) {
-            std::string str;
-            std::getline(in, str);
-            std::vector<std::string> v = split (str, " ");
-            num_nodes_in_elem = std::stoi(v[0]);
-            const int num_1D_points = std::round(std::cbrt(num_nodes_in_elem));
-            const int Pn_order = num_1D_points - 1;
+        std::vector<size_t> cell_data;
+        cell_data.reserve(cell_size);
+        while (cell_data.size() < cell_size && next_tokens(tok)) {
+            for (const auto& t : tok) cell_data.push_back(std::stoul(t));
+        }
+        if (cell_data.size() < cell_size || num_elem == 0) {
+            throw std::runtime_error("read_vtk_hexN_mesh: CELLS block is truncated");
+        }
 
-            int this_point = 0;
-            for (int k=0; k <= Pn_order; k++){
-                for (int j=0; j <= Pn_order; j++){
-                    for (int i_idx=0; i_idx <= Pn_order; i_idx++){
+        // ---- infer Pn from the file, and check it against the YAML ----
+        const size_t n0     = cell_data[0];
+        const size_t num_1D = (size_t)std::llround(std::cbrt((double)n0));
+        if (num_1D * num_1D * num_1D != n0 || num_1D < 2) {
+            throw std::runtime_error("read_vtk_hexN_mesh: cell node count is not (Pn+1)^3");
+        }
+        const size_t Pn_file = num_1D - 1;
 
-                        int order[3] = {Pn_order, Pn_order, Pn_order};
-                        int this_index = PointIndexFromIJK(i_idx, j, k, order);
+        if ((size_t)mesh_inps.p_order != Pn_file) {
+            printf("ERROR: VTK file has Pn = %zu but input file has p_order = %d\n",
+                Pn_file, (int)mesh_inps.p_order);
+            throw std::runtime_error("read_vtk_hexN_mesh: p_order in YAML does not match the mesh file");
+        }
 
-                        convert_vtk_to_fierro(this_point) = this_index;
-                        this_point++;
-                    }
+        mesh.initialize_elems_Pn(num_elem, Pn_file, 2 * Pn_file);
+
+        // ---- 3. build the VTK -> ijk map ONCE ----
+        const int Pn = (int)Pn_file;
+        int order[3] = {Pn, Pn, Pn};
+        std::vector<size_t> vtk_lid_of_ijk(mesh.num_nodes_in_elem);
+        {
+            size_t lid = 0;
+            for (int k = 0; k <= Pn; k++)
+            for (int j = 0; j <= Pn; j++)
+            for (int i = 0; i <= Pn; i++) {
+                vtk_lid_of_ijk[lid++] = (size_t)PointIndexFromIJK(i, j, k, order);
+            }
+        }
+
+        // ---- fill nodes_in_elem with validation ----
+        size_t off = 0;
+        for (size_t e = 0; e < num_elem; e++) {
+            if (off >= cell_data.size()) {
+                throw std::runtime_error("read_vtk_hexN_mesh: ran out of CELLS data");
+            }
+            const size_t n = cell_data[off];
+            if (n != mesh.num_nodes_in_elem) {
+                throw std::runtime_error("read_vtk_hexN_mesh: mixed element orders are not supported");
+            }
+            if (off + n >= cell_data.size()) {
+                throw std::runtime_error("read_vtk_hexN_mesh: CELLS line is truncated");
+            }
+
+            for (size_t lid = 0; lid < n; lid++) {
+                const size_t gid = cell_data[off + 1 + vtk_lid_of_ijk[lid]];
+                if (gid >= num_nodes) {
+                    throw std::runtime_error("read_vtk_hexN_mesh: node id out of range in CELLS");
                 }
+                mesh.nodes_in_elem.host(e, lid) = gid;
             }
-
-            // Map connectivity from VTK to Fierro/Swage mesh structure
-            for (size_t node_lid=0; node_lid < num_nodes_in_elem; node_lid++){
-                int vtk_index = convert_vtk_to_fierro(node_lid); 
-                mesh.nodes_in_elem.host(elem_gid, node_lid) = (size_t)std::stod(v[vtk_index+1]);
-            }
+            off += n + 1;
         }
-
         mesh.nodes_in_elem.update_device();
 
-        // Initialize corners based on dynamic nodes-per-element count
-        size_t num_corners = num_elem * num_nodes_in_elem;
-
-        // Build connectivity (Faces, etc.)
-        mesh.build_connectivity();
-
-
-        // --- 4. Validate CELL_TYPES ---
+        // ---- 4. CELL_TYPES ----
         found = false;
-        i = 0;
-        size_t elem_type = 0;
-        while (found==false) {
-            std::string str;
-            std::getline(in, str);
-            std::vector<std::string> v = split (str, " ");
-
-            if(v[0] == "CELL_TYPES"){
-                std::getline(in, str);
-                elem_type = std::stoi(str);
-                found = true;
-            }
-
-            if (i > 1000){
-                printf("ERROR: Failed to find CELL_TYPES \n");
-                break;
-            }
-            i++;
+        while (next_tokens(tok)) {
+            if (tok[0] == "CELL_TYPES") { found = true; break; }
+        }
+        if (!found) {
+            throw std::runtime_error("read_vtk_hexN_mesh: CELL_TYPES not found");
         }
 
-        printf("Element type read = %zu \n", elem_type);
-
-        // 12 = Linear Hex, 72 = Lagrange Hex (High Order)
-        if(elem_type != 12 && elem_type != 72) {
-            std::cerr << "WARNING: element type " << elem_type << " may not be a supported Hex type." << std::endl;
+        size_t num_types_read = 0;
+        while (num_types_read < num_elem && next_tokens(tok)) {
+            for (const auto& t : tok) {
+                const int type = std::stoi(t);
+                // 72 = VTK_LAGRANGE_HEXAHEDRON; 12 = VTK_HEXAHEDRON (same vertex order when Pn = 1)
+                if (!(type == 72 || (type == 12 && Pn == 1))) {
+                    printf("ERROR: unsupported cell type %d for a HexN mesh\n", type);
+                    throw std::runtime_error("read_vtk_hexN_mesh: unsupported cell type");
+                }
+                num_types_read++;
+            }
         }
+        printf("Element type read = 72 (Lagrange hex, Pn = %d)\n", Pn);
 
         in.close();
 
+        // NOTE: do NOT call mesh.build_connectivity() here; read_mesh() already does it.
     } // end of read_vtk_hexN_mesh
 
 
@@ -1154,7 +1178,7 @@ public:
         //------------------------------------
         // allocate mesh class nodes and elems
         mesh.initialize_nodes(num_nodes);
-        if (HexN || Pn_order > 1) {
+        if(HexN){
             mesh.initialize_elems_Pn(num_elems, Pn_order, 2*Pn_order);
         } else {
             mesh.initialize_elems(num_elems);
@@ -1374,11 +1398,9 @@ public:
                             // convert this_node index to the FE index convention
                             int order[3] = {Pn_order, Pn_order, Pn_order};
                             int this_index = PointIndexFromIJK(i, j, k, order);
-
-                            // Table maps IJK_lex -> VTK_slot (used as the connectivity
-                            // index in the writeback below). For p=1 the map is self-
-                            // inverse so an inverted build went undetected; p>1 needs
-                            // this direction explicitly.
+                            
+                            // store the points in this elem according the the finite
+                            // element numbering convention
                             convert_pn_vtk_to_ijk.host(this_node) = this_index;
                             
                             // increment the point counting index
@@ -1468,11 +1490,11 @@ public:
             }
         }
         else if (SimulationParamaters.MeshInput.num_dims == 3) {
-            if (HexN || SimulationParamaters.MeshInput.p_order > 1) {
-                build_3d_HexN_box(mesh, node_coords, SimulationParamaters);
+            if (!HexN) {
+                build_3d_box(mesh, node_coords, SimulationParamaters);
             }
             else {
-                build_3d_box(mesh, node_coords, SimulationParamaters);
+                build_3d_HexN_box(mesh, node_coords, SimulationParamaters);
             }
         }
         else{
@@ -1856,8 +1878,6 @@ public:
                            MPICArrayKokkos<double>& node_coords,
                            SimulationParameters_t& SimulationParamaters) const
     {
-        printf("Creating a 3D high order box mesh \n");
-
         const int num_dim = 3;
 
         // SimulationParamaters.MeshInput.length.update_host();
@@ -1944,8 +1964,8 @@ public:
         node_coords.update_device();
 
 
-        // initialize elem variables, (Pn_order+1)^3 nodes per element
-        mesh.initialize_elems_Pn(num_elems, Pn_order, 2*Pn_order);
+        // initialize elem variables
+        mesh.initialize_elems_Pn(num_elems, SimulationParamaters.MeshInput.p_order, 2*SimulationParamaters.MeshInput.p_order);
 
         // --- Build elems  ---
         
@@ -5699,7 +5719,7 @@ public:
                                  node_coord_id,
                                  node_grad_level_set_id,
                                  node_temp_id,
-                                 node_disp_id);*/
+                                 node_disp_id); */
 
 
         Kokkos::fence();
