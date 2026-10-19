@@ -26,7 +26,7 @@ const char* level_tag(LogLevel l)
         case LogLevel::Error: return "ERROR";
         case LogLevel::Off  : return "OFF  ";
     }
-    return "?????";
+    return "NO LOG LEVEL";
 }
 } // namespace
 
