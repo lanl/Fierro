@@ -43,7 +43,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.hpp"
 
 #include "geometry_new.hpp"
-#include "logger.hpp"   // fierro::Logger::Handle for in-kernel logging examples
 
 struct SimulationParamaters_t;
 struct Material_t;

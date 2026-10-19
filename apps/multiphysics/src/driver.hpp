@@ -42,8 +42,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // Physical state data
 #include "state.hpp"
 
-// MPI- and GPU-safe printf-style logger (one per Driver; passed by reference
-// to solvers and captured into kernels via its POD Handle view).
+// MPI-aware, host-only printf-style logger (one per Driver; passed by
+// pointer to solvers).
 #include "logger.hpp"
 
 
@@ -97,9 +97,8 @@ public:
     // set of enabled solvers
     std::vector<Solver*> solvers;
 
-    // One MPI- and GPU-safe logger, owned by the Driver. Solvers receive a
-    // reference to this and may call log_.info / warn / error / debug on the
-    // host, or capture log_.handle() by value into FOR_ALL / KOKKOS_LAMBDA.
+    // One logger, owned by the Driver. Solvers receive a pointer to this and
+    // may call info / warn / error / debug / trace on the host.
     // Default constructs against MPI_COMM_WORLD at LogLevel::Info with file
     // prefix "Fierro_log_", yielding per-rank files Fierro_log_0, Fierro_log_1, ...
     // MPI must already be initialized by main() before the Driver is constructed.
