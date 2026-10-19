@@ -185,10 +185,37 @@ static void build_lumped_volume(const swage::Mesh_t& Mesh,
             const double vol_qpt = elem_det_jac(elem_gid, qpt_lid)*Quad.qpt_weights(qpt_lid);
             vol += tables.basis_row_sum(qpt_lid)*FERefElem.qpt_basis(qpt_lid, node_lid)*vol_qpt;
         }
-        corconer_vol(Mesh.corners_in_elem(elem_gid, node_lid)) = vol;
+        corner_vol(Mesh.corners_in_elem(elem_gid, node_lid)) = vol;
     });
 } // end build_lumped_volume
 
+
+// ============================================================================
+// Full volume matrix for computing coefficients to polynomial representation of fields
+// ============================================================================
+// Stored (elem_gid, node_i, node_j)
+static void build_volume_matrix(const swage::Mesh_t& Mesh,
+    const elements::ReferenceElement_t& FERefElem,
+    const elements::Quadrature_t& Quad,
+    const BasisTables_t& tables,
+    const CArrayKokkos<double>& elem_det_jac,
+    DCArrayKokkos<double>& volume_matrix, // (corner_gid)
+    const size_t num_elems,
+    const size_t num_qpts_in_elem,
+    const size_t num_nodes_in_elem)
+{
+    FOR_ALL(elem_gid, 0, num_elems,
+            node_lid_i, 0, num_nodes_in_elem,
+            node_lid_j, 0, num_nodes_in_elem {
+                
+        double vol = 0.0;
+        for(size_t qpt_lid = 0; qpt_lid < num_qpts_in_elem; qpt_lid++){
+            const double vol_qpt = FERefElem.qpt_basis(qpt_lid, node_lid_i)*FERefElem.qpt_basis(qpt_lid, node_lid_j)*Quad.qpt_weights(qpt_lid);
+            vol += vol_qpt;
+        }
+        volume_matrix(elem_gid,node_lid_i, node_lid_j) = vol;
+    });
+} // end build_lumped_volume
 
 
 
