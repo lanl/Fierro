@@ -37,7 +37,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include <string>
-#include <stdio.h>
 
 #include "matar.h"
 #include "table.hpp"

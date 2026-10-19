@@ -33,7 +33,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
 #include "level_set_solver.hpp"
-#include "state.hpp"
 //#include "mesh.hpp""
 #include "geometry_new.hpp"
 

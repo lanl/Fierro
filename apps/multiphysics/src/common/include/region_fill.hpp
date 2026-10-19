@@ -42,7 +42,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.hpp"
 #include "state.hpp"
 
-#include "geometry_new.hpp"
 
 struct SimulationParamaters_t;
 struct Material_t;

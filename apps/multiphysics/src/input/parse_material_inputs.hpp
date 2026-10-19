@@ -35,12 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef FIERRO_PARSE_MATERIAL_INPUTS_H
 #define FIERRO_PARSE_MATERIAL_INPUTS_H
 
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
 #include <stdio.h>
-#include <sys/stat.h>
 
 #include "matar.h"
 

@@ -31,25 +31,15 @@ WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
 #include <stdio.h>
 #include <math.h>
-#include <sys/stat.h>
 #include <vector>
-#include <variant>
-#include <algorithm>
-#include <map>
 
-#include "string_utils.hpp"
 
 #include "matar.h"
 
 #include "parse_yaml.hpp"
 
-#include "parse_tools.hpp"
 #include "parse_regions.hpp"
 #include "parse_initial_conditions.hpp"
 #include "parse_mesh_inputs.hpp"

@@ -34,7 +34,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef FIERRO_OUTPUT_OPTIONS_H
 #define FIERRO_OUTPUT_OPTIONS_H
-#include <stdio.h>
 #include "matar.h"
 #include "state.hpp"
 

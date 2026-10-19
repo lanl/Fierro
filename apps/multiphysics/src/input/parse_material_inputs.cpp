@@ -32,18 +32,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 #include <iostream>
-#include <sstream>
-#include <fstream>
 #include <string>
 #include <stdio.h>
 #include <math.h>
-#include <sys/stat.h>
 #include <vector>
-#include <variant>
-#include <algorithm>
 #include <map>
 
-#include "string_utils.hpp"
 
 #include "matar.h"
 #include "parse_tools.hpp"
@@ -70,7 +64,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // strength
 #include "no_strength.hpp"
 #include "user_defined_strength.hpp"
-#include "host_user_defined_strength.hpp"
 #include "host_ann_strength.hpp"
 #include "decoupled_plasticity.hpp"
 #include "QS_iso_lin_elastic.hpp"
@@ -91,7 +84,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "no_dissipation.hpp"
 
 // fracture files
-#include "user_defined_fracture.hpp"
 
 // tabular files
 #include "tabular_material_model.hpp"

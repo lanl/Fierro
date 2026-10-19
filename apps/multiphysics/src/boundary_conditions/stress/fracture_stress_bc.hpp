@@ -36,7 +36,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BOUNDARY_STRESS_FRACTURE_H
 
 #include "boundary_conditions.hpp"
-#include "mesh_io.hpp"
 
 struct BoundaryConditionEnums_t;
 

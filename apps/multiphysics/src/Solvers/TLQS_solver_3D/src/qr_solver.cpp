@@ -39,18 +39,11 @@
 
  //////////////////////////
 
-#include <iostream>
 #include <stdio.h>
 #include <cmath>
 
 #include "tlqs_solver_3D.hpp"
 
-#include "simulation_parameters.hpp"
-#include "material.hpp"
-#include "boundary_conditions.hpp"
-#include "state.hpp"
-#include "geometry_new.hpp"
-#include "mesh_io.hpp"
 
 #include "matar.h"
 using namespace mtr;

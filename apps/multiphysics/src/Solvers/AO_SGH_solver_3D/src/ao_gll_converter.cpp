@@ -1,4 +1,3 @@
-#include <stdexcept>
 
 #include "ao_gll_converter.hpp"
 #include "ao_ref_elem.hpp"

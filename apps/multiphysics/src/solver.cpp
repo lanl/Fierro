@@ -36,9 +36,6 @@
 #include "solver.hpp"
 
 // debug and performance includes
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <ctime>
 
 Solver::Solver()
 {
