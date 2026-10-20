@@ -1019,7 +1019,8 @@ bool refresh_closest_point(const size_t bdy_node_lid,
 /// contact_counts(0) = penetrating nodes this sweep (length of pen_nodes)
 /// contact_counts(1) = penetrating nodes where no surface passed the direction
 ///                     filter, or with a degenerate direction reference (should be 0)
-/// contact_counts(2) = active nodes this load step (length of active_nodes)
+/// contact_counts(2) = active nodes this load step (length of active_nodes)=
+/// contact_counts(3) = pairs added by the merge + pairs deleted by the refresh this sweep
 /// Host copies are current on return.
 ///
 /// pen_nodes, active_nodes, and pair order within a node are NOT deterministic
@@ -1081,8 +1082,10 @@ void penetration_sweep(const size_t num_bdy_surfs,
 
     // per-sweep counters: host write + copy, no kernel launch
     // host(2) is current from the sort or the previous sweep, so the copy preserves it
+    // reset block
     contact_counts.host(0) = 0;
     contact_counts.host(1) = 0;
+    contact_counts.host(3) = 0;
     contact_counts.update_device();
     Kokkos::fence();
 
@@ -1311,6 +1314,9 @@ void penetration_sweep(const size_t num_bdy_surfs,
             } // end if direction defined
         } // end if penetrating
 
+        // right after the merge block (before "2. refresh"):
+        size_t num_changes = num_pairs - num_old;   // pairs added by the merge
+
         // ===========================================================
         // 2. refresh pairs from earlier sweeps on their stored surface
         //    downward loop: a deleted pair is replaced by the row's last pair,
@@ -1338,6 +1344,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
                     }
                 }
                 num_pairs--;
+                num_changes++;                       // pair deleted by the refresh
                 continue;
             }
 
@@ -1356,6 +1363,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
         } // end for p
 
         num_pairs_in_node(bdy_node_lid) = num_pairs;
+        if (num_changes > 0) Kokkos::atomic_add(&contact_counts(3), num_changes);
 
         // ===========================================================
         // 3. sharing counts for the relaxation weights:

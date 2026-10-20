@@ -148,7 +148,8 @@ void AO_contact_initialize(AO_contact_state_t& AO_contact_state,
     // ---------------------------------------------------------------
     // counters: [0] penetrating this sweep, [1] pairing errors, [2] active this load step
     // ---------------------------------------------------------------
-    AO_contact_state.contact_counts = DCArrayKokkos<size_t>(3, "contact_counts");
+    AO_contact_state.bdy_node_pred_coords = DCArrayKokkos<double>(num_bdy_nodes, 3, "bdy_node_pred_coords");
+    AO_contact_state.contact_counts       = DCArrayKokkos<size_t>(4, "contact_counts");
 
     // ---------------------------------------------------------------
     // persistent pair variables (reset per load step in AO_contact_sort)
