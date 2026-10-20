@@ -41,33 +41,62 @@ using namespace mtr;
 
 struct AO_contact_state_t
 {
-    // bounding node variables
-    DCArrayKokkos <double> bdy_node_coords;                     // subset of coords only including boundary nodes
-    CArrayKokkos <double> bdy_node_vels;                        // subset of coords only including boundary nodes
-    CArrayKokkos <double> bdy_node_accels;                      // subset of coords only including boundary nodes
+    // ---------------------------------------------------------------
+    // boundary node variables
+    // ---------------------------------------------------------------
+    DCArrayKokkos <double> bdy_node_coords;     // subset of coords only including boundary nodes
+    CArrayKokkos <double> bdy_node_vels;        // boundary node velocities (TLQS: delta_u/dt)
+    CArrayKokkos <double> bdy_node_accels;      // boundary node accelerations (TLQS: zero)
+    CArrayKokkos <double> bdy_node_mass;        // (num_bdy_nodes) lumped nodal mass
 
-    // sort variables
+    // ---------------------------------------------------------------
+    // sort variables (rebuilt once per load step)
+    // ---------------------------------------------------------------
     CArrayKokkos <double> bounding_boxes;                       // coords of bounding box of each boundary surface
     RaggedRightArrayKokkos <size_t> nodes_in_bounding_boxes;    // nodes that lie in the bounding box of each boundary surface
     DCArrayKokkos <size_t> num_nodes_in_bounding_boxes;         // stride array for nodes_in_bounding_boxes
     const size_t num_bins = 10; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     double lebesgue_overshoot;
     swage::PointCloud_t bdy_node_point_cloud;
-    DCArrayKokkos<size_t>          num_surfs_in_node_boxes;   // (num_bdy_nodes) number of surface bounding boxes containing each node
-    RaggedRightArrayKokkos<size_t> surfs_in_node_boxes;       // (bdy node, k) -> bdy_surf_lid
-    RaggedRightArrayKokkos<size_t> cols_in_node_boxes;        // (bdy node, k) -> node_lid column in pairing_check_vars
+    DCArrayKokkos<size_t>          num_surfs_in_node_boxes;     // (num_bdy_nodes) number of surface bounding boxes containing each node
+    RaggedRightArrayKokkos<size_t> surfs_in_node_boxes;         // (bdy node, slot) -> bdy_surf_lid
+    RaggedRightArrayKokkos<size_t> cols_in_node_boxes;          // (bdy node, slot) -> node_lid column in pairing_check_vars
 
-    // pairing variables
-    DRaggedRightArrayKokkos <double> pairing_check_vars;        // stores min(distance_to_surf), xi, and eta for a node compared to a surface
-    CArrayKokkos<double> bdy_surf_node_normals;                 // stores outward normal at each node in surface to avoid redundant calculations
+    // ---------------------------------------------------------------
+    // detection variables (reset every sweep)
+    // ---------------------------------------------------------------
+    DRaggedRightArrayKokkos <double> pairing_check_vars;        // (surf, box node, 3) gap, xi, eta; sentinel if not penetrating
+    CArrayKokkos<double> bdy_surf_node_normals;                 // outward normal at each node in each surface
     const double filter_tol = 0.0; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     double max_gap;
-    CArrayKokkos<size_t> num_pen_surfs_in_node;    // (num_bdy_nodes) surfaces each node penetrates this sweep
-    CArrayKokkos<size_t> pen_nodes;                // (num_bdy_nodes) compact list of penetrating bdy node lids
-    DCArrayKokkos<size_t> num_pen_nodes;           // (2) [0] valid length of pen_nodes, [1] pairing error count
-    CArrayKokkos<size_t>            num_pairs_in_node;    // (num_bdy_nodes) pairs for each penetrating node
-    RaggedRightArrayKokkos<size_t>  contact_pair_surfs;   // (bdy node, pair) -> target bdy_surf_lid
-    DRaggedRightArrayKokkos<double> contact_pair_vars;    // (bdy node, pair, 7) -> xi, eta, nx, ny, nz, F_tot, f_inc
+    CArrayKokkos<size_t> num_pen_surfs_in_node;                 // (num_bdy_nodes) surfaces each node penetrates this sweep
+    CArrayKokkos<size_t> pen_nodes;                             // (num_bdy_nodes) penetrating bdy node lids this sweep, valid to contact_counts(0)
+
+    // ---------------------------------------------------------------
+    // counters, host copy current after penetration_sweep
+    //   [0] penetrating nodes this sweep
+    //   [1] pairing errors this sweep (should be 0)
+    //   [2] active nodes this load step (valid length of active_nodes)
+    // ---------------------------------------------------------------
+    DCArrayKokkos<size_t> contact_counts;
+
+    // ---------------------------------------------------------------
+    // persistent pair variables
+    // reset once per load step in AO_contact_sort; persist across Picard
+    // iterations, refreshed every sweep, new pairs appended by the sweep
+    // ---------------------------------------------------------------
+    CArrayKokkos<size_t>            is_active;                  // (num_bdy_nodes) 1 once the node is in active_nodes this load step
+    CArrayKokkos<size_t>            active_nodes;               // (num_bdy_nodes) bdy node lids with pairs, valid to contact_counts(2)
+    CArrayKokkos<size_t>            num_pairs_in_node;          // (num_bdy_nodes) current pairs per node
+    RaggedRightArrayKokkos<size_t>  contact_pair_surfs;         // (bdy node, pair) -> target bdy_surf_lid
+    DRaggedRightArrayKokkos<double> contact_pair_vars;          // (bdy node, pair, 7) -> xi, eta, nx, ny, nz, F_tot, f_inc
+    CArrayKokkos<size_t>            num_pairs_touching_node;    // (num_bdy_nodes) pairs involving each node (relaxation weight), recounted every sweep
+
+    // ---------------------------------------------------------------
+    // contact forces
+    // ---------------------------------------------------------------
+    CArrayKokkos<double> contact_forces;                        // (num_bdy_nodes, 3) assembled from the pairs
+    CArrayKokkos<double> contact_forces_used;                   // (num_bdy_nodes, 3) copy handed to the last Picard solve
 
 };
 
@@ -82,23 +111,11 @@ double get_lebesgue_constant_1d(const elements::ReferenceElement_t& ref_elem,
 // getting the overshoot factor for sizing bounding boxes
 void get_surf_overshoot_factor(const elements::ReferenceElement_t& ref_elem, double& lebesgue_overshoot);
 
-// sizes necessary arrays and gets static variables
-void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
-                           CArrayKokkos <double>& bdy_node_vels,
-                           CArrayKokkos <double>& bdy_node_accels,
-                           const size_t num_bdy_nodes,
-                           DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
-                           const size_t num_bdy_surfs,
+void AO_contact_initialize(AO_contact_state_t& AO_contact_state,
                            const elements::ReferenceElement_t& ref_elem,
-                           double& lebesgue_overshoot,
-                           CArrayKokkos <double>& bounding_boxes,
-                           CArrayKokkos<double>& bdy_surf_node_normals,
-                           const size_t num_nodes_in_surf,
-                           DCArrayKokkos <size_t>& num_surfs_in_node_boxes,
-                           CArrayKokkos <size_t>& num_pen_surfs_in_node,
-                           CArrayKokkos <size_t>& pen_nodes,
-                           DCArrayKokkos <size_t>& num_pen_nodes,
-                           CArrayKokkos <size_t>& num_pairs_in_node);
+                           const size_t num_bdy_nodes,
+                           const size_t num_bdy_surfs,
+                           const size_t num_nodes_in_surf);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR INITIALIZATION OF CONTACT STATE
@@ -168,7 +185,12 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
                      RaggedRightArrayKokkos<size_t>& cols_in_node_boxes,
                      RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
-                     DRaggedRightArrayKokkos<double>& contact_pair_vars);
+                     DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                     CArrayKokkos<size_t>& num_pairs_in_node,
+                     CArrayKokkos<size_t>& is_active,
+                     CArrayKokkos<double>& contact_forces,
+                     CArrayKokkos<double>& contact_forces_used,
+                     DCArrayKokkos<size_t>& contact_counts);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR SORTING NODES FOR PAIRING
@@ -279,6 +301,15 @@ bool penetration_check(const size_t bdy_node_lid,
                        const double max_gap,
                        const DRaggedRightArrayKokkos<double>& pairing_check_vars);
 
+KOKKOS_FUNCTION
+bool refresh_closest_point(const size_t bdy_node_lid,
+                           const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
+                           const DCArrayKokkos<double>& bdy_node_coords,
+                           const CArrayKokkos<double>& dof_positions_1d,
+                           const double slide_tol,
+                           double& xi,
+                           double& eta);
+
 // find contact pairs from nodes_in_bounding_boxes
 void penetration_sweep(const size_t num_bdy_surfs,
                        const size_t num_bdy_nodes,
@@ -306,10 +337,13 @@ void penetration_sweep(const size_t num_bdy_surfs,
                        DRaggedRightArrayKokkos<double>& pairing_check_vars,
                        CArrayKokkos<size_t>& num_pen_surfs_in_node,
                        CArrayKokkos<size_t>& pen_nodes,
-                       DCArrayKokkos<size_t>& num_pen_nodes,
+                       DCArrayKokkos<size_t>& contact_counts,
+                       CArrayKokkos<size_t>& is_active,
+                       CArrayKokkos<size_t>& active_nodes,
                        CArrayKokkos<size_t>& num_pairs_in_node,
                        RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
-                       DRaggedRightArrayKokkos<double>& contact_pair_vars);
+                       DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                       CArrayKokkos<size_t>& num_pairs_touching_node);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR CHECKING PENETRATION

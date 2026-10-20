@@ -92,38 +92,80 @@ void get_surf_overshoot_factor(const elements::ReferenceElement_t& ref_elem, dou
     return;
 } // end get_surf_overshoot_factor
 
-// sizes necessary arrays and gets static variables
-void AO_contact_initialize(DCArrayKokkos <double>& bdy_node_coords,
-                           CArrayKokkos <double>& bdy_node_vels,
-                           CArrayKokkos <double>& bdy_node_accels,
-                           const size_t num_bdy_nodes,
-                           DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
-                           const size_t num_bdy_surfs,
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn AO_contact_initialize
+///
+/// \brief Allocates all fixed-size contact storage once at solver setup and
+///        computes the Lebesgue overshoot factor for bounding box sizing.
+///
+/// Ragged arrays whose strides depend on the bounding box search
+/// (nodes_in_bounding_boxes, pairing_check_vars, inverse map, pair storage)
+/// are allocated per load step in AO_contact_sort, not here.
+///
+/// Solver-specific initialization (e.g. zeroed kinematics for TLQS, nodal
+/// mass) is done by the calling solver after this function.
+///
+/// \param AO_contact_state    contact state to allocate
+/// \param ref_elem            reference element (Lebesgue constant of the 1D basis)
+/// \param num_bdy_nodes       number of boundary nodes
+/// \param num_bdy_surfs       number of boundary surfaces
+/// \param num_nodes_in_surf   nodes per surface, (p+1)^2
+///
+/////////////////////////////////////////////////////////////////////////////
+void AO_contact_initialize(AO_contact_state_t& AO_contact_state,
                            const elements::ReferenceElement_t& ref_elem,
-                           double& lebesgue_overshoot,
-                           CArrayKokkos <double>& bounding_boxes,
-                           CArrayKokkos<double>& bdy_surf_node_normals,
-                           const size_t num_nodes_in_surf,
-                           DCArrayKokkos <size_t>& num_surfs_in_node_boxes,
-                           CArrayKokkos <size_t>& num_pen_surfs_in_node,
-                           CArrayKokkos <size_t>& pen_nodes,
-                           DCArrayKokkos <size_t>& num_pen_nodes,
-                           CArrayKokkos <size_t>& num_pairs_in_node)
+                           const size_t num_bdy_nodes,
+                           const size_t num_bdy_surfs,
+                           const size_t num_nodes_in_surf)
 {
-    // allocating member variables that are statically sized
-    bdy_node_coords = DCArrayKokkos <double> (num_bdy_nodes, 3, "bdy_node_coords");
-    bdy_node_vels = CArrayKokkos <double> (num_bdy_nodes, 3, "bdy_node_vels");
-    bdy_node_accels = CArrayKokkos <double> (num_bdy_nodes, 3, "bdy_node_accels");
-    num_nodes_in_bounding_boxes = DCArrayKokkos <size_t> (num_bdy_surfs, "num_nodes_in_bounding_boxes");
-    bounding_boxes = CArrayKokkos <double> (num_bdy_surfs, 2, 3, "bounding_boxes");
-    bdy_surf_node_normals = CArrayKokkos <double> (num_bdy_surfs, num_nodes_in_surf, 3, "bdy_surf_node_normals");
-    num_surfs_in_node_boxes = DCArrayKokkos<size_t>(num_bdy_nodes, "num_surfs_in_node_boxes");
-    num_pen_surfs_in_node   = CArrayKokkos<size_t>(num_bdy_nodes, "num_pen_surfs_in_node");
-    pen_nodes               = CArrayKokkos<size_t>(num_bdy_nodes, "pen_nodes");
-    num_pairs_in_node = CArrayKokkos<size_t>(num_bdy_nodes, "num_pairs_in_node");
-    num_pen_nodes     = DCArrayKokkos<size_t>(2, "num_pen_nodes");
+    // ---------------------------------------------------------------
+    // boundary node variables
+    // ---------------------------------------------------------------
+    AO_contact_state.bdy_node_coords = DCArrayKokkos<double>(num_bdy_nodes, 3, "bdy_node_coords");
+    AO_contact_state.bdy_node_vels   = CArrayKokkos<double>(num_bdy_nodes, 3, "bdy_node_vels");
+    AO_contact_state.bdy_node_accels = CArrayKokkos<double>(num_bdy_nodes, 3, "bdy_node_accels");
+    AO_contact_state.bdy_node_mass   = CArrayKokkos<double>(num_bdy_nodes, "bdy_node_mass");
 
-    get_surf_overshoot_factor(ref_elem, lebesgue_overshoot);
+    // ---------------------------------------------------------------
+    // sort variables (fixed size)
+    // ---------------------------------------------------------------
+    // bounding_boxes(surf, 0, dim) = min corner, bounding_boxes(surf, 1, dim) = max corner
+    AO_contact_state.bounding_boxes              = CArrayKokkos<double>(num_bdy_surfs, 2, 3, "bounding_boxes");
+    AO_contact_state.num_nodes_in_bounding_boxes = DCArrayKokkos<size_t>(num_bdy_surfs, "num_nodes_in_bounding_boxes");
+    AO_contact_state.num_surfs_in_node_boxes     = DCArrayKokkos<size_t>(num_bdy_nodes, "num_surfs_in_node_boxes");
+
+    // geometric overshoot of high-order surfaces between their nodes (bounding box padding)
+    get_surf_overshoot_factor(ref_elem, AO_contact_state.lebesgue_overshoot);
+
+    // ---------------------------------------------------------------
+    // detection variables
+    // ---------------------------------------------------------------
+    AO_contact_state.bdy_surf_node_normals = CArrayKokkos<double>(num_bdy_surfs, num_nodes_in_surf, 3, "bdy_surf_node_normals");
+    AO_contact_state.num_pen_surfs_in_node = CArrayKokkos<size_t>(num_bdy_nodes, "num_pen_surfs_in_node");
+    AO_contact_state.pen_nodes             = CArrayKokkos<size_t>(num_bdy_nodes, "pen_nodes");
+
+    // ---------------------------------------------------------------
+    // counters: [0] penetrating this sweep, [1] pairing errors, [2] active this load step
+    // ---------------------------------------------------------------
+    AO_contact_state.contact_counts = DCArrayKokkos<size_t>(3, "contact_counts");
+
+    // ---------------------------------------------------------------
+    // persistent pair variables (reset per load step in AO_contact_sort)
+    // ---------------------------------------------------------------
+    AO_contact_state.is_active               = CArrayKokkos<size_t>(num_bdy_nodes, "is_active");
+    AO_contact_state.active_nodes            = CArrayKokkos<size_t>(num_bdy_nodes, "active_nodes");
+    AO_contact_state.num_pairs_in_node       = CArrayKokkos<size_t>(num_bdy_nodes, "num_pairs_in_node");
+    AO_contact_state.num_pairs_touching_node = CArrayKokkos<size_t>(num_bdy_nodes, "num_pairs_touching_node");
+
+    // ---------------------------------------------------------------
+    // contact forces (zeroed so they are defined before the first sort)
+    // ---------------------------------------------------------------
+    AO_contact_state.contact_forces      = CArrayKokkos<double>(num_bdy_nodes, 3, "contact_forces");
+    AO_contact_state.contact_forces_used = CArrayKokkos<double>(num_bdy_nodes, 3, "contact_forces_used");
+    AO_contact_state.contact_forces.set_values(0.0);
+    AO_contact_state.contact_forces_used.set_values(0.0);
+    Kokkos::fence();
 
     return;
 } // end AO_contact_initialize
@@ -459,14 +501,34 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
                      RaggedRightArrayKokkos<size_t>& cols_in_node_boxes,
                      RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
-                     DRaggedRightArrayKokkos<double>& contact_pair_vars)
+                     DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                     CArrayKokkos<size_t>& num_pairs_in_node,
+                     CArrayKokkos<size_t>& is_active,
+                     CArrayKokkos<double>& contact_forces,
+                     CArrayKokkos<double>& contact_forces_used,
+                     DCArrayKokkos<size_t>& contact_counts)
 {
-    // updating bdy_node_coords
-    FOR_ALL(i, 0, (int)num_bdy_nodes,
-            j, 0, 3, 
-            {
-                bdy_node_coords(i,j) = node_coords(bdy_nodes(i), j);
-            });
+    // ---------------------------------------------------------------
+    // per bdy node: refresh coordinates and reset the persistent pair state
+    // pairs are rebuilt every load step, so the assembled contact forces must
+    // start at zero to stay consistent with the empty pair set.
+    // fused into one launch
+    // ---------------------------------------------------------------
+    FOR_ALL(bdy_node_lid, 0, num_bdy_nodes, {
+        for (size_t dim = 0; dim < 3; dim++) {
+            bdy_node_coords(bdy_node_lid, dim)     = node_coords(bdy_nodes(bdy_node_lid), dim);
+            contact_forces(bdy_node_lid, dim)      = 0.0;
+            contact_forces_used(bdy_node_lid, dim) = 0.0;
+        }
+        num_pairs_in_node(bdy_node_lid) = 0;
+        is_active(bdy_node_lid)         = 0;
+    });
+
+    // all counters: host write + copy, no kernel launch
+    contact_counts.host(0) = 0;
+    contact_counts.host(1) = 0;
+    contact_counts.host(2) = 0;
+    contact_counts.update_device();
     Kokkos::fence();
 
     // getting domain bounds

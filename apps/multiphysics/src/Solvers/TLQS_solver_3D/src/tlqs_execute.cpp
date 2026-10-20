@@ -115,11 +115,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // setting up contact if it was called
     if (doing_contact) {
         AO_contact_state_t AO_contact_state;
-        AO_contact_initialize(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels, mesh.num_bdy_nodes,
-                              AO_contact_state.num_nodes_in_bounding_boxes, mesh.num_bdy_surfs, ref_elem,
-                              AO_contact_state.lebesgue_overshoot, AO_contact_state.bounding_boxes, AO_contact_state.bdy_surf_node_normals,
-                              mesh.num_nodes_in_surf, AO_contact_state.num_surfs_in_node_boxes, AO_contact_state.num_pen_surfs_in_node,
-                              AO_contact_state.pen_nodes, AO_contact_state.num_pen_nodes, AO_contact_state.num_pairs_in_node);
+        AO_contact_initialize(AO_contact_state, ref_elem, mesh.num_bdy_nodes, mesh.num_bdy_surfs, mesh.num_nodes_in_surf);
 
         // zeroing out bdy_node_velocities since this solver doesn't carry full node state velocity or evolve velocity
         // will be updated during picard iterations
@@ -135,7 +131,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         AO_contact_state.lebesgue_overshoot, AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes,
                         ref_elem.num_dofs_1d, mesh.bdy_surfs, mesh.elems_in_surf, mesh.nodes_in_elem, AO_contact_state.max_gap, AO_contact_state.pairing_check_vars,
                         AO_contact_state.num_surfs_in_node_boxes, AO_contact_state.surfs_in_node_boxes, AO_contact_state.cols_in_node_boxes,
-                        AO_contact_state.contact_pair_surfs, AO_contact_state.contact_pair_vars);
+                        AO_contact_state.contact_pair_surfs, AO_contact_state.contact_pair_vars, AO_contact_state.num_pairs_in_node, AO_contact_state.is_active,
+                        AO_contact_state.contact_forces, AO_contact_state.contact_forces_used, AO_contact_state.contact_counts);
 
         // TESTING NORMALS
 
@@ -248,9 +245,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // END TESTING NORMALS
 
-        // TESTING PENETRATION SWEEP
+                // TESTING PENETRATION SWEEP
 
-        /* // ---------------------------------------------------------------
+        // ---------------------------------------------------------------
         // test settings: change per case
         //   1: uniform overlap  (B bottom nodes 27-35: z -= delta)
         //   2: center bulge     (A top center node 22: z += delta)
@@ -309,13 +306,14 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---------------------------------------------------------------
         // rebuild candidates, max_gap, pairing storage, inverse map, pair storage, and nodal normals
         // ---------------------------------------------------------------
-        AO_contact_sort(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels, num_bdy_nodes,
+        AO_contact_sort(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels, mesh.num_bdy_nodes,
                         State.node.coords, mesh.bdy_nodes, AO_contact_state.bdy_node_point_cloud, AO_contact_state.num_bins,
-                        num_bdy_surfs, num_nodes_in_surf, test_dt, mesh.bdy_nodes_in_bdy_surf, AO_contact_state.bounding_boxes,
+                        mesh.num_bdy_surfs, mesh.num_nodes_in_surf, test_dt, mesh.bdy_nodes_in_bdy_surf, AO_contact_state.bounding_boxes,
                         AO_contact_state.lebesgue_overshoot, AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes,
                         ref_elem.num_dofs_1d, mesh.bdy_surfs, mesh.elems_in_surf, mesh.nodes_in_elem, AO_contact_state.max_gap, AO_contact_state.pairing_check_vars,
                         AO_contact_state.num_surfs_in_node_boxes, AO_contact_state.surfs_in_node_boxes, AO_contact_state.cols_in_node_boxes,
-                        AO_contact_state.contact_pair_surfs, AO_contact_state.contact_pair_vars);
+                        AO_contact_state.contact_pair_surfs, AO_contact_state.contact_pair_vars, AO_contact_state.num_pairs_in_node, AO_contact_state.is_active,
+                        AO_contact_state.contact_forces, AO_contact_state.contact_forces_used, AO_contact_state.contact_counts);
 
         get_bdy_surf_node_normals(num_bdy_surfs,
                                   num_nodes_in_surf,
@@ -355,10 +353,13 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                           AO_contact_state.pairing_check_vars,
                           AO_contact_state.num_pen_surfs_in_node,
                           AO_contact_state.pen_nodes,
-                          AO_contact_state.num_pen_nodes,
+                          AO_contact_state.contact_counts,
+                          AO_contact_state.is_active,
+                          AO_contact_state.active_nodes,
                           AO_contact_state.num_pairs_in_node,
                           AO_contact_state.contact_pair_surfs,
-                          AO_contact_state.contact_pair_vars);
+                          AO_contact_state.contact_pair_vars,
+                          AO_contact_state.num_pairs_touching_node);
 
         // ---------------------------------------------------------------
         // local copies AFTER the sort (it reassigns the ragged arrays)
@@ -371,27 +372,32 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         const auto   cols_in_node_boxes      = AO_contact_state.cols_in_node_boxes;
         const auto   num_pen_surfs_in_node   = AO_contact_state.num_pen_surfs_in_node;
         const auto   pen_nodes               = AO_contact_state.pen_nodes;
-        const auto   num_pen_nodes           = AO_contact_state.num_pen_nodes;
+        const auto   contact_counts          = AO_contact_state.contact_counts;
+        const auto   is_active               = AO_contact_state.is_active;
+        const auto   active_nodes            = AO_contact_state.active_nodes;
         const auto   num_pairs_in_node       = AO_contact_state.num_pairs_in_node;
         const auto   contact_pair_surfs      = AO_contact_state.contact_pair_surfs;
         const auto   contact_pair_vars       = AO_contact_state.contact_pair_vars;
         const double max_gap                 = AO_contact_state.max_gap;
 
-        // scratch: how many times each node appears in pen_nodes (check B)
+        // scratch: how many times each node appears in pen_nodes (check B) and active_nodes (check G)
         CArrayKokkos<size_t> times_in_pen_nodes(num_bdy_nodes, "times_in_pen_nodes");
+        CArrayKokkos<size_t> times_in_active_nodes(num_bdy_nodes, "times_in_active_nodes");
         times_in_pen_nodes.set_values(0);
+        times_in_active_nodes.set_values(0);
         Kokkos::fence();
 
         // ---------------------------------------------------------------
         // checks and by-node print
         // ---------------------------------------------------------------
         RUN({
-            const size_t n_pen = num_pen_nodes(0);
+            const size_t n_pen    = contact_counts(0);
+            const size_t n_active = contact_counts(2);
             size_t num_fail = 0;
 
             printf("penetration sweep test case %d, delta = %.4e, max_gap = %.4e\n", test_case, delta, max_gap);
-            printf("num_pen_nodes = %lu, pairing errors = %lu\n\n",
-                   (unsigned long)n_pen, (unsigned long)num_pen_nodes(1));
+            printf("penetrating nodes = %lu, pairing errors = %lu, active nodes = %lu\n\n",
+                   (unsigned long)n_pen, (unsigned long)contact_counts(1), (unsigned long)n_active);
 
             // -----------------------------------------------------------
             // A. inverse map: row lengths and back-pointers
@@ -425,7 +431,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // B. pen_nodes: every node with a nonzero count, exactly once
             // -----------------------------------------------------------
             if (n_pen > num_bdy_nodes) {
-                printf("  FAIL B: num_pen_nodes %lu > num_bdy_nodes %lu\n",
+                printf("  FAIL B: penetrating nodes %lu > num_bdy_nodes %lu\n",
                        (unsigned long)n_pen, (unsigned long)num_bdy_nodes);
                 num_fail++;
             }
@@ -544,10 +550,18 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 }
 
                 // ---------------------------------------------------
-                // E. contact pairs (only valid for penetrating nodes;
-                //    num_pairs_in_node is not reset for other nodes)
+                // E. contact pairs
+                //    num_pairs_in_node is reset by the sort, so after a fresh
+                //    sort + one sweep a non-penetrating node must have no pairs
                 // ---------------------------------------------------
-                if (num_hits == 0) continue;
+                if (num_hits == 0) {
+                    if (num_pairs_in_node(bdy_node_lid) != 0) {
+                        printf("  FAIL E: gid %lu is not penetrating but has %lu pairs\n",
+                               (unsigned long)gid, (unsigned long)num_pairs_in_node(bdy_node_lid));
+                        num_fail++;
+                    }
+                    continue;
+                }
 
                 // expected pair for this node
                 size_t expected_elem = 0;
@@ -636,12 +650,52 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             } // end for bdy_node_lid
 
             // -----------------------------------------------------------
-            // F. pairing error counter (zero-pair or degenerate-direction nodes)
+            // F. pairing error counter (no passing direction or degenerate direction)
             // -----------------------------------------------------------
-            if (num_pen_nodes(1) != 0) {
+            if (contact_counts(1) != 0) {
                 printf("  FAIL F: %lu pairing errors reported by penetration_sweep\n",
-                       (unsigned long)num_pen_nodes(1));
+                       (unsigned long)contact_counts(1));
                 num_fail++;
+            }
+
+            // -----------------------------------------------------------
+            // G. active set after a fresh sort + one sweep:
+            //    active nodes == penetrating nodes, each exactly once,
+            //    and is_active set exactly for those nodes
+            // -----------------------------------------------------------
+            if (n_active != n_pen) {
+                printf("  FAIL G: active nodes %lu != penetrating nodes %lu\n",
+                       (unsigned long)n_active, (unsigned long)n_pen);
+                num_fail++;
+            }
+
+            if (n_active > num_bdy_nodes) {
+                printf("  FAIL G: active nodes %lu > num_bdy_nodes %lu\n",
+                       (unsigned long)n_active, (unsigned long)num_bdy_nodes);
+                num_fail++;
+            }
+            else {
+                for (size_t active_lid = 0; active_lid < n_active; active_lid++) {
+                    times_in_active_nodes(active_nodes(active_lid)) += 1;
+                }
+                for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes; bdy_node_lid++) {
+                    const size_t expected_times = (num_pen_surfs_in_node(bdy_node_lid) > 0) ? 1 : 0;
+
+                    if (times_in_active_nodes(bdy_node_lid) != expected_times) {
+                        printf("  FAIL G: gid %lu appears %lu times in active_nodes, expected %lu\n",
+                               (unsigned long)bdy_nodes(bdy_node_lid),
+                               (unsigned long)times_in_active_nodes(bdy_node_lid),
+                               (unsigned long)expected_times);
+                        num_fail++;
+                    }
+                    if (is_active(bdy_node_lid) != expected_times) {
+                        printf("  FAIL G: gid %lu is_active = %lu, expected %lu\n",
+                               (unsigned long)bdy_nodes(bdy_node_lid),
+                               (unsigned long)is_active(bdy_node_lid),
+                               (unsigned long)expected_times);
+                        num_fail++;
+                    }
+                }
             }
 
             printf("\ntotal writes: %lu, total pairs: %lu\n", (unsigned long)total_writes, (unsigned long)total_pairs);
@@ -668,7 +722,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 }
             }
         });
-        Kokkos::fence(); */
+        Kokkos::fence();
 
         // END TESTING PENETRATION SWEEP
 
