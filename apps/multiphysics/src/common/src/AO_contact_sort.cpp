@@ -94,6 +94,132 @@ void get_surf_overshoot_factor(const elements::ReferenceElement_t& ref_elem, dou
 
 /////////////////////////////////////////////////////////////////////////////
 ///
+/// \fn get_bdy_node_mass
+///
+/// \brief Row-sum lumped mass of each boundary node for arbitrary-order
+///        tensor product elements.
+///
+/// For every material in every element, the mass of each Gauss point is
+///   m_q = den_q * mat_volfrac_q * geo_volfrac_q * w_q * det(J_q)
+/// where w_q*det(J_q) is the Gauss point volume. That mass is distributed to
+/// the element nodes with the basis, m_a += m_q * N_a(xi_q). Since the basis
+/// is a partition of unity, the nodal masses sum to the element mass.
+///
+/// All elements are visited, so every element touching a boundary node
+/// contributes (including those that only share an edge or vertex with the
+/// boundary). Nodes that are not boundary nodes are skipped.
+///
+/// \param ref_elem      reference element (basis and grad basis at the qpts)
+/// \param Quad          quadrature the ref_elem was built on (qpt weights)
+/// \param mesh          mesh (nodes_in_elem, bdy_nodes)
+/// \param State         state (material point den and volume fractions, material maps)
+/// \param node_coords   (num_nodes, 3) coords of the configuration den is defined on
+///                      (reference coords for TLQS, where den is not updated)
+/// \param bdy_node_mass output (num_bdy_nodes) lumped boundary node mass
+///
+/////////////////////////////////////////////////////////////////////////////
+void get_bdy_node_mass(const elements::ReferenceElement_t& ref_elem,
+                       const elements::Quadrature_t& Quad,
+                       const swage::Mesh_t& mesh,
+                       const State_t& State,
+                       const MPICArrayKokkos<double>& node_coords,
+                       CArrayKokkos<double>& bdy_node_mass)
+{
+    const size_t num_nodes         = mesh.num_nodes;
+    const size_t num_bdy_nodes     = mesh.num_bdy_nodes;
+    const size_t num_nodes_in_elem = ref_elem.num_dofs_in_elem;
+    const size_t num_qpts_in_elem  = Quad.num_qpts_in_elem;
+    const size_t num_mats          = State.MaterialToMeshMaps.num_mat_elems.size();
+
+    // local shallow copies so the device lambdas don't capture host structs
+    const CArrayKokkos<double> qpt_basis      = ref_elem.qpt_basis;
+    const CArrayKokkos<double> qpt_grad_basis = ref_elem.qpt_grad_basis;
+    const CArrayKokkos<double> qpt_weights    = Quad.qpt_weights;
+
+    const DCArrayKokkos<size_t> nodes_in_elem = mesh.nodes_in_elem;
+    const CArrayKokkos<size_t>  bdy_nodes     = mesh.bdy_nodes;
+
+    const DRaggedRightArrayKokkos<size_t> elem_in_mat_elem = State.MaterialToMeshMaps.elem_in_mat_elem;
+    const DRaggedRightArrayKokkos<double> den              = State.MaterialPoints.den;
+    const DRaggedRightArrayKokkos<double> mat_volfrac      = State.MaterialPoints.mat_volfrac;
+    const DRaggedRightArrayKokkos<double> geo_volfrac      = State.MaterialPoints.geo_volfrac;
+    const points_in_mat_t points_in_mat_elem = State.points_in_mat_elem;
+
+    // ---------------------------------------------------------------
+    // node gid -> bdy node lid, num_bdy_nodes marks a non-boundary node
+    // ---------------------------------------------------------------
+    CArrayKokkos<size_t> bdy_lid_in_node(num_nodes, "bdy_lid_in_node");
+    bdy_lid_in_node.set_values(num_bdy_nodes);
+    bdy_node_mass.set_values(0.0);
+    Kokkos::fence();
+
+    FOR_ALL(bdy_node_lid, 0, num_bdy_nodes, {
+        bdy_lid_in_node(bdy_nodes(bdy_node_lid)) = bdy_node_lid;
+    });
+    Kokkos::fence();
+
+    // ---------------------------------------------------------------
+    // scatter Gauss point mass to the boundary nodes
+    // nodes are shared by elements, so the sums are atomic
+    // ---------------------------------------------------------------
+    for (size_t mat_id = 0; mat_id < num_mats; mat_id++) {
+
+        const size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
+
+        FOR_ALL(mat_elem_sid, 0, num_mat_elems, {
+
+            const size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
+
+            for (size_t qpt_lid = 0; qpt_lid < num_qpts_in_elem; qpt_lid++) {
+
+                // J(i, j) = dx_i/dxi_j at this qpt
+                double J[3][3];
+                for (size_t i = 0; i < 3; i++) {
+                    for (size_t j = 0; j < 3; j++) {
+                        J[i][j] = 0.0;
+                    }
+                }
+                for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                    const size_t node_gid = nodes_in_elem(elem_gid, node_lid);
+                    for (size_t i = 0; i < 3; i++) {
+                        for (size_t j = 0; j < 3; j++) {
+                            J[i][j] += node_coords(node_gid, i)*qpt_grad_basis(qpt_lid, node_lid, j);
+                        }
+                    }
+                } // end for node_lid
+
+                const double det_J = J[0][0]*(J[1][1]*J[2][2] - J[2][1]*J[1][2])
+                                   - J[0][1]*(J[1][0]*J[2][2] - J[2][0]*J[1][2])
+                                   + J[0][2]*(J[1][0]*J[2][1] - J[2][0]*J[1][1]);
+
+                // mass of this material at this Gauss point
+                const size_t mat_point_sid = points_in_mat_elem(mat_elem_sid, qpt_lid);
+                const double qpt_vol  = qpt_weights(qpt_lid)*det_J;
+                const double qpt_mass = den(mat_id, mat_point_sid)
+                                      * mat_volfrac(mat_id, mat_point_sid)
+                                      * geo_volfrac(mat_id, mat_point_sid)
+                                      * qpt_vol;
+
+                // row-sum lumping onto the boundary nodes of the element
+                for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
+                    const size_t bdy_node_lid = bdy_lid_in_node(nodes_in_elem(elem_gid, node_lid));
+                    if (bdy_node_lid < num_bdy_nodes) {
+                        Kokkos::atomic_add(&bdy_node_mass(bdy_node_lid), qpt_mass*qpt_basis(qpt_lid, node_lid));
+                    }
+                } // end for node_lid
+
+            } // end for qpt_lid
+
+        });
+        Kokkos::fence();
+
+    } // end for mat_id
+
+    return;
+} // end get_bdy_node_mass
+
+/////////////////////////////////////////////////////////////////////////////
+///
 /// \fn AO_contact_initialize
 ///
 /// \brief Allocates all fixed-size contact storage once at solver setup and
@@ -103,11 +229,16 @@ void get_surf_overshoot_factor(const elements::ReferenceElement_t& ref_elem, dou
 /// (nodes_in_bounding_boxes, pairing_check_vars, inverse map, pair storage)
 /// are allocated per load step in AO_contact_sort, not here.
 ///
-/// Solver-specific initialization (e.g. zeroed kinematics for TLQS, nodal
-/// mass) is done by the calling solver after this function.
+/// The boundary node mass is lumped from the material point densities here.
+/// Other solver-specific initialization (e.g. zeroed kinematics for TLQS) is
+/// done by the calling solver after this function.
 ///
 /// \param AO_contact_state    contact state to allocate
-/// \param ref_elem            reference element (Lebesgue constant of the 1D basis)
+/// \param ref_elem            reference element (Lebesgue constant of the 1D basis, basis at qpts)
+/// \param Quad                quadrature the ref_elem was built on
+/// \param mesh                mesh
+/// \param State               state (material point den and volume fractions)
+/// \param node_coords         coords of the configuration den is defined on (TLQS: coords_t0)
 /// \param num_bdy_nodes       number of boundary nodes
 /// \param num_bdy_surfs       number of boundary surfaces
 /// \param num_nodes_in_surf   nodes per surface, (p+1)^2
@@ -115,6 +246,10 @@ void get_surf_overshoot_factor(const elements::ReferenceElement_t& ref_elem, dou
 /////////////////////////////////////////////////////////////////////////////
 void AO_contact_initialize(AO_contact_state_t& AO_contact_state,
                            const elements::ReferenceElement_t& ref_elem,
+                           const elements::Quadrature_t& Quad,
+                           const swage::Mesh_t& mesh,
+                           const State_t& State,
+                           const MPICArrayKokkos<double>& node_coords,
                            const size_t num_bdy_nodes,
                            const size_t num_bdy_surfs,
                            const size_t num_nodes_in_surf)
@@ -126,6 +261,9 @@ void AO_contact_initialize(AO_contact_state_t& AO_contact_state,
     AO_contact_state.bdy_node_vels   = CArrayKokkos<double>(num_bdy_nodes, 3, "bdy_node_vels");
     AO_contact_state.bdy_node_accels = CArrayKokkos<double>(num_bdy_nodes, 3, "bdy_node_accels");
     AO_contact_state.bdy_node_mass   = CArrayKokkos<double>(num_bdy_nodes, "bdy_node_mass");
+
+    // lumped boundary node mass from the material point densities
+    get_bdy_node_mass(ref_elem, Quad, mesh, State, node_coords, AO_contact_state.bdy_node_mass);
 
     // ---------------------------------------------------------------
     // sort variables (fixed size)

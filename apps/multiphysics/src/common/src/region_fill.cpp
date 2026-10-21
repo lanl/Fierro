@@ -983,7 +983,7 @@ void fill_regions(
                 for (size_t gauss_lid=0; gauss_lid<mesh.num_gauss_in_elem; gauss_lid++){
 
                     // get gauss gid using elem and gauss_lid in the element
-                    size_t gauss_gid = elem_gid + gauss_lid;
+                    size_t gauss_gid = mesh.gauss_in_elem(elem_gid, gauss_lid);
 
 
                     //------------------------------------------------------------------------------
@@ -1326,9 +1326,9 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
             // loop over Guass points in the element
             for (size_t gauss_lid=0; gauss_lid<num_gauss_points_in_elem; gauss_lid++) {
 
-                size_t gauss_gid = elem_gid + gauss_lid;  // gauss_gid in the element
+                size_t gauss_gid = mesh.gauss_in_elem.host(elem_gid, gauss_lid);
 
-                size_t mat_point_sid = mat_elem_sid + gauss_lid; // for more than 1 gauss point, this increments
+                size_t mat_point_sid = State.points_in_mat_elem.host(mat_elem_sid, gauss_lid);
 
                 // --- volume fraction ---
                 State.MaterialPoints.mat_volfrac.host(mat_id,mat_point_sid) = fillElemState.mat_volfrac.host(elem_gid,a_mat_in_elem);

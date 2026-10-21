@@ -36,6 +36,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "matar.h"
 #include "simulation_parameters.hpp"
+#include "state.hpp"
 
 using namespace mtr;
 
@@ -113,8 +114,20 @@ double get_lebesgue_constant_1d(const elements::ReferenceElement_t& ref_elem,
 // getting the overshoot factor for sizing bounding boxes
 void get_surf_overshoot_factor(const elements::ReferenceElement_t& ref_elem, double& lebesgue_overshoot);
 
+// row-sum lumped mass of the boundary nodes from the material point densities
+void get_bdy_node_mass(const elements::ReferenceElement_t& ref_elem,
+                       const elements::Quadrature_t& Quad,
+                       const swage::Mesh_t& mesh,
+                       const State_t& State,
+                       const MPICArrayKokkos<double>& node_coords,
+                       CArrayKokkos<double>& bdy_node_mass);
+
 void AO_contact_initialize(AO_contact_state_t& AO_contact_state,
                            const elements::ReferenceElement_t& ref_elem,
+                           const elements::Quadrature_t& Quad,
+                           const swage::Mesh_t& mesh,
+                           const State_t& State,
+                           const MPICArrayKokkos<double>& node_coords,
                            const size_t num_bdy_nodes,
                            const size_t num_bdy_surfs,
                            const size_t num_nodes_in_surf);

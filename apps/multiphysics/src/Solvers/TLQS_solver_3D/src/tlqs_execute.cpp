@@ -115,7 +115,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // setting up contact if it was called
     if (doing_contact) {
         AO_contact_state_t AO_contact_state;
-        AO_contact_initialize(AO_contact_state, ref_elem, mesh.num_bdy_nodes, mesh.num_bdy_surfs, mesh.num_nodes_in_surf);
+        AO_contact_initialize(AO_contact_state, ref_elem, Quad, mesh, State, State.node.coords, mesh.num_bdy_nodes, mesh.num_bdy_surfs, mesh.num_nodes_in_surf);
 
         // zeroing out bdy_node_velocities since this solver doesn't carry full node state velocity or evolve velocity
         // will be updated during picard iterations
@@ -1001,7 +1001,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         // tallying to element array
                         TLQS3D::get_gradients(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, displacement_step, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
                         double weight = Quad.qpt_weights(mat_pt)*det_J;
-                        double local_mat_vol_frac = State.MaterialPoints.mat_volfrac(mat_id, elem);
+                        double local_mat_vol_frac = State.MaterialPoints.mat_volfrac(mat_id, State.points_in_mat_elem(elem, mat_pt));
 
                         TLQS3D::tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, weight, PK2_curr_config, curr_K_elem, curr_F_elem, local_mat_vol_frac);
                     } // end mat_pt
