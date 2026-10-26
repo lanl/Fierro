@@ -91,27 +91,24 @@ void AO_contact_snapshot_forces(const size_t num_bdy_nodes,
 ///
 /// \fn predict_bdy_node_coords
 ///
-/// \brief x_pred = x^k + dt^2/(2m) (f^c - f^c_used) for every boundary node.
+/// \brief x_pred = x^k + c (f^c - f^c_used) for every boundary node, with c
+///        the per-direction compliance (dt^2/(2m) explicit, ~1/K_ii quasi-static).
 ///        Configuration the repeated sweeps detect on. Equals x^k at the
 ///        start of a contact pass (f^c == f^c_used right after the solve).
+///        A zero compliance (constrained dof, unset mass) means no motion.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void predict_bdy_node_coords(const size_t num_bdy_nodes,
-                             const double dt,
                              const DCArrayKokkos<double>& bdy_node_coords,
-                             const CArrayKokkos<double>& bdy_node_mass,
+                             const CArrayKokkos<double>& bdy_node_compliance,
                              const CArrayKokkos<double>& contact_forces,
                              const CArrayKokkos<double>& contact_forces_used,
                              DCArrayKokkos<double>& bdy_node_pred_coords)
 {
-    const double half_dt2 = 0.5*dt*dt;
-
     FOR_ALL(bdy_node_lid, 0, num_bdy_nodes, {
-        const double mass = bdy_node_mass(bdy_node_lid);
-        const double c    = half_dt2/mass;   // unset mass: no motion (resolution reports it)
         for (size_t dim = 0; dim < 3; dim++) {
             bdy_node_pred_coords(bdy_node_lid, dim) = bdy_node_coords(bdy_node_lid, dim)
-                + c*(contact_forces(bdy_node_lid, dim) - contact_forces_used(bdy_node_lid, dim));
+                + bdy_node_compliance(bdy_node_lid, dim)*(contact_forces(bdy_node_lid, dim) - contact_forces_used(bdy_node_lid, dim));
         }
     });
     Kokkos::fence();
@@ -233,15 +230,16 @@ void assemble_contact_forces(const size_t num_active,
 ///        penetrating node and the target surface point coincide in the
 ///        predicted configuration.
 ///
-///   c = dt^2/(2m),  df0 = f^c - f^c_used  (lag term, trial force excluded)
-///   x_I^ = x_I + c_I (df0_I + f n)
-///   x_k^ = x_k + c_k (df0_k - f n phi_k)
+///   c = per-direction compliance (bdy_node_compliance),
+///   df0 = f^c - f^c_used  (lag term, trial force excluded)
+///   x_I^ = x_I + C_I (df0_I + f n)
+///   x_k^ = x_k + C_k (df0_k - f n phi_k)
 ///   R    = x_I^ - sum_k phi_k x_k^
 ///
-///   dR/dxi  = -t_xi  + f n sum_k c_k phi_k dphi_k/dxi
-///   dR/deta = -t_eta + f n sum_k c_k phi_k dphi_k/deta
-///   dR/df   =  n (c_I + sum_k c_k phi_k^2)
-///   t_xi, t_eta: tangents of the predicted surface
+///   dR/dxi  = -t_xi  + f sum_k phi_k dphi_k/dxi  C_k n
+///   dR/deta = -t_eta + f sum_k phi_k dphi_k/deta C_k n
+///   dR/df   =  C_I n + sum_k phi_k^2 C_k n
+///   C = diag(c_x, c_y, c_z), t_xi, t_eta: tangents of the predicted surface
 ///
 /// n is held fixed within an iteration and updated after each step from the
 /// predicted surface (t_xi x t_eta, sign aligned with the previous n).
@@ -256,18 +254,18 @@ void assemble_contact_forces(const size_t num_active,
 ///
 /// \return 0: converged, xi, eta, n, f_inc updated
 ///         1: slid off, pair should be deleted
-///         2: not converged / singular / bad mass, inputs restored, f_inc = 0
+///         2: not converged / singular / pair cannot move (zero compliance),
+///            inputs restored, f_inc = 0
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 int frictionless_increment(const size_t bdy_node_lid,
                            const ViewCArrayKokkos<size_t>& surf_nodes,
                            const DCArrayKokkos<double>& bdy_node_coords,
-                           const CArrayKokkos<double>& bdy_node_mass,
+                           const CArrayKokkos<double>& bdy_node_compliance,
                            const CArrayKokkos<double>& contact_forces,
                            const CArrayKokkos<double>& contact_forces_used,
                            const CArrayKokkos<double>& dof_positions_1d,
-                           const double dt,
                            const double slide_tol,
                            const double res_tol,
                            double& xi,
@@ -277,9 +275,8 @@ int frictionless_increment(const size_t bdy_node_lid,
 {
     const size_t num_dofs_1d    = dof_positions_1d.dims(0);
     const size_t num_surf_nodes = num_dofs_1d*num_dofs_1d;
-    const size_t max_iter       = 25;        // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const size_t max_iter       = 100;        // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const double n_tol          = 1.0e-10;   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const double half_dt2       = 0.5*dt*dt;
 
     // inputs, restored on failure
     const double xi_in  = xi;
@@ -290,19 +287,26 @@ int frictionless_increment(const size_t bdy_node_lid,
     f_inc = 0.0;
 
     // ---------------------------------------------------------------
-    // masses must be set (filled by the solver after initialize)
+    // compliance must be set (filled by the solver after initialize)
+    // the pair can close the gap only if some node of it can move
+    // (constrained dofs have c = 0; a fully fixed pair has a singular dR/df)
     // ---------------------------------------------------------------
-    if (bdy_node_mass(bdy_node_lid) <= 0.0) return 2;
-    for (size_t k = 0; k < num_surf_nodes; k++) {
-        if (bdy_node_mass(surf_nodes(k)) <= 0.0) return 2;
+    double c_sum = 0.0;
+    for (size_t dim = 0; dim < 3; dim++) {
+        c_sum += bdy_node_compliance(bdy_node_lid, dim);
+        for (size_t k = 0; k < num_surf_nodes; k++) {
+            c_sum += bdy_node_compliance(surf_nodes(k), dim);
+        }
     }
+    if (!(c_sum > 0.0)) return 2;
 
     // penetrating node: compliance and the f-independent part of its predicted position
-    const double c_I = half_dt2/bdy_node_mass(bdy_node_lid);
+    double c_I[3];
     double x_I0[3];
     for (size_t dim = 0; dim < 3; dim++) {
+        c_I[dim]  = bdy_node_compliance(bdy_node_lid, dim);
         x_I0[dim] = bdy_node_coords(bdy_node_lid, dim)
-                  + c_I*(contact_forces(bdy_node_lid, dim) - contact_forces_used(bdy_node_lid, dim));
+                  + c_I[dim]*(contact_forces(bdy_node_lid, dim) - contact_forces_used(bdy_node_lid, dim));
     }
 
     double f = 0.0;
@@ -322,9 +326,14 @@ int frictionless_increment(const size_t bdy_node_lid,
             t_xi[dim]  = 0.0;
             t_eta[dim] = 0.0;
         }
-        double s_NN    = 0.0;   // sum c_k phi_k^2
-        double s_NNxi  = 0.0;   // sum c_k phi_k dphi_k/dxi
-        double s_NNeta = 0.0;   // sum c_k phi_k dphi_k/deta
+        double s_NN[3];      // sum_k c_k phi_k^2,          per direction
+        double s_NNxi[3];    // sum_k c_k phi_k dphi_k/dxi,  per direction
+        double s_NNeta[3];   // sum_k c_k phi_k dphi_k/deta, per direction
+        for (size_t dim = 0; dim < 3; dim++) {
+            s_NN[dim]    = 0.0;
+            s_NNxi[dim]  = 0.0;
+            s_NNeta[dim] = 0.0;
+        }
 
         for (size_t a = 0; a < num_dofs_1d; a++) {
 
@@ -342,21 +351,22 @@ int frictionless_increment(const size_t bdy_node_lid,
                 const double dN_dxi  = dl_xi*l_eta;
                 const double dN_deta = l_xi*dl_eta;
 
-                const size_t k   = surf_nodes(elements::get_dof_rid(a, b, num_dofs_1d));
-                const double c_k = half_dt2/bdy_node_mass(k);
+                const size_t k = surf_nodes(elements::get_dof_rid(a, b, num_dofs_1d));
 
                 for (size_t dim = 0; dim < 3; dim++) {
+                    const double c_k = bdy_node_compliance(k, dim);
+
                     // predicted surface node position with this pair's trial force
                     const double x_k = bdy_node_coords(k, dim)
                                      + c_k*(contact_forces(k, dim) - contact_forces_used(k, dim) - f*n[dim]*N);
                     S[dim]     += N*x_k;
                     t_xi[dim]  += dN_dxi*x_k;
                     t_eta[dim] += dN_deta*x_k;
-                }
 
-                s_NN    += c_k*N*N;
-                s_NNxi  += c_k*N*dN_dxi;
-                s_NNeta += c_k*N*dN_deta;
+                    s_NN[dim]    += c_k*N*N;
+                    s_NNxi[dim]  += c_k*N*dN_dxi;
+                    s_NNeta[dim] += c_k*N*dN_deta;
+                }
             } // end for b
         } // end for a
 
@@ -364,7 +374,7 @@ int frictionless_increment(const size_t bdy_node_lid,
         double R[3];
         double R_norm2 = 0.0;
         for (size_t dim = 0; dim < 3; dim++) {
-            R[dim]   = x_I0[dim] + c_I*f*n[dim] - S[dim];
+            R[dim]   = x_I0[dim] + c_I[dim]*f*n[dim] - S[dim];
             R_norm2 += R[dim]*R[dim];
         }
 
@@ -400,9 +410,9 @@ int frictionless_increment(const size_t bdy_node_lid,
         double J_eta[3];
         double J_f[3];
         for (size_t dim = 0; dim < 3; dim++) {
-            J_xi[dim]  = -t_xi[dim]  + f*n[dim]*s_NNxi;
-            J_eta[dim] = -t_eta[dim] + f*n[dim]*s_NNeta;
-            J_f[dim]   =  n[dim]*(c_I + s_NN);
+            J_xi[dim]  = -t_xi[dim]  + f*n[dim]*s_NNxi[dim];
+            J_eta[dim] = -t_eta[dim] + f*n[dim]*s_NNeta[dim];
+            J_f[dim]   =  n[dim]*(c_I[dim] + s_NN[dim]);
         }
 
         // -----------------------------------------------------------
@@ -483,6 +493,8 @@ int frictionless_increment(const size_t bdy_node_lid,
 ///        the change AFTER the clamp (separated pairs at F_tot = 0 have dF = 0).
 ///
 /// Assembles once on entry, since the sweep's refresh moved xi, eta, n.
+/// After an iteration that deleted pairs, num_pairs_touching_node is recounted
+/// so the relaxation weights of the next iteration match the current pair set.
 ///
 /// \param num_deleted  out: pairs deleted by slide-off
 /// \param num_failed   out: local solves that failed (pair kept unchanged)
@@ -492,7 +504,6 @@ int frictionless_increment(const size_t bdy_node_lid,
 /////////////////////////////////////////////////////////////////////////////
 bool force_resolution(const size_t num_active,
                       const size_t num_nodes_in_surf,
-                      const double dt,
                       const double slide_tol,
                       const double res_tol,
                       const double rel_tol,
@@ -501,11 +512,11 @@ bool force_resolution(const size_t num_active,
                       CArrayKokkos<size_t>& num_pairs_in_node,
                       RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
                       DRaggedRightArrayKokkos<double>& contact_pair_vars,
-                      const CArrayKokkos<size_t>& num_pairs_touching_node,
+                      CArrayKokkos<size_t>& num_pairs_touching_node,
                       const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
                       const CArrayKokkos<double>& dof_positions_1d,
                       const DCArrayKokkos<double>& bdy_node_coords,
-                      const CArrayKokkos<double>& bdy_node_mass,
+                      const CArrayKokkos<double>& bdy_node_compliance,
                       const CArrayKokkos<double>& contact_forces_used,
                       CArrayKokkos<double>& contact_forces,
                       size_t& num_deleted,
@@ -529,6 +540,7 @@ bool force_resolution(const size_t num_active,
     Kokkos::fence();
 
     bool converged = false;
+    size_t num_deleted_prev = 0;   // deletions seen before this iteration
 
     for (size_t iter = 0; iter < max_global_iter; iter++) {
 
@@ -567,8 +579,8 @@ bool force_resolution(const size_t num_active,
                     double f_inc = 0.0;
 
                     const int status = frictionless_increment(bdy_node_lid, surf_nodes, bdy_node_coords,
-                                                              bdy_node_mass, contact_forces, contact_forces_used,
-                                                              dof_positions_1d, dt, slide_tol, res_tol,
+                                                              bdy_node_compliance, contact_forces, contact_forces_used,
+                                                              dof_positions_1d, slide_tol, res_tol,
                                                               xi, eta, n, f_inc);
 
                     if (status == 1) {
@@ -630,6 +642,16 @@ bool force_resolution(const size_t num_active,
                                 dof_positions_1d, contact_forces);
 
         // -----------------------------------------------------------
+        // pairs deleted this iteration: the relaxation weights are stale
+        // -----------------------------------------------------------
+        res_counts.update_host();
+        if (res_counts.host(0) > num_deleted_prev) {
+            count_pairs_touching_nodes(num_active, num_nodes_in_surf, active_nodes, num_pairs_in_node,
+                                       contact_pair_surfs, bdy_nodes_in_bdy_surf, num_pairs_touching_node);
+            num_deleted_prev = res_counts.host(0);
+        }
+
+        // -----------------------------------------------------------
         // convergence on the clamped change (0 <= 0 when everything separated)
         // -----------------------------------------------------------
         if (max_dF <= rel_tol*max_F) {
@@ -649,6 +671,83 @@ bool force_resolution(const size_t num_active,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
+/// \fn count_pairs_touching_nodes
+///
+/// \brief Recounts num_pairs_touching_node from the current pair set: each
+///        pair touches its own node and every node of its target surface.
+///        Used for the relaxation weights in force_resolution.
+///
+/// \param num_active              active nodes (length of active_nodes)
+/// \param num_nodes_in_surf       nodes per surface
+/// \param active_nodes            active bdy node lids
+/// \param num_pairs_in_node       (num_bdy_nodes) pairs per node
+/// \param contact_pair_surfs      (bdy node, pair) -> target bdy_surf_lid
+/// \param bdy_nodes_in_bdy_surf   (num_bdy_surfs, num_nodes_in_surf) bdy node lids
+/// \param num_pairs_touching_node output (num_bdy_nodes)
+///
+/////////////////////////////////////////////////////////////////////////////
+void count_pairs_touching_nodes(const size_t num_active,
+                                const size_t num_nodes_in_surf,
+                                const CArrayKokkos<size_t>& active_nodes,
+                                const CArrayKokkos<size_t>& num_pairs_in_node,
+                                const RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
+                                const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
+                                CArrayKokkos<size_t>& num_pairs_touching_node)
+{
+    num_pairs_touching_node.set_values(0);
+    Kokkos::fence();
+
+    FOR_ALL(active_lid, 0, num_active, {
+        const size_t bdy_node_lid = active_nodes(active_lid);
+        for (size_t p = 0; p < num_pairs_in_node(bdy_node_lid); p++) {
+            Kokkos::atomic_add(&num_pairs_touching_node(bdy_node_lid), (size_t)1);
+            const size_t bdy_surf_lid = contact_pair_surfs(bdy_node_lid, p);
+            for (size_t a = 0; a < num_nodes_in_surf; a++) {
+                Kokkos::atomic_add(&num_pairs_touching_node(bdy_nodes_in_bdy_surf(bdy_surf_lid, a)), (size_t)1);
+            }
+        }
+    });
+    Kokkos::fence();
+
+} // end count_pairs_touching_nodes
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_contact_force_change
+///
+/// \brief max |f^c - f^c_used| and max |f^c| over the boundary nodes and
+///        directions. Measures how much contact force the last solve has
+///        not seen yet (the coupling residual of a Picard iteration).
+///
+/////////////////////////////////////////////////////////////////////////////
+void get_contact_force_change(const size_t num_bdy_nodes,
+                              const CArrayKokkos<double>& contact_forces,
+                              const CArrayKokkos<double>& contact_forces_used,
+                              double& max_dF,
+                              double& max_F)
+{
+    max_dF = 0.0;
+    max_F  = 0.0;
+
+    Kokkos::parallel_reduce(
+        "contact_force_change",
+        num_bdy_nodes,
+        KOKKOS_LAMBDA(const size_t bdy_node_lid, double& dF_lcl, double& F_lcl)
+        {
+            for (size_t dim = 0; dim < 3; dim++) {
+                dF_lcl = fmax(dF_lcl, fabs(contact_forces(bdy_node_lid, dim) - contact_forces_used(bdy_node_lid, dim)));
+                F_lcl  = fmax(F_lcl,  fabs(contact_forces(bdy_node_lid, dim)));
+            }
+        },
+        Kokkos::Max<double>(max_dF),
+        Kokkos::Max<double>(max_F));
+
+} // end get_contact_force_change
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
 /// \fn AO_contact_resolve
 ///
 /// \brief One contact pass, run after every Picard solve (TLQS) or once per
@@ -656,19 +755,28 @@ bool force_resolution(const size_t num_active,
 ///        sweep on the predicted configuration no longer changes the pair set.
 ///
 ///   for sweep:
-///       x_pred = x^k + dt^2/(2m) (f^c - f^c_used)
+///       x_pred = x^k + c (f^c - f^c_used)
 ///       nodal normals on x_pred
 ///       penetration_sweep on x_pred (merge new pairs, refresh existing ones)
 ///       sweep > 0 and no pair-set changes -> reassemble, done
 ///       force_resolution
 ///
 /// Requires: AO_contact_sort for the load step, bdy_node_coords = x^k
-/// (AO_contact_update_bdy_coords), bdy_node_mass filled.
+/// (AO_contact_update_bdy_coords), bdy_node_compliance filled.
 /// Output: contact_forces (bdy node lid indexed).
 ///
+/// Arrays named like AO_contact_state_t members are those members; the mesh
+/// arrays are the swage::Mesh_t members of the same name, dof_positions_1d is
+/// ref_elem.dof_positions_1d, surf_qpt_basis is ref_surf.qpt_basis and
+/// surf_qpt_positions is SurfQuad.qpt_positions.
+///
+/// \param settled    out: the pair set survived a sweep on its own predicted configuration
+/// \param num_active out: active nodes this load step
+/// \param max_dF     out: max |f^c - f^c_used| (contact force the last solve has not seen)
+/// \param max_F      out: max |f^c|
+///
 /////////////////////////////////////////////////////////////////////////////
-void AO_contact_resolve(AO_contact_state_t& AO_contact_state,
-                        const size_t num_bdy_surfs,
+void AO_contact_resolve(const size_t num_bdy_surfs,
                         const size_t num_bdy_nodes,
                         const size_t num_nodes_in_surf,
                         const size_t num_nodes_in_elem,
@@ -683,49 +791,71 @@ void AO_contact_resolve(AO_contact_state_t& AO_contact_state,
                         const CArrayKokkos<double>& surf_qpt_basis,
                         const CArrayKokkos<double>& surf_qpt_positions,
                         const MPICArrayKokkos<double>& node_coords,
-                        const double dt)
+                        const DCArrayKokkos<double>& bdy_node_coords,
+                        const CArrayKokkos<double>& bdy_node_vels,
+                        const CArrayKokkos<double>& bdy_node_compliance,
+                        const RaggedRightArrayKokkos<size_t>& nodes_in_bounding_boxes,
+                        const RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
+                        const RaggedRightArrayKokkos<size_t>& cols_in_node_boxes,
+                        const double filter_tol,
+                        const double max_gap,
+                        DCArrayKokkos<double>& bdy_node_pred_coords,
+                        CArrayKokkos<double>& bdy_surf_node_normals,
+                        DRaggedRightArrayKokkos<double>& pairing_check_vars,
+                        CArrayKokkos<size_t>& num_pen_surfs_in_node,
+                        CArrayKokkos<size_t>& pen_nodes,
+                        DCArrayKokkos<size_t>& contact_counts,
+                        CArrayKokkos<size_t>& is_active,
+                        CArrayKokkos<size_t>& active_nodes,
+                        CArrayKokkos<size_t>& num_pairs_in_node,
+                        RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
+                        DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                        CArrayKokkos<size_t>& num_pairs_touching_node,
+                        const CArrayKokkos<double>& contact_forces_used,
+                        CArrayKokkos<double>& contact_forces,
+                        bool& settled,
+                        size_t& num_active,
+                        double& max_dF,
+                        double& max_F)
 {
-    const size_t max_sweeps      = 5;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const size_t max_global_iter = 100;    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const size_t max_sweeps      = 10;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const size_t max_global_iter = 100000;    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const double rel_tol         = 1.0e-8; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const double slide_tol       = 1.01;   // TODO: define once (shared with penetration_sweep)
-    const double res_tol         = 1.0e-10*AO_contact_state.max_gap;   // length scale from the mesh
+    const double res_tol         = 1.0e-10*max_gap;   // length scale from the mesh
 
-    // shorthand only (reference, no copy). do NOT use cs inside a kernel in this
-    // function: the lambda would copy the whole struct. pass members to functions instead.
-    AO_contact_state_t& cs = AO_contact_state;
-
-    bool settled = false;
+    settled    = false;
+    num_active = 0;
 
     for (size_t sweep = 0; sweep < max_sweeps; sweep++) {
 
         // -----------------------------------------------------------
         // configuration including the contact force not yet seen by the solve
         // -----------------------------------------------------------
-        predict_bdy_node_coords(num_bdy_nodes, dt, cs.bdy_node_coords, cs.bdy_node_mass,
-                                cs.contact_forces, cs.contact_forces_used, cs.bdy_node_pred_coords);
+        predict_bdy_node_coords(num_bdy_nodes, bdy_node_coords, bdy_node_compliance,
+                                contact_forces, contact_forces_used, bdy_node_pred_coords);
 
         get_bdy_surf_node_normals(num_bdy_surfs, num_nodes_in_surf, bdy_surfs, faces_in_surf,
                                   bdy_nodes_in_bdy_surf, dof_positions_1d,
-                                  cs.bdy_node_pred_coords, cs.bdy_surf_node_normals);
+                                  bdy_node_pred_coords, bdy_surf_node_normals);
 
         penetration_sweep(num_bdy_surfs, num_bdy_nodes, num_nodes_in_surf, num_nodes_in_elem,
                           bdy_surfs, faces_in_surf, elems_in_surf, bdy_nodes, elems_in_node,
                           nodes_in_elem, bdy_nodes_in_bdy_surf, dof_positions_1d,
                           surf_qpt_basis, surf_qpt_positions, node_coords,
-                          cs.bdy_node_pred_coords, cs.bdy_node_vels, cs.bdy_surf_node_normals,
-                          cs.nodes_in_bounding_boxes, cs.surfs_in_node_boxes, cs.cols_in_node_boxes,
-                          cs.filter_tol, cs.max_gap, cs.pairing_check_vars,
-                          cs.num_pen_surfs_in_node, cs.pen_nodes, cs.contact_counts,
-                          cs.is_active, cs.active_nodes, cs.num_pairs_in_node,
-                          cs.contact_pair_surfs, cs.contact_pair_vars, cs.num_pairs_touching_node);
+                          bdy_node_pred_coords, bdy_node_vels, bdy_surf_node_normals,
+                          nodes_in_bounding_boxes, surfs_in_node_boxes, cols_in_node_boxes,
+                          filter_tol, max_gap, pairing_check_vars,
+                          num_pen_surfs_in_node, pen_nodes, contact_counts,
+                          is_active, active_nodes, num_pairs_in_node,
+                          contact_pair_surfs, contact_pair_vars, num_pairs_touching_node);
 
-        const size_t num_active  = cs.contact_counts.host(2);
-        const size_t num_changes = cs.contact_counts.host(3);
+        num_active = contact_counts.host(2);
+        const size_t num_changes = contact_counts.host(3);
 
         // no pairs this load step
         if (num_active == 0) {
-            cs.contact_forces.set_values(0.0);
+            contact_forces.set_values(0.0);
             Kokkos::fence();
             settled = true;
             break;
@@ -734,21 +864,21 @@ void AO_contact_resolve(AO_contact_state_t& AO_contact_state,
         // the last resolution's pair set survived a sweep on its own predicted configuration
         if (sweep > 0 && num_changes == 0) {
             // refresh moved xi, eta, n slightly: keep contact_forces == sum over pairs
-            assemble_contact_forces(num_active, num_nodes_in_surf, cs.active_nodes, cs.num_pairs_in_node,
-                                    cs.contact_pair_surfs, cs.contact_pair_vars, bdy_nodes_in_bdy_surf,
-                                    dof_positions_1d, cs.contact_forces);
+            assemble_contact_forces(num_active, num_nodes_in_surf, active_nodes, num_pairs_in_node,
+                                    contact_pair_surfs, contact_pair_vars, bdy_nodes_in_bdy_surf,
+                                    dof_positions_1d, contact_forces);
             settled = true;
             break;
         }
 
         size_t num_deleted = 0;
         size_t num_failed  = 0;
-        const bool converged = force_resolution(num_active, num_nodes_in_surf, dt, slide_tol, res_tol, rel_tol,
-                                                max_global_iter, cs.active_nodes, cs.num_pairs_in_node,
-                                                cs.contact_pair_surfs, cs.contact_pair_vars,
-                                                cs.num_pairs_touching_node, bdy_nodes_in_bdy_surf,
-                                                dof_positions_1d, cs.bdy_node_coords, cs.bdy_node_mass,
-                                                cs.contact_forces_used, cs.contact_forces,
+        const bool converged = force_resolution(num_active, num_nodes_in_surf, slide_tol, res_tol, rel_tol,
+                                                max_global_iter, active_nodes, num_pairs_in_node,
+                                                contact_pair_surfs, contact_pair_vars,
+                                                num_pairs_touching_node, bdy_nodes_in_bdy_surf,
+                                                dof_positions_1d, bdy_node_coords, bdy_node_compliance,
+                                                contact_forces_used, contact_forces,
                                                 num_deleted, num_failed);
 
         if (!converged) {
@@ -765,7 +895,48 @@ void AO_contact_resolve(AO_contact_state_t& AO_contact_state,
                (unsigned long)max_sweeps);
     }
 
+    num_active = contact_counts.host(2);
+    get_contact_force_change(num_bdy_nodes, contact_forces, contact_forces_used, max_dF, max_F);
+
+    return;
+
 } // end AO_contact_resolve
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn add_contact_forces_to_residual
+///
+/// \brief residual(bdy_nodes(lid), dim) += contact_forces(lid, dim) on every
+///        free dof. Constrained dofs are skipped: their row of the solve is
+///        u = prescribed, so any force there would come back as displacement.
+///
+/// Each bdy node lid maps to a distinct node gid, so no atomics are needed.
+///
+/// \param num_bdy_nodes  number of boundary nodes
+/// \param bdy_nodes      bdy node lid -> node gid
+/// \param bdy_dof_fixed  (num_bdy_nodes, 3) 1 if the dof is constrained
+/// \param contact_forces (num_bdy_nodes, 3) assembled contact forces
+/// \param residual       (num_nodes, 3) residual the forces are added to
+///
+/////////////////////////////////////////////////////////////////////////////
+void add_contact_forces_to_residual(const size_t num_bdy_nodes,
+                                    const CArrayKokkos<size_t>& bdy_nodes,
+                                    const CArrayKokkos<size_t>& bdy_dof_fixed,
+                                    const CArrayKokkos<double>& contact_forces,
+                                    const MPICArrayKokkos<double>& residual)
+{
+    FOR_ALL(bdy_node_lid, 0, num_bdy_nodes, {
+        const size_t node_gid = bdy_nodes(bdy_node_lid);
+        for (size_t dim = 0; dim < 3; dim++) {
+            if (bdy_dof_fixed(bdy_node_lid, dim) == 0) {
+                residual(node_gid, dim) += contact_forces(bdy_node_lid, dim);
+            }
+        }
+    });
+    Kokkos::fence();
+
+} // end add_contact_forces_to_residual
 
 // ********************************************************
 // ENDING FUNCTIONS FOR FORCE RESOLUTION

@@ -685,6 +685,12 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         case boundary_conditions::globalContactQstatxStressBC:
                             if (verbose) std::cout << "Setting contact bc " << std::endl;
                             BoundaryConditions.allow_contact = true;
+
+                            // zero traction, so boundary_stress never calls a null pointer for this set
+                            RUN({
+                                BoundaryConditions.BoundaryConditionEnums(bc_id).BCQstatxStressModel = boundary_conditions::globalContactQstatxStressBC;
+                                BoundaryConditions.BoundaryConditionFunctions(bc_id).qstatx_stress = &GlobalContactQstatxStressBC::qstatx_stress;
+                            });
                             break;
 
                         default:

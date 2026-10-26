@@ -32,8 +32,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef BOUNDARY_QSTATX_STRESS_NONE_H
-#define BOUNDARY_QSTATX_STRESS_NONE_H
+#ifndef BOUNDARY_QSTATX_STRESS_GLOBAL_CONTACT_H
+#define BOUNDARY_QSTATX_STRESS_GLOBAL_CONTACT_H
 
 #include "boundary_conditions.hpp"
 
@@ -43,9 +43,10 @@ namespace GlobalContactQstatxStressBC
 {
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn Boundary stress does not exist, its a free surface
+/// \fn Global contact marker, no traction
 ///
-/// \brief This is a function for a free surface, the default case
+/// \brief Turns contact on (BoundaryConditions.allow_contact). Contact forces
+///        are added to the residual by the solver, so this traction is zero
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options

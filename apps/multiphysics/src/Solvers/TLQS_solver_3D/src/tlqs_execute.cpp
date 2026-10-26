@@ -112,622 +112,6 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     ref_surf.initialize_ref_surf(SurfQuad,
                                  ref_elem);
 
-    // setting up contact if it was called
-    if (doing_contact) {
-        AO_contact_state_t AO_contact_state;
-        AO_contact_initialize(AO_contact_state, ref_elem, Quad, mesh, State, State.node.coords, mesh.num_bdy_nodes, mesh.num_bdy_surfs, mesh.num_nodes_in_surf);
-
-        // zeroing out bdy_node_velocities since this solver doesn't carry full node state velocity or evolve velocity
-        // will be updated during picard iterations
-        AO_contact_state.bdy_node_vels.set_values(0);
-
-        // zeroing out bdy_node_accels since this solver assumes no acceleration
-        AO_contact_state.bdy_node_accels.set_values(0);
-
-        // TESTING SECTION
-        AO_contact_sort(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels, mesh.num_bdy_nodes,
-                        State.node.coords, mesh.bdy_nodes, AO_contact_state.bdy_node_point_cloud, AO_contact_state.num_bins, 
-                        mesh.num_bdy_surfs, mesh.num_nodes_in_surf, dt, mesh.bdy_nodes_in_bdy_surf, AO_contact_state.bounding_boxes,
-                        AO_contact_state.lebesgue_overshoot, AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes,
-                        ref_elem.num_dofs_1d, mesh.bdy_surfs, mesh.elems_in_surf, mesh.nodes_in_elem, AO_contact_state.max_gap, AO_contact_state.pairing_check_vars,
-                        AO_contact_state.num_surfs_in_node_boxes, AO_contact_state.surfs_in_node_boxes, AO_contact_state.cols_in_node_boxes,
-                        AO_contact_state.contact_pair_surfs, AO_contact_state.contact_pair_vars, AO_contact_state.num_pairs_in_node, AO_contact_state.is_active,
-                        AO_contact_state.contact_forces, AO_contact_state.contact_forces_used, AO_contact_state.contact_counts);
-
-        // TESTING NORMALS
-
-        /* // ---------------------------------------------------------------
-        // rotation settings: change these
-        // ---------------------------------------------------------------
-        const double angle_deg = 45.0;
-        const double axis[3]   = {0.0, 0.0, 1.0};   // any length, normalized below
-        const double center[3] = {0.5, 0.5, 0.5};
-
-        // unit rotation axis
-        const double axis_mag = sqrt(axis[0]*axis[0] + axis[1]*axis[1] + axis[2]*axis[2]);
-        const double kx = axis[0]/axis_mag;
-        const double ky = axis[1]/axis_mag;
-        const double kz = axis[2]/axis_mag;
-
-        const double theta = angle_deg*acos(-1.0)/180.0;
-        const double cos_t = cos(theta);
-        const double sin_t = sin(theta);
-        const double v     = 1.0 - cos_t;
-
-        // Rodrigues: R = cos I + sin [k]x + (1 - cos) k k^T
-        double R[3][3];
-        R[0][0] = cos_t + kx*kx*v;     R[0][1] = kx*ky*v - kz*sin_t;  R[0][2] = kx*kz*v + ky*sin_t;
-        R[1][0] = ky*kx*v + kz*sin_t;  R[1][1] = cos_t + ky*ky*v;     R[1][2] = ky*kz*v - kx*sin_t;
-        R[2][0] = kz*kx*v - ky*sin_t;  R[2][1] = kz*ky*v + kx*sin_t;  R[2][2] = cos_t + kz*kz*v;
-
-        // rotate all nodes about the center: x' = c + R (x - c)
-        for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
-            double rel[3];
-            for (size_t dim = 0; dim < 3; dim++) {
-                rel[dim] = State.node.coords(node_gid, dim) - center[dim];
-            }
-            for (size_t i = 0; i < 3; i++) {
-                State.node.coords(node_gid, i) = center[i] + R[i][0]*rel[0] + R[i][1]*rel[1] + R[i][2]*rel[2];
-            }
-        } // end for node_gid
-
-        // refresh boundary coords from the rotated global coords
-        for (size_t bdy_node_lid = 0; bdy_node_lid < mesh.num_bdy_nodes; bdy_node_lid++) {
-            for (size_t dim = 0; dim < 3; dim++) {
-                AO_contact_state.bdy_node_coords(bdy_node_lid, dim) = State.node.coords(mesh.bdy_nodes(bdy_node_lid), dim);
-            }
-        } // end for bdy_node_lid
-
-        // ---------------------------------------------------------------
-        // normal test (boundary space)
-        // ---------------------------------------------------------------
-        const size_t num_pts_1d = 3;
-        const double pt_spacing = 2.0/(double)(num_pts_1d - 1);
-
-        for (size_t bdy_surf_lid = 0; bdy_surf_lid < mesh.num_bdy_surfs; bdy_surf_lid++) {
-
-            // map boundary surface lid to the global surface id
-            const size_t surf_gid = mesh.bdy_surfs(bdy_surf_lid);
-
-            // surface's local face id in its element (orientation sign only)
-            const size_t face_lid = mesh.faces_in_surf(surf_gid, 0);
-
-            // view into this surface's boundary node lids
-            ViewCArrayKokkos<size_t> bdy_nodes_in_the_surf(&mesh.bdy_nodes_in_bdy_surf(bdy_surf_lid, 0), mesh.num_nodes_in_surf);
-
-            // print the nodes in this surface (boundary lids)
-            printf("bdy surf %lu (surf_gid %lu, face_lid %lu) bdy nodes:",
-                (unsigned long)bdy_surf_lid, (unsigned long)surf_gid, (unsigned long)face_lid);
-            for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_surf; node_lid++) {
-                printf(" %lu", (unsigned long)bdy_nodes_in_the_surf(node_lid));
-            }
-            printf("\n");
-
-            // print the normal at each test point
-            for (size_t j = 0; j < num_pts_1d; j++) {
-                for (size_t i = 0; i < num_pts_1d; i++) {
-
-                    const double xi  = -1.0 + i*pt_spacing;
-                    const double eta = -1.0 + j*pt_spacing;
-
-                    double normal[3];
-                    get_normal(ref_elem.dof_positions_1d, bdy_nodes_in_the_surf, AO_contact_state.bdy_node_coords,
-                            face_lid, xi, eta, normal);
-
-                    printf("  (xi, eta) = (%+.3f, %+.3f)   normal = (%+.6f, %+.6f, %+.6f)\n",
-                        xi, eta, normal[0], normal[1], normal[2]);
-                } // end for i
-            } // end for j
-
-            printf("\n");
-
-        } // end for bdy_surf_lid
-
-        // ---------------------------------------------------------------
-        // undo the rotation: x = c + R^T (x' - c)
-        // ---------------------------------------------------------------
-        for (size_t node_gid = 0; node_gid < mesh.num_nodes; node_gid++) {
-            double rel[3];
-            for (size_t dim = 0; dim < 3; dim++) {
-                rel[dim] = State.node.coords(node_gid, dim) - center[dim];
-            }
-            for (size_t i = 0; i < 3; i++) {
-                State.node.coords(node_gid, i) = center[i] + R[0][i]*rel[0] + R[1][i]*rel[1] + R[2][i]*rel[2];
-            }
-        } // end for node_gid
-
-        // refresh boundary coords from the restored global coords
-        for (size_t bdy_node_lid = 0; bdy_node_lid < mesh.num_bdy_nodes; bdy_node_lid++) {
-            for (size_t dim = 0; dim < 3; dim++) {
-                AO_contact_state.bdy_node_coords(bdy_node_lid, dim) = State.node.coords(mesh.bdy_nodes(bdy_node_lid), dim);
-            }
-        } // end for bdy_node_lid */
-
-        // END TESTING NORMALS
-
-                // TESTING PENETRATION SWEEP
-
-        // ---------------------------------------------------------------
-        // test settings: change per case
-        //   1: uniform overlap  (B bottom nodes 27-35: z -= delta)
-        //   2: center bulge     (A top center node 22: z += delta)
-        //   3: tilt             (B bottom nodes 27-35: z -= delta*x)
-        // ---------------------------------------------------------------
-        const int    test_case = 3;
-        const double delta     = 0.01;    // keep below the kinematic pad (~0.016 with test_dt = 1, zero vels)
-        const double test_dt   = 1.0;     // inflates kin_pad so the perturbed nodes are candidates
-        const double no_pair_sentinel = 100000.0;   // must match penetration_sweep
-        const double normal_tol       = 1.0e-10;    // analytic vs computed pair normal, per component
-
-        const size_t b_bottom_first  = 27; // B bottom face gids 27-35
-        const size_t b_bottom_last   = 35;
-        const size_t a_top_first     = 18; // A top face gids 18-26
-        const size_t a_top_last      = 26;
-        const size_t a_top_center    = 22; // A top face center gid
-        const size_t b_bottom_center = 31; // B bottom face center gid
-
-        // bdy surf lids and owning elements of the contact faces for this mesh (from earlier output)
-        const size_t surf_a_top    = 5;   // elem 0, face_lid 5: penetrated by B bottom nodes
-        const size_t surf_b_bottom = 10;  // elem 1, face_lid 4: penetrated by A top nodes
-        const size_t elem_a        = 0;
-        const size_t elem_b        = 1;
-
-        // ---------------------------------------------------------------
-        // local shallow copies so kernels don't capture mesh/State/AO_contact_state
-        // ---------------------------------------------------------------
-        const size_t num_bdy_surfs     = mesh.num_bdy_surfs;
-        const size_t num_bdy_nodes     = mesh.num_bdy_nodes;
-        const size_t num_nodes_in_surf = mesh.num_nodes_in_surf;
-        const auto   bdy_nodes         = mesh.bdy_nodes;
-        const auto   bdy_surfs         = mesh.bdy_surfs;
-        const auto   elems_in_surf     = mesh.elems_in_surf;
-        const auto   node_coords       = State.node.coords;
-
-        // ---------------------------------------------------------------
-        // perturb the contact face nodes
-        // ---------------------------------------------------------------
-        RUN({
-            if (test_case == 1) {
-                for (size_t gid = b_bottom_first; gid <= b_bottom_last; gid++) {
-                    node_coords(gid, 2) -= delta;
-                }
-            }
-            else if (test_case == 2) {
-                node_coords(a_top_center, 2) += delta;
-            }
-            else if (test_case == 3) {
-                for (size_t gid = b_bottom_first; gid <= b_bottom_last; gid++) {
-                    node_coords(gid, 2) -= delta*node_coords(gid, 0);
-                }
-            }
-        });
-        Kokkos::fence();
-
-        // ---------------------------------------------------------------
-        // rebuild candidates, max_gap, pairing storage, inverse map, pair storage, and nodal normals
-        // ---------------------------------------------------------------
-        AO_contact_sort(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels, mesh.num_bdy_nodes,
-                        State.node.coords, mesh.bdy_nodes, AO_contact_state.bdy_node_point_cloud, AO_contact_state.num_bins,
-                        mesh.num_bdy_surfs, mesh.num_nodes_in_surf, test_dt, mesh.bdy_nodes_in_bdy_surf, AO_contact_state.bounding_boxes,
-                        AO_contact_state.lebesgue_overshoot, AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes,
-                        ref_elem.num_dofs_1d, mesh.bdy_surfs, mesh.elems_in_surf, mesh.nodes_in_elem, AO_contact_state.max_gap, AO_contact_state.pairing_check_vars,
-                        AO_contact_state.num_surfs_in_node_boxes, AO_contact_state.surfs_in_node_boxes, AO_contact_state.cols_in_node_boxes,
-                        AO_contact_state.contact_pair_surfs, AO_contact_state.contact_pair_vars, AO_contact_state.num_pairs_in_node, AO_contact_state.is_active,
-                        AO_contact_state.contact_forces, AO_contact_state.contact_forces_used, AO_contact_state.contact_counts);
-
-        get_bdy_surf_node_normals(num_bdy_surfs,
-                                  num_nodes_in_surf,
-                                  mesh.bdy_surfs,
-                                  mesh.faces_in_surf,
-                                  mesh.bdy_nodes_in_bdy_surf,
-                                  ref_elem.dof_positions_1d,
-                                  AO_contact_state.bdy_node_coords,
-                                  AO_contact_state.bdy_surf_node_normals);
-
-        // ---------------------------------------------------------------
-        // penetration sweep (detection + pairing)
-        // ---------------------------------------------------------------
-        penetration_sweep(num_bdy_surfs,
-                          num_bdy_nodes,
-                          num_nodes_in_surf,
-                          mesh.num_nodes_in_elem,
-                          mesh.bdy_surfs,
-                          mesh.faces_in_surf,
-                          mesh.elems_in_surf,
-                          mesh.bdy_nodes,
-                          mesh.elems_in_node,
-                          mesh.nodes_in_elem,
-                          mesh.bdy_nodes_in_bdy_surf,
-                          ref_elem.dof_positions_1d,
-                          ref_surf.qpt_basis,
-                          SurfQuad.qpt_positions,
-                          State.node.coords,
-                          AO_contact_state.bdy_node_coords,
-                          AO_contact_state.bdy_node_vels,
-                          AO_contact_state.bdy_surf_node_normals,
-                          AO_contact_state.nodes_in_bounding_boxes,
-                          AO_contact_state.surfs_in_node_boxes,
-                          AO_contact_state.cols_in_node_boxes,
-                          AO_contact_state.filter_tol,
-                          AO_contact_state.max_gap,
-                          AO_contact_state.pairing_check_vars,
-                          AO_contact_state.num_pen_surfs_in_node,
-                          AO_contact_state.pen_nodes,
-                          AO_contact_state.contact_counts,
-                          AO_contact_state.is_active,
-                          AO_contact_state.active_nodes,
-                          AO_contact_state.num_pairs_in_node,
-                          AO_contact_state.contact_pair_surfs,
-                          AO_contact_state.contact_pair_vars,
-                          AO_contact_state.num_pairs_touching_node);
-
-        // ---------------------------------------------------------------
-        // local copies AFTER the sort (it reassigns the ragged arrays)
-        // ---------------------------------------------------------------
-        const auto   bdy_node_coords         = AO_contact_state.bdy_node_coords;
-        const auto   nodes_in_bounding_boxes = AO_contact_state.nodes_in_bounding_boxes;
-        const auto   pairing_check_vars      = AO_contact_state.pairing_check_vars;
-        const auto   num_surfs_in_node_boxes = AO_contact_state.num_surfs_in_node_boxes;
-        const auto   surfs_in_node_boxes     = AO_contact_state.surfs_in_node_boxes;
-        const auto   cols_in_node_boxes      = AO_contact_state.cols_in_node_boxes;
-        const auto   num_pen_surfs_in_node   = AO_contact_state.num_pen_surfs_in_node;
-        const auto   pen_nodes               = AO_contact_state.pen_nodes;
-        const auto   contact_counts          = AO_contact_state.contact_counts;
-        const auto   is_active               = AO_contact_state.is_active;
-        const auto   active_nodes            = AO_contact_state.active_nodes;
-        const auto   num_pairs_in_node       = AO_contact_state.num_pairs_in_node;
-        const auto   contact_pair_surfs      = AO_contact_state.contact_pair_surfs;
-        const auto   contact_pair_vars       = AO_contact_state.contact_pair_vars;
-        const double max_gap                 = AO_contact_state.max_gap;
-
-        // scratch: how many times each node appears in pen_nodes (check B) and active_nodes (check G)
-        CArrayKokkos<size_t> times_in_pen_nodes(num_bdy_nodes, "times_in_pen_nodes");
-        CArrayKokkos<size_t> times_in_active_nodes(num_bdy_nodes, "times_in_active_nodes");
-        times_in_pen_nodes.set_values(0);
-        times_in_active_nodes.set_values(0);
-        Kokkos::fence();
-
-        // ---------------------------------------------------------------
-        // checks and by-node print
-        // ---------------------------------------------------------------
-        RUN({
-            const size_t n_pen    = contact_counts(0);
-            const size_t n_active = contact_counts(2);
-            size_t num_fail = 0;
-
-            printf("penetration sweep test case %d, delta = %.4e, max_gap = %.4e\n", test_case, delta, max_gap);
-            printf("penetrating nodes = %lu, pairing errors = %lu, active nodes = %lu\n\n",
-                   (unsigned long)n_pen, (unsigned long)contact_counts(1), (unsigned long)n_active);
-
-            // -----------------------------------------------------------
-            // A. inverse map: row lengths and back-pointers
-            // -----------------------------------------------------------
-            for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes; bdy_node_lid++) {
-
-                const size_t num_cand = surfs_in_node_boxes.stride(bdy_node_lid);
-
-                if (num_cand != num_surfs_in_node_boxes(bdy_node_lid)) {
-                    printf("  FAIL A: bdy node %lu row length %lu != count %lu\n",
-                           (unsigned long)bdy_node_lid, (unsigned long)num_cand,
-                           (unsigned long)num_surfs_in_node_boxes(bdy_node_lid));
-                    num_fail++;
-                }
-
-                for (size_t slot = 0; slot < num_cand; slot++) {
-                    const size_t bdy_surf_lid = surfs_in_node_boxes(bdy_node_lid, slot);
-                    const size_t col          = cols_in_node_boxes(bdy_node_lid, slot);
-
-                    if (col >= nodes_in_bounding_boxes.stride(bdy_surf_lid) ||
-                        nodes_in_bounding_boxes(bdy_surf_lid, col) != bdy_node_lid) {
-                        printf("  FAIL A: bdy node %lu slot %lu -> (surf %lu, col %lu) does not point back\n",
-                               (unsigned long)bdy_node_lid, (unsigned long)slot,
-                               (unsigned long)bdy_surf_lid, (unsigned long)col);
-                        num_fail++;
-                    }
-                }
-            } // end for bdy_node_lid
-
-            // -----------------------------------------------------------
-            // B. pen_nodes: every node with a nonzero count, exactly once
-            // -----------------------------------------------------------
-            if (n_pen > num_bdy_nodes) {
-                printf("  FAIL B: penetrating nodes %lu > num_bdy_nodes %lu\n",
-                       (unsigned long)n_pen, (unsigned long)num_bdy_nodes);
-                num_fail++;
-            }
-            else {
-                for (size_t pen_lid = 0; pen_lid < n_pen; pen_lid++) {
-                    times_in_pen_nodes(pen_nodes(pen_lid)) += 1;
-                }
-                for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes; bdy_node_lid++) {
-                    const size_t expected_times = (num_pen_surfs_in_node(bdy_node_lid) > 0) ? 1 : 0;
-                    if (times_in_pen_nodes(bdy_node_lid) != expected_times) {
-                        printf("  FAIL B: gid %lu appears %lu times in pen_nodes, expected %lu\n",
-                               (unsigned long)bdy_nodes(bdy_node_lid),
-                               (unsigned long)times_in_pen_nodes(bdy_node_lid),
-                               (unsigned long)expected_times);
-                        num_fail++;
-                    }
-                }
-            }
-
-            // -----------------------------------------------------------
-            // C. surface-major writes == sum of per-node counts
-            // -----------------------------------------------------------
-            size_t total_writes = 0;
-            for (size_t bdy_surf_lid = 0; bdy_surf_lid < num_bdy_surfs; bdy_surf_lid++) {
-                for (size_t node_lid = 0; node_lid < nodes_in_bounding_boxes.stride(bdy_surf_lid); node_lid++) {
-                    if (pairing_check_vars(bdy_surf_lid, node_lid, 0) < 0.5*no_pair_sentinel) total_writes++;
-                }
-            }
-            size_t total_counts = 0;
-            for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes; bdy_node_lid++) {
-                total_counts += num_pen_surfs_in_node(bdy_node_lid);
-            }
-            if (total_writes != total_counts) {
-                printf("  FAIL C: %lu surface-major writes != %lu summed node counts\n",
-                       (unsigned long)total_writes, (unsigned long)total_counts);
-                num_fail++;
-            }
-
-            // -----------------------------------------------------------
-            // D. per node: surfaces found through the inverse map vs expected
-            // E. per node: contact pairs vs expected surface, element, (xi, eta), normal
-            //    (ascending bdy node lid order for readability; pen_nodes order is arbitrary)
-            // -----------------------------------------------------------
-            size_t total_pairs = 0;
-
-            for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes; bdy_node_lid++) {
-
-                const size_t gid = bdy_nodes(bdy_node_lid);
-
-                // expected penetrated surface for this case (-1 = none)
-                long expected_surf = -1;
-                const bool on_a_top    = (gid >= a_top_first    && gid <= a_top_last);
-                const bool on_b_bottom = (gid >= b_bottom_first && gid <= b_bottom_last);
-
-                if (test_case == 1) {
-                    if (on_a_top)    expected_surf = (long)surf_b_bottom;
-                    if (on_b_bottom) expected_surf = (long)surf_a_top;
-                }
-                else if (test_case == 2) {
-                    if (gid == a_top_center)    expected_surf = (long)surf_b_bottom;
-                    if (gid == b_bottom_center) expected_surf = (long)surf_a_top;
-                }
-                else if (test_case == 3) {
-                    // nodes at x = 0 (every third gid) lie on the other face: no write
-                    if (on_a_top    && (gid - a_top_first)    % 3 != 0) expected_surf = (long)surf_b_bottom;
-                    if (on_b_bottom && (gid - b_bottom_first) % 3 != 0) expected_surf = (long)surf_a_top;
-                }
-
-                // ---------------------------------------------------
-                // D. walk the candidate row, collect penetrated surfaces
-                // ---------------------------------------------------
-                const size_t num_cand = surfs_in_node_boxes.stride(bdy_node_lid);
-                size_t num_hits       = 0;
-                bool   found_expected = false;
-                size_t hit_surf       = 0;   // last penetrated surface (unique in these cases)
-                size_t hit_col        = 0;
-
-                for (size_t slot = 0; slot < num_cand; slot++) {
-                    const size_t bdy_surf_lid = surfs_in_node_boxes(bdy_node_lid, slot);
-                    const size_t col          = cols_in_node_boxes(bdy_node_lid, slot);
-                    const double gap          = pairing_check_vars(bdy_surf_lid, col, 0);
-                    if (gap > 0.5*no_pair_sentinel) continue;   // candidate, not penetrating
-
-                    if (num_hits == 0) {
-                        printf("  gid %3lu (bdy %3lu)  x = (%+.4f, %+.4f, %+.4f)  %lu of %lu candidates:\n",
-                               (unsigned long)gid, (unsigned long)bdy_node_lid,
-                               bdy_node_coords(bdy_node_lid, 0), bdy_node_coords(bdy_node_lid, 1), bdy_node_coords(bdy_node_lid, 2),
-                               (unsigned long)num_pen_surfs_in_node(bdy_node_lid), (unsigned long)num_cand);
-                    }
-                    printf("      surf %3lu  gap = %+.8e  (xi, eta) = (%+.8f, %+.8f)\n",
-                           (unsigned long)bdy_surf_lid, gap,
-                           pairing_check_vars(bdy_surf_lid, col, 1),
-                           pairing_check_vars(bdy_surf_lid, col, 2));
-
-                    if ((long)bdy_surf_lid == expected_surf) found_expected = true;
-                    hit_surf = bdy_surf_lid;
-                    hit_col  = col;
-                    num_hits++;
-                } // end for slot
-
-                // count from the sweep must match what the row shows
-                if (num_hits != num_pen_surfs_in_node(bdy_node_lid)) {
-                    printf("  FAIL D: gid %lu row shows %lu hits, sweep counted %lu\n",
-                           (unsigned long)gid, (unsigned long)num_hits,
-                           (unsigned long)num_pen_surfs_in_node(bdy_node_lid));
-                    num_fail++;
-                }
-
-                // every expected case penetrates exactly one surface
-                const size_t expected_hits = (expected_surf >= 0) ? 1 : 0;
-                if (num_hits != expected_hits || (expected_surf >= 0 && !found_expected)) {
-                    printf("  FAIL D: gid %lu penetrates %lu surfs, expected %lu (surf %ld)\n",
-                           (unsigned long)gid, (unsigned long)num_hits,
-                           (unsigned long)expected_hits, expected_surf);
-                    num_fail++;
-                }
-
-                // ---------------------------------------------------
-                // E. contact pairs
-                //    num_pairs_in_node is reset by the sort, so after a fresh
-                //    sort + one sweep a non-penetrating node must have no pairs
-                // ---------------------------------------------------
-                if (num_hits == 0) {
-                    if (num_pairs_in_node(bdy_node_lid) != 0) {
-                        printf("  FAIL E: gid %lu is not penetrating but has %lu pairs\n",
-                               (unsigned long)gid, (unsigned long)num_pairs_in_node(bdy_node_lid));
-                        num_fail++;
-                    }
-                    continue;
-                }
-
-                // expected pair for this node
-                size_t expected_elem = 0;
-                double n_exp[3];
-                if (expected_surf == (long)surf_a_top) {
-                    // A top is flat at z = 1 in every case (case 2: apex of the bulge, vertical by symmetry)
-                    expected_elem = elem_a;
-                    n_exp[0] = 0.0;  n_exp[1] = 0.0;  n_exp[2] = 1.0;
-                }
-                else {
-                    // B bottom: flat (cases 1, 2) or tilted plane z = 1 - delta*x (case 3), outward = down
-                    expected_elem = elem_b;
-                    if (test_case == 3) {
-                        const double inv = 1.0/sqrt(1.0 + delta*delta);
-                        n_exp[0] = -delta*inv;  n_exp[1] = 0.0;  n_exp[2] = -inv;
-                    }
-                    else {
-                        n_exp[0] = 0.0;  n_exp[1] = 0.0;  n_exp[2] = -1.0;
-                    }
-                }
-
-                const size_t num_pairs = num_pairs_in_node(bdy_node_lid);
-                total_pairs += num_pairs;
-
-                // one penetrated surface on one element -> exactly one pair
-                if (num_pairs != 1) {
-                    printf("  FAIL E: gid %lu has %lu pairs, expected 1\n",
-                           (unsigned long)gid, (unsigned long)num_pairs);
-                    num_fail++;
-                }
-
-                for (size_t pair = 0; pair < num_pairs; pair++) {
-
-                    const size_t p_surf = contact_pair_surfs(bdy_node_lid, pair);
-                    const size_t p_elem = elems_in_surf(bdy_surfs(p_surf), 0);
-                    const double p_xi   = contact_pair_vars(bdy_node_lid, pair, 0);
-                    const double p_eta  = contact_pair_vars(bdy_node_lid, pair, 1);
-                    double p_n[3];
-                    p_n[0] = contact_pair_vars(bdy_node_lid, pair, 2);
-                    p_n[1] = contact_pair_vars(bdy_node_lid, pair, 3);
-                    p_n[2] = contact_pair_vars(bdy_node_lid, pair, 4);
-                    const double p_Ftot = contact_pair_vars(bdy_node_lid, pair, 5);
-                    const double p_finc = contact_pair_vars(bdy_node_lid, pair, 6);
-
-                    printf("      pair %lu: surf %3lu (elem %lu)  (xi, eta) = (%+.8f, %+.8f)  n = (%+.8f, %+.8f, %+.8f)\n",
-                           (unsigned long)pair, (unsigned long)p_surf, (unsigned long)p_elem,
-                           p_xi, p_eta, p_n[0], p_n[1], p_n[2]);
-
-                    // target surface and element
-                    if ((long)p_surf != expected_surf || p_elem != expected_elem) {
-                        printf("  FAIL E: gid %lu pair %lu -> surf %lu (elem %lu), expected surf %ld (elem %lu)\n",
-                               (unsigned long)gid, (unsigned long)pair, (unsigned long)p_surf,
-                               (unsigned long)p_elem, expected_surf, (unsigned long)expected_elem);
-                        num_fail++;
-                    }
-
-                    // (xi, eta) are copied from the sweep entry, so they must match exactly
-                    if (p_xi  != pairing_check_vars(hit_surf, hit_col, 1) ||
-                        p_eta != pairing_check_vars(hit_surf, hit_col, 2)) {
-                        printf("  FAIL E: gid %lu pair %lu (xi, eta) differs from its sweep entry\n",
-                               (unsigned long)gid, (unsigned long)pair);
-                        num_fail++;
-                    }
-
-                    // normal: unit length and matching the analytic target normal
-                    double n_mag2 = 0.0;
-                    double n_err  = 0.0;
-                    for (size_t dim = 0; dim < 3; dim++) {
-                        n_mag2 += p_n[dim]*p_n[dim];
-                        n_err   = fmax(n_err, fabs(p_n[dim] - n_exp[dim]));
-                    }
-                    if (fabs(sqrt(n_mag2) - 1.0) > normal_tol || n_err > normal_tol) {
-                        printf("  FAIL E: gid %lu pair %lu normal off, expected (%+.8f, %+.8f, %+.8f), max err %.3e\n",
-                               (unsigned long)gid, (unsigned long)pair,
-                               n_exp[0], n_exp[1], n_exp[2], n_err);
-                        num_fail++;
-                    }
-
-                    // resolution placeholders start at zero
-                    if (p_Ftot != 0.0 || p_finc != 0.0) {
-                        printf("  FAIL E: gid %lu pair %lu F_tot/f_inc not zero (%+.3e, %+.3e)\n",
-                               (unsigned long)gid, (unsigned long)pair, p_Ftot, p_finc);
-                        num_fail++;
-                    }
-                } // end for pair
-            } // end for bdy_node_lid
-
-            // -----------------------------------------------------------
-            // F. pairing error counter (no passing direction or degenerate direction)
-            // -----------------------------------------------------------
-            if (contact_counts(1) != 0) {
-                printf("  FAIL F: %lu pairing errors reported by penetration_sweep\n",
-                       (unsigned long)contact_counts(1));
-                num_fail++;
-            }
-
-            // -----------------------------------------------------------
-            // G. active set after a fresh sort + one sweep:
-            //    active nodes == penetrating nodes, each exactly once,
-            //    and is_active set exactly for those nodes
-            // -----------------------------------------------------------
-            if (n_active != n_pen) {
-                printf("  FAIL G: active nodes %lu != penetrating nodes %lu\n",
-                       (unsigned long)n_active, (unsigned long)n_pen);
-                num_fail++;
-            }
-
-            if (n_active > num_bdy_nodes) {
-                printf("  FAIL G: active nodes %lu > num_bdy_nodes %lu\n",
-                       (unsigned long)n_active, (unsigned long)num_bdy_nodes);
-                num_fail++;
-            }
-            else {
-                for (size_t active_lid = 0; active_lid < n_active; active_lid++) {
-                    times_in_active_nodes(active_nodes(active_lid)) += 1;
-                }
-                for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes; bdy_node_lid++) {
-                    const size_t expected_times = (num_pen_surfs_in_node(bdy_node_lid) > 0) ? 1 : 0;
-
-                    if (times_in_active_nodes(bdy_node_lid) != expected_times) {
-                        printf("  FAIL G: gid %lu appears %lu times in active_nodes, expected %lu\n",
-                               (unsigned long)bdy_nodes(bdy_node_lid),
-                               (unsigned long)times_in_active_nodes(bdy_node_lid),
-                               (unsigned long)expected_times);
-                        num_fail++;
-                    }
-                    if (is_active(bdy_node_lid) != expected_times) {
-                        printf("  FAIL G: gid %lu is_active = %lu, expected %lu\n",
-                               (unsigned long)bdy_nodes(bdy_node_lid),
-                               (unsigned long)is_active(bdy_node_lid),
-                               (unsigned long)expected_times);
-                        num_fail++;
-                    }
-                }
-            }
-
-            printf("\ntotal writes: %lu, total pairs: %lu\n", (unsigned long)total_writes, (unsigned long)total_pairs);
-            printf("%s: %lu failures\n\n", (num_fail == 0) ? "PASS" : "FAIL", (unsigned long)num_fail);
-        });
-        Kokkos::fence();
-
-        // ---------------------------------------------------------------
-        // undo perturbations (bdy_node_coords is refreshed on the next AO_contact_sort)
-        // x is unchanged by every case, so case 3 can be undone with the same formula
-        // ---------------------------------------------------------------
-        RUN({
-            if (test_case == 1) {
-                for (size_t gid = b_bottom_first; gid <= b_bottom_last; gid++) {
-                    node_coords(gid, 2) += delta;
-                }
-            }
-            else if (test_case == 2) {
-                node_coords(a_top_center, 2) -= delta;
-            }
-            else if (test_case == 3) {
-                for (size_t gid = b_bottom_first; gid <= b_bottom_last; gid++) {
-                    node_coords(gid, 2) += delta*node_coords(gid, 0);
-                }
-            }
-        });
-        Kokkos::fence();
-
-        // END TESTING PENETRATION SWEEP
-
-    }
-
     int num_qpt_in_elem = ref_elem.qpt_grad_basis.dims(0);
     
     // element stiffness and force arrays
@@ -838,6 +222,115 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     zkp1.initialize_comm_plan(*node_communication_plan);
     temporary.initialize_comm_plan(*node_communication_plan);
 
+    // ***************************************************
+    // AO contact setup
+    // ***************************************************
+    // the state lives for the whole solve: pairs persist across Picard iterations
+    // and loaded pairs are carried over from one load step to the next
+    AO_contact_state_t AO_contact_state;
+
+    // previous load step displacement increment, bdy node velocity = this/dt for the box padding
+    CArrayKokkos <double> prev_displacement_step;
+
+    // compliance scale: 1/K_ii underestimates the nodal compliance, > 1 under-relaxes
+    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const double contact_compliance_scale = 15;
+
+    // Picard convergence on the contact force the last solve has not seen
+    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const double contact_force_tol = 1.0e-6;
+
+    if (doing_contact) {
+
+        if (num_ranks > 1) {
+            throw std::runtime_error("**** TLQS AO contact is only supported on a single rank ****");
+        }
+
+        // fixed-size contact storage, only the members it needs are passed
+        AO_contact_initialize(mesh.num_bdy_nodes, mesh.num_bdy_surfs, mesh.num_nodes_in_surf,
+                              ref_elem.dof_positions_1d, ref_elem.num_dofs_1d, ref_elem.elem_dims,
+                              AO_contact_state.bdy_node_coords,
+                              AO_contact_state.bdy_node_vels,
+                              AO_contact_state.bdy_node_accels,
+                              AO_contact_state.bdy_node_mass,
+                              AO_contact_state.bdy_node_compliance,
+                              AO_contact_state.bdy_dof_fixed,
+                              AO_contact_state.bounding_boxes,
+                              AO_contact_state.num_nodes_in_bounding_boxes,
+                              AO_contact_state.num_surfs_in_node_boxes,
+                              AO_contact_state.lebesgue_overshoot,
+                              AO_contact_state.bdy_surf_node_normals,
+                              AO_contact_state.num_pen_surfs_in_node,
+                              AO_contact_state.pen_nodes,
+                              AO_contact_state.bdy_node_pred_coords,
+                              AO_contact_state.contact_counts,
+                              AO_contact_state.is_active,
+                              AO_contact_state.active_nodes,
+                              AO_contact_state.num_pairs_in_node,
+                              AO_contact_state.num_pairs_touching_node,
+                              AO_contact_state.contact_forces,
+                              AO_contact_state.contact_forces_used);
+
+        // lumped boundary node mass (density is defined on the reference configuration in TLQS)
+        // TLQS contact runs on the quasi-static compliance, the mass is kept for diagnostics
+        //get_bdy_node_mass(mesh.num_nodes, mesh.num_bdy_nodes, ref_elem.num_dofs_in_elem, Quad.num_qpts_in_elem,
+        //                  ref_elem.qpt_basis, ref_elem.qpt_grad_basis, Quad.qpt_weights,
+        //                  mesh.nodes_in_elem, mesh.bdy_nodes,
+        //                  State.MaterialToMeshMaps.num_mat_elems, State.MaterialToMeshMaps.elem_in_mat_elem,
+        //                  State.MaterialPoints.den, State.MaterialPoints.mat_volfrac, State.MaterialPoints.geo_volfrac,
+        //                  State.points_in_mat_elem, State.node.coords_t0,
+        //                  AO_contact_state.bdy_node_mass);
+
+        // this solver doesn't carry velocity or acceleration
+        // velocities are set per load step from the previous step's displacement increment
+        AO_contact_state.bdy_node_vels.set_values(0.0);
+        AO_contact_state.bdy_node_accels.set_values(0.0);
+
+        prev_displacement_step = CArrayKokkos <double> (mesh.num_nodes, 3, "prev_displacement_step");
+        prev_displacement_step.set_values(0.0);
+        Kokkos::fence();
+
+        // ---------------------------------------------------------------
+        // constrained dofs: run the displacement BCs on a zero stiffness;
+        // every dof they constrain gets a nonzero diagonal. this uses the BC
+        // functions themselves, so it holds for any displacement model.
+        // ---------------------------------------------------------------
+        CArrayKokkos <double> scratch_disp(mesh.num_nodes, 3, "contact_scratch_disp");
+        K_elem.set_values(0.0);
+        F_elem.set_values(0.0);
+        scratch_disp.set_values(0.0);
+        Kokkos::fence();
+
+        boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, scratch_disp, dt, time_value, time_start, time_end);
+        Kokkos::fence();
+
+        // shallow copies so the kernel doesn't capture mesh or the contact state
+        const CArrayKokkos<size_t>  bdy_nodes         = mesh.bdy_nodes;
+        const RaggedRightArrayKokkos<size_t> elems_in_node = mesh.elems_in_node;
+        const DCArrayKokkos<size_t> nodes_in_elem     = mesh.nodes_in_elem;
+        const size_t                num_nodes_in_elem = mesh.num_nodes_in_elem;
+        const CArrayKokkos<size_t>  bdy_dof_fixed     = AO_contact_state.bdy_dof_fixed;
+
+        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes, {
+            const size_t node_gid = bdy_nodes(bdy_node_lid);
+            for (size_t dim = 0; dim < 3; dim++) {
+                double diag = 0.0;
+                for (size_t elem_lid = 0; elem_lid < elems_in_node.stride(node_gid); elem_lid++) {
+                    const size_t elem_gid = elems_in_node(node_gid, elem_lid);
+                    for (size_t a = 0; a < num_nodes_in_elem; a++) {
+                        if (nodes_in_elem(elem_gid, a) == node_gid) {
+                            diag += fabs(K_elem(elem_gid, 3*a + dim, 3*a + dim));
+                            break;
+                        }
+                    }
+                }
+                bdy_dof_fixed(bdy_node_lid, dim) = (diag > 0.0) ? 1 : 0;
+            }
+        });
+        Kokkos::fence();
+
+    } // end if doing_contact
+
 
     // Create mesh writer
     MeshWriter mesh_writer;
@@ -907,6 +400,41 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         hist_anderson_residual.set_values(0);
         hist_displacement_iter.set_values(0);
         Kokkos::fence();
+
+        // -----------------------------------------------------------
+        // contact candidates and pair storage for this load step
+        // -----------------------------------------------------------
+        if (doing_contact) {
+
+            // bdy node velocity from the previous load step's increment (zero on the first step)
+            const CArrayKokkos<size_t> bdy_nodes      = mesh.bdy_nodes;
+            const CArrayKokkos<double> bdy_node_vels  = AO_contact_state.bdy_node_vels;
+            const CArrayKokkos<double> prev_disp_step = prev_displacement_step;
+            const double inv_dt = 1.0/dt;
+            FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes, {
+                for (size_t dim = 0; dim < 3; dim++) {
+                    bdy_node_vels(bdy_node_lid, dim) = prev_disp_step(bdy_nodes(bdy_node_lid), dim)*inv_dt;
+                }
+            });
+            Kokkos::fence();
+
+            // keep_pairs = true: loaded pairs carry their force into this load step
+            AO_contact_sort(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels,
+                            mesh.num_bdy_nodes, State.node.coords, mesh.bdy_nodes,
+                            AO_contact_state.bdy_node_point_cloud, AO_contact_state.num_bins,
+                            mesh.num_bdy_surfs, mesh.num_nodes_in_surf, dt, mesh.bdy_nodes_in_bdy_surf,
+                            AO_contact_state.bounding_boxes, AO_contact_state.lebesgue_overshoot,
+                            AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes,
+                            ref_elem.num_dofs_1d, mesh.bdy_surfs, mesh.elems_in_surf, mesh.nodes_in_elem,
+                            AO_contact_state.max_gap, AO_contact_state.pairing_check_vars,
+                            AO_contact_state.num_surfs_in_node_boxes, AO_contact_state.surfs_in_node_boxes,
+                            AO_contact_state.cols_in_node_boxes,
+                            AO_contact_state.contact_pair_surfs, AO_contact_state.contact_pair_vars,
+                            AO_contact_state.num_pairs_in_node, AO_contact_state.is_active, AO_contact_state.active_nodes,
+                            AO_contact_state.contact_forces, AO_contact_state.contact_forces_used,
+                            AO_contact_state.contact_counts, ref_elem.dof_positions_1d,
+                            true, AO_contact_state.pairs_allocated);
+        }
 
         // start Picard iteration loop
         for (int iter = 0; iter < max_iter; iter++) {
@@ -1011,6 +539,19 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 Kokkos::fence();
 
             } // end mat_id
+
+            // -----------------------------------------------------------
+            // contact compliance, once per load step from the stiffness at the
+            // start of the step, before the Dirichlet rows are overwritten
+            // (D_inv is free scratch here, it is rebuilt before the solve)
+            // -----------------------------------------------------------
+            if (doing_contact && iter == 0) {
+                get_diagonal_inverse(D_inv, K_elem, mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem);
+                get_quasi_static_compliance(mesh.num_bdy_nodes, mesh.bdy_nodes, D_inv,
+                                            AO_contact_state.bdy_dof_fixed, contact_compliance_scale,
+                                            AO_contact_state.bdy_node_compliance);
+            }
+
             auto point_B = std::chrono::steady_clock::now();
             auto elapsed_B = std::chrono::duration_cast<std::chrono::milliseconds>(point_B - point_A).count();
             //std::cout << "Time elapsed to build element arrays: " << elapsed_B << " ms\n";
@@ -1137,6 +678,14 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // apply traction conditions
             boundary_stress(mesh, BoundaryConditions, rk, ref_surf, SurfQuad, State.node.coords_t0, dt, time_value, time_start, time_end);
+
+            // apply contact forces (free dofs only), and record what this solve sees
+            if (doing_contact) {
+                add_contact_forces_to_residual(mesh.num_bdy_nodes, mesh.bdy_nodes, AO_contact_state.bdy_dof_fixed,
+                                               AO_contact_state.contact_forces, rk);
+                AO_contact_snapshot_forces(mesh.num_bdy_nodes, AO_contact_state.contact_forces,
+                                           AO_contact_state.contact_forces_used);
+            }
 
             // smoothing with chebyshev polynomial
             apply_chebyshev_preconditioner(rk, zk, D_inv, zk, delta_z, temporary, K_elem, 
@@ -1384,6 +933,48 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             });
             Kokkos::fence();
 
+            // -----------------------------------------------------------
+            // contact pass on the current iterate
+            // runs before the convergence check, so the loop cannot exit
+            // with contact forces the solve has not seen
+            // -----------------------------------------------------------
+            bool   contact_settled    = true;
+            size_t contact_num_active = 0;
+            double contact_max_dF     = 0.0;
+            double contact_max_F      = 0.0;
+            if (doing_contact) {
+
+                // current configuration (coords is otherwise only updated at the end of the load step,
+                // and nothing else in the Picard loop reads it)
+                FOR_ALL(i, 0, (int)mesh.num_nodes,
+                        j, 0, 3, {
+                    State.node.coords(i,j) = State.node.coords_t0(i,j) + State.node.displacement(i,j) + displacement_step(i,j);
+                });
+                Kokkos::fence();
+
+                AO_contact_update_bdy_coords(mesh.num_bdy_nodes, State.node.coords, mesh.bdy_nodes,
+                                             AO_contact_state.bdy_node_coords);
+
+                AO_contact_resolve(mesh.num_bdy_surfs, mesh.num_bdy_nodes, mesh.num_nodes_in_surf, mesh.num_nodes_in_elem,
+                                   mesh.bdy_surfs, mesh.faces_in_surf, mesh.elems_in_surf, mesh.bdy_nodes,
+                                   mesh.elems_in_node, mesh.nodes_in_elem, mesh.bdy_nodes_in_bdy_surf,
+                                   ref_elem.dof_positions_1d, ref_surf.qpt_basis, SurfQuad.qpt_positions,
+                                   State.node.coords,
+                                   AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels,
+                                   AO_contact_state.bdy_node_compliance,
+                                   AO_contact_state.nodes_in_bounding_boxes, AO_contact_state.surfs_in_node_boxes,
+                                   AO_contact_state.cols_in_node_boxes,
+                                   AO_contact_state.filter_tol, AO_contact_state.max_gap,
+                                   AO_contact_state.bdy_node_pred_coords, AO_contact_state.bdy_surf_node_normals,
+                                   AO_contact_state.pairing_check_vars,
+                                   AO_contact_state.num_pen_surfs_in_node, AO_contact_state.pen_nodes,
+                                   AO_contact_state.contact_counts, AO_contact_state.is_active, AO_contact_state.active_nodes,
+                                   AO_contact_state.num_pairs_in_node, AO_contact_state.contact_pair_surfs,
+                                   AO_contact_state.contact_pair_vars, AO_contact_state.num_pairs_touching_node,
+                                   AO_contact_state.contact_forces_used, AO_contact_state.contact_forces,
+                                   contact_settled, contact_num_active, contact_max_dF, contact_max_F);
+            }
+
             // convergence check
             /* double norm_num = 0.0;
             double loc_norm_num = 0.0;
@@ -1411,7 +1002,19 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             MPI_Allreduce(MPI_IN_PLACE, &norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
             std::cout << "ITER: " << iter << "   ANDERSON RESIDUAL NORM: " << norm << std::endl;
-            if (norm < 1E-16 && iter > 1) {
+
+            // contact is converged when the pair set settled and the solve saw (nearly) all of the contact force
+            bool contact_converged = true;
+            if (doing_contact) {
+                contact_converged = contact_settled &&
+                                    (contact_max_dF <= contact_force_tol*contact_max_F);
+                std::cout << "      CONTACT: active nodes = " << contact_num_active
+                          << ", settled = " << contact_settled
+                          << ", max |dF| = " << contact_max_dF
+                          << ", max |F| = " << contact_max_F << std::endl;
+            }
+
+            if (norm < 1E-16 && iter > 1 && contact_converged) {
                 std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }
@@ -1436,6 +1039,22 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     State.node.coords(i,j) = State.node.coords_t0(i,j) + State.node.displacement(i,j);
         });
         Kokkos::fence();
+        /* std::cout << "NODE DISPLACEMENTS" << std::endl;
+        for (int n = 0; n < mesh.num_nodes; n++) {
+            for (int m = 0; m < 3; m++) {
+                std::cout << State.node.displacement(n,m) << "   ";
+            }
+            std::cout << std::endl;
+        } */
+
+        // load step increment, bdy node velocities for the next load step's boxes
+        if (doing_contact) {
+            FOR_ALL(i, 0, (int)mesh.num_nodes,
+                    j, 0, 3, {
+                prev_displacement_step(i,j) = displacement_step(i,j);
+            });
+            Kokkos::fence();
+        }
 
         // filling in stress and strain for output
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {
