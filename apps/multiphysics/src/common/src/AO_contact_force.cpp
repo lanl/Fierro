@@ -496,6 +496,11 @@ int frictionless_increment(const size_t bdy_node_lid,
 /// After an iteration that deleted pairs, num_pairs_touching_node is recounted
 /// so the relaxation weights of the next iteration match the current pair set.
 ///
+/// Each pair also records its unclamped, unweighted update F_tot + f_inc (pair
+/// slot 7, F_prop). For a loaded pair at convergence it equals F_tot; for a pair clamped
+/// at F_tot = 0 it is negative. AO_contact_relax_forces uses it as the outer
+/// (Picard) proposal.
+///
 /// \param num_deleted  out: pairs deleted by slide-off
 /// \param num_failed   out: local solves that failed (pair kept unchanged)
 ///
@@ -589,7 +594,7 @@ bool force_resolution(const size_t num_active,
                         const size_t last = num_pairs - 1;
                         if (p != last) {
                             contact_pair_surfs(bdy_node_lid, p) = contact_pair_surfs(bdy_node_lid, last);
-                            for (size_t var = 0; var < 7; var++) {
+                            for (size_t var = 0; var < num_contact_pair_vars; var++) {
                                 contact_pair_vars(bdy_node_lid, p, var) = contact_pair_vars(bdy_node_lid, last, var);
                             }
                         }
@@ -601,6 +606,7 @@ bool force_resolution(const size_t num_active,
                     if (status == 2) {
                         // failed local solve: keep the pair as is for this iteration
                         contact_pair_vars(bdy_node_lid, p, 6) = 0.0;
+                        contact_pair_vars(bdy_node_lid, p, 7) = F_tot;   // F_prop: no new information
                         F_lcl = fmax(F_lcl, F_tot);
                         Kokkos::atomic_add(&res_counts(1), (size_t)1);
                         continue;
@@ -617,6 +623,12 @@ bool force_resolution(const size_t num_active,
                     // clamp: separated pairs stay active at F_tot = 0 and can reactivate
                     const double F_new = fmax(0.0, F_tot + omega*f_inc);
 
+                    // outer (Picard) proposal F_prop: the pair's full local correction, unclamped and
+                    // without the sharing weight (omega only damps this inner Jacobi loop).
+                    // for a pair that wants to separate it is negative and still carries how far
+                    // apart the bodies are, which AO_contact_relax_forces needs; F_new loses it
+                    const double F_prop = F_tot + f_inc;
+
                     contact_pair_vars(bdy_node_lid, p, 0) = xi;
                     contact_pair_vars(bdy_node_lid, p, 1) = eta;
                     contact_pair_vars(bdy_node_lid, p, 2) = n[0];
@@ -624,6 +636,7 @@ bool force_resolution(const size_t num_active,
                     contact_pair_vars(bdy_node_lid, p, 4) = n[2];
                     contact_pair_vars(bdy_node_lid, p, 5) = F_new;
                     contact_pair_vars(bdy_node_lid, p, 6) = f_inc;
+                    contact_pair_vars(bdy_node_lid, p, 7) = F_prop;
 
                     dF_lcl = fmax(dF_lcl, fabs(F_new - F_tot));
                     F_lcl  = fmax(F_lcl,  F_new);
@@ -770,7 +783,8 @@ void get_contact_force_change(const size_t num_bdy_nodes,
 /// ref_elem.dof_positions_1d, surf_qpt_basis is ref_surf.qpt_basis and
 /// surf_qpt_positions is SurfQuad.qpt_positions.
 ///
-/// \param settled    out: the pair set survived a sweep on its own predicted configuration
+/// \param settled       out: the pair set survived a sweep on its own predicted configuration
+/// \param pairs_changed out: any pair was added or deleted during this pass (sweeps or resolution)
 /// \param num_active out: active nodes this load step
 /// \param max_dF     out: max |f^c - f^c_used| (contact force the last solve has not seen)
 /// \param max_F      out: max |f^c|
@@ -814,6 +828,7 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
                         const CArrayKokkos<double>& contact_forces_used,
                         CArrayKokkos<double>& contact_forces,
                         bool& settled,
+                        bool& pairs_changed,
                         size_t& num_active,
                         double& max_dF,
                         double& max_F)
@@ -824,8 +839,9 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
     const double slide_tol       = 1.01;   // TODO: define once (shared with penetration_sweep)
     const double res_tol         = 1.0e-10*max_gap;   // length scale from the mesh
 
-    settled    = false;
-    num_active = 0;
+    settled       = false;
+    pairs_changed = false;
+    num_active    = 0;
 
     for (size_t sweep = 0; sweep < max_sweeps; sweep++) {
 
@@ -852,6 +868,7 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
 
         num_active = contact_counts.host(2);
         const size_t num_changes = contact_counts.host(3);
+        if (num_changes > 0) pairs_changed = true;
 
         // no pairs this load step
         if (num_active == 0) {
@@ -881,6 +898,8 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
                                                 contact_forces_used, contact_forces,
                                                 num_deleted, num_failed);
 
+        if (num_deleted > 0) pairs_changed = true;
+
         if (!converged) {
             printf("WARNING: force_resolution not converged on sweep %lu\n", (unsigned long)sweep);
         }
@@ -901,6 +920,187 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
     return;
 
 } // end AO_contact_resolve
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn contact_outer_residual
+///
+/// \brief Outer residual of one pair, r = F_prop - F_used, projected for the
+///        F >= 0 constraint: a pair the last solve saw unloaded (F_used = 0)
+///        that still wants to separate (F_prop <= 0) is correctly separated,
+///        so its residual is 0. Every other pair keeps the unclamped
+///        difference, so a loaded pair that overshoots into separation still
+///        reports how far it overshot.
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_INLINE_FUNCTION
+static double contact_outer_residual(const double F_prop, const double F_used)
+{
+    if (F_used <= 0.0 && F_prop <= 0.0) return 0.0;
+    return F_prop - F_used;
+} // end contact_outer_residual
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn AO_contact_snapshot_pair_forces
+///
+/// \brief F_used = F_tot (pair slot 8 = slot 5) for every pair. Called right
+///        before a Picard solve, next to AO_contact_snapshot_forces, so the
+///        outer relaxation knows the pair forces that solve saw.
+///
+/// \param num_active        active nodes (contact_counts.host(2))
+/// \param active_nodes      active bdy node lids
+/// \param num_pairs_in_node (num_bdy_nodes) pairs per node
+/// \param contact_pair_vars in/out: slot 8 set from slot 5
+///
+/////////////////////////////////////////////////////////////////////////////
+void AO_contact_snapshot_pair_forces(const size_t num_active,
+                                     const CArrayKokkos<size_t>& active_nodes,
+                                     const CArrayKokkos<size_t>& num_pairs_in_node,
+                                     DRaggedRightArrayKokkos<double>& contact_pair_vars)
+{
+    if (num_active == 0) return;
+
+    FOR_ALL(active_lid, 0, num_active, {
+        const size_t bdy_node_lid = active_nodes(active_lid);
+        for (size_t p = 0; p < num_pairs_in_node(bdy_node_lid); p++) {
+            contact_pair_vars(bdy_node_lid, p, 8) = contact_pair_vars(bdy_node_lid, p, 5);
+        }
+    });
+    Kokkos::fence();
+
+} // end AO_contact_snapshot_pair_forces
+
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn AO_contact_relax_forces
+///
+/// \brief Aitken relaxation of the pair forces between Picard solves.
+///
+/// One contact pass maps the force a solve saw to a proposal, F_prop = G(F_used).
+/// Applying the proposal in full (F <- G(F)) diverges whenever the true
+/// structural compliance is larger than the compliance the local solves assume
+/// (e.g. a beam in bending), and the F >= 0 clamp turns that into a 0 / F*
+/// two-cycle. Instead:
+///
+///   r_k     = F_prop - F_used                (projected, contact_outer_residual)
+///   omega_k = -omega_{k-1} (r_{k-1} . (r_k - r_{k-1})) / |r_k - r_{k-1}|^2
+///   F_{k+1} = max(0, F_used + omega_k r_k)
+///
+/// (Irons-Tuck / Kuttler-Wall). For a linear map with slope 1 - rho this gives
+/// omega = 1/rho, so the iteration adapts to the actual compliance without a
+/// tuned scale. omega is clipped to [omega_min, omega_max].
+///
+/// reset (the pair set changed this pass): the residual history no longer
+/// matches the pairs one to one, so the Aitken update is skipped and the current
+/// omega is kept. Without history (first relaxation of a load step) the current
+/// omega is used too (warm start). The current residual is stored either way, so
+/// the next call has history. r_prev travels with its pair when rows are
+/// compacted (all num_contact_pair_vars slots are copied), and new pairs start
+/// with r_prev = 0.
+///
+/// Requires: AO_contact_snapshot_pair_forces before the solve, AO_contact_resolve
+/// after it. Output: F_tot (slot 5), r_prev (slot 9), contact_forces reassembled.
+///
+/// \param num_active            active nodes (contact_counts.host(2))
+/// \param num_nodes_in_surf     nodes per surface
+/// \param active_nodes          active bdy node lids
+/// \param num_pairs_in_node     (num_bdy_nodes) pairs per node
+/// \param contact_pair_surfs    (bdy node, pair) -> target bdy_surf_lid
+/// \param bdy_nodes_in_bdy_surf (num_bdy_surfs, num_nodes_in_surf) bdy node lids
+/// \param dof_positions_1d      ref_elem.dof_positions_1d
+/// \param reset                 skip the Aitken update this call
+/// \param omega_min, omega_max  bounds on omega
+/// \param omega                 in/out: relaxation factor (AO_contact_state.aitken_omega)
+/// \param have_history          in/out: slot 9 holds a valid previous residual
+/// \param contact_pair_vars     in/out: slots 5 and 9 updated
+/// \param contact_forces        out: assembled from the relaxed pair forces
+///
+/////////////////////////////////////////////////////////////////////////////
+void AO_contact_relax_forces(const size_t num_active,
+                             const size_t num_nodes_in_surf,
+                             const CArrayKokkos<size_t>& active_nodes,
+                             const CArrayKokkos<size_t>& num_pairs_in_node,
+                             const RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
+                             const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
+                             const CArrayKokkos<double>& dof_positions_1d,
+                             const bool reset,
+                             const double omega_min,
+                             const double omega_max,
+                             double& omega,
+                             bool& have_history,
+                             DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                             CArrayKokkos<double>& contact_forces)
+{
+    // no pairs: nothing to relax, and the next pairs start a new history
+    if (num_active == 0) {
+        have_history = false;
+        return;
+    }
+
+    // ---------------------------------------------------------------
+    // Aitken sums against the previous residual
+    //   num = r_prev . (r - r_prev),  den = |r - r_prev|^2
+    // ---------------------------------------------------------------
+    if (have_history && !reset) {
+
+        double num = 0.0;
+        double den = 0.0;
+
+        Kokkos::parallel_reduce(
+            "contact_aitken_sums",
+            num_active,
+            KOKKOS_LAMBDA(const size_t active_lid, double& num_lcl, double& den_lcl)
+            {
+                const size_t bdy_node_lid = active_nodes(active_lid);
+                for (size_t p = 0; p < num_pairs_in_node(bdy_node_lid); p++) {
+                    const double r      = contact_outer_residual(contact_pair_vars(bdy_node_lid, p, 7),
+                                                                 contact_pair_vars(bdy_node_lid, p, 8));
+                    const double r_prev = contact_pair_vars(bdy_node_lid, p, 9);
+                    const double dr     = r - r_prev;
+                    num_lcl += r_prev*dr;
+                    den_lcl += dr*dr;
+                }
+            },
+            Kokkos::Sum<double>(num),
+            Kokkos::Sum<double>(den));
+
+        // unchanged residual: no slope information, keep omega
+        if (den > 0.0) {
+            omega = -omega*num/den;
+        }
+    }
+
+    // also catches a NaN omega (fmax returns the non-NaN argument)
+    omega = fmin(omega_max, fmax(omega_min, omega));
+
+    // ---------------------------------------------------------------
+    // relaxed update, store the residual for the next call
+    // ---------------------------------------------------------------
+    const double w = omega;
+
+    FOR_ALL(active_lid, 0, num_active, {
+        const size_t bdy_node_lid = active_nodes(active_lid);
+        for (size_t p = 0; p < num_pairs_in_node(bdy_node_lid); p++) {
+            const double F_used = contact_pair_vars(bdy_node_lid, p, 8);
+            const double r      = contact_outer_residual(contact_pair_vars(bdy_node_lid, p, 7), F_used);
+            contact_pair_vars(bdy_node_lid, p, 5) = fmax(0.0, F_used + w*r);
+            contact_pair_vars(bdy_node_lid, p, 9) = r;
+        }
+    });
+    Kokkos::fence();
+
+    have_history = true;
+
+    // contact_forces == sum over the relaxed pairs
+    assemble_contact_forces(num_active, num_nodes_in_surf, active_nodes, num_pairs_in_node,
+                            contact_pair_surfs, contact_pair_vars, bdy_nodes_in_bdy_surf,
+                            dof_positions_1d, contact_forces);
+
+} // end AO_contact_relax_forces
 
 
 /////////////////////////////////////////////////////////////////////////////

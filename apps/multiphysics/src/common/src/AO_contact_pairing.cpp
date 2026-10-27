@@ -1299,6 +1299,9 @@ void penetration_sweep(const size_t num_bdy_surfs,
                         contact_pair_vars(bdy_node_lid, pair, 4) = n_S[2];
                         contact_pair_vars(bdy_node_lid, pair, 5) = 0.0;        // F_tot: new pair starts unloaded
                         contact_pair_vars(bdy_node_lid, pair, 6) = this_abs;   // scratch |gap|, zeroed after the merge
+                        contact_pair_vars(bdy_node_lid, pair, 7) = 0.0;        // F_prop
+                        contact_pair_vars(bdy_node_lid, pair, 8) = 0.0;        // F_used: the last solve saw no force from it
+                        contact_pair_vars(bdy_node_lid, pair, 9) = 0.0;        // r_prev
                     }
                 } // end for slot
 
@@ -1339,7 +1342,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
                 const size_t last = num_pairs - 1;
                 if (p != last) {
                     contact_pair_surfs(bdy_node_lid, p) = contact_pair_surfs(bdy_node_lid, last);
-                    for (size_t var = 0; var < 7; var++) {
+                    for (size_t var = 0; var < num_contact_pair_vars; var++) {
                         contact_pair_vars(bdy_node_lid, p, var) = contact_pair_vars(bdy_node_lid, last, var);
                     }
                 }

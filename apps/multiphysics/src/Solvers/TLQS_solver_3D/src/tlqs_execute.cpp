@@ -234,11 +234,20 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // compliance scale: 1/K_ii underestimates the nodal compliance, > 1 under-relaxes
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const double contact_compliance_scale = 15;
+    const double contact_compliance_scale = 100;
 
     // Picard convergence on the contact force the last solve has not seen
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const double contact_force_tol = 1.0e-6;
+
+    // Aitken relaxation of the contact force between Picard solves
+    // omega_init: relaxation before any history exists (first load step); later load steps
+    //             warm start from the omega the previous load step ended with
+    // [omega_min, omega_max]: bounds on the adaptive omega
+    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const double contact_aitken_omega_init = 0.5;
+    const double contact_aitken_omega_min  = 1.0e-3;
+    const double contact_aitken_omega_max  = 1.0;
 
     if (doing_contact) {
 
@@ -434,6 +443,11 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                             AO_contact_state.contact_forces, AO_contact_state.contact_forces_used,
                             AO_contact_state.contact_counts, ref_elem.dof_positions_1d,
                             true, AO_contact_state.pairs_allocated);
+
+            // new load step: the outer force iteration starts over
+            // (omega is warm started from the previous load step)
+            AO_contact_state.aitken_have_history = false;
+            if (cycle == 0) AO_contact_state.aitken_omega = contact_aitken_omega_init;
         }
 
         // start Picard iteration loop
@@ -685,6 +699,10 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                                                AO_contact_state.contact_forces, rk);
                 AO_contact_snapshot_forces(mesh.num_bdy_nodes, AO_contact_state.contact_forces,
                                            AO_contact_state.contact_forces_used);
+
+                // the same, per pair: F_used for the outer (Aitken) residual after this solve
+                AO_contact_snapshot_pair_forces(AO_contact_state.contact_counts.host(2), AO_contact_state.active_nodes,
+                                                AO_contact_state.num_pairs_in_node, AO_contact_state.contact_pair_vars);
             }
 
             // smoothing with chebyshev polynomial
@@ -939,6 +957,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // with contact forces the solve has not seen
             // -----------------------------------------------------------
             bool   contact_settled    = true;
+            bool   contact_changed    = false;
             size_t contact_num_active = 0;
             double contact_max_dF     = 0.0;
             double contact_max_F      = 0.0;
@@ -972,7 +991,28 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                                    AO_contact_state.num_pairs_in_node, AO_contact_state.contact_pair_surfs,
                                    AO_contact_state.contact_pair_vars, AO_contact_state.num_pairs_touching_node,
                                    AO_contact_state.contact_forces_used, AO_contact_state.contact_forces,
-                                   contact_settled, contact_num_active, contact_max_dF, contact_max_F);
+                                   contact_settled, contact_changed, contact_num_active, contact_max_dF, contact_max_F);
+
+                // ---------------------------------------------------------------
+                // Aitken relaxation of the proposed pair forces before the next solve.
+                // the resolve's proposal (pair slot 7) would otherwise be applied in full,
+                // which over-corrects when the structure is more compliant than the
+                // quasi-static compliance assumes (e.g. a beam in bending)
+                //
+                // pair set changed: the residual history no longer matches the pairs
+                // one to one, so this call skips the Aitken update and keeps omega
+                // (omega reflects the structure's compliance, which a pair change doesn't reset)
+                //
+                // contact_max_dF / contact_max_F stay as reported by the resolve: the unrelaxed
+                // residual, so a small omega cannot make contact look converged early
+                // ---------------------------------------------------------------
+                AO_contact_relax_forces(contact_num_active, mesh.num_nodes_in_surf,
+                                        AO_contact_state.active_nodes, AO_contact_state.num_pairs_in_node,
+                                        AO_contact_state.contact_pair_surfs, mesh.bdy_nodes_in_bdy_surf,
+                                        ref_elem.dof_positions_1d, contact_changed,
+                                        contact_aitken_omega_min, contact_aitken_omega_max,
+                                        AO_contact_state.aitken_omega, AO_contact_state.aitken_have_history,
+                                        AO_contact_state.contact_pair_vars, AO_contact_state.contact_forces);
             }
 
             // convergence check
@@ -1010,6 +1050,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                                     (contact_max_dF <= contact_force_tol*contact_max_F);
                 std::cout << "      CONTACT: active nodes = " << contact_num_active
                           << ", settled = " << contact_settled
+                          << ", changed = " << contact_changed
+                          << ", omega = " << AO_contact_state.aitken_omega
                           << ", max |dF| = " << contact_max_dF
                           << ", max |F| = " << contact_max_F << std::endl;
             }

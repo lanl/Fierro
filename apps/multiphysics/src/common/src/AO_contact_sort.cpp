@@ -874,7 +874,7 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
     // contact pair storage: at most one pair per candidate surface
     // ---------------------------------------------------------------
     contact_pair_surfs = RaggedRightArrayKokkos<size_t>(num_surfs_in_node_boxes, "contact_pair_surfs");
-    contact_pair_vars  = DRaggedRightArrayKokkos<double>(num_surfs_in_node_boxes, 7, "contact_pair_vars");
+    contact_pair_vars  = DRaggedRightArrayKokkos<double>(num_surfs_in_node_boxes, num_contact_pair_vars, "contact_pair_vars");
     pairs_allocated    = true;
 
     // ---------------------------------------------------------------
@@ -963,7 +963,11 @@ void carry_over_pairs(const size_t num_bdy_nodes,
             for (size_t var = 0; var < 6; var++) {
                 contact_pair_vars(bdy_node_lid, num_kept, var) = old_contact_pair_vars(bdy_node_lid, p, var);
             }
-            contact_pair_vars(bdy_node_lid, num_kept, 6) = 0.0;   // f_inc
+            const double F_tot = old_contact_pair_vars(bdy_node_lid, p, 5);
+            contact_pair_vars(bdy_node_lid, num_kept, 6) = 0.0;     // f_inc
+            contact_pair_vars(bdy_node_lid, num_kept, 7) = F_tot;   // F_prop: no proposal yet this load step
+            contact_pair_vars(bdy_node_lid, num_kept, 8) = F_tot;   // F_used
+            contact_pair_vars(bdy_node_lid, num_kept, 9) = 0.0;     // r_prev (history is reset per load step)
             num_kept++;
         } // end for p
 

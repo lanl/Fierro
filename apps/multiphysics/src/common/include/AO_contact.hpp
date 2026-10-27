@@ -40,6 +40,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace mtr;
 
+// number of values stored per contact pair in contact_pair_vars (see AO_contact_state_t)
+constexpr size_t num_contact_pair_vars = 10;
+
 struct AO_contact_state_t
 {
     // ---------------------------------------------------------------
@@ -95,9 +98,20 @@ struct AO_contact_state_t
     CArrayKokkos<size_t>            active_nodes;               // (num_bdy_nodes) bdy node lids with pairs, valid to contact_counts(2)
     CArrayKokkos<size_t>            num_pairs_in_node;          // (num_bdy_nodes) current pairs per node
     RaggedRightArrayKokkos<size_t>  contact_pair_surfs;         // (bdy node, pair) -> target bdy_surf_lid
-    DRaggedRightArrayKokkos<double> contact_pair_vars;          // (bdy node, pair, 7) -> xi, eta, nx, ny, nz, F_tot, f_inc
+    DRaggedRightArrayKokkos<double> contact_pair_vars;          // (bdy node, pair, num_contact_pair_vars):
+                                                                //   0 xi, 1 eta, 2-4 n, 5 F_tot, 6 f_inc,
+                                                                //   7 F_prop: unclamped proposal F_tot + f_inc from the last force_resolution
+                                                                //   8 F_used: F_tot the last Picard solve saw
+                                                                //   9 r_prev: outer residual F_prop - F_used of the previous Picard iteration
     CArrayKokkos<size_t>            num_pairs_touching_node;    // (num_bdy_nodes) pairs involving each node (relaxation weight), recounted every sweep
     bool                            pairs_allocated = false;    // pair storage exists (set by the first AO_contact_sort)
+
+    // ---------------------------------------------------------------
+    // Aitken relaxation of the outer (Picard) contact force iteration
+    // ---------------------------------------------------------------
+    double aitken_omega        = 0.5;    // current relaxation factor
+    bool   aitken_have_history = false;  // r_prev (pair slot 9) holds a valid previous residual
+
 
     // ---------------------------------------------------------------
     // contact forces
@@ -573,9 +587,32 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
                         const CArrayKokkos<double>& contact_forces_used,
                         CArrayKokkos<double>& contact_forces,
                         bool& settled,
+                        bool& pairs_changed,
                         size_t& num_active,
                         double& max_dF,
                         double& max_F);
+
+// Aitken relaxation of the pair forces between solves (quasi-static outer iteration)
+void AO_contact_relax_forces(const size_t num_active,
+                             const size_t num_nodes_in_surf,
+                             const CArrayKokkos<size_t>& active_nodes,
+                             const CArrayKokkos<size_t>& num_pairs_in_node,
+                             const RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
+                             const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
+                             const CArrayKokkos<double>& dof_positions_1d,
+                             const bool reset,
+                             const double omega_min,
+                             const double omega_max,
+                             double& omega,
+                             bool& have_history,
+                             DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                             CArrayKokkos<double>& contact_forces);
+
+// records each pair's F_tot as F_used, the force the next solve sees
+void AO_contact_snapshot_pair_forces(const size_t num_active,
+                                     const CArrayKokkos<size_t>& active_nodes,
+                                     const CArrayKokkos<size_t>& num_pairs_in_node,
+                                     DRaggedRightArrayKokkos<double>& contact_pair_vars);
 
 // adds contact_forces to a node-indexed residual, skipping constrained dofs
 void add_contact_forces_to_residual(const size_t num_bdy_nodes,
