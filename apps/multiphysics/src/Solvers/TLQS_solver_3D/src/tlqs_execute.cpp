@@ -115,8 +115,22 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     int num_qpt_in_elem = ref_elem.qpt_grad_basis.dims(0);
     
     // element stiffness and force arrays
-    CArrayKokkos <double> K_elem(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem); /// K1 + K2
+    // K_elem stores only the packed upper triangle of each symmetric element stiffness matrix
+    // (n = 3*num_nodes_in_elem, n*(n+1)/2 entries per element, see TLQS3D::packed_row_start),
+    // which halves its memory and the bytes read by every CG product. Kel is symmetric for the
+    // supported material models (see the MATERIAL MODEL LIMITATION note in tally_elem_arrays).
+    const size_t num_dof_in_elem = 3*mesh.num_nodes_in_elem;
+    CArrayKokkos <double> K_elem(mesh.num_elems, num_dof_in_elem*(num_dof_in_elem+1)/2); /// K1 + K2 (packed upper triangle)
     CArrayKokkos <double> F_elem(mesh.num_elems,3*mesh.num_nodes_in_elem); /// F02 - F01
+
+    // dofs prescribed by the displacement BCs. The constraints are applied at the vector level in
+    // the linear solve (A = P*K*P + (I - P), see TLQS3D::constrained_K_times_x) instead of by
+    // zeroing rows and columns of K_elem, so the BC cost does not grow with the element order.
+    CArrayKokkos <bool> constrained_dof(mesh.num_nodes, 3, "constrained_dof");
+
+    // per element scratch for the element based CG products (gathered x and element result)
+    CArrayKokkos <double> x_elem(mesh.num_elems, num_dof_in_elem, "x_elem");
+    CArrayKokkos <double> y_elem(mesh.num_elems, num_dof_in_elem, "y_elem");
 
     // per element scratch used by tally_elem_arrays at each material point: the global basis
     // gradients, B1 for every node, and one row of K2. Computing these once per material point
@@ -312,8 +326,14 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             //std::cout << "ITER: " << iter << std::endl;
             const auto start_time = std::chrono::steady_clock::now();
 
-            // dirichlet (displacement) type
-            boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
+            // dirichlet (displacement) type: marks the constrained dofs and sets their increment in
+            // displacement_step (used by get_gradients below). The constraints themselves are applied
+            // in the CG solve, so K_elem / F_elem are not touched.
+            constrained_dof.set_values(false);
+            Kokkos::fence();
+            boundary_displacement(mesh, BoundaryConditions, constrained_dof, displacement_step, dt, time_value, time_start, time_end);
+            // NOTE: the commented out RBM-fix test code below still edits a full (n x n) K_elem; it would
+            // need to set constrained_dof instead now that K_elem is packed
             // TESTING FOR LINEAR VARYING TRACTION
             // Hardcoded rigid-body-mode removal (interior nodes, so not reachable via tagging)
             /* struct RBMFix { size_t node_gid; int num_constrained; int dofs[3]; };
@@ -388,7 +408,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     double det_J;
                     double PK2_curr_config[6];
                     double material_matrix[6][6];
-                    ViewCArrayKokkos<double> curr_K_elem(&K_elem(elem_id,0,0),3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
+                    ViewCArrayKokkos<double> curr_K_elem(&K_elem(elem_id,0), num_dof_in_elem*(num_dof_in_elem+1)/2);  // packed upper triangle
                     ViewCArrayKokkos<double> curr_F_elem(&F_elem(elem_id,0),3*mesh.num_nodes_in_elem);
 
                     ViewCArrayKokkos<double> curr_glob_grad(&glob_grad_elem(elem_id,0,0), mesh.num_nodes_in_elem, 3);
@@ -428,8 +448,10 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // neumann (traction) type
 
-            // dirichlet (displacement) type
-            boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
+            // dirichlet (displacement) type: nothing to do here any more. The constrained dofs were
+            // marked before the element arrays (constrained_dof), and they are applied in the CG
+            // solve below instead of by zeroing K_elem rows/columns (which is why the BCs used to be
+            // called a second time, after K_elem was rebuilt).
 
             // TESTING FOR LINEAR VARYING TRACTION
             // Hardcoded rigid-body-mode removal (interior nodes, so not reachable via tagging)
@@ -522,7 +544,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             Kokkos::fence();
 
             // getting inverse of the diagonal like diagonal jacobi
-            get_diagonal_inverse(D_inv, K_elem, mesh.num_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem, mesh.nodes_in_elem);
+            get_diagonal_inverse(D_inv, K_elem, constrained_dof, mesh.num_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem);
 
             // getting spectral bounds for chebyshev smoothing
             // We pass zk and temporary here safely because they are currently uninitialized 
@@ -531,19 +553,22 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             double beta = 0.0;
             const int cheb_degree = 3; // Choose your Chebyshev polynomial degree (typically 2 to 5)
             
-            get_chebyshev_bounds(alpha, beta, D_inv, K_elem, mesh.num_nodes, 
-                                 mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem, mesh.nodes_in_elem,
+            get_chebyshev_bounds(alpha, beta, D_inv, K_elem, constrained_dof, mesh.num_elems, mesh.num_nodes,
+                                 mesh.num_nodes_in_elem, mesh.nodes_in_elem, x_elem, y_elem,
                                  zk, temporary, 15, mesh.num_owned_nodes, mesh.shared_tally_owned_nodes); // Running 15 power iterations
 
-            // getting r0 = (02F - 01F) - K * displacement_iter_k
-            get_r0(mesh.num_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
+            // getting r0 = (02F - 01F) - A * displacement_iter_k (constrained dofs applied, see get_r0)
+            get_r0(mesh.num_elems, mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, mesh.elems_in_node, node_lid_in_elem,
+                   F_elem, K_elem, constrained_dof, displacement_iter_kp1, rk, x_elem, y_elem);
 
             // apply traction conditions
             boundary_stress(mesh, BoundaryConditions, rk, ref_surf, SurfQuad, State.node.coords_t0, dt, time_value, time_start, time_end);
+            Kokkos::fence();
+            rk.communicate();
 
             // smoothing with chebyshev polynomial
-            apply_chebyshev_preconditioner(rk, zk, D_inv, zk, delta_z, temporary, K_elem, 
-                                           mesh.num_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem, mesh.nodes_in_elem, 
+            apply_chebyshev_preconditioner(rk, zk, D_inv, zk, delta_z, temporary, K_elem, constrained_dof,
+                                           mesh.num_elems, mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, x_elem, y_elem,
                                            alpha, beta, cheb_degree);
 
             // z0 = M_inv * r0,  p0 = z0
@@ -573,7 +598,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 MPI_Allreduce(MPI_IN_PLACE, &rktzk, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                 // alpha_k = (r_k^T * z_k) / (p_k^T * K * p_k)
-                double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.num_owned_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.nodes_in_elem, K_elem, rktzk, p, temporary, mesh.shared_tally_owned_nodes);
+                double alpha_k = get_alpha(mesh.num_elems, mesh.num_nodes, mesh.num_nodes_in_elem, mesh.num_owned_nodes, mesh.nodes_in_elem,
+                                           K_elem, constrained_dof, rktzk, p, temporary, mesh.shared_tally_owned_nodes, x_elem, y_elem);
 
                 // displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
                 FOR_ALL(i, 0, (int)mesh.num_nodes,
@@ -588,8 +614,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 get_rkp1(mesh.num_nodes, rk, temporary, alpha_k, rkp1);
 
                 // smoothing with chebyshev polynomial
-                apply_chebyshev_preconditioner(rkp1, zkp1, D_inv, zk, delta_z, temporary, K_elem, 
-                                               mesh.num_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem, mesh.nodes_in_elem, 
+                apply_chebyshev_preconditioner(rkp1, zkp1, D_inv, zk, delta_z, temporary, K_elem, constrained_dof,
+                                               mesh.num_elems, mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, x_elem, y_elem,
                                                alpha, beta, cheb_degree);
 
                 // z_{k+1} = M_inv * r_{k+1}

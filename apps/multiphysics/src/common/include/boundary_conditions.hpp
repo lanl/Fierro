@@ -270,12 +270,13 @@ struct BoundaryConditionFunctions_t
         const size_t bdy_set) = NULL;
 
     // function pointer for displacement BC's
+    // constrained_dof(node_gid, dir) is set to true for every dof the BC prescribes, and
+    // displacement_step(node_gid, dir) is set to the prescribed displacement increment
     void (*displacement) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& disp_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
-        const CArrayKokkos<double>& K_elem,
-        const CArrayKokkos<double>& F_elem,
+        const CArrayKokkos<bool>& constrained_dof,
         const CArrayKokkos<double>& displacement_step,
         const double dt,
         const double time_value,

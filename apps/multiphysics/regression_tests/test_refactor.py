@@ -21,7 +21,7 @@ solver_path = os.path.join("..", "build", "app", "Fierro.exe" if IS_WINDOWS else
 # If your Windows build is in a config subfolder, use instead:
 # solver_path = os.path.join("..", "build", "app", "Release", "Fierro.exe")
 
-num_ranks = 1
+num_ranks = 2
 
 # Add names of each test
 if (num_ranks == 1):
@@ -46,7 +46,6 @@ else:
             "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", "Pressure_bc_box",\
             "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
             "SGTM_cooling_cube", "TLQS_cantilever_beam", "TLQS_triaxial"]
-
 
 #,"SGTM_cooling_cube" currently broken
 

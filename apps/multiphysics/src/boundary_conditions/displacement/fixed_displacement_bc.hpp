@@ -64,8 +64,7 @@ static void displacement(const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<double>& disp_bc_global_vars,
         const DCArrayKokkos<double>& bc_state_vars,
-        const CArrayKokkos<double>& K_elem,
-        const CArrayKokkos<double>& F_elem,
+        const CArrayKokkos<bool>& constrained_dof,
         const CArrayKokkos<double>& displacement_step,
         const double dt,
         const double time_value,
@@ -74,35 +73,10 @@ static void displacement(const swage::Mesh_t& mesh,
         const size_t bdy_node_gid,
         const size_t bdy_set)
 {
-    const size_t num_elems_in_node = mesh.elems_in_node.stride(bdy_node_gid);
-    const size_t num_nodes_in_elem = mesh.num_nodes_in_elem;
-    const size_t num_dof_in_elem   = 3 * num_nodes_in_elem;
-
-    for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
-        const size_t elem_gid = mesh.elems_in_node(bdy_node_gid, elem_lid);
-
-        // Find the local node index for bdy_node_gid within this element
-        size_t local_node_lid = num_nodes_in_elem; // sentinel
-        for (size_t a = 0; a < num_nodes_in_elem; a++) {
-            if (mesh.nodes_in_elem(elem_gid, a) == bdy_node_gid) {
-                local_node_lid = a;
-                break;
-            }
-        }
-
-        // Zero rows and columns for all 3 constrained DOFs of this node
-        for (size_t p = 0; p < 3; p++) {
-            const size_t constrained_dof = 3 * local_node_lid + p;
-
-            for (size_t col = 0; col < num_dof_in_elem; col++)
-            Kokkos::atomic_store(&K_elem(elem_gid, constrained_dof, col), 0.0);
-
-        for (size_t row = 0; row < num_dof_in_elem; row++)
-            Kokkos::atomic_store(&K_elem(elem_gid, row, constrained_dof), 0.0);
-
-            K_elem(elem_gid, constrained_dof, constrained_dof) = 1.0 / (double)num_elems_in_node;
-            F_elem(elem_gid, constrained_dof) = 0;
-        }
+    // all 3 dofs of this node are constrained, with a zero displacement increment
+    // (the solver applies the constraint in its linear solve, see constrained_dof)
+    for (size_t p = 0; p < 3; p++) {
+        constrained_dof(bdy_node_gid, p) = true;
     }
 
     return;
