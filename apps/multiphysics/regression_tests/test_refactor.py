@@ -15,46 +15,84 @@ solvers = ["Fierro"]
 
 solver_path = "../build/app/Fierro"
 
-num_ranks = 1
+# splitting by solver and capabilities for appending based on input args
+sgh = ["stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
+       "Compaction_rz", "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
+       "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", \
+       "Pressure_bc_box","vtu_read", \
+       "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box"]
 
-# Add names of each test
-if (num_ranks == 1):
-    # all tests can be run on one rank
-    tests = ["stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
-            "Compaction_rz", "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
-            "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", \
-            "Pressure_bc_box","vtu_read", \
-            "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
-            "slanted_block_bounce", "slanted_impact", "SGTM_cooling_cube", \
-            "sie_expansion_test", "confined_preload", "unconfined_preload",\
-            "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact",\
-            "TaylorAnvil_Contact", "fracture_mode_1", "fracture_mode_2", \
-            "fracture_reorientation", "TLQS_cantilever_beam", "TLQS_triaxial", \
-            "TLQS_test_ao_read"] #"TLQS_uniaxial"]
-            # TLQS_uniaxial commented out due to persistent git actions issues that can't be recreated locally: 8-28-26
-else:
-    # fracture and contact can't be run with more than one rank: 8-26-26
-    # vtu_read currently doesn't run on more than one rank: 8-26-26
-    tests = ["stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
-            "Compaction_rz", "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
-            "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", "Pressure_bc_box",\
-            "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
-            "SGTM_cooling_cube", "TLQS_cantilever_beam", "TLQS_triaxial"]
+sgh_contact = ["slanted_block_bounce", "slanted_impact", "SGTM_cooling_cube", \
+               "sie_expansion_test", "confined_preload", "unconfined_preload",\
+               "edge_flat_test", "billiards", "3by3_stack", "cylinder_contact",\
+               "TaylorAnvil_Contact"]
 
+sgh_fracture = ["fracture_mode_1", "fracture_mode_2", \
+                "fracture_reorientation"]
 
-#,"SGTM_cooling_cube" currently broken
+sgtm = ["SGTM_cooling_cube"]
 
-# Parse command line arguments
-parser = argparse.ArgumentParser(description='Run regression tests.')
-parser.add_argument('test_name', nargs='?', help='Name of the specific test to run')
+tlqs = ["TLQS_cantilever_beam", "TLQS_triaxial", \
+        "TLQS_test_ao_read"]
+
+# map solver names (used on the command line) to their test lists
+solver_tests = {
+    "sgh":          sgh,
+    "sgh_contact":  sgh_contact,
+    "sgh_fracture": sgh_fracture,
+    "sgtm":         sgtm,
+    "tlqs":         tlqs,
+}
+
+# fracture and contact can't be run with more than one rank: 8-26-26
+multi_rank_solvers = ["sgh", "sgtm", "tlqs"]
+
+# vtu_read currently doesn't run on more than one rank: 8-26-26
+# TLQS_test_ao_read only has 2 elements, easier to just remove it from multi-rank runs
+single_rank_only_tests = ["vtu_read", "TLQS_test_ao_read"]
+
+# ---------------- input args ----------------
+parser = argparse.ArgumentParser(description="Run regression tests.")
+parser.add_argument(
+    "--solver",
+    action="append",
+    choices=list(solver_tests),
+    help="Solver test group to run. Can be passed multiple times. "
+         "If omitted, all groups are run.",
+)
+parser.add_argument(
+    "--ranks",
+    type=int,
+    default=1,
+    help="Number of MPI ranks (default: 1). If > 1, only sgh, sgtm, and tlqs are run.",
+)
 args = parser.parse_args()
 
-if args.test_name:
-    if args.test_name in tests:
-        tests = [args.test_name]
-    else:
-        print(f"Error: Test '{args.test_name}' not found.")
-        sys.exit(1)
+num_ranks = args.ranks
+if num_ranks < 1:
+    parser.error("--ranks must be >= 1")
+
+# default to all solvers if none were passed
+solver_groups = args.solver if args.solver else list(solver_tests)
+
+# restrict solvers when running on more than one rank
+if num_ranks > 1:
+    skipped = [s for s in solver_groups if s not in multi_rank_solvers]
+    if skipped and args.solver:  # only warn if the user explicitly asked for them
+        print(f"Warning: {skipped} can't be run with more than one rank, skipping.")
+    solver_groups = [s for s in solver_groups if s in multi_rank_solvers]
+
+if not solver_groups:
+    parser.error("No runnable solver_groups selected for the given --ranks.")
+
+# ---------------- build test list ----------------
+tests = []
+for solver in solver_groups:
+    for test in solver_tests[solver]:
+        if num_ranks > 1 and test in single_rank_only_tests:
+            continue
+        if test not in tests:  # avoid duplicates (e.g. SGTM_cooling_cube)
+            tests.append(test)
 
 # Extract data from txt file
 def extract_state_data(filename):

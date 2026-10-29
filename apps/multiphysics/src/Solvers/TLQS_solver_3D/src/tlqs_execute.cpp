@@ -234,7 +234,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // compliance scale: 1/K_ii underestimates the nodal compliance, > 1 under-relaxes
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const double contact_compliance_scale = 100;
+    double contact_compliance_scale = 2;
 
     // Picard convergence on the contact force the last solve has not seen
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
@@ -246,7 +246,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // [omega_min, omega_max]: bounds on the adaptive omega
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const double contact_aitken_omega_init = 0.5;
-    const double contact_aitken_omega_min  = 1.0e-3;
+    const double contact_aitken_omega_min  = 0.01;
     const double contact_aitken_omega_max  = 1.0;
 
     if (doing_contact) {
@@ -686,12 +686,15 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             get_chebyshev_bounds(alpha, beta, D_inv, K_elem, mesh.num_nodes, 
                                  mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem,
                                  zk, temporary, 15, mesh.num_owned_nodes, mesh.shared_tally_owned_nodes); // Running 15 power iterations
+            contact_compliance_scale = beta;
 
             // getting r0 = (02F - 01F) - K * displacement_iter_k
             get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
 
             // apply traction conditions
             boundary_stress(mesh, BoundaryConditions, rk, ref_surf, SurfQuad, State.node.coords_t0, dt, time_value, time_start, time_end);
+            Kokkos::fence();
+            rk.communicate();
 
             // apply contact forces (free dofs only), and record what this solve sees
             if (doing_contact) {
@@ -775,7 +778,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 MPI_Allreduce(MPI_IN_PLACE, &rkp1trkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 double norm = sqrt(rkp1trkp1);
                 //std::cout << "CGM iter " << cgm_iter << " residual norm: " << norm << "\n";
-                if (norm < 1.0/*1E-10*/) {
+                if (norm < 0.01/*1E-10*/) {
                     break;
                 }
 
@@ -1056,7 +1059,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                           << ", max |F| = " << contact_max_F << std::endl;
             }
 
-            if (norm < 1E-16 && iter > 1 && contact_converged) {
+            if (norm < 1E-16 && iter > 1 && contact_converged || norm < 1E-20) {
                 std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }
@@ -1078,9 +1081,18 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         FOR_ALL(i, 0, (int)mesh.num_nodes, 
                 j, 0, 3, {
                     State.node.displacement(i,j) += displacement_step(i, j);
+        });
+        Kokkos::fence();
+
+        State.node.displacement.communicate();
+
+        // updating coords
+        FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                j, 0, 3, {
                     State.node.coords(i,j) = State.node.coords_t0(i,j) + State.node.displacement(i,j);
         });
         Kokkos::fence();
+
         /* std::cout << "NODE DISPLACEMENTS" << std::endl;
         for (int n = 0; n < mesh.num_nodes; n++) {
             for (int m = 0; m < 3; m++) {
