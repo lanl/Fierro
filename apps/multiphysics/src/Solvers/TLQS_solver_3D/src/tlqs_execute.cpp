@@ -1059,7 +1059,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                           << ", max |F| = " << contact_max_F << std::endl;
             }
 
-            if (norm < 1E-16 && iter > 1 && contact_converged || norm < 1E-20) {
+            if (norm < 1E-16 && iter > 1 && contact_converged) {
                 std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }

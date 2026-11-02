@@ -35,6 +35,8 @@ sgtm = ["SGTM_cooling_cube"]
 tlqs = ["TLQS_cantilever_beam", "TLQS_triaxial", \
         "TLQS_test_ao_read"]
 
+tlqs_contact = ["TLQS_uniaxial_contact_p1", "TLQS_uniaxial_contact_p2", "TLQS_uniaxial_contact_p3"]
+
 # map solver names (used on the command line) to their test lists
 solver_tests = {
     "sgh":          sgh,
@@ -42,6 +44,7 @@ solver_tests = {
     "sgh_fracture": sgh_fracture,
     "sgtm":         sgtm,
     "tlqs":         tlqs,
+    "tlqs_contact": tlqs_contact,
 }
 
 # fracture and contact can't be run with more than one rank: 8-26-26

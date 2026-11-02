@@ -1,0 +1,29 @@
+# vtk DataFile Version 2.0
+two linear hex blocks for contact filter testing
+ASCII
+DATASET UNSTRUCTURED_GRID
+POINTS 16 double
+0.0 0.0 0.0
+1.0 0.0 0.0
+1.0 1.0 0.0
+0.0 1.0 0.0
+0.0 0.0 1.0
+1.0 0.0 1.0
+1.0 1.0 1.0
+0.0 1.0 1.0
+0.0 0.0 1.0
+1.0 0.0 1.0
+1.0 1.0 1.0
+0.0 1.0 1.0
+0.0 0.0 2.0
+1.0 0.0 2.0
+1.0 1.0 2.0
+0.0 1.0 2.0
+
+CELLS 2 18
+8 0 1 2 3 4 5 6 7
+8 8 9 10 11 12 13 14 15
+
+CELL_TYPES 2
+12
+12
