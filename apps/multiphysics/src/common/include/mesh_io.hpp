@@ -4464,7 +4464,14 @@ public:
                                   const int node_temp_id,
                                   const int node_disp_id)
     {
-        for (auto field : output_node_states){
+        if (node_disp_id >= 0) {
+            FOR_ALL(node_gid, 0, num_nodes, {
+                node_vector_fields(node_disp_id,node_gid,0) = Node.displacement(node_gid,0);
+                node_vector_fields(node_disp_id,node_gid,1) = Node.displacement(node_gid,1);
+                node_vector_fields(node_disp_id,node_gid,2) = Node.displacement(node_gid,2);
+            });
+        }
+        /* for (auto field : output_node_states){
             switch(field){
                 // scalars
                 case node_state::mass:
@@ -4576,7 +4583,7 @@ public:
                     break;
                 // tensors
             } // end switch
-        } // end for over
+        } // end for over */
 
         
 
