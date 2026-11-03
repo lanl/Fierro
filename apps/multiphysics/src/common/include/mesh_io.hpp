@@ -5709,9 +5709,9 @@ public:
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_vectors");
         Kokkos::fence();
         FOR_ALL(node, 0, num_nodes, {
-            node_vector_fields(0, node, 0) = 0.0;
-            node_vector_fields(0, node, 1) = 0.0;
-            node_vector_fields(0, node, 2) = 0.0;
+            node_vector_fields(0, node, 0) = State.node.displacement(node, 0);
+            node_vector_fields(0, node, 1) = State.node.displacement(node, 1);
+            node_vector_fields(0, node, 2) = State.node.displacement(node, 2);
         });
         Kokkos::fence();
 
