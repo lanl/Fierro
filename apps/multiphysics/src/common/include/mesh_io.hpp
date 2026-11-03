@@ -4527,7 +4527,7 @@ public:
 
                     break;
 
-                case 0: //node_state::displacement:
+                case node_state::displacement:
                     printf("INSIDE DISP\n");
                     FOR_ALL(node_gid, 0, num_nodes, {
                         printf("INSIDE DISP FOR ALL\n");
