@@ -4530,7 +4530,7 @@ public:
                 case node_state::displacement:
 
                     FOR_ALL(node_gid, 0, num_nodes, {
-                        printf("NODE VECTOR FIELDS %f %f %f\n", node_vector_fields(node_disp_id,node_gid,0), node_vector_fields(node_disp_id,node_gid,1), node_vector_fields(node_disp_id,node_gid,2));
+                        //printf("NODE VECTOR FIELDS %f %f %f\n", node_vector_fields(node_disp_id,node_gid,0), node_vector_fields(node_disp_id,node_gid,1), node_vector_fields(node_disp_id,node_gid,2));
                         printf("NODE VECTOR FIELDS %f %f %f\n", Node.displacement(node_gid,0), Node.displacement(node_gid,1), Node.displacement(node_gid,2));
                         node_vector_fields(node_disp_id,node_gid,0) = Node.displacement(node_gid,0);
                         node_vector_fields(node_disp_id,node_gid,1) = Node.displacement(node_gid,1);
