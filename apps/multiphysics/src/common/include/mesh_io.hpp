@@ -4528,7 +4528,13 @@ public:
                     break;
 
                 case node_state::displacement:
-                    printf("INSIDE DISP\n");
+                    fprintf(stderr,
+                            "disp: size=%zu host_ptr=%p dev_ptr=%p | num_nodes=%zu num_dims=%zu disp_id=%d nvf_dim0=%zu\n",
+                            Node.displacement.size(),
+                            (void*)Node.displacement.host_pointer(),
+                            (void*)Node.displacement.device_pointer(),
+                            num_nodes, num_dims, node_disp_id,
+                            node_vector_fields.dims(0));
                     FOR_ALL(node_gid, 0, num_nodes, {
                         printf("INSIDE DISP FOR ALL\n");
                         printf("NODE VECTOR FIELDS %f %f %f\n", node_vector_fields(node_disp_id,node_gid,0), node_vector_fields(node_disp_id,node_gid,1), node_vector_fields(node_disp_id,node_gid,2));
