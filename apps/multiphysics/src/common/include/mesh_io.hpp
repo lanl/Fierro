@@ -4464,6 +4464,7 @@ public:
                                   const int node_temp_id,
                                   const int node_disp_id)
     {
+        printf("CONCAT NODAL FIELDS VARS INSIDE: %d   %d   %d   %d   %d   %d   %d\n");
         for (auto field : output_node_states){
             switch(field){
                 // scalars
@@ -5705,6 +5706,8 @@ public:
         // save the nodal fields to an array for exporting to graphics files
         DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
+
+        printf("CONCAT NODAL FIELDS VARS OUTSIDE: %d   %d   %d   %d   %d   %d   %d\n");
 
         concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
