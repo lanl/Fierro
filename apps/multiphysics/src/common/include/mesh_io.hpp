@@ -5707,7 +5707,13 @@ public:
         // save the nodal fields to an array for exporting to graphics files
         DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_vectors");
-        printf("NUM NODE VECTOR VARS: %d\n", num_node_vector_vars);
+        Kokkos::fence();
+        FOR_ALL(node, 0, num_nodes, {
+            node_vector_fields(0, node, 0) = 0.0;
+            node_vector_fields(0, node, 1) = 0.0;
+            node_vector_fields(0, node, 2) = 0.0;
+        });
+        Kokkos::fence();
 
         concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
