@@ -5699,7 +5699,7 @@ public:
         Kokkos::fence();
         elem_scalar_fields.update_host();
         elem_tensor_fields.update_host();
-
+        Kokkos::fence();
 
         // ************************
         //  Build the nodal fields 
@@ -5708,6 +5708,7 @@ public:
         // save the nodal fields to an array for exporting to graphics files
         DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
+        Kokkos::fence();
 
         concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
