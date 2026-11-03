@@ -4464,18 +4464,20 @@ public:
                                   const int node_temp_id,
                                   const int node_disp_id)
     {
-        printf("CONCAT NODAL FIELDS VARS INSIDE: %d   %d   %d   %d   %d   %d   %d\n", node_mass_id, node_vel_id, node_accel_id, node_coord_id, node_grad_level_set_id, node_temp_id, node_disp_id);
         for (auto field : output_node_states){
+            printf("INSIDE FOR LOOP\n");
             switch(field){
+                printf("INSIDE SWITCH CASE\n");
                 // scalars
                 case node_state::mass:
-
+                    printf("INSIDE MASS\n");
                     FOR_ALL(node_gid, 0, num_nodes, {
                         node_scalar_fields(node_mass_id, node_gid) = Node.mass(node_gid);
                     });
 
                     break;
                 case node_state::temp:
+                    printf("INSIDE TEMP\n");
                     FOR_ALL(node_gid, 0, num_nodes, {
                         node_scalar_fields(node_temp_id, node_gid) = Node.temp(node_gid);
                     });
@@ -4485,7 +4487,7 @@ public:
                 // vector fields
 
                 case node_state::coords:
-
+                    printf("INSIDE COORDS\n");
                     FOR_ALL(node_gid, 0, num_nodes, {
 
                         node_vector_fields(node_coord_id, node_gid, 0) = Node.coords(node_gid, 0);
@@ -4501,7 +4503,7 @@ public:
 
                     break;
                 case node_state::velocity:
-
+                    printf("INSIDE VEL\n");
                     FOR_ALL(node_gid, 0, num_nodes, {
 
                         // velocity, var is node_vel_id 
@@ -4529,7 +4531,7 @@ public:
                     break;
 
                 case node_state::displacement:
-
+                    printf("INSIDE DISP\n");
                     FOR_ALL(node_gid, 0, num_nodes, {
                         node_vector_fields(node_disp_id,node_gid,0) = Node.displacement(node_gid,0);
                         node_vector_fields(node_disp_id,node_gid,1) = Node.displacement(node_gid,1);
@@ -4538,11 +4540,12 @@ public:
                     break;
 
                 case node_state::coords_t0:
+                    printf("INSIDE COORDS_T0\n");
                     break;
                     
                     
                 case node_state::gradient_level_set:
-
+                    printf("INSIDE GRAD LEVEL SET\n");
                     FOR_ALL(node_gid, 0, num_nodes, {
 
                         // velocity, var is node_vel_id 
@@ -4561,13 +4564,17 @@ public:
                 
                 // -- not used vars
                 case node_state::force:
+                    printf("INSIDE FORCE\n");
                     break;
 
                 // heat transer vars
                 case node_state::heat_transfer:
+                    printf("INSIDE HEAT TRAN\n");
                     break;
                 // tensors
+                printf("END OF SWITCH\n");
             } // end switch
+            printf("END OF FOR iter\n");
         } // end for over
 
         
@@ -5706,8 +5713,6 @@ public:
         // save the nodal fields to an array for exporting to graphics files
         DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
-
-        printf("CONCAT NODAL FIELDS VARS OUTSIDE: %d   %d   %d   %d   %d   %d   %d\n", node_mass_id, node_vel_id, node_accel_id, node_coord_id, node_grad_level_set_id, node_temp_id, node_disp_id);
 
         concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
