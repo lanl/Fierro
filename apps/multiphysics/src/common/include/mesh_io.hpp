@@ -2821,7 +2821,7 @@ public:
         DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
       
-        concatenate_nodal_fields(State,//State.node,
+        concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
                                  node_vector_fields,
                                  //SimulationParamaters.OutputOptions.output_node_state,
@@ -4449,7 +4449,7 @@ public:
     /// \param mat_id the index for the material
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void concatenate_nodal_fields(State_t& state,//const node_t& Node,
+    void concatenate_nodal_fields(const node_t& Node,
                                   DCArrayKokkos<double>& node_scalar_fields,
                                   DCArrayKokkos<double>& node_vector_fields,
                                   //std::vector<node_state>& output_node_states,
@@ -4466,9 +4466,9 @@ public:
     {
         if (node_disp_id >= 0) {
             FOR_ALL(node_gid, 0, num_nodes, {
-                node_vector_fields(node_disp_id,node_gid,1) = state.node.displacement(node_gid,1);
-                node_vector_fields(node_disp_id,node_gid,0) = state.node.displacement(node_gid,0);
-                node_vector_fields(node_disp_id,node_gid,2) = state.node.displacement(node_gid,2);
+                node_vector_fields(node_disp_id,node_gid,0) = Node.displacement(node_gid,0);
+                node_vector_fields(node_disp_id,node_gid,1) = Node.displacement(node_gid,1);
+                node_vector_fields(node_disp_id,node_gid,2) = Node.displacement(node_gid,2);
             });
         }
         /* for (auto field : output_node_states){
@@ -5718,7 +5718,7 @@ public:
         // ************************
 
         // save the nodal fields to an array for exporting to graphics files
-        DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
+        DCArrayKokkos<double> node_scalar_fields(1/*num_node_scalar_vars*/, num_nodes, "node_scalars");
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_vectors");
         Kokkos::fence();
         FOR_ALL(node, 0, num_nodes, {
@@ -5729,7 +5729,7 @@ public:
         Kokkos::fence();
         printf("GOING INTO CONCAT NODAL FIELDS\n");
 
-        concatenate_nodal_fields(State,//State.node,
+        concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
                                  node_vector_fields,
                                  //SimulationParamaters.OutputOptions.output_node_state,
