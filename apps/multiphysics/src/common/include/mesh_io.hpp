@@ -2821,7 +2821,7 @@ public:
         DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
       
-        concatenate_nodal_fields(State.node.displacement,
+        concatenate_nodal_fields(//State.node.displacement,
                                  //node_scalar_fields,
                                  node_vector_fields);
                                  //SimulationParamaters.OutputOptions.output_node_state,
@@ -4449,7 +4449,7 @@ public:
     /// \param mat_id the index for the material
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void concatenate_nodal_fields(const MPICArrayKokkos<double>& displacement,//const node_t& Node,
+    void concatenate_nodal_fields(//const MPICArrayKokkos<double>& displacement,//const node_t& Node,
                                   //DCArrayKokkos<double>& node_scalar_fields,
                                   DCArrayKokkos<double>& node_vector_fields)
                                   //std::vector<node_state>& output_node_states,
@@ -4466,9 +4466,9 @@ public:
     {
         //if (node_disp_id >= 0) {
             FOR_ALL(node_gid, 0, 496, {
-                node_vector_fields(0,node_gid,0) = displacement(node_gid,0);
-                node_vector_fields(0,node_gid,1) = displacement(node_gid,1);
-                node_vector_fields(0,node_gid,2) = displacement(node_gid,2);
+                node_vector_fields(0,node_gid,0) = 0.0;
+                node_vector_fields(0,node_gid,1) = 0.0;
+                node_vector_fields(0,node_gid,2) = 0.0;
             });
         //}
         /* for (auto field : output_node_states){
@@ -5729,7 +5729,7 @@ public:
         Kokkos::fence();
         printf("GOING INTO CONCAT NODAL FIELDS\n");
 
-        concatenate_nodal_fields(State.node.displacement,
+        concatenate_nodal_fields(//State.node.displacement,
                                  //node_scalar_fields,
                                  node_vector_fields);
                                  //SimulationParamaters.OutputOptions.output_node_state,
