@@ -4451,7 +4451,7 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void concatenate_nodal_fields(//const MPICArrayKokkos<double>& displacement,//const node_t& Node,
                                   //DCArrayKokkos<double>& node_scalar_fields,
-                                  DCArrayKokkos<double>& node_vector_fields)
+                                  const DCArrayKokkos<double>& node_vector_fields)
                                   //std::vector<node_state>& output_node_states,
                                   //double dt,
                                   //const size_t num_nodes,
