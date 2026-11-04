@@ -2826,7 +2826,7 @@ public:
                                  node_vector_fields,
                                  //SimulationParamaters.OutputOptions.output_node_state,
                                  //dt,
-                                 num_nodes,
+                                 num_nodes);
                                  //num_dims,
                                  //node_mass_id,
                                  //node_vel_id,
@@ -2834,7 +2834,7 @@ public:
                                  //node_coord_id,
                                  //node_grad_level_set_id,
                                  //node_temp_id,
-                                 node_disp_id);
+                                 //node_disp_id);
                                  
 
         Kokkos::fence();
@@ -4454,7 +4454,7 @@ public:
                                   DCArrayKokkos<double>& node_vector_fields,
                                   //std::vector<node_state>& output_node_states,
                                   //double dt,
-                                  const size_t num_nodes,
+                                  const size_t num_nodes)
                                   //const size_t num_dims,
                                   //const int node_mass_id,
                                   //const int node_vel_id,
@@ -4462,15 +4462,15 @@ public:
                                   //const int node_coord_id,
                                   //const int node_grad_level_set_id,
                                   //const int node_temp_id,
-                                  const int node_disp_id)
+                                  //const int node_disp_id)
     {
-        if (node_disp_id >= 0) {
+        //if (node_disp_id >= 0) {
             FOR_ALL(node_gid, 0, num_nodes, {
-                node_vector_fields(node_disp_id,node_gid,0) = Node.displacement(node_gid,0);
-                node_vector_fields(node_disp_id,node_gid,1) = Node.displacement(node_gid,1);
-                node_vector_fields(node_disp_id,node_gid,2) = Node.displacement(node_gid,2);
+                node_vector_fields(0,node_gid,0) = Node.displacement(node_gid,0);
+                node_vector_fields(0,node_gid,1) = Node.displacement(node_gid,1);
+                node_vector_fields(0,node_gid,2) = Node.displacement(node_gid,2);
             });
-        }
+        //}
         /* for (auto field : output_node_states){
             switch(field){
                 // scalars
@@ -5734,7 +5734,7 @@ public:
                                  node_vector_fields,
                                  //SimulationParamaters.OutputOptions.output_node_state,
                                  //dt,
-                                 num_nodes,
+                                 num_nodes);
                                  //num_dims,
                                  //node_mass_id,
                                  //node_vel_id,
@@ -5742,7 +5742,7 @@ public:
                                  //node_coord_id,
                                  //node_grad_level_set_id,
                                  //node_temp_id,
-                                 node_disp_id);
+                                 //node_disp_id);
 
 
         Kokkos::fence();
