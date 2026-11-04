@@ -2823,10 +2823,10 @@ public:
       
         concatenate_nodal_fields(State.node,
                                  //node_scalar_fields,
-                                 node_vector_fields,
+                                 node_vector_fields);
                                  //SimulationParamaters.OutputOptions.output_node_state,
                                  //dt,
-                                 num_nodes);
+                                 //num_nodes,
                                  //num_dims,
                                  //node_mass_id,
                                  //node_vel_id,
@@ -4451,10 +4451,10 @@ public:
     /////////////////////////////////////////////////////////////////////////////
     void concatenate_nodal_fields(const node_t& Node,
                                   //DCArrayKokkos<double>& node_scalar_fields,
-                                  DCArrayKokkos<double>& node_vector_fields,
+                                  DCArrayKokkos<double>& node_vector_fields)
                                   //std::vector<node_state>& output_node_states,
                                   //double dt,
-                                  const size_t num_nodes)
+                                  //const size_t num_nodes,
                                   //const size_t num_dims,
                                   //const int node_mass_id,
                                   //const int node_vel_id,
@@ -4465,7 +4465,7 @@ public:
                                   //const int node_disp_id)
     {
         //if (node_disp_id >= 0) {
-            FOR_ALL(node_gid, 0, num_nodes, {
+            FOR_ALL(node_gid, 0, 496, {
                 node_vector_fields(0,node_gid,0) = Node.displacement(node_gid,0);
                 node_vector_fields(0,node_gid,1) = Node.displacement(node_gid,1);
                 node_vector_fields(0,node_gid,2) = Node.displacement(node_gid,2);
@@ -5731,10 +5731,10 @@ public:
 
         concatenate_nodal_fields(State.node,
                                  //node_scalar_fields,
-                                 node_vector_fields,
+                                 node_vector_fields);
                                  //SimulationParamaters.OutputOptions.output_node_state,
                                  //dt,
-                                 num_nodes);
+                                 //num_nodes,
                                  //num_dims,
                                  //node_mass_id,
                                  //node_vel_id,
