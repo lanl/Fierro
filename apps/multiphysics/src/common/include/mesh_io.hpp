@@ -5727,6 +5727,7 @@ public:
             node_vector_fields(0, node, 2) = State.node.displacement(node, 2);
         });
         Kokkos::fence();
+        printf("GOING INTO CONCAT NODAL FIELDS\n");
 
         concatenate_nodal_fields(State.node,
                                  node_scalar_fields,
