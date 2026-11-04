@@ -4475,12 +4475,19 @@ public:
                 (void*)node_vector_fields.host_pointer(),
                 (void*)node_vector_fields.device_pointer());
         fflush(stderr);
+        Kokkos::parallel_for(
+            Kokkos::RangePolicy<>(0, 496),
+            KOKKOS_LAMBDA(const int node_gid) {
+                node_vector_fields(0, node_gid, 0) = 0.0;
+                node_vector_fields(0, node_gid, 1) = 0.0;
+                node_vector_fields(0, node_gid, 2) = 0.0;
+            });
         //if (node_disp_id >= 0) {
-            FOR_ALL(node_gid, 0, 496, {
+            /* FOR_ALL(node_gid, 0, 496, {
                 node_vector_fields(0,node_gid,0) = 0.0;
                 node_vector_fields(0,node_gid,1) = 0.0;
                 node_vector_fields(0,node_gid,2) = 0.0;
-            });
+            }); */
         //}
         /* for (auto field : output_node_states){
             switch(field){
