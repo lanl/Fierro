@@ -5727,7 +5727,16 @@ public:
             node_vector_fields(0, node, 2) = State.node.displacement(node, 2);
         });
         Kokkos::fence();
-        printf("GOING INTO CONCAT NODAL FIELDS\n");
+        fprintf(stderr,
+                "node_vector_fields: order=%zu size=%zu dims=(%zu, %zu, %zu) host=%p dev=%p\n",
+                (size_t)node_vector_fields.order(),
+                (size_t)node_vector_fields.size(),
+                (size_t)node_vector_fields.dims(0),
+                (size_t)node_vector_fields.dims(1),
+                (size_t)node_vector_fields.dims(2),
+                (void*)node_vector_fields.host_pointer(),
+                (void*)node_vector_fields.device_pointer());
+        fflush(stderr);
 
         concatenate_nodal_fields(//State.node.displacement,
                                  //node_scalar_fields,
