@@ -2822,18 +2822,18 @@ public:
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
       
         concatenate_nodal_fields(State.node,
-                                 node_scalar_fields,
+                                 //node_scalar_fields,
                                  node_vector_fields,
                                  //SimulationParamaters.OutputOptions.output_node_state,
-                                 dt,
+                                 //dt,
                                  num_nodes,
-                                 num_dims,
-                                 node_mass_id,
-                                 node_vel_id,
-                                 node_accel_id,
-                                 node_coord_id,
-                                 node_grad_level_set_id,
-                                 node_temp_id,
+                                 //num_dims,
+                                 //node_mass_id,
+                                 //node_vel_id,
+                                 //node_accel_id,
+                                 //node_coord_id,
+                                 //node_grad_level_set_id,
+                                 //node_temp_id,
                                  node_disp_id);
                                  
 
@@ -4450,18 +4450,18 @@ public:
     ///
     /////////////////////////////////////////////////////////////////////////////
     void concatenate_nodal_fields(const node_t& Node,
-                                  DCArrayKokkos<double>& node_scalar_fields,
+                                  //DCArrayKokkos<double>& node_scalar_fields,
                                   DCArrayKokkos<double>& node_vector_fields,
                                   //std::vector<node_state>& output_node_states,
-                                  double dt,
+                                  //double dt,
                                   const size_t num_nodes,
-                                  const size_t num_dims,
-                                  const int node_mass_id,
-                                  const int node_vel_id,
-                                  const int node_accel_id,
-                                  const int node_coord_id,
-                                  const int node_grad_level_set_id,
-                                  const int node_temp_id,
+                                  //const size_t num_dims,
+                                  //const int node_mass_id,
+                                  //const int node_vel_id,
+                                  //const int node_accel_id,
+                                  //const int node_coord_id,
+                                  //const int node_grad_level_set_id,
+                                  //const int node_temp_id,
                                   const int node_disp_id)
     {
         if (node_disp_id >= 0) {
@@ -5718,7 +5718,7 @@ public:
         // ************************
 
         // save the nodal fields to an array for exporting to graphics files
-        DCArrayKokkos<double> node_scalar_fields(1/*num_node_scalar_vars*/, num_nodes, "node_scalars");
+        DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_vectors");
         Kokkos::fence();
         FOR_ALL(node, 0, num_nodes, {
@@ -5730,18 +5730,18 @@ public:
         printf("GOING INTO CONCAT NODAL FIELDS\n");
 
         concatenate_nodal_fields(State.node,
-                                 node_scalar_fields,
+                                 //node_scalar_fields,
                                  node_vector_fields,
                                  //SimulationParamaters.OutputOptions.output_node_state,
-                                 dt,
+                                 //dt,
                                  num_nodes,
-                                 num_dims,
-                                 node_mass_id,
-                                 node_vel_id,
-                                 node_accel_id,
-                                 node_coord_id,
-                                 node_grad_level_set_id,
-                                 node_temp_id,
+                                 //num_dims,
+                                 //node_mass_id,
+                                 //node_vel_id,
+                                 //node_accel_id,
+                                 //node_coord_id,
+                                 //node_grad_level_set_id,
+                                 //node_temp_id,
                                  node_disp_id);
 
 
