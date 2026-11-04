@@ -4464,6 +4464,17 @@ public:
                                   //const int node_temp_id,
                                   //const int node_disp_id)
     {
+        printf("INSIDE CONCAT NODAL FIELDS BUT BEFORE FOR ALL\n");
+        fprintf(stderr,
+                "node_vector_fields: order=%zu size=%zu dims=(%zu, %zu, %zu) host=%p dev=%p\n",
+                (size_t)node_vector_fields.order(),
+                (size_t)node_vector_fields.size(),
+                (size_t)node_vector_fields.dims(0),
+                (size_t)node_vector_fields.dims(1),
+                (size_t)node_vector_fields.dims(2),
+                (void*)node_vector_fields.host_pointer(),
+                (void*)node_vector_fields.device_pointer());
+        fflush(stderr);
         //if (node_disp_id >= 0) {
             FOR_ALL(node_gid, 0, 496, {
                 node_vector_fields(0,node_gid,0) = 0.0;
@@ -5727,6 +5738,7 @@ public:
             node_vector_fields(0, node, 2) = State.node.displacement(node, 2);
         });
         Kokkos::fence();
+        printf("BEFORE CONCAT NODAL FIELDS\n");
         fprintf(stderr,
                 "node_vector_fields: order=%zu size=%zu dims=(%zu, %zu, %zu) host=%p dev=%p\n",
                 (size_t)node_vector_fields.order(),
