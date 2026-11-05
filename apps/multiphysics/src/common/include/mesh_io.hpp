@@ -2821,9 +2821,9 @@ public:
         DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
         DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
       
-        concatenate_nodal_fields(//State.node.displacement,
+        concatenate_nodal_fields();//State.node.displacement,
                                  //node_scalar_fields,
-                                 node_vector_fields);
+                                 //node_vector_fields);
                                  //SimulationParamaters.OutputOptions.output_node_state,
                                  //dt,
                                  //num_nodes,
@@ -4449,9 +4449,9 @@ public:
     /// \param mat_id the index for the material
     ///
     /////////////////////////////////////////////////////////////////////////////
-    void concatenate_nodal_fields(//const MPICArrayKokkos<double>& displacement,//const node_t& Node,
+    void concatenate_nodal_fields()//const MPICArrayKokkos<double>& displacement,//const node_t& Node,
                                   //DCArrayKokkos<double>& node_scalar_fields,
-                                  const DCArrayKokkos<double>& node_vector_fields)
+                                  //const DCArrayKokkos<double>& node_vector_fields)
                                   //std::vector<node_state>& output_node_states,
                                   //double dt,
                                   //const size_t num_nodes,
@@ -4465,7 +4465,7 @@ public:
                                   //const int node_disp_id)
     {
         printf("INSIDE CONCAT NODAL FIELDS BUT BEFORE FOR ALL\n");
-        fprintf(stderr,
+        /* fprintf(stderr,
                 "node_vector_fields: order=%zu size=%zu dims=(%zu, %zu, %zu) host=%p dev=%p\n",
                 (size_t)node_vector_fields.order(),
                 (size_t)node_vector_fields.size(),
@@ -4474,7 +4474,7 @@ public:
                 (size_t)node_vector_fields.dims(2),
                 (void*)node_vector_fields.host_pointer(),
                 (void*)node_vector_fields.device_pointer());
-        fflush(stderr);
+        fflush(stderr); */
         Kokkos::parallel_for(
             Kokkos::RangePolicy<>(0, 496),
             KOKKOS_LAMBDA(const int node_gid) {
@@ -5758,9 +5758,9 @@ public:
                 (void*)node_vector_fields.device_pointer());
         fflush(stderr);
 
-        concatenate_nodal_fields(//State.node.displacement,
+        concatenate_nodal_fields();//State.node.displacement,
                                  //node_scalar_fields,
-                                 node_vector_fields);
+                                 //node_vector_fields);
                                  //SimulationParamaters.OutputOptions.output_node_state,
                                  //dt,
                                  //num_nodes,
