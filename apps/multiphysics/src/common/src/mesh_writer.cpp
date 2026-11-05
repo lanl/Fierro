@@ -842,20 +842,20 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
     DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
     DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
   
-    concatenate_nodal_fields();//State.node.displacement,
-                             //node_scalar_fields,
-                             //node_vector_fields);
-                             //SimulationParamaters.OutputOptions.output_node_state,
-                             //dt,
-                             //num_nodes,
-                             //num_dims,
-                             //node_mass_id,
-                             //node_vel_id,
-                             //node_accel_id,
-                             //node_coord_id,
-                             //node_grad_level_set_id,
-                             //node_temp_id,
-                             //node_disp_id);
+    concatenate_nodal_fields(State.node.displacement,
+                             node_scalar_fields,
+                             node_vector_fields,
+                             SimulationParamaters.OutputOptions.output_node_state,
+                             dt,
+                             num_nodes,
+                             num_dims,
+                             node_mass_id,
+                             node_vel_id,
+                             node_accel_id,
+                             node_coord_id,
+                             node_grad_level_set_id,
+                             node_temp_id,
+                             node_disp_id);
                              
 
     Kokkos::fence();
@@ -2474,20 +2474,20 @@ void MeshWriter::concatenate_mat_fields(const MaterialPoint_t& MaterialPoints,
 /// \param mat_id the index for the material
 ///
 /////////////////////////////////////////////////////////////////////////////
-void MeshWriter::concatenate_nodal_fields()//const MPICArrayKokkos<double>& displacement,//const node_t& Node,
-                              //DCArrayKokkos<double>& node_scalar_fields,
-                              //const DCArrayKokkos<double>& node_vector_fields)
-                              //std::vector<node_state>& output_node_states,
-                              //double dt,
-                              //const size_t num_nodes,
-                              //const size_t num_dims,
-                              //const int node_mass_id,
-                              //const int node_vel_id,
-                              //const int node_accel_id,
-                              //const int node_coord_id,
-                              //const int node_grad_level_set_id,
-                              //const int node_temp_id,
-                              //const int node_disp_id)
+void MeshWriter::concatenate_nodal_fields(const MPICArrayKokkos<double>& displacement,//const node_t& Node,
+                                          DCArrayKokkos<double>& node_scalar_fields,
+                                          const DCArrayKokkos<double>& node_vector_fields,
+                                          std::vector<node_state>& output_node_states,
+                                          double dt,
+                                          const size_t num_nodes,
+                                          const size_t num_dims,
+                                          const int node_mass_id,
+                                          const int node_vel_id,
+                                          const int node_accel_id,
+                                          const int node_coord_id,
+                                          const int node_grad_level_set_id,
+                                          const int node_temp_id,
+                                          const int node_disp_id)
 {
     printf("INSIDE CONCAT NODAL FIELDS BUT BEFORE FOR ALL\n");
     /* fprintf(stderr,
@@ -3785,20 +3785,20 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
             (void*)node_vector_fields.device_pointer());
     fflush(stderr);
 
-    concatenate_nodal_fields();//State.node.displacement,
-                             //node_scalar_fields,
-                             //node_vector_fields);
-                             //SimulationParamaters.OutputOptions.output_node_state,
-                             //dt,
-                             //num_nodes,
-                             //num_dims,
-                             //node_mass_id,
-                             //node_vel_id,
-                             //node_accel_id,
-                             //node_coord_id,
-                             //node_grad_level_set_id,
-                             //node_temp_id,
-                             //node_disp_id);
+    concatenate_nodal_fields(State.node.displacement,
+                             node_scalar_fields,
+                             node_vector_fields,
+                             SimulationParamaters.OutputOptions.output_node_state,
+                             dt,
+                             num_nodes,
+                             num_dims,
+                             node_mass_id,
+                             node_vel_id,
+                             node_accel_id,
+                             node_coord_id,
+                             node_grad_level_set_id,
+                             node_temp_id,
+                             node_disp_id);
 
 
     Kokkos::fence();

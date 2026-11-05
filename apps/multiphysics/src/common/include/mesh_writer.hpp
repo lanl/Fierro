@@ -144,7 +144,20 @@ public:
                                 const int mat_specific_heat_id,
                                 const int mat_heat_flux_id);
 
-    void concatenate_nodal_fields();
+    void concatenate_nodal_fields(const MPICArrayKokkos<double>& displacement,//const node_t& Node,
+                                  DCArrayKokkos<double>& node_scalar_fields,
+                                  const DCArrayKokkos<double>& node_vector_fields,
+                                  std::vector<node_state>& output_node_states,
+                                  double dt,
+                                  const size_t num_nodes,
+                                  const size_t num_dims,
+                                  const int node_mass_id,
+                                  const int node_vel_id,
+                                  const int node_accel_id,
+                                  const int node_coord_id,
+                                  const int node_grad_level_set_id,
+                                  const int node_temp_id,
+                                  const int node_disp_id);
 
     void write_vtu(
         const ViewCArray<double>& node_coords_host,
