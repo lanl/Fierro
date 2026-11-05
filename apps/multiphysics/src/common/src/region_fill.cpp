@@ -39,7 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "state.hpp"
 #include "region.hpp"
 #include "initial_conditions.hpp"
-#include "mesh_io.hpp"
+#include "mesh_builder.hpp"  // get_id_device
 #include "string_utils.hpp"
 #include "geometry_new.hpp"
 

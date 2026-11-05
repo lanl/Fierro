@@ -20,6 +20,9 @@ message("\n ****** ADDING COMMON SOURCE FILES ******** \n ")
 set(COMMON_Files 
 ${CMAKE_CURRENT_SOURCE_DIR}/src/region_fill.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry_new.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/mesh_reader.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/mesh_builder.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/src/mesh_writer.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/stl_to_volfrac.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/AO_contact_sort.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/src/AO_contact_pairing.cpp
