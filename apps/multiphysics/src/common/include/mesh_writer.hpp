@@ -144,7 +144,7 @@ public:
                                 const int mat_specific_heat_id,
                                 const int mat_heat_flux_id);
 
-    void concatenate_nodal_fields(const MPICArrayKokkos<double>& displacement,//const node_t& Node,
+    void concatenate_nodal_fields(const node_t& Node,
                                   DCArrayKokkos<double>& node_scalar_fields,
                                   const DCArrayKokkos<double>& node_vector_fields,
                                   std::vector<node_state>& output_node_states,

@@ -842,7 +842,7 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
     DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
     DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
   
-    concatenate_nodal_fields(State.node.displacement,
+    concatenate_nodal_fields(State.node,
                              node_scalar_fields,
                              node_vector_fields,
                              SimulationParamaters.OutputOptions.output_node_state,
@@ -2474,7 +2474,7 @@ void MeshWriter::concatenate_mat_fields(const MaterialPoint_t& MaterialPoints,
 /// \param mat_id the index for the material
 ///
 /////////////////////////////////////////////////////////////////////////////
-void MeshWriter::concatenate_nodal_fields(const MPICArrayKokkos<double>& displacement,//const node_t& Node,
+void MeshWriter::concatenate_nodal_fields(const node_t& Node,
                                           DCArrayKokkos<double>& node_scalar_fields,
                                           const DCArrayKokkos<double>& node_vector_fields,
                                           std::vector<node_state>& output_node_states,
@@ -2489,33 +2489,7 @@ void MeshWriter::concatenate_nodal_fields(const MPICArrayKokkos<double>& displac
                                           const int node_temp_id,
                                           const int node_disp_id)
 {
-    printf("INSIDE CONCAT NODAL FIELDS BUT BEFORE FOR ALL\n");
-    /* fprintf(stderr,
-            "node_vector_fields: order=%zu size=%zu dims=(%zu, %zu, %zu) host=%p dev=%p\n",
-            (size_t)node_vector_fields.order(),
-            (size_t)node_vector_fields.size(),
-            (size_t)node_vector_fields.dims(0),
-            (size_t)node_vector_fields.dims(1),
-            (size_t)node_vector_fields.dims(2),
-            (void*)node_vector_fields.host_pointer(),
-            (void*)node_vector_fields.device_pointer());
-    fflush(stderr); */
-    Kokkos::parallel_for(
-        Kokkos::RangePolicy<>(0, 496),
-        KOKKOS_LAMBDA(const int node_gid) {
-            /* node_vector_fields(0, node_gid, 0) = 0.0;
-            node_vector_fields(0, node_gid, 1) = 0.0;
-            node_vector_fields(0, node_gid, 2) = 0.0; */
-            double a = 3.0;
-        });
-    //if (node_disp_id >= 0) {
-        /* FOR_ALL(node_gid, 0, 496, {
-            node_vector_fields(0,node_gid,0) = 0.0;
-            node_vector_fields(0,node_gid,1) = 0.0;
-            node_vector_fields(0,node_gid,2) = 0.0;
-        }); */
-    //}
-    /* for (auto field : output_node_states){
+    for (auto field : output_node_states){
         switch(field){
             // scalars
             case node_state::mass:
@@ -2579,17 +2553,7 @@ void MeshWriter::concatenate_nodal_fields(const MPICArrayKokkos<double>& displac
                 break;
 
             case node_state::displacement:
-                fprintf(stderr,
-                        "disp: size=%zu host_ptr=%p dev_ptr=%p | num_nodes=%zu num_dims=%zu disp_id=%d nvf_dim0=%zu\n",
-                        Node.displacement.size(),
-                        (void*)Node.displacement.host_pointer(),
-                        (void*)Node.displacement.device_pointer(),
-                        num_nodes, num_dims, node_disp_id,
-                        node_vector_fields.dims(0));
                 FOR_ALL(node_gid, 0, num_nodes, {
-                    printf("INSIDE DISP FOR ALL\n");
-                    printf("NODE VECTOR FIELDS %f %f %f\n", node_vector_fields(node_disp_id,node_gid,0), node_vector_fields(node_disp_id,node_gid,1), node_vector_fields(node_disp_id,node_gid,2));
-                    printf("NODE VECTOR FIELDS %f %f %f\n", Node.displacement(node_gid,0), Node.displacement(node_gid,1), Node.displacement(node_gid,2));
                     node_vector_fields(node_disp_id,node_gid,0) = Node.displacement(node_gid,0);
                     node_vector_fields(node_disp_id,node_gid,1) = Node.displacement(node_gid,1);
                     node_vector_fields(node_disp_id,node_gid,2) = Node.displacement(node_gid,2);
@@ -2627,7 +2591,7 @@ void MeshWriter::concatenate_nodal_fields(const MPICArrayKokkos<double>& displac
                 break;
             // tensors
         } // end switch
-    } // end for over */
+    } // end for over
 
     
 
@@ -3767,25 +3731,8 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
     DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
     DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_vectors");
     Kokkos::fence();
-    FOR_ALL(node, 0, num_nodes, {
-        node_vector_fields(0, node, 0) = State.node.displacement(node, 0);
-        node_vector_fields(0, node, 1) = State.node.displacement(node, 1);
-        node_vector_fields(0, node, 2) = State.node.displacement(node, 2);
-    });
-    Kokkos::fence();
-    printf("BEFORE CONCAT NODAL FIELDS\n");
-    fprintf(stderr,
-            "node_vector_fields: order=%zu size=%zu dims=(%zu, %zu, %zu) host=%p dev=%p\n",
-            (size_t)node_vector_fields.order(),
-            (size_t)node_vector_fields.size(),
-            (size_t)node_vector_fields.dims(0),
-            (size_t)node_vector_fields.dims(1),
-            (size_t)node_vector_fields.dims(2),
-            (void*)node_vector_fields.host_pointer(),
-            (void*)node_vector_fields.device_pointer());
-    fflush(stderr);
 
-    concatenate_nodal_fields(State.node.displacement,
+    concatenate_nodal_fields(State.node,
                              node_scalar_fields,
                              node_vector_fields,
                              SimulationParamaters.OutputOptions.output_node_state,
