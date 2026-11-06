@@ -623,8 +623,11 @@ struct MaterialPoint_t
 
 
     // Material Models are stored on Material points
-    DRaggedRightArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS, accessed as (mat_id, elem_lid, var_lid)
-    DRaggedRightArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
+    DRaggedRightArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS, accessed as (mat_id, mat_elem_sid, var_lid)
+    DRaggedRightArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength, accessed as (mat_id, mat_elem_sid, var_lid)
+    DRaggedRightArrayKokkos<double> num_strength_state_vars;   ///< Array of number of state variables for the strength
+    DRaggedRightArrayKokkos<double> user_physics_state_vars;   ///< Array of state variables for the physics models, accessed as (mat_id, mat_elem_sid, var_lid)
+    DRaggedRightArrayKokkos<double> num_user_physics_state_vars;   ///< Array of number of user physics state variables for the strength
 
     DRaggedRightArrayKokkos<double> temp_grad;     ///< Temperature gradient
     DRaggedRightArrayKokkos<double> mat_volfrac;       ///< MaterialPoint volume fraction

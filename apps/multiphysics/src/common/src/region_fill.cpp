@@ -1443,7 +1443,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
         // Caution: if residual stresses are applied, skip this coding
         if (State.MaterialPoints.deformation_grad.size()>0){
 
-            const size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems(mat_id);
+            const size_t num_mat_elems = State.MaterialToMeshMaps.num_mat_elems.host(mat_id);
 
             // loop over all material points
             FOR_ALL(mat_point_sid, 0, num_mat_elems*num_gauss_points_in_elem, {
