@@ -2136,6 +2136,10 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
+                case material_pt_state::deformation_grad:
+                    break;
+                case material_pt_state::coords:
+                    break;
                 
                 default:
                     std::cout<<"Desired material point state not understood in outputs"<<std::endl;
@@ -2164,6 +2168,19 @@ public:
                 case gauss_pt_state::shock_detector:
                     State.GaussPoints.shock_detector.update_host();
                     break;
+
+                // not USED gauss pt state
+                case gauss_pt_state::detj0:
+                    break;
+                case gauss_pt_state::jac0_inv:
+                    break;
+                case gauss_pt_state::rho0_detj0_w:
+                    break;
+                case gauss_pt_state::detj:
+                    break;
+                case gauss_pt_state::jac_inv:
+                    break;
+                
                 default:
                     std::cout<<"Desired Gauss point state not understood in vtk outputs"<<std::endl;
 
@@ -2271,6 +2288,10 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
+                case material_pt_state::deformation_grad:
+                    break;
+                case material_pt_state::coords:
+                    break;
                 
                 default:
                     std::cout<<"Desired material point state not understood in outputs"<<std::endl;
@@ -2329,6 +2350,10 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
+                case material_pt_state::deformation_grad:
+                    break;
+                case material_pt_state::coords:
+                    break;
                 case material_pt_state::heat_flux:
                     break;
                 default:
@@ -2361,6 +2386,18 @@ public:
                     num_gauss_pt_tensor_vars ++;
                     break;
                 
+                // not USED gauss pt state
+                case gauss_pt_state::detj0:
+                    break;
+                case gauss_pt_state::jac0_inv:
+                    break;
+                case gauss_pt_state::rho0_detj0_w:
+                    break;
+                case gauss_pt_state::detj:
+                    break;
+                case gauss_pt_state::jac_inv:
+                    break;
+
                 default:
                     std::cout<<"Desired Gauss point state not understood in vtk outputs"<<std::endl;
 
@@ -2474,7 +2511,7 @@ public:
                     break;
 
                 case material_pt_state::heat_flux:
-                    mat_elem_vector_var_names[var] = "mat_heat_flux";
+                    mat_elem_vector_var_names[vector_var] = "mat_heat_flux";
                     mat_heat_flux_id = vector_var;
                     vector_var++;
                     break;
@@ -2488,6 +2525,10 @@ public:
                 case material_pt_state::shear_modulii:
                     break;
                 case material_pt_state::poisson_ratios:
+                    break;
+                case material_pt_state::deformation_grad:
+                    break;
+                case material_pt_state::coords:
                     break;
                 
             } // end switch
@@ -2580,6 +2621,10 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
+                case material_pt_state::deformation_grad:
+                    break;
+                case material_pt_state::coords:
+                    break;
                 case material_pt_state::heat_flux:
                     break;
             } // end switch
@@ -2624,6 +2669,20 @@ public:
                     vel_grad_id = tensor_var;
                     tensor_var++;
                     break;
+
+
+                // not USED gauss pt state
+                case gauss_pt_state::detj0:
+                    break;
+                case gauss_pt_state::jac0_inv:
+                    break;
+                case gauss_pt_state::rho0_detj0_w:
+                    break;
+                case gauss_pt_state::detj:
+                    break;
+                case gauss_pt_state::jac_inv:
+                    break;
+
             } // end switch
         } // end loop over gauss_pt_states
 
@@ -4179,6 +4238,10 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
+                case material_pt_state::deformation_grad:
+                    break;
+                case material_pt_state::coords:
+                    break;
                 case material_pt_state::heat_flux:
                     break;
             } // end switch
@@ -4235,6 +4298,19 @@ public:
                     break;
 
                 // add other gauss variables here
+
+
+                // not USED gauss pt state
+                case gauss_pt_state::detj0:
+                    break;
+                case gauss_pt_state::jac0_inv:
+                    break;
+                case gauss_pt_state::rho0_detj0_w:
+                    break;
+                case gauss_pt_state::detj:
+                    break;
+                case gauss_pt_state::jac_inv:
+                    break;
 
             } // end switch
         } // end loop over gauss_pt_states
@@ -4425,6 +4501,10 @@ public:
                 case material_pt_state::shear_modulii:
                     break;
                 case material_pt_state::poisson_ratios:
+                    break;
+                case material_pt_state::deformation_grad:
+                    break;
+                case material_pt_state::coords:
                     break;
                 
             } // end switch
@@ -5016,6 +5096,10 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
+                case material_pt_state::deformation_grad:
+                    break;
+                case material_pt_state::coords:
+                    break;
                 
                 default:
                     std::cout<<"Desired material point state not understood in outputs"<<std::endl;
@@ -5150,6 +5234,10 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
+                case material_pt_state::deformation_grad:
+                    break;
+                case material_pt_state::coords:
+                    break;
                 
                 default:
                     std::cout<<"Desired material point state not understood in outputs"<<std::endl;
@@ -5211,6 +5299,10 @@ public:
                 case material_pt_state::shear_modulii:
                     break;
                 case material_pt_state::poisson_ratios:
+                    break;
+                case material_pt_state::deformation_grad:
+                    break;
+                case material_pt_state::coords:
                     break;
                 case material_pt_state::heat_flux:
                     break;
@@ -5355,7 +5447,7 @@ public:
                     break;
 
                 case material_pt_state::heat_flux:
-                    mat_elem_vector_var_names[var] = "mat_heat_flux";
+                    mat_elem_vector_var_names[vector_var] = "mat_heat_flux";
                     mat_heat_flux_id = vector_var;
                     vector_var++;
                     break;
@@ -5369,6 +5461,10 @@ public:
                 case material_pt_state::shear_modulii:
                     break;
                 case material_pt_state::poisson_ratios:
+                    break;
+                case material_pt_state::deformation_grad:
+                    break;
+                case material_pt_state::coords:
                     break;
                 
             } // end switch
@@ -5462,6 +5558,10 @@ public:
                     break;
                 case material_pt_state::poisson_ratios:
                     break;
+                case material_pt_state::deformation_grad:
+                    break;
+                case material_pt_state::coords:
+                    break;
                 case material_pt_state::heat_flux:
                     break;
             } // end switch
@@ -5507,6 +5607,20 @@ public:
                     vel_grad_id = tensor_var;
                     tensor_var++;
                     break;
+
+                
+                // not USED gauss pt state
+                case gauss_pt_state::detj0:
+                    break;
+                case gauss_pt_state::jac0_inv:
+                    break;
+                case gauss_pt_state::rho0_detj0_w:
+                    break;
+                case gauss_pt_state::detj:
+                    break;
+                case gauss_pt_state::jac_inv:
+                    break;
+
             } // end switch
         } // end loop over gauss_pt_states
 

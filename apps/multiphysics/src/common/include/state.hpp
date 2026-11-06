@@ -369,6 +369,7 @@ struct node_t
                         this->temp_n0 = MPICArrayKokkos<double>(num_nodes, "node_temp_n0");
                         this->temp_n0.initialize_comm_plan(comm_plan);
                     }
+                    break;
 
                 default:
                     std::cout<<"Desired node state not understood in node_t initialize with communication plan"<<std::endl;
@@ -576,9 +577,10 @@ enum class material_pt_state
     elastic_modulii,
     shear_modulii,
     poisson_ratios,
+    deformation_grad,
     thermal_conductivity,
     specific_heat,
-    coords  // physical position at the material point (= qpt for single-material)
+    coords  // physical position at the material point (= qpt for FE methods)
 };
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -613,13 +615,19 @@ struct MaterialPoint_t
     DRaggedRightArrayKokkos<double> elastic_modulii;  ///<  MaterialPoint elastic modulii Exx, Eyy, Ezz
     DRaggedRightArrayKokkos<double> shear_modulii;    ///<  MaterialPoint shear modulii Gxy, Gxz, Gyz
     DRaggedRightArrayKokkos<double> poisson_ratios;   ///<  MaterialPoint poisson ratios nu_xy, nu_xz, nu_yz
+    
+    DRaggedRightArrayKokkos<double> deformation_grad;    ///<  MaterialPoint deformation gradient
+    DRaggedRightArrayKokkos<double> deformation_grad_t0; ///<  MaterialPoint deformation gradient at t0 or after a remap step
 
     DRaggedRightArrayKokkos<double> coords;           ///< physical position at the material point
 
 
     // Material Models are stored on Material points
-    DRaggedRightArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS, accessed as (mat_id, elem_lid, var_lid)
-    DRaggedRightArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength
+    DRaggedRightArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS, accessed as (mat_id, mat_elem_sid, var_lid)
+    DRaggedRightArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength, accessed as (mat_id, mat_elem_sid, var_lid)
+    DRaggedRightArrayKokkos<double> num_strength_state_vars;   ///< Array of number of state variables for the strength
+    DRaggedRightArrayKokkos<double> user_physics_state_vars;   ///< Array of state variables for the physics models, accessed as (mat_id, mat_elem_sid, var_lid)
+    DRaggedRightArrayKokkos<double> num_user_physics_state_vars;   ///< Array of number of user physics state variables for the strength
 
     DRaggedRightArrayKokkos<double> temp_grad;     ///< Temperature gradient
     DRaggedRightArrayKokkos<double> mat_volfrac;       ///< MaterialPoint volume fraction
@@ -675,6 +683,10 @@ struct MaterialPoint_t
                     break;
                 case material_pt_state::poisson_ratios:
                     if (poisson_ratios.size() == 0) this->poisson_ratios = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, "material_poisson_ratios");
+                    break;
+                case material_pt_state::deformation_grad:
+                    if (deformation_grad.size() == 0) this->deformation_grad = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, 3, "material_deformation_grad");
+                    if (deformation_grad_t0.size() == 0) this->deformation_grad_t0 = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, 3, "material_deformation_grad_t0");
                     break;
                 case material_pt_state::sound_speed:
                     if (sspd.size() == 0) this->sspd = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_sspd");
