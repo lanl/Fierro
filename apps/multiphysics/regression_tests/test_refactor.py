@@ -20,7 +20,7 @@ num_ranks = 1
 # Add names of each test
 if (num_ranks == 1):
     # all tests can be run on one rank
-    tests = ["stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
+    tests = ["elastic_cube_pull_Z","stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
             "Compaction_rz", "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
             "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", \
             "Pressure_bc_box","vtu_read", \
@@ -34,7 +34,7 @@ if (num_ranks == 1):
 else:
     # fracture and contact can't be run with more than one rank: 8-26-26
     # vtu_read currently doesn't run on more than one rank: 8-26-26
-    tests = ["stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
+    tests = ["elastic_cube_pull_Z", "stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
             "Compaction_rz", "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
             "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", "Pressure_bc_box",\
             "lin_vol_frac_two_mat", "Bending-3D-plate", "Vel_bc_box", \
