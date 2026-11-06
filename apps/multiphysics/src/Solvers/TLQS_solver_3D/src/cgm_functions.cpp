@@ -35,9 +35,54 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "tlqs_solver_3D.hpp"
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn build_node_lid_in_elem
+///
+/// \brief Caches the local index of each node inside every element that
+///        contains it, so the matrix-free kernels do not have to search
+///        nodes_in_elem for it on every call.
+///
+/////////////////////////////////////////////////////////////////////////////
+void TLQS3D::build_node_lid_in_elem(
+    const size_t num_nodes,
+    const RaggedRightArrayKokkos <size_t>& elems_in_node,
+    const size_t num_nodes_in_elem,
+    const DCArrayKokkos <size_t>& nodes_in_elem,
+    CArrayKokkos <size_t>& num_elems_in_node,
+    RaggedRightArrayKokkos <size_t>& node_lid_in_elem
+)
+{
+    num_elems_in_node = CArrayKokkos<size_t>(num_nodes, "num_elems_in_node");
+    FOR_ALL(node_gid, 0, num_nodes, {
+        num_elems_in_node(node_gid) = elems_in_node.stride(node_gid);
+    });
+    Kokkos::fence();
+
+    node_lid_in_elem = RaggedRightArrayKokkos<size_t>(num_elems_in_node, "node_lid_in_elem");
+
+    FOR_ALL(node_gid, 0, num_nodes, {
+        for (size_t elem_lid = 0; elem_lid < elems_in_node.stride(node_gid); elem_lid++) {
+            const size_t elem_gid = elems_in_node(node_gid, elem_lid);
+
+            // Find local index of this node within the element
+            size_t local_node_lid = num_nodes_in_elem; // sentinel
+            for (size_t a = 0; a < num_nodes_in_elem; a++) {
+                if (nodes_in_elem(elem_gid, a) == node_gid) {
+                    local_node_lid = a;
+                    break;
+                }
+            }
+            node_lid_in_elem(node_gid, elem_lid) = local_node_lid;
+        }
+    });
+    Kokkos::fence();
+} // end build_node_lid_in_elem
+
 void TLQS3D::get_r0(
     const size_t num_nodes,
     const RaggedRightArrayKokkos <size_t>& elems_in_node,
+    const RaggedRightArrayKokkos <size_t>& node_lid_in_elem,
     const size_t num_nodes_in_elem,
     const DCArrayKokkos <size_t>& nodes_in_elem,
     const CArrayKokkos <double>& F_elem,
@@ -46,45 +91,56 @@ void TLQS3D::get_r0(
     MPICArrayKokkos <double>& r0
 )
 {
+    const size_t num_dof_in_elem = 3 * num_nodes_in_elem;
+
     // getting r0 = (02F - 01F) - K * displacement_iter
+    // the 3 dofs of the node are gathered together (displacement_iter is read once for all 3),
+    // each one is still summed in the same order as the original per-dof loop
     FOR_ALL(node_gid, 0, num_nodes, {
         const size_t num_elems_in_node = elems_in_node.stride(node_gid);
 
-        for (size_t p = 0; p < 3; p++) {
-            double val = 0.0;
+        double val0 = 0.0;
+        double val1 = 0.0;
+        double val2 = 0.0;
 
-            // Sum contributions from all elements containing this node
-            for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
-                const size_t elem_gid = elems_in_node(node_gid, elem_lid);
+        // Sum contributions from all elements containing this node
+        for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
+            const size_t elem_gid  = elems_in_node(node_gid, elem_lid);
+            const size_t local_dof = 3 * node_lid_in_elem(node_gid, elem_lid);
 
-                // Find local index of this node within the element
-                size_t local_node_lid = num_nodes_in_elem; // sentinel
-                for (size_t a = 0; a < num_nodes_in_elem; a++) {
-                    if (nodes_in_elem(elem_gid, a) == node_gid) {
-                        local_node_lid = a;
-                        break;
-                    }
-                }
+            // F_elem contribution
+            val0 += F_elem(elem_gid, local_dof);
+            val1 += F_elem(elem_gid, local_dof + 1);
+            val2 += F_elem(elem_gid, local_dof + 2);
 
-                const size_t local_dof = 3 * local_node_lid + p;
+            const double* K_row0 = &K_elem(elem_gid, local_dof, 0);
+            const double* K_row1 = K_row0 + num_dof_in_elem;
+            const double* K_row2 = K_row1 + num_dof_in_elem;
 
-                // F_elem contribution
-                val += F_elem(elem_gid, local_dof);
-                //std::cout << "F_ELEM: " << F_elem(elem_gid, local_dof) << std::endl;
+            // Subtract K_elem * displacement_iter
+            for (size_t b = 0; b < num_nodes_in_elem; b++) {
+                const size_t node_gid_b = nodes_in_elem(elem_gid, b);
+                const double x0 = displacement_iter(node_gid_b, 0);
+                const double x1 = displacement_iter(node_gid_b, 1);
+                const double x2 = displacement_iter(node_gid_b, 2);
 
-                // Subtract K_elem * displacement_iter
-                for (size_t b = 0; b < num_nodes_in_elem; b++) {
-                    const size_t node_gid_b = nodes_in_elem(elem_gid, b);
-                    for (size_t q = 0; q < 3; q++) {
-                        const size_t local_dof_b = 3 * b + q;
-                        val -= K_elem(elem_gid, local_dof, local_dof_b) * displacement_iter(node_gid_b, q);
-                        //std::cout << "K_ELEM: " << K_elem(elem_gid, local_dof, local_dof_b) << std::endl;
-                    }
-                }
+                val0 -= K_row0[3*b] * x0;
+                val0 -= K_row0[3*b+1] * x1;
+                val0 -= K_row0[3*b+2] * x2;
+
+                val1 -= K_row1[3*b] * x0;
+                val1 -= K_row1[3*b+1] * x1;
+                val1 -= K_row1[3*b+2] * x2;
+
+                val2 -= K_row2[3*b] * x0;
+                val2 -= K_row2[3*b+1] * x1;
+                val2 -= K_row2[3*b+2] * x2;
             }
-
-            r0(node_gid, p) = val;
         }
+
+        r0(node_gid, 0) = val0;
+        r0(node_gid, 1) = val1;
+        r0(node_gid, 2) = val2;
     });
     Kokkos::fence();
     r0.communicate();
@@ -95,6 +151,7 @@ double TLQS3D::get_alpha(
     const size_t num_nodes_in_elem,
     const size_t num_owned_nodes,
     const RaggedRightArrayKokkos<size_t>& elems_in_node,
+    const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
     const DCArrayKokkos<size_t>& nodes_in_elem,
     const CArrayKokkos<double>& K_elem,
     const double rktrk,
@@ -105,32 +162,13 @@ double TLQS3D::get_alpha(
 {
     // Kernel 1: compute temporary = K * p
     FOR_ALL(node_gid, 0, num_nodes, {
-        for (size_t p_dir = 0; p_dir < 3; p_dir++) {
-            double val = 0.0;
-
-            for (size_t elem_lid = 0; elem_lid < elems_in_node.stride(node_gid); elem_lid++) {
-                const size_t elem_gid = elems_in_node(node_gid, elem_lid);
-
-                size_t local_node_lid = num_nodes_in_elem;
-                for (size_t a = 0; a < num_nodes_in_elem; a++) {
-                    if (nodes_in_elem(elem_gid, a) == node_gid) {
-                        local_node_lid = a;
-                        break;
-                    }
-                }
-
-                const size_t local_dof = 3 * local_node_lid + p_dir;
-
-                for (size_t b = 0; b < num_nodes_in_elem; b++) {
-                    const size_t node_gid_b = nodes_in_elem(elem_gid, b);
-                    for (size_t q = 0; q < 3; q++) {
-                        const size_t local_dof_b = 3 * b + q;
-                        val += K_elem(elem_gid, local_dof, local_dof_b) * p(node_gid_b, q);
-                    }
-                }
-            }
-            temporary(node_gid, p_dir) = val;
-        }
+        double val0 = 0.0;
+        double val1 = 0.0;
+        double val2 = 0.0;
+        node_K_times_x(node_gid, elems_in_node, node_lid_in_elem, num_nodes_in_elem, nodes_in_elem, K_elem, p, val0, val1, val2);
+        temporary(node_gid, 0) = val0;
+        temporary(node_gid, 1) = val1;
+        temporary(node_gid, 2) = val2;
     });
     MATAR_FENCE();
 
@@ -156,45 +194,18 @@ double TLQS3D::get_alpha(
 
 void TLQS3D::get_rkp1(
     const size_t num_nodes,
-    const RaggedRightArrayKokkos<size_t>& elems_in_node,
-    const size_t num_nodes_in_elem,
-    const DCArrayKokkos<size_t>& nodes_in_elem,
-    const CArrayKokkos<double>& K_elem,
     const MPICArrayKokkos<double>& rk,
-    const CArrayKokkos<double>& p,
+    const MPICArrayKokkos<double>& Kp,
     const double alpha,
     MPICArrayKokkos<double>& rkp1)
 {
     // r_{k+1} = r_k - alpha * K * p
+    // K * p was already computed (and communicated) by get_alpha and p has not changed since,
+    // so this is now a vector update instead of a second matrix-free product. Kp_val is the same
+    // value the original recomputed, so rkp1 is unchanged.
     FOR_ALL(node_gid, 0, num_nodes, {
-        const size_t num_elems_in_node = elems_in_node.stride(node_gid);
-
         for (size_t p_dir = 0; p_dir < 3; p_dir++) {
-            double Kp_val = 0.0;
-
-            for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
-                const size_t elem_gid = elems_in_node(node_gid, elem_lid);
-
-                // find local index of this node within the element
-                size_t local_node_lid = num_nodes_in_elem; // sentinel
-                for (size_t a = 0; a < num_nodes_in_elem; a++) {
-                    if (nodes_in_elem(elem_gid, a) == node_gid) {
-                        local_node_lid = a;
-                        break;
-                    }
-                }
-
-                const size_t local_dof = 3 * local_node_lid + p_dir;
-
-                for (size_t b = 0; b < num_nodes_in_elem; b++) {
-                    const size_t node_gid_b = nodes_in_elem(elem_gid, b);
-                    for (size_t q = 0; q < 3; q++) {
-                        const size_t local_dof_b  = 3 * b + q;
-                        Kp_val += K_elem(elem_gid, local_dof, local_dof_b) * p(node_gid_b, q);
-                    }
-                }
-            }
-
+            const double Kp_val = Kp(node_gid, p_dir);
             rkp1(node_gid, p_dir) = rk(node_gid, p_dir) - alpha * Kp_val;
         }
     });

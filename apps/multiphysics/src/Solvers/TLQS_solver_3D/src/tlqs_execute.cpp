@@ -118,6 +118,21 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <double> K_elem(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem); /// K1 + K2
     CArrayKokkos <double> F_elem(mesh.num_elems,3*mesh.num_nodes_in_elem); /// - F01    note: F02 added directly to cg residual from traction conditions
 
+    // per element scratch used by tally_elem_arrays at each material point: the global basis
+    // gradients, B1 for every node, and one row of K2. Computing these once per material point
+    // (instead of once per node pair) is what lets the Kel row updates vectorize.
+    // Indexed by element (like K_elem) so every thread in the element loop has its own slice.
+    CArrayKokkos <double> glob_grad_elem(mesh.num_elems, mesh.num_nodes_in_elem, 3);
+    CArrayKokkos <double> B1_elem(mesh.num_elems, 6, 3*mesh.num_nodes_in_elem);
+    CArrayKokkos <double> K2_row_elem(mesh.num_elems, 3*mesh.num_nodes_in_elem);
+
+    // local index of each node in every element connected to it. The mesh does not change during
+    // the solve, so this is built once here instead of searching nodes_in_elem for it inside every
+    // matrix-free product (get_r0, get_alpha, chebyshev smoothing and bounds, diagonal inverse).
+    CArrayKokkos <size_t> num_elems_in_node;
+    RaggedRightArrayKokkos <size_t> node_lid_in_elem;
+    build_node_lid_in_elem(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, num_elems_in_node, node_lid_in_elem);
+
     // additive schwarz preconditioning variables
     /* CArrayKokkos <double> K_elem_inv(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
     CArrayKokkos <double> intermediate_K_elem_inv(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
@@ -534,6 +549,10 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     ViewCArrayKokkos<double> curr_K_elem(&K_elem(elem_id,0,0),3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
                     ViewCArrayKokkos<double> curr_F_elem(&F_elem(elem_id,0),3*mesh.num_nodes_in_elem);
 
+                    ViewCArrayKokkos<double> curr_glob_grad(&glob_grad_elem(elem_id,0,0), mesh.num_nodes_in_elem, 3);
+                    ViewCArrayKokkos<double> curr_B1(&B1_elem(elem_id,0,0), 6, 3*mesh.num_nodes_in_elem);
+                    ViewCArrayKokkos<double> curr_K2_row(&K2_row_elem(elem_id,0), 3*mesh.num_nodes_in_elem);
+
                     // looping through material points
                     for (int mat_pt = 0; mat_pt < num_qpt_in_elem; mat_pt++) {
                         // setting up view and getting material matrix
@@ -545,7 +564,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         double weight = Quad.qpt_weights(mat_pt)*det_J;
                         double local_mat_vol_frac = State.MaterialPoints.mat_volfrac(mat_id, State.points_in_mat_elem(elem, mat_pt));
 
-                        TLQS3D::tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, weight, PK2_curr_config, curr_K_elem, curr_F_elem, local_mat_vol_frac);
+                        TLQS3D::tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, weight, PK2_curr_config, curr_K_elem, curr_F_elem, local_mat_vol_frac, curr_glob_grad, curr_B1, curr_K2_row);
                     } // end mat_pt
 
                 }); // end elem
@@ -560,7 +579,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // (D_inv is free scratch here, it is rebuilt before the solve)
             // -----------------------------------------------------------
             if (doing_contact && iter == 0) {
-                get_diagonal_inverse(D_inv, K_elem, mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem);
+                get_diagonal_inverse(D_inv, K_elem, mesh.num_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem, mesh.nodes_in_elem);
                 get_quasi_static_compliance(mesh.num_bdy_nodes, mesh.bdy_nodes, D_inv,
                                             AO_contact_state.bdy_dof_fixed, contact_compliance_scale,
                                             AO_contact_state.bdy_node_compliance);
@@ -674,7 +693,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             Kokkos::fence();
 
             // getting inverse of the diagonal like diagonal jacobi
-            get_diagonal_inverse(D_inv, K_elem, mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem);
+            get_diagonal_inverse(D_inv, K_elem, mesh.num_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem, mesh.nodes_in_elem);
 
             // getting spectral bounds for chebyshev smoothing
             // We pass zk and temporary here safely because they are currently uninitialized 
@@ -683,13 +702,13 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             double beta = 0.0;
             const int cheb_degree = 3; // Choose your Chebyshev polynomial degree (typically 2 to 5)
             
-            get_chebyshev_bounds(alpha, beta, D_inv, K_elem, mesh.num_nodes, 
-                                 mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem,
+            get_chebyshev_bounds(alpha, beta, D_inv, K_elem, mesh.num_nodes,
+                                 mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem, mesh.nodes_in_elem,
                                  zk, temporary, 15, mesh.num_owned_nodes, mesh.shared_tally_owned_nodes); // Running 15 power iterations
             contact_compliance_scale = beta;
 
             // getting r0 = (02F - 01F) - K * displacement_iter_k
-            get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
+            get_r0(mesh.num_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
 
             // apply traction conditions
             boundary_stress(mesh, BoundaryConditions, rk, ref_surf, SurfQuad, State.node.coords_t0, dt, time_value, time_start, time_end);
@@ -709,8 +728,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             }
 
             // smoothing with chebyshev polynomial
-            apply_chebyshev_preconditioner(rk, zk, D_inv, zk, delta_z, temporary, K_elem, 
-                                           mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, 
+            apply_chebyshev_preconditioner(rk, zk, D_inv, zk, delta_z, temporary, K_elem,
+                                           mesh.num_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem, mesh.nodes_in_elem,
                                            alpha, beta, cheb_degree);
 
             // z0 = M_inv * r0,  p0 = z0
@@ -740,7 +759,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 MPI_Allreduce(MPI_IN_PLACE, &rktzk, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                 // alpha_k = (r_k^T * z_k) / (p_k^T * K * p_k)
-                double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.num_owned_nodes, mesh.elems_in_node, mesh.nodes_in_elem, K_elem, rktzk, p, temporary, mesh.shared_tally_owned_nodes);
+                double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.num_owned_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.nodes_in_elem, K_elem, rktzk, p, temporary, mesh.shared_tally_owned_nodes);
 
                 // displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
                 FOR_ALL(i, 0, (int)mesh.num_nodes,
@@ -750,11 +769,13 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 Kokkos::fence();
 
                 // r_{k+1} = r_k - alpha_k * K * p_k
-                get_rkp1(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p, alpha_k, rkp1);
+                // get_alpha left K * p_k in temporary (already communicated), and p_k has not changed
+                // since, so it is reused here instead of recomputing the same matrix-free product
+                get_rkp1(mesh.num_nodes, rk, temporary, alpha_k, rkp1);
 
                 // smoothing with chebyshev polynomial
                 apply_chebyshev_preconditioner(rkp1, zkp1, D_inv, zk, delta_z, temporary, K_elem, 
-                                               mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, 
+                                               mesh.num_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem, mesh.nodes_in_elem,
                                                alpha, beta, cheb_degree);
 
                 // z_{k+1} = M_inv * r_{k+1}

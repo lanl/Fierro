@@ -48,6 +48,7 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
                                             const CArrayKokkos<double>& K_elem,
                                             const size_t num_nodes,
                                             const RaggedRightArrayKokkos<size_t>& elems_in_node,
+                                            const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
                                             const size_t num_nodes_in_elem,
                                             const DCArrayKokkos<size_t>& nodes_in_elem,
                                             const double alpha,
@@ -77,41 +78,17 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
         // --- THREAD-SAFE MATRIX-FREE MULTIPLICATION (temporary = K * zk) ---
         // Parallelized by node; each thread computes its exact global DOF value.
         FOR_ALL(node_gid, 0, num_nodes, {
-            const size_t num_elems_in_node = elems_in_node.stride(node_gid);
+            // Sum contributions from all elements containing this global node,
+            // contracting the K_elem rows with the incoming Chebyshev vector (zk)
+            double val0 = 0.0;
+            double val1 = 0.0;
+            double val2 = 0.0;
+            node_K_times_x(node_gid, elems_in_node, node_lid_in_elem, num_nodes_in_elem, nodes_in_elem, K_elem, zk, val0, val1, val2);
 
-            for (size_t p = 0; p < 3; p++) {
-                double val = 0.0;
-
-                // Sum contributions from all elements containing this global node
-                for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
-                    const size_t elem_gid = elems_in_node(node_gid, elem_lid);
-
-                    // Find local index of this node within the current element
-                    size_t local_node_lid = num_nodes_in_elem; 
-                    for (size_t a = 0; a < num_nodes_in_elem; a++) {
-                        if (nodes_in_elem(elem_gid, a) == node_gid) {
-                            local_node_lid = a;
-                            break;
-                        }
-                    }
-
-                    const size_t local_dof = 3 * local_node_lid + p;
-
-                    // Contract K_elem row with the incoming Chebyshev vector (zk)
-                    for (size_t b = 0; b < num_nodes_in_elem; b++) {
-                        const size_t node_gid_b = nodes_in_elem(elem_gid, b);
-                        
-                        for (size_t q = 0; q < 3; q++) {
-                            const size_t local_dof_b = 3 * b + q;
-                            
-                            val += K_elem(elem_gid, local_dof, local_dof_b) * zk(node_gid_b, q);
-                        }
-                    }
-                }
-
-                // Directly assign to scratch array without atomics or clearing passes
-                temporary(node_gid, p) = val;
-            }
+            // Directly assign to scratch array without atomics or clearing passes
+            temporary(node_gid, 0) = val0;
+            temporary(node_gid, 1) = val1;
+            temporary(node_gid, 2) = val2;
         });
         MATAR_FENCE();
         // -----------------------------------------------------------------
@@ -150,6 +127,7 @@ void TLQS3D::get_diagonal_inverse(MPICArrayKokkos<double>& D_inv,
                                   const CArrayKokkos<double>& K_elem,
                                   const size_t num_nodes,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_node,
+                                  const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
                                   const size_t num_nodes_in_elem,
                                   const DCArrayKokkos<size_t>& nodes_in_elem)
 {
@@ -162,16 +140,8 @@ void TLQS3D::get_diagonal_inverse(MPICArrayKokkos<double>& D_inv,
             for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
                 const size_t elem_gid = elems_in_node(node_gid, elem_lid);
                 
-                // Find local index of this node within the element
-                size_t local_node_lid = num_nodes_in_elem;
-                for (size_t a = 0; a < num_nodes_in_elem; a++) {
-                    if (nodes_in_elem(elem_gid, a) == node_gid) {
-                        local_node_lid = a;
-                        break;
-                    }
-                }
-                
-                const size_t local_dof = 3 * local_node_lid + p_dir;
+                // local index of this node within the element
+                const size_t local_dof = 3 * node_lid_in_elem(node_gid, elem_lid) + p_dir;
                 
                 // Accumulate diagonal entries (local_dof, local_dof)
                 diag += K_elem(elem_gid, local_dof, local_dof);
@@ -195,6 +165,7 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
                                   const CArrayKokkos<double>& K_elem,
                                   const size_t num_nodes,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_node,
+                                  const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
                                   const size_t num_nodes_in_elem,
                                   const DCArrayKokkos<size_t>& nodes_in_elem,
                                   MPICArrayKokkos<double>& v_scratch,
@@ -217,38 +188,15 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
         
         // 1. FUSED KERNEL: Compute Matrix-Free Product AND Scale by D_inv directly
         FOR_ALL(node_gid, 0, num_nodes, {
-            const size_t num_elems_in_node = elems_in_node.stride(node_gid);
+            double val0 = 0.0;
+            double val1 = 0.0;
+            double val2 = 0.0;
+            node_K_times_x(node_gid, elems_in_node, node_lid_in_elem, num_nodes_in_elem, nodes_in_elem, K_elem, v_scratch, val0, val1, val2);
 
-            for (size_t p = 0; p < 3; p++) {
-                double val = 0.0;
-
-                for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
-                    const size_t elem_gid = elems_in_node(node_gid, elem_lid);
-
-                    size_t local_node_lid = num_nodes_in_elem; 
-                    for (size_t a = 0; a < num_nodes_in_elem; a++) {
-                        if (nodes_in_elem(elem_gid, a) == node_gid) {
-                            local_node_lid = a;
-                            break;
-                        }
-                    }
-
-                    const size_t local_dof = 3 * local_node_lid + p;
-
-                    for (size_t b = 0; b < num_nodes_in_elem; b++) {
-                        const size_t node_gid_b = nodes_in_elem(elem_gid, b);
-                        
-                        for (size_t q = 0; q < 3; q++) {
-                            const size_t local_dof_b = 3 * b + q;
-                            
-                            val += K_elem(elem_gid, local_dof, local_dof_b) * v_scratch(node_gid_b, q);
-                        }
-                    }
-                }
-                
-                // Fused operation: Scale the accumulated stiffness action by D_inv 
-                w_scratch(node_gid, p) = val * D_inv(node_gid, p);
-            }
+            // Fused operation: Scale the accumulated stiffness action by D_inv 
+            w_scratch(node_gid, 0) = val0 * D_inv(node_gid, 0);
+            w_scratch(node_gid, 1) = val1 * D_inv(node_gid, 1);
+            w_scratch(node_gid, 2) = val2 * D_inv(node_gid, 2);
         });
         MATAR_FENCE();
 
