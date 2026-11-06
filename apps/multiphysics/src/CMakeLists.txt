@@ -85,7 +85,12 @@ include_directories(boundary_conditions/quasi_static_stress)
 
 # Common and Input
 message("\n ****** ADDING COMMON AND INPUT ******** \n ")
-include_directories(common/include)
+include_directories(common/setup/include)
+include_directories(common/physics/include)
+include_directories(common/helpers/include)
+include_directories(common/mesh/include)
+include_directories(common/geometric/include)
+include_directories(common/core_structures/include)
 add_subdirectory(common)
 include_directories(input)
 add_subdirectory(input)

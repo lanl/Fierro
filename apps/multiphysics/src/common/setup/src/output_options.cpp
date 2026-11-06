@@ -1,0 +1,107 @@
+/**********************************************************************************************
+� 2020. Triad National Security, LLC. All rights reserved.
+This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
+National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
+Department of Energy/National Nuclear Security Administration. All rights in the program are
+reserved by Triad National Security, LLC, and the U.S. Department of Energy/National Nuclear
+Security Administration. The Government is granted for itself and others acting on its behalf a
+nonexclusive, paid-up, irrevocable worldwide license in this material to reproduce, prepare
+derivative works, distribute copies to the public, perform publicly and display publicly, and
+to permit others to do so.
+This program is open source under the BSD-3 License.
+Redistribution and use in source and binary forms, with or without modification, are permitted
+provided that the following conditions are met:
+1.  Redistributions of source code must retain the above copyright notice, this list of
+conditions and the following disclaimer.
+2.  Redistributions in binary form must reproduce the above copyright notice, this list of
+conditions and the following disclaimer in the documentation and/or other materials
+provided with the distribution.
+3.  Neither the name of the copyright holder nor the names of its contributors may be used
+to endorse or promote products derived from this software without specific prior
+written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+**********************************************************************************************/
+
+#include "output_options.hpp"
+
+std::map<std::string, output_options::format> output_format_map
+{
+    { "viz",     output_options::viz },
+    { "ensight", output_options::ensight },
+    { "state",   output_options::state },
+    { "viz_and_state", output_options::viz_and_state }
+};
+
+std::map<std::string, output_options::timer_output_level> timer_output_level_map
+{
+    { "thorough", output_options::thorough }
+};
+
+std::map<std::string, node_state> node_outputs_map
+{
+    { "coords", node_state::coords },
+    { "vel",    node_state::velocity },
+    { "temp",   node_state::temp },
+    { "mass",   node_state::mass },
+    { "force",  node_state::force },
+    { "grad_level_set", node_state::gradient_level_set},
+    { "disp", node_state::displacement}
+};
+
+std::map<std::string, gauss_pt_state> gauss_pt_outputs_map
+{
+    { "volume",    gauss_pt_state::volume },
+    { "level_set", gauss_pt_state::level_set },
+    { "vel_grad",  gauss_pt_state::gradient_velocity },
+    { "shock_detector", gauss_pt_state::shock_detector }
+};
+
+std::map<std::string, material_pt_state> mat_pt_outputs_map
+{
+    { "den",     material_pt_state::density},
+    { "pres",    material_pt_state::pressure},
+    { "stress",  material_pt_state::stress},
+    { "strain",  material_pt_state::strain},
+    { "sie",     material_pt_state::specific_internal_energy},
+    { "sspd",    material_pt_state::sound_speed},
+    { "mass",    material_pt_state::mass},
+    { "volfrac", material_pt_state::volume_fraction},
+    { "eroded",  material_pt_state::eroded_flag},
+    { "heat_flux",  material_pt_state::heat_flux}
+};
+
+std::map<std::string, material_pt_state> elem_outputs_map
+{
+    { "den",    material_pt_state::density},
+    { "pres",   material_pt_state::pressure},
+    { "stress", material_pt_state::stress},
+    { "sie",    material_pt_state::specific_internal_energy},
+    { "sspd",   material_pt_state::sound_speed},
+    { "mass",   material_pt_state::mass}
+};
+
+std::vector<std::string> str_output_options_inps
+{
+    "timer_output_level",
+    "output_file_format",
+    "graphics_time_step",
+    "graphics_iteration_step",
+    "elem_field_outputs",
+    "node_field_outputs",
+    "mat_pt_field_outputs",
+    "gauss_pt_field_outputs"
+};
+
+std::vector<std::string> output_options_required_inps
+{
+};
