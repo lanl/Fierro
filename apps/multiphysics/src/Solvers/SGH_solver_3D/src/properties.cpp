@@ -554,7 +554,7 @@ void SGH3D::get_deformation_grad(
             + u(4) * b_matrix(4, 0) + u(5) * b_matrix(5, 0)
             + u(6) * b_matrix(6, 0) + u(7) * b_matrix(7, 0)) * inverse_vol;
 
-printf("elem_gid = %zu, F00 = %f \n", elem_gid, elem_deformation_grad(mat_id, mat_point_sid, 0, 0));
+//printf("elem_gid = %zu, F00 = %f \n", elem_gid, elem_deformation_grad(mat_id, mat_point_sid, 0, 0));
 
         elem_deformation_grad(mat_id, mat_point_sid, 0, 1) = (u(0) * b_matrix(0, 1) + u(1) * b_matrix(1, 1)
             + u(2) * b_matrix(2, 1) + u(3) * b_matrix(3, 1)

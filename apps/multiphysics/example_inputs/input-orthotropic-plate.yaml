@@ -23,7 +23,7 @@
 
 dynamic_options:
     # Final simulation time (ms).
-    time_final: 2.0
+    time_final: 20.0
     # Minimum adaptive timestep bound (ms).
     dt_min: 1.e-8
     # Maximum adaptive timestep bound (ms).
@@ -31,7 +31,7 @@ dynamic_options:
     # Initial timestep guess (ms).
     dt_start: 1.e-5
     # Hard stop after this many cycles.
-    cycle_stop: 10
+    cycle_stop: 100000
 
 
 # ---------------------------------------------------------------------------
@@ -184,9 +184,9 @@ boundary_conditions:
         stress_model: time_varying 
         #simga(t) = simga0 exp(-varDecay*(time - time_start) )
         stress_bc_global_vars:
-            - -1.1   # press, stress(0,0)
-            - -1.1   # press, stress(1,1)
-            - -1.1   # press, stress(2,2)
+            - -0.01   # press, stress(0,0)
+            - -0.01   # press, stress(1,1)
+            - -0.01   # press, stress(2,2)
             - 0   # stress(1,2)
             - 0   # stress(0,2)
             - 0   # stress(0,1)
@@ -226,7 +226,7 @@ materials:
             - 1.333 # q1ex
             - 1.0   # q2
             - 1.333 # q2ex
-            - 0.05   # min limiter
+            - 0.5   # min limiter
             - 1.0
 
 
@@ -255,7 +255,7 @@ initial_conditions:
         density: 
             type: uniform
             # Density (g/cm^3).
-            value: 1.0
+            value: 9.0
         specific_internal_energy: 
             type: uniform
             # Specific internal energy (J/kg, assuming SI-like scaling).

@@ -1,7 +1,19 @@
 # num_dims: 3
+#
+# Paraview
+# 0 = sigma(0,0)
+# 1 = sigma(0,1)
+# 2 = sigma(0,2)
+# 3 = sigma(1,0)
+# 4 = simga(1,1)
+# 5 = sigma(1,2)
+# 6 = sigma(2,0)
+# 7 = sigma(2,1)
+# 8 = sigma(2,2)
+
 
 dynamic_options:
-    time_final: 1.0
+    time_final: 100.0
     dt_min: 1.e-8
     dt_max: 0.1
     dt_start: 1.e-6
@@ -32,7 +44,7 @@ output_options:
     # Output format for visualization.
     output_file_format: viz # only options are viz or viz_and_state
     # Amount of simulated time between visualization dumps (microseconds).
-    graphics_time_step: 0.1
+    graphics_time_step: 2.0
     # graphics_iteration_step: 10
     elem_field_outputs:
         - den
@@ -58,7 +70,8 @@ solver_options:
         #  - blah
 
 boundary_conditions:
-    # Tag X plane
+
+    # Tag x plane: wall at x=0
     - boundary_condition:
         solver_id: 0
         surface: 
@@ -70,31 +83,6 @@ boundary_conditions:
             - 0   # y
             - 0   # z
 
-    # Tag Y plane
-    - boundary_condition:
-        solver_id: 0
-        surface: 
-            type: y_plane
-            plane_position: 0.0
-        velocity_model: reflected
-        velocity_bc_global_vars:
-            - 0   # x
-            - 1   # y
-            - 0   # z
-
-            
-    # Tag z plane
-    - boundary_condition:
-        solver_id: 0
-        surface: 
-            type: z_plane
-            plane_position: 0.0
-        velocity_model: reflected
-        velocity_bc_global_vars:
-            - 0   # x
-            - 0   # y
-            - 1   # z
-
   
 materials:
 
@@ -102,6 +90,7 @@ materials:
         id: 0  # othortopic carbon fiber plate
 
         #------Strength
+        # carbon fiber 
         # values from Omairey et. al., Engineering with Computers, 2018. 
         strength_model_type: state_based
         strength_model: orthotropic_linear_elastic
@@ -109,13 +98,13 @@ materials:
             - 2.445 # E1  
             - 1.435 # E2 
             - 1.435 # E3  
-            - 0.648 # nu12 
-            - 0.648 # nu13 
-            - 0.698 # nu23 
-            - 0.175 # G12 
-            - 0.103 # G13 
-            - 0.345 # G23   
-            - 0.001 #min sound speed
+            - 0.175 # nu12 
+            - 0.103 # nu13 
+            - 0.345 # nu23 
+            - 0.648 # G12 
+            - 0.648 # G13 
+            - 0.698 # G23   
+            - 0.01 #min sound speed
         # ------ArtVisc
         dissipation_model: MARS
         dissipation_global_vars:
@@ -123,7 +112,7 @@ materials:
             - 1.333 # q1ex
             - 1.0   # q2
             - 1.333 # q2ex
-            - 0.05   # min limiter
+            - 0.5   # min limiter
             - 1.0
 
 
@@ -141,13 +130,13 @@ initial_conditions:
         material_id: 0
         density: 
             type: uniform
-            value: 8.93
+            value: 1.75 #carbon fiber 
         specific_internal_energy: 
             type: uniform
             value: 1.e-10
         velocity:
             type: cartesian
-            u: -0.0125  
+            u: -0.0125
             v: 0.0
             w: 0.0
         material_volume_fraction:
