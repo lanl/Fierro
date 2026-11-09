@@ -267,16 +267,18 @@ void get_dynamic_compliance(const size_t num_bdy_nodes,
 ///        direction: the static displacement per unit force from the
 ///        diagonal of the assembled stiffness.
 ///
-/// diag_inv must come from the stiffness BEFORE the Dirichlet conditions
-/// overwrite the constrained rows. Constrained dofs get c = 0, since the
-/// solve will not move them.
+/// diag_inv only needs to hold 1/K_ii on the free dofs. The displacement BCs
+/// no longer modify the element stiffness (they are applied in the linear
+/// solve through a constrained dof mask), so the solver's regular Jacobi
+/// D_inv can be passed directly. Its value on constrained dofs is ignored:
+/// they get c = 0 through bdy_dof_fixed, since the solve will not move them.
 ///
 /// 1/K_ii underestimates the true nodal compliance (K^-1)_ii, so a scale
 /// above 1 under-relaxes the contact force from one Picard iteration to the next.
 ///
 /// \param num_bdy_nodes       number of boundary nodes
 /// \param bdy_nodes           bdy node lid -> node gid
-/// \param diag_inv            (num_nodes, 3) 1/K_ii of the unconstrained stiffness
+/// \param diag_inv            (num_nodes, 3) 1/K_ii of the stiffness (free dofs)
 /// \param bdy_dof_fixed       (num_bdy_nodes, 3) 1 if the dof is constrained
 /// \param scale               compliance scale factor
 /// \param bdy_node_compliance output (num_bdy_nodes, 3)

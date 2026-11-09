@@ -43,16 +43,21 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /// \brief Evolves the boundary according to a given displacement
 ///
+/// Every displacement BC marks the dofs it prescribes in constrained_dof and
+/// sets their increment in displacement_step. The constraints are applied
+/// at the vector level in the linear solve (see elem_K_times_x), so the
+/// element stiffness arrays are not modified here.
+///
 /// \param mesh The simulation mesh
 /// \param BoundaryConditions Boundary contains arrays of information about BCs
-/// \param node_disp The nodal displacement array
+/// \param constrained_dof (num_nodes, 3) mask, set to true for prescribed dofs
+/// \param displacement_step The load step displacement increment
 /// \param time_value The current simulation time
 ///
 /////////////////////////////////////////////////////////////////////////////
 void TLQS3D::boundary_displacement(const swage::Mesh_t& mesh,
     const BoundaryCondition_t& BoundaryConditions,
-    const CArrayKokkos<double>& K_elem,
-    const CArrayKokkos<double>& F_elem,
+    const CArrayKokkos<bool>& constrained_dof,
     const CArrayKokkos<double>& displacement_step,
     const double dt,
     const double time_value,
@@ -77,8 +82,7 @@ void TLQS3D::boundary_displacement(const swage::Mesh_t& mesh,
                 BoundaryConditions.BoundaryConditionEnums,
                 BoundaryConditions.displacement_bc_global_vars,
                 BoundaryConditions.bc_state_vars,
-                K_elem,
-                F_elem,
+                constrained_dof,
                 displacement_step,
                 dt,
                 time_value,
@@ -88,6 +92,7 @@ void TLQS3D::boundary_displacement(const swage::Mesh_t& mesh,
                 bdy_set);
         }); // end for bdy_node_lid
     } // end for bdy_set
+    Kokkos::fence();
 
     return;
 } // end boundary_displacement function

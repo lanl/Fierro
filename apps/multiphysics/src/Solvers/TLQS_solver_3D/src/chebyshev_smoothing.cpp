@@ -36,8 +36,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "tlqs_solver_3D.hpp"
 
 /**
- * @brief Applies a matrix-free Chebyshev polynomial preconditioner using a thread-safe,
- * node-based gathering approach (no atomic operations required).
+ * @brief Applies a matrix-free Chebyshev polynomial preconditioner. The products with the
+ * constrained stiffness operator A are element based (packed symmetric K_elem, atomic scatter),
+ * see constrained_K_times_x.
  */
 void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
                                             const MPICArrayKokkos<double>& zkp1,
@@ -46,11 +47,13 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
                                             const CArrayKokkos<double>& delta_z,
                                             MPICArrayKokkos<double>& temporary,
                                             const CArrayKokkos<double>& K_elem,
+                                            const CArrayKokkos<bool>& constrained_dof,
+                                            const size_t num_elems,
                                             const size_t num_nodes,
-                                            const RaggedRightArrayKokkos<size_t>& elems_in_node,
-                                            const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
                                             const size_t num_nodes_in_elem,
                                             const DCArrayKokkos<size_t>& nodes_in_elem,
+                                            const CArrayKokkos<double>& x_elem,
+                                            const CArrayKokkos<double>& y_elem,
                                             const double alpha,
                                             const double beta,
                                             const int degree)
@@ -75,22 +78,10 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
         double rho_k = 1.0 / (2.0 * d / c - rho_prev);
         double gamma_k = rho_k * 2.0 / c;
 
-        // --- THREAD-SAFE MATRIX-FREE MULTIPLICATION (temporary = K * zk) ---
-        // Parallelized by node; each thread computes its exact global DOF value.
-        FOR_ALL(node_gid, 0, num_nodes, {
-            // Sum contributions from all elements containing this global node,
-            // contracting the K_elem rows with the incoming Chebyshev vector (zk)
-            double val0 = 0.0;
-            double val1 = 0.0;
-            double val2 = 0.0;
-            node_K_times_x(node_gid, elems_in_node, node_lid_in_elem, num_nodes_in_elem, nodes_in_elem, K_elem, zk, val0, val1, val2);
-
-            // Directly assign to scratch array without atomics or clearing passes
-            temporary(node_gid, 0) = val0;
-            temporary(node_gid, 1) = val1;
-            temporary(node_gid, 2) = val2;
-        });
-        MATAR_FENCE();
+        // --- MATRIX-FREE MULTIPLICATION (temporary = A * zk) ---
+        // element based on the packed symmetric K_elem, see constrained_K_times_x
+        constrained_K_times_x(num_elems, num_nodes, num_nodes_in_elem, nodes_in_elem, K_elem, constrained_dof,
+                              zk, temporary, x_elem, y_elem);
         // -----------------------------------------------------------------
         temporary.communicate();
 
@@ -114,39 +105,45 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
 }
 
 /**
- * @brief Computes the inverse of the global stiffness matrix diagonal (D_inv)
+ * @brief Computes the inverse of the diagonal of the constrained operator A (D_inv)
  * using a thread-safe, node-based assembly approach.
- * * @param D_inv              Output vector tracking 1.0 / (K_ii + epsilon)
- * @param K_elem             Element stiffness arrays (num_elems, 3*npe, 3*npe)
+ * * @param D_inv              Output vector tracking 1.0 / (A_ii + epsilon)
+ * @param K_elem             Element stiffness arrays, packed upper triangles (num_elems, n*(n+1)/2)
+ * @param constrained_dof    true for dofs prescribed by a displacement BC (A_ii = 1 there)
  * @param num_nodes          Total number of global nodes in the mesh
  * @param elems_in_node      Ragged array mapping global node ID to local elements
+ * @param node_lid_in_elem   Local index of the node in each of those elements
  * @param num_nodes_in_elem  Number of nodes per element (e.g., 64 for cubic hex)
- * @param nodes_in_elem      Array mapping element ID to its global node IDs
  */
 void TLQS3D::get_diagonal_inverse(MPICArrayKokkos<double>& D_inv,
                                   const CArrayKokkos<double>& K_elem,
+                                  const CArrayKokkos<bool>& constrained_dof,
                                   const size_t num_nodes,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_node,
                                   const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
-                                  const size_t num_nodes_in_elem,
-                                  const DCArrayKokkos<size_t>& nodes_in_elem)
+                                  const size_t num_nodes_in_elem)
 {
+    const size_t n = 3 * num_nodes_in_elem;
+
     FOR_ALL(node_gid, 0, num_nodes, {
         const size_t num_elems_in_node = elems_in_node.stride(node_gid);
-        
+
         for (size_t p_dir = 0; p_dir < 3; p_dir++) {
-            double diag = 0.0;
-            
-            for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
-                const size_t elem_gid = elems_in_node(node_gid, elem_lid);
-                
-                // local index of this node within the element
-                const size_t local_dof = 3 * node_lid_in_elem(node_gid, elem_lid) + p_dir;
-                
-                // Accumulate diagonal entries (local_dof, local_dof)
-                diag += K_elem(elem_gid, local_dof, local_dof);
+            double diag = 1.0;  // constrained dof: A_ii = 1
+
+            if (!constrained_dof(node_gid, p_dir)) {
+                diag = 0.0;
+                for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
+                    const size_t elem_gid = elems_in_node(node_gid, elem_lid);
+
+                    // local index of this node within the element
+                    const size_t local_dof = 3 * node_lid_in_elem(node_gid, elem_lid) + p_dir;
+
+                    // Accumulate diagonal entries (local_dof, local_dof): the first entry of the packed row
+                    diag += K_elem(elem_gid, packed_row_start(local_dof, n));
+                }
             }
-            
+
             // Invert with safety epsilon protection
             D_inv(node_gid, p_dir) = 1.0 / (diag + 1e-16);
         }
@@ -163,11 +160,13 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
                                   double& beta,
                                   const MPICArrayKokkos<double>& D_inv,
                                   const CArrayKokkos<double>& K_elem,
+                                  const CArrayKokkos<bool>& constrained_dof,
+                                  const size_t num_elems,
                                   const size_t num_nodes,
-                                  const RaggedRightArrayKokkos<size_t>& elems_in_node,
-                                  const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
                                   const size_t num_nodes_in_elem,
                                   const DCArrayKokkos<size_t>& nodes_in_elem,
+                                  const CArrayKokkos<double>& x_elem,
+                                  const CArrayKokkos<double>& y_elem,
                                   MPICArrayKokkos<double>& v_scratch,
                                   MPICArrayKokkos<double>& w_scratch,
                                   const int max_iters,
@@ -186,17 +185,14 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
     // --- Power Iteration Loop ---
     for (int iter = 0; iter < max_iters; ++iter) {
         
-        // 1. FUSED KERNEL: Compute Matrix-Free Product AND Scale by D_inv directly
-        FOR_ALL(node_gid, 0, num_nodes, {
-            double val0 = 0.0;
-            double val1 = 0.0;
-            double val2 = 0.0;
-            node_K_times_x(node_gid, elems_in_node, node_lid_in_elem, num_nodes_in_elem, nodes_in_elem, K_elem, v_scratch, val0, val1, val2);
+        // 1. Matrix-free product w = A * v (element based, packed symmetric K_elem), then scale by D_inv
+        constrained_K_times_x(num_elems, num_nodes, num_nodes_in_elem, nodes_in_elem, K_elem, constrained_dof,
+                              v_scratch, w_scratch, x_elem, y_elem);
 
-            // Fused operation: Scale the accumulated stiffness action by D_inv 
-            w_scratch(node_gid, 0) = val0 * D_inv(node_gid, 0);
-            w_scratch(node_gid, 1) = val1 * D_inv(node_gid, 1);
-            w_scratch(node_gid, 2) = val2 * D_inv(node_gid, 2);
+        FOR_ALL(node_gid, 0, num_nodes, {
+            for (size_t q = 0; q < 3; q++) {
+                w_scratch(node_gid, q) *= D_inv(node_gid, q);
+            }
         });
         MATAR_FENCE();
 
