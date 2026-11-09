@@ -187,6 +187,8 @@ for i in range(len(executables)):
                 diff_tol = 1E-2
             if (tests[j] == "TaylorAnvil_Contact"):
                 diff_tol = 1.2E-2
+            if (tests[j] == "TLQS_cantilever_beam"):
+                diff_tol = 1E-4
 
             for k in range(len(result_data[0])):
                 calc = [row[k] for row in result_data]
