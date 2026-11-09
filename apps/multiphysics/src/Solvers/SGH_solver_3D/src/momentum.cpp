@@ -120,7 +120,7 @@ void SGH3D::get_velgrad(DCArrayKokkos<double>& vel_grad,
     const size_t num_nodes_in_elem = 8;
     const size_t num_dims = 3;
 
-    // --- calculate the forces acting on the nodes from the element ---
+    // --- calculate the element average vel gradient ---
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
         double u_array[num_nodes_in_elem];
         double v_array[num_nodes_in_elem];

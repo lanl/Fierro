@@ -383,7 +383,6 @@ void init_press_sspd_stress(const Material_t& Materials,
                             const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
                             const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
                             const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
-                            DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
                             const size_t num_mat_pts,
                             const size_t mat_id);
 
