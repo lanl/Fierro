@@ -188,7 +188,7 @@ for i in range(len(executables)):
             if (tests[j] == "TaylorAnvil_Contact"):
                 diff_tol = 1.2E-2
             if (tests[j] == "TLQS_cantilever_beam" or tests[j] == "TLQS_uniaxial_contact_p1" or tests[j] == "TLQS_uniaxial_contact_p3"):
-                diff_tol = 1E-4 # adding on 11-9-26 due to noise in shear stresses that are functionally zero causing failures of the test
+                diff_tol = 1E-4 # adding on 11-9-26 due to noise in stresses that are functionally zero causing failures of the test
 
             for k in range(len(result_data[0])):
                 calc = [row[k] for row in result_data]
