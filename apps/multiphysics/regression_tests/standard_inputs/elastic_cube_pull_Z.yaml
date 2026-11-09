@@ -1,0 +1,199 @@
+# num_dims: 3
+# Strain = 10 percent, delta_x = 0.1
+# Analytic solution, quasistatics (GPa)= 
+# [   0.00    0.00    0.00   ]
+# [   0.00    0.00    0.00   ]
+# [   0.00    0.00    15.29 ]
+# code =  0.153 MBar = 15.3 GPa 
+#
+# Paraview
+# 0 = sigma(0,0)
+# 1 = sigma(0,1)
+# 2 = sigma(0,2)
+# 3 = sigma(1,0)
+# 4 = simga(1,1)
+# 5 = sigma(1,2)
+# 6 = sigma(2,0)
+# 7 = sigma(2,1)
+# 8 = sigma(2,2)
+# 
+# Note: the z-direction requires a smaller strain, using 0.1, else
+# element inverts; the other directions are not as sensative
+
+dynamic_options:
+    time_final: 12.0
+    dt_min: 1.e-8
+    dt_max: 0.1
+    dt_start: 1.e-6
+    cycle_stop: 100000
+
+
+# mesh_options:
+#     source: file
+#     file_path: /var/tmp/repos/Fierro/fork/Fierro/testing/meshes/mesh_Sedov_8.geo
+
+mesh_options:
+    source: generate
+    num_dims: 3
+    type: box
+    origin: [0.0, 0.0, 0.0]
+    length: [1, 1, 1]
+    num_elems: [1, 1, 1]
+
+
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: viz_and_state # only options are viz or viz_and_state
+    graphics_time_step: 12
+    mat_pt_field_outputs:
+        - den
+        - stress
+        - sie
+        - volfrac
+
+solver_options:
+  - solver:
+        method: dynx_FE
+        id: 0
+        # solver_vars:
+        #  - blah
+        #  - blah
+        #  - blah
+
+boundary_conditions:
+    # Tag Z plane
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 0.0
+        velocity_model: reflected
+        velocity_bc_global_vars:
+            - 0   # x
+            - 0   # y
+            - 1   # z
+
+    # -----------------------------------------------------
+    # using two velocity conditions on the z=1 boundary: 
+    #    v=0.01 till t=10 and then v=0 afterwards
+    # -----------------------------------------------------
+
+    # Tag z plane: piston driven at z=1
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 1.0
+            # Piston direction is specified by the first 3 entries below.
+        velocity_model: piston
+        velocity_bc_global_vars:
+            # Piston direction vector (normal to the driven face):
+            - 0   # x
+            - 0   # y
+            - 1   # z
+            #
+            # Piston velocity polynomial coefficients along the piston direction.
+            # Let dt = time_value - t_start. For t_start <= time_value <= t_end:
+            #   v(dt) = v0 + v1*dt + 0.5*v2*dt^2
+            # where v0/v1/v2 correspond to hydro_bc_vel_0/1/2.
+            - 0.01  # hydro_bc_vel_0 
+            - 0.0  # hydro_bc_vel_1 
+            - 0.0  # hydro_bc_vel_2 
+            - 0.0  # t_start
+            - 10.0  # t_end
+
+    # Tag z plane: piston driven at z=1
+    - boundary_condition:
+        solver_id: 0
+        surface: 
+            type: z_plane
+            plane_position: 1.0
+            # Piston direction is specified by the first 3 entries below.
+        velocity_model: piston
+        velocity_bc_global_vars:
+            # Piston direction vector (normal to the driven face):
+            - 0   # x
+            - 0   # y
+            - 1   # z
+            #
+            # Piston velocity polynomial coefficients along the piston direction.
+            # Let dt = time_value - t_start. For t_start <= time_value <= t_end:
+            #   v(dt) = v0 + v1*dt + 0.5*v2*dt^2
+            # where v0/v1/v2 correspond to hydro_bc_vel_0/1/2.
+            - 0.0  # hydro_bc_vel_0 
+            - 0.0  # hydro_bc_vel_1 
+            - 0.0  # hydro_bc_vel_2 
+            - 10.0 # t_start
+            - 1000.0  # t_end
+  
+materials:
+
+    - material:
+        id: 0  # othortopic carbon fiber plate
+
+        #------Strength
+        # values are MBar = 10^11 Pa = 100GPa 
+        strength_model_type: state_based
+        strength_model: orthotropic_linear_elastic
+        strength_global_vars:
+            # single-crystal Zinc
+            - 1.24 # E1   #(Basal Plane 1)          
+            - 0.35 # E2   #(Weak C-Axis rotated to Axis 2) -> ~3.5x drop!        
+            - 1.24 # E3   #(Basal Plane 2)          
+            - 0.10 # nu12           
+            - 0.25 # nu13          
+            - 0.10 # nu23          
+            - 0.60 # G12  
+            - 0.40 # G13  
+            - 0.60 # G23         
+            - 0.01 #min sound speed
+        #
+        # isotopic steel
+        #    - 2.0 # E1  
+        #    - 2.0 # E2 
+        #    - 2.0 # E3  
+        #    - 0.3 # nu12 
+        #    - 0.3 # nu13 
+        #    - 0.3 # nu23 
+        #    - 0.8 # G12 
+        #    - 0.8 # G13 
+        #    - 0.8 # G23   
+        #    - 0.01 #min sound speed
+        # ------ArtVisc
+        dissipation_model: MARS
+        dissipation_global_vars:
+            - 1.0   # q1
+            - 1.333 # q1ex
+            - 1.0   # q2
+            - 1.333 # q2ex
+            - 0.01   # min limiter
+            - 1.0
+
+
+regions:
+    # fill with gas
+    - region:
+        id: 0
+        volume:
+            type: global
+        
+initial_conditions:
+
+    - initial_condition:
+        region_id: 0
+        material_id: 0
+        density: 
+            type: uniform
+            value: 9.00
+        specific_internal_energy: 
+            type: uniform
+            value: 1.e-10
+        velocity:
+            type: cartesian
+            u: 0.0  
+            v: 0.0
+            w: 0.0
+        material_volume_fraction:
+            type: uniform
+            value: 1.0

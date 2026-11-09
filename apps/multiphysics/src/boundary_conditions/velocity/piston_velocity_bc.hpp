@@ -101,8 +101,8 @@ static void velocity(const swage::Mesh_t& mesh,
 
     // Set velocity to that direction to specified value
     // if t_end > time > t_start
-    // v(t) = v0 exp(-v1*(time - time_start) )
-    if (time_value >= hydro_bc_vel_t_start && time_value <= hydro_bc_vel_t_end) {
+    // v(t) = v0 + v1*dt + v2*0.5*dt^2
+    if (time_value >= hydro_bc_vel_t_start && time_value < hydro_bc_vel_t_end) {
         // the time difference
         const double time_delta = time_value - hydro_bc_vel_t_start;
 
