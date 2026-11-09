@@ -198,7 +198,12 @@ enum class gauss_pt_state
     divergence_velocity,
     gradient_velocity,
     level_set,
-    shock_detector
+    shock_detector,
+    detj0,         // det(J0) at t=0, frozen reference-to-physical Jacobian determinant
+    jac0_inv,      // inv(J0) at t=0, frozen reference-to-physical Jacobian inverse
+    rho0_detj0_w,  // rho0 * det(J0) * w_q, frozen per-qpt conserved mass weight
+    detj,          // det(J(t)) at current time, rebuilt each RK stage
+    jac_inv        // inv(J(t)) at current time, rebuilt each RK stage
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -219,6 +224,12 @@ struct GaussPoint_t
     MPICArrayKokkos<double> level_set_n0;  ///< GaussPoint level set field
 
     MPICArrayKokkos<double> shock_detector;  ///< GaussPoint shock detector field
+
+    DCArrayKokkos<double> detj0;         ///< det(J0) at t=0, frozen ref-to-physical Jacobian determinant
+    DCArrayKokkos<double> jac0_inv;      ///< inv(J0) at t=0, shape (num_gauss_pnts, num_dims, num_dims)
+    DCArrayKokkos<double> rho0_detj0_w;  ///< rho0 * det(J0) * w_q, per-qpt conserved mass weight
+    DCArrayKokkos<double> detj;          ///< det(J(t)) at current time
+    DCArrayKokkos<double> jac_inv;       ///< inv(J(t)) at current time, shape (num_gauss_pnts, num_dims, num_dims)
 
     // initialization method (num_cells, num_dims)
     void initialize(size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states);
@@ -286,7 +297,8 @@ enum class material_pt_state
     shear_modulii,
     poisson_ratios,
     thermal_conductivity,
-    specific_heat
+    specific_heat,
+    coords  // physical position at the material point (= qpt for single-material)
 };
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -321,7 +333,9 @@ struct MaterialPoint_t
     DRaggedRightArrayKokkos<double> elastic_modulii;  ///<  MaterialPoint elastic modulii Exx, Eyy, Ezz
     DRaggedRightArrayKokkos<double> shear_modulii;    ///<  MaterialPoint shear modulii Gxy, Gxz, Gyz
     DRaggedRightArrayKokkos<double> poisson_ratios;   ///<  MaterialPoint poisson ratios nu_xy, nu_xz, nu_yz
-    
+
+    DRaggedRightArrayKokkos<double> coords;           ///< physical position at the material point
+
 
     // Material Models are stored on Material points
     DRaggedRightArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS, accessed as (mat_id, elem_lid, var_lid)
@@ -347,7 +361,8 @@ struct MaterialPoint_t
 // Possible material zone states, used to initialize MaterialZone_t
 enum class material_zone_state
 {
-    specific_internal_energy
+    specific_internal_energy,
+    mass  // lumped row-sum thermo mass per zone DoF; time-invariant under pointwise rho update
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -364,6 +379,7 @@ struct MaterialZone_t
 
     DRaggedRightArrayKokkos<double> sie;     ///< coefficients for the sie polynomial field
     DRaggedRightArrayKokkos<double> sie_n0;  ///< coefficients for the sie polynomial field at t=n0 of time integration
+    DRaggedRightArrayKokkos<double> mass;    ///< lumped row-sum mass per zone DoF
 
 
     void initialize_num_mats(size_t num_mats);

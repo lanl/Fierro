@@ -270,6 +270,21 @@ void GaussPoint_t::initialize(size_t num_gauss_pnts, size_t num_dims, std::vecto
             case gauss_pt_state::shock_detector:
                 if (shock_detector.size() == 0) this->shock_detector = MPICArrayKokkos<double>(num_gauss_pnts, "gauss_point_shock_detector");
                 break;
+            case gauss_pt_state::detj0:
+                if (detj0.size() == 0) this->detj0 = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_detj0");
+                break;
+            case gauss_pt_state::jac0_inv:
+                if (jac0_inv.size() == 0) this->jac0_inv = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_jac0_inv");
+                break;
+            case gauss_pt_state::rho0_detj0_w:
+                if (rho0_detj0_w.size() == 0) this->rho0_detj0_w = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_rho0_detj0_w");
+                break;
+            case gauss_pt_state::detj:
+                if (detj.size() == 0) this->detj = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_detj");
+                break;
+            case gauss_pt_state::jac_inv:
+                if (jac_inv.size() == 0) this->jac_inv = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_jac_inv");
+                break;
             default:
                 std::cout<<"Desired gauss point state not understood in GaussPoint_t initialize"<<std::endl;
                 throw std::runtime_error("**** Error in State Field Name ****");
@@ -409,6 +424,9 @@ void MaterialPoint_t::initialize(size_t num_dims, std::vector<material_pt_state>
             case material_pt_state::eroded_flag:
                 if (eroded.size() == 0) this->eroded = DRaggedRightArrayKokkos<bool>(this->num_material_points_buffer, "material_point_eroded");
                 break;
+            case material_pt_state::coords:
+                if (coords.size() == 0) this->coords = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, "material_point_coords");
+                break;
             default:
                 std::cout<<"Desired material point state not understood in MaterialPoint_t initialize"<<std::endl;
                 throw std::runtime_error("**** Error in State Field Name ****");
@@ -437,6 +455,9 @@ void MaterialZone_t::initialize_Pn(std::vector<material_zone_state> material_zon
             case material_zone_state::specific_internal_energy:
                 if (sie.size() == 0) this->sie = DRaggedRightArrayKokkos<double>(this->num_material_zones_buffer, "material_zone_sie");
                 if (sie_n0.size() == 0) this->sie_n0 = DRaggedRightArrayKokkos<double>(this->num_material_zones_buffer, "material_zone_sie_n0");
+                break;
+            case material_zone_state::mass:
+                if (mass.size() == 0) this->mass = DRaggedRightArrayKokkos<double>(this->num_material_zones_buffer, "material_zone_mass");
                 break;
             default:
                 std::cout<<"Desired material zone state not understood in MaterialZone_t initialize"<<std::endl;

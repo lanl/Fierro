@@ -69,8 +69,8 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 
     // storing reference configuration if variable initialized
     if (State.node.coords_t0.size() > 0) {
-        FOR_ALL(i, 0, static_cast<long long>(mesh.num_nodes),
-                j, 0, 3, {
+        FOR_ALL(i, 0, static_cast<long long>(num_nodes),
+                j, 0, static_cast<long long>(num_dims), {
                     State.node.coords_t0(i,j) = State.node.coords(i,j);
                 });
         State.node.coords_t0.update_host();
@@ -2052,8 +2052,9 @@ double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
             }
         case initial_conditions::tgVortexScalar:
             {
-                printf("**** TG Vortex not supported for general scalar initial conditions ****\n");
-
+                value_out = scalar
+                          + (3.0/8.0) * (cos(2.0 * PI * mesh_coords(0))
+                                       + cos(2.0 * PI * mesh_coords(1)));
                 break;
             }
         case initial_conditions::noICsScalar:
@@ -2164,8 +2165,9 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
             }
         case initial_conditions::tgVortexScalar:
             {
-                printf("**** TG Vortex not supported for general scalar initial conditions ****\n");
-
+                field_scalar(mesh_gid,bin) = scalar
+                          + (3.0/8.0) * (cos(2.0 * PI * mesh_coords(0))
+                                       + cos(2.0 * PI * mesh_coords(1)));
                 break;
             }
         case initial_conditions::noICsScalar:
@@ -2292,8 +2294,9 @@ void paint_scalar(const MPICArrayKokkos<double>& field_scalar,
                 }
             case initial_conditions::tgVortexScalar:
                 {
-                    printf("**** TG Vortex not supported for general scalar initial conditions ****\n");
-
+                    field_scalar(mesh_gid) = scalar
+                              + (3.0/8.0) * (cos(2.0 * PI * mesh_coords(0))
+                                           + cos(2.0 * PI * mesh_coords(1)));
                     break;
                 }
             case initial_conditions::noICsScalar:
@@ -2560,8 +2563,9 @@ void paint_node_scalar(const double scalar,
                 }
             case initial_conditions::tgVortexScalar:
                 {
-                    printf("**** TG Vortex not supported for general scalar initial conditions ****\n");
-
+                    node_scalar(node_gid) = scalar
+                              + (3.0/8.0) * (cos(2.0 * PI * node_coords(node_gid, 0))
+                                           + cos(2.0 * PI * node_coords(node_gid, 1)));
                     break;
                 }
             case initial_conditions::noICsScalar:

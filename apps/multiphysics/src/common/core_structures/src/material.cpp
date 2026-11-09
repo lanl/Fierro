@@ -57,6 +57,7 @@ std::map<std::string, model::StrengthModels> strength_models_map
     { "hypo_elastic_plastic_strength_rz", model::hypoElasticPlasticStrengthRZ },
     { "host_ann_strength", model::hostANNStrength },
     { "qstatx_isotropic_linear_elastic", model::QSIsotropicLinearElastic},
+    { "orthotropic_linear_elastic", model::OrthotropicLinearElasticStrength}
 };
 
 std::map<std::string, model::EOSType> eos_type_map

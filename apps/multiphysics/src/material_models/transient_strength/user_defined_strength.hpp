@@ -1,5 +1,5 @@
 /**********************************************************************************************
-� 2020. Triad National Security, LLC. All rights reserved.
+© 2020. Triad National Security, LLC. All rights reserved.
 This program was produced under U.S. Government contract 89233218CNA000001 for Los Alamos
 National Laboratory (LANL), which is operated by Triad National Security, LLC for the U.S.
 Department of Energy/National Nuclear Security Administration. All rights in the program are
@@ -95,6 +95,7 @@ namespace UserDefinedStrengthModel {
     static void calc_stress(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
         const MPICArrayKokkos<double> &node_coords,
+        const MPICArrayKokkos<double> &node_coords_t0,
         const MPICArrayKokkos <double> &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
@@ -200,6 +201,7 @@ namespace NotionalStrengthModel {
     static void calc_stress(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
         const MPICArrayKokkos <double> &node_coords,
+        const MPICArrayKokkos <double> &node_coords_t0,
         const MPICArrayKokkos <double> &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,

@@ -59,6 +59,7 @@ namespace SGHRZ_State
     static const std::vector<node_state> required_node_state = 
     { 
         node_state::coords,
+        node_state::coords_t0,
         node_state::velocity,
         node_state::mass
     };
@@ -300,6 +301,7 @@ public:
         const Material_t& Materials,
         const swage::Mesh_t& mesh,
         const MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords_t0,
         const MPICArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
@@ -329,6 +331,7 @@ public:
         const swage::Mesh_t& mesh,
         const DCArrayKokkos<double>& GaussPoints_vol,
         const MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<double>& node_coords_t0,
         const MPICArrayKokkos<double>& node_vel,
         const DCArrayKokkos<double>& GaussPoints_vel_grad,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,

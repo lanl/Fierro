@@ -36,11 +36,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 std::map<std::string, solver_input::method> solver_map
 {
-    { "dynx_FE",    solver_input::SGH3D },
-    { "dynx_FE_rz", solver_input::SGHRZ },
-    { "thrmex_FE",  solver_input::SGTM3D },
+    { "dynx_FE",     solver_input::SGH3D },
+    { "dynx_FE_rz",  solver_input::SGHRZ },
+    { "thrmex_FE",   solver_input::SGTM3D },
     { "level_set",   solver_input::levelSet },
-    { "qstatx_FE",   solver_input::TLQS3D }
+    { "qstatx_FE",   solver_input::TLQS3D },
+    { "ao_dynx_FE",  solver_input::AOSGH3D }
 };
 
 std::vector<std::string> str_solver_inps
@@ -48,7 +49,8 @@ std::vector<std::string> str_solver_inps
     "method",
     "id",
     "time_end",
-    "use_moving_heat_source"
+    "use_moving_heat_source",
+    "time_integration"
 };
 
 std::vector<std::string> solver_required_inps

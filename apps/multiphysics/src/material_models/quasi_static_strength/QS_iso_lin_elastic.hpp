@@ -96,6 +96,7 @@ namespace QSIsotropicLinearElastic {
      *
      * @param GaussPoints_vel_grad   Velocity gradient at Gauss points.
      * @param node_coords   Coordinates of the nodes.
+     * @param node_coords_t0   Coordinates of the nodes in the intial, reference configuration.
      * @param node_vel   Velocities of the nodes.
      * @param nodes_in_elem   Node indices in the element.
      * @param MaterialPoints_pres   Pressure at material points.
@@ -124,6 +125,7 @@ namespace QSIsotropicLinearElastic {
     static void calc_stress(
         const DCArrayKokkos<double>  &GaussPoints_vel_grad,
         const MPICArrayKokkos<double> &node_coords,
+        const MPICArrayKokkos<double> &node_coords_t0,
         const MPICArrayKokkos <double> &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
         const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
