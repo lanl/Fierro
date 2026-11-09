@@ -84,11 +84,13 @@ void Driver::initialize()
     parse_yaml(root, SimulationParamaters, Materials, BoundaryConditions);
     log_.info("Finished parsing YAML file\n");
 
-    // checking if TLQS is active in order to run correct read vtk function
-    bool TLQS_active = false;
+    // checking if a solver that uses arbitrary order hex (HexN) elements is active (TLQS or AO_SGH),
+    // so the mesh builder and reader create Pn elements instead of linear ones
+    bool HexN = false;
     for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
-        if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::TLQS3D) {
-            TLQS_active = true;
+        if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::TLQS3D ||
+            SimulationParamaters.solver_inputs[solver_id].method == solver_input::AOSGH3D) {
+            HexN = true;
         }
     }
 
@@ -130,7 +132,7 @@ void Driver::initialize()
                                   initial_node_coords,
                                   SimulationParamaters.MeshInput, 
                                   initial_mesh.num_dims,
-                                  TLQS_active);
+                                  HexN);
         } // end if rank == 0
     }
     else if (SimulationParamaters.MeshInput.source == mesh_input::generate) {
@@ -139,7 +141,7 @@ void Driver::initialize()
             mesh_builder.build_mesh(initial_mesh, 
                                     initial_node_coords,
                                     SimulationParamaters,
-                                    TLQS_active);
+                                    HexN);
         } // end if rank == 0
     }
     else{
