@@ -16,7 +16,7 @@ solvers = ["Fierro"]
 solver_path = "../build/app/Fierro"
 
 # splitting by solver and capabilities for appending based on input args
-sgh = ["stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
+sgh = ["elastic_cube_pull_Z", "stl_to_volfrac", "TaylorAnvil", "TaylorAnvil_rz", "Compaction",  \
        "Compaction_rz", "Sedov", "Sod_X", "Sod_Y", "Sod_Z", "Sedov_Erosion", \
        "Sedov_Read_Ensight", "Sedov_rz_polar", "Abaqus_read", \
        "Pressure_bc_box","vtu_read", \

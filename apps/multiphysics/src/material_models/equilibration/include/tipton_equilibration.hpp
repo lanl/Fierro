@@ -135,7 +135,6 @@ namespace TiptonEquilibrationModel {
             const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
             const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
             const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-            const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
             const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
             const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
             const points_in_mat_t& points_in_mat_elem,

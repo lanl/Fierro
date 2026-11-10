@@ -240,6 +240,7 @@ void node_t::initialize(size_t num_nodes, size_t num_dims, std::vector<node_stat
                     this->temp_n0 = MPICArrayKokkos<double>(num_nodes, "node_temp_n0");
                     this->temp_n0.initialize_comm_plan(comm_plan);
                 }
+                break;
 
             default:
                 std::cout<<"Desired node state not understood in node_t initialize with communication plan"<<std::endl;
@@ -394,6 +395,10 @@ void MaterialPoint_t::initialize(size_t num_dims, std::vector<material_pt_state>
                 break;
             case material_pt_state::poisson_ratios:
                 if (poisson_ratios.size() == 0) this->poisson_ratios = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, "material_poisson_ratios");
+                break;
+            case material_pt_state::deformation_grad:
+                if (deformation_grad.size() == 0) this->deformation_grad = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, 3, "material_deformation_grad");
+                if (deformation_grad_t0.size() == 0) this->deformation_grad_t0 = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, 3, "material_deformation_grad_t0");
                 break;
             case material_pt_state::sound_speed:
                 if (sspd.size() == 0) this->sspd = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_sspd");
