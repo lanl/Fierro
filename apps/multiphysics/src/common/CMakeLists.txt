@@ -1,25 +1,25 @@
 cmake_minimum_required(VERSION 3.17)
 
-add_definitions(-DHAVE_KOKKOS=1)
-
-if (CUDA)
-  add_definitions(-DHAVE_CUDA=1)
-elseif (HIP)
-  add_definitions(-DHAVE_HIP=1)
-elseif (OPENMP)
-  add_definitions(-DHAVE_OPENMP=1)
-elseif (THREADS)
-  add_definitions(-DHAVE_THREADS=1)
-endif()
-
-include_directories(include)
-include_directories(src)
+# Common is split into six groups. Each group has its own CMakeLists.txt
+# that exports a COMMON_<GROUP>_Files list; they are combined here into
+# COMMON_Files, which src/CMakeLists.txt links into the Fierro executable.
+# The matching include/ directories are added in src/CMakeLists.txt.
 
 message("\n ****** ADDING COMMON SOURCE FILES ******** \n ")
 
-set(COMMON_Files 
-${CMAKE_CURRENT_SOURCE_DIR}/src/region_fill.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/src/geometry_new.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/src/stl_to_volfrac.cpp
+add_subdirectory(setup)
+add_subdirectory(physics)
+add_subdirectory(helpers)
+add_subdirectory(mesh)
+add_subdirectory(geometric)
+add_subdirectory(core_structures)
+
+set(COMMON_Files
+${COMMON_SETUP_Files}
+${COMMON_PHYSICS_Files}
+${COMMON_HELPERS_Files}
+${COMMON_MESH_Files}
+${COMMON_GEOMETRIC_Files}
+${COMMON_CORE_STRUCTURES_Files}
 PARENT_SCOPE
 )

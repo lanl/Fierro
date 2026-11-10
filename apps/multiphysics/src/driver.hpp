@@ -32,7 +32,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include "mesh_io.hpp"
+#include "mesh_reader.hpp"
+#include "mesh_builder.hpp"
 #include "parse_yaml.hpp"
 #include "solver.hpp"
 #include "simulation_parameters.hpp"

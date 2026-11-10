@@ -35,55 +35,95 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "tlqs_solver_3D.hpp"
 
-void TLQS3D::get_r0(
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn build_node_lid_in_elem
+///
+/// \brief Caches the local index of each node inside every element that
+///        contains it, so the matrix-free kernels do not have to search
+///        nodes_in_elem for it on every call.
+///
+/////////////////////////////////////////////////////////////////////////////
+void TLQS3D::build_node_lid_in_elem(
     const size_t num_nodes,
     const RaggedRightArrayKokkos <size_t>& elems_in_node,
     const size_t num_nodes_in_elem,
     const DCArrayKokkos <size_t>& nodes_in_elem,
-    const CArrayKokkos <double>& F_elem,
-    const CArrayKokkos <double>& K_elem,
-    const CArrayKokkos <double>& displacement_iter,
-    MPICArrayKokkos <double>& r0
+    CArrayKokkos <size_t>& num_elems_in_node,
+    RaggedRightArrayKokkos <size_t>& node_lid_in_elem
 )
 {
-    // getting r0 = (02F - 01F) - K * displacement_iter
+    num_elems_in_node = CArrayKokkos<size_t>(num_nodes, "num_elems_in_node");
     FOR_ALL(node_gid, 0, num_nodes, {
-        const size_t num_elems_in_node = elems_in_node.stride(node_gid);
+        num_elems_in_node(node_gid) = elems_in_node.stride(node_gid);
+    });
+    Kokkos::fence();
 
-        for (size_t p = 0; p < 3; p++) {
-            double val = 0.0;
+    node_lid_in_elem = RaggedRightArrayKokkos<size_t>(num_elems_in_node, "node_lid_in_elem");
 
-            // Sum contributions from all elements containing this node
-            for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
-                const size_t elem_gid = elems_in_node(node_gid, elem_lid);
+    FOR_ALL(node_gid, 0, num_nodes, {
+        for (size_t elem_lid = 0; elem_lid < elems_in_node.stride(node_gid); elem_lid++) {
+            const size_t elem_gid = elems_in_node(node_gid, elem_lid);
 
-                // Find local index of this node within the element
-                size_t local_node_lid = num_nodes_in_elem; // sentinel
-                for (size_t a = 0; a < num_nodes_in_elem; a++) {
-                    if (nodes_in_elem(elem_gid, a) == node_gid) {
-                        local_node_lid = a;
-                        break;
-                    }
-                }
-
-                const size_t local_dof = 3 * local_node_lid + p;
-
-                // F_elem contribution
-                val += F_elem(elem_gid, local_dof);
-                //std::cout << "F_ELEM: " << F_elem(elem_gid, local_dof) << std::endl;
-
-                // Subtract K_elem * displacement_iter
-                for (size_t b = 0; b < num_nodes_in_elem; b++) {
-                    const size_t node_gid_b = nodes_in_elem(elem_gid, b);
-                    for (size_t q = 0; q < 3; q++) {
-                        const size_t local_dof_b = 3 * b + q;
-                        val -= K_elem(elem_gid, local_dof, local_dof_b) * displacement_iter(node_gid_b, q);
-                        //std::cout << "K_ELEM: " << K_elem(elem_gid, local_dof, local_dof_b) << std::endl;
-                    }
+            // Find local index of this node within the element
+            size_t local_node_lid = num_nodes_in_elem; // sentinel
+            for (size_t a = 0; a < num_nodes_in_elem; a++) {
+                if (nodes_in_elem(elem_gid, a) == node_gid) {
+                    local_node_lid = a;
+                    break;
                 }
             }
+            node_lid_in_elem(node_gid, elem_lid) = local_node_lid;
+        }
+    });
+    Kokkos::fence();
+} // end build_node_lid_in_elem
 
-            r0(node_gid, p) = val;
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn get_r0
+///
+/// \brief Initial CG residual r0 = b - A * x for the constrained system,
+///        where b = P * F (F = sum of F_elem) and A = P*K*P + (I - P).
+///
+/// For free dofs: r0 = F - K * P * x. For constrained dofs: r0 = -x (the
+/// constraint row of A is the identity with a zero right hand side, which is
+/// what zeroing the K_elem rows/columns and F_elem entries used to produce).
+/// The traction BCs are added to r0 afterwards by the caller, as before.
+///
+/////////////////////////////////////////////////////////////////////////////
+void TLQS3D::get_r0(
+    const size_t num_elems,
+    const size_t num_nodes,
+    const size_t num_nodes_in_elem,
+    const DCArrayKokkos <size_t>& nodes_in_elem,
+    const RaggedRightArrayKokkos <size_t>& elems_in_node,
+    const RaggedRightArrayKokkos <size_t>& node_lid_in_elem,
+    const CArrayKokkos <double>& F_elem,
+    const CArrayKokkos <double>& K_elem,
+    const CArrayKokkos <bool>& constrained_dof,
+    const CArrayKokkos <double>& displacement_iter,
+    MPICArrayKokkos <double>& r0,
+    const CArrayKokkos <double>& x_elem,
+    const CArrayKokkos <double>& y_elem
+)
+{
+    // r0 = A * x
+    constrained_K_times_x(num_elems, num_nodes, num_nodes_in_elem, nodes_in_elem, K_elem, constrained_dof,
+                          displacement_iter, r0, x_elem, y_elem);
+
+    // r0 = P * F - A * x: gather F from the elements of each node (free dofs only)
+    FOR_ALL(node_gid, 0, num_nodes, {
+        const size_t num_elems_in_node = elems_in_node.stride(node_gid);
+        for (size_t q = 0; q < 3; q++) {
+            double F_val = 0.0;
+            if (!constrained_dof(node_gid, q)) {
+                for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
+                    const size_t elem_gid = elems_in_node(node_gid, elem_lid);
+                    F_val += F_elem(elem_gid, 3 * node_lid_in_elem(node_gid, elem_lid) + q);
+                }
+            }
+            r0(node_gid, q) = F_val - r0(node_gid, q);
         }
     });
     Kokkos::fence();
@@ -91,48 +131,24 @@ void TLQS3D::get_r0(
 } // end get_r0
 
 double TLQS3D::get_alpha(
+    const size_t num_elems,
     const size_t num_nodes,
     const size_t num_nodes_in_elem,
     const size_t num_owned_nodes,
-    const RaggedRightArrayKokkos<size_t>& elems_in_node,
     const DCArrayKokkos<size_t>& nodes_in_elem,
     const CArrayKokkos<double>& K_elem,
+    const CArrayKokkos<bool>& constrained_dof,
     const double rktrk,
     const CArrayKokkos<double>& p,
     MPICArrayKokkos<double>& temporary,
-    const DCArrayKokkos<bool> shared_tally_owned_nodes
+    const DCArrayKokkos<bool> shared_tally_owned_nodes,
+    const CArrayKokkos<double>& x_elem,
+    const CArrayKokkos<double>& y_elem
     )
 {
-    // Kernel 1: compute temporary = K * p
-    FOR_ALL(node_gid, 0, num_nodes, {
-        for (size_t p_dir = 0; p_dir < 3; p_dir++) {
-            double val = 0.0;
-
-            for (size_t elem_lid = 0; elem_lid < elems_in_node.stride(node_gid); elem_lid++) {
-                const size_t elem_gid = elems_in_node(node_gid, elem_lid);
-
-                size_t local_node_lid = num_nodes_in_elem;
-                for (size_t a = 0; a < num_nodes_in_elem; a++) {
-                    if (nodes_in_elem(elem_gid, a) == node_gid) {
-                        local_node_lid = a;
-                        break;
-                    }
-                }
-
-                const size_t local_dof = 3 * local_node_lid + p_dir;
-
-                for (size_t b = 0; b < num_nodes_in_elem; b++) {
-                    const size_t node_gid_b = nodes_in_elem(elem_gid, b);
-                    for (size_t q = 0; q < 3; q++) {
-                        const size_t local_dof_b = 3 * b + q;
-                        val += K_elem(elem_gid, local_dof, local_dof_b) * p(node_gid_b, q);
-                    }
-                }
-            }
-            temporary(node_gid, p_dir) = val;
-        }
-    });
-    MATAR_FENCE();
+    // Kernel 1: compute temporary = A * p (element based, packed symmetric K_elem)
+    constrained_K_times_x(num_elems, num_nodes, num_nodes_in_elem, nodes_in_elem, K_elem, constrained_dof,
+                          p, temporary, x_elem, y_elem);
 
     // temporary ghost entries needed for dot product
     temporary.communicate();
@@ -156,45 +172,18 @@ double TLQS3D::get_alpha(
 
 void TLQS3D::get_rkp1(
     const size_t num_nodes,
-    const RaggedRightArrayKokkos<size_t>& elems_in_node,
-    const size_t num_nodes_in_elem,
-    const DCArrayKokkos<size_t>& nodes_in_elem,
-    const CArrayKokkos<double>& K_elem,
     const MPICArrayKokkos<double>& rk,
-    const CArrayKokkos<double>& p,
+    const MPICArrayKokkos<double>& Kp,
     const double alpha,
     MPICArrayKokkos<double>& rkp1)
 {
     // r_{k+1} = r_k - alpha * K * p
+    // K * p was already computed (and communicated) by get_alpha and p has not changed since,
+    // so this is now a vector update instead of a second matrix-free product. Kp_val is the same
+    // value the original recomputed, so rkp1 is unchanged.
     FOR_ALL(node_gid, 0, num_nodes, {
-        const size_t num_elems_in_node = elems_in_node.stride(node_gid);
-
         for (size_t p_dir = 0; p_dir < 3; p_dir++) {
-            double Kp_val = 0.0;
-
-            for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
-                const size_t elem_gid = elems_in_node(node_gid, elem_lid);
-
-                // find local index of this node within the element
-                size_t local_node_lid = num_nodes_in_elem; // sentinel
-                for (size_t a = 0; a < num_nodes_in_elem; a++) {
-                    if (nodes_in_elem(elem_gid, a) == node_gid) {
-                        local_node_lid = a;
-                        break;
-                    }
-                }
-
-                const size_t local_dof = 3 * local_node_lid + p_dir;
-
-                for (size_t b = 0; b < num_nodes_in_elem; b++) {
-                    const size_t node_gid_b = nodes_in_elem(elem_gid, b);
-                    for (size_t q = 0; q < 3; q++) {
-                        const size_t local_dof_b  = 3 * b + q;
-                        Kp_val += K_elem(elem_gid, local_dof, local_dof_b) * p(node_gid_b, q);
-                    }
-                }
-            }
-
+            const double Kp_val = Kp(node_gid, p_dir);
             rkp1(node_gid, p_dir) = rk(node_gid, p_dir) - alpha * Kp_val;
         }
     });
