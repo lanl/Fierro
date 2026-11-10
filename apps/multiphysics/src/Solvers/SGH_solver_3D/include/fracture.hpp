@@ -35,8 +35,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef FRACTURE_H
 #define FRACTURE_H
 #include "matar.h"
-#include "state.hpp"
-#include "simulation_parameters.hpp"
 #include "boundary_conditions.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

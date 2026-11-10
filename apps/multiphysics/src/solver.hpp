@@ -63,23 +63,13 @@ public:
 
     bool use_moving_heat_source = false; // flag for SGTM solver for additive manufacturing moving heat source
 
-    /// @brief MPI- and GPU-safe logger, owned by the Driver. Set via
-    ///        set_logger() before any solver phase is invoked. Null by default
-    ///        so solvers that never touched logging still compile and run.
+    /// @brief Host-only logger, owned by the Driver. Set via set_logger()
+    ///        before any solver phase is invoked. Null by default so solvers
+    ///        that never touched logging still compile and run.
     ///
-    /// Usage inside a solver method (host):
+    /// Usage inside a solver method (host only, not inside FOR_ALL):
     ///     if (log) log->info("...\n");
-    /// Inside FOR_ALL (once per enclosing scope, before parallel_for):
-    ///     const auto log_dev = log_handle();
-    ///     FOR_ALL(i, 0, n, { if (log_dev) log_dev.info("...\n"); });
     fierro::Logger* log = nullptr;
-
-    /// @brief POD logger view for Kokkos capture (`log ? log->handle() : {}`).
-    ///        Call on the host immediately before FOR_ALL; name the result
-    ///        `log_dev` (or any name) and capture that variable by value.
-    inline fierro::Logger::Handle log_handle() const noexcept {
-        return fierro::log_handle(log);
-    }
 
     /// @brief Attach the Driver's logger to this solver. Non-owning pointer;
     ///        the caller (Driver) retains ownership. Safe to call at any time

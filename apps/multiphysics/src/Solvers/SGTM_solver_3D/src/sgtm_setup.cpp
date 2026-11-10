@@ -39,7 +39,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.hpp"
 #include "state.hpp"
 #include "simulation_parameters.hpp"
-#include "geometry_new.hpp"
 
 
 

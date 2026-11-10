@@ -35,12 +35,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef FIERRO_PARSE_BDY_COND_H
 #define FIERRO_PARSE_BDY_COND_H
 
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <string>
 #include <stdio.h>
-#include <sys/stat.h>
 
 #include "matar.h"
 

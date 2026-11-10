@@ -35,7 +35,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef TABULAR_MATERIAL_MODEL_H
 #define TABULAR_MATERIAL_MODEL_H
 
-#include "material.hpp"
 #include "table.hpp"
 
 
