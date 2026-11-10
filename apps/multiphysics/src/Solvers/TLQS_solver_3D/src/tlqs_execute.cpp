@@ -38,7 +38,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "material.hpp"
 #include "boundary_conditions.hpp"
 #include "state.hpp"
-#include "mesh_io.hpp"
+#include "mesh_writer.hpp"
+#include "AO_contact.hpp"
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -110,12 +111,40 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     ref_surf.initialize_ref_surf(SurfQuad,
                                  ref_elem);
 
-
     int num_qpt_in_elem = ref_elem.qpt_grad_basis.dims(0);
     
     // element stiffness and force arrays
-    CArrayKokkos <double> K_elem(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem); /// K1 + K2
-    CArrayKokkos <double> F_elem(mesh.num_elems,3*mesh.num_nodes_in_elem); /// F02 - F01
+    // K_elem stores only the packed upper triangle of each symmetric element stiffness matrix
+    // (n = 3*num_nodes_in_elem, n*(n+1)/2 entries per element, see TLQS3D::packed_row_start),
+    // which halves its memory and the bytes read by every CG product. Kel is symmetric for the
+    // supported material models (see the MATERIAL MODEL LIMITATION note in tally_elem_arrays).
+    const size_t num_dof_in_elem = 3*mesh.num_nodes_in_elem;
+    CArrayKokkos <double> K_elem(mesh.num_elems, num_dof_in_elem*(num_dof_in_elem+1)/2); /// K1 + K2 (packed upper triangle)
+    CArrayKokkos <double> F_elem(mesh.num_elems,3*mesh.num_nodes_in_elem); /// - F01    note: F02 added directly to cg residual from traction conditions
+
+    // dofs prescribed by the displacement BCs. The constraints are applied at the vector level in
+    // the linear solve (A = P*K*P + (I - P), see TLQS3D::constrained_K_times_x) instead of by
+    // zeroing rows and columns of K_elem, so the BC cost does not grow with the element order.
+    CArrayKokkos <bool> constrained_dof(mesh.num_nodes, 3, "constrained_dof");
+
+    // per element scratch for the element based CG products (gathered x and element result)
+    CArrayKokkos <double> x_elem(mesh.num_elems, num_dof_in_elem, "x_elem");
+    CArrayKokkos <double> y_elem(mesh.num_elems, num_dof_in_elem, "y_elem");
+
+    // per element scratch used by tally_elem_arrays at each material point: the global basis
+    // gradients, B1 for every node, and one row of K2. Computing these once per material point
+    // (instead of once per node pair) is what lets the Kel row updates vectorize.
+    // Indexed by element (like K_elem) so every thread in the element loop has its own slice.
+    CArrayKokkos <double> glob_grad_elem(mesh.num_elems, mesh.num_nodes_in_elem, 3);
+    CArrayKokkos <double> B1_elem(mesh.num_elems, 6, 3*mesh.num_nodes_in_elem);
+    CArrayKokkos <double> K2_row_elem(mesh.num_elems, 3*mesh.num_nodes_in_elem);
+
+    // local index of each node in every element connected to it. The mesh does not change during
+    // the solve, so this is built once here instead of searching nodes_in_elem for it inside every
+    // matrix-free product (get_r0, get_alpha, chebyshev smoothing and bounds, diagonal inverse).
+    CArrayKokkos <size_t> num_elems_in_node;
+    RaggedRightArrayKokkos <size_t> node_lid_in_elem;
+    build_node_lid_in_elem(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, num_elems_in_node, node_lid_in_elem);
 
     // additive schwarz preconditioning variables
     /* CArrayKokkos <double> K_elem_inv(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
@@ -221,6 +250,112 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     zkp1.initialize_comm_plan(*node_communication_plan);
     temporary.initialize_comm_plan(*node_communication_plan);
 
+    // ***************************************************
+    // AO contact setup
+    // ***************************************************
+    // the state lives for the whole solve: pairs persist across Picard iterations
+    // and loaded pairs are carried over from one load step to the next
+    AO_contact_state_t AO_contact_state;
+
+    // previous load step displacement increment, bdy node velocity = this/dt for the box padding
+    CArrayKokkos <double> prev_displacement_step;
+
+    // compliance scale: 1/K_ii underestimates the nodal compliance, > 1 under-relaxes
+    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    double contact_compliance_scale = 2;
+
+    // Picard convergence on the contact force the last solve has not seen
+    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const double contact_force_tol = 1.0e-6;
+
+    // Aitken relaxation of the contact force between Picard solves
+    // omega_init: relaxation before any history exists (first load step); later load steps
+    //             warm start from the omega the previous load step ended with
+    // [omega_min, omega_max]: bounds on the adaptive omega
+    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const double contact_aitken_omega_init = 0.5;
+    const double contact_aitken_omega_min  = 0.01;
+    const double contact_aitken_omega_max  = 1.0;
+
+    if (doing_contact) {
+
+        if (num_ranks > 1) {
+            throw std::runtime_error("**** TLQS AO contact is only supported on a single rank ****");
+        }
+
+        // fixed-size contact storage, only the members it needs are passed
+        AO_contact_initialize(mesh.num_bdy_nodes, mesh.num_bdy_surfs, mesh.num_nodes_in_surf,
+                              ref_elem.dof_positions_1d, ref_elem.num_dofs_1d, ref_elem.elem_dims,
+                              AO_contact_state.bdy_node_coords,
+                              AO_contact_state.bdy_node_vels,
+                              AO_contact_state.bdy_node_accels,
+                              AO_contact_state.bdy_node_mass,
+                              AO_contact_state.bdy_node_compliance,
+                              AO_contact_state.bdy_dof_fixed,
+                              AO_contact_state.bounding_boxes,
+                              AO_contact_state.num_nodes_in_bounding_boxes,
+                              AO_contact_state.num_surfs_in_node_boxes,
+                              AO_contact_state.lebesgue_overshoot,
+                              AO_contact_state.bdy_surf_node_normals,
+                              AO_contact_state.num_pen_surfs_in_node,
+                              AO_contact_state.pen_nodes,
+                              AO_contact_state.bdy_node_pred_coords,
+                              AO_contact_state.contact_counts,
+                              AO_contact_state.is_active,
+                              AO_contact_state.active_nodes,
+                              AO_contact_state.num_pairs_in_node,
+                              AO_contact_state.num_pairs_touching_node,
+                              AO_contact_state.contact_forces,
+                              AO_contact_state.contact_forces_used);
+
+        // lumped boundary node mass (density is defined on the reference configuration in TLQS)
+        // TLQS contact runs on the quasi-static compliance, the mass is kept for diagnostics
+        //get_bdy_node_mass(mesh.num_nodes, mesh.num_bdy_nodes, ref_elem.num_dofs_in_elem, Quad.num_qpts_in_elem,
+        //                  ref_elem.qpt_basis, ref_elem.qpt_grad_basis, Quad.qpt_weights,
+        //                  mesh.nodes_in_elem, mesh.bdy_nodes,
+        //                  State.MaterialToMeshMaps.num_mat_elems, State.MaterialToMeshMaps.elem_in_mat_elem,
+        //                  State.MaterialPoints.den, State.MaterialPoints.mat_volfrac, State.MaterialPoints.geo_volfrac,
+        //                  State.points_in_mat_elem, State.node.coords_t0,
+        //                  AO_contact_state.bdy_node_mass);
+
+        // this solver doesn't carry velocity or acceleration
+        // velocities are set per load step from the previous step's displacement increment
+        AO_contact_state.bdy_node_vels.set_values(0.0);
+        AO_contact_state.bdy_node_accels.set_values(0.0);
+
+        prev_displacement_step = CArrayKokkos <double> (mesh.num_nodes, 3, "prev_displacement_step");
+        prev_displacement_step.set_values(0.0);
+        Kokkos::fence();
+
+        // ---------------------------------------------------------------
+        // constrained dofs: run the displacement BCs once and read back the
+        // constrained_dof mask they set. this uses the BC functions themselves,
+        // so it holds for any displacement model. (none of the current models
+        // change which dofs they constrain over time, so once at setup is enough)
+        // ---------------------------------------------------------------
+        CArrayKokkos <double> scratch_disp(mesh.num_nodes, 3, "contact_scratch_disp");
+        constrained_dof.set_values(false);
+        scratch_disp.set_values(0.0);
+        Kokkos::fence();
+
+        boundary_displacement(mesh, BoundaryConditions, constrained_dof, scratch_disp, dt, time_value, time_start, time_end);
+        Kokkos::fence();
+
+        // shallow copies so the kernel doesn't capture mesh or the contact state
+        const CArrayKokkos<size_t>  bdy_nodes             = mesh.bdy_nodes;
+        const CArrayKokkos<bool>    constrained_dof_setup = constrained_dof;
+        const CArrayKokkos<size_t>  bdy_dof_fixed         = AO_contact_state.bdy_dof_fixed;
+
+        FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes, {
+            const size_t node_gid = bdy_nodes(bdy_node_lid);
+            for (size_t dim = 0; dim < 3; dim++) {
+                bdy_dof_fixed(bdy_node_lid, dim) = constrained_dof_setup(node_gid, dim) ? 1 : 0;
+            }
+        });
+        Kokkos::fence();
+
+    } // end if doing_contact
+
 
     // Create mesh writer
     MeshWriter mesh_writer;
@@ -291,13 +426,59 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         hist_displacement_iter.set_values(0);
         Kokkos::fence();
 
+        // -----------------------------------------------------------
+        // contact candidates and pair storage for this load step
+        // -----------------------------------------------------------
+        if (doing_contact) {
+
+            // bdy node velocity from the previous load step's increment (zero on the first step)
+            const CArrayKokkos<size_t> bdy_nodes      = mesh.bdy_nodes;
+            const CArrayKokkos<double> bdy_node_vels  = AO_contact_state.bdy_node_vels;
+            const CArrayKokkos<double> prev_disp_step = prev_displacement_step;
+            const double inv_dt = 1.0/dt;
+            FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes, {
+                for (size_t dim = 0; dim < 3; dim++) {
+                    bdy_node_vels(bdy_node_lid, dim) = prev_disp_step(bdy_nodes(bdy_node_lid), dim)*inv_dt;
+                }
+            });
+            Kokkos::fence();
+
+            // keep_pairs = true: loaded pairs carry their force into this load step
+            AO_contact_sort(AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels, AO_contact_state.bdy_node_accels,
+                            mesh.num_bdy_nodes, State.node.coords, mesh.bdy_nodes,
+                            AO_contact_state.bdy_node_point_cloud, AO_contact_state.num_bins,
+                            mesh.num_bdy_surfs, mesh.num_nodes_in_surf, dt, mesh.bdy_nodes_in_bdy_surf,
+                            AO_contact_state.bounding_boxes, AO_contact_state.lebesgue_overshoot,
+                            AO_contact_state.num_nodes_in_bounding_boxes, AO_contact_state.nodes_in_bounding_boxes,
+                            ref_elem.num_dofs_1d, mesh.bdy_surfs, mesh.elems_in_surf, mesh.nodes_in_elem,
+                            AO_contact_state.max_gap, AO_contact_state.pairing_check_vars,
+                            AO_contact_state.num_surfs_in_node_boxes, AO_contact_state.surfs_in_node_boxes,
+                            AO_contact_state.cols_in_node_boxes,
+                            AO_contact_state.contact_pair_surfs, AO_contact_state.contact_pair_vars,
+                            AO_contact_state.num_pairs_in_node, AO_contact_state.is_active, AO_contact_state.active_nodes,
+                            AO_contact_state.contact_forces, AO_contact_state.contact_forces_used,
+                            AO_contact_state.contact_counts, ref_elem.dof_positions_1d,
+                            true, AO_contact_state.pairs_allocated);
+
+            // new load step: the outer force iteration starts over
+            // (omega is warm started from the previous load step)
+            AO_contact_state.aitken_have_history = false;
+            if (cycle == 0) AO_contact_state.aitken_omega = contact_aitken_omega_init;
+        }
+
         // start Picard iteration loop
         for (int iter = 0; iter < max_iter; iter++) {
             //std::cout << "ITER: " << iter << std::endl;
             const auto start_time = std::chrono::steady_clock::now();
 
-            // dirichlet (displacement) type
-            boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
+            // dirichlet (displacement) type: marks the constrained dofs and sets their increment in
+            // displacement_step (used by get_gradients below). The constraints themselves are applied
+            // in the CG solve, so K_elem / F_elem are not touched.
+            constrained_dof.set_values(false);
+            Kokkos::fence();
+            boundary_displacement(mesh, BoundaryConditions, constrained_dof, displacement_step, dt, time_value, time_start, time_end);
+            // NOTE: the commented out RBM-fix test code below still edits a full (n x n) K_elem; it would
+            // need to set constrained_dof instead now that K_elem is packed
             // TESTING FOR LINEAR VARYING TRACTION
             // Hardcoded rigid-body-mode removal (interior nodes, so not reachable via tagging)
             /* struct RBMFix { size_t node_gid; int num_constrained; int dofs[3]; };
@@ -372,8 +553,12 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     double det_J;
                     double PK2_curr_config[6];
                     double material_matrix[6][6];
-                    ViewCArrayKokkos<double> curr_K_elem(&K_elem(elem_id,0,0),3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
+                    ViewCArrayKokkos<double> curr_K_elem(&K_elem(elem_id,0), num_dof_in_elem*(num_dof_in_elem+1)/2);  // packed upper triangle
                     ViewCArrayKokkos<double> curr_F_elem(&F_elem(elem_id,0),3*mesh.num_nodes_in_elem);
+
+                    ViewCArrayKokkos<double> curr_glob_grad(&glob_grad_elem(elem_id,0,0), mesh.num_nodes_in_elem, 3);
+                    ViewCArrayKokkos<double> curr_B1(&B1_elem(elem_id,0,0), 6, 3*mesh.num_nodes_in_elem);
+                    ViewCArrayKokkos<double> curr_K2_row(&K2_row_elem(elem_id,0), 3*mesh.num_nodes_in_elem);
 
                     // looping through material points
                     for (int mat_pt = 0; mat_pt < num_qpt_in_elem; mat_pt++) {
@@ -384,9 +569,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                         // tallying to element array
                         TLQS3D::get_gradients(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, displacement_step, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
                         double weight = Quad.qpt_weights(mat_pt)*det_J;
-                        double local_mat_vol_frac = State.MaterialPoints.mat_volfrac(mat_id, elem);
+                        double local_mat_vol_frac = State.MaterialPoints.mat_volfrac(mat_id, State.points_in_mat_elem(elem, mat_pt));
 
-                        TLQS3D::tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, weight, PK2_curr_config, curr_K_elem, curr_F_elem, local_mat_vol_frac);
+                        TLQS3D::tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, weight, PK2_curr_config, curr_K_elem, curr_F_elem, local_mat_vol_frac, curr_glob_grad, curr_B1, curr_K2_row);
                     } // end mat_pt
 
                 }); // end elem
@@ -394,6 +579,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 Kokkos::fence();
 
             } // end mat_id
+
             auto point_B = std::chrono::steady_clock::now();
             auto elapsed_B = std::chrono::duration_cast<std::chrono::milliseconds>(point_B - point_A).count();
             //std::cout << "Time elapsed to build element arrays: " << elapsed_B << " ms\n";
@@ -408,8 +594,10 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // neumann (traction) type
 
-            // dirichlet (displacement) type
-            boundary_displacement(mesh, BoundaryConditions, K_elem, F_elem, displacement_step, dt, time_value, time_start, time_end);
+            // dirichlet (displacement) type: nothing to do here any more. The constrained dofs were
+            // marked before the element arrays (constrained_dof), and they are applied in the CG
+            // solve below instead of by zeroing K_elem rows/columns (which is why the BCs used to be
+            // called a second time, after K_elem was rebuilt).
 
             // TESTING FOR LINEAR VARYING TRACTION
             // Hardcoded rigid-body-mode removal (interior nodes, so not reachable via tagging)
@@ -502,7 +690,19 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             Kokkos::fence();
 
             // getting inverse of the diagonal like diagonal jacobi
-            get_diagonal_inverse(D_inv, K_elem, mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem);
+            get_diagonal_inverse(D_inv, K_elem, constrained_dof, mesh.num_nodes, mesh.elems_in_node, node_lid_in_elem, mesh.num_nodes_in_elem);
+
+            // -----------------------------------------------------------
+            // contact compliance, once per load step from the stiffness at the
+            // start of the step. the displacement BCs no longer modify K_elem, so
+            // D_inv holds 1/K_ii on every free dof (constrained dofs get 1 there,
+            // and the compliance masks them to 0 through bdy_dof_fixed)
+            // -----------------------------------------------------------
+            if (doing_contact && iter == 0) {
+                get_quasi_static_compliance(mesh.num_bdy_nodes, mesh.bdy_nodes, D_inv,
+                                            AO_contact_state.bdy_dof_fixed, contact_compliance_scale,
+                                            AO_contact_state.bdy_node_compliance);
+            }
 
             // getting spectral bounds for chebyshev smoothing
             // We pass zk and temporary here safely because they are currently uninitialized 
@@ -511,19 +711,35 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             double beta = 0.0;
             const int cheb_degree = 3; // Choose your Chebyshev polynomial degree (typically 2 to 5)
             
-            get_chebyshev_bounds(alpha, beta, D_inv, K_elem, mesh.num_nodes, 
-                                 mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem,
+            get_chebyshev_bounds(alpha, beta, D_inv, K_elem, constrained_dof, mesh.num_elems, mesh.num_nodes,
+                                 mesh.num_nodes_in_elem, mesh.nodes_in_elem, x_elem, y_elem,
                                  zk, temporary, 15, mesh.num_owned_nodes, mesh.shared_tally_owned_nodes); // Running 15 power iterations
+            contact_compliance_scale = beta;
 
-            // getting r0 = (02F - 01F) - K * displacement_iter_k
-            get_r0(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, F_elem, K_elem, displacement_iter_kp1, rk);
+            // getting r0 = (02F - 01F) - A * displacement_iter_k (constrained dofs applied, see get_r0)
+            get_r0(mesh.num_elems, mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, mesh.elems_in_node, node_lid_in_elem,
+                   F_elem, K_elem, constrained_dof, displacement_iter_kp1, rk, x_elem, y_elem);
 
             // apply traction conditions
             boundary_stress(mesh, BoundaryConditions, rk, ref_surf, SurfQuad, State.node.coords_t0, dt, time_value, time_start, time_end);
+            Kokkos::fence();
+            rk.communicate();
+
+            // apply contact forces (free dofs only), and record what this solve sees
+            if (doing_contact) {
+                add_contact_forces_to_residual(mesh.num_bdy_nodes, mesh.bdy_nodes, AO_contact_state.bdy_dof_fixed,
+                                               AO_contact_state.contact_forces, rk);
+                AO_contact_snapshot_forces(mesh.num_bdy_nodes, AO_contact_state.contact_forces,
+                                           AO_contact_state.contact_forces_used);
+
+                // the same, per pair: F_used for the outer (Aitken) residual after this solve
+                AO_contact_snapshot_pair_forces(AO_contact_state.contact_counts.host(2), AO_contact_state.active_nodes,
+                                                AO_contact_state.num_pairs_in_node, AO_contact_state.contact_pair_vars);
+            }
 
             // smoothing with chebyshev polynomial
-            apply_chebyshev_preconditioner(rk, zk, D_inv, zk, delta_z, temporary, K_elem, 
-                                           mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, 
+            apply_chebyshev_preconditioner(rk, zk, D_inv, zk, delta_z, temporary, K_elem, constrained_dof,
+                                           mesh.num_elems, mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, x_elem, y_elem,
                                            alpha, beta, cheb_degree);
 
             // z0 = M_inv * r0,  p0 = z0
@@ -553,7 +769,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 MPI_Allreduce(MPI_IN_PLACE, &rktzk, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                 // alpha_k = (r_k^T * z_k) / (p_k^T * K * p_k)
-                double alpha_k = get_alpha(mesh.num_nodes, mesh.num_nodes_in_elem, mesh.num_owned_nodes, mesh.elems_in_node, mesh.nodes_in_elem, K_elem, rktzk, p, temporary, mesh.shared_tally_owned_nodes);
+                double alpha_k = get_alpha(mesh.num_elems, mesh.num_nodes, mesh.num_nodes_in_elem, mesh.num_owned_nodes, mesh.nodes_in_elem,
+                                           K_elem, constrained_dof, rktzk, p, temporary, mesh.shared_tally_owned_nodes, x_elem, y_elem);
 
                 // displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
                 FOR_ALL(i, 0, (int)mesh.num_nodes,
@@ -563,11 +780,13 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 Kokkos::fence();
 
                 // r_{k+1} = r_k - alpha_k * K * p_k
-                get_rkp1(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, K_elem, rk, p, alpha_k, rkp1);
+                // get_alpha left K * p_k in temporary (already communicated), and p_k has not changed
+                // since, so it is reused here instead of recomputing the same matrix-free product
+                get_rkp1(mesh.num_nodes, rk, temporary, alpha_k, rkp1);
 
                 // smoothing with chebyshev polynomial
-                apply_chebyshev_preconditioner(rkp1, zkp1, D_inv, zk, delta_z, temporary, K_elem, 
-                                               mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, 
+                apply_chebyshev_preconditioner(rkp1, zkp1, D_inv, zk, delta_z, temporary, K_elem, constrained_dof,
+                                               mesh.num_elems, mesh.num_nodes, mesh.num_nodes_in_elem, mesh.nodes_in_elem, x_elem, y_elem,
                                                alpha, beta, cheb_degree);
 
                 // z_{k+1} = M_inv * r_{k+1}
@@ -591,7 +810,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 MPI_Allreduce(MPI_IN_PLACE, &rkp1trkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 double norm = sqrt(rkp1trkp1);
                 //std::cout << "CGM iter " << cgm_iter << " residual norm: " << norm << "\n";
-                if (norm < 1.0/*1E-10*/) {
+                if (norm < 0.01/*1E-10*/) {
                     break;
                 }
 
@@ -767,6 +986,70 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             });
             Kokkos::fence();
 
+            // -----------------------------------------------------------
+            // contact pass on the current iterate
+            // runs before the convergence check, so the loop cannot exit
+            // with contact forces the solve has not seen
+            // -----------------------------------------------------------
+            bool   contact_settled    = true;
+            bool   contact_changed    = false;
+            size_t contact_num_active = 0;
+            double contact_max_dF     = 0.0;
+            double contact_max_F      = 0.0;
+            if (doing_contact) {
+
+                // current configuration (coords is otherwise only updated at the end of the load step,
+                // and nothing else in the Picard loop reads it)
+                FOR_ALL(i, 0, (int)mesh.num_nodes,
+                        j, 0, 3, {
+                    State.node.coords(i,j) = State.node.coords_t0(i,j) + State.node.displacement(i,j) + displacement_step(i,j);
+                });
+                Kokkos::fence();
+
+                AO_contact_update_bdy_coords(mesh.num_bdy_nodes, State.node.coords, mesh.bdy_nodes,
+                                             AO_contact_state.bdy_node_coords);
+
+                AO_contact_resolve(mesh.num_bdy_surfs, mesh.num_bdy_nodes, mesh.num_nodes_in_surf, mesh.num_nodes_in_elem,
+                                   mesh.bdy_surfs, mesh.faces_in_surf, mesh.elems_in_surf, mesh.bdy_nodes,
+                                   mesh.elems_in_node, mesh.nodes_in_elem, mesh.bdy_nodes_in_bdy_surf,
+                                   ref_elem.dof_positions_1d, ref_surf.qpt_basis, SurfQuad.qpt_positions,
+                                   State.node.coords,
+                                   AO_contact_state.bdy_node_coords, AO_contact_state.bdy_node_vels,
+                                   AO_contact_state.bdy_node_compliance,
+                                   AO_contact_state.nodes_in_bounding_boxes, AO_contact_state.surfs_in_node_boxes,
+                                   AO_contact_state.cols_in_node_boxes,
+                                   AO_contact_state.filter_tol, AO_contact_state.max_gap,
+                                   AO_contact_state.bdy_node_pred_coords, AO_contact_state.bdy_surf_node_normals,
+                                   AO_contact_state.pairing_check_vars,
+                                   AO_contact_state.num_pen_surfs_in_node, AO_contact_state.pen_nodes,
+                                   AO_contact_state.contact_counts, AO_contact_state.is_active, AO_contact_state.active_nodes,
+                                   AO_contact_state.num_pairs_in_node, AO_contact_state.contact_pair_surfs,
+                                   AO_contact_state.contact_pair_vars, AO_contact_state.num_pairs_touching_node,
+                                   AO_contact_state.contact_forces_used, AO_contact_state.contact_forces,
+                                   contact_settled, contact_changed, contact_num_active, contact_max_dF, contact_max_F);
+
+                // ---------------------------------------------------------------
+                // Aitken relaxation of the proposed pair forces before the next solve.
+                // the resolve's proposal (pair slot 7) would otherwise be applied in full,
+                // which over-corrects when the structure is more compliant than the
+                // quasi-static compliance assumes (e.g. a beam in bending)
+                //
+                // pair set changed: the residual history no longer matches the pairs
+                // one to one, so this call skips the Aitken update and keeps omega
+                // (omega reflects the structure's compliance, which a pair change doesn't reset)
+                //
+                // contact_max_dF / contact_max_F stay as reported by the resolve: the unrelaxed
+                // residual, so a small omega cannot make contact look converged early
+                // ---------------------------------------------------------------
+                AO_contact_relax_forces(contact_num_active, mesh.num_nodes_in_surf,
+                                        AO_contact_state.active_nodes, AO_contact_state.num_pairs_in_node,
+                                        AO_contact_state.contact_pair_surfs, mesh.bdy_nodes_in_bdy_surf,
+                                        ref_elem.dof_positions_1d, contact_changed,
+                                        contact_aitken_omega_min, contact_aitken_omega_max,
+                                        AO_contact_state.aitken_omega, AO_contact_state.aitken_have_history,
+                                        AO_contact_state.contact_pair_vars, AO_contact_state.contact_forces);
+            }
+
             // convergence check
             /* double norm_num = 0.0;
             double loc_norm_num = 0.0;
@@ -794,7 +1077,21 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             MPI_Allreduce(MPI_IN_PLACE, &norm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
             std::cout << "ITER: " << iter << "   ANDERSON RESIDUAL NORM: " << norm << std::endl;
-            if (norm < 1E-16 && iter > 1) {
+
+            // contact is converged when the pair set settled and the solve saw (nearly) all of the contact force
+            bool contact_converged = true;
+            if (doing_contact) {
+                contact_converged = contact_settled &&
+                                    (contact_max_dF <= contact_force_tol*contact_max_F);
+                std::cout << "      CONTACT: active nodes = " << contact_num_active
+                          << ", settled = " << contact_settled
+                          << ", changed = " << contact_changed
+                          << ", omega = " << AO_contact_state.aitken_omega
+                          << ", max |dF| = " << contact_max_dF
+                          << ", max |F| = " << contact_max_F << std::endl;
+            }
+
+            if (norm < 1E-16 && iter > 1 && contact_converged) {
                 std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }
@@ -816,9 +1113,34 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         FOR_ALL(i, 0, (int)mesh.num_nodes, 
                 j, 0, 3, {
                     State.node.displacement(i,j) += displacement_step(i, j);
+        });
+        Kokkos::fence();
+
+        State.node.displacement.communicate();
+
+        // updating coords
+        FOR_ALL(i, 0, (int)mesh.num_nodes, 
+                j, 0, 3, {
                     State.node.coords(i,j) = State.node.coords_t0(i,j) + State.node.displacement(i,j);
         });
         Kokkos::fence();
+
+        /* std::cout << "NODE DISPLACEMENTS" << std::endl;
+        for (int n = 0; n < mesh.num_nodes; n++) {
+            for (int m = 0; m < 3; m++) {
+                std::cout << State.node.displacement(n,m) << "   ";
+            }
+            std::cout << std::endl;
+        } */
+
+        // load step increment, bdy node velocities for the next load step's boxes
+        if (doing_contact) {
+            FOR_ALL(i, 0, (int)mesh.num_nodes,
+                    j, 0, 3, {
+                prev_displacement_step(i,j) = displacement_step(i,j);
+            });
+            Kokkos::fence();
+        }
 
         // filling in stress and strain for output
         for (int mat_id = 0; mat_id < num_mats; mat_id++) {

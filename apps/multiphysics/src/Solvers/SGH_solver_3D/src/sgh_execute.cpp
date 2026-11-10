@@ -39,7 +39,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //#include "mesh.hpp""
 #include "state.hpp"
 #include "geometry_new.hpp"
-#include "mesh_io.hpp"
+#include "mesh_writer.hpp"
 #include "tipton_equilibration.hpp"
 #include "reorientation_kinematics.hpp"
 #include "mach_shock.hpp"

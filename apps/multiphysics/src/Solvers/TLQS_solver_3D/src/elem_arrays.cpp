@@ -138,6 +138,41 @@ void TLQS3D::get_gradients(
 
 } // end get_gradients
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn tally_elem_arrays
+///
+/// \brief Tallies the contribution of one material point to the UPPER
+///        TRIANGLE (col >= row) of the element stiffness array (K1 + K2) and
+///        to the element force vector.
+///
+/// Kel is symmetric for the supported material models (see the MATERIAL
+/// MODEL LIMITATION note below), so only its upper triangle is accumulated
+/// and stored. Kel_packed is the element's packed upper triangle: row i holds
+/// columns i..n-1 contiguously, starting at packed_row_start(i, n), with
+/// n = 3*num_nodes (see tlqs_solver_3D.hpp). The lower triangle is never
+/// formed: the CG products use K(j,i) = K(i,j) (see elem_K_times_x).
+///
+/// Performance notes (the math and the order of every floating point
+/// addition into the upper triangle of Kel and into Fel are the same as the
+/// original implementation):
+///   - The global basis gradients and B1 columns of every node are computed
+///     once per material point into the glob_grad and B1 scratch views,
+///     instead of being recomputed for node b inside the (a,b) double loop.
+///   - B1 is stored as B1(m, 3*b+q), so each row of Kel is updated with one
+///     contiguous loop over its 3*num_nodes columns, which the compiler
+///     vectorizes. K2_row holds the K2 part of that row (k2_scalar on the
+///     p==q diagonal of each 3x3 block, 0 elsewhere, exactly as before).
+///   - k2_scalar(b) does not depend on the row p, so it is computed once per
+///     (a,b) instead of 3 times, and K2_row is updated by moving it between
+///     the q slots instead of rewriting all 3*num_nodes entries per row.
+///   - Exact zeros of material_matrix are skipped when forming C^T * B1_a.
+///     material_matrix is still filled at every material point by the
+///     caller, so this works for any constitutive model.
+///   Nothing here depends on the polynomial order: all loops run over
+///   num_nodes = gauss_point_grad_basis.dims(0).
+///
+/////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void TLQS3D::tally_elem_arrays(
     const double material_matrix[6][6],
@@ -146,11 +181,15 @@ void TLQS3D::tally_elem_arrays(
     ViewCArrayKokkos <double>& gauss_point_grad_basis,
     double gauss_point_weight,
     const double PK2_curr_config[6],
-    ViewCArrayKokkos <double>& Kel,
+    ViewCArrayKokkos <double>& Kel_packed,
     ViewCArrayKokkos <double>& Fel,
-    const double vol_frac)
+    const double vol_frac,
+    ViewCArrayKokkos <double>& glob_grad,
+    ViewCArrayKokkos <double>& B1,
+    ViewCArrayKokkos <double>& K2_row)
 {
     const int num_nodes = gauss_point_grad_basis.dims(0);
+    const int num_dofs  = 3 * num_nodes;
 
     // Unpack grad_u for readability
     const double ux = grad_u[0][0];
@@ -175,14 +214,46 @@ void TLQS3D::tally_elem_arrays(
     S[2][1] = PK2_curr_config[3];
     S[2][2] = PK2_curr_config[2];
 
-    // temp arrays for forming element matrix
-    double B1_a[6][3];              // B1 values for node a
-    double CT_matmul_B1_a[6][3];      // C^T * B1_a = C * B1_a (C symmetric), using transpose for better memory access pattern
-    double S_mul_glob_grad_a[3];   // only needs to be size 3 because of the sparsity and repeating nature of [S]9x9 and B2
-    double B1_b[6][3];              // B1 values for node b
+    // Nonzero entries of the (shear corrected) material matrix at this material point,
+    // kept in (m,k) order so C^T * B1_a below is summed in the same order as before.
+    // Only exact zeros are skipped. Adding a +-0 product does not change the sum, so this
+    // gives the same result for any constitutive model that fills material_matrix
+    // (the one exception is a non finite B1 entry, where 0*inf = NaN is no longer added).
+    //
+    // ***************************************************************************************
+    // MATERIAL MODEL LIMITATION (symmetric Kel assembly):
+    // K1 = B1^T * C' * B1 is symmetric exactly when C' is, where C' is material_matrix with its
+    // shear COLUMNS (k = 3,4,5) scaled by shear_fix = 0.5 (material_matrix uses the tensor-strain
+    // Voigt convention, B1 gives engineering shear strain). C' is symmetric for any material with
+    // a symmetric tangent (any hyperelastic model, isotropic through fully anisotropic), as long
+    // as material_matrix is filled in that convention, i.e.
+    //     material_matrix[m][k] * f(k) == material_matrix[k][m] * f(m),  f = 1 (normal), 0.5 (shear)
+    // K2 (dpsig_a . S . dpsig_b, S symmetric) and the displacement constraints are symmetric too.
+    // The solver relies on this: tally_elem_arrays only accumulates the upper triangle of Kel,
+    // K_elem only STORES the packed upper triangle, and the CG products (elem_K_times_x) use
+    // K(j,i) = K(i,j). A model with a NON symmetric tangent (e.g. non-associative plasticity,
+    // some damage/friction models) makes Kel non symmetric; that needs full (n x n) K_elem
+    // storage again, all columns in the row loop below, and a non symmetric element product.
+    // ***************************************************************************************
+    int    num_C_nonzero = 0;
+    int    C_nonzero_m[36];
+    int    C_nonzero_k[36];
+    double C_nonzero_val[36];
+    for (int m = 0; m < 6; m++) {
+        for (int k = 0; k < 6; k++) {
+            if (material_matrix[m][k] != 0.0) {
+                const double shear_fix = (k >= 3) ? 0.5 : 1.0;
+                C_nonzero_m[num_C_nonzero]   = m;
+                C_nonzero_k[num_C_nonzero]   = k;
+                C_nonzero_val[num_C_nonzero] = shear_fix*material_matrix[m][k];
+                num_C_nonzero++;
+            }
+        }
+    }
 
-    // looping through each node to avoid dynamic allocations
-    // outer loop of node a
+    // global basis gradients and B1 for every node are computed once per material point
+    // (instead of once per (a,b) node pair). B1 is stored as B1(m, 3*b+q) = B1_b[m][q],
+    // so that a row of Kel is a contiguous (vectorizable) loop over its columns 3*b+q.
     for (int a = 0; a < num_nodes; a++) {
 
         // dpsig for node a: inv_J * grad_basis(a)
@@ -190,30 +261,62 @@ void TLQS3D::tally_elem_arrays(
         const double glob_grad_a_1 = inv_J[1][0]*gauss_point_grad_basis(a,0) + inv_J[1][1]*gauss_point_grad_basis(a,1) + inv_J[1][2]*gauss_point_grad_basis(a,2);
         const double glob_grad_a_2 = inv_J[2][0]*gauss_point_grad_basis(a,0) + inv_J[2][1]*gauss_point_grad_basis(a,1) + inv_J[2][2]*gauss_point_grad_basis(a,2);
 
+        glob_grad(a,0) = glob_grad_a_0;
+        glob_grad(a,1) = glob_grad_a_1;
+        glob_grad(a,2) = glob_grad_a_2;
+
         // columns of B1 for node a
-        B1_a[0][0] = glob_grad_a_0*(1+ux);
-        B1_a[0][1] = glob_grad_a_0*vx;
-        B1_a[0][2] = glob_grad_a_0*wx;
+        B1(0, 3*a)   = glob_grad_a_0*(1+ux);
+        B1(0, 3*a+1) = glob_grad_a_0*vx;
+        B1(0, 3*a+2) = glob_grad_a_0*wx;
 
-        B1_a[1][0] = glob_grad_a_1*uy;
-        B1_a[1][1] = glob_grad_a_1*(1+vy);
-        B1_a[1][2] = glob_grad_a_1*wy;
+        B1(1, 3*a)   = glob_grad_a_1*uy;
+        B1(1, 3*a+1) = glob_grad_a_1*(1+vy);
+        B1(1, 3*a+2) = glob_grad_a_1*wy;
 
-        B1_a[2][0] = glob_grad_a_2*uz;
-        B1_a[2][1] = glob_grad_a_2*vz;
-        B1_a[2][2] = glob_grad_a_2*(1+wz);
+        B1(2, 3*a)   = glob_grad_a_2*uz;
+        B1(2, 3*a+1) = glob_grad_a_2*vz;
+        B1(2, 3*a+2) = glob_grad_a_2*(1+wz);
 
-        B1_a[3][0] = glob_grad_a_1*uz + glob_grad_a_2*uy;
-        B1_a[3][1] = glob_grad_a_1*vz + glob_grad_a_2*(1+vy);
-        B1_a[3][2] = glob_grad_a_1*(1+wz) + glob_grad_a_2*wy;
+        B1(3, 3*a)   = glob_grad_a_1*uz + glob_grad_a_2*uy;
+        B1(3, 3*a+1) = glob_grad_a_1*vz + glob_grad_a_2*(1+vy);
+        B1(3, 3*a+2) = glob_grad_a_1*(1+wz) + glob_grad_a_2*wy;
 
-        B1_a[4][0] = glob_grad_a_2*(1+ux) + glob_grad_a_0*uz;
-        B1_a[4][1] = glob_grad_a_0*vz + glob_grad_a_2*vx;
-        B1_a[4][2] = glob_grad_a_0*(1+wz) + glob_grad_a_2*wx;
+        B1(4, 3*a)   = glob_grad_a_2*(1+ux) + glob_grad_a_0*uz;
+        B1(4, 3*a+1) = glob_grad_a_0*vz + glob_grad_a_2*vx;
+        B1(4, 3*a+2) = glob_grad_a_0*(1+wz) + glob_grad_a_2*wx;
 
-        B1_a[5][0] = glob_grad_a_1*(1+ux) + glob_grad_a_0*uy;
-        B1_a[5][1] = glob_grad_a_0*(1+vy) + glob_grad_a_1*vx;
-        B1_a[5][2] = glob_grad_a_0*wy + glob_grad_a_1*wx;
+        B1(5, 3*a)   = glob_grad_a_1*(1+ux) + glob_grad_a_0*uy;
+        B1(5, 3*a+1) = glob_grad_a_0*(1+vy) + glob_grad_a_1*vx;
+        B1(5, 3*a+2) = glob_grad_a_0*wy + glob_grad_a_1*wx;
+    }
+
+    // row pointers into B1 and the K2 row so the row updates of Kel below are
+    // simple contiguous (vectorizable) loops
+    const double* B1_0 = &B1(0,0);
+    const double* B1_1 = &B1(1,0);
+    const double* B1_2 = &B1(2,0);
+    const double* B1_3 = &B1(3,0);
+    const double* B1_4 = &B1(4,0);
+    const double* B1_5 = &B1(5,0);
+    double* k2_row = &K2_row(0);
+
+    // K2_row is kept all zero except (at most) one entry per 3x3 block, see the row loop below
+    for (int col = 0; col < num_dofs; col++) {
+        k2_row[col] = 0.0;
+    }
+
+    // temp arrays for forming element matrix
+    double CT_matmul_B1_a[6][3];      // C^T * B1_a = C * B1_a (C symmetric), using transpose for better memory access pattern
+    double S_mul_glob_grad_a[3];   // only needs to be size 3 because of the sparsity and repeating nature of [S]9x9 and B2
+
+    // looping through each node to avoid dynamic allocations
+    // outer loop of node a
+    for (int a = 0; a < num_nodes; a++) {
+
+        const double glob_grad_a_0 = glob_grad(a,0);
+        const double glob_grad_a_1 = glob_grad(a,1);
+        const double glob_grad_a_2 = glob_grad(a,2);
 
         // Precompute C^T * B1_a
         // Used in inner loop as: K1(3a+p, 3b+q) = sum_m CtB1_a[m][p] * B1_b[m][q]
@@ -222,12 +325,11 @@ void TLQS3D::tally_elem_arrays(
                 CT_matmul_B1_a[i][j] = 0.0;
             }
         }
-        for (int m = 0; m < 6; m++) {
-            for (int k = 0; k < 6; k++) {
-                const double shear_fix = (k >= 3) ? 0.5 : 1.0;
-                for (int p = 0; p < 3; p++) {
-                    CT_matmul_B1_a[m][p] += shear_fix*material_matrix[m][k] * B1_a[k][p];
-                }
+        for (int n = 0; n < num_C_nonzero; n++) {
+            const int m = C_nonzero_m[n];
+            const int k = C_nonzero_k[n];
+            for (int p = 0; p < 3; p++) {
+                CT_matmul_B1_a[m][p] += C_nonzero_val[n] * B1(k, 3*a+p);
             }
         }
 
@@ -244,59 +346,84 @@ void TLQS3D::tally_elem_arrays(
         for (int p = 0; p < 3; p++) {
             double fel_val = 0.0;
             for (int k = 0; k < 6; k++) {
-                fel_val += B1_a[k][p] * PK2_curr_config[k];
+                fel_val += B1(k, 3*a+p) * PK2_curr_config[k];
             }
             Fel(3*a + p) -= gauss_point_weight * fel_val * vol_frac;
         }
 
-        // Inner loop over b for Kel
-        for (int b = 0; b < num_nodes; b++) {
+        // K2 part of the rows of node a: k2_scalar(b) = dpsig_a · S3 · dpsig_b sits on the p==q
+        // diagonal of each 3x3 block (a,b), 0 elsewhere. k2_scalar(b) is the same for all 3 rows p,
+        // so it is computed once per (a,b) and written to the q==0 slots of K2_row (the rest stay 0).
+        // Only the upper triangle of Kel is accumulated (col >= row, see below), and the rows of
+        // node a only reach columns of nodes b >= a there, so only b >= a is needed.
+        for (int b = a; b < num_nodes; b++) {
+            k2_row[3*b] = S_mul_glob_grad_a[0]*glob_grad(b,0) + S_mul_glob_grad_a[1]*glob_grad(b,1) + S_mul_glob_grad_a[2]*glob_grad(b,2);
+        }
 
-            // dpsig for node b
-            const double glob_grad_b_0 = inv_J[0][0]*gauss_point_grad_basis(b,0) + inv_J[0][1]*gauss_point_grad_basis(b,1) + inv_J[0][2]*gauss_point_grad_basis(b,2);
-            const double glob_grad_b_1 = inv_J[1][0]*gauss_point_grad_basis(b,0) + inv_J[1][1]*gauss_point_grad_basis(b,1) + inv_J[1][2]*gauss_point_grad_basis(b,2);
-            const double glob_grad_b_2 = inv_J[2][0]*gauss_point_grad_basis(b,0) + inv_J[2][1]*gauss_point_grad_basis(b,1) + inv_J[2][2]*gauss_point_grad_basis(b,2);
+        // Accumulate the 3 rows of Kel belonging to node a
+        for (int p = 0; p < 3; p++) {
+            const double c0 = CT_matmul_B1_a[0][p];
+            const double c1 = CT_matmul_B1_a[1][p];
+            const double c2 = CT_matmul_B1_a[2][p];
+            const double c3 = CT_matmul_B1_a[3][p];
+            const double c4 = CT_matmul_B1_a[4][p];
+            const double c5 = CT_matmul_B1_a[5][p];
 
-            // B1_b[6][3]: columns of B1 for node b
-            double B1_b[6][3];
-            B1_b[0][0] = glob_grad_b_0*(1+ux);
-            B1_b[0][1] = glob_grad_b_0*vx;
-            B1_b[0][2] = glob_grad_b_0*wx;
-
-            B1_b[1][0] = glob_grad_b_1*uy;
-            B1_b[1][1] = glob_grad_b_1*(1+vy);
-            B1_b[1][2] = glob_grad_b_1*wy;
-
-            B1_b[2][0] = glob_grad_b_2*uz;
-            B1_b[2][1] = glob_grad_b_2*vz;
-            B1_b[2][2] = glob_grad_b_2*(1+wz);
-
-            B1_b[3][0] = glob_grad_b_1*uz + glob_grad_b_2*uy;
-            B1_b[3][1] = glob_grad_b_1*vz + glob_grad_b_2*(1+vy);
-            B1_b[3][2] = glob_grad_b_1*(1+wz) + glob_grad_b_2*wy;
-
-            B1_b[4][0] = glob_grad_b_2*(1+ux) + glob_grad_b_0*uz;
-            B1_b[4][1] = glob_grad_b_0*vz + glob_grad_b_2*vx;
-            B1_b[4][2] = glob_grad_b_0*(1+wz) + glob_grad_b_2*wx;
-
-            B1_b[5][0] = glob_grad_b_1*(1+ux) + glob_grad_b_0*uy;
-            B1_b[5][1] = glob_grad_b_0*(1+vy) + glob_grad_b_1*vx;
-            B1_b[5][2] = glob_grad_b_0*wy + glob_grad_b_1*wx;
-
-            // K2 scalar: dpsig_a · S3 · dpsig_b (same value along p==q diagonal)
-            const double k2_scalar = S_mul_glob_grad_a[0]*glob_grad_b_0 + S_mul_glob_grad_a[1]*glob_grad_b_1 + S_mul_glob_grad_a[2]*glob_grad_b_2;
-
-            // Accumulate 3x3 block into Kel
-            for (int p = 0; p < 3; p++) {
-                for (int q = 0; q < 3; q++) {
-                    double k1_val = 0.0;
-                    for (int m = 0; m < 6; m++) {
-                        k1_val += CT_matmul_B1_a[m][p] * B1_b[m][q];
-                    }
-                    const double k2_val = (p == q) ? k2_scalar : 0.0;
-                    Kel(3*a+p, 3*b+q) += gauss_point_weight * (k1_val + k2_val) * vol_frac;
+            // shift k2_scalar(b) from the q==p-1 slot to the q==p slot of each block, so K2_row
+            // holds row p of K2 (k2_scalar(b) at col 3*b+p, 0 everywhere else)
+            if (p > 0) {
+                for (int b = a; b < num_nodes; b++) {
+                    k2_row[3*b+p]   = k2_row[3*b+p-1];
+                    k2_row[3*b+p-1] = 0.0;
                 }
             }
+
+            const int row = 3*a+p;
+
+            // packed row `row` holds columns row..num_dofs-1, starting at packed_row_start(row, n);
+            // offsetting the pointer by -row lets it be indexed by the full column index col >= row
+            double* Kel_row = &Kel_packed(packed_row_start(row, num_dofs)) - row;
+
+            // Accumulate row p of every 3x3 block (a,b) into Kel, col = 3*b + q
+            // K1(3a+p, 3b+q) = sum_m CtB1_a[m][p] * B1_b[m][q]
+            // (same operations and order as the original (b, p, q) loop, just traversed by row).
+            // Kel is symmetric (see the MATERIAL MODEL LIMITATION note above), so only the upper
+            // triangle col >= row is accumulated and stored, which halves the work of this loop
+            // and the size of K_elem.
+            // The original started k1_val at 0.0 before adding c0*B1_0; that only differs from
+            // starting at c0*B1_0 when the result is a signed zero (-0.0 vs +0.0), and a signed
+            // zero added to Kel (which starts at +0.0) leaves Kel's bits unchanged, so the
+            // redundant add is dropped.
+            // x * 1.0 == x exactly (for every x, including inf/NaN/-0), so when the material fills
+            // the element (vol_frac == 1.0, checked at run time) the multiply by vol_frac is skipped.
+            if (vol_frac == 1.0) {
+                for (int col = row; col < num_dofs; col++) {
+                    double k1_val = c0 * B1_0[col];
+                    k1_val += c1 * B1_1[col];
+                    k1_val += c2 * B1_2[col];
+                    k1_val += c3 * B1_3[col];
+                    k1_val += c4 * B1_4[col];
+                    k1_val += c5 * B1_5[col];
+                    Kel_row[col] += gauss_point_weight * (k1_val + k2_row[col]);
+                }
+            }
+            else {
+                for (int col = row; col < num_dofs; col++) {
+                    double k1_val = c0 * B1_0[col];
+                    k1_val += c1 * B1_1[col];
+                    k1_val += c2 * B1_2[col];
+                    k1_val += c3 * B1_3[col];
+                    k1_val += c4 * B1_4[col];
+                    k1_val += c5 * B1_5[col];
+                    Kel_row[col] += gauss_point_weight * (k1_val + k2_row[col]) * vol_frac;
+                }
+            }
+        }
+
+        // reset the q==2 slots so K2_row is all zero again for the next node a
+        // (only the slots of nodes b >= a were written)
+        for (int b = a; b < num_nodes; b++) {
+            k2_row[3*b+2] = 0.0;
         }
 
     }
