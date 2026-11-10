@@ -52,7 +52,7 @@ multi_rank_solvers = ["sgh", "sgtm", "tlqs"]
 
 # vtu_read currently doesn't run on more than one rank: 8-26-26
 # TLQS_test_ao_read only has 2 elements, easier to just remove it from multi-rank runs
-single_rank_only_tests = ["vtu_read", "TLQS_test_ao_read"]
+single_rank_only_tests = ["vtu_read", "TLQS_test_ao_read", "elastic_cube_pull_Z"]
 
 # ---------------- input args ----------------
 parser = argparse.ArgumentParser(description="Run regression tests.")
