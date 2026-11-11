@@ -2,6 +2,29 @@
 
 Fierro-multiphysics uses CMake for configuration and building. The build process involves creating a build directory, configuring with CMake, and compiling the code.
 
+### Prerequisites
+
+Fierro gets its dependencies from nested git submodules: `lib/Elements` provides ELEMENTS, which
+builds MATAR from its own `matar/` submodule, and MATAR builds the Kokkos it bundles (currently
+5.2.1). The chain is two levels deep, so clone with
+
+```bash
+git clone --recursive https://github.com/lanl/Fierro.git
+```
+
+or, in an existing clone,
+
+```bash
+git submodule update --init --recursive
+```
+
+A plain `git submodule update --init` is **not** enough — it would leave Kokkos missing. Configuring
+without the submodule fails immediately with that instruction. Only Scotch is still downloaded at
+configure time.
+
+MATAR requires C++20, so Fierro and everything it links compile as C++20. CMake 3.22 or newer and an
+MPI installation are also required.
+
 ### Basic Build Steps
 
 1. **Create a build directory** (recommended to keep source tree clean):
@@ -121,6 +144,41 @@ make -j$(nproc)
 *   HIP-capable C++ compiler (hipcc)
 *   Ensure `hipcc` is in your `PATH`
 
+### Mixed Host/Device Backends
+
+The `FIERRO_ENABLE_*` options above pick **one** Kokkos backend that runs everything. The
+`FIERRO_DEVICE_BACKEND` / `FIERRO_HOST_BACKEND` pair instead selects the two sides independently:
+
+*   The **device** backend runs MATAR's standard parallel macros — `FOR_ALL`, `DO_ALL`,
+    `FOR_REDUCE_SUM`, and friends.
+*   The **host** backend runs the `_HOST` twins — `FOR_ALL_HOST`, `DO_ALL_HOST`, `RUN_HOST` — in
+    `DefaultHostExecSpace`.
+
+Device kernels are asynchronous and host kernels only block the calling thread, so CPU-side work
+such as file IO can run on several threads while GPU kernels are still in flight:
+
+```bash
+cd apps/multiphysics
+mkdir build_mixed
+cd build_mixed
+cmake -DFIERRO_DEVICE_BACKEND=cuda -DFIERRO_HOST_BACKEND=openmp ..
+make -j$(nproc)
+```
+
+Accepted values are `serial`, `openmp`, `pthreads`, `cuda`, `hip` and `sycl` for the device side,
+and `serial`, `openmp` or `pthreads` for the host side. The pair is forwarded to ELEMENTS as
+`ELEMENTS_DEVICE_BACKEND` / `ELEMENTS_HOST_BACKEND` and on to MATAR as `MATAR_DEVICE_BACKEND` /
+`MATAR_HOST_BACKEND`, which validates it and maps it onto the `Kokkos_ENABLE_*` variables.
+
+Setting either value takes precedence over the `FIERRO_ENABLE_*` toggles, and Fierro warns if you
+turn on both schemes. Kokkos permits only one host-parallel space per build, so `openmp` and
+`pthreads` cannot be paired with each other. Naming the same backend on both sides is valid but
+buys no concurrency, and MATAR warns at configure time.
+
+**A host kernel may only touch host-accessible memory.** Inside `FOR_ALL_HOST` use host types, the
+`.host()` side of a dual (`D*Kokkos`) array, or plain `std::` data. Reading a device array from a
+host kernel compiles cleanly and then aborts at runtime with an inaccessible-memory-space error.
+
 ### Build Type Options
 
 You can specify the build type (Debug, Release, RelWithDebInfo) using:
@@ -136,15 +194,13 @@ Available build types:
 
 ### Multiple Backends
 
-You can enable multiple backends simultaneously, though typically only one is used at runtime:
+With the `FIERRO_ENABLE_*` toggles, enabling several backends builds them all into Kokkos but only
+one of them runs the parallel macros. To actually use two backends at once — a GPU for the solver
+and threaded CPU for IO — use the `FIERRO_DEVICE_BACKEND` / `FIERRO_HOST_BACKEND` pair described
+above.
 
-```bash
-cmake -DFIERRO_ENABLE_SERIAL=ON \
-      -DFIERRO_ENABLE_OPENMP=ON \
-      -DFIERRO_ENABLE_PTHREADS=ON ..
-```
-
-Note that CUDA and HIP backends are mutually exclusive and cannot be enabled together.
+Note that CUDA and HIP are mutually exclusive and cannot be enabled together, and that OpenMP and
+PThreads cannot both be used as the host-parallel space.
 
 
 ## Testing Your Install
