@@ -39,11 +39,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //#include "mesh.hpp""
 #include "state.hpp"
 #include "geometry_new.hpp"
-#include "mesh_io.hpp"
+#include "mesh_writer.hpp"
 #include "tipton_equilibration.hpp"
-#include "fracture_stress_bc.hpp"
 #include "reorientation_kinematics.hpp"
-#include "user_defined_velocity_bc.hpp"
 #include "mach_shock.hpp"
 
 
@@ -411,7 +409,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                                     State.MaterialPoints.sspd,
                                     State.MaterialPoints.eos_state_vars,
                                     State.MaterialPoints.strength_state_vars,
-                                    State.MaterialPoints.shear_modulii,
+                                    State.MaterialPoints.deformation_grad,
+                                    State.MaterialPoints.deformation_grad_t0,
                                     State.MaterialToMeshMaps.elem_in_mat_elem,
                                     State.MaterialToMeshMaps.num_mat_elems.host(mat_id),
                                     mat_id,
@@ -556,7 +555,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                              State.MaterialPoints.eos_state_vars,
                              State.MaterialPoints.strength_state_vars,
                              State.MaterialPoints.eroded,
-                             State.MaterialPoints.shear_modulii,
+                             State.MaterialPoints.deformation_grad,
+                             State.MaterialPoints.deformation_grad_t0,
                              State.MaterialToMeshMaps.elem_in_mat_elem,
                              time_value,
                              dt,

@@ -83,7 +83,8 @@ namespace SGHRZ_State
         material_pt_state::volume_fraction,
         material_pt_state::specific_internal_energy,
         material_pt_state::eroded_flag,
-        material_pt_state::shear_modulii
+        material_pt_state::shear_modulii,
+        material_pt_state::deformation_grad
     };
 
     // Material corner state to be initialized for the SGH solver
@@ -317,7 +318,8 @@ public:
         const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
         const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const double time_value,
         const double dt,
@@ -342,7 +344,8 @@ public:
         const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_shear_modulii,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
+        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id,

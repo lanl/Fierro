@@ -39,7 +39,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.hpp"
 #include "state.hpp"
 #include "simulation_parameters.hpp"
-#include "geometry_new.hpp"
 
 
 
@@ -71,7 +70,6 @@ void SGTM3D::setup(SimulationParameters_t& SimulationParamaters,
                             State.MaterialPoints.sie,
                             State.MaterialPoints.eos_state_vars,    
                             State.MaterialPoints.strength_state_vars,
-                            State.MaterialPoints.shear_modulii,
                             State.MaterialPoints.num_material_points.host(mat_id),
                             mat_id);
 

@@ -37,7 +37,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "matar.h"
 #include "ELEMENTS.h"
-#include "mesh_io.hpp"
 #include "state.hpp"
 #include <cmath>
 

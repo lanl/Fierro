@@ -38,7 +38,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "boundary_conditions.hpp"
 #include "state.hpp"
 #include "simulation_parameters.hpp"
-#include "geometry_new.hpp"
 
 
 
@@ -74,6 +73,16 @@ void TLQS3D::setup(SimulationParameters_t& SimulationParamaters,
 
     } // for loop over mat_id
 
-    std::cout << "TLQS solver setup \n";
+    // Setting up contact
+    if (log) log->info("Setting up contact\n");
+    for (size_t i = 0; i < mesh.num_bdy_sets; i++) {
+        if (Boundary.allow_contact) {
+            if (log) log->info("Setting up global contact\n");
+            doing_contact = true;
+            std::cout << "CONTACT IS ON" << std::endl;
+            break;
+        }
+    }
+    
     return;
 } // end TLQS setup
