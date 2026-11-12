@@ -49,8 +49,7 @@ void TLQS3D::get_gradients(
     double PK2_curr_config[6])
 {
     // allocate and initialize Jacobian
-    // J[i][j] = dX_j / dxi_i (transpose of the Jacobian dX_i / dxi_j),
-    // so inv_J below is J^{-T}, which maps reference gradients to dN/dX
+    // J[i][j] = dX_j / dxi_i
     double J[3][3];
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
@@ -70,7 +69,7 @@ void TLQS3D::get_gradients(
     // get det(J)
     det_J = J[0][0]*(J[1][1]*J[2][2] - J[2][1]*J[1][2]) - J[0][1]*(J[1][0]*J[2][2] - J[2][0]*J[1][2]) + J[0][2]*(J[1][0]*J[2][1] - J[2][0]*J[1][1]);
     //std::cout << "DET_J: " << det_J << std::endl;
-    // get inv(J), which is J^{-T} because J holds the transpose
+    // get inv(J)
     double adjoint[3][3];
     adjoint[0][0] = J[1][1]*J[2][2] - J[2][1]*J[1][2];
     adjoint[0][1] = -(J[0][1]*J[2][2] - J[2][1]*J[0][2]);
@@ -254,7 +253,7 @@ void TLQS3D::tally_elem_arrays(
     // so that a row of Kel is a contiguous (vectorizable) loop over its columns 3*b+q.
     for (int a = 0; a < num_nodes; a++) {
 
-        // dpsig for node a: inv_J * grad_basis(a), with inv_J = J^{-T}
+        // dpsig for node a: inv_J * grad_basis(a)
         const double glob_grad_a_0 = inv_J[0][0]*gauss_point_grad_basis(a,0) + inv_J[0][1]*gauss_point_grad_basis(a,1) + inv_J[0][2]*gauss_point_grad_basis(a,2);
         const double glob_grad_a_1 = inv_J[1][0]*gauss_point_grad_basis(a,0) + inv_J[1][1]*gauss_point_grad_basis(a,1) + inv_J[1][2]*gauss_point_grad_basis(a,2);
         const double glob_grad_a_2 = inv_J[2][0]*gauss_point_grad_basis(a,0) + inv_J[2][1]*gauss_point_grad_basis(a,1) + inv_J[2][2]*gauss_point_grad_basis(a,2);

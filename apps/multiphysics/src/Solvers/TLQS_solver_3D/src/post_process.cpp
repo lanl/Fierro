@@ -46,8 +46,7 @@ void TLQS3D::post_process(
     ViewCArrayKokkos <double>& strain)
 {
     // allocate and initialize Jacobian
-    // J[i][j] = dX_j / dxi_i (transpose of the Jacobian dX_i / dxi_j),
-    // so inv_J below is J^{-T}, which maps reference gradients to dN/dX
+    // J[i][j] = dX_j / dxi_i
     double J[3][3];
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
@@ -67,7 +66,7 @@ void TLQS3D::post_process(
     // get det(J)
     double det_J = J[0][0]*(J[1][1]*J[2][2] - J[2][1]*J[1][2]) - J[0][1]*(J[1][0]*J[2][2] - J[2][0]*J[1][2]) + J[0][2]*(J[1][0]*J[2][1] - J[2][0]*J[1][1]);
     //std::cout << "DET_J: " << det_J << std::endl;
-    // get inv(J), which is J^{-T} because J holds the transpose
+    // get inv(J)
     double adjoint[3][3];
     adjoint[0][0] = J[1][1]*J[2][2] - J[2][1]*J[1][2];
     adjoint[0][1] = -(J[0][1]*J[2][2] - J[2][1]*J[0][2]);
