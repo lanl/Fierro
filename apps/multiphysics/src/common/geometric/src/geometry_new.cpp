@@ -59,21 +59,21 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void geometry::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
+void geometry::get_bmatrix(const ViewCArrayKokkos<real_t>& B_matrix,
     const size_t elem_gid,
     const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 8;
 
-    double x_array[8];
-    double y_array[8];
-    double z_array[8];
+    real_t x_array[8];
+    real_t y_array[8];
+    real_t z_array[8];
 
     // x, y, z coordinates of elem vertices
-    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
-    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
-    auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
+    auto x = ViewCArrayKokkos<real_t>(x_array, num_nodes);
+    auto y = ViewCArrayKokkos<real_t>(y_array, num_nodes);
+    auto z = ViewCArrayKokkos<real_t>(z_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
@@ -83,7 +83,7 @@ void geometry::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
     }     // end for
 
 
-    double twelth = 1. / 12.;
+    real_t twelth = real_t(1.) / real_t(12.);
 
     B_matrix(0, 0) = (+y(1) * (-z(3) - z(2) + z(4) + z(5) )
         + y(3) * (+z(1) - z(2) )
@@ -272,16 +272,16 @@ void geometry::get_vol_quad(const DCArrayKokkos<real_t>& elem_vol,
     const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
-    elem_vol(elem_gid) = 0.0;
+    elem_vol(elem_gid) = real_t(0.0);
 
     const size_t num_nodes = 4;
 
-    double x_array[4];
-    double y_array[4];
+    real_t x_array[4];
+    real_t y_array[4];
 
     // x, y coordinates of elem vertices
-    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
-    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
+    auto x = ViewCArrayKokkos<real_t>(x_array, num_nodes);
+    auto y = ViewCArrayKokkos<real_t>(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
@@ -294,9 +294,9 @@ void geometry::get_vol_quad(const DCArrayKokkos<real_t>& elem_vol,
     */
     elem_vol(elem_gid) =
         ( (y(2) + y(3) + y(0)) * ((y(2) - y(3)) * (x(0) - x(3)) - (y(0) - y(3)) * (x(2) - x(3)) )
-        + (y(0) + y(1) + y(2)) * ((y(0) - y(1)) * (x(2) - x(1)) - (y(2) - y(1)) * (x(0) - x(1))) ) / 6.0;
+        + (y(0) + y(1) + y(2)) * ((y(0) - y(1)) * (x(2) - x(1)) - (y(2) - y(1)) * (x(0) - x(1))) ) / real_t(6.0);
         
-    elem_vol(elem_gid) = fmax(elem_vol(elem_gid), 1.0E-14);
+    elem_vol(elem_gid) = Kokkos::fmax(elem_vol(elem_gid), real_t(1.0E-14));
     return;
 } // end get_vol_quad
 
@@ -320,14 +320,14 @@ void geometry::get_vol_hex(const DCArrayKokkos<real_t>& elem_vol,
 {
     const size_t num_nodes = 8;
 
-    double x_array[8];
-    double y_array[8];
-    double z_array[8];
+    real_t x_array[8];
+    real_t y_array[8];
+    real_t z_array[8];
 
     // x, y, z coordinates of elem vertices
-    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
-    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
-    auto z = ViewCArrayKokkos<double>(z_array, num_nodes);
+    auto x = ViewCArrayKokkos<real_t>(x_array, num_nodes);
+    auto y = ViewCArrayKokkos<real_t>(y_array, num_nodes);
+    auto z = ViewCArrayKokkos<real_t>(z_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
@@ -336,7 +336,7 @@ void geometry::get_vol_hex(const DCArrayKokkos<real_t>& elem_vol,
         z(node_lid) = node_coords(elem_node_gids(node_lid), 2);
     }     // end for
 
-    double twelth = 1. / 12.;
+    real_t twelth = real_t(1.) / real_t(12.);
 
     // element volume
     elem_vol(elem_gid) =
@@ -352,7 +352,7 @@ void geometry::get_vol_hex(const DCArrayKokkos<real_t>& elem_vol,
         twelth;
 
     // std::cout<<"Calculating volume for hex = "<<elem_vol(elem_gid)<<std::endl;
-    elem_vol(elem_gid) = fmax(elem_vol(elem_gid), 1.0E-14);
+    elem_vol(elem_gid) = Kokkos::fmax(elem_vol(elem_gid), real_t(1.0E-14));
 
     return;
 } // end get_vol_hex
@@ -404,19 +404,19 @@ void geometry::get_vol(const DCArrayKokkos<real_t>& elem_vol,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void geometry::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
+void geometry::get_bmatrix2D(const ViewCArrayKokkos<real_t>& B_matrix,
     const size_t elem_gid,
     const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 4;
 
-    double x_array[4];
-    double y_array[4];
+    real_t x_array[4];
+    real_t y_array[4];
 
     // x, y coordinates of elem vertices
-    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
-    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
+    auto x = ViewCArrayKokkos<real_t>(x_array, num_nodes);
+    auto y = ViewCArrayKokkos<real_t>(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
@@ -428,21 +428,21 @@ void geometry::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
        Flanaghan node order 3 4 1 2
     */
 
-    B_matrix(0, 0) = -0.5 * (y(3) - y(1));
+    B_matrix(0, 0) = -real_t(0.5) * (y(3) - y(1));
 
-    B_matrix(1, 0) = -0.5 * (y(0) - y(2));
+    B_matrix(1, 0) = -real_t(0.5) * (y(0) - y(2));
 
-    B_matrix(2, 0) = -0.5 * (y(1) - y(3));
+    B_matrix(2, 0) = -real_t(0.5) * (y(1) - y(3));
 
-    B_matrix(3, 0) = -0.5 * (y(2) - y(0));
+    B_matrix(3, 0) = -real_t(0.5) * (y(2) - y(0));
 
-    B_matrix(0, 1) = -0.5 * (x(1) - x(3));
+    B_matrix(0, 1) = -real_t(0.5) * (x(1) - x(3));
 
-    B_matrix(1, 1) = -0.5 * (x(2) - x(0));
+    B_matrix(1, 1) = -real_t(0.5) * (x(2) - x(0));
 
-    B_matrix(2, 1) = -0.5 * (x(3) - x(1));
+    B_matrix(2, 1) = -real_t(0.5) * (x(3) - x(1));
 
-    B_matrix(3, 1) = -0.5 * (x(0) - x(2));
+    B_matrix(3, 1) = -real_t(0.5) * (x(0) - x(2));
 
     //
     /*
@@ -484,16 +484,16 @@ double geometry::get_area_quad(const size_t   elem_gid,
     const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
-    double elem_area = 0.0;
+    real_t elem_area = real_t(0.0);
 
     const size_t num_nodes = 4;
 
-    double x_array[4];
-    double y_array[4];
+    real_t x_array[4];
+    real_t y_array[4];
 
     // x, y coordinates of elem vertices
-    auto x = ViewCArrayKokkos<double>(x_array, num_nodes);
-    auto y = ViewCArrayKokkos<double>(y_array, num_nodes);
+    auto x = ViewCArrayKokkos<real_t>(x_array, num_nodes);
+    auto y = ViewCArrayKokkos<real_t>(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
@@ -506,7 +506,7 @@ double geometry::get_area_quad(const size_t   elem_gid,
     */
 
     // element facial area
-    elem_area = 0.5 * ((x(0) - x(2)) * (y(1) - y(3)) + (x(3) - x(1)) * (y(0) - y(2)));
+    elem_area = real_t(0.5) * ((x(0) - x(2)) * (y(1) - y(3)) + (x(3) - x(1)) * (y(0) - y(2)));
 
     return elem_area;
 } // end get_area_quad
@@ -528,25 +528,25 @@ double geometry::get_area_quad(const size_t   elem_gid,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-double geometry::heron(const double x1,
-    const double y1,
-    const double x2,
-    const double y2,
-    const double x3,
-    const double y3)
+double geometry::heron(const real_t x1,
+    const real_t y1,
+    const real_t x2,
+    const real_t y2,
+    const real_t x3,
+    const real_t y3)
 {
-    double S, a, b, c, area;
+    real_t S, a, b, c, area;
 
-    S  = 0.0;
-    a  = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+    S  = real_t(0.0);
+    a  = Kokkos::sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
     S += a;
-    b  = sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
+    b  = Kokkos::sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
     S += b;
-    c  = sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 - y1));
+    c  = Kokkos::sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 - y1));
     S += c;
 
-    S   *= 0.5;
-    area = sqrt(S * (S - a) * (S - b) * (S - c));
+    S   *= real_t(0.5);
+    area = Kokkos::sqrt(S * (S - a) * (S - b) * (S - c));
 
     return area;
 } // end heron
@@ -565,30 +565,30 @@ double geometry::heron(const double x1,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
+void geometry::get_area_weights2D(const ViewCArrayKokkos<real_t>& corner_areas,
     const size_t elem_gid,
     const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 4;
 
-    double x_array[4];
-    double y_array[4];
+    real_t x_array[4];
+    real_t y_array[4];
 
-    double rc, zc;
-    double A12, A23, A34, A41;
+    real_t rc, zc;
+    real_t A12, A23, A34, A41;
 
     // x, y coordinates of elem vertices
-    ViewCArrayKokkos<double> x(x_array, num_nodes);
-    ViewCArrayKokkos<double> y(y_array, num_nodes);
+    ViewCArrayKokkos<real_t> x(x_array, num_nodes);
+    ViewCArrayKokkos<real_t> y(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    rc = zc = 0.0;
+    rc = zc = real_t(0.0);
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(elem_node_gids(node_lid), 1);
-        rc += 0.25 * y(node_lid);
-        zc += 0.25 * x(node_lid);
+        rc += real_t(0.25) * y(node_lid);
+        zc += real_t(0.25) * x(node_lid);
     }     // end for
 
     /* ensight node order   0 1 2 3
@@ -600,10 +600,10 @@ void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
     A34 = heron(x(2), y(2), zc, rc, x(3), y(3));
     A41 = heron(x(3), y(3), zc, rc, x(0), y(0));
 
-    corner_areas(0) = (5. * A41 + 5. * A12 + A23 + A34) / 12.;
-    corner_areas(1) = (A41 + 5. * A12 + 5. * A23 + A34) / 12.;
-    corner_areas(2) = (A41 + A12 + 5. * A23 + 5. * A34) / 12.;
-    corner_areas(3) = (5. * A41 + A12 + A23 + 5. * A34) / 12.;
+    corner_areas(0) = (real_t(5.) * A41 + real_t(5.) * A12 + A23 + A34) / real_t(12.);
+    corner_areas(1) = (A41 + real_t(5.) * A12 + real_t(5.) * A23 + A34) / real_t(12.);
+    corner_areas(2) = (A41 + A12 + real_t(5.) * A23 + real_t(5.) * A34) / real_t(12.);
+    corner_areas(3) = (real_t(5.) * A41 + A12 + A23 + real_t(5.) * A34) / real_t(12.);
 
     return;
 } // end get_area_weights2D
@@ -625,11 +625,11 @@ void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 KOKKOS_FUNCTION
 size_t check_bdy(const size_t patch_gid,
     const int     this_bc_tag,
-    const double  val,
-    const double  tolerance,
-    const double  orig_x,
-    const double  orig_y,
-    const double  orig_z,
+    const real_t  val,
+    const real_t  tolerance,
+    const real_t  orig_x,
+    const real_t  orig_y,
+    const real_t  orig_z,
     const swage::Mesh_t& mesh,
     const MPICArrayKokkos<real_t>& node_coords)
 {
@@ -639,7 +639,7 @@ size_t check_bdy(const size_t patch_gid,
     size_t is_on_bdy = 0;
 
     // the patch coordinates
-    double these_patch_coords[3];  // Note: cannot allocated array with num_dims
+    real_t these_patch_coords[3];  // Note: cannot allocated array with num_dims
 
     // loop over the nodes on the patch
     for (size_t patch_node_lid = 0; patch_node_lid < mesh.num_nodes_in_patch; patch_node_lid++) {
@@ -652,38 +652,38 @@ size_t check_bdy(const size_t patch_gid,
 
         // a x-plane
         if (this_bc_tag == 0) {
-            if (fabs(these_patch_coords[0] - val) <= tolerance) {
+            if (Kokkos::fabs(these_patch_coords[0] - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
         // a y-plane
         else if (this_bc_tag == 1) {
-            if (fabs(these_patch_coords[1] - val) <= tolerance) {
+            if (Kokkos::fabs(these_patch_coords[1] - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
         // a z-plane
         else if (this_bc_tag == 2) {
-            if (fabs(these_patch_coords[2] - val) <= tolerance) {
+            if (Kokkos::fabs(these_patch_coords[2] - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
-        // cylinderical shell where radius = sqrt(dx^2 + dy^2)
+        // cylinderical shell where radius = Kokkos::sqrt(dx^2 + dy^2)
         else if (this_bc_tag == 3) {
-            double R = sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
+            real_t R = Kokkos::sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
                             (these_patch_coords[1] - orig_y) * (these_patch_coords[1] - orig_y));
 
-            if (fabs(R - val) <= tolerance) {
+            if (Kokkos::fabs(R - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
-        // spherical shell where radius = sqrt(dx^2 + dy^2 + dz^2)
+        // spherical shell where radius = Kokkos::sqrt(dx^2 + dy^2 + dz^2)
         else if (this_bc_tag == 4) {
-            double R = sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
+            real_t R = Kokkos::sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
                             (these_patch_coords[1] - orig_y) * (these_patch_coords[1] - orig_y) +
                             (these_patch_coords[2] - orig_z) * (these_patch_coords[2] - orig_z));
 
-            if (fabs(R - val) <= tolerance) {
+            if (Kokkos::fabs(R - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
@@ -724,7 +724,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     DynamicRaggedRightArrayKokkos<size_t> temp_bdy_patches_in_set (mesh.num_bdy_sets, mesh.num_bdy_patches, "temp_bdy_patches_in_set");
     
     // initialize the number of bdy patches in a set to zero
-    mesh.num_bdy_patches_in_set.set_values(0.0); // array length is num_bdy_sets
+    mesh.num_bdy_patches_in_set.set_values(real_t(0.0)); // array length is num_bdy_sets
 
     // If no boundaries, return
     if(mesh.num_bdy_sets == 0) return;
@@ -734,11 +734,11 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
         // tag boundaries
         int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).surface;
-        double value  = boundary.BoundaryConditionSetup(bdy_set).value;
-        double tolerance = boundary.BoundaryConditionSetup(bdy_set).tolerance;
-        double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
-        double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
-        double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
+        real_t value  = boundary.BoundaryConditionSetup(bdy_set).value;
+        real_t tolerance = boundary.BoundaryConditionSetup(bdy_set).tolerance;
+        real_t orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
+        real_t orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
+        real_t orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
         
 
 
@@ -849,7 +849,7 @@ void build_boundry_node_sets(swage::Mesh_t& mesh)
     // build boundary nodes in each boundary set
 
     mesh.num_bdy_nodes_in_set = DCArrayKokkos<size_t>(mesh.num_bdy_sets, "mesh.num_bdy_nodes_in_set");
-    mesh.num_bdy_nodes_in_set.set_values(0.0);
+    mesh.num_bdy_nodes_in_set.set_values(real_t(0.0));
 
     CArrayKokkos<long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes, "temp_count_num_bdy_nodes_in_set");
 

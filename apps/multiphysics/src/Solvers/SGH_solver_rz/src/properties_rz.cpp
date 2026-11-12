@@ -86,9 +86,9 @@ void SGHRZ::update_state_rz(
     const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
     const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad_t0,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
-    const double time_value,
-    const double dt,
-    const double rk_alpha,
+    const real_t time_value,
+    const real_t dt,
+    const real_t rk_alpha,
     const size_t cycle,
     const size_t num_material_elems,
     const size_t mat_id) const
@@ -116,7 +116,7 @@ void SGHRZ::update_state_rz(
 
         // --- Density ---
         MaterialPoints_den(mat_id, mat_point_sid) = MaterialPoints_mass(mat_id, mat_point_sid) /
-           (GaussPoints_vol(gauss_gid)*MaterialPoints_volfrac(mat_id, mat_point_sid)*MaterialPoints_geo_volfrac(mat_id, mat_point_sid) + 1.0e-20);
+           (GaussPoints_vol(gauss_gid)*MaterialPoints_volfrac(mat_id, mat_point_sid)*MaterialPoints_geo_volfrac(mat_id, mat_point_sid) + real_t(1.0e-20));
 
     }); // end parallel for over mat elem lid
     Kokkos::fence();
@@ -192,7 +192,7 @@ void SGHRZ::update_state_rz(
 
 
             // --- Density ---
-            MaterialPoints_den(mat_id, mat_point_sid) = MaterialPoints_mass(mat_id, mat_point_sid) / (GaussPoints_vol(gauss_gid) + 1.0e-20);
+            MaterialPoints_den(mat_id, mat_point_sid) = MaterialPoints_mass(mat_id, mat_point_sid) / (GaussPoints_vol(gauss_gid) + real_t(1.0e-20));
 
 
             // --- call strength model ---
@@ -258,13 +258,13 @@ void SGHRZ::update_state_rz(
 
             // apply a void eos if mat_point is eroded
             if (MaterialPoints_eroded(mat_id, mat_point_sid)) {
-                MaterialPoints_pres(mat_id, mat_point_sid) = 0.0;
-                MaterialPoints_sspd(mat_id, mat_point_sid) = 1.0e-32;
-                MaterialPoints_den(mat_id, mat_point_sid) = 1.0e-32;
+                MaterialPoints_pres(mat_id, mat_point_sid) = real_t(0.0);
+                MaterialPoints_sspd(mat_id, mat_point_sid) = real_t(1.0e-32);
+                MaterialPoints_den(mat_id, mat_point_sid) = real_t(1.0e-32);
 
                 for (size_t i = 0; i < 3; i++) {
                     for (size_t j = 0; j < 3; j++) {
-                        MaterialPoints_stress(mat_id, mat_point_sid, i, j) = 0.0;
+                        MaterialPoints_stress(mat_id, mat_point_sid, i, j) = real_t(0.0);
                     }
                 }  // end for i,j
             } // end if on eroded
@@ -327,11 +327,11 @@ void SGHRZ::update_stress(const Material_t& Materials,
                           const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                           const size_t num_mat_elems,
                           const size_t mat_id,
-                          const double fuzz,
-                          const double small,
-                          const double time_value,
-                          const double dt,
-                          const double rk_alpha,
+                          const real_t fuzz,
+                          const real_t small,
+                          const real_t time_value,
+                          const real_t dt,
+                          const real_t rk_alpha,
                           const size_t cycle) const
 {
     // --- Update Stress ---

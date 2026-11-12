@@ -56,18 +56,18 @@ struct cohesive_zones_t {
     CArrayKokkos<int> cz_info; // element/face connectivity info per cohesive zone node pair
     size_t max_elem_in_cohesive_zone = 0; // max number of elements attached to any cohesive zone node pair (used to size cz_info blocks)
     size_t num_nodes = 0; // total number of nodes in the mesh
-    double geom_tol = 1.0e-8; // default value for geometric tolerance; will be set from SimulationParameters.dynamic_options.small in initialize()
+    real_t geom_tol = real_t(1.0e-8); // default value for geometric tolerance; will be set from SimulationParameters.dynamic_options.small in initialize()
 
     // --- cohesive zone constiutive model parameters ---
     // Cohesive zone model bacsed on: Allen, D.H. and Searcy, C.R. (2001) 
     // "A micromechanical model for a viscoelastic cohesive zone"
     // International Journal of Fracture, 107:159-1765
     // https://doi.org/10.1023/A:1007693116116
-    double E_inf = 0.0; // prony constant term
-    double a1 = 0.0; // internal damage parameter
-    double n_exp = 0.0; // power of damage evolution law
-    double u_n_star = 1.0; // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0)
-    double u_t_star = 1.0; // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0
+    real_t E_inf = real_t(0.0); // prony constant term
+    real_t a1 = real_t(0.0); // internal damage parameter
+    real_t n_exp = real_t(0.0); // power of damage evolution law
+    real_t u_n_star = real_t(1.0); // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0)
+    real_t u_t_star = real_t(1.0); // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0
     int num_prony_terms = 0; // number of prony series terms
     CArrayKokkos<real_t> prony_params;  // (num_prony_terms, 2): row j = [E_j, tau_j] 
 
@@ -90,10 +90,10 @@ struct cohesive_zones_t {
 
     // --- fracture reorientation validation mode ---
     bool reorientation_validation_mode = false;
-    double omega_y = 0.0; // rotation about x2 axis (rad/time)
-    double omega_z = 0.0; // rotation about x3 axis (rad/time)
-    double cz_opening_rate = 0.0; // constant rate of opening for cohesive zone interface
-    double x_interface = 0.0; // x inferface location for reorientation validation mode
+    real_t omega_y = real_t(0.0); // rotation about x2 axis (rad/time)
+    real_t omega_z = real_t(0.0); // rotation about x3 axis (rad/time)
+    real_t cz_opening_rate = real_t(0.0); // constant rate of opening for cohesive zone interface
+    real_t x_interface = real_t(0.0); // x inferface location for reorientation validation mode
     CArrayKokkos<real_t> initial_coords; // initial nodal coordinates of the mesh
     CArrayKokkos<int> cz_b_side_flag; // flag for nodes on B side of interface for opening 
 
@@ -115,7 +115,7 @@ struct cohesive_zones_t {
         CArrayKokkos<size_t>& bdy_nodes,                 // mesh.bdy_nodes
         size_t num_bdy_nodes,                            // mesh.num_bdy_nodes
         MPICArrayKokkos<real_t>& node_coords,            // State.node.coords
-        double geom_tol);                                // SimulationParameters.DynamicOptions.small
+        real_t geom_tol);                                // SimulationParameters.DynamicOptions.small
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// \fn initialize_fracture_bc
@@ -167,9 +167,9 @@ void compute_cohesive_zone_nodal_forces(
     DCArrayKokkos<size_t>& overlapping_node_gids,
     CArrayKokkos<int>& cz_info,
     size_t max_elem_in_cohesive_zone,
-    double geom_tol,
-    const double E_inf, const double a1, const double n_exp,
-    const double u_n_star, const double u_t_star, const int num_prony_terms,
+    real_t geom_tol,
+    const real_t E_inf, const real_t a1, const real_t n_exp,
+    const real_t u_n_star, const real_t u_t_star, const int num_prony_terms,
     CArrayKokkos<real_t>& prony_params,
     CArrayKokkos<real_t>& internal_vars,
     CArrayKokkos<real_t>& delta_internal_vars,
@@ -178,8 +178,8 @@ void compute_cohesive_zone_nodal_forces(
     DCArrayKokkos<int>& gather_counts,
     DCArrayKokkos<int>& gather_entries,
     size_t gather_node_count,
-    double dt_stage,
-    double time_value,
+    real_t dt_stage,
+    real_t time_value,
     size_t cycle,
     size_t rk_stage,
     size_t rk_num_stages,
@@ -236,10 +236,10 @@ static void compute_face_geometry(
     const MPICArrayKokkos<real_t>& node_coords,
     const size_t surf,
     const size_t elem,
-    ViewCArrayKokkos<double>& n,
-    ViewCArrayKokkos<double>& r,
-    ViewCArrayKokkos<double>& s,
-    ViewCArrayKokkos<double>& cenface
+    ViewCArrayKokkos<real_t>& n,
+    ViewCArrayKokkos<real_t>& r,
+    ViewCArrayKokkos<real_t>& s,
+    ViewCArrayKokkos<real_t>& cenface
 );
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -268,7 +268,7 @@ void oriented(
     DCArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
     CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
     size_t max_elem_in_cohesive_zone,
-    double geom_tol,                 // centroid coincidence tolerance (ABS distance)
+    real_t geom_tol,                 // centroid coincidence tolerance (ABS distance)
     CArrayKokkos<real_t>& cohesive_zone_orientation       // (nvcz x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
 ); 
 
@@ -282,7 +282,7 @@ void ucmap(
     const MPICArrayKokkos<real_t>& vel,
     const CArrayKokkos<real_t>& cohesive_zone_orientation,
     DCArrayKokkos<size_t>& overlapping_node_gids,
-    const double dt_stage, 
+    const real_t dt_stage, 
     CArrayKokkos<real_t>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
 );
 
@@ -293,10 +293,10 @@ void ucmap(
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////     
 void cohesive_zone_var_update(
     const CArrayKokkos<real_t>& local_opening,
-    const double dt_stage, 
-    const double time_value, // ADDED IN FOR DEBUGGING
+    const real_t dt_stage, 
+    const real_t time_value, // ADDED IN FOR DEBUGGING
     DCArrayKokkos<size_t>& overlapping_node_gids,
-    const double E_inf, const double a1, const double n_exp, const double u_n_star, const double u_t_star, const int num_prony_terms, // cohesive zone parameters
+    const real_t E_inf, const real_t a1, const real_t n_exp, const real_t u_n_star, const real_t u_t_star, const int num_prony_terms, // cohesive zone parameters
     const CArrayKokkos<real_t>& prony_params, // E_j, tau_j pairs
     const CArrayKokkos<real_t>& internal_vars,      // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
     CArrayKokkos<real_t>& delta_internal_vars 

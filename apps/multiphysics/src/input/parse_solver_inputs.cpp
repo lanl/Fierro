@@ -156,7 +156,7 @@ void parse_solver_input(Yaml::Node& root, std::vector<solver_input_t>& solver_in
             }
             else if (a_word.compare("time_end") == 0){
                 // read input using s_id, save info to solver_id 
-                double t_end = root["solver_options"][s_id]["solver"]["time_end"].As<double>();
+                real_t t_end = root["solver_options"][s_id]["solver"]["time_end"].As<double>();
 
                 if (t_end<0){
                     std::cout << "ERROR: invalid ending time specified in the solver definition " << std::endl;

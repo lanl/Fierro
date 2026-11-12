@@ -58,40 +58,40 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
     // arrays local to this solver
     MPICArrayKokkos<real_t> node_level_set_vel(mesh.num_nodes, mesh.num_dims);
 
-    double fuzz  = SimulationParamaters.DynamicOptions.fuzz;
-    double tiny  = SimulationParamaters.DynamicOptions.tiny;
-    double small = SimulationParamaters.DynamicOptions.small;
+    real_t fuzz  = SimulationParamaters.DynamicOptions.fuzz;
+    real_t tiny  = SimulationParamaters.DynamicOptions.tiny;
+    real_t small = SimulationParamaters.DynamicOptions.small;
 
-    double graphics_dt_ival  = SimulationParamaters.OutputOptions.graphics_time_step;
+    real_t graphics_dt_ival  = SimulationParamaters.OutputOptions.graphics_time_step;
     int    graphics_cyc_ival = SimulationParamaters.OutputOptions.graphics_iteration_step;
 
-    // double time_initial = SimulationParamaters.DynamicOptions.time_initial;
-    double time_final   = this->time_end; //SimulationParamaters.DynamicOptions.time_final;
-    double dt_min   = SimulationParamaters.DynamicOptions.dt_min;
-    double dt_max   = SimulationParamaters.DynamicOptions.dt_max;
-    double dt_start = SimulationParamaters.DynamicOptions.dt_start;
-    double dt_cfl   = SimulationParamaters.DynamicOptions.dt_cfl;
+    // real_t time_initial = SimulationParamaters.DynamicOptions.time_initial;
+    real_t time_final   = this->time_end; //SimulationParamaters.DynamicOptions.time_final;
+    real_t dt_min   = SimulationParamaters.DynamicOptions.dt_min;
+    real_t dt_max   = SimulationParamaters.DynamicOptions.dt_max;
+    real_t dt_start = SimulationParamaters.DynamicOptions.dt_start;
+    real_t dt_cfl   = SimulationParamaters.DynamicOptions.dt_cfl;
 
     int rk_num_stages = SimulationParamaters.DynamicOptions.rk_num_stages;
     int cycle_stop    = SimulationParamaters.DynamicOptions.cycle_stop;
 
     // initialize time, time_step, and cycles
-    double time_value = this->time_start;  // was 0.0
-    double dt = dt_start;
+    real_t time_value = this->time_start;  // was 0.0
+    real_t dt = dt_start;
 
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
     // --- Graphics vars ----
-    CArray<double> graphics_times = CArray<double>(20000);
+    CArray<real_t> graphics_times = CArray<real_t>(20000);
     graphics_times(0) = this->time_start; // was zero
-    double graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
+    real_t graphics_time = this->time_start; // the times for writing graphics dump, was started at 0.0
 
     if (log) log->info("Applying initial boundary conditions \n");
     //boundary_velocity(mesh, BoundaryConditions, node_level_set_vel, time_value); // Time value = 0.0;
 
     
-    double cached_pregraphics_dt = fuzz;
+    real_t cached_pregraphics_dt = fuzz;
 
     // the number of materials specified by the user input
     const size_t num_mats = Materials.num_mats;
@@ -137,7 +137,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
             // initialize the material dt
-            double dt_mat = dt;
+            real_t dt_mat = dt;
 
             // only solve level set on the materials that have it
             if (Materials.MaterialEnums.host(mat_id).levelSetType == model::evolveFront){
@@ -195,7 +195,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
 
 
             // save the smallest dt of all materials
-            min_dt_calc = fmin(dt_mat, min_dt_calc);
+            min_dt_calc = Kokkos::fmin(dt_mat, min_dt_calc);
         } // end for loop over all mats
 
         dt = min_dt_calc;  // save this dt time step
@@ -241,7 +241,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
             
             // ---- RK coefficient ----
-            double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
+            real_t rk_alpha = real_t(1.0) / ((double)rk_num_stages - (double)rk_stage);
           
             // calculate the gradient at the node, its calculated across the whole mesh
             nodal_gradient(

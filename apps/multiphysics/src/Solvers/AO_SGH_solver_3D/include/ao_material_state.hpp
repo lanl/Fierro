@@ -60,7 +60,7 @@ void add_artificial_viscosity(const DCArrayKokkos<real_t>&           vel_grad,
                               const DRaggedRightArrayKokkos<real_t>& mat_sspd,
                               const size_t                           num_gauss_pts,
                               const size_t                           mat_id,
-                              const double                           h0,
+                              const real_t                           h0,
                               DCArrayKokkos<real_t>&                 sigma_qpt,
                               DCArrayKokkos<real_t>&                 visc_coeff_qpt);
 

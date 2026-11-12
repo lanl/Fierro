@@ -62,7 +62,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 namespace HypoPlasticityModel {
 
-    const double fuzz = 1.e-16;
+    const real_t fuzz = real_t(1.e-16);
     
     /**
      * @brief Initialize the strength state variables for the material points.
@@ -134,16 +134,16 @@ namespace HypoPlasticityModel {
         const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
-        const double MaterialPoints_den,
-        const double MaterialPoints_sie,
+        const real_t MaterialPoints_den,
+        const real_t MaterialPoints_sie,
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos<real_t> &eos_global_vars,
         const RaggedRightArrayKokkos<real_t> &strength_global_vars,
-        const double vol,
-        const double dt,
-        const double rk_alpha,
-        const double time,
+        const real_t vol,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
@@ -167,10 +167,10 @@ namespace HypoPlasticityModel {
     
 
         // shear modulus
-        double G_stress = strength_global_vars(mat_id, 0);
+        real_t G_stress = strength_global_vars(mat_id, 0);
 
         // yield strength
-        double Y_stress = strength_global_vars(mat_id, 1);
+        real_t Y_stress = strength_global_vars(mat_id, 1);
         
         const int num_dims = 3; // for 3D only
 
@@ -185,11 +185,11 @@ namespace HypoPlasticityModel {
         ViewCArrayKokkos<real_t> stress_n(&MaterialPoints_stress_n0(mat_id, MaterialPoints_lid, 0, 0), num_dims, num_dims); // stress at previous timestep
         ViewCArrayKokkos<real_t> stress(&MaterialPoints_stress(mat_id, MaterialPoints_lid, 0, 0), num_dims, num_dims); // stress at this timestep
 
-        double s_dev_n_1D[num_dims * num_dims];
-        double s_dev_1D[num_dims * num_dims];
+        real_t s_dev_n_1D[num_dims * num_dims];
+        real_t s_dev_1D[num_dims * num_dims];
 
-        ViewCArrayKokkos <double> s_dev_n(s_dev_n_1D, num_dims, num_dims); // deviatoric stress at previous timestep
-        ViewCArrayKokkos <double> s_dev(s_dev_1D, num_dims, num_dims); // deviatoric stress at this timestep
+        ViewCArrayKokkos <real_t> s_dev_n(s_dev_n_1D, num_dims, num_dims); // deviatoric stress at previous timestep
+        ViewCArrayKokkos <real_t> s_dev(s_dev_1D, num_dims, num_dims); // deviatoric stress at this timestep
 
         for (int i = 0; i < num_dims; i++) {
             for (int j = 0; j < num_dims; j++) {
@@ -199,8 +199,8 @@ namespace HypoPlasticityModel {
         }
 
         // subtract 1/3*trace*I from the stress tensor to get the stress deviators
-        //double trace_n = 0.0;
-        //double trace = 0.0;
+        //real_t trace_n = 0.0;
+        //real_t trace = 0.0;
         //for (int i = 0; i < num_dims; i++) {
         //    trace_n += s_dev_n(i, i);
         //    trace += s_dev(i, i);
@@ -213,25 +213,25 @@ namespace HypoPlasticityModel {
         //}
         
         // Jaumann rate RHS for evolving the stress_dev tensor
-        double stress_dev_rhs_1d[num_dims * num_dims];
-        ViewCArrayKokkos <double> stress_dev_rhs(stress_dev_rhs_1d, num_dims, num_dims);
+        real_t stress_dev_rhs_1d[num_dims * num_dims];
+        ViewCArrayKokkos <real_t> stress_dev_rhs(stress_dev_rhs_1d, num_dims, num_dims);
 
         // symmetric part of velocity gradient
-        double D_1d[num_dims * num_dims];
-        ViewCArrayKokkos <double> D(D_1d, num_dims, num_dims);
+        real_t D_1d[num_dims * num_dims];
+        ViewCArrayKokkos <real_t> D(D_1d, num_dims, num_dims);
 
         // anti-symmetric part of velocity gradient
-        double W_1d[num_dims * num_dims];
-        ViewCArrayKokkos <double> W(W_1d, num_dims, num_dims);
+        real_t W_1d[num_dims * num_dims];
+        ViewCArrayKokkos <real_t> W(W_1d, num_dims, num_dims);
 
         // D = 1/2(vel_grad + vel_grad^T)
         for (int i = 0; i < num_dims; i++) {
             for (int j = 0; j < num_dims; j++) {
-                D(i, j) = 0.5 * (GaussPoints_vel_grad(gauss_gid,i, j) + GaussPoints_vel_grad(gauss_gid,j, i));
+                D(i, j) = real_t(0.5) * (GaussPoints_vel_grad(gauss_gid,i, j) + GaussPoints_vel_grad(gauss_gid,j, i));
             }
         }
         
-        double div = 0;
+        real_t div = 0;
         for (int i = 0; i < num_dims; i++) {
             div += GaussPoints_vel_grad(gauss_gid,i, i);
         }
@@ -240,7 +240,7 @@ namespace HypoPlasticityModel {
         // W = 1/2(GaussPoints_vel_grad gauss_gid,- GaussPoints_vel_grad^gauss_gid,T)
         for (int i = 0; i < num_dims; i++) {
             for (int j = 0; j < num_dims; j++) {
-                W(i, j) = 0.5 * (GaussPoints_vel_grad(gauss_gid,i, j) - GaussPoints_vel_grad(gauss_gid,j, i));
+                W(i, j) = real_t(0.5) * (GaussPoints_vel_grad(gauss_gid,i, j) - GaussPoints_vel_grad(gauss_gid,j, i));
             }
         }
 
@@ -255,8 +255,8 @@ namespace HypoPlasticityModel {
         // ----------------------------------------------------------------------
 
         // Set up identity matrix
-        double eye_size[num_dims * num_dims];
-        ViewCArrayKokkos <double> eye(eye_size, num_dims, num_dims);
+        real_t eye_size[num_dims * num_dims];
+        ViewCArrayKokkos <real_t> eye(eye_size, num_dims, num_dims);
         // now calculate the identity matrix of s_dev
         for (int i = 0; i < num_dims; i++) {
             for (int j = 0; j < num_dims; j++) {
@@ -273,7 +273,7 @@ namespace HypoPlasticityModel {
         // Now calculate Jaumann for each element
         for (int i = 0; i < num_dims; i++) {
             for (int j = 0; j < num_dims; j++) {
-                stress_dev_rhs(i, j) = 2.0 * G_stress * (D(i, j) - ((div / 3.0) * eye(i, j)));
+                stress_dev_rhs(i, j) = real_t(2.0) * G_stress * (D(i, j) - ((div / real_t(3.0)) * eye(i, j)));
             }
         }
         for (int i = 0; i < num_dims; i++) {
@@ -293,20 +293,20 @@ namespace HypoPlasticityModel {
         }
         
         // scale to be on the yield surface, J2 plasticity
-        double J2 = 0.0;
+        real_t J2 = real_t(0.0);
         
         for (int i = 0; i < num_dims; i++) {
             for (int j = 0; j < num_dims; j++) {
                 J2 += s_dev(i, j) * s_dev(i, j);
             }
         }
-        J2 = J2 / 2.0;
+        J2 = J2 / real_t(2.0);
         
 
         // adjust to Mohr's circle
-        double factor = Y_stress / sqrt(3.0 * J2 + fuzz);
+        real_t factor = Y_stress / Kokkos::sqrt(real_t(3.0) * J2 + fuzz);
         
-        if (factor < 1.0) {
+        if (factor < real_t(1.0)) {
             for (int i = 0; i < num_dims; i++) {
                 for (int j = 0; j < num_dims; j++) {
                     s_dev(i, j) *= factor;
@@ -356,7 +356,7 @@ namespace HypoPlasticityModel {
 /////////////////////////////////////////////////////////////////////////////
 namespace HypoPlasticityRZModel {
 
-    const double fuzz = 1.e-16;
+    const real_t fuzz = real_t(1.e-16);
 
     /**
      * @brief Initialize the strength state variables for the material points (RZ version).
@@ -429,16 +429,16 @@ namespace HypoPlasticityRZModel {
         const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
-        const double MaterialPoints_den,
-        const double MaterialPoints_sie,
+        const real_t MaterialPoints_den,
+        const real_t MaterialPoints_sie,
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos<real_t> &eos_global_vars,
         const RaggedRightArrayKokkos<real_t> &strength_global_vars,
-        const double vol,
-        const double dt,
-        const double rk_alpha,
-        const double time,
+        const real_t vol,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
@@ -457,11 +457,11 @@ namespace HypoPlasticityRZModel {
         ViewCArrayKokkos<real_t> stress_n(&MaterialPoints_stress_n0(mat_id, MaterialPoints_lid, 0, 0), 3, 3); // stress from previous timestep
         ViewCArrayKokkos<real_t> stress(&MaterialPoints_stress(mat_id, MaterialPoints_lid, 0, 0), 3, 3); // stress from this timestep
 
-        double s_dev_n_1D[3 * 3];
-        double s_dev_1D[3 * 3];
+        real_t s_dev_n_1D[3 * 3];
+        real_t s_dev_1D[3 * 3];
 
-        ViewCArrayKokkos <double> s_dev_n(&s_dev_n_1D[0], 3, 3); // deviatoric stress from previous timestep
-        ViewCArrayKokkos <double> s_dev(&s_dev_1D[0], 3, 3); // deviatoric stress from this timestep
+        ViewCArrayKokkos <real_t> s_dev_n(&s_dev_n_1D[0], 3, 3); // deviatoric stress from previous timestep
+        ViewCArrayKokkos <real_t> s_dev(&s_dev_1D[0], 3, 3); // deviatoric stress from this timestep
 
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -471,46 +471,46 @@ namespace HypoPlasticityRZModel {
         }
 
         // subtract 1/3*trace*I from the stress tensor to get the stress deviators
-        double trace_n = 0.0;
-        double trace = 0.0;
+        real_t trace_n = real_t(0.0);
+        real_t trace = real_t(0.0);
         for (int i = 0; i < 3; i++) {
         trace_n += s_dev_n(i, i);
         trace += s_dev(i, i);
         }
         for (int i = 0; i < 3; i++) {
-        s_dev_n(i, i) -= trace_n / 3.0;
-        s_dev(i, i) -= trace / 3.0;
+        s_dev_n(i, i) -= trace_n / real_t(3.0);
+        s_dev(i, i) -= trace / real_t(3.0);
         }
 
         // Jaumann rate RHS for evolving the stress_dev tensor
-        double stress_dev_rhs_1d[3 * 3];
-        ViewCArrayKokkos <double> stress_dev_rhs(&stress_dev_rhs_1d[0], 3, 3);
+        real_t stress_dev_rhs_1d[3 * 3];
+        ViewCArrayKokkos <real_t> stress_dev_rhs(&stress_dev_rhs_1d[0], 3, 3);
 
         // symmetric part of velocity gradient
-        double D_1d[3 * 3];
-        ViewCArrayKokkos <double> D(&D_1d[0], 3, 3);
+        real_t D_1d[3 * 3];
+        ViewCArrayKokkos <real_t> D(&D_1d[0], 3, 3);
         
         // anti-symmetric part of velocity gradient
-        double W_1d[num_dims * num_dims];
-        ViewCArrayKokkos <double> W(&W_1d[0], num_dims, num_dims);
+        real_t W_1d[num_dims * num_dims];
+        ViewCArrayKokkos <real_t> W(&W_1d[0], num_dims, num_dims);
         
         
         // D = 1/2(vel_grad + vel_grad^T)
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                D(i, j) = 0.5 * (GaussPoints_vel_grad(gauss_gid,i, j) + GaussPoints_vel_grad(gauss_gid,j, i));
+                D(i, j) = real_t(0.5) * (GaussPoints_vel_grad(gauss_gid,i, j) + GaussPoints_vel_grad(gauss_gid,j, i));
             }
         }
         
         // W = 1/2(vel_grad - vel_grad^T)
         for (int i = 0; i < num_dims; i++) {
             for (int j = 0; j < num_dims; j++) {
-                W(i, j) = 0.5 * (GaussPoints_vel_grad(gauss_gid,i, j) - GaussPoints_vel_grad(gauss_gid,j, i));
+                W(i, j) = real_t(0.5) * (GaussPoints_vel_grad(gauss_gid,i, j) - GaussPoints_vel_grad(gauss_gid,j, i));
             }
         }
         
         
-        double div = 0;
+        real_t div = 0;
         for (int i = 0; i < num_dims; i++) {
             div += GaussPoints_vel_grad(gauss_gid,i, i);
         }
@@ -520,15 +520,15 @@ namespace HypoPlasticityRZModel {
         //            [dv/dx,  dv/dy]
         // GaussPoints_vel_grad(gauss_gid,1,0) = dv/dx
         // GaussPoints_vel_grad(gauss_gid,0,1) = du/dy
-        double curl;
+        real_t curl;
         curl = GaussPoints_vel_grad(gauss_gid,1,0) - GaussPoints_vel_grad(gauss_gid,0,1);  // dv/dx - du/dy
         
 
         // shear modulus
-        double G_stress = strength_global_vars(mat_id, 0);
+        real_t G_stress = strength_global_vars(mat_id, 0);
 
         // yield strength
-        double Y_stress = strength_global_vars(mat_id, 1);
+        real_t Y_stress = strength_global_vars(mat_id, 1);
 
         // ----------------------------------------------------------------------
         // Strength used by Maenchen and Sack, and by Wilkins (1964)
@@ -538,11 +538,11 @@ namespace HypoPlasticityRZModel {
         // ----------------------------------------------------------------------
         
         // calculate the RHS for the Jaumann rate for an elastic response in 2D RZ and state
-        double term = (s_dev_n(0, 0) - s_dev_n(1, 1))/2.0;
+        real_t term = (s_dev_n(0, 0) - s_dev_n(1, 1))/real_t(2.0);
 
         // setup for the identity matrix
-        double eye_size[9];
-        ViewCArrayKokkos <double> eye(eye_size, 3, 3);
+        real_t eye_size[9];
+        ViewCArrayKokkos <real_t> eye(eye_size, 3, 3);
         // now calculate the identity matrix of s_dev
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -565,18 +565,18 @@ namespace HypoPlasticityRZModel {
             // Now calculate Jaumann for each element
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
-                    stress_dev_rhs(i, j) = 2.0 * G_stress * (D(i, j) - ((div / 3.0) * eye(i, j)));
+                    stress_dev_rhs(i, j) = real_t(2.0) * G_stress * (D(i, j) - ((div / real_t(3.0)) * eye(i, j)));
                 }
             }
             
             // ----------------------
             // NOTE: the hoop stress doesn't use these Rotation terms
-            double sinw = 0.5*curl*rk_alpha*dt;   // the sin of the angle of rotation over dt;
-            double cosw = sqrt(1.0 - sinw*sinw);  // sinw^2 + cosw^2 = 1
+            real_t sinw = real_t(0.5)*curl*rk_alpha*dt;   // the sin of the angle of rotation over dt;
+            real_t cosw = Kokkos::sqrt(real_t(1.0) - sinw*sinw);  // sinw^2 + cosw^2 = 1
             
-            double Rzz = (s_dev(1, 1) - s_dev(0, 0))*sinw*sinw + 2.0*s_dev(1, 0)*sinw*cosw;
-            double Rrr = -Rzz;
-            double Rrz = (s_dev(1, 1) - s_dev(0, 0))*sinw*cosw - 2.0*s_dev(1, 0)*sinw*sinw;
+            real_t Rzz = (s_dev(1, 1) - s_dev(0, 0))*sinw*sinw + real_t(2.0)*s_dev(1, 0)*sinw*cosw;
+            real_t Rrr = -Rzz;
+            real_t Rrz = (s_dev(1, 1) - s_dev(0, 0))*sinw*cosw - real_t(2.0)*s_dev(1, 0)*sinw*sinw;
 
             
 
@@ -596,20 +596,20 @@ namespace HypoPlasticityRZModel {
             
 
             // scale to be on the yield surface, J2 plasticity
-            double J2 = 0.0;
+            real_t J2 = real_t(0.0);
 
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
                     J2 += s_dev(i, j) * s_dev(i, j);
                 } // end for j
             } // end for i
-            J2 = J2 / 2.0;
+            J2 = J2 / real_t(2.0);
 
             // adjust to Mohr's circle
-            double factor = Y_stress / sqrt(3.0 * J2 + fuzz);
+            real_t factor = Y_stress / Kokkos::sqrt(real_t(3.0) * J2 + fuzz);
 
 
-            if (factor < 1.0) {
+            if (factor < real_t(1.0)) {
                 for (int i = 0; i < 3; i++) {
                     for (int j = 0; j < 3; j++) {
                     s_dev(i, j) *= factor;
@@ -625,27 +625,27 @@ namespace HypoPlasticityRZModel {
             }
             
 
-            stress(0, 2) = 0.0;
-            stress(1, 2) = 0.0;
-            stress(2, 0) = 0.0;
-            stress(2, 1) = 0.0;
+            stress(0, 2) = real_t(0.0);
+            stress(1, 2) = real_t(0.0);
+            stress(2, 0) = real_t(0.0);
+            stress(2, 1) = real_t(0.0);
         }
         else {
                 
             
             // Equations according to Mark Wilkins 1963
-            stress_dev_rhs(0, 0) = (2.0 * G_stress * (D(0, 0) - ((div / 3.0)*eye(0, 0)))) + (term*(((D(0, 1)*s_dev(1, 0))+(s_dev(0, 1)*D(1, 0))) + ((D(0, 0)*s_dev(0, 0))+(s_dev(0, 0)*D(0, 0)))))
+            stress_dev_rhs(0, 0) = (real_t(2.0) * G_stress * (D(0, 0) - ((div / real_t(3.0))*eye(0, 0)))) + (term*(((D(0, 1)*s_dev(1, 0))+(s_dev(0, 1)*D(1, 0))) + ((D(0, 0)*s_dev(0, 0))+(s_dev(0, 0)*D(0, 0)))))
                                         + s_dev_n(0, 1)*((W(0, 1) * s_dev(1, 0)) - (s_dev(0, 1) * W(1, 0)));
             stress_dev_rhs(0, 1) = (G_stress * D(0, 1)) + ((s_dev_n(0, 1)*((((D(0, 0)*s_dev(0, 1))+(s_dev(0, 0)*D(0, 1))) + ((D(0, 1)*s_dev(1, 1))+(s_dev(0, 1)*D(1, 1))))))
                                     - term*(((W(0, 0) * s_dev(0, 1)) - (s_dev(0, 0) * W(0, 1)))+ ((W(0, 1)*s_dev(1, 1))-(s_dev(0, 1)*W(1, 1)))));
-            stress_dev_rhs(0, 2) = 0.0;
+            stress_dev_rhs(0, 2) = real_t(0.0);
             stress_dev_rhs(1, 0) = (G_stress * D(1, 0)) + ((s_dev_n(1, 0)*((((D(1, 0)*s_dev(0, 0))+(s_dev(1, 0)*D(0, 0))) + ((D(1, 1)*s_dev(1, 0))+(s_dev(1, 1)*D(1, 0))))))
                                     - term*(((W(1, 0) * s_dev(0, 0)) - (s_dev(1, 0) * W(0, 0))) + ((W(1, 1)*s_dev(1, 0))-(s_dev(1, 1)*W(1, 0)))));
-            stress_dev_rhs(1, 1) = (2.0 * G_stress * (D(1, 1) - ((div / 3.0)*eye(1, 1)))) + ((W(1, 0) * s_dev(0, 1)) - (s_dev(1, 0) * W(0, 1)));
-            stress_dev_rhs(1, 2) = 0.0;
-            stress_dev_rhs(2, 0) = 0.0;
-            stress_dev_rhs(2, 1) = 0.0;
-            stress_dev_rhs(2, 2) = (2.0 * G_stress * (D(2, 2) - ((div / 3.0)*eye(2, 2))));
+            stress_dev_rhs(1, 1) = (real_t(2.0) * G_stress * (D(1, 1) - ((div / real_t(3.0))*eye(1, 1)))) + ((W(1, 0) * s_dev(0, 1)) - (s_dev(1, 0) * W(0, 1)));
+            stress_dev_rhs(1, 2) = real_t(0.0);
+            stress_dev_rhs(2, 0) = real_t(0.0);
+            stress_dev_rhs(2, 1) = real_t(0.0);
+            stress_dev_rhs(2, 2) = (real_t(2.0) * G_stress * (D(2, 2) - ((div / real_t(3.0))*eye(2, 2))));
 
             // calculate the next stress
             for (int i = 0; i < num_dims; i++) {
@@ -655,7 +655,7 @@ namespace HypoPlasticityRZModel {
             }
 
             // scale to be on the yield surface, J2 plasticity
-            double J2 = 0.0;
+            real_t J2 = real_t(0.0);
             
             for (int i = 0; i < num_dims; i++) {
                 for (int j = 0; j < num_dims; j++) {
@@ -663,15 +663,15 @@ namespace HypoPlasticityRZModel {
                 }
             }
 
-            double K = J2 - ((2.0/3.0)*(Y_stress*Y_stress));
+            real_t K = J2 - ((real_t(2.0)/real_t(3.0))*(Y_stress*Y_stress));
 
             // adjust to Mohr's circle
-            double factor = (sqrt(2.0/3.0)*Y_stress) / sqrt(J2 + fuzz);
+            real_t factor = (Kokkos::sqrt(real_t(2.0)/real_t(3.0))*Y_stress) / Kokkos::sqrt(J2 + fuzz);
 
             // real_t factor = 0.9;  // warning warning testing  WARNING WARNING
             // WARNING testing
 
-            if (K > 0.0) {
+            if (K > real_t(0.0)) {
                 s_dev(0, 0) *= factor;
                 s_dev(1, 1) *= factor;
                 s_dev(2, 2) *= factor;
@@ -681,12 +681,12 @@ namespace HypoPlasticityRZModel {
             // set the new stress
             stress(0, 0) = s_dev(0, 0);
             stress(0, 1) = s_dev(0, 1);
-            stress(0, 2) = 0.0;
+            stress(0, 2) = real_t(0.0);
             stress(1, 0) = s_dev(0, 1);
             stress(1, 1) = s_dev(1, 1);
-            stress(1, 2) = 0.0;
-            stress(2, 0) = 0.0;
-            stress(2, 1) = 0.0;
+            stress(1, 2) = real_t(0.0);
+            stress(2, 0) = real_t(0.0);
+            stress(2, 1) = real_t(0.0);
             stress(2, 2) = s_dev(2, 2);
         
         }

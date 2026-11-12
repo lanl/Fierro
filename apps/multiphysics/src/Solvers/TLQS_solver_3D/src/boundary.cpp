@@ -59,10 +59,10 @@ void TLQS3D::boundary_displacement(const swage::Mesh_t& mesh,
     const BoundaryCondition_t& BoundaryConditions,
     const CArrayKokkos<bool>& constrained_dof,
     const CArrayKokkos<real_t>& displacement_step,
-    const double dt,
-    const double time_value,
-    const double time_start,
-    const double time_end) const
+    const real_t dt,
+    const real_t time_value,
+    const real_t time_start,
+    const real_t time_end) const
 {
     size_t num_disp_bdy_sets = BoundaryConditions.num_disp_bdy_sets_in_solver.host(this->solver_id);
     //std::cout << "NUM DISP BDY SETS" << num_disp_bdy_sets << std::endl;
@@ -115,10 +115,10 @@ void TLQS3D::boundary_stress(const swage::Mesh_t& mesh,
     const elements::ReferenceSurface_t ref_surf,
     const elements::SurfaceQuadrature_t SurfQuad,
     const MPICArrayKokkos<real_t> node_coords,
-    const double dt,
-    const double time_value,
-    const double time_start,
-    const double time_end) const
+    const real_t dt,
+    const real_t time_value,
+    const real_t time_start,
+    const real_t time_end) const
 {
     size_t num_stress_bdy_sets = BoundaryConditions.num_qstatx_stress_bdy_sets_in_solver.host(this->solver_id);
 
@@ -137,17 +137,17 @@ void TLQS3D::boundary_stress(const swage::Mesh_t& mesh,
             const size_t face_lid = mesh.faces_in_surf(bdy_surf_gid, 0);
 
             // making temp variables on the thread
-            double traction_arr[3];
-            double surf_normal_arr[3];
-            double qpt_coords_arr[3];
-            ViewCArrayKokkos <double> traction(&traction_arr[0], 3);
-            ViewCArrayKokkos <double> surf_normal(&surf_normal_arr[0], 3);
-            ViewCArrayKokkos <double> qpt_coords(&qpt_coords_arr[0], 3);
-            double qpt_weighted_area;
-            double jac_arr[3][3];
-            ViewCArrayKokkos<double> jac(&jac_arr[0][0], 3, 3);
-            double inv_jac_arr[3][3];
-            ViewCArrayKokkos<double> inv_jac(&inv_jac_arr[0][0], 3, 3);
+            real_t traction_arr[3];
+            real_t surf_normal_arr[3];
+            real_t qpt_coords_arr[3];
+            ViewCArrayKokkos <real_t> traction(&traction_arr[0], 3);
+            ViewCArrayKokkos <real_t> surf_normal(&surf_normal_arr[0], 3);
+            ViewCArrayKokkos <real_t> qpt_coords(&qpt_coords_arr[0], 3);
+            real_t qpt_weighted_area;
+            real_t jac_arr[3][3];
+            ViewCArrayKokkos<real_t> jac(&jac_arr[0][0], 3, 3);
+            real_t inv_jac_arr[3][3];
+            ViewCArrayKokkos<real_t> inv_jac(&inv_jac_arr[0][0], 3, 3);
 
             for (int qpt_lid = 0; qpt_lid < ref_surf.qpt_basis.dims(1); qpt_lid++) {
                 
@@ -174,10 +174,10 @@ void TLQS3D::boundary_stress(const swage::Mesh_t& mesh,
                 for (size_t node_elem_lid = 0; node_elem_lid < mesh.num_nodes_in_elem; node_elem_lid++) {
         
                     const size_t node_gid = mesh.nodes_in_elem(elem_gid, node_elem_lid);
-                    const double phi = ref_surf.qpt_basis(face_lid, qpt_lid, node_elem_lid);
+                    const real_t phi = ref_surf.qpt_basis(face_lid, qpt_lid, node_elem_lid);
 
                     for (size_t dim = 0; dim < 3; dim++) {
-                        const double force_val = phi * traction(dim) * qpt_weighted_area;
+                        const real_t force_val = phi * traction(dim) * qpt_weighted_area;
 
                         // Direct accumulation into global residual vector (requires atomic add if multi-threaded)
                         Kokkos::atomic_add(&cg_residual(node_gid, dim), force_val);

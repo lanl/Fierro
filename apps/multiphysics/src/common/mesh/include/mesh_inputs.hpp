@@ -80,24 +80,24 @@ struct MeshInput_t
     std::string file_path     = ""; ///< Absolute path of mesh file
     mesh_input::type type;          ///< Type of mesh to generate if
 
-    double origin[3]    = { 0.0, 0.0, 0.0 }; ///< Mesh origin for generating a mesh
-    double length[3]    = { 0.0, 0.0, 0.0 }; ///< x,y,z length of generated mesh
+    real_t origin[3]    = { real_t(0.0), real_t(0.0), real_t(0.0) }; ///< Mesh origin for generating a mesh
+    real_t length[3]    = { real_t(0.0), real_t(0.0), real_t(0.0) }; ///< x,y,z length of generated mesh
     size_t num_elems[3] = { 1, 1, 1 }; ///< Number of elements along x,y, z for generating a mesh.
 
     size_t p_order = 1;
 
     // WARNING, NOT YET PARSED
-    double inner_radius   = 0.0;     ///< Inner radius for generating 2D RZ mesh
-    double outer_radius   = 1.0;     ///< Outer radius for generating 2D RZ mesh
-    double starting_angle = 0.0;     ///< Starting angle in degrees for 2D RZ mesh
-    double ending_angle   = 90;      ///< Ending angle in degrees for 2D RZ mesh
+    real_t inner_radius   = real_t(0.0);     ///< Inner radius for generating 2D RZ mesh
+    real_t outer_radius   = real_t(1.0);     ///< Outer radius for generating 2D RZ mesh
+    real_t starting_angle = real_t(0.0);     ///< Starting angle in degrees for 2D RZ mesh
+    real_t ending_angle   = 90;      ///< Ending angle in degrees for 2D RZ mesh
 
     int num_radial_elems  = 10;     ///< Number of elements in the radial direction for 2DRZ mesh
     int num_angular_elems = 10;     ///< Number of elements in the radial direction for 2DRZ mesh
 
-    double scale_x = 1.0; ///< Scales mesh x coordinate dimensions
-    double scale_y = 1.0; ///< Scales mesh y coordinate dimensions
-    double scale_z = 1.0; ///< Scales mesh z coordinate dimensions
+    real_t scale_x = real_t(1.0); ///< Scales mesh x coordinate dimensions
+    real_t scale_y = real_t(1.0); ///< Scales mesh y coordinate dimensions
+    real_t scale_z = real_t(1.0); ///< Scales mesh z coordinate dimensions
 
     DCArrayKokkos <int> object_ids; ///< the object_ids in the vtu full mesh file (from exodus mesh)  
 

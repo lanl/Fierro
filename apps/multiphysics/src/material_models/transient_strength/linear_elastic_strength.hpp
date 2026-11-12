@@ -79,7 +79,7 @@ namespace OrthotropicLinearElasticStrengthModel {
                    const T3& C) {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                double sum = 0.0;
+                double sum = real_t(0.0);
                 for (int k = 0; k < 3; k++) {
                     sum += A(i,k) * B(k,j);
                 }
@@ -110,7 +110,7 @@ namespace OrthotropicLinearElasticStrengthModel {
                    const int N) {
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
-                double sum = 0.0;
+                double sum = real_t(0.0);
                 for (int k = 0; k < N; k++) {
                     sum += A(i,k) * B(k,j);
                 }
@@ -135,27 +135,27 @@ namespace OrthotropicLinearElasticStrengthModel {
 
 
     /**
-    * Symmetric Eigen-Decomposition: sqrt(F^T*F)
+    * Symmetric Eigen-Decomposition: Kokkos::sqrt(F^T*F)
     * @brief Jacobi eigenvalue algorithm for a symmetric 3x3 matrix.
     *        Computes eigenvalues (eigval) and eigenvectors (columns of eigvec).
     *        A is overwritten during iteration (pass a copy if you need to keep it).
     */
     KOKKOS_INLINE_FUNCTION
-    void jacobiEigenSolve3x3(const ViewCArrayKokkos<double> A,       // 3x3 symmetric, copied
-                             const ViewCArrayKokkos<double>& eigval, // size 3
-                             const ViewCArrayKokkos<double>& eigvec) // 3x3, columns = eigenvectors
+    void jacobiEigenSolve3x3(const ViewCArrayKokkos<real_t> A,       // 3x3 symmetric, copied
+                             const ViewCArrayKokkos<real_t>& eigval, // size 3
+                             const ViewCArrayKokkos<real_t>& eigvec) // 3x3, columns = eigenvectors
     {
         // Initialize eigvec to identity
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++)
-                eigvec(i,j) = (i == j) ? 1.0 : 0.0;
+                eigvec(i,j) = (i == j) ? real_t(1.0) : real_t(0.0);
 
         const int max_sweeps = 50;
-        const double tol = 1.0e-14;
+        const real_t tol = real_t(1.0e-14);
 
         for (int sweep = 0; sweep < max_sweeps; sweep++) {
             // Off-diagonal norm (convergence check)
-            double off = fabs(A(0,1)) + fabs(A(0,2)) + fabs(A(1,2));
+            real_t off = Kokkos::fabs(A(0,1)) + Kokkos::fabs(A(0,2)) + Kokkos::fabs(A(1,2));
             if (off < tol) break;
 
             // Loop over the 3 off-diagonal pairs (p,q)
@@ -164,24 +164,24 @@ namespace OrthotropicLinearElasticStrengthModel {
             for (auto& pq : pairs) {
                 int p = pq[0], q = pq[1];
 
-                if (fabs(A(p,q)) < 1.0e-18) continue;
+                if (Kokkos::fabs(A(p,q)) < real_t(1.0e-18)) continue;
 
-                double theta = (A(q,q) - A(p,p)) / (2.0 * A(p,q));
-                double t = (theta >= 0.0 ? 1.0 : -1.0) /
-                        (fabs(theta) + sqrt(theta*theta + 1.0));
-                double c = 1.0 / sqrt(t*t + 1.0);
-                double s = t * c;
+                real_t theta = (A(q,q) - A(p,p)) / (real_t(2.0) * A(p,q));
+                real_t t = (theta >= real_t(0.0) ? real_t(1.0) : -real_t(1.0)) /
+                        (Kokkos::fabs(theta) + Kokkos::sqrt(theta*theta + real_t(1.0)));
+                real_t c = real_t(1.0) / Kokkos::sqrt(t*t + real_t(1.0));
+                real_t s = t * c;
 
-                double App = A(p,p), Aqq = A(q,q), Apq = A(p,q);
+                real_t App = A(p,p), Aqq = A(q,q), Apq = A(p,q);
 
                 A(p,p) = App - t * Apq;
                 A(q,q) = Aqq + t * Apq;
-                A(p,q) = 0.0;
-                A(q,p) = 0.0;
+                A(p,q) = real_t(0.0);
+                A(q,p) = real_t(0.0);
 
                 for (int k = 0; k < 3; k++) {
                     if (k != p && k != q) {
-                        double Akp = A(k,p), Akq = A(k,q);
+                        real_t Akp = A(k,p), Akq = A(k,q);
                         A(k,p) = c * Akp - s * Akq;
                         A(p,k) = A(k,p);
                         A(k,q) = s * Akp + c * Akq;
@@ -191,7 +191,7 @@ namespace OrthotropicLinearElasticStrengthModel {
 
                 // Update eigenvector matrix
                 for (int k = 0; k < 3; k++) {
-                    double Vkp = eigvec(k,p), Vkq = eigvec(k,q);
+                    real_t Vkp = eigvec(k,p), Vkq = eigvec(k,q);
                     eigvec(k,p) = c * Vkp - s * Vkq;
                     eigvec(k,q) = s * Vkp + c * Vkq;
                 } // end for k
@@ -207,46 +207,46 @@ namespace OrthotropicLinearElasticStrengthModel {
 
     /**
     * @brief Compute the rotation tensor R from the right polar decomposition
-    *        F = R * U, where U = sqrt(F^T F).
+    *        F = R * U, where U = Kokkos::sqrt(F^T F).
     *
     * @param F  Deformation gradient (3x3 MATAR CArray)
     * @param R  Output rotation tensor (3x3 MATAR CArray, must be pre-allocated)
     */
     KOKKOS_INLINE_FUNCTION
-    void computeRotationFromF(const ViewCArrayKokkos<double>& F, 
-                              const ViewCArrayKokkos<double>& R) {
+    void computeRotationFromF(const ViewCArrayKokkos<real_t>& F, 
+                              const ViewCArrayKokkos<real_t>& R) {
 
-        double Ft_1D[9];
-        ViewCArrayKokkos<double>Ft(&Ft_1D[0],3,3);
+        real_t Ft_1D[9];
+        ViewCArrayKokkos<real_t>Ft(&Ft_1D[0],3,3);
 
-        double C_1D[9];
-        ViewCArrayKokkos<double>C(&C_1D[0],3,3);
+        real_t C_1D[9];
+        ViewCArrayKokkos<real_t>C(&C_1D[0],3,3);
 
         transpose3x3(F, Ft);
         matmul3x3(Ft, F, C);   // C = F^T F  (right Cauchy-Green tensor)
 
-        double eigval_1D[3];
-        ViewCArrayKokkos<double>eigval(&eigval_1D[0],3);
+        real_t eigval_1D[3];
+        ViewCArrayKokkos<real_t>eigval(&eigval_1D[0],3);
 
-        double eigvec_1D[9];
-        ViewCArrayKokkos<double>eigvec(&eigvec_1D[0],3,3); // columns are eigenvectors of C
+        real_t eigvec_1D[9];
+        ViewCArrayKokkos<real_t>eigvec(&eigvec_1D[0],3,3); // columns are eigenvectors of C
 
         jacobiEigenSolve3x3(C, eigval, eigvec);
 
-        // Build U = V * diag(sqrt(lambda)) * V^T
-        // Build U_inv = V * diag(1/sqrt(lambda)) * V^T
+        // Build U = V * diag(Kokkos::sqrt(lambda)) * V^T
+        // Build U_inv = V * diag(1/Kokkos::sqrt(lambda)) * V^T
 
-        double U_1D[9];
-        ViewCArrayKokkos<double>U(&U_1D[0],3,3);
+        real_t U_1D[9];
+        ViewCArrayKokkos<real_t>U(&U_1D[0],3,3);
 
-        double Uinv_1D[9];
-        ViewCArrayKokkos<double>Uinv(&Uinv_1D[0],3,3);
+        real_t Uinv_1D[9];
+        ViewCArrayKokkos<real_t>Uinv(&Uinv_1D[0],3,3);
 
-        double V_1D[9];
-        ViewCArrayKokkos<double>V(&V_1D[0],3,3);
+        real_t V_1D[9];
+        ViewCArrayKokkos<real_t>V(&V_1D[0],3,3);
 
-        double Vt_1D[9];
-        ViewCArrayKokkos<double>Vt(&Vt_1D[0],3,3);
+        real_t Vt_1D[9];
+        ViewCArrayKokkos<real_t>Vt(&Vt_1D[0],3,3);
 
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++)
@@ -255,26 +255,26 @@ namespace OrthotropicLinearElasticStrengthModel {
         transpose3x3(V, Vt);
 
 
-        double sqrtLambda_1D[9];
-        ViewCArrayKokkos<double>sqrtLambda(&sqrtLambda_1D[0],3,3);
+        real_t sqrtLambda_1D[9];
+        ViewCArrayKokkos<real_t>sqrtLambda(&sqrtLambda_1D[0],3,3);
 
-        double invSqrtLambda_1D[9];
-        ViewCArrayKokkos<double>invSqrtLambda(&invSqrtLambda_1D[0],3,3);
+        real_t invSqrtLambda_1D[9];
+        ViewCArrayKokkos<real_t>invSqrtLambda(&invSqrtLambda_1D[0],3,3);
 
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++) {
-                sqrtLambda(i,j) = 0.0;
-                invSqrtLambda(i,j) = 0.0;
+                sqrtLambda(i,j) = real_t(0.0);
+                invSqrtLambda(i,j) = real_t(0.0);
             }
 
         for (int i = 0; i < 3; i++) {
-            double lam = fmax(eigval(i), 1.0e-30); // guard against negative/zero
-            sqrtLambda(i,i) = sqrt(lam);
-            invSqrtLambda(i,i) = 1.0 / sqrt(lam);
+            real_t lam = Kokkos::fmax(eigval(i), real_t(1.0e-30)); // guard against negative/zero
+            sqrtLambda(i,i) = Kokkos::sqrt(lam);
+            invSqrtLambda(i,i) = real_t(1.0) / Kokkos::sqrt(lam);
         }
 
-        double temporary_1D[9];
-        ViewCArrayKokkos<double>temporary(&temporary_1D[0],3,3);
+        real_t temporary_1D[9];
+        ViewCArrayKokkos<real_t>temporary(&temporary_1D[0],3,3);
 
         matmul3x3(V, sqrtLambda, temporary);
         matmul3x3(temporary, Vt, U);
@@ -292,45 +292,45 @@ namespace OrthotropicLinearElasticStrengthModel {
     *        Rotates Voigt-notation stiffness via: C_current = M * C_ref * M^T
     */
     KOKKOS_INLINE_FUNCTION
-    void buildBondMatrix(const ViewCArrayKokkos<double>& R, 
-                         const ViewCArrayKokkos<double>& M) {
+    void buildBondMatrix(const ViewCArrayKokkos<real_t>& R, 
+                         const ViewCArrayKokkos<real_t>& M) {
 
         // Convenience aliases for rotation matrix components
-        double R11=R(0,0); 
-        double R12=R(0,1); 
-        double R13=R(0,2);
+        real_t R11=R(0,0); 
+        real_t R12=R(0,1); 
+        real_t R13=R(0,2);
 
-        double R21=R(1,0); 
-        double R22=R(1,1); 
-        double R23=R(1,2);
+        real_t R21=R(1,0); 
+        real_t R22=R(1,1); 
+        real_t R23=R(1,2);
 
-        double R31=R(2,0); 
-        double R32=R(2,1); 
-        double R33=R(2,2);
+        real_t R31=R(2,0); 
+        real_t R32=R(2,1); 
+        real_t R33=R(2,2);
 
         // Row 1
         M(0,0)=R11*R11; 
         M(0,1)=R12*R12; 
         M(0,2)=R13*R13;
-        M(0,3)=2.0*R12*R13; 
-        M(0,4)=2.0*R13*R11; 
-        M(0,5)=2.0*R11*R12;
+        M(0,3)=real_t(2.0)*R12*R13; 
+        M(0,4)=real_t(2.0)*R13*R11; 
+        M(0,5)=real_t(2.0)*R11*R12;
 
         // Row 2
         M(1,0)=R21*R21; 
         M(1,1)=R22*R22; 
         M(1,2)=R23*R23;
-        M(1,3)=2.0*R22*R23; 
-        M(1,4)=2.0*R23*R21; 
-        M(1,5)=2.0*R21*R22;
+        M(1,3)=real_t(2.0)*R22*R23; 
+        M(1,4)=real_t(2.0)*R23*R21; 
+        M(1,5)=real_t(2.0)*R21*R22;
 
         // Row 3
         M(2,0)=R31*R31; 
         M(2,1)=R32*R32; 
         M(2,2)=R33*R33;
-        M(2,3)=2.0*R32*R33; 
-        M(2,4)=2.0*R33*R31; 
-        M(2,5)=2.0*R31*R32;
+        M(2,3)=real_t(2.0)*R32*R33; 
+        M(2,4)=real_t(2.0)*R33*R31; 
+        M(2,5)=real_t(2.0)*R31*R32;
 
         // Row 4
         M(3,0)=R21*R31; 
@@ -369,23 +369,23 @@ namespace OrthotropicLinearElasticStrengthModel {
     * @param C_current   Output: rotated stiffness matrix (6x6)
     */
     KOKKOS_INLINE_FUNCTION
-    void rotateStiffnessFromF(const ViewCArrayKokkos<double>& C_ref,
-                                     const ViewCArrayKokkos<double>& F,
-                                     const ViewCArrayKokkos<double>& C_current) {
+    void rotateStiffnessFromF(const ViewCArrayKokkos<real_t>& C_ref,
+                                     const ViewCArrayKokkos<real_t>& F,
+                                     const ViewCArrayKokkos<real_t>& C_current) {
 
-        double R_1D[9];
-        ViewCArrayKokkos<double>R(&R_1D[0],3,3);
+        real_t R_1D[9];
+        ViewCArrayKokkos<real_t>R(&R_1D[0],3,3);
 
         computeRotationFromF(F, R);
 
-        double M_1D[36];
-        ViewCArrayKokkos<double>M(&M_1D[0],6,6);
+        real_t M_1D[36];
+        ViewCArrayKokkos<real_t>M(&M_1D[0],6,6);
 
-        double Mt_1D[36];
-        ViewCArrayKokkos<double>Mt(&Mt_1D[0],6,6);
+        real_t Mt_1D[36];
+        ViewCArrayKokkos<real_t>Mt(&Mt_1D[0],6,6);
 
-        double temporary_1D[36];
-        ViewCArrayKokkos<double>temporary(&temporary_1D[0],6,6);
+        real_t temporary_1D[36];
+        ViewCArrayKokkos<real_t>temporary(&temporary_1D[0],6,6);
 
 
         buildBondMatrix(R, M);
@@ -400,19 +400,19 @@ namespace OrthotropicLinearElasticStrengthModel {
         // routines needed to calculate things like the wave speed in a material
 
         // Reference stiffness tensor (e.g., cubic crystal, Voigt notation)
-        double C_ref_1D[36];
-        ViewCArrayKokkos<double> C_ref(&C_ref_1D[0],6,6);
+        real_t C_ref_1D[36];
+        ViewCArrayKokkos<real_t> C_ref(&C_ref_1D[0],6,6);
         // ... fill C_ref with your material's reference stiffness values ...
 
         // Deformation gradient from your solver (already a MATAR RaggeCArray)
 
-        ViewCArrayKokkos<double> F(&Deformation_Grad(...),3,3);
+        ViewCArrayKokkos<real_t> F(&Deformation_Grad(...),3,3);
         F(0,0)=1.05; F(0,1)=0.02; F(0,2)=0.00;
         F(1,0)=0.00; F(1,1)=0.98; F(1,2)=0.01;
         F(2,0)=0.01; F(2,1)=0.00; F(2,2)=1.00;
 
-        double C_current_1D[36];
-        ViewCArrayKokkos<double> C_current(&C_current_1D[0],6,6);
+        real_t C_current_1D[36];
+        ViewCArrayKokkos<real_t> C_current(&C_current_1D[0],6,6);
 
         rotateStiffnessFromF(C_ref, F, C_current);
 
@@ -431,18 +431,18 @@ namespace OrthotropicLinearElasticStrengthModel {
     void computeGreenLagrangeStrain(const TF& F,
                                     const TE& E) {
         
-        double Ft_1D[9];
-        ViewCArrayKokkos<double>Ft(&Ft_1D[0],3,3);
+        real_t Ft_1D[9];
+        ViewCArrayKokkos<real_t>Ft(&Ft_1D[0],3,3);
 
-        double C_1D[9];
-        ViewCArrayKokkos<double>C(&C_1D[0],3,3);
+        real_t C_1D[9];
+        ViewCArrayKokkos<real_t>C(&C_1D[0],3,3);
 
         transpose3x3(F, Ft);
         matmul3x3(Ft, F, C);   // C = F^T F
 
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                E(i,j) = 0.5 * (C(i,j) - (i == j ? 1.0 : 0.0));
+                E(i,j) = real_t(0.5) * (C(i,j) - (i == j ? real_t(1.0) : real_t(0.0)));
             }
         }
     } // end function
@@ -452,14 +452,14 @@ namespace OrthotropicLinearElasticStrengthModel {
     *        using engineering strain convention for shear terms.
     */
     KOKKOS_INLINE_FUNCTION
-    void strainTensorToVoigt(const ViewCArrayKokkos<double>& E, 
-                             const ViewCArrayKokkos<double>& E_voigt) {
+    void strainTensorToVoigt(const ViewCArrayKokkos<real_t>& E, 
+                             const ViewCArrayKokkos<real_t>& E_voigt) {
         E_voigt(0) = E(0,0);          // E11
         E_voigt(1) = E(1,1);          // E22
         E_voigt(2) = E(2,2);          // E33
-        E_voigt(3) = 2.0 * E(1,2);    // 2*E23
-        E_voigt(4) = 2.0 * E(0,2);    // 2*E13
-        E_voigt(5) = 2.0 * E(0,1);    // 2*E12
+        E_voigt(3) = real_t(2.0) * E(1,2);    // 2*E23
+        E_voigt(4) = real_t(2.0) * E(0,2);    // 2*E13
+        E_voigt(5) = real_t(2.0) * E(0,1);    // 2*E12
     }
 
 
@@ -469,12 +469,12 @@ namespace OrthotropicLinearElasticStrengthModel {
     *           S = C_ref * E
     */
     KOKKOS_INLINE_FUNCTION
-    void computeSecondPKStressVoigt(const double C_ref[6][6],
-                                    const ViewCArrayKokkos<double>& E_voigt,
-                                    const ViewCArrayKokkos<double>& S_voigt) {
+    void computeSecondPKStressVoigt(const real_t C_ref[6][6],
+                                    const ViewCArrayKokkos<real_t>& E_voigt,
+                                    const ViewCArrayKokkos<real_t>& S_voigt) {
 
         for (int i = 0; i < 6; i++) {
-            double sum = 0.0;
+            double sum = real_t(0.0);
             for (int j = 0; j < 6; j++) {
                 sum += C_ref[i][j] * E_voigt(j);
             }
@@ -484,8 +484,8 @@ namespace OrthotropicLinearElasticStrengthModel {
 
 
     KOKKOS_INLINE_FUNCTION
-    void stressVoigtToTensor(const ViewCArrayKokkos<double>& S_voigt, 
-                             const ViewCArrayKokkos<double>& S) {
+    void stressVoigtToTensor(const ViewCArrayKokkos<real_t>& S_voigt, 
+                             const ViewCArrayKokkos<real_t>& S) {
         S(0,0) = S_voigt(0);
         S(1,1) = S_voigt(1);
         S(2,2) = S_voigt(2);
@@ -506,29 +506,29 @@ namespace OrthotropicLinearElasticStrengthModel {
     *        decoupled and diagonal.
     */
     KOKKOS_INLINE_FUNCTION
-    void buildOrthotropicStiffness(const double E1, const double E2, const double E3,
-                                   const double nu12, const double nu13, const double nu23,
-                                   const double G12, const double G13, const double G23,
-                                   double C_ref[6][6]) {
+    void buildOrthotropicStiffness(const real_t E1, const real_t E2, const real_t E3,
+                                   const real_t nu12, const real_t nu13, const real_t nu23,
+                                   const real_t G12, const real_t G13, const real_t G23,
+                                   real_t C_ref[6][6]) {
 
         for (int i = 0; i < 6; i++)
             for (int j = 0; j < 6; j++)
-                C_ref[i][j] = 0.0;
+                C_ref[i][j] = real_t(0.0);
 
         // Compliance sub-block (normal-normal), using symmetry nu_ij/E_i = nu_ji/E_j
-        const double S11 =  1.0 / E1;
-        const double S22 =  1.0 / E2;
-        const double S33 =  1.0 / E3;
-        const double S12 = -nu12 / E1;   // = -nu21/E2
-        const double S13 = -nu13 / E1;   // = -nu31/E3
-        const double S23 = -nu23 / E2;   // = -nu32/E3
+        const real_t S11 =  real_t(1.0) / E1;
+        const real_t S22 =  real_t(1.0) / E2;
+        const real_t S33 =  real_t(1.0) / E3;
+        const real_t S12 = -nu12 / E1;   // = -nu21/E2
+        const real_t S13 = -nu13 / E1;   // = -nu31/E3
+        const real_t S23 = -nu23 / E2;   // = -nu32/E3
 
         // Invert the symmetric 3x3 compliance block analytically
-        const double detS = S11*(S22*S33 - S23*S23)
+        const real_t detS = S11*(S22*S33 - S23*S23)
                           - S12*(S12*S33 - S23*S13)
                           + S13*(S12*S23 - S22*S13);
 
-        const double inv_detS = 1.0 / detS;
+        const real_t inv_detS = real_t(1.0) / detS;
 
         C_ref[0][0] = (S22*S33 - S23*S23) * inv_detS;
         C_ref[1][1] = (S11*S33 - S13*S13) * inv_detS;
@@ -558,27 +558,27 @@ namespace OrthotropicLinearElasticStrengthModel {
     */
     KOKKOS_INLINE_FUNCTION
     double maxBulkModulusFromEngineeringConstants(
-        const double E1, const double E2, const double E3,
-        const double nu12, const double nu13, const double nu23) {
+        const real_t E1, const real_t E2, const real_t E3,
+        const real_t nu12, const real_t nu13, const real_t nu23) {
 
-        const double S11 = 1.0/E1;
-        const double S22 = 1.0/E2;
-        const double S33 = 1.0/E3;
-        const double S12 = -nu12/E1;
-        const double S13 = -nu13/E1;
-        const double S23 = -nu23/E2;
+        const real_t S11 = real_t(1.0)/E1;
+        const real_t S22 = real_t(1.0)/E2;
+        const real_t S33 = real_t(1.0)/E3;
+        const real_t S12 = -nu12/E1;
+        const real_t S13 = -nu13/E1;
+        const real_t S23 = -nu23/E2;
 
-        const double Delta = S11*S22*S33
+        const real_t Delta = S11*S22*S33
                            - S11*S23*S23
                            - S22*S13*S13
                            - S33*S12*S12
-                           + 2.0*S12*S13*S23;
+                           + real_t(2.0)*S12*S13*S23;
 
-        const double C11 = (S22*S33 - S23*S23) / (Delta + 1.e-16);
-        const double C22 = (S11*S33 - S13*S13) / (Delta + 1.e-16);
-        const double C33 = (S11*S22 - S12*S12) / (Delta + 1.e-16);
+        const real_t C11 = (S22*S33 - S23*S23) / (Delta + real_t(1.e-16));
+        const real_t C22 = (S11*S33 - S13*S13) / (Delta + real_t(1.e-16));
+        const real_t C33 = (S11*S22 - S12*S12) / (Delta + real_t(1.e-16));
 
-        return fmax(C11, fmax(C22, C33));
+        return Kokkos::fmax(C11, Kokkos::fmax(C22, C33));
     } // end function
 
 
@@ -600,18 +600,18 @@ namespace OrthotropicLinearElasticStrengthModel {
 
     KOKKOS_FUNCTION
     static void fill_C_matrix(const RaggedRightArrayKokkos<real_t> &strength_global_vars,
-                              double C_ref[6][6],
+                              real_t C_ref[6][6],
                               const size_t mat_id)
     {
-        const double E1   = strength_global_vars(mat_id, 0);
-        const double E2   = strength_global_vars(mat_id, 1);
-        const double E3   = strength_global_vars(mat_id, 2);
-        const double nu12 = strength_global_vars(mat_id, 3);
-        const double nu13 = strength_global_vars(mat_id, 4);
-        const double nu23 = strength_global_vars(mat_id, 5);
-        const double G12  = strength_global_vars(mat_id, 6);
-        const double G13  = strength_global_vars(mat_id, 7);
-        const double G23  = strength_global_vars(mat_id, 8);
+        const real_t E1   = strength_global_vars(mat_id, 0);
+        const real_t E2   = strength_global_vars(mat_id, 1);
+        const real_t E3   = strength_global_vars(mat_id, 2);
+        const real_t nu12 = strength_global_vars(mat_id, 3);
+        const real_t nu13 = strength_global_vars(mat_id, 4);
+        const real_t nu23 = strength_global_vars(mat_id, 5);
+        const real_t G12  = strength_global_vars(mat_id, 6);
+        const real_t G13  = strength_global_vars(mat_id, 7);
+        const real_t G23  = strength_global_vars(mat_id, 8);
 
         buildOrthotropicStiffness(E1, E2, E3, nu12, nu13, nu23, G12, G13, G23, C_ref);
 
@@ -631,16 +631,16 @@ namespace OrthotropicLinearElasticStrengthModel {
         const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
-        const double MaterialPoints_den,
-        const double MaterialPoints_sie,
+        const real_t MaterialPoints_den,
+        const real_t MaterialPoints_sie,
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos<real_t> &eos_global_vars,
         const RaggedRightArrayKokkos<real_t> &strength_global_vars,
-        const double vol,
-        const double dt,
-        const double rk_alpha,
-        const double time,
+        const real_t vol,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t time,
         const size_t cycle,
         const size_t MaterialPoints_sid,
         const size_t mat_id,
@@ -662,43 +662,43 @@ namespace OrthotropicLinearElasticStrengthModel {
         //    this in MaterialPoints_strength_state_vars instead of
         //    rebuilding it every call.
         // -----------------------------------------------------------
-        double C_ref[6][6];
+        real_t C_ref[6][6];
         fill_C_matrix(strength_global_vars, C_ref, mat_id);
 
 
         // -----------------------------------------------------------
         // 2) Green-Lagrange strain:  E = 1/2 (F^T F - I)
         // -----------------------------------------------------------
-        double strain_1D[9];
-        ViewCArrayKokkos <double> strain(&strain_1D[0], 3, 3);
+        real_t strain_1D[9];
+        ViewCArrayKokkos <real_t> strain(&strain_1D[0], 3, 3);
         computeGreenLagrangeStrain(F, strain);
         
         // -----------------------------------------------------------
         // 3) Strain tensor -> Voigt -> 2nd PK stress (Voigt) -> tensor
         // -----------------------------------------------------------
-        double E_voigt_1D[6];
-        ViewCArrayKokkos<double> E_voigt(&E_voigt_1D[0], 6);
+        real_t E_voigt_1D[6];
+        ViewCArrayKokkos<real_t> E_voigt(&E_voigt_1D[0], 6);
         strainTensorToVoigt(strain, E_voigt);
 
-        double S_voigt_1D[6];
-        ViewCArrayKokkos<double> S_voigt(&S_voigt_1D[0], 6);
+        real_t S_voigt_1D[6];
+        ViewCArrayKokkos<real_t> S_voigt(&S_voigt_1D[0], 6);
         computeSecondPKStressVoigt(C_ref, E_voigt, S_voigt);
 
-        double S_1D[9];
-        ViewCArrayKokkos<double> S(&S_1D[0], 3, 3);
+        real_t S_1D[9];
+        ViewCArrayKokkos<real_t> S(&S_1D[0], 3, 3);
         stressVoigtToTensor(S_voigt, S);
 
         // -----------------------------------------------------------
         // 4) Push forward 2nd PK stress S to Cauchy stress sigma:
         //        sigma = (1/J) * F * S * F^T
         // -----------------------------------------------------------
-        const double detF = fmax(det_3x3(F), 1.e-13);
+        const real_t detF = Kokkos::fmax(det_3x3(F), real_t(1.e-13));
 
-        double FS_1D[9];
-        ViewCArrayKokkos<double> FS(&FS_1D[0], 3, 3);
+        real_t FS_1D[9];
+        ViewCArrayKokkos<real_t> FS(&FS_1D[0], 3, 3);
 
-        double Ft_1D[9];
-        ViewCArrayKokkos<double> Ft(&Ft_1D[0], 3, 3);
+        real_t Ft_1D[9];
+        ViewCArrayKokkos<real_t> Ft(&Ft_1D[0], 3, 3);
 
         matmul3x3(F, S, FS);
         transpose3x3(F, Ft);
@@ -722,30 +722,30 @@ namespace OrthotropicLinearElasticStrengthModel {
                                  const size_t mat_id,
                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
-                                 const double den,
-                                 const double sie,
+                                 const real_t den,
+                                 const real_t sie,
                                  const RaggedRightArrayKokkos<real_t> &eos_global_vars,
                                  const RaggedRightArrayKokkos<real_t> &strength_global_vars)
     {
 
-        const double E1   = strength_global_vars(mat_id, 0);
-        const double E2   = strength_global_vars(mat_id, 1);
-        const double E3   = strength_global_vars(mat_id, 2);
-        const double nu12 = strength_global_vars(mat_id, 3);
-        const double nu13 = strength_global_vars(mat_id, 4);
-        const double nu23 = strength_global_vars(mat_id, 5);
-        const double G12  = strength_global_vars(mat_id, 6);
-        const double G13  = strength_global_vars(mat_id, 7);
-        const double G23  = strength_global_vars(mat_id, 8);
-        const double csmin  = strength_global_vars(mat_id, 9);
+        const real_t E1   = strength_global_vars(mat_id, 0);
+        const real_t E2   = strength_global_vars(mat_id, 1);
+        const real_t E3   = strength_global_vars(mat_id, 2);
+        const real_t nu12 = strength_global_vars(mat_id, 3);
+        const real_t nu13 = strength_global_vars(mat_id, 4);
+        const real_t nu23 = strength_global_vars(mat_id, 5);
+        const real_t G12  = strength_global_vars(mat_id, 6);
+        const real_t G13  = strength_global_vars(mat_id, 7);
+        const real_t G23  = strength_global_vars(mat_id, 8);
+        const real_t csmin  = strength_global_vars(mat_id, 9);
 
-        // sspd = sqrt((B + 4/3G)/rho)
-        const double B_max = maxBulkModulusFromEngineeringConstants(E1, E2, E3, nu12, nu13, nu23);
+        // sspd = Kokkos::sqrt((B + 4/3G)/rho)
+        const real_t B_max = maxBulkModulusFromEngineeringConstants(E1, E2, E3, nu12, nu13, nu23);
 
-        const double G_max = fmax(G12, fmax(G13, G23));
+        const real_t G_max = Kokkos::fmax(G12, Kokkos::fmax(G13, G23));
 
         // sound speed
-        MaterialPoints_sspd(mat_id, mat_pt_lid) = fmax(csmin, sqrt((B_max + (4.0/3.0)*G_max)/den));
+        MaterialPoints_sspd(mat_id, mat_pt_lid) = Kokkos::fmax(csmin, Kokkos::sqrt((B_max + (real_t(4.0)/real_t(3.0))*G_max)/den));
 
         return;
     } // end func

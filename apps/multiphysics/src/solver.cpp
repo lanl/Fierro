@@ -63,8 +63,8 @@ double Solver::CPU_Time()
     auto time = std::chrono::system_clock::now();
     auto time_duration = time.time_since_epoch();
 
-    double calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_duration - zero_time_duration).count();
-    calc_time *= 1e-09;
+    real_t calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_duration - zero_time_duration).count();
+    calc_time *= real_t(1e-09);
 
     return calc_time;
 }
@@ -78,6 +78,6 @@ double Solver::CPU_Time()
 /////////////////////////////////////////////////////////////////////////////
 void Solver::init_clock()
 {
-    // double current_cpu = 0;
+    // real_t current_cpu = 0;
     initial_CPU_time = CPU_Time();
 }

@@ -64,7 +64,7 @@ static void temperature(const swage::Mesh_t& mesh,
     const RaggedRightArrayKokkos<real_t>& temp_bc_global_vars,
         const DCArrayKokkos<real_t>& bc_state_vars,
         const MPICArrayKokkos<real_t>& node_temp,
-        const double time_value,
+        const real_t time_value,
         const size_t rk_stage,
         const size_t bdy_node_gid,
         const size_t bdy_set)

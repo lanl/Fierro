@@ -66,10 +66,10 @@ static void displacement(const swage::Mesh_t& mesh,
         const DCArrayKokkos<real_t>& bc_state_vars,
         const CArrayKokkos<bool>& constrained_dof,
         const CArrayKokkos<real_t>& displacement_step,
-        const double dt,
-        const double time_value,
-        const double time_start,
-        const double time_end,
+        const real_t dt,
+        const real_t time_value,
+        const real_t time_start,
+        const real_t time_end,
         const size_t bdy_node_gid,
         const size_t bdy_set)
 {
@@ -80,10 +80,10 @@ static void displacement(const swage::Mesh_t& mesh,
 
     const size_t constrained_dir  = static_cast<size_t>(disp_bc_global_vars(bdy_set, 2));
 
-    double ang_freq = 2*3.14159265358979323846*disp_bc_global_vars(bdy_set, 1);
-    double disp_curr = disp_bc_global_vars(bdy_set, 0)*sin((time_value-time_start)*ang_freq);
-    double disp_next = disp_bc_global_vars(bdy_set, 0)*sin((time_value+dt-time_start)*ang_freq);
-    const double total_step_target = disp_next - disp_curr;
+    real_t ang_freq = 2*real_t(3.14159265358979323846)*disp_bc_global_vars(bdy_set, 1);
+    real_t disp_curr = disp_bc_global_vars(bdy_set, 0)*Kokkos::sin((time_value-time_start)*ang_freq);
+    real_t disp_next = disp_bc_global_vars(bdy_set, 0)*Kokkos::sin((time_value+dt-time_start)*ang_freq);
+    const real_t total_step_target = disp_next - disp_curr;
 
     displacement_step(bdy_node_gid, constrained_dir) = total_step_target;
 

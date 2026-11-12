@@ -158,9 +158,9 @@ extern std::map<std::string, boundary_conditions::BCFcnLocation> bc_location_map
 struct BoundaryConditionSetup_t
 {
     boundary_conditions::BdyTag surface;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
-    double origin[3] = { 0.0, 0.0, 0.0 };  ///< origin of surface being tagged, e.g., sphere or cylinder surface
-    double value     = 0.0;                ///< value = position, radius, etc. defining the surface geometric shape
-    double tolerance = 1.0e-7;  ///< tolerance for tagging a boundary surface
+    real_t origin[3] = { real_t(0.0), real_t(0.0), real_t(0.0) };  ///< origin of surface being tagged, e.g., sphere or cylinder surface
+    real_t value     = real_t(0.0);                ///< value = position, radius, etc. defining the surface geometric shape
+    real_t tolerance = real_t(1.0e-7);  ///< tolerance for tagging a boundary surface
 }; // end boundary condition setup
 
 /////////////////////////////////////////////////////////////////////////////
@@ -207,7 +207,7 @@ struct BoundaryConditionFunctions_t
         const RaggedRightArrayKokkos<real_t>& vel_bc_global_vars,
         const DCArrayKokkos<real_t>& bc_state_vars,
         const MPICArrayKokkos<real_t>& node_vel,
-        const double time_value,
+        const real_t time_value,
         const size_t rk_stage,
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
@@ -221,10 +221,10 @@ struct BoundaryConditionFunctions_t
         const DCArrayKokkos<real_t>& bc_state_vars,
         const CArrayKokkos<bool>& constrained_dof,
         const CArrayKokkos<real_t>& displacement_step,
-        const double dt,
-        const double time_value,
-        const double time_start,
-        const double time_end,
+        const real_t dt,
+        const real_t time_value,
+        const real_t time_start,
+        const real_t time_end,
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
 
@@ -234,7 +234,7 @@ struct BoundaryConditionFunctions_t
         const RaggedRightArrayKokkos<real_t>& temp_bc_global_vars,
         const DCArrayKokkos<real_t>& bc_state_vars,
         const MPICArrayKokkos<real_t>& node_temp,
-        const double time_value,
+        const real_t time_value,
         const size_t rk_stage,
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
@@ -245,7 +245,7 @@ struct BoundaryConditionFunctions_t
         const RaggedRightArrayKokkos<real_t>& heat_flux_bc_global_vars,
         const DCArrayKokkos<real_t>& bc_state_vars,
         const MPICArrayKokkos<real_t>& node_temp,
-        const double time_value,
+        const real_t time_value,
         const size_t rk_stage,
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
@@ -256,9 +256,9 @@ struct BoundaryConditionFunctions_t
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<real_t>& stress_bc_global_vars,
         const DCArrayKokkos<real_t>& bc_state_vars,
-        const ViewCArrayKokkos <double>& corner_surf_force,
-        const ViewCArrayKokkos <double>& corner_surf_normal,
-        const double time_value,
+        const ViewCArrayKokkos <real_t>& corner_surf_force,
+        const ViewCArrayKokkos <real_t>& corner_surf_normal,
+        const real_t time_value,
         const size_t rk_stage,
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
@@ -268,13 +268,13 @@ struct BoundaryConditionFunctions_t
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
         const RaggedRightArrayKokkos<real_t>& qstatx_stress_bc_global_vars,
         const DCArrayKokkos<real_t>& bc_state_vars,
-        ViewCArrayKokkos <double>& traction,
-        const ViewCArrayKokkos <double>& surf_normal,
-        const double dt,
-        const double time_value,
-        const double time_start,
-        const double time_end,
-        const ViewCArrayKokkos <double>& qpt_coords,
+        ViewCArrayKokkos <real_t>& traction,
+        const ViewCArrayKokkos <real_t>& surf_normal,
+        const real_t dt,
+        const real_t time_value,
+        const real_t time_start,
+        const real_t time_end,
+        const ViewCArrayKokkos <real_t>& qpt_coords,
         const size_t bdy_set) = NULL;
 
 

@@ -211,7 +211,7 @@ void sample_thermo_at_kine_gll(const DCArrayKokkos<real_t>& thermo_coef_per_elem
 
     for (size_t i = 0; i < nk; ++i) {
         for (size_t j = 0; j < nt; ++j) {
-            double phi = 1.0;
+            real_t phi = real_t(1.0);
             for (size_t m = 0; m < nt; ++m) {
                 if (m != j) {
                     phi *= (xi_kine[i] - xi_thermo[m])
@@ -231,7 +231,7 @@ void sample_thermo_at_kine_gll(const DCArrayKokkos<real_t>& thermo_coef_per_elem
         for (size_t lz = 0; lz < nt; ++lz) {
             for (size_t ly = 0; ly < nt; ++ly) {
                 for (size_t ix = 0; ix < nk; ++ix) {
-                    double acc = 0.0;
+                    real_t acc = real_t(0.0);
                     for (size_t lx = 0; lx < nt; ++lx) {
                         const size_t lex = lx + ly * nt + lz * nt * nt;
                         acc += B_cross(ix, lx) * thermo_coef_per_elem(elem_gid, lex);
@@ -247,7 +247,7 @@ void sample_thermo_at_kine_gll(const DCArrayKokkos<real_t>& thermo_coef_per_elem
         for (size_t lz = 0; lz < nt; ++lz) {
             for (size_t iy = 0; iy < nk; ++iy) {
                 for (size_t ix = 0; ix < nk; ++ix) {
-                    double acc = 0.0;
+                    real_t acc = real_t(0.0);
                     for (size_t ly = 0; ly < nt; ++ly) {
                         acc += B_cross(iy, ly) * T1(elem_gid, lz, ly, ix);
                     }
@@ -263,7 +263,7 @@ void sample_thermo_at_kine_gll(const DCArrayKokkos<real_t>& thermo_coef_per_elem
         for (size_t iz = 0; iz < nk; ++iz) {
             for (size_t iy = 0; iy < nk; ++iy) {
                 for (size_t ix = 0; ix < nk; ++ix) {
-                    double acc = 0.0;
+                    real_t acc = real_t(0.0);
                     for (size_t lz = 0; lz < nt; ++lz) {
                         acc += B_cross(iz, lz) * T2(elem_gid, lz, iy, ix);
                     }
@@ -295,20 +295,20 @@ void sample_qpt_field_element_average(const DCArrayKokkos<real_t>& qpt_field,
     const DCArrayKokkos<real_t>& w1 = quad.qpt_weights_1d;
 
     FOR_ALL(elem_gid, 0, num_elems, {
-        double num = 0.0;
-        double den = 0.0;
+        real_t num = real_t(0.0);
+        real_t den = real_t(0.0);
         for (size_t qk = 0; qk < nq; ++qk) {
             for (size_t qj = 0; qj < nq; ++qj) {
                 for (size_t qi = 0; qi < nq; ++qi) {
                     const size_t local_q = qi + qj * nq + qk * nq * nq;
                     const size_t g       = elem_gid * n_qpts_3d + local_q;
-                    const double w_dJ    = w1(qi) * w1(qj) * w1(qk) * detj(g);
+                    const real_t w_dJ    = w1(qi) * w1(qj) * w1(qk) * detj(g);
                     num += qpt_field(g) * w_dJ;
                     den += w_dJ;
                 }
             }
         }
-        const double avg = num / den;
+        const real_t avg = num / den;
 
         for (size_t iz = 0; iz < nk; ++iz) {
             for (size_t iy = 0; iy < nk; ++iy) {
@@ -329,9 +329,9 @@ namespace {
 
 inline double lagrange_1d(const std::vector<double>& nodes,
                           const size_t              idx,
-                          const double              x)
+                          const real_t              x)
 {
-    double v = 1.0;
+    real_t v = real_t(1.0);
     const size_t n = nodes.size();
     for (size_t m = 0; m < n; ++m) {
         if (m != idx) {
@@ -369,7 +369,7 @@ void write_lagrange_thermo_hex_vtu(const std::string&            path,
     for (size_t a = 0; a < nk; ++a) xi_kine[a]   = kine_ref.dof_positions_1d.host(a);
     for (size_t j = 0; j < nt; ++j) xi_thermo[j] = thermo_ref.dof_positions_1d.host(j);
     for (size_t i = 0; i < nv_1d; ++i) {
-        xi_equi[i] = -1.0 + 2.0 * static_cast<double>(i) / static_cast<double>(vis_order);
+        xi_equi[i] = -real_t(1.0) + real_t(2.0) * static_cast<double>(i) / static_cast<double>(vis_order);
     }
 
     std::vector<double> B_kine_at_vis  (nv_1d * nk);
@@ -418,13 +418,13 @@ void write_lagrange_thermo_hex_vtu(const std::string&            path,
     auto eval_thermo = [&](const DCArrayKokkos<real_t>& coef,
                            size_t e, size_t ix, size_t iy, size_t iz) -> double
     {
-        double v = 0.0;
+        real_t v = real_t(0.0);
         for (size_t jz = 0; jz < nt; ++jz) {
-            const double bz = B_thermo_at_vis[iz * nt + jz];
+            const real_t bz = B_thermo_at_vis[iz * nt + jz];
             for (size_t jy = 0; jy < nt; ++jy) {
-                const double by = B_thermo_at_vis[iy * nt + jy];
+                const real_t by = B_thermo_at_vis[iy * nt + jy];
                 for (size_t jx = 0; jx < nt; ++jx) {
-                    const double bx = B_thermo_at_vis[ix * nt + jx];
+                    const real_t bx = B_thermo_at_vis[ix * nt + jx];
                     const size_t lex = jx + jy * nt + jz * nt * nt;
                     v += bx * by * bz * coef.host(e, lex);
                 }
@@ -462,14 +462,14 @@ void write_lagrange_thermo_hex_vtu(const std::string&            path,
         for (size_t iz = 0; iz < nv_1d; ++iz) {
             for (size_t iy = 0; iy < nv_1d; ++iy) {
                 for (size_t ix = 0; ix < nv_1d; ++ix) {
-                    double px = 0.0, py = 0.0, pz = 0.0;
+                    real_t px = real_t(0.0), py = real_t(0.0), pz = real_t(0.0);
                     for (size_t c = 0; c < nk; ++c) {
-                        const double bz = B_kine_at_vis[iz * nk + c];
+                        const real_t bz = B_kine_at_vis[iz * nk + c];
                         for (size_t b = 0; b < nk; ++b) {
-                            const double by = B_kine_at_vis[iy * nk + b];
+                            const real_t by = B_kine_at_vis[iy * nk + b];
                             for (size_t a = 0; a < nk; ++a) {
-                                const double bx  = B_kine_at_vis[ix * nk + a];
-                                const double w   = bx * by * bz;
+                                const real_t bx  = B_kine_at_vis[ix * nk + a];
+                                const real_t w   = bx * by * bz;
                                 const size_t lex = a + b * nk + c * nk * nk;
                                 const size_t gid = nodes_in_elem.host(e, lex);
                                 px += w * coords.host(gid, 0);
@@ -532,7 +532,7 @@ void write_lagrange_kine_hex_vtu(const std::string&            path,
     std::vector<double> xi_kine(nk), xi_equi(nv_1d);
     for (size_t a = 0; a < nk; ++a) xi_kine[a] = kine_ref.dof_positions_1d.host(a);
     for (size_t i = 0; i < nv_1d; ++i) {
-        xi_equi[i] = -1.0 + 2.0 * static_cast<double>(i) / static_cast<double>(vis_order);
+        xi_equi[i] = -real_t(1.0) + real_t(2.0) * static_cast<double>(i) / static_cast<double>(vis_order);
     }
 
     std::vector<double> B_kine_at_vis(nv_1d * nk);
@@ -579,14 +579,14 @@ void write_lagrange_kine_hex_vtu(const std::string&            path,
         for (size_t iz = 0; iz < nv_1d; ++iz) {
             for (size_t iy = 0; iy < nv_1d; ++iy) {
                 for (size_t ix = 0; ix < nv_1d; ++ix) {
-                    double vx = 0.0, vy = 0.0, vz = 0.0;
+                    real_t vx = real_t(0.0), vy = real_t(0.0), vz = real_t(0.0);
                     for (size_t c = 0; c < nk; ++c) {
-                        const double bz = B_kine_at_vis[iz * nk + c];
+                        const real_t bz = B_kine_at_vis[iz * nk + c];
                         for (size_t b = 0; b < nk; ++b) {
-                            const double by = B_kine_at_vis[iy * nk + b];
+                            const real_t by = B_kine_at_vis[iy * nk + b];
                             for (size_t a = 0; a < nk; ++a) {
-                                const double bx  = B_kine_at_vis[ix * nk + a];
-                                const double w   = bx * by * bz;
+                                const real_t bx  = B_kine_at_vis[ix * nk + a];
+                                const real_t w   = bx * by * bz;
                                 const size_t lex = a + b * nk + c * nk * nk;
                                 const size_t gid = nodes_in_elem.host(e, lex);
                                 vx += w * vel.host(gid, 0);
@@ -610,14 +610,14 @@ void write_lagrange_kine_hex_vtu(const std::string&            path,
         for (size_t iz = 0; iz < nv_1d; ++iz) {
             for (size_t iy = 0; iy < nv_1d; ++iy) {
                 for (size_t ix = 0; ix < nv_1d; ++ix) {
-                    double px = 0.0, py = 0.0, pz = 0.0;
+                    real_t px = real_t(0.0), py = real_t(0.0), pz = real_t(0.0);
                     for (size_t c = 0; c < nk; ++c) {
-                        const double bz = B_kine_at_vis[iz * nk + c];
+                        const real_t bz = B_kine_at_vis[iz * nk + c];
                         for (size_t b = 0; b < nk; ++b) {
-                            const double by = B_kine_at_vis[iy * nk + b];
+                            const real_t by = B_kine_at_vis[iy * nk + b];
                             for (size_t a = 0; a < nk; ++a) {
-                                const double bx  = B_kine_at_vis[ix * nk + a];
-                                const double w   = bx * by * bz;
+                                const real_t bx  = B_kine_at_vis[ix * nk + a];
+                                const real_t w   = bx * by * bz;
                                 const size_t lex = a + b * nk + c * nk * nk;
                                 const size_t gid = nodes_in_elem.host(e, lex);
                                 px += w * coords.host(gid, 0);

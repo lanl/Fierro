@@ -64,22 +64,22 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
 
     // Conveinent local variables
-    double fuzz  = SimulationParamaters.DynamicOptions.fuzz;
-    double tiny  = SimulationParamaters.DynamicOptions.tiny;
-    double small = SimulationParamaters.DynamicOptions.small;
+    real_t fuzz  = SimulationParamaters.DynamicOptions.fuzz;
+    real_t tiny  = SimulationParamaters.DynamicOptions.tiny;
+    real_t small = SimulationParamaters.DynamicOptions.small;
 
-    double graphics_dt_ival  = SimulationParamaters.OutputOptions.graphics_time_step;
+    real_t graphics_dt_ival  = SimulationParamaters.OutputOptions.graphics_time_step;
     int    graphics_cyc_ival = SimulationParamaters.OutputOptions.graphics_iteration_step;
 
-    // double time_initial = SimulationParamaters.DynamicOptions.time_initial;
-    double time_final   = this->time_end;
-    double dt_start = SimulationParamaters.DynamicOptions.dt_start;
+    // real_t time_initial = SimulationParamaters.DynamicOptions.time_initial;
+    real_t time_final   = this->time_end;
+    real_t dt_start = SimulationParamaters.DynamicOptions.dt_start;
 
     int cycle_stop    = SimulationParamaters.DynamicOptions.cycle_stop;
 
     // initialize time, time_step, and cycles
-    double time_value = this->time_start;
-    double dt = dt_start;
+    real_t time_value = this->time_start;
+    real_t dt = dt_start;
 
     // defining displacement at start of tlqs solve
     FOR_ALL(i, 0, static_cast<long long>(mesh.num_nodes),
@@ -171,8 +171,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos<real_t> DeltaF(3*mesh.num_nodes, max_hist);
     CArrayKokkos<real_t> DeltaG(3*mesh.num_nodes, max_hist);
     const int startup_iters = 3;       // Number of initial pure Picard steps
-    const double max_weight = 50.0;     // Threshold to catch exploded weights
-    const double fine_floor = 1e-10;     // Residual norm below which Anderson is unsafe
+    const real_t max_weight = real_t(50.0);     // Threshold to catch exploded weights
+    const real_t fine_floor = real_t(1e-10);     // Residual norm below which Anderson is unsafe
 
     // ***********************************************************
     // TEMPORARY ALLOCATION AS ANDERSON IS NOT BEING SET FOR MPI YET
@@ -218,8 +218,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // Algebraic Multigrid variables
     /* int max_layers = 10;
     int dof_cutoff = 3000; // NOTE: LOOK INTO THIS VALUE MORE
-    double theta = 0.25;
-    double omega = 2/3;
+    real_t theta = 0.25;
+    real_t omega = 2/3;
     CArrayKokkos<real_t> A1;
     CArrayKokkos<real_t> A2;
     CArrayKokkos<real_t> A3;
@@ -262,20 +262,20 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // compliance scale: 1/K_ii underestimates the nodal compliance, > 1 under-relaxes
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    double contact_compliance_scale = 2;
+    real_t contact_compliance_scale = 2;
 
     // Picard convergence on the contact force the last solve has not seen
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const double contact_force_tol = 1.0e-6;
+    const real_t contact_force_tol = real_t(1.0e-6);
 
     // Aitken relaxation of the contact force between Picard solves
     // omega_init: relaxation before any history exists (first load step); later load steps
     //             warm start from the omega the previous load step ended with
     // [omega_min, omega_max]: bounds on the adaptive omega
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const double contact_aitken_omega_init = 0.5;
-    const double contact_aitken_omega_min  = 0.01;
-    const double contact_aitken_omega_max  = 1.0;
+    const real_t contact_aitken_omega_init = real_t(0.5);
+    const real_t contact_aitken_omega_min  = real_t(0.01);
+    const real_t contact_aitken_omega_max  = real_t(1.0);
 
     if (doing_contact) {
 
@@ -320,11 +320,11 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // this solver doesn't carry velocity or acceleration
         // velocities are set per load step from the previous step's displacement increment
-        AO_contact_state.bdy_node_vels.set_values(0.0);
-        AO_contact_state.bdy_node_accels.set_values(0.0);
+        AO_contact_state.bdy_node_vels.set_values(real_t(0.0));
+        AO_contact_state.bdy_node_accels.set_values(real_t(0.0));
 
         prev_displacement_step = CArrayKokkos<real_t>(mesh.num_nodes, 3, "prev_displacement_step");
-        prev_displacement_step.set_values(0.0);
+        prev_displacement_step.set_values(real_t(0.0));
         Kokkos::fence();
 
         // ---------------------------------------------------------------
@@ -335,7 +335,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---------------------------------------------------------------
         CArrayKokkos<real_t> scratch_disp(mesh.num_nodes, 3, "contact_scratch_disp");
         constrained_dof.set_values(false);
-        scratch_disp.set_values(0.0);
+        scratch_disp.set_values(real_t(0.0));
         Kokkos::fence();
 
         boundary_displacement(mesh, BoundaryConditions, constrained_dof, scratch_disp, dt, time_value, time_start, time_end);
@@ -361,11 +361,11 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     MeshWriter mesh_writer;
 
     // --- Graphics vars ----
-    CArray<double> graphics_times = CArray<double>(20000);
+    CArray<real_t> graphics_times = CArray<real_t>(20000);
     graphics_times(0) = this->time_start;
-    double graphics_time = this->time_start;
+    real_t graphics_time = this->time_start;
     
-    double cached_pregraphics_dt = fuzz;
+    real_t cached_pregraphics_dt = fuzz;
 
     // the number of materials specified by the user input
     const size_t num_mats = Materials.num_mats;
@@ -435,7 +435,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             const CArrayKokkos<size_t> bdy_nodes      = mesh.bdy_nodes;
             const CArrayKokkos<real_t> bdy_node_vels  = AO_contact_state.bdy_node_vels;
             const CArrayKokkos<real_t> prev_disp_step = prev_displacement_step;
-            const double inv_dt = 1.0/dt;
+            const real_t inv_dt = real_t(1.0)/dt;
             FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes, {
                 for (size_t dim = 0; dim < 3; dim++) {
                     bdy_node_vels(bdy_node_lid, dim) = prev_disp_step(bdy_nodes(bdy_node_lid), dim)*inv_dt;
@@ -548,11 +548,11 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     // setting up views and temp memory
                     const size_t elem_id = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
                     ViewCArrayKokkos<size_t> nodes_in_curr_elem(&mesh.nodes_in_elem(elem_id,0),mesh.num_nodes_in_elem);
-                    double grad_u[3][3];
-                    double inv_J[3][3];
-                    double det_J;
-                    double PK2_curr_config[6];
-                    double material_matrix[6][6];
+                    real_t grad_u[3][3];
+                    real_t inv_J[3][3];
+                    real_t det_J;
+                    real_t PK2_curr_config[6];
+                    real_t material_matrix[6][6];
                     ViewCArrayKokkos<real_t> curr_K_elem(&K_elem(elem_id,0), num_dof_in_elem*(num_dof_in_elem+1)/2);  // packed upper triangle
                     ViewCArrayKokkos<real_t> curr_F_elem(&F_elem(elem_id,0),3*mesh.num_nodes_in_elem);
 
@@ -568,7 +568,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
                         // tallying to element array
                         TLQS3D::get_gradients(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, displacement_step, curr_grad_basis, grad_u, inv_J, det_J, PK2_curr_config);
-                        double weight = Quad.qpt_weights(mat_pt)*det_J;
+                        real_t weight = Quad.qpt_weights(mat_pt)*det_J;
                         double local_mat_vol_frac = State.MaterialPoints.mat_volfrac(mat_id, State.points_in_mat_elem(elem, mat_pt));
 
                         TLQS3D::tally_elem_arrays(material_matrix, grad_u, inv_J, curr_grad_basis, weight, PK2_curr_config, curr_K_elem, curr_F_elem, local_mat_vol_frac, curr_glob_grad, curr_B1, curr_K2_row);
@@ -659,11 +659,11 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // This lifts the null space without significantly affecting the deformation modes
             FOR_ALL(elem_gid, 0, mesh.num_elems, {
                 const size_t n_local = 3 * mesh.num_nodes_in_elem;
-                double trace = 0.0;
+                real_t trace = 0.0;
                 for (size_t d = 0; d < n_local; d++) {
                     trace += intermediate_K_elem_inv(elem_gid, d, d);
                 }
-                const double reg = 1e-6 * trace / (double)n_local;
+                const real_t reg = 1e-6 * trace / (double)n_local;
                 for (size_t d = 0; d < n_local; d++) {
                     intermediate_K_elem_inv(elem_gid, d, d) += reg;
                 }
@@ -671,10 +671,10 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             Kokkos::fence();
 
             FOR_ALL(i, 0, mesh.num_elems,{
-                ViewCArrayKokkos<double> curr_intermediate_K_elem_inv(&intermediate_K_elem_inv(i,0,0),3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
-                ViewCArrayKokkos<double> curr_temporary(&temporary(i, 0), 3*mesh.num_nodes_in_elem);
+                ViewCArrayKokkos<real_t> curr_intermediate_K_elem_inv(&intermediate_K_elem_inv(i,0,0),3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
+                ViewCArrayKokkos<real_t> curr_temporary(&temporary(i, 0), 3*mesh.num_nodes_in_elem);
                 ViewCArrayKokkos<size_t> curr_perm(&perm(i, 0), 3*mesh.num_nodes_in_elem);
-                ViewCArrayKokkos<double> curr_K_elem_inv(&K_elem_inv(i,0,0),3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
+                ViewCArrayKokkos<real_t> curr_K_elem_inv(&K_elem_inv(i,0,0),3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
                 int parity;
                 LU_decompose(curr_intermediate_K_elem_inv, curr_perm, curr_temporary, parity);
                 LU_invert(curr_intermediate_K_elem_inv, curr_perm, curr_K_elem_inv, curr_temporary);
@@ -707,8 +707,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // getting spectral bounds for chebyshev smoothing
             // We pass zk and temporary here safely because they are currently uninitialized 
             // scratch space before the CG loop kicks off.
-            double alpha = 0.0;
-            double beta = 0.0;
+            real_t alpha = real_t(0.0);
+            real_t beta = real_t(0.0);
             const int cheb_degree = 3; // Choose your Chebyshev polynomial degree (typically 2 to 5)
             
             get_chebyshev_bounds(alpha, beta, D_inv, K_elem, constrained_dof, mesh.num_elems, mesh.num_nodes,
@@ -755,8 +755,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             for (int cgm_iter = 0; cgm_iter < max_iter; cgm_iter++) {
 
                 // r_k^T * z_k
-                double rktzk = 0.0;
-                double loc_rktzk = 0.0;
+                double rktzk = real_t(0.0);
+                double loc_rktzk = real_t(0.0);
                 FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_rktzk, {
                     if(mesh.shared_tally_owned_nodes(i)) {
                         for (int j = 0; j < 3; j++) {
@@ -769,7 +769,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 MPI_Allreduce(MPI_IN_PLACE, &rktzk, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                 // alpha_k = (r_k^T * z_k) / (p_k^T * K * p_k)
-                double alpha_k = get_alpha(mesh.num_elems, mesh.num_nodes, mesh.num_nodes_in_elem, mesh.num_owned_nodes, mesh.nodes_in_elem,
+                real_t alpha_k = get_alpha(mesh.num_elems, mesh.num_nodes, mesh.num_nodes_in_elem, mesh.num_owned_nodes, mesh.nodes_in_elem,
                                            K_elem, constrained_dof, rktzk, p, temporary, mesh.shared_tally_owned_nodes, x_elem, y_elem);
 
                 // displacement_iter_kp1 = displacement_iter_kp1 + alpha_k * p_k
@@ -797,8 +797,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 Kokkos::fence(); */
 
                 // check convergence on true residual norm
-                double rkp1trkp1 = 0.0;
-                double loc_rkp1trkp1 = 0.0;
+                double rkp1trkp1 = real_t(0.0);
+                double loc_rkp1trkp1 = real_t(0.0);
                 FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_rkp1trkp1, {
                     if(mesh.shared_tally_owned_nodes(i)){
                         for (int j = 0; j < 3; j++) {
@@ -808,15 +808,15 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 }, rkp1trkp1);
                 Kokkos::fence();
                 MPI_Allreduce(MPI_IN_PLACE, &rkp1trkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-                double norm = sqrt(rkp1trkp1);
+                double norm = Kokkos::sqrt(rkp1trkp1);
                 //std::cout << "CGM iter " << cgm_iter << " residual norm: " << norm << "\n";
-                if (norm < 0.01/*1E-10*/) {
+                if (norm < real_t(0.01)/*real_t(1E-10)*/) {
                     break;
                 }
 
                 // r_{k+1}^T * z_{k+1}
-                double rkp1tzkp1 = 0.0;
-                double loc_rkp1tzkp1 = 0.0;
+                double rkp1tzkp1 = real_t(0.0);
+                double loc_rkp1tzkp1 = real_t(0.0);
                 FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_rkp1tzkp1, {
                     if(mesh.shared_tally_owned_nodes(i)){
                         for (int j = 0; j < 3; j++) {
@@ -828,7 +828,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 MPI_Allreduce(MPI_IN_PLACE, &rkp1tzkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                 // beta_k = (r_{k+1}^T * z_{k+1}) / (r_k^T * z_k)
-                double beta_k = rkp1tzkp1 / (rktzk + 1e-16);
+                real_t beta_k = rkp1tzkp1 / (rktzk + real_t(1e-16));
 
                 // p_{k+1} = z_{k+1} + beta_k * p_k
                 FOR_ALL(i, 0, (int)mesh.num_nodes,
@@ -924,7 +924,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // SAFEGUARD: Check for ill-conditioning (exploded weights)
                 bool weights_are_valid = true;
                 for (int a = 0; a < m_diff; a++) {
-                    if (fabs(anderson_weights.host(a)) > max_weight) {
+                    if (Kokkos::fabs(anderson_weights.host(a)) > max_weight) {
                         weights_are_valid = false;
                         break;
                     }
@@ -950,7 +950,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 if (weights_are_valid) {
                     // --- Step 4a: Apply Accelerated Update ---
                     FOR_ALL(i, 0, 3*mesh.num_nodes, {
-                        double correction = 0.0;
+                        real_t correction = 0.0;
                         for (int j = 0; j < m_diff; j++) {
                             correction += anderson_weights(j) * DeltaG(i, j);
                         }
@@ -967,7 +967,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // --- Step 4c: Normal Pure Picard Mode ---
                 // Active during the startup phase or when the residual drops below fine_floor.
                 if (safe_norm <= fine_floor && iter >= startup_iters) {
-                    std::cout << " [Anderson] Residual below safety floor (" << safe_norm << "). Finalizing via Picard." << std::endl;
+                    std::cout << " [Anderson] Residual below safety Kokkos::floor(" << safe_norm << "). Finalizing via Picard." << std::endl;
                 }
             }
 
@@ -994,8 +994,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             bool   contact_settled    = true;
             bool   contact_changed    = false;
             size_t contact_num_active = 0;
-            double contact_max_dF     = 0.0;
-            double contact_max_F      = 0.0;
+            double contact_max_dF     = real_t(0.0);
+            double contact_max_F      = real_t(0.0);
             if (doing_contact) {
 
                 // current configuration (coords is otherwise only updated at the end of the load step,
@@ -1063,9 +1063,9 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 loc_norm_den += displacement_step(i) * displacement_step(i);
             }, norm_den);
 
-            double norm = sqrt(norm_num / norm_den); */
-            double norm = 0.0;
-            double loc_norm = 0.0;
+            double norm = Kokkos::sqrt(norm_num / norm_den); */
+            double norm = real_t(0.0);
+            double loc_norm = real_t(0.0);
             FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_norm, {
                 if(mesh.shared_tally_owned_nodes(i)){
                     for (int j = 0; j < 3; j++) {
@@ -1091,7 +1091,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                           << ", max |F| = " << contact_max_F << std::endl;
             }
 
-            if (norm < 1E-16 && iter > 1 && contact_converged) {
+            if (norm < real_t(1E-16) && iter > 1 && contact_converged) {
                 std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }
@@ -1151,7 +1151,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 const size_t elem_id = State.MaterialToMeshMaps.elem_in_mat_elem(mat_id, elem);
 
                 ViewCArrayKokkos<size_t> nodes_in_curr_elem(&mesh.nodes_in_elem(elem_id,0),mesh.num_nodes_in_elem);
-                double material_matrix[6][6];
+                real_t material_matrix[6][6];
 
                 // looping through material points
                 for (int mat_pt = 0; mat_pt < num_qpt_in_elem; mat_pt++) {

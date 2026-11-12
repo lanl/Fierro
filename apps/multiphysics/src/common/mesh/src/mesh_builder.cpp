@@ -141,8 +141,8 @@ void MeshBuilder::build_2d_box(swage::Mesh_t& mesh,
 
     const int num_dim = 2;
 
-    const double lx = SimulationParamaters.MeshInput.length[0];
-    const double ly = SimulationParamaters.MeshInput.length[1];
+    const real_t lx = SimulationParamaters.MeshInput.length[0];
+    const real_t ly = SimulationParamaters.MeshInput.length[1];
 
     const int num_elems_i = SimulationParamaters.MeshInput.num_elems[0];
     const int num_elems_j = SimulationParamaters.MeshInput.num_elems[1];
@@ -152,8 +152,8 @@ void MeshBuilder::build_2d_box(swage::Mesh_t& mesh,
 
     const int num_nodes = num_points_i * num_points_j;
 
-    const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
-    const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
+    const real_t dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
+    const real_t dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
 
     const int num_elems = num_elems_i * num_elems_j;
 
@@ -256,11 +256,11 @@ void MeshBuilder::build_2d_polar(swage::Mesh_t& mesh,
 
     int num_dim     = 2;
 
-    const double inner_radius = SimulationParamaters.MeshInput.inner_radius;
-    const double outer_radius = SimulationParamaters.MeshInput.outer_radius;
+    const real_t inner_radius = SimulationParamaters.MeshInput.inner_radius;
+    const real_t outer_radius = SimulationParamaters.MeshInput.outer_radius;
 
-    const double start_angle = PI / 180.0 * SimulationParamaters.MeshInput.starting_angle;
-    const double end_angle   = PI / 180.0 * SimulationParamaters.MeshInput.ending_angle;
+    const real_t start_angle = PI / real_t(180.0) * SimulationParamaters.MeshInput.starting_angle;
+    const real_t end_angle   = PI / real_t(180.0) * SimulationParamaters.MeshInput.ending_angle;
 
     const int num_elems_i = SimulationParamaters.MeshInput.num_radial_elems;
     const int num_elems_j = SimulationParamaters.MeshInput.num_angular_elems;
@@ -270,8 +270,8 @@ void MeshBuilder::build_2d_polar(swage::Mesh_t& mesh,
 
     const int num_nodes = num_points_i * num_points_j;
 
-    const double dx = (outer_radius - inner_radius) / ((double)num_elems_i);  // len/(elems)
-    const double dy = (end_angle - start_angle) / ((double)num_elems_j);  // len/(elems)
+    const real_t dx = (outer_radius - inner_radius) / ((double)num_elems_i);  // len/(elems)
+    const real_t dy = (end_angle - start_angle) / ((double)num_elems_j);  // len/(elems)
 
     const int num_elems = num_elems_i * num_elems_j;
 
@@ -304,14 +304,14 @@ void MeshBuilder::build_2d_polar(swage::Mesh_t& mesh,
             // global id for the point
             int node_gid = get_id(i, j, 0, num_points_i, num_points_j);
 
-            double r_i     = inner_radius + (double)i * dx;
-            double theta_j = start_angle + (double)j * dy;
+            real_t r_i     = inner_radius + (double)i * dx;
+            real_t theta_j = start_angle + (double)j * dy;
 
             // store the point coordinates
-            node_coords.host(node_gid, 0) = origin[0] + r_i * cos(theta_j);
-            node_coords.host(node_gid, 1) = origin[1] + r_i * sin(theta_j);
+            node_coords.host(node_gid, 0) = origin[0] + r_i * Kokkos::cos(theta_j);
+            node_coords.host(node_gid, 1) = origin[1] + r_i * Kokkos::sin(theta_j);
 
-            if(node_coords.host(node_gid, 0) < 0.0){
+            if(node_coords.host(node_gid, 0) < real_t(0.0)){
                 throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
             }
 
@@ -380,9 +380,9 @@ void MeshBuilder::build_3d_box(swage::Mesh_t& mesh,
     const int num_dim = 3;
 
     // SimulationParamaters.MeshInput.length.update_host();
-    const double lx = SimulationParamaters.MeshInput.length[0];
-    const double ly = SimulationParamaters.MeshInput.length[1];
-    const double lz = SimulationParamaters.MeshInput.length[2];
+    const real_t lx = SimulationParamaters.MeshInput.length[0];
+    const real_t ly = SimulationParamaters.MeshInput.length[1];
+    const real_t lz = SimulationParamaters.MeshInput.length[2];
 
     // SimulationParamaters.MeshInput.num_elems.update_host();
     const int num_elems_i = SimulationParamaters.MeshInput.num_elems[0];
@@ -395,9 +395,9 @@ void MeshBuilder::build_3d_box(swage::Mesh_t& mesh,
 
     const int num_nodes = num_points_i * num_points_j * num_points_k;
 
-    const double dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
-    const double dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
-    const double dz = lz / ((double)num_elems_k);  // len/(num_elems_k)
+    const real_t dx = lx / ((double)num_elems_i);  // len/(num_elems_i)
+    const real_t dy = ly / ((double)num_elems_j);  // len/(num_elems_j)
+    const real_t dz = lz / ((double)num_elems_k);  // len/(num_elems_k)
 
     const int num_elems = num_elems_i * num_elems_j * num_elems_k;
 
@@ -499,9 +499,9 @@ void MeshBuilder::build_3d_HexN_box(swage::Mesh_t& mesh,
     const int num_dim = 3;
 
     // SimulationParamaters.MeshInput.length.update_host();
-    const double lx = SimulationParamaters.MeshInput.length[0];
-    const double ly = SimulationParamaters.MeshInput.length[1];
-    const double lz = SimulationParamaters.MeshInput.length[2];
+    const real_t lx = SimulationParamaters.MeshInput.length[0];
+    const real_t ly = SimulationParamaters.MeshInput.length[1];
+    const real_t lz = SimulationParamaters.MeshInput.length[2];
 
     // SimulationParamaters.MeshInput.num_elems.update_host();
     const int num_elems_i = SimulationParamaters.MeshInput.num_elems[0];
@@ -525,9 +525,9 @@ void MeshBuilder::build_3d_HexN_box(swage::Mesh_t& mesh,
     const int num_points_k = num_zones_k+1; // num points in y accounting for Pn
     
     
-    const double dx = lx/((double)num_zones_i);  // len/(num_zones_i)
-    const double dy = ly/((double)num_zones_j);  // len/(num_zones_j)
-    const double dz = lz/((double)num_zones_k);  // len/(num_zones_k)
+    const real_t dx = lx/((double)num_zones_i);  // len/(num_zones_i)
+    const real_t dy = ly/((double)num_zones_j);  // len/(num_zones_j)
+    const real_t dz = lz/((double)num_zones_k);  // len/(num_zones_k)
     
     const int num_elems = num_elems_i*num_elems_j*num_elems_k;
     // const int num_zones = num_zones_i*num_zones_j*num_zones_k; // accounts for Pn
@@ -547,7 +547,7 @@ void MeshBuilder::build_3d_HexN_box(swage::Mesh_t& mesh,
        
     
     // --- elem ---
-    auto elem_coords = CArray <double> (num_elems, num_dim);
+    auto elem_coords = CArray<real_t> (num_elems, num_dim);
     auto elem_point_list = CArray <int> (num_elems, num_points_in_elem);
     
     

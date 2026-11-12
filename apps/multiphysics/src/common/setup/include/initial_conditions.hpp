@@ -50,7 +50,7 @@ namespace initial_conditions
 
         // uniform
         cartesian = 2,       // cart vector
-        radialVec = 3,          // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+        radialVec = 3,          // radial in the (x,y) plane where x=r*Kokkos::cos(theta) and y=r*Kokkos::sin(theta)
         sphericalVec = 4,       // spherical
 
         // linear variation
@@ -70,7 +70,7 @@ namespace initial_conditions
 
         // uniform
         uniform = 1,  // same value everywhere
-        radialScalar = 2,     // radial in the (x,y) plane where x=r*cos(theta) and y=r*sin(theta)
+        radialScalar = 2,     // radial in the (x,y) plane where x=r*Kokkos::cos(theta) and y=r*Kokkos::sin(theta)
         sphericalScalar = 3,  // spherical
 
         // linear variations
@@ -141,37 +141,37 @@ struct RegionICs_t
     initial_conditions::ICsScalar mat_volfrac_field = initial_conditions::uniform;
 
     // velocity coefficients by component
-    double u = 0.0; ///< U component of velocity
-    double v = 0.0; ///< V component of velocity
-    double w = 0.0; ///< W component of velocity
+    real_t u = real_t(0.0); ///< U component of velocity
+    real_t v = real_t(0.0); ///< V component of velocity
+    real_t w = real_t(0.0); ///< W component of velocity
 
-    double speed = 0.0; ///< velocity magnitude for radial velocity initialization
+    real_t speed = real_t(0.0); ///< velocity magnitude for radial velocity initialization
 
-    double temperature = 0.0; ///< temperature magnitude for initialization
-    double temperature_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for temperature field
+    real_t temperature = real_t(0.0); ///< temperature magnitude for initialization
+    real_t temperature_origin[3] = { real_t(0.0), real_t(0.0), real_t(0.0) }; ///< Origin for temperature field
 
-    double ie  = 0.0;  ///< extensive internal energy
-    double sie = 0.0;  ///< specific internal energy
-    double sie_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for sie or ie field
+    real_t ie  = real_t(0.0);  ///< extensive internal energy
+    real_t sie = real_t(0.0);  ///< specific internal energy
+    real_t sie_origin[3] = { real_t(0.0), real_t(0.0), real_t(0.0) }; ///< Origin for sie or ie field
 
-    double den = 0.0;  ///< density
-    double den_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for den field
+    double den = real_t(0.0);  ///< density
+    real_t den_origin[3] = { real_t(0.0), real_t(0.0), real_t(0.0) }; ///< Origin for den field
 
 
-    double level_set = 0.0; ///< level set field
-    double level_set_slope = 0.0; ///< slope of level_set field
-    double level_set_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for level_set field
+    real_t level_set = real_t(0.0); ///< level set field
+    real_t level_set_slope = real_t(0.0); ///< slope of level_set field
+    real_t level_set_origin[3] = { real_t(0.0), real_t(0.0), real_t(0.0) }; ///< Origin for level_set field
     
     // note: setup applies min and max fcns, making it [0:1]
-    double mat_volfrac = 1.0; ///< volume fraction of material field
-    double mat_volfrac_slope = 0.0; ///< slope of volume fraction field
-    double mat_volfrac_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for volume fraction field
+    real_t mat_volfrac = real_t(1.0); ///< volume fraction of material field
+    real_t mat_volfrac_slope = real_t(0.0); ///< slope of volume fraction field
+    real_t mat_volfrac_origin[3] = { real_t(0.0), real_t(0.0), real_t(0.0) }; ///< Origin for volume fraction field
 
-    double specific_heat = 0.0; ///< specific heat
-    double specific_heat_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for specific heat field
+    real_t specific_heat = real_t(0.0); ///< specific heat
+    real_t specific_heat_origin[3] = { real_t(0.0), real_t(0.0), real_t(0.0) }; ///< Origin for specific heat field
 
-    double thermal_conductivity = 0.0; ///< thermal conductivity
-    double thermal_conductivity_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for thermal cond field
+    real_t thermal_conductivity = real_t(0.0); ///< thermal conductivity
+    real_t thermal_conductivity_origin[3] = { real_t(0.0), real_t(0.0), real_t(0.0) }; ///< Origin for thermal cond field
 
 };
 

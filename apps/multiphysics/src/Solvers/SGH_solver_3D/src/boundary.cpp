@@ -50,7 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGH3D::boundary_velocity(const swage::Mesh_t&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
                               MPICArrayKokkos<real_t>& node_vel,
-                              const double time_value) const
+                              const real_t time_value) const
 {
     size_t num_vel_bdy_sets = BoundaryConditions.num_vel_bdy_sets_in_solver.host(this->solver_id);
 
@@ -96,7 +96,7 @@ void SGH3D::boundary_velocity(const swage::Mesh_t&      mesh,
 void SGH3D::boundary_contact(const swage::Mesh_t& mesh,
                              const BoundaryCondition_t& BoundaryConditions,
                              MPICArrayKokkos<real_t>& node_vel,
-                             const double time_value) const
+                             const real_t time_value) const
 {
     return;
 } // end boundary_contact function
@@ -110,7 +110,7 @@ void SGH3D::boundary_contact(const swage::Mesh_t& mesh,
 /// \param The time step size
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D:: boundary_contact_force(State_t& State, const swage::Mesh_t &mesh, const double &del_t, contact_state_t &Contact_State)
+void SGH3D:: boundary_contact_force(State_t& State, const swage::Mesh_t &mesh, const real_t &del_t, contact_state_t &Contact_State)
 {
     
     sort(State.node.coords, mesh.num_bdy_nodes, mesh.bdy_nodes, State.node.vel, mesh.num_corners_in_node,
@@ -158,15 +158,15 @@ void SGH3D:: boundary_contact_force(State_t& State, const swage::Mesh_t &mesh, c
 /// \param The stage time increment
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGH3D::boundary_fracture_force(State_t& State, swage::Mesh_t &mesh, const double &dt_stage,
-                                     cohesive_zones_t &cohesive_zones_bank, const double &time_value,
+void SGH3D::boundary_fracture_force(State_t& State, swage::Mesh_t &mesh, const real_t &dt_stage,
+                                     cohesive_zones_t &cohesive_zones_bank, const real_t &time_value,
                                      const size_t &cycle, const size_t &rk_stage, const size_t &rk_num_stages)
 {
     // reset delta internal vars to zero
     reset_delta_internal_vars(cohesive_zones_bank.delta_internal_vars);
 
     // reset F_cz for this stage
-    cohesive_zones_bank.F_cz.set_values(0.0);
+    cohesive_zones_bank.F_cz.set_values(real_t(0.0));
 
     // compute cohesive forces (orientation, openings, constitutive, loads)
     compute_cohesive_zone_nodal_forces(
@@ -232,7 +232,7 @@ void SGH3D::boundary_stress(const swage::Mesh_t&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
                               DCArrayKokkos<real_t>& node_bdy_force,
                               MPICArrayKokkos<real_t>& node_coords,
-                              const double time_value) const
+                              const real_t time_value) const
 {
 
 
@@ -252,10 +252,10 @@ void SGH3D::boundary_stress(const swage::Mesh_t&      mesh,
             size_t bdy_patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_lid);
 
             // --- calculate surfaced area ---
-            double avg_coords[3];
-            avg_coords[0] = 0.0;
-            avg_coords[1] = 0.0;
-            avg_coords[2] = 0.0;
+            real_t avg_coords[3];
+            avg_coords[0] = real_t(0.0);
+            avg_coords[1] = real_t(0.0);
+            avg_coords[2] = real_t(0.0);
             for (size_t node_lid=0; node_lid<mesh.num_nodes_in_patch; node_lid++){
                 
                 // get the node id
@@ -274,20 +274,20 @@ void SGH3D::boundary_stress(const swage::Mesh_t&      mesh,
 
 
             // allocate the corner surface normals and forces 
-            double corn_patch_area_normal_1D[3];
-            ViewCArrayKokkos <double> corn_patch_area_normal(&corn_patch_area_normal_1D[0],3);
+            real_t corn_patch_area_normal_1D[3];
+            ViewCArrayKokkos <real_t> corn_patch_area_normal(&corn_patch_area_normal_1D[0],3);
             
-            double corn_patch_force_1D[3];
-            ViewCArrayKokkos <double> corn_patch_force(&corn_patch_force_1D[0], 3);
+            real_t corn_patch_force_1D[3];
+            ViewCArrayKokkos <real_t> corn_patch_force(&corn_patch_force_1D[0], 3);
             
             // inialize corner patch vector to zero
             for (size_t dim=0; dim<mesh.num_dims; dim++){
-                corn_patch_area_normal(dim) = 0.0;
-                corn_patch_force(dim) = 0.0;
+                corn_patch_area_normal(dim) = real_t(0.0);
+                corn_patch_force(dim) = real_t(0.0);
             } // end for dim
 
-            double vec_a[3];
-            double vec_b[3];
+            real_t vec_a[3];
+            real_t vec_b[3];
             for (size_t node_lid=0; node_lid<mesh.num_nodes_in_patch; node_lid++){
                 
                 // get the node ids for the triangle
@@ -317,7 +317,7 @@ void SGH3D::boundary_stress(const swage::Mesh_t&      mesh,
             } // end for dim
 
             //printf("checking area normal \n");
-            //double area = sqrt(corn_patch_area_normal(0)*corn_patch_area_normal(0) +
+            //real_t area = Kokkos::sqrt(corn_patch_area_normal(0)*corn_patch_area_normal(0) +
             //                   corn_patch_area_normal(1)*corn_patch_area_normal(1) +
             //                   corn_patch_area_normal(2)*corn_patch_area_normal(2));
             //if(corn_patch_area_normal(1)/area > (1.0 - 1.e-12) ){

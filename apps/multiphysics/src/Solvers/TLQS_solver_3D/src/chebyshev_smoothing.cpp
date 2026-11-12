@@ -54,29 +54,29 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<real_t>& rk,
                                             const DCArrayKokkos<size_t>& nodes_in_elem,
                                             const CArrayKokkos<real_t>& x_elem,
                                             const CArrayKokkos<real_t>& y_elem,
-                                            const double alpha,
-                                            const double beta,
+                                            const real_t alpha,
+                                            const real_t beta,
                                             const int degree)
 {
     // Compute Chebyshev parameters based on spectral bounds
-    const double d = (beta + alpha) / 2.0;
-    const double c = (beta - alpha) / 2.0;
+    const real_t d = (beta + alpha) / real_t(2.0);
+    const real_t c = (beta - alpha) / real_t(2.0);
 
     // --- Step 1: Initialize the 3-term recurrence (Iteration k = 0) ---
     FOR_ALL(i, 0, (int)num_nodes,
             j, 0, 3, {
-        zk(i,j) = 0.0;
-        delta_z(i,j) = (1.0 / d) * D_inv(i,j) * rk(i,j);
+        zk(i,j) = real_t(0.0);
+        delta_z(i,j) = (real_t(1.0) / d) * D_inv(i,j) * rk(i,j);
         zk(i,j) += delta_z(i,j);
     });
     MATAR_FENCE();
 
-    double rho_prev = c / (2.0 * d);
+    real_t rho_prev = c / (real_t(2.0) * d);
     
     // --- Step 2: Recurrence Loop (Iteration k = 1 to degree-1) ---
     for (int k = 1; k < degree; ++k) {
-        double rho_k = 1.0 / (2.0 * d / c - rho_prev);
-        double gamma_k = rho_k * 2.0 / c;
+        real_t rho_k = real_t(1.0) / (real_t(2.0) * d / c - rho_prev);
+        real_t gamma_k = rho_k * real_t(2.0) / c;
 
         // --- MATRIX-FREE MULTIPLICATION (temporary = A * zk) ---
         // element based on the packed symmetric K_elem, see constrained_K_times_x
@@ -129,10 +129,10 @@ void TLQS3D::get_diagonal_inverse(MPICArrayKokkos<real_t>& D_inv,
         const size_t num_elems_in_node = elems_in_node.stride(node_gid);
 
         for (size_t p_dir = 0; p_dir < 3; p_dir++) {
-            double diag = 1.0;  // constrained dof: A_ii = 1
+            real_t diag = real_t(1.0);  // constrained dof: A_ii = 1
 
             if (!constrained_dof(node_gid, p_dir)) {
-                diag = 0.0;
+                diag = real_t(0.0);
                 for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
                     const size_t elem_gid = elems_in_node(node_gid, elem_lid);
 
@@ -145,7 +145,7 @@ void TLQS3D::get_diagonal_inverse(MPICArrayKokkos<real_t>& D_inv,
             }
 
             // Invert with safety epsilon protection
-            D_inv(node_gid, p_dir) = 1.0 / (diag + 1e-16);
+            D_inv(node_gid, p_dir) = real_t(1.0) / (diag + real_t(1e-16));
         }
     });
     MATAR_FENCE();
@@ -156,8 +156,8 @@ void TLQS3D::get_diagonal_inverse(MPICArrayKokkos<real_t>& D_inv,
  * @brief Computes the spectral bounds (alpha and beta) for the Chebyshev preconditioner
  * using a performance-optimized Power Iteration loop with fused kernels and proper MATAR reductions.
  */
-void TLQS3D::get_chebyshev_bounds(double& alpha,
-                                  double& beta,
+void TLQS3D::get_chebyshev_bounds(real_t& alpha,
+                                  real_t& beta,
                                   const MPICArrayKokkos<real_t>& D_inv,
                                   const CArrayKokkos<real_t>& K_elem,
                                   const CArrayKokkos<bool>& constrained_dof,
@@ -173,12 +173,12 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
                                   const int num_owned_nodes,
                                   const DCArrayKokkos<bool> shared_tally_owned_nodes)
 {
-    double lambda_max = 0.0;
+    real_t lambda_max = real_t(0.0);
 
     // Initialize initial guess vector v to 1.0
     FOR_ALL(i, 0, (int)num_nodes, 
             j, 0, 3, {
-        v_scratch(i,j) = 1.0;
+        v_scratch(i,j) = real_t(1.0);
     });
     MATAR_FENCE();
 
@@ -197,10 +197,10 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
         MATAR_FENCE();
 
         // 2. Compute Dot Products for Rayleigh Quotient using 6-arg FOR_REDUCE_SUM
-        double v_dot_w = 0.0;
-        double v_dot_v = 0.0;
+        double v_dot_w = real_t(0.0);
+        double v_dot_v = real_t(0.0);
 
-        double local_v_dot_w = 0.0;
+        double local_v_dot_w = real_t(0.0);
         FOR_REDUCE_SUM(i, 0, (int)num_owned_nodes, local_v_dot_w, {
             if(shared_tally_owned_nodes(i)){
                 for (int j = 0; j < 3; j++) {
@@ -211,7 +211,7 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
 
         MPI_Allreduce(MPI_IN_PLACE, &v_dot_w, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-        double local_v_dot_v = 0.0;
+        double local_v_dot_v = real_t(0.0);
         FOR_REDUCE_SUM(i, 0, (int)num_owned_nodes, local_v_dot_v, {
             if(shared_tally_owned_nodes(i)){
                 for (int j = 0; j < 3; j++) {
@@ -224,11 +224,11 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
         MPI_Allreduce(MPI_IN_PLACE, &v_dot_v, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         // Calculate current estimate of the maximum eigenvalue
-        lambda_max = v_dot_w / (v_dot_v + 1e-16);
+        lambda_max = v_dot_w / (v_dot_v + real_t(1e-16));
 
         // 3. Normalize w vector to update our guess v: v = w / ||w||_2
-        double w_norm2 = 0.0;
-        double local_w_norm2 = 0.0;
+        double w_norm2 = real_t(0.0);
+        double local_w_norm2 = real_t(0.0);
         FOR_REDUCE_SUM(i, 0, (int)num_owned_nodes, local_w_norm2, {
             if(shared_tally_owned_nodes(i)){
                 for (int j = 0; j < 3; j++) {
@@ -240,7 +240,7 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
 
         MPI_Allreduce(MPI_IN_PLACE, &w_norm2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         
-        double inv_norm = 1.0 / (sqrt(w_norm2) + 1e-16);
+        real_t inv_norm = real_t(1.0) / (Kokkos::sqrt(w_norm2) + real_t(1e-16));
 
         FOR_ALL(i, 0, (int)num_owned_nodes,
                 j, 0, 3, {
@@ -253,6 +253,6 @@ void TLQS3D::get_chebyshev_bounds(double& alpha,
     }
 
     // --- 4. Apply Heuristic Bounding Box ---
-    beta  = 1.1 * lambda_max; 
-    alpha = beta / 10.0;      
+    beta  = real_t(1.1) * lambda_max; 
+    alpha = beta / real_t(10.0);      
 }

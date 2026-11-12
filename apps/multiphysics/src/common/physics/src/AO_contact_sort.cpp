@@ -44,29 +44,29 @@ double get_lebesgue_constant_1d(const CArrayKokkos<real_t>& dof_positions_1d,
                                 const size_t num_dofs_1d,
                                 const size_t num_samples)
 {
-    const double h = 2.0/double(num_samples - 1);
+    const real_t h = real_t(2.0)/double(num_samples - 1);
 
-    double lambda_lcl = 0.0;
-    double lambda_1d  = 0.0;
+    double lambda_lcl = real_t(0.0);
+    double lambda_1d  = real_t(0.0);
 
     FOR_REDUCE_MAX(sample, 0, num_samples, lambda_lcl, {
 
-        const double xi = -1.0 + h*double(sample);
+        const real_t xi = -real_t(1.0) + h*double(sample);
 
         // Lebesgue function L(xi) = sum_i |N_i(xi)|
-        double L = 0.0;
+        real_t L = real_t(0.0);
         for (size_t i = 0; i < num_dofs_1d; i++) {
-            double Ni = 1.0;
+            real_t Ni = real_t(1.0);
             for (size_t j = 0; j < num_dofs_1d; j++) {
                 if (j != i) {
                     Ni *= (xi - dof_positions_1d(j))
                         / (dof_positions_1d(i) - dof_positions_1d(j));
                 }
             } // end for j
-            L += fabs(Ni);
+            L += Kokkos::fabs(Ni);
         } // end for i
 
-        lambda_lcl = fmax(lambda_lcl, L);
+        lambda_lcl = Kokkos::fmax(lambda_lcl, L);
 
     }, lambda_1d);
 
@@ -79,18 +79,18 @@ double get_lebesgue_constant_1d(const CArrayKokkos<real_t>& dof_positions_1d,
 void get_surf_overshoot_factor(const CArrayKokkos<real_t>& dof_positions_1d,
                                const size_t num_dofs_1d,
                                const size_t elem_dims,
-                               double& lebesgue_overshoot)
+                               real_t& lebesgue_overshoot)
 {
     const double lambda_1d = get_lebesgue_constant_1d(dof_positions_1d, num_dofs_1d);
 
     // faces are tensor products in (elem_dims - 1) directions
-    double lambda_surf = 1.0;
+    real_t lambda_surf = real_t(1.0);
     for (size_t dim = 0; dim < elem_dims - 1; dim++) {
         lambda_surf *= lambda_1d;
     }
 
-    const double safety = 1.001; // covers sampling error
-    lebesgue_overshoot = 0.5*(lambda_surf - 1.0)*safety;
+    const real_t safety = real_t(1.001); // covers sampling error
+    lebesgue_overshoot = real_t(0.5)*(lambda_surf - real_t(1.0))*safety;
 
     return;
 } // end get_surf_overshoot_factor
@@ -157,7 +157,7 @@ void get_bdy_node_mass(const size_t num_nodes,
     // ---------------------------------------------------------------
     CArrayKokkos<size_t> bdy_lid_in_node(num_nodes, "bdy_lid_in_node");
     bdy_lid_in_node.set_values(num_bdy_nodes);
-    bdy_node_mass.set_values(0.0);
+    bdy_node_mass.set_values(real_t(0.0));
     Kokkos::fence();
 
     FOR_ALL(bdy_node_lid, 0, num_bdy_nodes, {
@@ -180,10 +180,10 @@ void get_bdy_node_mass(const size_t num_nodes,
             for (size_t qpt_lid = 0; qpt_lid < num_qpts_in_elem; qpt_lid++) {
 
                 // J(i, j) = dx_i/dxi_j at this qpt
-                double J[3][3];
+                real_t J[3][3];
                 for (size_t i = 0; i < 3; i++) {
                     for (size_t j = 0; j < 3; j++) {
-                        J[i][j] = 0.0;
+                        J[i][j] = real_t(0.0);
                     }
                 }
                 for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -195,14 +195,14 @@ void get_bdy_node_mass(const size_t num_nodes,
                     }
                 } // end for node_lid
 
-                const double det_J = J[0][0]*(J[1][1]*J[2][2] - J[2][1]*J[1][2])
+                const real_t det_J = J[0][0]*(J[1][1]*J[2][2] - J[2][1]*J[1][2])
                                    - J[0][1]*(J[1][0]*J[2][2] - J[2][0]*J[1][2])
                                    + J[0][2]*(J[1][0]*J[2][1] - J[2][0]*J[1][1]);
 
                 // mass of this material at this Gauss point
                 const size_t mat_point_sid = points_in_mat_elem(mat_elem_sid, qpt_lid);
-                const double qpt_vol  = qpt_weights(qpt_lid)*det_J;
-                const double qpt_mass = den(mat_id, mat_point_sid)
+                const real_t qpt_vol  = qpt_weights(qpt_lid)*det_J;
+                const real_t qpt_mass = den(mat_id, mat_point_sid)
                                       * mat_volfrac(mat_id, mat_point_sid)
                                       * geo_volfrac(mat_id, mat_point_sid)
                                       * qpt_vol;
@@ -242,15 +242,15 @@ void get_bdy_node_mass(const size_t num_nodes,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void get_dynamic_compliance(const size_t num_bdy_nodes,
-                            const double dt,
+                            const real_t dt,
                             const CArrayKokkos<real_t>& bdy_node_mass,
                             CArrayKokkos<real_t>& bdy_node_compliance)
 {
-    const double half_dt2 = 0.5*dt*dt;
+    const real_t half_dt2 = real_t(0.5)*dt*dt;
 
     FOR_ALL(bdy_node_lid, 0, num_bdy_nodes, {
-        const double mass = bdy_node_mass(bdy_node_lid);
-        const double c    = (mass > 0.0) ? half_dt2/mass : 0.0;
+        const real_t mass = bdy_node_mass(bdy_node_lid);
+        const real_t c    = (mass > real_t(0.0)) ? half_dt2/mass : real_t(0.0);
         for (size_t dim = 0; dim < 3; dim++) {
             bdy_node_compliance(bdy_node_lid, dim) = c;
         }
@@ -288,14 +288,14 @@ void get_quasi_static_compliance(const size_t num_bdy_nodes,
                                  const CArrayKokkos<size_t>& bdy_nodes,
                                  const MPICArrayKokkos<real_t>& diag_inv,
                                  const CArrayKokkos<size_t>& bdy_dof_fixed,
-                                 const double scale,
+                                 const real_t scale,
                                  CArrayKokkos<real_t>& bdy_node_compliance)
 {
     FOR_ALL(bdy_node_lid, 0, num_bdy_nodes, {
         const size_t node_gid = bdy_nodes(bdy_node_lid);
         for (size_t dim = 0; dim < 3; dim++) {
             bdy_node_compliance(bdy_node_lid, dim) = (bdy_dof_fixed(bdy_node_lid, dim) == 1) ?
-                                                     0.0 : scale*diag_inv(node_gid, dim);
+                                                     real_t(0.0) : scale*diag_inv(node_gid, dim);
         }
     });
     Kokkos::fence();
@@ -344,7 +344,7 @@ void AO_contact_initialize(const size_t num_bdy_nodes,
                            CArrayKokkos<real_t>& bounding_boxes,
                            DCArrayKokkos<size_t>& num_nodes_in_bounding_boxes,
                            DCArrayKokkos<size_t>& num_surfs_in_node_boxes,
-                           double& lebesgue_overshoot,
+                           real_t& lebesgue_overshoot,
                            CArrayKokkos<real_t>& bdy_surf_node_normals,
                            CArrayKokkos<size_t>& num_pen_surfs_in_node,
                            CArrayKokkos<size_t>& pen_nodes,
@@ -364,13 +364,13 @@ void AO_contact_initialize(const size_t num_bdy_nodes,
     bdy_node_vels   = CArrayKokkos<real_t>(num_bdy_nodes, 3, "bdy_node_vels");
     bdy_node_accels = CArrayKokkos<real_t>(num_bdy_nodes, 3, "bdy_node_accels");
     bdy_node_mass   = CArrayKokkos<real_t>(num_bdy_nodes, "bdy_node_mass");
-    bdy_node_mass.set_values(0.0);
+    bdy_node_mass.set_values(real_t(0.0));
 
     // compliance is set by the calling solver (get_dynamic_compliance or get_quasi_static_compliance)
     // constrained dofs are marked by the calling solver; explicit solvers leave them all free
     bdy_node_compliance = CArrayKokkos<real_t>(num_bdy_nodes, 3, "bdy_node_compliance");
     bdy_dof_fixed       = CArrayKokkos<size_t>(num_bdy_nodes, 3, "bdy_dof_fixed");
-    bdy_node_compliance.set_values(0.0);
+    bdy_node_compliance.set_values(real_t(0.0));
     bdy_dof_fixed.set_values(0);
 
     // ---------------------------------------------------------------
@@ -411,8 +411,8 @@ void AO_contact_initialize(const size_t num_bdy_nodes,
     // ---------------------------------------------------------------
     contact_forces      = CArrayKokkos<real_t>(num_bdy_nodes, 3, "contact_forces");
     contact_forces_used = CArrayKokkos<real_t>(num_bdy_nodes, 3, "contact_forces_used");
-    contact_forces.set_values(0.0);
-    contact_forces_used.set_values(0.0);
+    contact_forces.set_values(real_t(0.0));
+    contact_forces_used.set_values(real_t(0.0));
     Kokkos::fence();
 
     return;
@@ -448,12 +448,12 @@ void get_max_vel_and_accel(double& vx_max, double& vy_max, double& vz_max,
                     double& aymax_lcl,
                     double& azmax_lcl) 
         {
-            vxmax_lcl = fmax(fabs(bdy_node_vels(point_gid,0)), vxmax_lcl);
-            vymax_lcl = fmax(fabs(bdy_node_vels(point_gid,1)), vymax_lcl);
-            vzmax_lcl = fmax(fabs(bdy_node_vels(point_gid,2)), vzmax_lcl);
-            axmax_lcl = fmax(fabs(bdy_node_accels(point_gid,0)), axmax_lcl);
-            aymax_lcl = fmax(fabs(bdy_node_accels(point_gid,1)), aymax_lcl);
-            azmax_lcl = fmax(fabs(bdy_node_accels(point_gid,2)), azmax_lcl);
+            vxmax_lcl = Kokkos::fmax(Kokkos::fabs(bdy_node_vels(point_gid,0)), vxmax_lcl);
+            vymax_lcl = Kokkos::fmax(Kokkos::fabs(bdy_node_vels(point_gid,1)), vymax_lcl);
+            vzmax_lcl = Kokkos::fmax(Kokkos::fabs(bdy_node_vels(point_gid,2)), vzmax_lcl);
+            axmax_lcl = Kokkos::fmax(Kokkos::fabs(bdy_node_accels(point_gid,0)), axmax_lcl);
+            aymax_lcl = Kokkos::fmax(Kokkos::fabs(bdy_node_accels(point_gid,1)), aymax_lcl);
+            azmax_lcl = Kokkos::fmax(Kokkos::fabs(bdy_node_accels(point_gid,2)), azmax_lcl);
         },
         Kokkos::Max<double>(vx_max), 
         Kokkos::Max<double>(vy_max), 
@@ -463,9 +463,9 @@ void get_max_vel_and_accel(double& vx_max, double& vy_max, double& vz_max,
         Kokkos::Max<double>(az_max)); 
     
     // if velocities are zero, give the box some thickness anyways
-    vx_max = fmax(vx_max, 1E-2);
-    vy_max = fmax(vy_max, 1E-2);
-    vz_max = fmax(vz_max, 1E-2);
+    vx_max = Kokkos::fmax(vx_max, real_t(1E-2));
+    vy_max = Kokkos::fmax(vy_max, real_t(1E-2));
+    vz_max = Kokkos::fmax(vz_max, real_t(1E-2));
 
     return;
 } // end get_max_vel_and_accel
@@ -476,66 +476,66 @@ void get_bounding_boxes(const DCArrayKokkos<real_t>& bdy_node_coords,
                         const CArrayKokkos<real_t>& bdy_node_accels,
                         const size_t num_bdy_surfs,
                         const size_t num_nodes_in_surf,
-                        const double dt,
-                        const double lebesgue_overshoot,
-                        const double min_kin_pad,
+                        const real_t dt,
+                        const real_t lebesgue_overshoot,
+                        const real_t min_kin_pad,
                         const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
                         CArrayKokkos<real_t>& bounding_boxes)
 {
     // getting max velocity and acceleration to make bounding box sizes conservatively sized
-    double vx_max = 0.0;
-    double vy_max = 0.0;
-    double vz_max = 0.0;
-    double ax_max = 0.0;
-    double ay_max = 0.0;
-    double az_max = 0.0;
+    double vx_max = real_t(0.0);
+    double vy_max = real_t(0.0);
+    double vz_max = real_t(0.0);
+    double ax_max = real_t(0.0);
+    double ay_max = real_t(0.0);
+    double az_max = real_t(0.0);
     get_max_vel_and_accel(vx_max, vy_max, vz_max, ax_max, ay_max, az_max, bdy_node_vels, bdy_node_accels);
 
     // kinematic padding over the load step
     // the node can move d toward the surface while the surface moves up to lambda_surf*d toward the node
     // (the surface between nodes can move up to lambda_surf times the max nodal displacement)
-    const double lambda_surf   = 1.0 + 2.0*lebesgue_overshoot;
-    const double motion_factor = 1.0 + lambda_surf;
+    const real_t lambda_surf   = real_t(1.0) + real_t(2.0)*lebesgue_overshoot;
+    const real_t motion_factor = real_t(1.0) + lambda_surf;
 
     // never thinner than min_kin_pad (max_gap), so every penetration the depth check
     // accepts is a candidate even when the velocities are small (e.g. quasi-static)
-    const double kin_pad_x = fmax(motion_factor*(vx_max*dt + 0.5*ax_max*dt*dt), min_kin_pad);
-    const double kin_pad_y = fmax(motion_factor*(vy_max*dt + 0.5*ay_max*dt*dt), min_kin_pad);
-    const double kin_pad_z = fmax(motion_factor*(vz_max*dt + 0.5*az_max*dt*dt), min_kin_pad);
+    const real_t kin_pad_x = Kokkos::fmax(motion_factor*(vx_max*dt + real_t(0.5)*ax_max*dt*dt), min_kin_pad);
+    const real_t kin_pad_y = Kokkos::fmax(motion_factor*(vy_max*dt + real_t(0.5)*ay_max*dt*dt), min_kin_pad);
+    const real_t kin_pad_z = Kokkos::fmax(motion_factor*(vz_max*dt + real_t(0.5)*az_max*dt*dt), min_kin_pad);
 
     FOR_ALL(bdy_surf_lid, 0, num_bdy_surfs, {
 
         // initialize with the first node in the surface
         size_t bdy_node_gid = bdy_nodes_in_bdy_surf(bdy_surf_lid, 0);
 
-        double x_min  = bdy_node_coords(bdy_node_gid, 0);
-        double x_max  = x_min;
-        double y_min  = bdy_node_coords(bdy_node_gid, 1);
-        double y_max  = y_min;
-        double z_min  = bdy_node_coords(bdy_node_gid, 2);
-        double z_max  = z_min;
+        real_t x_min  = bdy_node_coords(bdy_node_gid, 0);
+        real_t x_max  = x_min;
+        real_t y_min  = bdy_node_coords(bdy_node_gid, 1);
+        real_t y_max  = y_min;
+        real_t z_min  = bdy_node_coords(bdy_node_gid, 2);
+        real_t z_max  = z_min;
 
         // loop over remaining nodes in the surface
         for (size_t node_lid = 1; node_lid < num_nodes_in_surf; node_lid++) {
             bdy_node_gid = bdy_nodes_in_bdy_surf(bdy_surf_lid, node_lid);
 
-            const double x  = bdy_node_coords(bdy_node_gid, 0);
-            const double y  = bdy_node_coords(bdy_node_gid, 1);
-            const double z  = bdy_node_coords(bdy_node_gid, 2);
+            const real_t x  = bdy_node_coords(bdy_node_gid, 0);
+            const real_t y  = bdy_node_coords(bdy_node_gid, 1);
+            const real_t z  = bdy_node_coords(bdy_node_gid, 2);
 
-            x_min  = fmin(x_min, x);
-            x_max  = fmax(x_max, x);
-            y_min  = fmin(y_min, y);
-            y_max  = fmax(y_max, y);
-            z_min  = fmin(z_min, z);
-            z_max  = fmax(z_max, z);
+            x_min  = Kokkos::fmin(x_min, x);
+            x_max  = Kokkos::fmax(x_max, x);
+            y_min  = Kokkos::fmin(y_min, y);
+            y_max  = Kokkos::fmax(y_max, y);
+            z_min  = Kokkos::fmin(z_min, z);
+            z_max  = Kokkos::fmax(z_max, z);
 
         } // end for node_lid
 
         // geometric overshoot of the high-order surface between its nodes
-        const double geo_pad_x = lebesgue_overshoot*(x_max - x_min);
-        const double geo_pad_y = lebesgue_overshoot*(y_max - y_min);
-        const double geo_pad_z = lebesgue_overshoot*(z_max - z_min);
+        const real_t geo_pad_x = lebesgue_overshoot*(x_max - x_min);
+        const real_t geo_pad_y = lebesgue_overshoot*(y_max - y_min);
+        const real_t geo_pad_z = lebesgue_overshoot*(z_max - z_min);
 
         // bounding_boxes(surf, 0, dim) = min corner [x, y, z]
         // bounding_boxes(surf, 1, dim) = max corner [x, y, z]
@@ -588,8 +588,8 @@ double get_min_bdy_elem_edge_length(const size_t num_bdy_surfs,
 {
     const size_t p = num_dofs_1d - 1;
 
-    double min_edge_length = 0.0;
-    double loc_min = 0.0;
+    double min_edge_length = real_t(0.0);
+    double loc_min = real_t(0.0);
 
     FOR_REDUCE_MIN(bdy_surf_lid, 0, num_bdy_surfs, loc_min, {
 
@@ -623,13 +623,13 @@ double get_min_bdy_elem_edge_length(const size_t num_bdy_surfs,
                     const size_t node_b = nodes_in_elem(elem_gid, elements::get_dof_rid(idx_b[0], idx_b[1], idx_b[2], num_dofs_1d));
 
                     // chord length between the two corner vertices
-                    double len2 = 0.0;
+                    real_t len2 = real_t(0.0);
                     for (size_t dim = 0; dim < 3; dim++) {
-                        const double diff = node_coords(node_b, dim) - node_coords(node_a, dim);
+                        const real_t diff = node_coords(node_b, dim) - node_coords(node_a, dim);
                         len2 += diff*diff;
                     }
 
-                    const double len = sqrt(len2);
+                    const real_t len = Kokkos::sqrt(len2);
                     if (len < loc_min) loc_min = len;
                 } // end for c2
             } // end for c1
@@ -754,17 +754,17 @@ void AO_contact_sort(DCArrayKokkos<real_t>& bdy_node_coords,
                      const size_t num_bins,
                      const size_t num_bdy_surfs,
                      const size_t num_nodes_in_surf,
-                     const double dt,
+                     const real_t dt,
                      const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
                      CArrayKokkos<real_t>& bounding_boxes,
-                     const double lebesgue_overshoot,
+                     const real_t lebesgue_overshoot,
                      DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
                      RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes,
                      const size_t num_dofs_1d,
                      const CArrayKokkos<size_t>& bdy_surfs,
                      const CArrayKokkos<int>& elems_in_surf,
                      const DCArrayKokkos<size_t>& nodes_in_elem,
-                     double& max_gap,
+                     real_t& max_gap,
                      DRaggedRightArrayKokkos<real_t>& pairing_check_vars,
                      DCArrayKokkos<size_t>& num_surfs_in_node_boxes,
                      RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
@@ -811,8 +811,8 @@ void AO_contact_sort(DCArrayKokkos<real_t>& bdy_node_coords,
     FOR_ALL(bdy_node_lid, 0, num_bdy_nodes, {
         for (size_t dim = 0; dim < 3; dim++) {
             bdy_node_coords(bdy_node_lid, dim)     = node_coords(bdy_nodes(bdy_node_lid), dim);
-            contact_forces(bdy_node_lid, dim)      = 0.0;
-            contact_forces_used(bdy_node_lid, dim) = 0.0;
+            contact_forces(bdy_node_lid, dim)      = real_t(0.0);
+            contact_forces_used(bdy_node_lid, dim) = real_t(0.0);
         }
         num_pairs_in_node(bdy_node_lid) = 0;
         is_active(bdy_node_lid)         = 0;
@@ -832,7 +832,7 @@ void AO_contact_sort(DCArrayKokkos<real_t>& bdy_node_coords,
     // smallest boundary element per load step; time step control will enforce this later
     // computed before the boxes, which are padded by at least max_gap
     // ---------------------------------------------------------------
-    const double max_gap_frac = 0.4;   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t max_gap_frac = real_t(0.4);   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     max_gap = max_gap_frac*get_min_bdy_elem_edge_length(num_bdy_surfs, num_dofs_1d,
                                                         bdy_surfs, elems_in_surf,
                                                         nodes_in_elem, node_coords);
@@ -843,9 +843,9 @@ void AO_contact_sort(DCArrayKokkos<real_t>& bdy_node_coords,
                                                 bdy_node_coords);
 
     // building underlying bin mesh
-    const double bin_mesh_sizing_factor_x = (bdy_node_point_cloud.xmax - bdy_node_point_cloud.xmin) / num_bins * 0.1; // setting bin mesh to extend 10 percent of a bin
-    const double bin_mesh_sizing_factor_y = (bdy_node_point_cloud.ymax - bdy_node_point_cloud.ymin) / num_bins * 0.1; // setting bin mesh to extend 10 percent of a bin
-    const double bin_mesh_sizing_factor_z = (bdy_node_point_cloud.zmax - bdy_node_point_cloud.zmin) / num_bins * 0.1; // setting bin mesh to extend 10 percent of a bin
+    const real_t bin_mesh_sizing_factor_x = (bdy_node_point_cloud.xmax - bdy_node_point_cloud.xmin) / num_bins * real_t(0.1); // setting bin mesh to extend 10 percent of a bin
+    const real_t bin_mesh_sizing_factor_y = (bdy_node_point_cloud.ymax - bdy_node_point_cloud.ymin) / num_bins * real_t(0.1); // setting bin mesh to extend 10 percent of a bin
+    const real_t bin_mesh_sizing_factor_z = (bdy_node_point_cloud.zmax - bdy_node_point_cloud.zmin) / num_bins * real_t(0.1); // setting bin mesh to extend 10 percent of a bin
     bdy_node_point_cloud.build_bin_mesh(bdy_node_point_cloud.xmin - bin_mesh_sizing_factor_x,
                                         bdy_node_point_cloud.ymin - bin_mesh_sizing_factor_y,
                                         bdy_node_point_cloud.zmin - bin_mesh_sizing_factor_z,
@@ -948,7 +948,7 @@ void carry_over_pairs(const size_t num_bdy_nodes,
         for (size_t p = 0; p < old_num_pairs_in_node(bdy_node_lid); p++) {
 
             // index 5 here is F_tot, if that's zero the pair was unloaded at the end of last step
-            if (old_contact_pair_vars(bdy_node_lid, p, 5) <= 0.0) continue;   // unloaded: let the sweep decide
+            if (old_contact_pair_vars(bdy_node_lid, p, 5) <= real_t(0.0)) continue;   // unloaded: let the sweep decide
 
             // the target must still be a candidate for this node
             const size_t bdy_surf_lid = old_contact_pair_surfs(bdy_node_lid, p);
@@ -965,11 +965,11 @@ void carry_over_pairs(const size_t num_bdy_nodes,
             for (size_t var = 0; var < 6; var++) {
                 contact_pair_vars(bdy_node_lid, num_kept, var) = old_contact_pair_vars(bdy_node_lid, p, var);
             }
-            const double F_tot = old_contact_pair_vars(bdy_node_lid, p, 5);
-            contact_pair_vars(bdy_node_lid, num_kept, 6) = 0.0;     // f_inc
+            const real_t F_tot = old_contact_pair_vars(bdy_node_lid, p, 5);
+            contact_pair_vars(bdy_node_lid, num_kept, 6) = real_t(0.0);     // f_inc
             contact_pair_vars(bdy_node_lid, num_kept, 7) = F_tot;   // F_prop: no proposal yet this load step
             contact_pair_vars(bdy_node_lid, num_kept, 8) = F_tot;   // F_used
-            contact_pair_vars(bdy_node_lid, num_kept, 9) = 0.0;     // r_prev (history is reset per load step)
+            contact_pair_vars(bdy_node_lid, num_kept, 9) = real_t(0.0);     // r_prev (history is reset per load step)
             num_kept++;
         } // end for p
 

@@ -53,17 +53,17 @@ namespace TabularMaterialModel {
 
 
     KOKKOS_FUNCTION
-    double get_density_from_temperature(const Table_t& data_table, const double temperature){
+    double get_density_from_temperature(const Table_t& data_table, const real_t temperature){
         return data_table.linear_interpolation(temperature, 1, Fields::temperature);
     }
 
     KOKKOS_FUNCTION
-    double get_thermal_conductivity_from_temperature(const Table_t& data_table, const double temperature){
+    double get_thermal_conductivity_from_temperature(const Table_t& data_table, const real_t temperature){
         return data_table.linear_interpolation(temperature, 1, Fields::temperature);
     }
 
     KOKKOS_FUNCTION
-    double get_specific_heat_from_temperature(const Table_t& data_table, const double temperature){
+    double get_specific_heat_from_temperature(const Table_t& data_table, const real_t temperature){
         return data_table.linear_interpolation(temperature, 1, Fields::temperature);
     }
     

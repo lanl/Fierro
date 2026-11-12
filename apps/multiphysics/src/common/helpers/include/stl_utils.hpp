@@ -42,9 +42,9 @@ using namespace mtr;
 
 // a vector type with 3 components
 struct vec_t{
-    double x;
-    double y;
-    double z;
+    real_t x;
+    real_t y;
+    real_t z;
     
     // default constructor
     KOKKOS_INLINE_FUNCTION
@@ -52,7 +52,7 @@ struct vec_t{
     
     // overloaded constructor
     KOKKOS_INLINE_FUNCTION
-    vec_t(const double x_in, const double y_in, const double z_in){
+    vec_t(const real_t x_in, const real_t y_in, const real_t z_in){
         x = x_in;
         y = y_in;
         z = z_in;
@@ -66,7 +66,7 @@ struct vec_t{
     vec_t operator-(const vec_t& b) const { return {x - b.x, y - b.y, z - b.z}; }
 
     KOKKOS_INLINE_FUNCTION
-    vec_t operator*(double s) const { return {x * s, y * s, z * s}; }
+    vec_t operator*(real_t s) const { return {x * s, y * s, z * s}; }
     
 }; // end vec_t
 
@@ -110,7 +110,7 @@ struct triangle_t {
         normal.y = A.z * B.x - A.x * B.z;
         normal.z = A.x * B.y - A.y * B.x;
         
-        const double mag = sqrt(normal.x*normal.x + normal.y*normal.y + normal.z*normal.z);
+        const real_t mag = Kokkos::sqrt(normal.x*normal.x + normal.y*normal.y + normal.z*normal.z);
         
         // save the unit normal
         normal.x /= mag;
@@ -166,7 +166,7 @@ double dot(const vec_t &a, const vec_t &b) {
 ///////////////////////////////////////////////////////////////////////////// 
 KOKKOS_INLINE_FUNCTION
 double magnitude(const vec_t &a){
-    return sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
+    return Kokkos::sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
 } // end function
 
 
@@ -182,7 +182,7 @@ double magnitude(const vec_t &a){
 ////////////////////////////////////////////////////////////////////////////// 
 KOKKOS_INLINE_FUNCTION
 double distance(const vec_t &a, const vec_t &b){
-    return sqrt((a.x-b.x)*(a.x-b.x) + 
+    return Kokkos::sqrt((a.x-b.x)*(a.x-b.x) + 
                 (a.y-b.y)*(a.y-b.y) + 
                 (a.z-b.z)*(a.z-b.z));
 } // end function
@@ -199,9 +199,9 @@ double distance(const vec_t &a, const vec_t &b){
 ////////////////////////////////////////////////////////////////////////////// 
 KOKKOS_INLINE_FUNCTION
 vec_t normalize(const vec_t& v) {
-    double len = magnitude(v);
-    if (len == 0.0) return {0,0,0};
-    return v * (1.0 / len);
+    real_t len = magnitude(v);
+    if (len == real_t(0.0)) return {0,0,0};
+    return v * (real_t(1.0) / len);
 }
 
 
@@ -217,8 +217,8 @@ vec_t normalize(const vec_t& v) {
 ///
 ////////////////////////////////////////////////////////////////////////////// 
 KOKKOS_INLINE_FUNCTION
-double clamp(double v, double lo, double hi) {
-    return fmax(lo, fmin(v, hi));
+double clamp(real_t v, real_t lo, real_t hi) {
+    return Kokkos::fmax(lo, Kokkos::fmin(v, hi));
 } // end function
 
 
@@ -240,13 +240,13 @@ vec_t closest_point_on_segment(const vec_t& p,
                                const vec_t& b) {
     vec_t ab = b - a;
 
-    double denom = dot(ab, ab);
+    real_t denom = dot(ab, ab);
 
     // degenerate segment
-    if (denom < 1.e-30) return a;
+    if (denom < real_t(1.e-30)) return a;
 
-    double t = dot(p - a, ab) / denom;
-    t = clamp(t, 0.0, 1.0);
+    real_t t = dot(p - a, ab) / denom;
+    t = clamp(t, real_t(0.0), real_t(1.0));
 
     return a + ab * t;
 } // end function
@@ -274,36 +274,36 @@ vec_t closest_point_on_triangle(const vec_t& p,
     vec_t ac = c - a;
     vec_t ap = p - a;
 
-    double d1 = dot(ab, ap);
-    double d2 = dot(ac, ap);
+    real_t d1 = dot(ab, ap);
+    real_t d2 = dot(ac, ap);
 
-    if (d1 <= 0.0 && d2 <= 0.0) return a;
+    if (d1 <= real_t(0.0) && d2 <= real_t(0.0)) return a;
 
     vec_t bp = p - b;
-    double d3 = dot(ab, bp);
-    double d4 = dot(ac, bp);
-    if (d3 >= 0.0 && d4 <= d3) return b;
+    real_t d3 = dot(ab, bp);
+    real_t d4 = dot(ac, bp);
+    if (d3 >= real_t(0.0) && d4 <= d3) return b;
 
-    double vc = d1 * d4 - d3 * d2;
-    if (vc <= 0.0 && d1 >= 0.0 && d3 <= 0.0)
+    real_t vc = d1 * d4 - d3 * d2;
+    if (vc <= real_t(0.0) && d1 >= real_t(0.0) && d3 <= real_t(0.0))
         return closest_point_on_segment(p, a, b);
 
     vec_t cp = p - c;
-    double d5 = dot(ab, cp);
-    double d6 = dot(ac, cp);
-    if (d6 >= 0.0 && d5 <= d6) return c;
+    real_t d5 = dot(ab, cp);
+    real_t d6 = dot(ac, cp);
+    if (d6 >= real_t(0.0) && d5 <= d6) return c;
 
-    double vb = d5 * d2 - d1 * d6;
-    if (vb <= 0.0 && d2 >= 0.0 && d6 <= 0.0)
+    real_t vb = d5 * d2 - d1 * d6;
+    if (vb <= real_t(0.0) && d2 >= real_t(0.0) && d6 <= real_t(0.0))
         return closest_point_on_segment(p, a, c);
 
-    double va = d3 * d6 - d5 * d4;
-    if (va <= 0.0 && (d4 - d3) >= 0.0 && (d5 - d6) >= 0.0)
+    real_t va = d3 * d6 - d5 * d4;
+    if (va <= real_t(0.0) && (d4 - d3) >= real_t(0.0) && (d5 - d6) >= real_t(0.0))
         return closest_point_on_segment(p, b, c);
 
-    double denom = 1.0 / (va + vb + vc + 1.0e-16);
-    double v = vb * denom;
-    double w = vc * denom;
+    real_t denom = real_t(1.0) / (va + vb + vc + real_t(1.0e-16));
+    real_t v = vb * denom;
+    real_t w = vc * denom;
 
     return a + ab * v + ac * w;
 } // end function
@@ -336,10 +336,10 @@ double signed_distance_to_triangle(const vec_t& p,
 
     vec_t diff = p - closest;
 
-    double dist = magnitude(diff);
+    real_t dist = magnitude(diff);
 
     // sign from orientation
-    double sign = (dot(diff, normal) >= 0.0) ? 1.0 : -1.0;
+    real_t sign = (dot(diff, normal) >= real_t(0.0)) ? real_t(1.0) : -real_t(1.0);
 
     return sign * dist;
 } // end function
@@ -356,10 +356,10 @@ double signed_distance_to_triangle(const vec_t& p,
 ///
 /////////////////////////////////////////////////////////////////////////////
 std::tuple<
-    CArray<double>,   // normal
-    CArray<double>, CArray<double>, CArray<double>,   // v0X, v0Y, v0Z 
-    CArray<double>, CArray<double>, CArray<double>,   // v1X, v1Y, v1Z
-    CArray<double>, CArray<double>, CArray<double>,   // v2X, v2Y, v2Z
+    CArray<real_t>,   // normal
+    CArray<real_t>, CArray<real_t>, CArray<real_t>,   // v0X, v0Y, v0Z 
+    CArray<real_t>, CArray<real_t>, CArray<real_t>,   // v1X, v1Y, v1Z
+    CArray<real_t>, CArray<real_t>, CArray<real_t>,   // v2X, v2Y, v2Z
     size_t // n_facets
 >
 binary_stl_reader(const std::string& path);

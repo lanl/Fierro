@@ -59,39 +59,39 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                      State_t& State)
 {
 
-    double fuzz  = SimulationParamaters.DynamicOptions.fuzz;
-    double tiny  = SimulationParamaters.DynamicOptions.tiny;
-    double small = SimulationParamaters.DynamicOptions.small;
+    real_t fuzz  = SimulationParamaters.DynamicOptions.fuzz;
+    real_t tiny  = SimulationParamaters.DynamicOptions.tiny;
+    real_t small = SimulationParamaters.DynamicOptions.small;
 
-    double graphics_dt_ival  = SimulationParamaters.OutputOptions.graphics_time_step;
+    real_t graphics_dt_ival  = SimulationParamaters.OutputOptions.graphics_time_step;
     int    graphics_cyc_ival = SimulationParamaters.OutputOptions.graphics_iteration_step;
 
-    // double time_initial = SimulationParamaters.DynamicOptions.time_initial;
-    double time_final = this->time_end; // SimulationParamaters.DynamicOptions.time_final;
-    double dt_min   = SimulationParamaters.DynamicOptions.dt_min;
-    double dt_max   = SimulationParamaters.DynamicOptions.dt_max;
-    double dt_start = SimulationParamaters.DynamicOptions.dt_start;
-    double dt_cfl   = SimulationParamaters.DynamicOptions.dt_cfl;
+    // real_t time_initial = SimulationParamaters.DynamicOptions.time_initial;
+    real_t time_final = this->time_end; // SimulationParamaters.DynamicOptions.time_final;
+    real_t dt_min   = SimulationParamaters.DynamicOptions.dt_min;
+    real_t dt_max   = SimulationParamaters.DynamicOptions.dt_max;
+    real_t dt_start = SimulationParamaters.DynamicOptions.dt_start;
+    real_t dt_cfl   = SimulationParamaters.DynamicOptions.dt_cfl;
 
     int rk_num_stages = SimulationParamaters.DynamicOptions.rk_num_stages;
     int cycle_stop    = SimulationParamaters.DynamicOptions.cycle_stop;
 
     // initialize time, time_step, and cycles
-    double time_value = this->time_start; // 0.0;
-    double dt = dt_start;
+    real_t time_value = this->time_start; // 0.0;
+    real_t dt = dt_start;
 
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
 
     // --- Graphics vars ----
-    CArray<double> graphics_times = CArray<double>(20000);
+    CArray<real_t> graphics_times = CArray<real_t>(20000);
     graphics_times(0) = this->time_start; // was zero
-    double graphics_time = this->time_start; // the times for writing graphics dump, was zero
+    real_t graphics_time = this->time_start; // the times for writing graphics dump, was zero
     size_t output_id=0; // the id for the outputs written
     
     boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value); // Time value = 0.0;
 
-    double cached_pregraphics_dt = fuzz;
+    real_t cached_pregraphics_dt = fuzz;
 
     // the number of materials specified by the user input
     const size_t num_mats = Materials.num_mats;
@@ -103,10 +103,10 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     // ---- Initialize the tool path information ---- //
     int number_of_points = 4;
     ToolPathInfo path(number_of_points);
-    path.set_data_point(0, 0.0,  100.0, 150.0, 15.0, 3000000.0);
-    path.set_data_point(1, 5.0,  200.0, 150.0, 15.0, 4000000.0);
-    path.set_data_point(2, 5.0,  100.0, 150.0, 30.0, 4000000.0);
-    path.set_data_point(3, 10.0, 200.0, 150.0, 30.0, 3000000.0);
+    path.set_data_point(0, real_t(0.0),  real_t(100.0), real_t(150.0), real_t(15.0), real_t(3000000.0));
+    path.set_data_point(1, real_t(5.0),  real_t(200.0), real_t(150.0), real_t(15.0), real_t(4000000.0));
+    path.set_data_point(2, real_t(5.0),  real_t(100.0), real_t(150.0), real_t(30.0), real_t(4000000.0));
+    path.set_data_point(3, real_t(10.0), real_t(200.0), real_t(150.0), real_t(30.0), real_t(3000000.0));
 
     path.tool_path_table.print_table();
 
@@ -147,14 +147,14 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     // ---- Set up sphere to act as a moving heat source ---- //
     DCArrayKokkos<real_t> sphere_position(3, "sphere_position");
 
-    sphere_position.host(0) = 0.0;
-    sphere_position.host(1) = 0.0;
-    sphere_position.host(2) = 0.0;
+    sphere_position.host(0) = real_t(0.0);
+    sphere_position.host(1) = real_t(0.0);
+    sphere_position.host(2) = real_t(0.0);
     sphere_position.update_device();
 
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        State.node.q_transfer(node_gid) = 0.0;
+        State.node.q_transfer(node_gid) = real_t(0.0);
     }); // end for parallel for over nodes
 
     // ---- Update the material properties ---- //
@@ -189,7 +189,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
             // initialize the material dt
-            double dt_mat = dt;
+            real_t dt_mat = dt;
             // ---- get the stable time step, both from CFL and Von Neumann stability ---- //
             get_timestep(mesh,
                          State.node.coords,
@@ -214,7 +214,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                          mat_id);
 
             // ---- save the smallest dt of all materials ---- //
-            min_dt_calc = fmin(dt_mat, min_dt_calc);
+            min_dt_calc = Kokkos::fmin(dt_mat, min_dt_calc);
         } // end for loop over all mats
         dt = min_dt_calc;
 
@@ -259,11 +259,11 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---- Integrate the solution forward to t(n+1) via Runge Kutta (RK) method ---- //
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
 
-            double rk_alpha = 1.0 / ((double)rk_num_stages - (double)rk_stage);
+            real_t rk_alpha = real_t(1.0) / ((double)rk_num_stages - (double)rk_stage);
 
             // ---- Initialize the nodal flux to zero for this RK stage ---- //
             FOR_ALL(node_gid, 0, mesh.num_nodes, {
-                State.node.q_transfer(node_gid) = 0.0;
+                State.node.q_transfer(node_gid) = real_t(0.0);
             }); // end for parallel for over nodes
 
             // ---- Calculate the corner heat flux from conduction per material ---- //
@@ -291,7 +291,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 // ---- Calculate the corner heat flux from moving volumetric heat source ----
                 if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source) {
-                    double power = path.get_power(time_value);
+                    real_t power = path.get_power(time_value);
                     moving_flux(
                         Materials,
                         mesh,
@@ -368,9 +368,9 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---- Move heat source ---- //
         if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source) {
             RUN({
-                double x = 0.0;
-                double y = 0.0;
-                double z = 0.0;
+                real_t x = real_t(0.0);
+                real_t y = real_t(0.0);
+                real_t z = real_t(0.0);
                 path.get_position(time_value, x, y, z);
                 sphere_position(0) = x;
                 sphere_position(1) = y;

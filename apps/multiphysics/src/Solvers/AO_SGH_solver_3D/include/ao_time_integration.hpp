@@ -36,9 +36,9 @@ inline ButcherTableau make_forward_euler()
 {
     ButcherTableau t;
     t.num_stages = 1;
-    t.c = {0.0};
-    t.A = {0.0};
-    t.b = {1.0};
+    t.c = {real_t(0.0)};
+    t.A = {real_t(0.0)};
+    t.b = {real_t(1.0)};
     return t;
 }
 
@@ -48,13 +48,13 @@ inline ButcherTableau make_ssp_rk3()
 {
     ButcherTableau t;
     t.num_stages = 3;
-    t.c = {0.0, 1.0, 0.5};
+    t.c = {real_t(0.0), real_t(1.0), real_t(0.5)};
     t.A = {
-        0.0,   0.0,   0.0,
-        1.0,   0.0,   0.0,
-        0.25,  0.25,  0.0
+        real_t(0.0),   real_t(0.0),   real_t(0.0),
+        real_t(1.0),   real_t(0.0),   real_t(0.0),
+        real_t(0.25),  real_t(0.25),  real_t(0.0)
     };
-    t.b = {1.0/6.0, 1.0/6.0, 2.0/3.0};
+    t.b = {real_t(1.0)/real_t(6.0), real_t(1.0)/real_t(6.0), real_t(2.0)/real_t(3.0)};
     return t;
 }
 
@@ -91,14 +91,14 @@ inline IMEXTableau make_rk2avg()
 {
     IMEXTableau t;
     t.num_stages = 2;
-    t.b   = {0.0, 1.0};
+    t.b   = {real_t(0.0), real_t(1.0)};
     t.A_I = {
-        0.5, 0.0,
-        0.0, 0.5
+        real_t(0.5), real_t(0.0),
+        real_t(0.0), real_t(0.5)
     };
     t.A_E = {
-        0.0, 0.0,
-        0.5, 0.0
+        real_t(0.0), real_t(0.0),
+        real_t(0.5), real_t(0.0)
     };
     return t;
 }
@@ -111,22 +111,22 @@ inline IMEXTableau make_rk3hc_a_alpha()
 {
     IMEXTableau t;
     t.num_stages = 4;
-    const double b1 = 0.0;
-    const double b2 = 1.1449072677736679441;
-    const double b3 = -1.9300000000000000000;
-    const double b4 = 1.7850927322263320559;
+    const real_t b1 = real_t(0.0);
+    const real_t b2 = real_t(1.1449072677736679441);
+    const real_t b3 = -real_t(1.9300000000000000000);
+    const real_t b4 = real_t(1.7850927322263320559);
     t.b = {b1, b2, b3, b4};
     t.A_E = {
-        0.0,                       0.0,                       0.0,                      0.0,
-        5.7245363388683397206e-1,  0.0,                       0.0,                      0.0,
-        1.7300000000000000000,    -1.5500927322263320559,     0.0,                      0.0,
-        1.6200000000000000000,    -1.5129540612310973493,     4.0769511793132136413e-4, 0.0
+        real_t(0.0),                       real_t(0.0),                       real_t(0.0),                      real_t(0.0),
+        real_t(5.7245363388683397206e-1),  real_t(0.0),                       real_t(0.0),                      real_t(0.0),
+        real_t(1.7300000000000000000),    -real_t(1.5500927322263320559),     real_t(0.0),                      real_t(0.0),
+        real_t(1.6200000000000000000),    -real_t(1.5129540612310973493),     real_t(4.0769511793132136413e-4), real_t(0.0)
     };
     t.A_I = {
-        b1 / 2.0, 0.0,      0.0,      0.0,
-        b1,       b2 / 2.0, 0.0,      0.0,
-        b1,       b2,       b3 / 2.0, 0.0,
-        b1,       b2,       b3,       b4 / 2.0
+        b1 / real_t(2.0), real_t(0.0),      real_t(0.0),      real_t(0.0),
+        b1,       b2 / real_t(2.0), real_t(0.0),      real_t(0.0),
+        b1,       b2,       b3 / real_t(2.0), real_t(0.0),
+        b1,       b2,       b3,       b4 / real_t(2.0)
     };
     return t;
 }
@@ -193,7 +193,7 @@ public:
     //   rhs_de(i)  : fills de_stage(i) from the State + V_curr
     //   apply_bc() : velocity BCs on State.node.vel (full steps only)
     template<class ApplyBCFn, class RefreshFn, class RHSFFn, class RHSDEFn>
-    void evolve(double                           dt,
+    void evolve(real_t                           dt,
                 MPICArrayKokkos<real_t>&           coords,
                 MPICArrayKokkos<real_t>&           vel,
                 DRaggedRightArrayKokkos<real_t>& sie,
@@ -248,7 +248,7 @@ public:
 
     // Load Y_i into the State (x, e) and the stage buffers (u).
     void build_stage_y(int                              i,
-                       double                           dt,
+                       real_t                           dt,
                        MPICArrayKokkos<real_t>&           coords,
                        DRaggedRightArrayKokkos<real_t>& sie,
                        const size_t                     mat_id)
@@ -265,14 +265,14 @@ public:
         const size_t nt = n_thermo_;
 
         FOR_ALL(n, 0, num_nodes_, {
-            double ux = 0.0;
-            double uy = 0.0;
-            double uz = 0.0;
-            double dx = 0.0;
-            double dy = 0.0;
-            double dz = 0.0;
+            real_t ux = real_t(0.0);
+            real_t uy = real_t(0.0);
+            real_t uz = real_t(0.0);
+            real_t dx = real_t(0.0);
+            real_t dy = real_t(0.0);
+            real_t dz = real_t(0.0);
             for (int j = 0; j < row; ++j) {
-                const double a = AE(row, j);
+                const real_t a = AE(row, j);
                 ux += a * fs(j, n, 0);
                 uy += a * fs(j, n, 1);
                 uz += a * fs(j, n, 2);
@@ -294,7 +294,7 @@ public:
 
         FOR_ALL(e, 0, num_elems_, {
             for (size_t k = 0; k < nt; ++k) {
-                double de = 0.0;
+                real_t de = real_t(0.0);
                 for (int j = 0; j < row; ++j) {
                     de += AE(row, j) * des(j, e, k);
                 }
@@ -306,7 +306,7 @@ public:
 
 
     // V_i = v^n + dt sum_{j<=i} A_I(i,j) f_j into V_curr.
-    void build_stage_v(int i, double dt)
+    void build_stage_v(int i, real_t dt)
     {
         const int row = i;
         auto& vn = v_n_;
@@ -315,11 +315,11 @@ public:
         auto& AI = AI_;
 
         FOR_ALL(n, 0, num_nodes_, {
-            double ax = 0.0;
-            double ay = 0.0;
-            double az = 0.0;
+            real_t ax = real_t(0.0);
+            real_t ay = real_t(0.0);
+            real_t az = real_t(0.0);
             for (int j = 0; j <= row; ++j) {
-                const double a = AI(row, j);
+                const real_t a = AI(row, j);
                 ax += a * fs(j, n, 0);
                 ay += a * fs(j, n, 1);
                 az += a * fs(j, n, 2);
@@ -332,7 +332,7 @@ public:
     }
 
 
-    void final_combine(double                           dt,
+    void final_combine(real_t                           dt,
                        MPICArrayKokkos<real_t>&           coords,
                        MPICArrayKokkos<real_t>&           vel,
                        DRaggedRightArrayKokkos<real_t>& sie,
@@ -349,14 +349,14 @@ public:
         const size_t nt = n_thermo_;
 
         FOR_ALL(n, 0, num_nodes_, {
-            double ax = 0.0;
-            double ay = 0.0;
-            double az = 0.0;
-            double dx = 0.0;
-            double dy = 0.0;
-            double dz = 0.0;
+            real_t ax = real_t(0.0);
+            real_t ay = real_t(0.0);
+            real_t az = real_t(0.0);
+            real_t dx = real_t(0.0);
+            real_t dy = real_t(0.0);
+            real_t dz = real_t(0.0);
             for (int j = 0; j < S; ++j) {
-                const double w = b(j);
+                const real_t w = b(j);
                 ax += w * fs(j, n, 0);
                 ay += w * fs(j, n, 1);
                 az += w * fs(j, n, 2);
@@ -375,7 +375,7 @@ public:
 
         FOR_ALL(e, 0, num_elems_, {
             for (size_t k = 0; k < nt; ++k) {
-                double de = 0.0;
+                real_t de = real_t(0.0);
                 for (int j = 0; j < S; ++j) {
                     de += b(j) * des(j, e, k);
                 }
@@ -491,7 +491,7 @@ public:
     // 2) internal energy, 3) position -- so the velocity used in the F^T
     // energy update never lags behind the matching position state.
     void combine(int                              row_idx,
-                 double                           dt,
+                 real_t                           dt,
                  MPICArrayKokkos<real_t>&           coords,
                  MPICArrayKokkos<real_t>&           vel,
                  DRaggedRightArrayKokkos<real_t>& sie,
@@ -510,11 +510,11 @@ public:
 
         // 1. velocity
         FOR_ALL(n, 0, num_nodes_, {
-            double dvx = 0.0;
-            double dvy = 0.0;
-            double dvz = 0.0;
+            real_t dvx = real_t(0.0);
+            real_t dvy = real_t(0.0);
+            real_t dvz = real_t(0.0);
             for (int j = 0; j < J_max; ++j) {
-                const double wj = w(row, j);
+                const real_t wj = w(row, j);
                 dvx += wj * sa(j, n, 0);
                 dvy += wj * sa(j, n, 1);
                 dvz += wj * sa(j, n, 2);
@@ -528,7 +528,7 @@ public:
         // 2. internal energy
         FOR_ALL(e, 0, num_elems_, {
             for (size_t k = 0; k < nt; ++k) {
-                double de = 0.0;
+                real_t de = real_t(0.0);
                 for (int j = 0; j < J_max; ++j) {
                     de += w(row, j) * sde(j, e, k);
                 }
@@ -539,11 +539,11 @@ public:
 
         // 3. position
         FOR_ALL(n, 0, num_nodes_, {
-            double dx = 0.0;
-            double dy = 0.0;
-            double dz = 0.0;
+            real_t dx = real_t(0.0);
+            real_t dy = real_t(0.0);
+            real_t dz = real_t(0.0);
             for (int j = 0; j < J_max; ++j) {
-                const double wj = w(row, j);
+                const real_t wj = w(row, j);
                 dx += wj * sv(j, n, 0);
                 dy += wj * sv(j, n, 1);
                 dz += wj * sv(j, n, 2);
@@ -561,7 +561,7 @@ public:
     //   refresh()   : recomputes jacobian, density, EoS at current State
     //   rhs(s)      : fills stage_v(s), stage_a(s), stage_de(s) at Y_s
     template<class ApplyBCFn, class RefreshFn, class RHSFn>
-    void evolve(double                           dt,
+    void evolve(real_t                           dt,
                 MPICArrayKokkos<real_t>&           coords,
                 MPICArrayKokkos<real_t>&           vel,
                 DRaggedRightArrayKokkos<real_t>& sie,

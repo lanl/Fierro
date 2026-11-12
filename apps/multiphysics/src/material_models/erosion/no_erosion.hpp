@@ -44,12 +44,12 @@ namespace NoErosionModel {
         KOKKOS_FUNCTION
         static void erode (const DRaggedRightArrayKokkos<bool>& MaterialPoints_eroded,
                            const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
-                           const double MaterialPoint_pres,
-                           const double MaterialPoint_den,
-                           const double MaterialPoint_sie,
-                           const double MaterialPoint_sspd,
-                           const double erode_tension_val,
-                           const double erode_density_val,
+                           const real_t MaterialPoint_pres,
+                           const real_t MaterialPoint_den,
+                           const real_t MaterialPoint_sie,
+                           const real_t MaterialPoint_sspd,
+                           const real_t erode_tension_val,
+                           const real_t erode_density_val,
                            const size_t mat_point_sid,
                            const size_t mat_id)
         {

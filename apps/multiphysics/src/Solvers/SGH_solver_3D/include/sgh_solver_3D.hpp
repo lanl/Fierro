@@ -248,30 +248,30 @@ public:
         const swage::Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
         MPICArrayKokkos<real_t>&     node_vel,
-        const double time_value) const;
+        const real_t time_value) const;
 
     void boundary_contact(
         const swage::Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
         MPICArrayKokkos<real_t>&     node_vel,
-        const double time_value) const;
+        const real_t time_value) const;
 
-    void boundary_contact_force(State_t& State, const swage::Mesh_t &mesh, const double &del_t, contact_state_t &Contact_State);
+    void boundary_contact_force(State_t& State, const swage::Mesh_t &mesh, const real_t &del_t, contact_state_t &Contact_State);
 
-    void boundary_fracture_force(State_t& State, swage::Mesh_t &mesh, const double &dt_stage,
-                                    cohesive_zones_t &cohesive_zones_bank, const double &time_value,
+    void boundary_fracture_force(State_t& State, swage::Mesh_t &mesh, const real_t &dt_stage,
+                                    cohesive_zones_t &cohesive_zones_bank, const real_t &time_value,
                                     const size_t &cycle, const size_t &rk_stage, const size_t &rk_num_stages);    
 
     void boundary_stress(const swage::Mesh_t& mesh,
                     const BoundaryCondition_t& BoundaryConditions,
                     DCArrayKokkos<real_t>& node_bdy_force,
                     MPICArrayKokkos<real_t>& node_coords,
-                    const double time_value) const;    
+                    const real_t time_value) const;    
 
     // **** Functions defined in energy_sgh.cpp **** //
     void update_energy(
-        const double  rk_alpha,
-        const double  dt,
+        const real_t  rk_alpha,
+        const real_t  dt,
         const swage::Mesh_t& mesh,
         const MPICArrayKokkos<real_t>& node_vel,
         const MPICArrayKokkos<real_t>& node_vel_n0,
@@ -307,15 +307,15 @@ public:
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
-        const double fuzz,
-        const double small,
-        const double dt,
-        const double rk_alpha) const;
+        const real_t fuzz,
+        const real_t small,
+        const real_t dt,
+        const real_t rk_alpha) const;
 
     // **** Functions defined in geometry.cpp **** //
     void update_position(
-        double rk_alpha,
-        double dt,
+        real_t rk_alpha,
+        real_t dt,
         const size_t num_dims,
         const size_t num_nodes,
         MPICArrayKokkos<real_t>& node_coords,
@@ -325,8 +325,8 @@ public:
 
     // **** Functions defined in momentum.cpp **** //
     void update_velocity(
-        double rk_alpha,
-        double dt,
+        real_t rk_alpha,
+        real_t dt,
         const swage::Mesh_t& mesh,
         MPICArrayKokkos<real_t>& node_vel,
         MPICArrayKokkos<real_t>& node_vel_n0,
@@ -352,9 +352,9 @@ public:
 
     KOKKOS_FUNCTION
     void decompose_vel_grad(
-        const ViewCArrayKokkos<double>& D_tensor,
-        const ViewCArrayKokkos<double>& W_tensor,
-        const ViewCArrayKokkos<double>& vel_grad) const;
+        const ViewCArrayKokkos<real_t>& D_tensor,
+        const ViewCArrayKokkos<real_t>& W_tensor,
+        const ViewCArrayKokkos<real_t>& vel_grad) const;
 
     // **** Functions defined in properties.cpp **** //
     void update_state(
@@ -380,9 +380,9 @@ public:
         DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad_t0,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
-        const double time_value,
-        const double dt,
-        const double rk_alpha,
+        const real_t time_value,
+        const real_t dt,
+        const real_t rk_alpha,
         const size_t cycle,
         const size_t num_material_elems,
         const size_t mat_id) const;
@@ -408,11 +408,11 @@ public:
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
-        const double fuzz,
-        const double small,
-        const double time_value,
-        const double dt,
-        const double rk_alpha,
+        const real_t fuzz,
+        const real_t small,
+        const real_t time_value,
+        const real_t dt,
+        const real_t rk_alpha,
         const size_t cycle) const;
 
     void get_deformation_grad(
@@ -451,15 +451,15 @@ public:
         DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
         DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         size_t num_mat_elems,
-        double time_value,
-        const double graphics_time,
-        const double time_final,
-        const double dt_max,
-        const double dt_min,
-        const double dt_cfl,
-        double&      dt,
-        const double fuzz,
-        const double tiny,
+        real_t time_value,
+        const real_t graphics_time,
+        const real_t time_final,
+        const real_t dt_max,
+        const real_t dt_min,
+        const real_t dt_cfl,
+        real_t&      dt,
+        const real_t fuzz,
+        const real_t tiny,
         const size_t mat_id) const;
 
 };

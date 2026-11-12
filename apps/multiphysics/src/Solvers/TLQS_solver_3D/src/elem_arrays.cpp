@@ -37,23 +37,23 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 KOKKOS_FUNCTION
 void TLQS3D::get_gradients(
-    const double material_matrix[6][6],
+    const real_t material_matrix[6][6],
     ViewCArrayKokkos <size_t>& nodes_in_elem,
     const MPICArrayKokkos<real_t>& coords_t0,
     const MPICArrayKokkos<real_t>& displacement,
     const CArrayKokkos<real_t>& displacement_step,
     ViewCArrayKokkos<real_t>& gauss_point_grad_basis,
-    double grad_u[3][3],
-    double inv_J[3][3],
-    double& det_J,
-    double PK2_curr_config[6])
+    real_t grad_u[3][3],
+    real_t inv_J[3][3],
+    real_t& det_J,
+    real_t PK2_curr_config[6])
 {
     // allocate and initialize Jacobian
     // dX_i / dxi_j
-    double J[3][3];
+    real_t J[3][3];
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            J[i][j] = 0.0;
+            J[i][j] = real_t(0.0);
         }
     }
 
@@ -73,7 +73,7 @@ void TLQS3D::get_gradients(
     det_J = J[0][0]*(J[1][1]*J[2][2] - J[2][1]*J[1][2]) - J[0][1]*(J[1][0]*J[2][2] - J[2][0]*J[1][2]) + J[0][2]*(J[1][0]*J[2][1] - J[2][0]*J[1][1]);
     //std::cout << "DET_J: " << det_J << std::endl;
     // get inv(J)
-    double adjoint[3][3];
+    real_t adjoint[3][3];
     adjoint[0][0] = J[1][1]*J[2][2] - J[2][1]*J[1][2];
     adjoint[0][1] = -(J[0][1]*J[2][2] - J[2][1]*J[0][2]);
     adjoint[0][2] = J[0][1]*J[1][2] - J[1][1]*J[0][2];
@@ -93,19 +93,19 @@ void TLQS3D::get_gradients(
     // du_i / dX_j
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            grad_u[i][j] = 0.0;
+            grad_u[i][j] = real_t(0.0);
         }
     }
 
     for (int k = 0; k < gauss_point_grad_basis.dims(0); k++) {
         const size_t node_gid = nodes_in_elem(k);
 
-        const double dpsig_k0 = inv_J[0][0]*gauss_point_grad_basis(k,0) + inv_J[0][1]*gauss_point_grad_basis(k,1) + inv_J[0][2]*gauss_point_grad_basis(k,2);
-        const double dpsig_k1 = inv_J[1][0]*gauss_point_grad_basis(k,0) + inv_J[1][1]*gauss_point_grad_basis(k,1) + inv_J[1][2]*gauss_point_grad_basis(k,2);
-        const double dpsig_k2 = inv_J[2][0]*gauss_point_grad_basis(k,0) + inv_J[2][1]*gauss_point_grad_basis(k,1) + inv_J[2][2]*gauss_point_grad_basis(k,2);
+        const real_t dpsig_k0 = inv_J[0][0]*gauss_point_grad_basis(k,0) + inv_J[0][1]*gauss_point_grad_basis(k,1) + inv_J[0][2]*gauss_point_grad_basis(k,2);
+        const real_t dpsig_k1 = inv_J[1][0]*gauss_point_grad_basis(k,0) + inv_J[1][1]*gauss_point_grad_basis(k,1) + inv_J[1][2]*gauss_point_grad_basis(k,2);
+        const real_t dpsig_k2 = inv_J[2][0]*gauss_point_grad_basis(k,0) + inv_J[2][1]*gauss_point_grad_basis(k,1) + inv_J[2][2]*gauss_point_grad_basis(k,2);
 
         for (int j = 0; j < 3; j++) {
-            const double u_total = displacement(node_gid, j) + displacement_step(node_gid, j);
+            const real_t u_total = displacement(node_gid, j) + displacement_step(node_gid, j);
             grad_u[j][0] += u_total * dpsig_k0;
             grad_u[j][1] += u_total * dpsig_k1;
             grad_u[j][2] += u_total * dpsig_k2;
@@ -118,13 +118,13 @@ void TLQS3D::get_gradients(
     // WARNING: NEED TO PUT THIS INTO A SEPARATE FUNCTION
     // WARNING: POINTER CALLED CALC QUASI_STATIC STRESS
     // ***************************************************
-    double current_strain[6]; // [Exx Eyy Ezz Eyz Exz Exy]
-    current_strain[0] = grad_u[0][0] + 0.5 * (grad_u[0][0]*grad_u[0][0] + grad_u[1][0]*grad_u[1][0] + grad_u[2][0]*grad_u[2][0]);
-    current_strain[1] = grad_u[1][1] + 0.5 * (grad_u[0][1]*grad_u[0][1] + grad_u[1][1]*grad_u[1][1] + grad_u[2][1]*grad_u[2][1]);
-    current_strain[2] = grad_u[2][2] + 0.5 * (grad_u[0][2]*grad_u[0][2] + grad_u[1][2]*grad_u[1][2] + grad_u[2][2]*grad_u[2][2]);
-    current_strain[3] = 0.5 * (grad_u[1][2] + grad_u[2][1] + grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]);
-    current_strain[4] = 0.5 * (grad_u[0][2] + grad_u[2][0] + grad_u[0][0]*grad_u[0][2] + grad_u[1][0]*grad_u[1][2] + grad_u[2][0]*grad_u[2][2]);
-    current_strain[5] = 0.5 * (grad_u[0][1] + grad_u[1][0] + grad_u[0][0]*grad_u[0][1] + grad_u[1][0]*grad_u[1][1] + grad_u[2][0]*grad_u[2][1]);
+    real_t current_strain[6]; // [Exx Eyy Ezz Eyz Exz Exy]
+    current_strain[0] = grad_u[0][0] + real_t(0.5) * (grad_u[0][0]*grad_u[0][0] + grad_u[1][0]*grad_u[1][0] + grad_u[2][0]*grad_u[2][0]);
+    current_strain[1] = grad_u[1][1] + real_t(0.5) * (grad_u[0][1]*grad_u[0][1] + grad_u[1][1]*grad_u[1][1] + grad_u[2][1]*grad_u[2][1]);
+    current_strain[2] = grad_u[2][2] + real_t(0.5) * (grad_u[0][2]*grad_u[0][2] + grad_u[1][2]*grad_u[1][2] + grad_u[2][2]*grad_u[2][2]);
+    current_strain[3] = real_t(0.5) * (grad_u[1][2] + grad_u[2][1] + grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]);
+    current_strain[4] = real_t(0.5) * (grad_u[0][2] + grad_u[2][0] + grad_u[0][0]*grad_u[0][2] + grad_u[1][0]*grad_u[1][2] + grad_u[2][0]*grad_u[2][2]);
+    current_strain[5] = real_t(0.5) * (grad_u[0][1] + grad_u[1][0] + grad_u[0][0]*grad_u[0][1] + grad_u[1][0]*grad_u[1][1] + grad_u[2][0]*grad_u[2][1]);
 
     // Normal stresses
     PK2_curr_config[0] = material_matrix[0][0] * current_strain[0] + material_matrix[0][1] * current_strain[1] + material_matrix[0][2] * current_strain[2]; // Sxx
@@ -175,15 +175,15 @@ void TLQS3D::get_gradients(
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void TLQS3D::tally_elem_arrays(
-    const double material_matrix[6][6],
-    const double grad_u[3][3],
-    const double inv_J[3][3],
+    const real_t material_matrix[6][6],
+    const real_t grad_u[3][3],
+    const real_t inv_J[3][3],
     ViewCArrayKokkos<real_t>& gauss_point_grad_basis,
-    double gauss_point_weight,
-    const double PK2_curr_config[6],
+    real_t gauss_point_weight,
+    const real_t PK2_curr_config[6],
     ViewCArrayKokkos<real_t>& Kel_packed,
     ViewCArrayKokkos<real_t>& Fel,
-    const double vol_frac,
+    const real_t vol_frac,
     ViewCArrayKokkos<real_t>& glob_grad,
     ViewCArrayKokkos<real_t>& B1,
     ViewCArrayKokkos<real_t>& K2_row)
@@ -192,18 +192,18 @@ void TLQS3D::tally_elem_arrays(
     const int num_dofs  = 3 * num_nodes;
 
     // Unpack grad_u for readability
-    const double ux = grad_u[0][0];
-    const double uy = grad_u[0][1];
-    const double uz = grad_u[0][2];
-    const double vx = grad_u[1][0];
-    const double vy = grad_u[1][1];
-    const double vz = grad_u[1][2];
-    const double wx = grad_u[2][0];
-    const double wy = grad_u[2][1];
-    const double wz = grad_u[2][2];
+    const real_t ux = grad_u[0][0];
+    const real_t uy = grad_u[0][1];
+    const real_t uz = grad_u[0][2];
+    const real_t vx = grad_u[1][0];
+    const real_t vy = grad_u[1][1];
+    const real_t vz = grad_u[1][2];
+    const real_t wx = grad_u[2][0];
+    const real_t wy = grad_u[2][1];
+    const real_t wz = grad_u[2][2];
 
     // Build symmetric 3x3 stress tensor for K2 (extracted from Voigt PK2)
-    double S[3][3];
+    real_t S[3][3];
     S[0][0] = PK2_curr_config[0];
     S[0][1] = PK2_curr_config[5];
     S[0][2] = PK2_curr_config[4];
@@ -238,11 +238,11 @@ void TLQS3D::tally_elem_arrays(
     int    num_C_nonzero = 0;
     int    C_nonzero_m[36];
     int    C_nonzero_k[36];
-    double C_nonzero_val[36];
+    real_t C_nonzero_val[36];
     for (int m = 0; m < 6; m++) {
         for (int k = 0; k < 6; k++) {
-            if (material_matrix[m][k] != 0.0) {
-                const double shear_fix = (k >= 3) ? 0.5 : 1.0;
+            if (material_matrix[m][k] != real_t(0.0)) {
+                const real_t shear_fix = (k >= 3) ? real_t(0.5) : real_t(1.0);
                 C_nonzero_m[num_C_nonzero]   = m;
                 C_nonzero_k[num_C_nonzero]   = k;
                 C_nonzero_val[num_C_nonzero] = shear_fix*material_matrix[m][k];
@@ -257,9 +257,9 @@ void TLQS3D::tally_elem_arrays(
     for (int a = 0; a < num_nodes; a++) {
 
         // dpsig for node a: inv_J * grad_basis(a)
-        const double glob_grad_a_0 = inv_J[0][0]*gauss_point_grad_basis(a,0) + inv_J[0][1]*gauss_point_grad_basis(a,1) + inv_J[0][2]*gauss_point_grad_basis(a,2);
-        const double glob_grad_a_1 = inv_J[1][0]*gauss_point_grad_basis(a,0) + inv_J[1][1]*gauss_point_grad_basis(a,1) + inv_J[1][2]*gauss_point_grad_basis(a,2);
-        const double glob_grad_a_2 = inv_J[2][0]*gauss_point_grad_basis(a,0) + inv_J[2][1]*gauss_point_grad_basis(a,1) + inv_J[2][2]*gauss_point_grad_basis(a,2);
+        const real_t glob_grad_a_0 = inv_J[0][0]*gauss_point_grad_basis(a,0) + inv_J[0][1]*gauss_point_grad_basis(a,1) + inv_J[0][2]*gauss_point_grad_basis(a,2);
+        const real_t glob_grad_a_1 = inv_J[1][0]*gauss_point_grad_basis(a,0) + inv_J[1][1]*gauss_point_grad_basis(a,1) + inv_J[1][2]*gauss_point_grad_basis(a,2);
+        const real_t glob_grad_a_2 = inv_J[2][0]*gauss_point_grad_basis(a,0) + inv_J[2][1]*gauss_point_grad_basis(a,1) + inv_J[2][2]*gauss_point_grad_basis(a,2);
 
         glob_grad(a,0) = glob_grad_a_0;
         glob_grad(a,1) = glob_grad_a_1;
@@ -303,26 +303,26 @@ void TLQS3D::tally_elem_arrays(
 
     // K2_row is kept all zero except (at most) one entry per 3x3 block, see the row loop below
     for (int col = 0; col < num_dofs; col++) {
-        k2_row[col] = 0.0;
+        k2_row[col] = real_t(0.0);
     }
 
     // temp arrays for forming element matrix
-    double CT_matmul_B1_a[6][3];      // C^T * B1_a = C * B1_a (C symmetric), using transpose for better memory access pattern
-    double S_mul_glob_grad_a[3];   // only needs to be size 3 because of the sparsity and repeating nature of [S]9x9 and B2
+    real_t CT_matmul_B1_a[6][3];      // C^T * B1_a = C * B1_a (C symmetric), using transpose for better memory access pattern
+    real_t S_mul_glob_grad_a[3];   // only needs to be size 3 because of the sparsity and repeating nature of [S]9x9 and B2
 
     // looping through each node to avoid dynamic allocations
     // outer loop of node a
     for (int a = 0; a < num_nodes; a++) {
 
-        const double glob_grad_a_0 = glob_grad(a,0);
-        const double glob_grad_a_1 = glob_grad(a,1);
-        const double glob_grad_a_2 = glob_grad(a,2);
+        const real_t glob_grad_a_0 = glob_grad(a,0);
+        const real_t glob_grad_a_1 = glob_grad(a,1);
+        const real_t glob_grad_a_2 = glob_grad(a,2);
 
         // Precompute C^T * B1_a
         // Used in inner loop as: K1(3a+p, 3b+q) = sum_m CtB1_a[m][p] * B1_b[m][q]
         for (int i = 0; i < 6; i++) {
             for (int j = 0; j < 3; j++) {
-                CT_matmul_B1_a[i][j] = 0.0;
+                CT_matmul_B1_a[i][j] = real_t(0.0);
             }
         }
         for (int n = 0; n < num_C_nonzero; n++) {
@@ -344,7 +344,7 @@ void TLQS3D::tally_elem_arrays(
         // Fel: Fel(3a+p) -= weight * sum_k B1_a[k][p] * PK2[k]
         // minus because Fel = boundarcy forces - current force in the element aka Fel = F02 - F01
         for (int p = 0; p < 3; p++) {
-            double fel_val = 0.0;
+            real_t fel_val = real_t(0.0);
             for (int k = 0; k < 6; k++) {
                 fel_val += B1(k, 3*a+p) * PK2_curr_config[k];
             }
@@ -362,19 +362,19 @@ void TLQS3D::tally_elem_arrays(
 
         // Accumulate the 3 rows of Kel belonging to node a
         for (int p = 0; p < 3; p++) {
-            const double c0 = CT_matmul_B1_a[0][p];
-            const double c1 = CT_matmul_B1_a[1][p];
-            const double c2 = CT_matmul_B1_a[2][p];
-            const double c3 = CT_matmul_B1_a[3][p];
-            const double c4 = CT_matmul_B1_a[4][p];
-            const double c5 = CT_matmul_B1_a[5][p];
+            const real_t c0 = CT_matmul_B1_a[0][p];
+            const real_t c1 = CT_matmul_B1_a[1][p];
+            const real_t c2 = CT_matmul_B1_a[2][p];
+            const real_t c3 = CT_matmul_B1_a[3][p];
+            const real_t c4 = CT_matmul_B1_a[4][p];
+            const real_t c5 = CT_matmul_B1_a[5][p];
 
             // shift k2_scalar(b) from the q==p-1 slot to the q==p slot of each block, so K2_row
             // holds row p of K2 (k2_scalar(b) at col 3*b+p, 0 everywhere else)
             if (p > 0) {
                 for (int b = a; b < num_nodes; b++) {
                     k2_row[3*b+p]   = k2_row[3*b+p-1];
-                    k2_row[3*b+p-1] = 0.0;
+                    k2_row[3*b+p-1] = real_t(0.0);
                 }
             }
 
@@ -396,9 +396,9 @@ void TLQS3D::tally_elem_arrays(
             // redundant add is dropped.
             // x * 1.0 == x exactly (for every x, including inf/NaN/-0), so when the material fills
             // the element (vol_frac == 1.0, checked at run time) the multiply by vol_frac is skipped.
-            if (vol_frac == 1.0) {
+            if (vol_frac == real_t(1.0)) {
                 for (int col = row; col < num_dofs; col++) {
-                    double k1_val = c0 * B1_0[col];
+                    real_t k1_val = c0 * B1_0[col];
                     k1_val += c1 * B1_1[col];
                     k1_val += c2 * B1_2[col];
                     k1_val += c3 * B1_3[col];
@@ -409,7 +409,7 @@ void TLQS3D::tally_elem_arrays(
             }
             else {
                 for (int col = row; col < num_dofs; col++) {
-                    double k1_val = c0 * B1_0[col];
+                    real_t k1_val = c0 * B1_0[col];
                     k1_val += c1 * B1_1[col];
                     k1_val += c2 * B1_2[col];
                     k1_val += c3 * B1_3[col];
@@ -423,7 +423,7 @@ void TLQS3D::tally_elem_arrays(
         // reset the q==2 slots so K2_row is all zero again for the next node a
         // (only the slots of nodes b >= a were written)
         for (int b = a; b < num_nodes; b++) {
-            k2_row[3*b+2] = 0.0;
+            k2_row[3*b+2] = real_t(0.0);
         }
 
     }

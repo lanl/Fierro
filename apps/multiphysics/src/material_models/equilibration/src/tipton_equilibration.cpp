@@ -73,18 +73,18 @@ namespace TiptonEquilibrationModel {
                       CArrayKokkos<real_t>& GaussPoint_pres_denominator,
                       CArrayKokkos<real_t>& GaussPoint_volfrac_min,
                       CArrayKokkos<real_t>& GaussPoint_volfrac_limiter,
-                      const double dt,
-                      const double rk_alpha,
-                      const double fuzz,
-                      const double small)
+                      const real_t dt,
+                      const real_t rk_alpha,
+                      const real_t fuzz,
+                      const real_t small)
     {
 
         const size_t num_mats = Materials.num_mats;
 
-        GaussPoint_pres.set_values(0.0);
-        GaussPoint_pres_denominator.set_values(0.0);
-        GaussPoint_volfrac_min.set_values(1.0);
-        GaussPoint_volfrac_limiter.set_values(1.0);
+        GaussPoint_pres.set_values(real_t(0.0));
+        GaussPoint_pres_denominator.set_values(real_t(0.0));
+        GaussPoint_volfrac_min.set_values(real_t(1.0));
+        GaussPoint_volfrac_limiter.set_values(real_t(1.0));
 
         // calculate weigted average pressure at gauss points
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
@@ -194,18 +194,18 @@ namespace TiptonEquilibrationModel {
         CArrayKokkos<real_t>& GaussPoint_pres_denominator,
         CArrayKokkos<real_t>& GaussPoint_volfrac_min,
         CArrayKokkos<real_t>& GaussPoint_volfrac_limiter,
-        const double dt,
-        const double rk_alpha,
-        const double fuzz,
-        const double small)
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t fuzz,
+        const real_t small)
     {
 
         const size_t num_mats = Materials.num_mats;
 
-        GaussPoint_pres.set_values(0.0);
-        GaussPoint_pres_denominator.set_values(0.0);
-        GaussPoint_volfrac_min.set_values(1.0);
-        GaussPoint_volfrac_limiter.set_values(1.0);
+        GaussPoint_pres.set_values(real_t(0.0));
+        GaussPoint_pres_denominator.set_values(real_t(0.0));
+        GaussPoint_volfrac_min.set_values(real_t(1.0));
+        GaussPoint_volfrac_limiter.set_values(real_t(1.0));
 
         // calculate weigted average pressure at gauss points
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
@@ -323,9 +323,9 @@ namespace TiptonEquilibrationModel {
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const points_in_mat_t& points_in_mat_elem,
-        const double dt,
-        const double rk_alpha,
-        const double fuzz,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t fuzz,
         const size_t num_mat_elems,
         const size_t mat_id)
     {
@@ -346,16 +346,16 @@ namespace TiptonEquilibrationModel {
                 size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_sid, gauss_pt_lid);
 
                 // only do pressure relaxation on materials that have volfrac<1
-                if (MaterialPoints_volfrac(mat_id, mat_point_storage_lid )<1.0-fuzz){
+                if (MaterialPoints_volfrac(mat_id, mat_point_storage_lid )<real_t(1.0)-fuzz){
 
                     // the smallest volume fraction is used for limiting volfrac changes
-                    GaussPoint_volfrac_min(gauss_gid) = fmin(MaterialPoints_volfrac(mat_id, mat_point_storage_lid), GaussPoint_volfrac_min(gauss_gid)); // min volfrac
+                    GaussPoint_volfrac_min(gauss_gid) = Kokkos::fmin(MaterialPoints_volfrac(mat_id, mat_point_storage_lid), GaussPoint_volfrac_min(gauss_gid)); // min volfrac
 
                     // calculate average pressure
                     // GaussPoint_avg_press = sum_i(volfrac_i/K_i P_i)/ sum_i(volfrac_i/K_i)
                     // K_i = rho*c^2
-                    const double bulk_mod = MaterialPoints_den(mat_id, mat_point_storage_lid)*MaterialPoints_sspd(mat_id, mat_point_storage_lid)*MaterialPoints_sspd(mat_id, mat_point_storage_lid);
-                    const double R = MaterialPoints_volfrac(mat_id, mat_point_storage_lid)/(bulk_mod+fuzz); // ratio
+                    const real_t bulk_mod = MaterialPoints_den(mat_id, mat_point_storage_lid)*MaterialPoints_sspd(mat_id, mat_point_storage_lid)*MaterialPoints_sspd(mat_id, mat_point_storage_lid);
+                    const real_t R = MaterialPoints_volfrac(mat_id, mat_point_storage_lid)/(bulk_mod+fuzz); // ratio
                     GaussPoint_pres(gauss_gid) += R * MaterialPoints_pres(mat_id, mat_point_storage_lid);
                     GaussPoint_pres_denominator(gauss_gid) += R; // defined as R_bar
 
@@ -363,7 +363,7 @@ namespace TiptonEquilibrationModel {
                 else {
                     // single material
                     GaussPoint_pres(gauss_gid) = MaterialPoints_pres(mat_id, mat_point_storage_lid);
-                    GaussPoint_pres_denominator(gauss_gid) = 1.0;
+                    GaussPoint_pres_denominator(gauss_gid) = real_t(1.0);
                 } // end if
 
             } // end for gauss point loop 
@@ -381,7 +381,7 @@ namespace TiptonEquilibrationModel {
         const swage::Mesh_t& mesh,
         const CArrayKokkos<real_t>&  GaussPoint_pres,
         const CArrayKokkos<real_t>&  GaussPoint_pres_denominator,
-        const double fuzz){
+        const real_t fuzz){
 
         // loop over all ellements in the mesh
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -422,9 +422,9 @@ namespace TiptonEquilibrationModel {
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const points_in_mat_t& points_in_mat_elem,
-        const double dt,
-        const double rk_alpha,
-        const double fuzz,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t fuzz,
         const CArrayKokkos<real_t> &equilibration_global_vars,
         const size_t num_global_vars,
         const size_t num_mat_elems,
@@ -447,37 +447,37 @@ namespace TiptonEquilibrationModel {
                 size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_sid, gauss_pt_lid);
 
                 // divergence at the Gauss point
-                double div = 0.0;
+                real_t div = real_t(0.0);
                 for (size_t dim=0; dim<mesh.num_dims; dim++){
                     div += GaussPoint_vel_grad(gauss_gid, dim, dim);
                 }
 
 
                 // only do pressure relaxation on materials that have volfrac<1
-                if (MaterialPoints_volfrac(mat_id, mat_point_storage_lid)<1.0-fuzz){
+                if (MaterialPoints_volfrac(mat_id, mat_point_storage_lid)<real_t(1.0)-fuzz){
 
                     // volume fraction change, unlimited
-                    const double bulk_mod = MaterialPoints_den(mat_id, mat_point_storage_lid)*MaterialPoints_sspd(mat_id, mat_point_storage_lid)*MaterialPoints_sspd(mat_id, mat_point_storage_lid);
-                    const double R = MaterialPoints_volfrac(mat_id, mat_point_storage_lid)/(bulk_mod+fuzz);
-                    const double R_bar = GaussPoint_pres_denominator(gauss_gid);
-                    const double term_1 = R*(MaterialPoints_pres(mat_id, mat_point_storage_lid) - GaussPoint_pres(gauss_gid))/(equilibration_global_vars(1)+fuzz);  // 0.25 is used in V. Chiravalle's IASSD paper
-                    const double term_2 = (R/(R_bar+fuzz) - MaterialPoints_volfrac(mat_id, mat_point_storage_lid))*div*rk_alpha*dt;
+                    const real_t bulk_mod = MaterialPoints_den(mat_id, mat_point_storage_lid)*MaterialPoints_sspd(mat_id, mat_point_storage_lid)*MaterialPoints_sspd(mat_id, mat_point_storage_lid);
+                    const real_t R = MaterialPoints_volfrac(mat_id, mat_point_storage_lid)/(bulk_mod+fuzz);
+                    const real_t R_bar = GaussPoint_pres_denominator(gauss_gid);
+                    const real_t term_1 = R*(MaterialPoints_pres(mat_id, mat_point_storage_lid) - GaussPoint_pres(gauss_gid))/(equilibration_global_vars(1)+fuzz);  // 0.25 is used in V. Chiravalle's IASSD paper
+                    const real_t term_2 = (R/(R_bar+fuzz) - MaterialPoints_volfrac(mat_id, mat_point_storage_lid))*div*rk_alpha*dt;
 
                     MaterialPoints_delta_volfrac(mat_id, mat_point_storage_lid) = term_1 + term_2;
 
                     // limit volume fraction change, ensuring positive volumes after relaxation
                     // coef*delta_vol <= param*smallest_volume
-                    const double param = fmin(1.0, fmax(0.0, equilibration_global_vars(0)));  // ensuring it is bounded between 0:1
+                    const real_t param = Kokkos::fmin(real_t(1.0), Kokkos::fmax(real_t(0.0), equilibration_global_vars(0)));  // ensuring it is bounded between 0:1
 
-                    GaussPoint_volfrac_limiter(gauss_gid) = fmin(GaussPoint_volfrac_limiter(gauss_gid), 
-                                                                 param*GaussPoint_volfrac_min(gauss_gid)/(fabs(MaterialPoints_delta_volfrac(mat_id, mat_point_storage_lid)) + fuzz));
+                    GaussPoint_volfrac_limiter(gauss_gid) = Kokkos::fmin(GaussPoint_volfrac_limiter(gauss_gid), 
+                                                                 param*GaussPoint_volfrac_min(gauss_gid)/(Kokkos::fabs(MaterialPoints_delta_volfrac(mat_id, mat_point_storage_lid)) + fuzz));
                     
 
                 } // end if volfrac<1
                 else {
                     // single material 
-                    MaterialPoints_delta_volfrac(mat_id, mat_point_storage_lid) = 0.0; 
-                    GaussPoint_volfrac_limiter(gauss_gid) = 1.0;  
+                    MaterialPoints_delta_volfrac(mat_id, mat_point_storage_lid) = real_t(0.0); 
+                    GaussPoint_volfrac_limiter(gauss_gid) = real_t(1.0);  
                 } // end check if multiple materials are present
 
             } // end for gauss point loop 
@@ -510,9 +510,9 @@ namespace TiptonEquilibrationModel {
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const points_in_mat_t& points_in_mat_elem,
-        const double dt,
-        const double rk_alpha,
-        const double fuzz,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t fuzz,
         const size_t num_mat_elems,
         const size_t mat_id)
     {
@@ -534,7 +534,7 @@ namespace TiptonEquilibrationModel {
 
 
                 // limited volfrac change 
-                const double delta_volfrac = GaussPoint_volfrac_limiter(gauss_gid)*MaterialPoints_delta_volfrac_inout(mat_id, mat_point_storage_lid);
+                const real_t delta_volfrac = GaussPoint_volfrac_limiter(gauss_gid)*MaterialPoints_delta_volfrac_inout(mat_id, mat_point_storage_lid);
 
                 // ------------------
                 // update the state
@@ -542,20 +542,20 @@ namespace TiptonEquilibrationModel {
 
 
                 // --- Volume fraction and its change ---
-                const double volfrac_orig = MaterialPoints_volfrac_inout(mat_id, mat_point_storage_lid);
-                const double volfrac_new = MaterialPoints_volfrac_inout(mat_id, mat_point_storage_lid) +  delta_volfrac;  // note: change in volfrac was limited above here
-                MaterialPoints_volfrac_inout(mat_id, mat_point_storage_lid) = fmin(1.0, fmax(0.0, volfrac_new));  
+                const real_t volfrac_orig = MaterialPoints_volfrac_inout(mat_id, mat_point_storage_lid);
+                const real_t volfrac_new = MaterialPoints_volfrac_inout(mat_id, mat_point_storage_lid) +  delta_volfrac;  // note: change in volfrac was limited above here
+                MaterialPoints_volfrac_inout(mat_id, mat_point_storage_lid) = Kokkos::fmin(real_t(1.0), Kokkos::fmax(real_t(0.0), volfrac_new));  
                 MaterialPoints_delta_volfrac_inout(mat_id, mat_point_storage_lid) = MaterialPoints_volfrac_inout(mat_id, mat_point_storage_lid)-volfrac_orig;           
 
                 
                 // --- Specific internal energy ---
-                const double vol_change = MaterialPoints_delta_volfrac_inout(mat_id, mat_point_storage_lid)*GaussPoint_vol(gauss_gid)*MaterialPoints_volfrac_in(mat_id, mat_point_storage_lid);
-                MaterialPoints_sie(mat_id, mat_point_storage_lid) -= GaussPoint_pres(gauss_gid)*vol_change/(MaterialPoints_mass(mat_id, mat_point_storage_lid)+1.0e-20);
+                const real_t vol_change = MaterialPoints_delta_volfrac_inout(mat_id, mat_point_storage_lid)*GaussPoint_vol(gauss_gid)*MaterialPoints_volfrac_in(mat_id, mat_point_storage_lid);
+                MaterialPoints_sie(mat_id, mat_point_storage_lid) -= GaussPoint_pres(gauss_gid)*vol_change/(MaterialPoints_mass(mat_id, mat_point_storage_lid)+real_t(1.0e-20));
             
 
                 // --- Density ---
                 MaterialPoints_den(mat_id, mat_point_storage_lid) = MaterialPoints_mass(mat_id, mat_point_storage_lid) / 
-                        (GaussPoint_vol(gauss_gid)*MaterialPoints_volfrac_inout(mat_id, mat_point_storage_lid)*MaterialPoints_volfrac_in(mat_id, mat_point_storage_lid) + 1.0e-20);
+                        (GaussPoint_vol(gauss_gid)*MaterialPoints_volfrac_inout(mat_id, mat_point_storage_lid)*MaterialPoints_volfrac_in(mat_id, mat_point_storage_lid) + real_t(1.0e-20));
 
                         
                 // --- Pressure ---

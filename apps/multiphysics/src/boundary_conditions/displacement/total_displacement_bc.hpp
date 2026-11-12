@@ -66,10 +66,10 @@ static void displacement(const swage::Mesh_t& mesh,
         const DCArrayKokkos<real_t>& bc_state_vars,
         const CArrayKokkos<bool>& constrained_dof,
         const CArrayKokkos<real_t>& displacement_step,
-        const double dt,
-        const double time_value,
-        const double time_start,
-        const double time_end,
+        const real_t dt,
+        const real_t time_value,
+        const real_t time_start,
+        const real_t time_end,
         const size_t bdy_node_gid,
         const size_t bdy_set)
 {
@@ -77,9 +77,9 @@ static void displacement(const swage::Mesh_t& mesh,
     // disp bc global vars col 1: final uy
     // disp bc global vars col 2: final uz
 
-    const double total_step_target_0 = disp_bc_global_vars(bdy_set, 0) * (dt / (time_end - time_start));
-    const double total_step_target_1 = disp_bc_global_vars(bdy_set, 1) * (dt / (time_end - time_start));
-    const double total_step_target_2 = disp_bc_global_vars(bdy_set, 2) * (dt / (time_end - time_start));
+    const real_t total_step_target_0 = disp_bc_global_vars(bdy_set, 0) * (dt / (time_end - time_start));
+    const real_t total_step_target_1 = disp_bc_global_vars(bdy_set, 1) * (dt / (time_end - time_start));
+    const real_t total_step_target_2 = disp_bc_global_vars(bdy_set, 2) * (dt / (time_end - time_start));
 
     displacement_step(bdy_node_gid, 0) = total_step_target_0;
     displacement_step(bdy_node_gid, 1) = total_step_target_1;
