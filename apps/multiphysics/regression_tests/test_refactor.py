@@ -28,7 +28,7 @@ sgh_contact = ["slanted_block_bounce", "slanted_impact", "SGTM_cooling_cube", \
                "TaylorAnvil_Contact"]
 
 sgh_fracture = ["fracture_mode_1", "fracture_mode_2", \
-                "fracture_reorientation"]
+                "fracture_reorientation", "fracture_variable_rate"]
 
 sgtm = ["SGTM_cooling_cube"]
 

@@ -417,7 +417,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
     reorientation_validation_mode = false;
     
     // temporary scratch array used to scan BC data for reorientaion mode
-    DCArrayKokkos<double> reorient_params(5, "reorient_params");
+    DCArrayKokkos<double> reorient_params(6, "reorient_params");
     DCArrayKokkos<int> found_reorient(1, "found_reorient");
     found_reorient.set_values(0); // initialize to zero
     reorient_params.set_values(0.0); // initialize to zero
@@ -425,6 +425,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
     // local references for device access, so RUN kernel can read BC data
     auto bc_enums = BoundaryConditions.BoundaryConditionEnums;
     auto vel_bc_vars = BoundaryConditions.velocity_bc_global_vars;
+    auto num_vel_bc_vars = BoundaryConditions.num_velocity_bc_global_vars; // number of values given in the .yaml for each BC
     size_t num_bcs = BoundaryConditions.num_bcs;
 
     FOR_ALL(i, 0, 1, {
@@ -447,6 +448,13 @@ void cohesive_zones_t::initialize_reorientation_mode(
                 reorient_params(2) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::omega_z);
                 reorient_params(3) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::cz_opening_rate);
                 reorient_params(4) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::x_interface);
+                // optional 6th value: quadratic opening coefficient beta (stays 0 if the .yaml gives only 5 values)
+                // this check is needed because each BC only stores as many values as its .yaml lists
+                // without check, a 5-value input would read past the end of its row
+                const size_t beta_id = UserDefinedVelocityBC::BCVars::cz_opening_beta;
+                if (num_vel_bc_vars(bdy_set) > beta_id) {
+                    reorient_params(5) = vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::cz_opening_beta);
+                }
                 break;
             }
         }
@@ -467,6 +475,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
     omega_z = reorient_params.host(2);
     cz_opening_rate = reorient_params.host(3);
     x_interface = reorient_params.host(4);
+    cz_opening_beta = reorient_params.host(5);
 
     // allocate reorientation-only storage; this happens only when validation mode is enabled
     initial_coords = CArrayKokkos<double>(num_nodes, 3, "initial_coords");
