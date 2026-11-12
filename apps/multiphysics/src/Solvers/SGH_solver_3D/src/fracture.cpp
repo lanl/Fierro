@@ -1383,7 +1383,8 @@ void cohesive_zone_var_update(
             //const double tau_j   = stress_bc_global_vars(bdy_set, prony_base + 1); // in Gavin's code, this is Eandrhom(j,1)
             const double tau_j = prony_params(j, 1);
             const double tau_eff = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min(); // same logic as Gavin's code to avoid div by zero
-            const double sigma_j = delta_internal_vars(i, 4 + j); // used to update prony stresses
+            const double sigma_j = internal_vars(i, 4 + j); // sigma_j(t): Prony recursive variable at the start of the step
+                                                            // incrementalized residual traction uses sigma_j(t), not sigma_j(t+dt)), which is delta_internal_vars(i, 4 + j) 
             sigma_sum     += sigma_j;
             sigma_sum_exp += (1.0 - exp(-dt_stage / tau_eff)) * sigma_j;
         }
