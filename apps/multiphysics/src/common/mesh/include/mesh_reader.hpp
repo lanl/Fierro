@@ -107,33 +107,33 @@ public:
     void set_mesh_file(char* MESH);
 
     void read_mesh(swage::Mesh_t& mesh,
-                   MPICArrayKokkos<double>& node_coords,
+                   MPICArrayKokkos<real_t>& node_coords,
                    MeshInput_t& mesh_inps,
                    int           num_dims,
                    bool HexN);
 
     void read_ensight_mesh(swage::Mesh_t& mesh,
-                           MPICArrayKokkos<double>& node_coords,
+                           MPICArrayKokkos<real_t>& node_coords,
                            MeshInput_t& mesh_inps,
                            int num_dims);
 
     void read_Abaqus_mesh(swage::Mesh_t& mesh,
-                          MPICArrayKokkos<double>& node_coords,
+                          MPICArrayKokkos<real_t>& node_coords,
                           MeshInput_t& mesh_inps,
                           int num_dims);
 
     void read_vtk_mesh(swage::Mesh_t& mesh,
-                       MPICArrayKokkos<double>& node_coords,
+                       MPICArrayKokkos<real_t>& node_coords,
                        MeshInput_t& mesh_inps,
                        int num_dims);
 
     void read_vtk_hexN_mesh(swage::Mesh_t& mesh,
-                            MPICArrayKokkos<double>& node_coords,
+                            MPICArrayKokkos<real_t>& node_coords,
                             MeshInput_t& mesh_inps,
                             int num_dims);
 
     void read_vtu_mesh(swage::Mesh_t& mesh,
-                       MPICArrayKokkos<double>& node_coords,
+                       MPICArrayKokkos<real_t>& node_coords,
                        MeshInput_t& mesh_inps,
                        int num_dims,
                        bool HexN);

@@ -53,8 +53,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::init_corner_node_masses_zero_rz(const swage::Mesh_t& mesh,
-                                            const DCArrayKokkos<double>& node_mass,
-                                            const DCArrayKokkos<double>& corner_mass) const
+                                            const DCArrayKokkos<real_t>& node_mass,
+                                            const DCArrayKokkos<real_t>& corner_mass) const
 {
                     
     // calculate the nodal mass
@@ -151,10 +151,10 @@ void SGHRZ::setup(SimulationParameters_t& SimulationParamaters,
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass_rz(const Material_t& Materials,
                          const swage::Mesh_t& mesh,
-                         const MPICArrayKokkos<double>& node_coords,
-                         const DCArrayKokkos<double>& node_mass,
-                         const DCArrayKokkos<double>& corner_mass,
-                         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+                         const MPICArrayKokkos<real_t>& node_coords,
+                         const DCArrayKokkos<real_t>& node_mass,
+                         const DCArrayKokkos<real_t>& corner_mass,
+                         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
                          const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                          const size_t num_mat_elems,
                          const size_t mat_id)
@@ -200,9 +200,9 @@ void calc_corner_mass_rz(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_mass_rz(const swage::Mesh_t& mesh,
-                    const MPICArrayKokkos<double>& node_coords,
-                    const DCArrayKokkos<double>& node_mass,
-                    const DCArrayKokkos<double>& corner_mass)
+                    const MPICArrayKokkos<real_t>& node_coords,
+                    const DCArrayKokkos<real_t>& node_mass,
+                    const DCArrayKokkos<real_t>& corner_mass)
 {
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {

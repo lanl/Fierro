@@ -56,7 +56,7 @@ struct Table_t{
     // Data stored as a 2D array (num_rows x num_columns) using MATAR's DCArrayKokkos.
     // - Rows correspond to data points.
     // - Columns correspond to variables (e.g., [time, x, y, z, power] or [temp, property]).
-    DCArrayKokkos<double> data;
+    DCArrayKokkos<real_t> data;
 
 
     // Default Constructor

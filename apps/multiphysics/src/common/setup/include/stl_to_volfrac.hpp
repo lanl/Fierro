@@ -55,8 +55,8 @@ using namespace mtr;
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
-double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
-                           const CArrayKokkos <double> &node_basis, 
+double calc_scalar_in_elem(const CArrayKokkos<real_t> &node_scalar,
+                           const CArrayKokkos<real_t> &node_basis, 
                            const DCArrayKokkos <size_t> &nodes_in_elems,
                            const size_t elem_gid,
                            const size_t eval_pnt_rid);
@@ -77,9 +77,9 @@ double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_INLINE_FUNCTION
-void calc_vector_in_elem(CArrayKokkos <double> &vec_pnt,
-                         const CArrayKokkos <double> &node_vec,
-                         const CArrayKokkos <double> &node_basis, 
+void calc_vector_in_elem(CArrayKokkos<real_t> &vec_pnt,
+                         const CArrayKokkos<real_t> &node_vec,
+                         const CArrayKokkos<real_t> &node_basis, 
                          const DCArrayKokkos <size_t> &nodes_in_elems,
                          const size_t elem_gid,
                          const size_t eval_pnt_rid);
@@ -98,8 +98,8 @@ void calc_vector_in_elem(CArrayKokkos <double> &vec_pnt,
 /// \param filename the file name of the STL file
 ///
 ///////////////////////////////////////////////////////////////////////////// 
-int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill, 
-                      const MPICArrayKokkos <double> &node_coords,
+int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill, 
+                      const MPICArrayKokkos<real_t> &node_coords,
                       const DCArrayKokkos <size_t> &nodes_in_elem,
                       const size_t num_nodes,
                       const double scale_x,

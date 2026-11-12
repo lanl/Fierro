@@ -168,13 +168,13 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
 
     // temporary arrays for boundary condition variables
-    DCArrayKokkos<double> tempVelocityBCGlobalVars (num_bcs, 100, "temporary_velocity_bc_global_values");
-    DCArrayKokkos<double> tempDisplacementBCGlobalVars (num_bcs, 100, "temporary_displacement_bc_global_values");
+    DCArrayKokkos<real_t> tempVelocityBCGlobalVars (num_bcs, 100, "temporary_velocity_bc_global_values");
+    DCArrayKokkos<real_t> tempDisplacementBCGlobalVars (num_bcs, 100, "temporary_displacement_bc_global_values");
 
-    DCArrayKokkos<double> tempTemperatureBCGlobalVars (num_bcs, 100, "temporary_temperature_bc_global_values");
-    DCArrayKokkos<double> tempStressBCGlobalVars (num_bcs, 100, "temporary_stress_bc_global_values");
-    DCArrayKokkos<double> tempQstatxStressBCGlobalVars (num_bcs, 100, "temporary_qstatx_stress_bc_global_values");
-    // DCArrayKokkos<double> tempHeatFluxBCGlobalVars (num_bcs, 100, "temporary_heat_flux_bc_global_values");
+    DCArrayKokkos<real_t> tempTemperatureBCGlobalVars (num_bcs, 100, "temporary_temperature_bc_global_values");
+    DCArrayKokkos<real_t> tempStressBCGlobalVars (num_bcs, 100, "temporary_stress_bc_global_values");
+    DCArrayKokkos<real_t> tempQstatxStressBCGlobalVars (num_bcs, 100, "temporary_qstatx_stress_bc_global_values");
+    // DCArrayKokkos<real_t> tempHeatFluxBCGlobalVars (num_bcs, 100, "temporary_heat_flux_bc_global_values");
     
     BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars");
     BoundaryConditions.num_displacement_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_displacement_bc_global_vars");
@@ -200,7 +200,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
 
     // state place holder is here
-    BoundaryConditions.bc_state_vars  = DCArrayKokkos<double>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
+    BoundaryConditions.bc_state_vars  = DCArrayKokkos<real_t>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
 
     // loop over the BC specified
     for (size_t bc_id = 0; bc_id < num_bcs; bc_id++) {
@@ -1072,15 +1072,15 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
 
      // allocate ragged right memory to hold the model global variables
-    BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
+    BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos<real_t>(BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
 
-    BoundaryConditions.displacement_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_displacement_bc_global_vars, "BoundaryConditions.displacement_bc_global_vars");
+    BoundaryConditions.displacement_bc_global_vars = RaggedRightArrayKokkos<real_t>(BoundaryConditions.num_displacement_bc_global_vars, "BoundaryConditions.displacement_bc_global_vars");
 
-    BoundaryConditions.temperature_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_temperature_bc_global_vars, "BoundaryConditions.temperature_bc_global_vars");
+    BoundaryConditions.temperature_bc_global_vars = RaggedRightArrayKokkos<real_t>(BoundaryConditions.num_temperature_bc_global_vars, "BoundaryConditions.temperature_bc_global_vars");
 
-    BoundaryConditions.stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_stress_bc_global_vars, "BoundaryConditions.stress_bc_global_vars");
+    BoundaryConditions.stress_bc_global_vars = RaggedRightArrayKokkos<real_t>(BoundaryConditions.num_stress_bc_global_vars, "BoundaryConditions.stress_bc_global_vars");
 
-    BoundaryConditions.qstatx_stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_qstatx_stress_bc_global_vars, "BoundaryConditions.qstatx_stress_bc_global_vars");
+    BoundaryConditions.qstatx_stress_bc_global_vars = RaggedRightArrayKokkos<real_t>(BoundaryConditions.num_qstatx_stress_bc_global_vars, "BoundaryConditions.qstatx_stress_bc_global_vars");
    
 
     // ... allocate other bc global vars here

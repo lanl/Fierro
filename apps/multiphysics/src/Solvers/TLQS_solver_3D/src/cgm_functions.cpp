@@ -99,13 +99,13 @@ void TLQS3D::get_r0(
     const DCArrayKokkos <size_t>& nodes_in_elem,
     const RaggedRightArrayKokkos <size_t>& elems_in_node,
     const RaggedRightArrayKokkos <size_t>& node_lid_in_elem,
-    const CArrayKokkos <double>& F_elem,
-    const CArrayKokkos <double>& K_elem,
+    const CArrayKokkos<real_t>& F_elem,
+    const CArrayKokkos<real_t>& K_elem,
     const CArrayKokkos <bool>& constrained_dof,
-    const CArrayKokkos <double>& displacement_iter,
-    MPICArrayKokkos <double>& r0,
-    const CArrayKokkos <double>& x_elem,
-    const CArrayKokkos <double>& y_elem
+    const CArrayKokkos<real_t>& displacement_iter,
+    MPICArrayKokkos<real_t>& r0,
+    const CArrayKokkos<real_t>& x_elem,
+    const CArrayKokkos<real_t>& y_elem
 )
 {
     // r0 = A * x
@@ -136,14 +136,14 @@ double TLQS3D::get_alpha(
     const size_t num_nodes_in_elem,
     const size_t num_owned_nodes,
     const DCArrayKokkos<size_t>& nodes_in_elem,
-    const CArrayKokkos<double>& K_elem,
+    const CArrayKokkos<real_t>& K_elem,
     const CArrayKokkos<bool>& constrained_dof,
     const double rktrk,
-    const CArrayKokkos<double>& p,
-    MPICArrayKokkos<double>& temporary,
+    const CArrayKokkos<real_t>& p,
+    MPICArrayKokkos<real_t>& temporary,
     const DCArrayKokkos<bool> shared_tally_owned_nodes,
-    const CArrayKokkos<double>& x_elem,
-    const CArrayKokkos<double>& y_elem
+    const CArrayKokkos<real_t>& x_elem,
+    const CArrayKokkos<real_t>& y_elem
     )
 {
     // Kernel 1: compute temporary = A * p (element based, packed symmetric K_elem)
@@ -172,10 +172,10 @@ double TLQS3D::get_alpha(
 
 void TLQS3D::get_rkp1(
     const size_t num_nodes,
-    const MPICArrayKokkos<double>& rk,
-    const MPICArrayKokkos<double>& Kp,
+    const MPICArrayKokkos<real_t>& rk,
+    const MPICArrayKokkos<real_t>& Kp,
     const double alpha,
-    MPICArrayKokkos<double>& rkp1)
+    MPICArrayKokkos<real_t>& rkp1)
 {
     // r_{k+1} = r_k - alpha * K * p
     // K * p was already computed (and communicated) by get_alpha and p has not changed since,

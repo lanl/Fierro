@@ -72,9 +72,9 @@ enum BCVars {
 KOKKOS_FUNCTION
 static void velocity(const swage::Mesh_t& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
-    const DCArrayKokkos<double>& bc_state_vars,
-    const MPICArrayKokkos<double>& node_vel,
+    const RaggedRightArrayKokkos<real_t>& vel_bc_global_vars,
+    const DCArrayKokkos<real_t>& bc_state_vars,
+    const MPICArrayKokkos<real_t>& node_vel,
     const double time_value,
     const size_t rk_stage,
     const size_t bdy_node_gid,

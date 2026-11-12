@@ -82,7 +82,7 @@ static int get_id(int i, int j, int k, int num_i, int num_j)
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshBuilder::build_mesh(swage::Mesh_t& mesh,
-                MPICArrayKokkos<double>& node_coords,
+                MPICArrayKokkos<real_t>& node_coords,
                 SimulationParameters_t& SimulationParamaters,
                 bool HexN)
 {
@@ -134,7 +134,7 @@ void MeshBuilder::build_mesh(swage::Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshBuilder::build_2d_box(swage::Mesh_t& mesh,
-                  MPICArrayKokkos<double>& node_coords,
+                  MPICArrayKokkos<real_t>& node_coords,
                   SimulationParameters_t& SimulationParamaters) const
 {
     printf("Creating a 2D box mesh \n");
@@ -179,7 +179,7 @@ void MeshBuilder::build_2d_box(swage::Mesh_t& mesh,
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
 
-    node_coords = MPICArrayKokkos<double>(num_nodes, num_dim, "node_coordinates_in_mesh_io");
+    node_coords = MPICArrayKokkos<real_t>(num_nodes, num_dim, "node_coordinates_in_mesh_io");
 
     // --- Build nodes ---
 
@@ -249,7 +249,7 @@ void MeshBuilder::build_2d_box(swage::Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshBuilder::build_2d_polar(swage::Mesh_t& mesh,
-                    MPICArrayKokkos<double>& node_coords,
+                    MPICArrayKokkos<real_t>& node_coords,
                     SimulationParameters_t& SimulationParamaters) const
 {
     printf("Creating a 2D polar mesh \n");
@@ -296,7 +296,7 @@ void MeshBuilder::build_2d_polar(swage::Mesh_t& mesh,
 
     // intialize node variables
     mesh.initialize_nodes(num_nodes);
-    node_coords = MPICArrayKokkos<double>(num_nodes, num_dim, "node_coordinates_in_mesh_io");
+    node_coords = MPICArrayKokkos<real_t>(num_nodes, num_dim, "node_coordinates_in_mesh_io");
 
     // populate the point data structures
     for (int j = 0; j < num_points_j; j++) {
@@ -372,7 +372,7 @@ void MeshBuilder::build_2d_polar(swage::Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshBuilder::build_3d_box(swage::Mesh_t& mesh,
-                  MPICArrayKokkos<double>& node_coords,
+                  MPICArrayKokkos<real_t>& node_coords,
                   SimulationParameters_t& SimulationParamaters) const
 {
     printf("Creating a 3D box mesh \n");
@@ -414,7 +414,7 @@ void MeshBuilder::build_3d_box(swage::Mesh_t& mesh,
 
     // initialize mesh node variables
     mesh.initialize_nodes(num_nodes);
-    node_coords = MPICArrayKokkos<double>(num_nodes, num_dim, "node_coordinates_in_mesh_io");
+    node_coords = MPICArrayKokkos<real_t>(num_nodes, num_dim, "node_coordinates_in_mesh_io");
 
     // --- Build nodes ---
 
@@ -493,7 +493,7 @@ void MeshBuilder::build_3d_box(swage::Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshBuilder::build_3d_HexN_box(swage::Mesh_t& mesh,
-                       MPICArrayKokkos<double>& node_coords,
+                       MPICArrayKokkos<real_t>& node_coords,
                        SimulationParameters_t& SimulationParamaters) const
 {
     const int num_dim = 3;
@@ -558,7 +558,7 @@ void MeshBuilder::build_3d_HexN_box(swage::Mesh_t& mesh,
     // initialize node variables
     mesh.initialize_nodes(num_points);
 
-    node_coords = MPICArrayKokkos<double>(num_points, num_dim, "node_coordinates_in_mesh_io");
+    node_coords = MPICArrayKokkos<real_t>(num_points, num_dim, "node_coordinates_in_mesh_io");
 
     // populate the point data structures
     for (int k = 0; k < num_points_k; k++){

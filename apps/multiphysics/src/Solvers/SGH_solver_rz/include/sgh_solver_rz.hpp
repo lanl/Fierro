@@ -194,20 +194,20 @@ public:
                         
     void init_corner_node_masses_zero_rz(
         const swage::Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_mass,
-        const DCArrayKokkos<double>& corner_mass) const;
+        const DCArrayKokkos<real_t>& node_mass,
+        const DCArrayKokkos<real_t>& corner_mass) const;
 
     // **** Functions defined in boundary.cpp **** //
     void boundary_velocity_rz(
         const swage::Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        MPICArrayKokkos<double>& node_vel,
+        MPICArrayKokkos<real_t>& node_vel,
         const double time_value) const;
 
     void boundary_contact_rz(
         const swage::Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
-        MPICArrayKokkos<double>& node_vel,
+        MPICArrayKokkos<real_t>& node_vel,
         const double time_value) const;
 
     // **** Functions defined in energy_SGHRZ.cpp **** //
@@ -215,14 +215,14 @@ public:
         const double rk_alpha,
         const double dt,
         const swage::Mesh_t& mesh,
-        const MPICArrayKokkos<double>& node_vel,
-        const MPICArrayKokkos<double>& node_vel_n0,
-        const MPICArrayKokkos<double>& node_coords,
-        const MPICArrayKokkos<double>& node_coords_n0,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-        const DRaggedRightArrayKokkos<double>& MaterialCorners_force,
+        const MPICArrayKokkos<real_t>& node_vel,
+        const MPICArrayKokkos<real_t>& node_vel_n0,
+        const MPICArrayKokkos<real_t>& node_coords,
+        const MPICArrayKokkos<real_t>& node_coords_n0,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie_n0,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass,
+        const DRaggedRightArrayKokkos<real_t>& MaterialCorners_force,
         const corners_in_mat_t corners_in_mat_elem,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
@@ -232,21 +232,21 @@ public:
     void get_force_rz(
         const Material_t& Materials,
         const swage::Mesh_t& mesh,
-        const DCArrayKokkos<double>& GaussPoints_vol,
-        const DCArrayKokkos<double>& GaussPoints_vel_grad,
-        const MPICArrayKokkos<double>& GaussPoints_shock_detector,
+        const DCArrayKokkos<real_t>& GaussPoints_vol,
+        const DCArrayKokkos<real_t>& GaussPoints_vel_grad,
+        const MPICArrayKokkos<real_t>& GaussPoints_shock_detector,
         const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-        const DCArrayKokkos<double>& corner_force,
-        const MPICArrayKokkos<double>& node_coords,
-        const MPICArrayKokkos<double>& node_vel,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-        const DRaggedRightArrayKokkos<double>& MaterialCorners_force,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_geo_volfrac,
+        const DCArrayKokkos<real_t>& corner_force,
+        const MPICArrayKokkos<real_t>& node_coords,
+        const MPICArrayKokkos<real_t>& node_vel,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<real_t>& MaterialCorners_force,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_volfrac,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_geo_volfrac,
         const corners_in_mat_t,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
@@ -263,27 +263,27 @@ public:
         double dt,
         const size_t num_dims,
         const size_t num_nodes,
-        MPICArrayKokkos<double>& node_coords,
-        const MPICArrayKokkos<double>& node_coords_n0,
-        const MPICArrayKokkos<double>& node_vel,
-        const MPICArrayKokkos<double>& node_vel_n0) const;
+        MPICArrayKokkos<real_t>& node_coords,
+        const MPICArrayKokkos<real_t>& node_coords_n0,
+        const MPICArrayKokkos<real_t>& node_vel,
+        const MPICArrayKokkos<real_t>& node_vel_n0) const;
 
     // **** Functions defined in momentum.cpp **** //
     void update_velocity_rz(
         double rk_alpha,
         double dt,
         const swage::Mesh_t& mesh,
-        MPICArrayKokkos<double>& node_vel,
-        const MPICArrayKokkos<double>& node_vel_n0,
-        const DCArrayKokkos<double>& node_mass,
-        const DCArrayKokkos<double>& corner_force) const;
+        MPICArrayKokkos<real_t>& node_vel,
+        const MPICArrayKokkos<real_t>& node_vel_n0,
+        const DCArrayKokkos<real_t>& node_mass,
+        const DCArrayKokkos<real_t>& corner_force) const;
 
     void get_velgrad_rz(
-        DCArrayKokkos<double>& elem_vel_grad,
+        DCArrayKokkos<real_t>& elem_vel_grad,
         const swage::Mesh_t mesh,
-        const MPICArrayKokkos<double>& node_coords,
-        const MPICArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& elem_vol) const;
+        const MPICArrayKokkos<real_t>& node_coords,
+        const MPICArrayKokkos<real_t>& node_vel,
+        const DCArrayKokkos<real_t>& elem_vol) const;
 
     KOKKOS_FUNCTION
     void decompose_vel_grad_rz(const ViewCArrayKokkos<double>& D_tensor,
@@ -291,35 +291,35 @@ public:
                                const ViewCArrayKokkos<double>& vel_grad) const;
 
     void get_divergence_rz(
-        DCArrayKokkos<double>& GaussPoints_div,
+        DCArrayKokkos<real_t>& GaussPoints_div,
         const swage::Mesh_t mesh,
-        const MPICArrayKokkos<double>& node_coords,
-        const MPICArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& GaussPoints_vol) const;
+        const MPICArrayKokkos<real_t>& node_coords,
+        const MPICArrayKokkos<real_t>& node_vel,
+        const DCArrayKokkos<real_t>& GaussPoints_vol) const;
 
     // **** Functions defined in properties.cpp **** //
     void update_state_rz(
         const Material_t& Materials,
         const swage::Mesh_t& mesh,
-        const MPICArrayKokkos<double>& node_coords,
-        const MPICArrayKokkos<double>& node_coords_t0,
-        const MPICArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& GaussPoints_vel_grad,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_geo_volfrac,
-        const DCArrayKokkos<double>& GaussPoints_vol,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
+        const MPICArrayKokkos<real_t>& node_coords,
+        const MPICArrayKokkos<real_t>& node_coords_t0,
+        const MPICArrayKokkos<real_t>& node_vel,
+        const DCArrayKokkos<real_t>& GaussPoints_vel_grad,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress_n0,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_volfrac,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_geo_volfrac,
+        const DCArrayKokkos<real_t>& GaussPoints_vol,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_strength_state_vars,
         const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad_t0,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const double time_value,
         const double dt,
@@ -331,21 +331,21 @@ public:
     void update_stress(
         const Material_t& Materials,
         const swage::Mesh_t& mesh,
-        const DCArrayKokkos<double>& GaussPoints_vol,
-        const MPICArrayKokkos<double>& node_coords,
-        const MPICArrayKokkos<double>& node_coords_t0,
-        const MPICArrayKokkos<double>& node_vel,
-        const DCArrayKokkos<double>& GaussPoints_vel_grad,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
+        const DCArrayKokkos<real_t>& GaussPoints_vol,
+        const MPICArrayKokkos<real_t>& node_coords,
+        const MPICArrayKokkos<real_t>& node_coords_t0,
+        const MPICArrayKokkos<real_t>& node_vel,
+        const DCArrayKokkos<real_t>& GaussPoints_vel_grad,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress_n0,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_strength_state_vars,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad_t0,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
@@ -360,14 +360,14 @@ public:
     // **** Functions defined in time_integration.cpp **** //
     // NOTE: Consider pulling up
     void rk_init_rz(
-        MPICArrayKokkos<double>& node_coords,
-        MPICArrayKokkos<double>& node_coords_n0,
-        MPICArrayKokkos<double>& node_vel,
-        MPICArrayKokkos<double>& node_vel_n0,
-        DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-        DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
-        DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-        DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
+        MPICArrayKokkos<real_t>& node_coords,
+        MPICArrayKokkos<real_t>& node_coords_n0,
+        MPICArrayKokkos<real_t>& node_vel,
+        MPICArrayKokkos<real_t>& node_vel_n0,
+        DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+        DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie_n0,
+        DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+        DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress_n0,
         const size_t num_dims,
         const size_t num_elems,
         const size_t num_nodes,
@@ -377,10 +377,10 @@ public:
 
     void get_timestep_rz(
         swage::Mesh_t& mesh,
-        MPICArrayKokkos<double>& node_coords,
-        MPICArrayKokkos<double>& node_vel,
-        DCArrayKokkos<double>& GaussPoints_vol,
-        DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+        MPICArrayKokkos<real_t>& node_coords,
+        MPICArrayKokkos<real_t>& node_vel,
+        DCArrayKokkos<real_t>& GaussPoints_vol,
+        DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
         DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
         DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         size_t num_mat_elems,
@@ -400,46 +400,46 @@ public:
 
 void calc_corner_mass_rz(const Material_t& Materials,
                          const swage::Mesh_t& mesh,
-                         const MPICArrayKokkos<double>& node_coords,
-                         const DCArrayKokkos<double>& node_mass,
-                         const DCArrayKokkos<double>& corner_mass,
-                         const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
+                         const MPICArrayKokkos<real_t>& node_coords,
+                         const DCArrayKokkos<real_t>& node_mass,
+                         const DCArrayKokkos<real_t>& corner_mass,
+                         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
                          const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                          const size_t num_mat_elems,
                          const size_t mat_id);
 
 void calc_node_mass_rz(const swage::Mesh_t& mesh,
-                       const MPICArrayKokkos<double>& node_coords,
-                       const DCArrayKokkos<double>& node_mass,
-                       const DCArrayKokkos<double>& corner_mass);                         
+                       const MPICArrayKokkos<real_t>& node_coords,
+                       const DCArrayKokkos<real_t>& node_mass,
+                       const DCArrayKokkos<real_t>& corner_mass);                         
 
 void calc_node_areal_mass_rz(const swage::Mesh_t& mesh,
-                             const MPICArrayKokkos<double>& node_coords,
-                             const DCArrayKokkos<double>& node_mass,
-                             CArrayKokkos<double> node_extensive_mass,
+                             const MPICArrayKokkos<real_t>& node_coords,
+                             const DCArrayKokkos<real_t>& node_mass,
+                             CArrayKokkos<real_t> node_extensive_mass,
                              double tiny);
 
-void calc_node_extensive_mass_rz(const CArrayKokkos<double>& node_extensive_mass,
-                                 const MPICArrayKokkos<double>& node_coords,
-                                 const DCArrayKokkos<double>& node_mass,
+void calc_node_extensive_mass_rz(const CArrayKokkos<real_t>& node_extensive_mass,
+                                 const MPICArrayKokkos<real_t>& node_coords,
+                                 const DCArrayKokkos<real_t>& node_mass,
                                  double num_nodes);
 
 double sum_domain_internal_energy_rz(const swage::Mesh_t& mesh,
                                      const MeshtoMaterialMap_t& MeshtoMaterialMaps,
-                                     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-                                     const DRaggedRightArrayKokkos<double>& MaterialPoints_sie);
+                                     const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass,
+                                     const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie);
 
 double sum_domain_kinetic_energy_rz(const swage::Mesh_t& mesh,
-                                    const MPICArrayKokkos<double>& node_vel,
-                                    const CArrayKokkos<double>& node_extensive_mass);
+                                    const MPICArrayKokkos<real_t>& node_vel,
+                                    const CArrayKokkos<real_t>& node_extensive_mass);
 
 double sum_domain_material_mass_rz(const swage::Mesh_t& mesh,
                                 const MeshtoMaterialMap_t& MeshtoMaterialMaps,
-                                const DRaggedRightArrayKokkos<double>& MaterialPoints_mass);
+                                const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass);
 
-double sum_domain_node_mass_rz(const swage::Mesh_t& mesh,const CArrayKokkos<double>& node_extensive_mass);
+double sum_domain_node_mass_rz(const swage::Mesh_t& mesh,const CArrayKokkos<real_t>& node_extensive_mass);
 
 void set_corner_force_zero_rz(const swage::Mesh_t& mesh, 
-                              const DCArrayKokkos<double>& corner_force);   
+                              const DCArrayKokkos<real_t>& corner_force);   
 
 #endif // end HEADER_H

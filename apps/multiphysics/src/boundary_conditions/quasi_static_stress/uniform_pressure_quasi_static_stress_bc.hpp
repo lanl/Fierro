@@ -60,8 +60,8 @@ namespace UniformPressureQstatxStressBC
 KOKKOS_FUNCTION
 static void qstatx_stress(const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-        const RaggedRightArrayKokkos<double>& qstatx_stress_bc_global_vars,
-        const DCArrayKokkos<double>& bc_state_vars,
+        const RaggedRightArrayKokkos<real_t>& qstatx_stress_bc_global_vars,
+        const DCArrayKokkos<real_t>& bc_state_vars,
         ViewCArrayKokkos <double>& traction,
         const ViewCArrayKokkos <double>& surf_normal,
         const double dt,

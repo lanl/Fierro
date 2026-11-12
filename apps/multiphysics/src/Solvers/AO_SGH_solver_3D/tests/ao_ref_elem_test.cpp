@@ -77,10 +77,10 @@ static void check_close(const double actual,
 // Stage a device-resident CArrayKokkos (Test 4's scratch buffers) into a host
 // std::vector so the checks can read it on any backend. The ref_elem_t /
 // quadrature_t tables are DCArrayKokkos and are read via .host() directly.
-static std::vector<double> to_host_1d(const CArrayKokkos<double>& src,
+static std::vector<double> to_host_1d(const CArrayKokkos<real_t>& src,
                                       const size_t n)
 {
-    DCArrayKokkos<double> stage(n, "ao_test_stage_1d");
+    DCArrayKokkos<real_t> stage(n, "ao_test_stage_1d");
     FOR_ALL(i, 0, n, {
         stage(i) = src(i);
     });
@@ -255,11 +255,11 @@ static void test_sum_factorization_equivalence()
         const size_t ndofs = ref.num_dofs_in_elem;
         const size_t nqpts = ref.num_qpts_in_elem;
 
-        CArrayKokkos<double> f_dof(ndofs, "f_dof");
-        CArrayKokkos<double> f_qpt_sf(nqpts, "f_qpt_sf");
-        CArrayKokkos<double> f_qpt_naive(nqpts, "f_qpt_naive");
-        CArrayKokkos<double> tmp1(nq * nd * nd, "tmp1");
-        CArrayKokkos<double> tmp2(nq * nq * nd, "tmp2");
+        CArrayKokkos<real_t> f_dof(ndofs, "f_dof");
+        CArrayKokkos<real_t> f_qpt_sf(nqpts, "f_qpt_sf");
+        CArrayKokkos<real_t> f_qpt_naive(nqpts, "f_qpt_naive");
+        CArrayKokkos<real_t> tmp1(nq * nd * nd, "tmp1");
+        CArrayKokkos<real_t> tmp2(nq * nq * nd, "tmp2");
 
         // Deterministic pseudo-random DoF values, filled on the device so the
         // buffer is valid in device memory for the evaluators below.
@@ -272,11 +272,11 @@ static void test_sum_factorization_equivalence()
         const ref_elem_t ref_local = ref;
 
         FOR_ALL(once, 0, 1, {
-            ViewCArrayKokkos<double> f_dof_view     (&f_dof(0),       ndofs);
-            ViewCArrayKokkos<double> f_qpt_sf_view  (&f_qpt_sf(0),    nqpts);
-            ViewCArrayKokkos<double> f_qpt_naive_v  (&f_qpt_naive(0), nqpts);
-            ViewCArrayKokkos<double> tmp1_view      (&tmp1(0),        nq * nd * nd);
-            ViewCArrayKokkos<double> tmp2_view      (&tmp2(0),        nq * nq * nd);
+            ViewCArrayKokkos<real_t> f_dof_view     (&f_dof(0),       ndofs);
+            ViewCArrayKokkos<real_t> f_qpt_sf_view  (&f_qpt_sf(0),    nqpts);
+            ViewCArrayKokkos<real_t> f_qpt_naive_v  (&f_qpt_naive(0), nqpts);
+            ViewCArrayKokkos<real_t> tmp1_view      (&tmp1(0),        nq * nd * nd);
+            ViewCArrayKokkos<real_t> tmp2_view      (&tmp2(0),        nq * nq * nd);
 
             eval_field_at_qpts_3d      (ref_local, f_dof_view, f_qpt_sf_view, tmp1_view, tmp2_view);
             eval_field_at_qpts_3d_naive(ref_local, f_dof_view, f_qpt_naive_v);

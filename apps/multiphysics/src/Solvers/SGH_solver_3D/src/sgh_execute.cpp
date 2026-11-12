@@ -134,10 +134,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     double dt = dt_start;
 
     // local memory for this solver
-    CArrayKokkos <double> GaussPoint_pres(mesh.num_elems*mesh.num_gauss_in_elem);
-    CArrayKokkos <double> GaussPoint_pres_denominator(mesh.num_elems*mesh.num_gauss_in_elem);
-    CArrayKokkos <double> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_gauss_in_elem);
-    CArrayKokkos <double> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_gauss_in_elem);
+    CArrayKokkos<real_t> GaussPoint_pres(mesh.num_elems*mesh.num_gauss_in_elem);
+    CArrayKokkos<real_t> GaussPoint_pres_denominator(mesh.num_elems*mesh.num_gauss_in_elem);
+    CArrayKokkos<real_t> GaussPoint_volfrac_min(mesh.num_elems*mesh.num_gauss_in_elem);
+    CArrayKokkos<real_t> GaussPoint_volfrac_limiter(mesh.num_elems*mesh.num_gauss_in_elem);
     
     // Create mesh writer
     MeshWriter mesh_writer; // Note: Pull to driver after refactoring evolution
@@ -819,8 +819,8 @@ double max_Eigen3D(const ViewCArrayKokkos<double> tensor)
 double sum_domain_internal_energy(
     const swage::Mesh_t& mesh,
     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_sie)
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie)
 {
     double IE_loc_sum = 0.0;
     double sum = 0.0;
@@ -859,8 +859,8 @@ double sum_domain_internal_energy(
 /////////////////////////////////////////////////////////////////////////////
 double sum_domain_kinetic_energy(
     const swage::Mesh_t& mesh,
-    const MPICArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& node_mass)
+    const MPICArrayKokkos<real_t>& node_vel,
+    const DCArrayKokkos<real_t>& node_mass)
 {
     // extensive KE
     double KE_sum = 0.0;
@@ -887,7 +887,7 @@ double sum_domain_kinetic_energy(
 
 // // a function to tally the material point masses
 // double sum_domain_material_mass(
-//     const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+//     const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass,
 //     const size_t num_mat_points,
 //     const size_t mat_id)
 // {
@@ -906,7 +906,7 @@ double sum_domain_kinetic_energy(
 double sum_domain_material_mass(
     const swage::Mesh_t& mesh,
     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass)
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass)
 {
     double mass_loc_sum = 0.0;
     double sum = 0.0;
@@ -944,8 +944,8 @@ double sum_domain_material_mass(
 ///
 /////////////////////////////////////////////////////////////////////////////
 double sum_domain_node_mass(const swage::Mesh_t& mesh,
-    const MPICArrayKokkos<double>& node_coords,
-    const DCArrayKokkos<double>& node_mass)
+    const MPICArrayKokkos<real_t>& node_coords,
+    const DCArrayKokkos<real_t>& node_mass)
 {
     double mass_domain = 0.0;
     double mass_loc_domain;
@@ -971,7 +971,7 @@ double sum_domain_node_mass(const swage::Mesh_t& mesh,
 
 // set the corner forces to zero
 void set_corner_force_zero(const swage::Mesh_t& mesh,
-    const DCArrayKokkos<double>& corner_force)
+    const DCArrayKokkos<real_t>& corner_force)
 {
     // set corner force to zero
     FOR_ALL(corner_gid, 0, mesh.num_corners, {

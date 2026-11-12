@@ -75,8 +75,8 @@ int PointIndexFromIJK(int i, int j, int k, const int* order)
 
 void write_lagrange_hex_vtu(const std::string&              path,
                             const DCArrayKokkos<size_t>&    nodes_in_elem,
-                            const MPICArrayKokkos<double>&    coords,
-                            const MPICArrayKokkos<double>&    vel,
+                            const MPICArrayKokkos<real_t>&    coords,
+                            const MPICArrayKokkos<real_t>&    vel,
                             const size_t                    num_elems,
                             const size_t                    num_nodes,
                             const size_t                    p_order,
@@ -87,7 +87,7 @@ void write_lagrange_hex_vtu(const std::string&              path,
     const int npe   = n_1d * n_1d * n_1d;
 
     // Type-72 assumes equispaced reference nodes; project coords for output.
-    DCArrayKokkos<double> equi_coords(num_nodes, 3, "ao_sgh_vtu_equi_coords");
+    DCArrayKokkos<real_t> equi_coords(num_nodes, 3, "ao_sgh_vtu_equi_coords");
     gll_to_equispaced(nodes_in_elem, coords, equi_coords, num_elems, p_order);
 
     std::vector<size_t> slot_to_lex((size_t)npe, 0);
@@ -190,19 +190,19 @@ void write_lagrange_hex_vtu(const std::string&              path,
 }
 
 
-void sample_thermo_at_kine_gll(const DCArrayKokkos<double>& thermo_coef_per_elem,
+void sample_thermo_at_kine_gll(const DCArrayKokkos<real_t>& thermo_coef_per_elem,
                                const DCArrayKokkos<size_t>& nodes_in_elem,
                                const ref_elem_t&            kine_ref,
                                const ref_elem_t&            thermo_ref,
                                const size_t                 num_elems,
                                const size_t                 num_nodes,
-                               DCArrayKokkos<double>&       out_kine_dof)
+                               DCArrayKokkos<real_t>&       out_kine_dof)
 {
     const size_t nk = kine_ref.num_dofs_1d;
     const size_t nt = thermo_ref.num_dofs_1d;
 
     // B_cross(i_kine, j_thermo) = psi_j(xi_i_kine_GLL).
-    DCArrayKokkos<double> B_cross(nk, nt, "ao_sgh_vis_B_cross");
+    DCArrayKokkos<real_t> B_cross(nk, nt, "ao_sgh_vis_B_cross");
 
     std::vector<double> xi_kine(nk);
     std::vector<double> xi_thermo(nt);
@@ -224,8 +224,8 @@ void sample_thermo_at_kine_gll(const DCArrayKokkos<double>& thermo_coef_per_elem
     B_cross.update_device();
     Kokkos::fence();
 
-    CArrayKokkos<double> T1(num_elems, nt, nt, nk, "ao_sgh_vis_T1");
-    CArrayKokkos<double> T2(num_elems, nt, nk, nk, "ao_sgh_vis_T2");
+    CArrayKokkos<real_t> T1(num_elems, nt, nt, nk, "ao_sgh_vis_T1");
+    CArrayKokkos<real_t> T2(num_elems, nt, nk, nk, "ao_sgh_vis_T2");
 
     FOR_ALL(elem_gid, 0, num_elems, {
         for (size_t lz = 0; lz < nt; ++lz) {
@@ -279,20 +279,20 @@ void sample_thermo_at_kine_gll(const DCArrayKokkos<double>& thermo_coef_per_elem
 }
 
 
-void sample_qpt_field_element_average(const DCArrayKokkos<double>& qpt_field,
-                                      const DCArrayKokkos<double>& detj,
+void sample_qpt_field_element_average(const DCArrayKokkos<real_t>& qpt_field,
+                                      const DCArrayKokkos<real_t>& detj,
                                       const DCArrayKokkos<size_t>& nodes_in_elem,
                                       const quadrature_t&          quad,
                                       const ref_elem_t&            kine_ref,
                                       const size_t                 num_elems,
                                       const size_t                 num_nodes,
-                                      DCArrayKokkos<double>&       out_kine_dof)
+                                      DCArrayKokkos<real_t>&       out_kine_dof)
 {
     const size_t nq = quad.num_qpts_1d;
     const size_t nk = kine_ref.num_dofs_1d;
     const size_t n_qpts_3d = nq * nq * nq;
 
-    const DCArrayKokkos<double>& w1 = quad.qpt_weights_1d;
+    const DCArrayKokkos<real_t>& w1 = quad.qpt_weights_1d;
 
     FOR_ALL(elem_gid, 0, num_elems, {
         double num = 0.0;
@@ -346,10 +346,10 @@ inline double lagrange_1d(const std::vector<double>& nodes,
 
 void write_lagrange_thermo_hex_vtu(const std::string&            path,
                                    const DCArrayKokkos<size_t>&  nodes_in_elem,
-                                   const MPICArrayKokkos<double>&  coords,
-                                   const DCArrayKokkos<double>&  sie_coef,
-                                   const DCArrayKokkos<double>&  pres_coef,
-                                   const DCArrayKokkos<double>&  den_coef,
+                                   const MPICArrayKokkos<real_t>&  coords,
+                                   const DCArrayKokkos<real_t>&  sie_coef,
+                                   const DCArrayKokkos<real_t>&  pres_coef,
+                                   const DCArrayKokkos<real_t>&  den_coef,
                                    const ref_elem_t&             kine_ref,
                                    const ref_elem_t&             thermo_ref,
                                    const size_t                  num_elems,
@@ -415,7 +415,7 @@ void write_lagrange_thermo_hex_vtu(const std::string&            path,
 
     f << "      <PointData Scalars=\"sie\">\n";
 
-    auto eval_thermo = [&](const DCArrayKokkos<double>& coef,
+    auto eval_thermo = [&](const DCArrayKokkos<real_t>& coef,
                            size_t e, size_t ix, size_t iy, size_t iz) -> double
     {
         double v = 0.0;
@@ -434,7 +434,7 @@ void write_lagrange_thermo_hex_vtu(const std::string&            path,
     };
 
     auto write_thermo_field = [&](const char* name,
-                                  const DCArrayKokkos<double>& coef)
+                                  const DCArrayKokkos<real_t>& coef)
     {
         f << "        <DataArray type=\"Float64\" NumberOfComponents=\"1\""
              " Name=\"" << name << "\" format=\"ascii\">\n";
@@ -518,8 +518,8 @@ void write_lagrange_thermo_hex_vtu(const std::string&            path,
 
 void write_lagrange_kine_hex_vtu(const std::string&            path,
                                  const DCArrayKokkos<size_t>&  nodes_in_elem,
-                                 const MPICArrayKokkos<double>&  coords,
-                                 const MPICArrayKokkos<double>&  vel,
+                                 const MPICArrayKokkos<real_t>&  coords,
+                                 const MPICArrayKokkos<real_t>&  vel,
                                  const ref_elem_t&             kine_ref,
                                  const size_t                  num_elems,
                                  const size_t                  p_order)

@@ -111,7 +111,7 @@ public:
     // through Fierro's per-set BoundaryConditionFunctions like SGH3D.
     void boundary_velocity(const swage::Mesh_t&         mesh,
                            const BoundaryCondition_t& Boundary,
-                           MPICArrayKokkos<double>&     node_vel,
+                           MPICArrayKokkos<real_t>&     node_vel,
                            const double               time_value) const;
 
     // Zero the wall-normal component of the assembled nodal force at every
@@ -119,7 +119,7 @@ public:
     // than wall traction. Mirrors the reflected-velocity slip projection.
     void boundary_force(const swage::Mesh_t&         mesh,
                         const BoundaryCondition_t& Boundary,
-                        DCArrayKokkos<double>&     node_force) const;
+                        DCArrayKokkos<real_t>&     node_force) const;
 };
 
 } // end namespace ao_sgh

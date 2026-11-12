@@ -48,18 +48,18 @@ struct AO_contact_state_t
     // ---------------------------------------------------------------
     // boundary node variables
     // ---------------------------------------------------------------
-    DCArrayKokkos <double> bdy_node_coords;     // subset of coords only including boundary nodes
-    CArrayKokkos <double> bdy_node_vels;        // boundary node velocities (TLQS: delta_u/dt)
-    CArrayKokkos <double> bdy_node_accels;      // boundary node accelerations (TLQS: zero)
-    CArrayKokkos <double> bdy_node_mass;        // (num_bdy_nodes) lumped nodal mass
-    CArrayKokkos <double> bdy_node_compliance;  // (num_bdy_nodes, 3) displacement per unit contact force, 0 on constrained dofs
+    DCArrayKokkos<real_t> bdy_node_coords;     // subset of coords only including boundary nodes
+    CArrayKokkos<real_t> bdy_node_vels;        // boundary node velocities (TLQS: delta_u/dt)
+    CArrayKokkos<real_t> bdy_node_accels;      // boundary node accelerations (TLQS: zero)
+    CArrayKokkos<real_t> bdy_node_mass;        // (num_bdy_nodes) lumped nodal mass
+    CArrayKokkos<real_t> bdy_node_compliance;  // (num_bdy_nodes, 3) displacement per unit contact force, 0 on constrained dofs
                                                 // explicit: get_dynamic_compliance, quasi-static: get_quasi_static_compliance
     CArrayKokkos <size_t> bdy_dof_fixed;        // (num_bdy_nodes, 3) 1 if the calling solver constrains the dof, else 0
 
     // ---------------------------------------------------------------
     // sort variables (rebuilt once per load step)
     // ---------------------------------------------------------------
-    CArrayKokkos <double> bounding_boxes;                       // coords of bounding box of each boundary surface
+    CArrayKokkos<real_t> bounding_boxes;                       // coords of bounding box of each boundary surface
     RaggedRightArrayKokkos <size_t> nodes_in_bounding_boxes;    // nodes that lie in the bounding box of each boundary surface
     DCArrayKokkos <size_t> num_nodes_in_bounding_boxes;         // stride array for nodes_in_bounding_boxes
     const size_t num_bins = 10; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
@@ -72,13 +72,13 @@ struct AO_contact_state_t
     // ---------------------------------------------------------------
     // detection variables (reset every sweep)
     // ---------------------------------------------------------------
-    DRaggedRightArrayKokkos <double> pairing_check_vars;        // (surf, box node, 3) gap, xi, eta; sentinel if not penetrating
-    CArrayKokkos<double> bdy_surf_node_normals;                 // outward normal at each node in each surface
+    DRaggedRightArrayKokkos<real_t> pairing_check_vars;        // (surf, box node, 3) gap, xi, eta; sentinel if not penetrating
+    CArrayKokkos<real_t> bdy_surf_node_normals;                 // outward normal at each node in each surface
     const double filter_tol = 0.0; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     double max_gap;
     CArrayKokkos<size_t> num_pen_surfs_in_node;                 // (num_bdy_nodes) surfaces each node penetrates this sweep
     CArrayKokkos<size_t> pen_nodes;                             // (num_bdy_nodes) penetrating bdy node lids this sweep, valid to contact_counts(0)
-    DCArrayKokkos <double> bdy_node_pred_coords;                // (num_bdy_nodes, 3) predicted coords for repeated sweeps
+    DCArrayKokkos<real_t> bdy_node_pred_coords;                // (num_bdy_nodes, 3) predicted coords for repeated sweeps
 
     // ---------------------------------------------------------------
     // counters, host copy current after penetration_sweep
@@ -98,7 +98,7 @@ struct AO_contact_state_t
     CArrayKokkos<size_t>            active_nodes;               // (num_bdy_nodes) bdy node lids with pairs, valid to contact_counts(2)
     CArrayKokkos<size_t>            num_pairs_in_node;          // (num_bdy_nodes) current pairs per node
     RaggedRightArrayKokkos<size_t>  contact_pair_surfs;         // (bdy node, pair) -> target bdy_surf_lid
-    DRaggedRightArrayKokkos<double> contact_pair_vars;          // (bdy node, pair, num_contact_pair_vars):
+    DRaggedRightArrayKokkos<real_t> contact_pair_vars;          // (bdy node, pair, num_contact_pair_vars):
                                                                 //   0 xi, 1 eta, 2-4 n, 5 F_tot, 6 f_inc,
                                                                 //   7 F_prop: unclamped proposal F_tot + f_inc from the last force_resolution
                                                                 //   8 F_used: F_tot the last Picard solve saw
@@ -116,8 +116,8 @@ struct AO_contact_state_t
     // ---------------------------------------------------------------
     // contact forces
     // ---------------------------------------------------------------
-    CArrayKokkos<double> contact_forces;                        // (num_bdy_nodes, 3) assembled from the pairs
-    CArrayKokkos<double> contact_forces_used;                   // (num_bdy_nodes, 3) copy handed to the last Picard solve
+    CArrayKokkos<real_t> contact_forces;                        // (num_bdy_nodes, 3) assembled from the pairs
+    CArrayKokkos<real_t> contact_forces_used;                   // (num_bdy_nodes, 3) copy handed to the last Picard solve
 
 };
 
@@ -126,12 +126,12 @@ struct AO_contact_state_t
 // ********************************************************
 
 // gets the max of the lebesgue function
-double get_lebesgue_constant_1d(const CArrayKokkos<double>& dof_positions_1d,
+double get_lebesgue_constant_1d(const CArrayKokkos<real_t>& dof_positions_1d,
                                 const size_t num_dofs_1d,
                                 const size_t num_samples = 100001);
 
 // getting the overshoot factor for sizing bounding boxes
-void get_surf_overshoot_factor(const CArrayKokkos<double>& dof_positions_1d,
+void get_surf_overshoot_factor(const CArrayKokkos<real_t>& dof_positions_1d,
                                const size_t num_dofs_1d,
                                const size_t elem_dims,
                                double& lebesgue_overshoot);
@@ -141,62 +141,62 @@ void get_bdy_node_mass(const size_t num_nodes,
                        const size_t num_bdy_nodes,
                        const size_t num_nodes_in_elem,
                        const size_t num_qpts_in_elem,
-                       const CArrayKokkos<double>& qpt_basis,
-                       const CArrayKokkos<double>& qpt_grad_basis,
-                       const CArrayKokkos<double>& qpt_weights,
+                       const CArrayKokkos<real_t>& qpt_basis,
+                       const CArrayKokkos<real_t>& qpt_grad_basis,
+                       const CArrayKokkos<real_t>& qpt_weights,
                        const DCArrayKokkos<size_t>& nodes_in_elem,
                        const CArrayKokkos<size_t>& bdy_nodes,
                        const DCArrayKokkos<size_t>& num_mat_elems,
                        const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
-                       const DRaggedRightArrayKokkos<double>& den,
-                       const DRaggedRightArrayKokkos<double>& mat_volfrac,
-                       const DRaggedRightArrayKokkos<double>& geo_volfrac,
+                       const DRaggedRightArrayKokkos<real_t>& den,
+                       const DRaggedRightArrayKokkos<real_t>& mat_volfrac,
+                       const DRaggedRightArrayKokkos<real_t>& geo_volfrac,
                        const points_in_mat_t points_in_mat_elem,
-                       const MPICArrayKokkos<double>& node_coords,
-                       CArrayKokkos<double>& bdy_node_mass);
+                       const MPICArrayKokkos<real_t>& node_coords,
+                       CArrayKokkos<real_t>& bdy_node_mass);
 
 // explicit dynamics compliance, c = dt^2/(2m)
 void get_dynamic_compliance(const size_t num_bdy_nodes,
                             const double dt,
-                            const CArrayKokkos<double>& bdy_node_mass,
-                            CArrayKokkos<double>& bdy_node_compliance);
+                            const CArrayKokkos<real_t>& bdy_node_mass,
+                            CArrayKokkos<real_t>& bdy_node_compliance);
 
 // quasi-static compliance, c = scale/K_ii, 0 on constrained dofs
 void get_quasi_static_compliance(const size_t num_bdy_nodes,
                                  const CArrayKokkos<size_t>& bdy_nodes,
-                                 const MPICArrayKokkos<double>& diag_inv,
+                                 const MPICArrayKokkos<real_t>& diag_inv,
                                  const CArrayKokkos<size_t>& bdy_dof_fixed,
                                  const double scale,
-                                 CArrayKokkos<double>& bdy_node_compliance);
+                                 CArrayKokkos<real_t>& bdy_node_compliance);
 
 // allocates the fixed-size contact storage and gets the Lebesgue overshoot
 void AO_contact_initialize(const size_t num_bdy_nodes,
                            const size_t num_bdy_surfs,
                            const size_t num_nodes_in_surf,
-                           const CArrayKokkos<double>& dof_positions_1d,
+                           const CArrayKokkos<real_t>& dof_positions_1d,
                            const size_t num_dofs_1d,
                            const size_t elem_dims,
-                           DCArrayKokkos<double>& bdy_node_coords,
-                           CArrayKokkos<double>& bdy_node_vels,
-                           CArrayKokkos<double>& bdy_node_accels,
-                           CArrayKokkos<double>& bdy_node_mass,
-                           CArrayKokkos<double>& bdy_node_compliance,
+                           DCArrayKokkos<real_t>& bdy_node_coords,
+                           CArrayKokkos<real_t>& bdy_node_vels,
+                           CArrayKokkos<real_t>& bdy_node_accels,
+                           CArrayKokkos<real_t>& bdy_node_mass,
+                           CArrayKokkos<real_t>& bdy_node_compliance,
                            CArrayKokkos<size_t>& bdy_dof_fixed,
-                           CArrayKokkos<double>& bounding_boxes,
+                           CArrayKokkos<real_t>& bounding_boxes,
                            DCArrayKokkos<size_t>& num_nodes_in_bounding_boxes,
                            DCArrayKokkos<size_t>& num_surfs_in_node_boxes,
                            double& lebesgue_overshoot,
-                           CArrayKokkos<double>& bdy_surf_node_normals,
+                           CArrayKokkos<real_t>& bdy_surf_node_normals,
                            CArrayKokkos<size_t>& num_pen_surfs_in_node,
                            CArrayKokkos<size_t>& pen_nodes,
-                           DCArrayKokkos<double>& bdy_node_pred_coords,
+                           DCArrayKokkos<real_t>& bdy_node_pred_coords,
                            DCArrayKokkos<size_t>& contact_counts,
                            CArrayKokkos<size_t>& is_active,
                            CArrayKokkos<size_t>& active_nodes,
                            CArrayKokkos<size_t>& num_pairs_in_node,
                            CArrayKokkos<size_t>& num_pairs_touching_node,
-                           CArrayKokkos<double>& contact_forces,
-                           CArrayKokkos<double>& contact_forces_used);
+                           CArrayKokkos<real_t>& contact_forces,
+                           CArrayKokkos<real_t>& contact_forces_used);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR INITIALIZATION OF CONTACT STATE
@@ -211,27 +211,27 @@ void AO_contact_initialize(const size_t num_bdy_nodes,
 // uses a kokkos parallel reduce to get the max values in one kernel launch
 void get_max_vel_and_accel(double& vx_max, double& vy_max, double& vz_max,
                            double& ax_max, double& ay_max, double& az_max,
-                           const CArrayKokkos <double>& bdy_node_vels,
-                           const CArrayKokkos <double>& bdy_node_accels);
+                           const CArrayKokkos<real_t>& bdy_node_vels,
+                           const CArrayKokkos<real_t>& bdy_node_accels);
 
 // gets the bounding box for all boundary surfaces
-void get_bounding_boxes(const DCArrayKokkos <double>& bdy_node_coords,
-                        const CArrayKokkos <double>& bdy_node_vels,
-                        const CArrayKokkos <double>& bdy_node_accels,
+void get_bounding_boxes(const DCArrayKokkos<real_t>& bdy_node_coords,
+                        const CArrayKokkos<real_t>& bdy_node_vels,
+                        const CArrayKokkos<real_t>& bdy_node_accels,
                         const size_t num_bdy_surfs,
                         const size_t num_nodes_in_surf,
                         const double dt,
                         const double lebesgue_overshoot,
                         const double min_kin_pad,
                         const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
-                        CArrayKokkos <double>& bounding_boxes);
+                        CArrayKokkos<real_t>& bounding_boxes);
 
 double get_min_bdy_elem_edge_length(const size_t num_bdy_surfs,
                                     const size_t num_dofs_1d,
                                     const CArrayKokkos<size_t>& bdy_surfs,
                                     const CArrayKokkos<int>& elems_in_surf,
                                     const DCArrayKokkos<size_t>& nodes_in_elem,
-                                    const MPICArrayKokkos<double>& node_coords);
+                                    const MPICArrayKokkos<real_t>& node_coords);
 
 void invert_bounding_boxes(const size_t num_bdy_surfs,
                            const size_t num_bdy_nodes,
@@ -242,11 +242,11 @@ void invert_bounding_boxes(const size_t num_bdy_surfs,
 
 // once per load step: updates bdy_node_coords, the candidates, and the pair storage,
 // optionally carrying over the previous load step's loaded pairs (keep_pairs)
-void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
-                     const CArrayKokkos <double>& bdy_node_vels,
-                     const CArrayKokkos <double>& bdy_node_accels,
+void AO_contact_sort(DCArrayKokkos<real_t>& bdy_node_coords,
+                     const CArrayKokkos<real_t>& bdy_node_vels,
+                     const CArrayKokkos<real_t>& bdy_node_accels,
                      const size_t num_bdy_nodes,
-                     const MPICArrayKokkos <double>& node_coords,
+                     const MPICArrayKokkos<real_t>& node_coords,
                      const CArrayKokkos <size_t>& bdy_nodes,
                      swage::PointCloud_t& bdy_node_point_cloud,
                      const size_t num_bins,
@@ -254,7 +254,7 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      const size_t num_nodes_in_surf,
                      const double dt,
                      const CArrayKokkos <size_t>& bdy_nodes_in_bdy_surf,
-                     CArrayKokkos <double>& bounding_boxes,
+                     CArrayKokkos<real_t>& bounding_boxes,
                      const double lebesgue_overshoot,
                      DCArrayKokkos <size_t>& num_nodes_in_bounding_boxes,
                      RaggedRightArrayKokkos <size_t>& nodes_in_bounding_boxes,
@@ -263,19 +263,19 @@ void AO_contact_sort(DCArrayKokkos <double>& bdy_node_coords,
                      const CArrayKokkos<int>& elems_in_surf,
                      const DCArrayKokkos<size_t>& nodes_in_elem,
                      double& max_gap,
-                     DRaggedRightArrayKokkos<double>& pairing_check_vars,
+                     DRaggedRightArrayKokkos<real_t>& pairing_check_vars,
                      DCArrayKokkos<size_t>& num_surfs_in_node_boxes,
                      RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
                      RaggedRightArrayKokkos<size_t>& cols_in_node_boxes,
                      RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
-                     DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                     DRaggedRightArrayKokkos<real_t>& contact_pair_vars,
                      CArrayKokkos<size_t>& num_pairs_in_node,
                      CArrayKokkos<size_t>& is_active,
                      CArrayKokkos<size_t>& active_nodes,
-                     CArrayKokkos<double>& contact_forces,
-                     CArrayKokkos<double>& contact_forces_used,
+                     CArrayKokkos<real_t>& contact_forces,
+                     CArrayKokkos<real_t>& contact_forces_used,
                      DCArrayKokkos<size_t>& contact_counts,
-                     const CArrayKokkos<double>& dof_positions_1d,
+                     const CArrayKokkos<real_t>& dof_positions_1d,
                      const bool keep_pairs,
                      bool& pairs_allocated);
 
@@ -284,17 +284,17 @@ void carry_over_pairs(const size_t num_bdy_nodes,
                       const size_t num_nodes_in_surf,
                       const CArrayKokkos<size_t>& old_num_pairs_in_node,
                       const RaggedRightArrayKokkos<size_t>& old_contact_pair_surfs,
-                      const DRaggedRightArrayKokkos<double>& old_contact_pair_vars,
+                      const DRaggedRightArrayKokkos<real_t>& old_contact_pair_vars,
                       const RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
                       const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
-                      const CArrayKokkos<double>& dof_positions_1d,
+                      const CArrayKokkos<real_t>& dof_positions_1d,
                       CArrayKokkos<size_t>& num_pairs_in_node,
                       RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
-                      DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                      DRaggedRightArrayKokkos<real_t>& contact_pair_vars,
                       CArrayKokkos<size_t>& is_active,
                       CArrayKokkos<size_t>& active_nodes,
                       DCArrayKokkos<size_t>& contact_counts,
-                      CArrayKokkos<double>& contact_forces);
+                      CArrayKokkos<real_t>& contact_forces);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR SORTING NODES FOR PAIRING
@@ -307,7 +307,7 @@ void carry_over_pairs(const size_t num_bdy_nodes,
 // ********************************************************
 
 KOKKOS_FUNCTION
-void lagrange_1D(const CArrayKokkos<double>& dof_positions_1d,
+void lagrange_1D(const CArrayKokkos<real_t>& dof_positions_1d,
                  const size_t num_dofs_1d,
                  const size_t a,
                  const double x,
@@ -316,9 +316,9 @@ void lagrange_1D(const CArrayKokkos<double>& dof_positions_1d,
 
 // build the cross product to get the normal direction
 KOKKOS_FUNCTION
-void get_normal(const CArrayKokkos<double>& dof_positions_1d,
+void get_normal(const CArrayKokkos<real_t>& dof_positions_1d,
                 const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
-                const DCArrayKokkos<double>& bdy_node_coords,
+                const DCArrayKokkos<real_t>& bdy_node_coords,
                 const size_t face_lid,
                 const double xi,
                 const double eta,
@@ -330,9 +330,9 @@ void get_bdy_surf_node_normals(const size_t num_bdy_surfs,
                                const CArrayKokkos<size_t>& bdy_surfs,
                                const CArrayKokkos<int>& faces_in_surf,
                                const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
-                               const CArrayKokkos<double>& dof_positions_1d,
-                               const DCArrayKokkos<double>& bdy_node_coords,
-                               CArrayKokkos<double>& bdy_surf_node_normals);
+                               const CArrayKokkos<real_t>& dof_positions_1d,
+                               const DCArrayKokkos<real_t>& bdy_node_coords,
+                               CArrayKokkos<real_t>& bdy_surf_node_normals);
 
 // returns true if the node should proceed to the Newton solve
 // filter 1: node is part of this surface's connectivity         -> reject
@@ -341,8 +341,8 @@ void get_bdy_surf_node_normals(const size_t num_bdy_surfs,
 KOKKOS_FUNCTION
 bool check_filters(const size_t bdy_node_lid,
                    const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
-                   const ViewCArrayKokkos<double>& surf_node_normals,
-                   const DCArrayKokkos<double>& bdy_node_coords,
+                   const ViewCArrayKokkos<real_t>& surf_node_normals,
+                   const DCArrayKokkos<real_t>& bdy_node_coords,
                    const size_t num_nodes_in_surf,
                    const double filter_tol);
 
@@ -355,7 +355,7 @@ void get_face_dims(const size_t face_lid,
                    size_t& face_layer);
 
 KOKKOS_FUNCTION
-void lagrange_1D_d2(const CArrayKokkos<double>& dof_positions_1d,
+void lagrange_1D_d2(const CArrayKokkos<real_t>& dof_positions_1d,
                     const size_t num_dofs_1d,
                     const size_t a,
                     const double x,
@@ -364,9 +364,9 @@ void lagrange_1D_d2(const CArrayKokkos<double>& dof_positions_1d,
                     double& ddval);
 
 KOKKOS_FUNCTION
-void get_surf_point_and_derivs(const CArrayKokkos<double>& dof_positions_1d,
+void get_surf_point_and_derivs(const CArrayKokkos<real_t>& dof_positions_1d,
                                const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
-                               const DCArrayKokkos<double>& bdy_node_coords,
+                               const DCArrayKokkos<real_t>& bdy_node_coords,
                                const double xi,
                                const double eta,
                                double* x_s,
@@ -379,8 +379,8 @@ void get_surf_point_and_derivs(const CArrayKokkos<double>& dof_positions_1d,
 KOKKOS_FUNCTION
 bool closest_point_projected_newton(const double* x_I,
                                     const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
-                                    const DCArrayKokkos<double>& bdy_node_coords,
-                                    const CArrayKokkos<double>& dof_positions_1d,
+                                    const DCArrayKokkos<real_t>& bdy_node_coords,
+                                    const CArrayKokkos<real_t>& dof_positions_1d,
                                     double& xi,
                                     double& eta,
                                     double& f);
@@ -397,20 +397,20 @@ bool penetration_check(const size_t bdy_node_lid,
                        const size_t bdy_surf_lid,
                        const size_t node_lid,
                        const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
-                       const DCArrayKokkos<double>& bdy_node_coords,
-                       const CArrayKokkos<double>& bdy_node_vels,
-                       const CArrayKokkos<double>& dof_positions_1d,
-                       const CArrayKokkos<double>& surf_qpt_basis,
-                       const CArrayKokkos<double>& surf_qpt_positions,
+                       const DCArrayKokkos<real_t>& bdy_node_coords,
+                       const CArrayKokkos<real_t>& bdy_node_vels,
+                       const CArrayKokkos<real_t>& dof_positions_1d,
+                       const CArrayKokkos<real_t>& surf_qpt_basis,
+                       const CArrayKokkos<real_t>& surf_qpt_positions,
                        const size_t face_lid,
                        const double max_gap,
-                       const DRaggedRightArrayKokkos<double>& pairing_check_vars);
+                       const DRaggedRightArrayKokkos<real_t>& pairing_check_vars);
 
 KOKKOS_FUNCTION
 bool refresh_closest_point(const size_t bdy_node_lid,
                            const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
-                           const DCArrayKokkos<double>& bdy_node_coords,
-                           const CArrayKokkos<double>& dof_positions_1d,
+                           const DCArrayKokkos<real_t>& bdy_node_coords,
+                           const CArrayKokkos<real_t>& dof_positions_1d,
                            const double slide_tol,
                            double& xi,
                            double& eta);
@@ -427,19 +427,19 @@ void penetration_sweep(const size_t num_bdy_surfs,
                        const RaggedRightArrayKokkos<size_t>& elems_in_node,
                        const DCArrayKokkos<size_t>& nodes_in_elem,
                        const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
-                       const CArrayKokkos<double>& dof_positions_1d,
-                       const CArrayKokkos<double>& surf_qpt_basis,
-                       const CArrayKokkos<double>& surf_qpt_positions,
-                       const MPICArrayKokkos<double>& node_coords,
-                       const DCArrayKokkos<double>& bdy_node_coords,
-                       const CArrayKokkos<double>& bdy_node_vels,
-                       const CArrayKokkos<double>& bdy_surf_node_normals,
+                       const CArrayKokkos<real_t>& dof_positions_1d,
+                       const CArrayKokkos<real_t>& surf_qpt_basis,
+                       const CArrayKokkos<real_t>& surf_qpt_positions,
+                       const MPICArrayKokkos<real_t>& node_coords,
+                       const DCArrayKokkos<real_t>& bdy_node_coords,
+                       const CArrayKokkos<real_t>& bdy_node_vels,
+                       const CArrayKokkos<real_t>& bdy_surf_node_normals,
                        const RaggedRightArrayKokkos<size_t>& nodes_in_bounding_boxes,
                        const RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
                        const RaggedRightArrayKokkos<size_t>& cols_in_node_boxes,
                        const double filter_tol,
                        const double max_gap,
-                       DRaggedRightArrayKokkos<double>& pairing_check_vars,
+                       DRaggedRightArrayKokkos<real_t>& pairing_check_vars,
                        CArrayKokkos<size_t>& num_pen_surfs_in_node,
                        CArrayKokkos<size_t>& pen_nodes,
                        DCArrayKokkos<size_t>& contact_counts,
@@ -447,7 +447,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
                        CArrayKokkos<size_t>& active_nodes,
                        CArrayKokkos<size_t>& num_pairs_in_node,
                        RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
-                       DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                       DRaggedRightArrayKokkos<real_t>& contact_pair_vars,
                        CArrayKokkos<size_t>& num_pairs_touching_node);
 
 // ********************************************************
@@ -461,49 +461,49 @@ void penetration_sweep(const size_t num_bdy_surfs,
 // ********************************************************
 
 void AO_contact_update_bdy_coords(const size_t num_bdy_nodes,
-                                  const MPICArrayKokkos<double>& node_coords,
+                                  const MPICArrayKokkos<real_t>& node_coords,
                                   const CArrayKokkos<size_t>& bdy_nodes,
-                                  DCArrayKokkos<double>& bdy_node_coords);
+                                  DCArrayKokkos<real_t>& bdy_node_coords);
 
 void AO_contact_snapshot_forces(const size_t num_bdy_nodes,
-                                const CArrayKokkos<double>& contact_forces,
-                                CArrayKokkos<double>& contact_forces_used);
+                                const CArrayKokkos<real_t>& contact_forces,
+                                CArrayKokkos<real_t>& contact_forces_used);
 
 void predict_bdy_node_coords(const size_t num_bdy_nodes,
-                             const DCArrayKokkos<double>& bdy_node_coords,
-                             const CArrayKokkos<double>& bdy_node_compliance,
-                             const CArrayKokkos<double>& contact_forces,
-                             const CArrayKokkos<double>& contact_forces_used,
-                             DCArrayKokkos<double>& bdy_node_pred_coords);
+                             const DCArrayKokkos<real_t>& bdy_node_coords,
+                             const CArrayKokkos<real_t>& bdy_node_compliance,
+                             const CArrayKokkos<real_t>& contact_forces,
+                             const CArrayKokkos<real_t>& contact_forces_used,
+                             DCArrayKokkos<real_t>& bdy_node_pred_coords);
 
 KOKKOS_FUNCTION
 void scatter_pair_force(const size_t bdy_node_lid,
                         const ViewCArrayKokkos<size_t>& surf_nodes,
-                        const CArrayKokkos<double>& dof_positions_1d,
+                        const CArrayKokkos<real_t>& dof_positions_1d,
                         const double xi,
                         const double eta,
                         const double* n,
                         const double F,
-                        const CArrayKokkos<double>& contact_forces);
+                        const CArrayKokkos<real_t>& contact_forces);
 
 void assemble_contact_forces(const size_t num_active,
                              const size_t num_nodes_in_surf,
                              const CArrayKokkos<size_t>& active_nodes,
                              const CArrayKokkos<size_t>& num_pairs_in_node,
                              const RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
-                             const DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                             const DRaggedRightArrayKokkos<real_t>& contact_pair_vars,
                              const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
-                             const CArrayKokkos<double>& dof_positions_1d,
-                             CArrayKokkos<double>& contact_forces);
+                             const CArrayKokkos<real_t>& dof_positions_1d,
+                             CArrayKokkos<real_t>& contact_forces);
 
 KOKKOS_FUNCTION
 int frictionless_increment(const size_t bdy_node_lid,
                            const ViewCArrayKokkos<size_t>& surf_nodes,
-                           const DCArrayKokkos<double>& bdy_node_coords,
-                           const CArrayKokkos<double>& bdy_node_compliance,
-                           const CArrayKokkos<double>& contact_forces,
-                           const CArrayKokkos<double>& contact_forces_used,
-                           const CArrayKokkos<double>& dof_positions_1d,
+                           const DCArrayKokkos<real_t>& bdy_node_coords,
+                           const CArrayKokkos<real_t>& bdy_node_compliance,
+                           const CArrayKokkos<real_t>& contact_forces,
+                           const CArrayKokkos<real_t>& contact_forces_used,
+                           const CArrayKokkos<real_t>& dof_positions_1d,
                            const double slide_tol,
                            const double res_tol,
                            double& xi,
@@ -520,14 +520,14 @@ bool force_resolution(const size_t num_active,
                       const CArrayKokkos<size_t>& active_nodes,
                       CArrayKokkos<size_t>& num_pairs_in_node,
                       RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
-                      DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                      DRaggedRightArrayKokkos<real_t>& contact_pair_vars,
                       CArrayKokkos<size_t>& num_pairs_touching_node,
                       const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
-                      const CArrayKokkos<double>& dof_positions_1d,
-                      const DCArrayKokkos<double>& bdy_node_coords,
-                      const CArrayKokkos<double>& bdy_node_compliance,
-                      const CArrayKokkos<double>& contact_forces_used,
-                      CArrayKokkos<double>& contact_forces,
+                      const CArrayKokkos<real_t>& dof_positions_1d,
+                      const DCArrayKokkos<real_t>& bdy_node_coords,
+                      const CArrayKokkos<real_t>& bdy_node_compliance,
+                      const CArrayKokkos<real_t>& contact_forces_used,
+                      CArrayKokkos<real_t>& contact_forces,
                       size_t& num_deleted,
                       size_t& num_failed);
 
@@ -542,8 +542,8 @@ void count_pairs_touching_nodes(const size_t num_active,
 
 // max |contact_forces - contact_forces_used| and max |contact_forces|
 void get_contact_force_change(const size_t num_bdy_nodes,
-                              const CArrayKokkos<double>& contact_forces,
-                              const CArrayKokkos<double>& contact_forces_used,
+                              const CArrayKokkos<real_t>& contact_forces,
+                              const CArrayKokkos<real_t>& contact_forces_used,
                               double& max_dF,
                               double& max_F);
 
@@ -560,21 +560,21 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
                         const RaggedRightArrayKokkos<size_t>& elems_in_node,
                         const DCArrayKokkos<size_t>& nodes_in_elem,
                         const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
-                        const CArrayKokkos<double>& dof_positions_1d,
-                        const CArrayKokkos<double>& surf_qpt_basis,
-                        const CArrayKokkos<double>& surf_qpt_positions,
-                        const MPICArrayKokkos<double>& node_coords,
-                        const DCArrayKokkos<double>& bdy_node_coords,
-                        const CArrayKokkos<double>& bdy_node_vels,
-                        const CArrayKokkos<double>& bdy_node_compliance,
+                        const CArrayKokkos<real_t>& dof_positions_1d,
+                        const CArrayKokkos<real_t>& surf_qpt_basis,
+                        const CArrayKokkos<real_t>& surf_qpt_positions,
+                        const MPICArrayKokkos<real_t>& node_coords,
+                        const DCArrayKokkos<real_t>& bdy_node_coords,
+                        const CArrayKokkos<real_t>& bdy_node_vels,
+                        const CArrayKokkos<real_t>& bdy_node_compliance,
                         const RaggedRightArrayKokkos<size_t>& nodes_in_bounding_boxes,
                         const RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
                         const RaggedRightArrayKokkos<size_t>& cols_in_node_boxes,
                         const double filter_tol,
                         const double max_gap,
-                        DCArrayKokkos<double>& bdy_node_pred_coords,
-                        CArrayKokkos<double>& bdy_surf_node_normals,
-                        DRaggedRightArrayKokkos<double>& pairing_check_vars,
+                        DCArrayKokkos<real_t>& bdy_node_pred_coords,
+                        CArrayKokkos<real_t>& bdy_surf_node_normals,
+                        DRaggedRightArrayKokkos<real_t>& pairing_check_vars,
                         CArrayKokkos<size_t>& num_pen_surfs_in_node,
                         CArrayKokkos<size_t>& pen_nodes,
                         DCArrayKokkos<size_t>& contact_counts,
@@ -582,10 +582,10 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
                         CArrayKokkos<size_t>& active_nodes,
                         CArrayKokkos<size_t>& num_pairs_in_node,
                         RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
-                        DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                        DRaggedRightArrayKokkos<real_t>& contact_pair_vars,
                         CArrayKokkos<size_t>& num_pairs_touching_node,
-                        const CArrayKokkos<double>& contact_forces_used,
-                        CArrayKokkos<double>& contact_forces,
+                        const CArrayKokkos<real_t>& contact_forces_used,
+                        CArrayKokkos<real_t>& contact_forces,
                         bool& settled,
                         bool& pairs_changed,
                         size_t& num_active,
@@ -599,27 +599,27 @@ void AO_contact_relax_forces(const size_t num_active,
                              const CArrayKokkos<size_t>& num_pairs_in_node,
                              const RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
                              const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
-                             const CArrayKokkos<double>& dof_positions_1d,
+                             const CArrayKokkos<real_t>& dof_positions_1d,
                              const bool reset,
                              const double omega_min,
                              const double omega_max,
                              double& omega,
                              bool& have_history,
-                             DRaggedRightArrayKokkos<double>& contact_pair_vars,
-                             CArrayKokkos<double>& contact_forces);
+                             DRaggedRightArrayKokkos<real_t>& contact_pair_vars,
+                             CArrayKokkos<real_t>& contact_forces);
 
 // records each pair's F_tot as F_used, the force the next solve sees
 void AO_contact_snapshot_pair_forces(const size_t num_active,
                                      const CArrayKokkos<size_t>& active_nodes,
                                      const CArrayKokkos<size_t>& num_pairs_in_node,
-                                     DRaggedRightArrayKokkos<double>& contact_pair_vars);
+                                     DRaggedRightArrayKokkos<real_t>& contact_pair_vars);
 
 // adds contact_forces to a node-indexed residual, skipping constrained dofs
 void add_contact_forces_to_residual(const size_t num_bdy_nodes,
                                     const CArrayKokkos<size_t>& bdy_nodes,
                                     const CArrayKokkos<size_t>& bdy_dof_fixed,
-                                    const CArrayKokkos<double>& contact_forces,
-                                    const MPICArrayKokkos<double>& residual);
+                                    const CArrayKokkos<real_t>& contact_forces,
+                                    const MPICArrayKokkos<real_t>& residual);
 
 // ********************************************************
 // ENDING FUNCTIONS FOR GETTING CONTACT FORCES

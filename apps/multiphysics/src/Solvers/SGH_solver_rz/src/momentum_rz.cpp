@@ -53,10 +53,10 @@ void SGHRZ::update_velocity_rz(
     double rk_alpha,
     double dt,
     const swage::Mesh_t& mesh,
-    MPICArrayKokkos<double>& node_vel,
-    const MPICArrayKokkos<double>& node_vel_n0,
-    const DCArrayKokkos<double>& node_mass,
-    const DCArrayKokkos<double>& corner_force) const
+    MPICArrayKokkos<real_t>& node_vel,
+    const MPICArrayKokkos<real_t>& node_vel_n0,
+    const DCArrayKokkos<real_t>& node_mass,
+    const DCArrayKokkos<real_t>& corner_force) const
 {
     const size_t num_dims = 2;
 
@@ -103,11 +103,11 @@ void SGHRZ::update_velocity_rz(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::get_velgrad_rz(
-    DCArrayKokkos<double>& elem_vel_grad,
+    DCArrayKokkos<real_t>& elem_vel_grad,
     const swage::Mesh_t mesh,
-    const MPICArrayKokkos<double>& node_coords,
-    const MPICArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& elem_vol) const
+    const MPICArrayKokkos<real_t>& node_coords,
+    const MPICArrayKokkos<real_t>& node_vel,
+    const DCArrayKokkos<real_t>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -178,7 +178,7 @@ void SGHRZ::get_velgrad_rz(
 KOKKOS_FUNCTION
 void SGHRZ::get_velgrad_rz(ViewCArrayKokkos<double>& vel_grad,
     const ViewCArrayKokkos<size_t>& elem_node_gids,
-    const MPICArrayKokkos<double>&    node_vel,
+    const MPICArrayKokkos<real_t>&    node_vel,
     const ViewCArrayKokkos<double>& b_matrix,
     const double elem_vol,
     const double elem_area,
@@ -246,11 +246,11 @@ void SGHRZ::get_velgrad_rz(ViewCArrayKokkos<double>& vel_grad,
 /// \param View of the volumes of each element
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGHRZ::get_divergence_rz(DCArrayKokkos<double>& elem_div,
+void SGHRZ::get_divergence_rz(DCArrayKokkos<real_t>& elem_div,
     const swage::Mesh_t mesh,
-    const MPICArrayKokkos<double>& node_coords,
-    const MPICArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& elem_vol) const
+    const MPICArrayKokkos<real_t>& node_coords,
+    const MPICArrayKokkos<real_t>& node_vel,
+    const DCArrayKokkos<real_t>& elem_vol) const
 {
     // --- calculate the forces acting on the nodes from the element ---
     FOR_ALL(elem_gid, 0, mesh.num_elems, {

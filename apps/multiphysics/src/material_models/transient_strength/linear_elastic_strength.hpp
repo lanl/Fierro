@@ -69,11 +69,14 @@ namespace OrthotropicLinearElasticStrengthModel {
     // helper functions 
 
     // C = A * B  for 3x3 matrices
-    template <typename T1>
+    // One template parameter per argument: the operands may be views over
+    // different tiers (state storage vs. a stack scratch buffer). The
+    // accumulator below stays double regardless.
+    template <typename T1, typename T2, typename T3>
     KOKKOS_INLINE_FUNCTION
     void matmul3x3(const T1& A,
-                   const T1& B,
-                   const T1& C) {
+                   const T2& B,
+                   const T3& C) {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 double sum = 0.0;
@@ -87,10 +90,10 @@ namespace OrthotropicLinearElasticStrengthModel {
 
 
     // B = A^T for 3x3
-    template <typename T1>
+    template <typename T1, typename T2>
     KOKKOS_INLINE_FUNCTION
     void transpose3x3(const T1& A, 
-                      const T1& B) {
+                      const T2& B) {
         for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++){
                 B(i,j) = A(j,i);
@@ -423,9 +426,10 @@ namespace OrthotropicLinearElasticStrengthModel {
     /**
     * @brief Compute Green-Lagrange strain E = 1/2(F^T F - I)
     */
+    template <typename TF, typename TE>
     KOKKOS_INLINE_FUNCTION
-    void computeGreenLagrangeStrain(const ViewCArrayKokkos<double>& F,
-                                    const ViewCArrayKokkos<double>& E) {
+    void computeGreenLagrangeStrain(const TF& F,
+                                    const TE& E) {
         
         double Ft_1D[9];
         ViewCArrayKokkos<double>Ft(&Ft_1D[0],3,3);
@@ -580,10 +584,10 @@ namespace OrthotropicLinearElasticStrengthModel {
 
 
     static void init_strength_state_vars(
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
+        const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+        const RaggedRightArrayKokkos<real_t> &strength_global_vars,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_id)
@@ -595,7 +599,7 @@ namespace OrthotropicLinearElasticStrengthModel {
 
 
     KOKKOS_FUNCTION
-    static void fill_C_matrix(const RaggedRightArrayKokkos <double> &strength_global_vars,
+    static void fill_C_matrix(const RaggedRightArrayKokkos<real_t> &strength_global_vars,
                               double C_ref[6][6],
                               const size_t mat_id)
     {
@@ -616,23 +620,23 @@ namespace OrthotropicLinearElasticStrengthModel {
 
     KOKKOS_FUNCTION
     static void calc_stress(
-        const DCArrayKokkos<double>  &GaussPoints_vel_grad,
-        const MPICArrayKokkos<double> &node_coords,
-        const MPICArrayKokkos<double> &node_coords_t0,
-        const MPICArrayKokkos <double> &node_vel,
+        const DCArrayKokkos<real_t>  &GaussPoints_vel_grad,
+        const MPICArrayKokkos<real_t> &node_coords,
+        const MPICArrayKokkos<real_t> &node_coords_t0,
+        const MPICArrayKokkos<real_t> &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress_n0,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_sspd,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_stress_n0,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
+        const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+        const RaggedRightArrayKokkos<real_t> &strength_global_vars,
         const double vol,
         const double dt,
         const double rk_alpha,
@@ -648,8 +652,8 @@ namespace OrthotropicLinearElasticStrengthModel {
         // 0) Access deform_grad (input) and stress (output) for this
         //    material point, wrapped as 3x3 views
         // -----------------------------------------------------------
-        ViewCArrayKokkos <double> F(&MaterialPoints_deformation_grad(mat_id,MaterialPoints_sid,0,0), 3, 3);
-        ViewCArrayKokkos <double> sigma(&MaterialPoints_stress(mat_id,MaterialPoints_sid,0,0), 3, 3);
+        ViewCArrayKokkos<real_t> F(&MaterialPoints_deformation_grad(mat_id,MaterialPoints_sid,0,0), 3, 3);
+        ViewCArrayKokkos<real_t> sigma(&MaterialPoints_stress(mat_id,MaterialPoints_sid,0,0), 3, 3);
 
         // -----------------------------------------------------------
         // 1) Build the reference (material-frame) orthotropic
@@ -712,16 +716,16 @@ namespace OrthotropicLinearElasticStrengthModel {
 
 
     KOKKOS_FUNCTION
-    static void calc_sound_speed(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+    static void calc_sound_speed(const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+                                 const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
                                  const size_t mat_pt_lid,
                                  const size_t mat_id,
-                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                                 const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+                                 const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
                                  const double den,
                                  const double sie,
-                                 const RaggedRightArrayKokkos<double> &eos_global_vars,
-                                 const RaggedRightArrayKokkos<double> &strength_global_vars)
+                                 const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+                                 const RaggedRightArrayKokkos<real_t> &strength_global_vars)
     {
 
         const double E1   = strength_global_vars(mat_id, 0);
@@ -750,10 +754,10 @@ namespace OrthotropicLinearElasticStrengthModel {
 
     
     static void destroy(
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
+        const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+        const RaggedRightArrayKokkos<real_t> &strength_global_vars,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_ids)

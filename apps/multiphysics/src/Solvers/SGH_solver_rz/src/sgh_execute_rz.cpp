@@ -89,7 +89,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
 
     double cached_pregraphics_dt = dt_start;
-    CArrayKokkos<double> node_extensive_mass(mesh.num_nodes);
+    CArrayKokkos<real_t> node_extensive_mass(mesh.num_nodes);
     
     // calculate the extensive node mass, its key to 2D
     calc_node_extensive_mass_rz(node_extensive_mass,
@@ -556,8 +556,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 double sum_domain_internal_energy_rz(
     const swage::Mesh_t& mesh,
     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_sie)
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie)
 {
 
     double IE_sum = 0.0;
@@ -582,8 +582,8 @@ double sum_domain_internal_energy_rz(
 
 double sum_domain_kinetic_energy_rz(
     const swage::Mesh_t& mesh,
-    const MPICArrayKokkos<double>& node_vel,
-    const CArrayKokkos<double>& node_extensive_mass)
+    const MPICArrayKokkos<real_t>& node_vel,
+    const CArrayKokkos<real_t>& node_extensive_mass)
 {
     // extensive KE
     double KE_sum = 0.0;
@@ -613,7 +613,7 @@ double sum_domain_kinetic_energy_rz(
 double sum_domain_material_mass_rz(
     const swage::Mesh_t& mesh,
     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass)
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass)
 {
     double mass_loc_sum = 0.0;
     double sum = 0.0;
@@ -636,7 +636,7 @@ double sum_domain_material_mass_rz(
 
 
 double sum_domain_node_mass_rz(const swage::Mesh_t& mesh,
-    const CArrayKokkos<double>& node_extensive_mass)
+    const CArrayKokkos<real_t>& node_extensive_mass)
 {
     double mass_domain = 0.0;
     double mass_loc_domain = 0.0;
@@ -668,9 +668,9 @@ double sum_domain_node_mass_rz(const swage::Mesh_t& mesh,
 /// \param num_nodes is the number of nodes in the mesh
 ///
 /////////////////////////////////////////////////////////////////////////////
-void calc_node_extensive_mass_rz(const CArrayKokkos<double>& node_extensive_mass,
-                                 const MPICArrayKokkos<double>& node_coords,
-                                 const DCArrayKokkos<double>& node_areal_mass,
+void calc_node_extensive_mass_rz(const CArrayKokkos<real_t>& node_extensive_mass,
+                                 const MPICArrayKokkos<real_t>& node_coords,
+                                 const DCArrayKokkos<real_t>& node_areal_mass,
                                  double num_nodes)
 {
     // save the nodal extensive mass
@@ -698,9 +698,9 @@ void calc_node_extensive_mass_rz(const CArrayKokkos<double>& node_extensive_mass
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_areal_mass_rz(const swage::Mesh_t& mesh,
-                             const MPICArrayKokkos<double>& node_coords,
-                             const DCArrayKokkos<double>& node_mass,
-                             const CArrayKokkos<double> node_extensive_mass,
+                             const MPICArrayKokkos<real_t>& node_coords,
+                             const DCArrayKokkos<real_t>& node_mass,
+                             const CArrayKokkos<real_t> node_extensive_mass,
                              double tiny)
 {
 
@@ -744,7 +744,7 @@ void calc_node_areal_mass_rz(const swage::Mesh_t& mesh,
 
 // set the corner forces to zero
 void set_corner_force_zero_rz(const swage::Mesh_t& mesh, 
-                              const DCArrayKokkos<double>& corner_force)
+                              const DCArrayKokkos<real_t>& corner_force)
 {
 
     // set corner force to zero

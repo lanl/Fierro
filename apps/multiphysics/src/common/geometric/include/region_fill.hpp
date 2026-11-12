@@ -68,22 +68,22 @@ void simulation_setup(SimulationParameters_t& SimulationParamaters,
 void fill_regions(
         const Material_t& Materials,
         const swage::Mesh_t& mesh,
-        const MPICArrayKokkos<double>& node_coords,
-        MPICArrayKokkos <double>& node_vel,
-        MPICArrayKokkos <double>& node_temp,
-        DCArrayKokkos <double>& gauss_den,
-        DCArrayKokkos <double>& gauss_sie,
+        const MPICArrayKokkos<real_t>& node_coords,
+        MPICArrayKokkos<real_t>& node_vel,
+        MPICArrayKokkos<real_t>& node_temp,
+        DCArrayKokkos<real_t>& gauss_den,
+        DCArrayKokkos<real_t>& gauss_sie,
         DCArrayKokkos <bool>& gauss_use_sie,
-        DCArrayKokkos <double>& gauss_ie,
-        DCArrayKokkos <double>& gauss_stress,
-        DCArrayKokkos <double>& gauss_conductivity,
-        DCArrayKokkos <double>& gauss_specific_heat,
-        DCArrayKokkos <double>& gauss_elastic_modulii,
-        DCArrayKokkos <double>& gauss_shear_modulii,
-        DCArrayKokkos <double>& gauss_poisson_ratios,
-        DCArrayKokkos <double>& gauss_level_set,
-        DCArrayKokkos <double>& elem_volfrac,
-        DCArrayKokkos <double>& elem_geo_volfrac,
+        DCArrayKokkos<real_t>& gauss_ie,
+        DCArrayKokkos<real_t>& gauss_stress,
+        DCArrayKokkos<real_t>& gauss_conductivity,
+        DCArrayKokkos<real_t>& gauss_specific_heat,
+        DCArrayKokkos<real_t>& gauss_elastic_modulii,
+        DCArrayKokkos<real_t>& gauss_shear_modulii,
+        DCArrayKokkos<real_t>& gauss_poisson_ratios,
+        DCArrayKokkos<real_t>& gauss_level_set,
+        DCArrayKokkos<real_t>& elem_volfrac,
+        DCArrayKokkos<real_t>& elem_geo_volfrac,
         DCArrayKokkos <size_t>& elem_mat_id,
         DCArrayKokkos <size_t>& elem_num_mats_saved_in_elem,
         const DCArrayKokkos <int>& object_ids,
@@ -143,10 +143,10 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
 KOKKOS_FUNCTION
 double fill_geometric_region(const swage::Mesh_t& mesh,
                              const DCArrayKokkos<size_t>& voxel_elem_mat_id,
-                             const DCArrayKokkos<double>& elem_geo_volfrac_fill,
+                             const DCArrayKokkos<real_t>& elem_geo_volfrac_fill,
                              const DCArrayKokkos<int>& object_ids,
                              const CArrayKokkos<RegionFill_t>& region_fills,
-                             const ViewCArrayKokkos <double>& mesh_coords,
+                             const ViewCArrayKokkos<real_t>& mesh_coords,
                              const double voxel_dx, 
                              const double voxel_dy, 
                              const double voxel_dz,
@@ -175,7 +175,7 @@ double fill_geometric_region(const swage::Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
+void append_fills_in_elem(const DCArrayKokkos<real_t>& elem_geo_volfracs,
                           const CArrayKokkos <size_t>& elem_region_ids,
                           const DCArrayKokkos <size_t>& elem_num_region_fills,
                           const double geovolfrac,
@@ -196,7 +196,7 @@ void append_fills_in_elem(const DCArrayKokkos <double>& elem_geo_volfracs,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-bool bound_volfracs(const DCArrayKokkos <double>& volfracs,
+bool bound_volfracs(const DCArrayKokkos<real_t>& volfracs,
                     const size_t index,
                     const size_t num_bins);
 
@@ -217,7 +217,7 @@ bool bound_volfracs(const DCArrayKokkos <double>& volfracs,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
+double get_region_scalar(const ViewCArrayKokkos<real_t> mesh_coords,
                          const double scalar,
                          const double slope,
                          const double orig[3],
@@ -243,8 +243,8 @@ double get_region_scalar(const ViewCArrayKokkos <double> mesh_coords,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
-                        const ViewCArrayKokkos <double> mesh_coords,
+void paint_multi_scalar(const DCArrayKokkos<real_t>& field_scalar,
+                        const ViewCArrayKokkos<real_t> mesh_coords,
                         const double scalar,
                         const double slope,
                         const double orig[3],
@@ -267,8 +267,8 @@ void paint_multi_scalar(const DCArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_scalar(const MPICArrayKokkos<double>& field_scalar,
-                  const ViewCArrayKokkos <double> mesh_coords,
+void paint_scalar(const MPICArrayKokkos<real_t>& field_scalar,
+                  const ViewCArrayKokkos<real_t> mesh_coords,
                   const double scalar,
                   const double slope,
                   const size_t mesh_gid,
@@ -292,8 +292,8 @@ void paint_scalar(const MPICArrayKokkos<double>& field_scalar,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void paint_vector(const MPICArrayKokkos<double>& vector_field,
-                  const ViewCArrayKokkos <double>& mesh_coords,
+void paint_vector(const MPICArrayKokkos<real_t>& vector_field,
+                  const ViewCArrayKokkos<real_t>& mesh_coords,
                   const double u,
                   const double v,
                   const double w,
@@ -324,8 +324,8 @@ void paint_vector(const MPICArrayKokkos<double>& vector_field,
 KOKKOS_FUNCTION
 void paint_node_scalar(const double scalar,
                        const CArrayKokkos<RegionFill_t>& region_fills,
-                       const DCArrayKokkos<double>& node_scalars,
-                       const MPICArrayKokkos<double>& node_coords,
+                       const DCArrayKokkos<real_t>& node_scalars,
+                       const MPICArrayKokkos<real_t>& node_coords,
                        const double node_gid,
                        const double num_dims,
                        const size_t f_id);
@@ -347,8 +347,8 @@ void paint_node_scalar(const double scalar,
 /////////////////////////////////////////////////////////////////////////////
 void init_state_vars(const Material_t& Materials,
                      const swage::Mesh_t& mesh,
-                     const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                     const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
+                     const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+                     const DRaggedRightArrayKokkos<real_t>& MaterialPoints_strength_state_vars,
                      const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                      const size_t num_mat_pts,
                      const size_t mat_id);
@@ -374,13 +374,13 @@ void init_state_vars(const Material_t& Materials,
 /////////////////////////////////////////////////////////////////////////////
 void init_press_sspd_stress(const Material_t& Materials,
                             const swage::Mesh_t& mesh,
-                            const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-                            DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-                            DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-                            DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-                            const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-                            const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                            const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
+                            const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+                            DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+                            DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+                            DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+                            const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+                            const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+                            const DRaggedRightArrayKokkos<real_t>& MaterialPoints_strength_state_vars,
                             const size_t num_mat_pts,
                             const size_t mat_id);
 
@@ -402,10 +402,10 @@ void init_press_sspd_stress(const Material_t& Materials,
 /////////////////////////////////////////////////////////////////////////////
 void calc_corner_mass(const Material_t& Materials,
                       const swage::Mesh_t& mesh,
-                      const MPICArrayKokkos<double>& node_coords,
-                      const DCArrayKokkos<double>& node_mass,
-                      const DCArrayKokkos<double>& corner_mass,
-                      const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
+                      const MPICArrayKokkos<real_t>& node_coords,
+                      const DCArrayKokkos<real_t>& node_mass,
+                      const DCArrayKokkos<real_t>& corner_mass,
+                      const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass,
                       const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                       const size_t num_mat_elems,
                       const size_t mat_id);
@@ -426,9 +426,9 @@ void calc_corner_mass(const Material_t& Materials,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void calc_node_mass(const swage::Mesh_t& mesh,
-                    const MPICArrayKokkos<double>& node_coords,
-                    const DCArrayKokkos<double>& node_mass,
-                    const DCArrayKokkos<double>& corner_mass);
+                    const MPICArrayKokkos<real_t>& node_coords,
+                    const DCArrayKokkos<real_t>& node_mass,
+                    const DCArrayKokkos<real_t>& corner_mass);
 
 
 
@@ -445,8 +445,8 @@ void calc_node_mass(const swage::Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void init_corner_node_masses_zero(
         const swage::Mesh_t& mesh,
-        const DCArrayKokkos<double>& node_mass,
-        const DCArrayKokkos<double>& corner_mass);
+        const DCArrayKokkos<real_t>& node_mass,
+        const DCArrayKokkos<real_t>& corner_mass);
 
 
 #endif

@@ -51,14 +51,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void TLQS3D::timestep_init(
-    MPICArrayKokkos<double>& node_coords,
-    MPICArrayKokkos<double>& node_coords_n0,
-    MPICArrayKokkos<double>& node_vel,
-    MPICArrayKokkos<double>& node_vel_n0,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
+    MPICArrayKokkos<real_t>& node_coords,
+    MPICArrayKokkos<real_t>& node_coords_n0,
+    MPICArrayKokkos<real_t>& node_vel,
+    MPICArrayKokkos<real_t>& node_vel_n0,
+    DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+    DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie_n0,
+    DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+    DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress_n0,
     const size_t num_dims,
     const size_t num_elems,
     const size_t num_nodes,

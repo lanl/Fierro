@@ -97,8 +97,8 @@ public:
 
     void concatenate_elem_fields(const MaterialPoint_t& MaterialPoints,
                                  const GaussPoint_t& GaussPoints,
-                                 DCArrayKokkos<double>& elem_scalar_fields,
-                                 DCArrayKokkos<double>& elem_tensor_fields,
+                                 DCArrayKokkos<real_t>& elem_scalar_fields,
+                                 DCArrayKokkos<real_t>& elem_tensor_fields,
                                  const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                                  const std::vector<material_pt_state>& output_elem_state,
                                  const std::vector<gauss_pt_state>& output_gauss_pt_states,
@@ -121,9 +121,9 @@ public:
                                  const int specific_heat_id);
 
     void concatenate_mat_fields(const MaterialPoint_t& MaterialPoints,
-                                DCArrayKokkos<double>& mat_elem_scalar_fields,
-                                DCArrayKokkos<double>& mat_elem_tensor_fields,
-                                DCArrayKokkos<double>& mat_elem_vector_fields,
+                                DCArrayKokkos<real_t>& mat_elem_scalar_fields,
+                                DCArrayKokkos<real_t>& mat_elem_tensor_fields,
+                                DCArrayKokkos<real_t>& mat_elem_vector_fields,
                                 const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                                 const std::vector<material_pt_state>& output_material_pt_states,
                                 const size_t num_mat_elems,
@@ -143,8 +143,8 @@ public:
                                 const int mat_heat_flux_id);
 
     void concatenate_nodal_fields(const node_t& Node,
-                                  DCArrayKokkos<double>& node_scalar_fields,
-                                  const DCArrayKokkos<double>& node_vector_fields,
+                                  DCArrayKokkos<real_t>& node_scalar_fields,
+                                  const DCArrayKokkos<real_t>& node_vector_fields,
                                   std::vector<node_state>& output_node_states,
                                   double dt,
                                   const size_t num_nodes,
@@ -158,13 +158,13 @@ public:
                                   const int node_disp_id);
 
     void write_vtu(
-        const ViewCArray<double>& node_coords_host,
+        const ViewCArray<real_t>& node_coords_host,
         const ViewCArray<size_t>& nodes_in_elem_host,
-        const DCArrayKokkos<double>& elem_scalar_fields,
-        const DCArrayKokkos<double>& elem_tensor_fields,
-        const DCArrayKokkos<double>& elem_vector_fields,
-        const DCArrayKokkos<double>& node_scalar_fields,
-        const DCArrayKokkos<double>& node_vector_fields,
+        const DCArrayKokkos<real_t>& elem_scalar_fields,
+        const DCArrayKokkos<real_t>& elem_tensor_fields,
+        const DCArrayKokkos<real_t>& elem_vector_fields,
+        const DCArrayKokkos<real_t>& node_scalar_fields,
+        const DCArrayKokkos<real_t>& node_vector_fields,
         const std::vector<std::string>& elem_scalar_var_names,
         const std::vector<std::string>& elem_tensor_var_names,
         const std::vector<std::string>& elem_vector_var_names,
@@ -260,8 +260,8 @@ public:
 
     void build_material_elem_node_lists(
         const swage::Mesh_t& mesh,
-        const MPICArrayKokkos<double>& state_node_coords,
-        DCArrayKokkos<double>& mat_node_coords,
+        const MPICArrayKokkos<real_t>& state_node_coords,
+        DCArrayKokkos<real_t>& mat_node_coords,
         DCArrayKokkos <size_t>& mat_nodes_in_mat_elem,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t mat_id,

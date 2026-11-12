@@ -41,10 +41,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace MachShockDetector {
 
     static void detect_shock(const swage::Mesh_t& mesh,
-                             const DCArrayKokkos<double>& GaussPoints_vel_grad,
-                             const MPICArrayKokkos<double>& GaussPoints_shock_detector,
-                             const DCArrayKokkos<double>& GaussPoints_vol,
-                             const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                             const DCArrayKokkos<real_t>& GaussPoints_vel_grad,
+                             const MPICArrayKokkos<real_t>& GaussPoints_shock_detector,
+                             const DCArrayKokkos<real_t>& GaussPoints_vol,
+                             const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
                              const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                              const DCArrayKokkos <size_t>& num_mat_elems,
                              const double fuzz,
@@ -143,10 +143,10 @@ namespace MachShockDetector {
 namespace MachShockDetectorRZ {
 
     static void detect_shock(const swage::Mesh_t& mesh,
-                             const DCArrayKokkos<double>& GaussPoints_vel_grad,
-                             const MPICArrayKokkos<double>& GaussPoints_shock_detector,
-                             const DCArrayKokkos<double>& GaussPoints_vol,
-                             const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                             const DCArrayKokkos<real_t>& GaussPoints_vel_grad,
+                             const MPICArrayKokkos<real_t>& GaussPoints_shock_detector,
+                             const DCArrayKokkos<real_t>& GaussPoints_vol,
+                             const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
                              const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                              const DCArrayKokkos <size_t>& num_mat_elems,
                              const double fuzz,

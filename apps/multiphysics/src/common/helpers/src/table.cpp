@@ -45,7 +45,7 @@ Table_t::Table_t() : num_rows(0), num_columns(0)
 Table_t::Table_t(size_t num_rows_, size_t num_columns_, const char* name_) : num_rows(num_rows_), num_columns(num_columns_)
 {
     // Initialize data with dimensions and name
-    data = DCArrayKokkos<double>(num_rows_, num_columns_, name_);
+    data = DCArrayKokkos<real_t>(num_rows_, num_columns_, name_);
     
     // Hardcoded NaN. Here, we use a bit pattern for portability in device code. This is to verify that data has been initialized correctly. 
     union { uint64_t i; double d; } nan_union;

@@ -4,19 +4,19 @@ namespace ao_sgh
 {
 
 void assemble_lumped_mass(const DCArrayKokkos<size_t>& nodes_in_elem,
-                          const DCArrayKokkos<double>& rho0_detj0_w,
+                          const DCArrayKokkos<real_t>& rho0_detj0_w,
                           const ref_elem_t&            kine_ref,
                           const quadrature_t&          quad,
                           const size_t                 num_elems,
-                          DCArrayKokkos<double>&       node_mass)
+                          DCArrayKokkos<real_t>&       node_mass)
 {
     const size_t nq = quad.num_qpts_1d;
     const size_t nd = kine_ref.num_dofs_1d;
 
-    const DCArrayKokkos<double>& B = kine_ref.basis_1d;
+    const DCArrayKokkos<real_t>& B = kine_ref.basis_1d;
 
-    CArrayKokkos<double> U(num_elems, nd, nq, nq, "ao_sgh_mass_U");
-    CArrayKokkos<double> V(num_elems, nd, nd, nq, "ao_sgh_mass_V");
+    CArrayKokkos<real_t> U(num_elems, nd, nq, nq, "ao_sgh_mass_U");
+    CArrayKokkos<real_t> V(num_elems, nd, nd, nq, "ao_sgh_mass_V");
 
     FOR_ALL(elem_gid, 0, num_elems, {
         const size_t base = elem_gid * nq * nq * nq;
@@ -74,17 +74,17 @@ void assemble_lumped_mass(const DCArrayKokkos<size_t>& nodes_in_elem,
 }
 
 
-void compute_stress_jinvt(const DCArrayKokkos<double>& sigma_qpt,
-                          const DCArrayKokkos<double>& jac_inv,
-                          const DCArrayKokkos<double>& detj,
+void compute_stress_jinvt(const DCArrayKokkos<real_t>& sigma_qpt,
+                          const DCArrayKokkos<real_t>& jac_inv,
+                          const DCArrayKokkos<real_t>& detj,
                           const quadrature_t&          quad,
                           const size_t                 num_elems,
-                          DCArrayKokkos<double>&       stress_jinvt)
+                          DCArrayKokkos<real_t>&       stress_jinvt)
 {
     const size_t nq = quad.num_qpts_1d;
     const size_t n_qpts_3d = nq * nq * nq;
 
-    const DCArrayKokkos<double>& w1 = quad.qpt_weights_1d;
+    const DCArrayKokkos<real_t>& w1 = quad.qpt_weights_1d;
 
     FOR_ALL(elem_gid, 0, num_elems, {
         for (size_t qk = 0; qk < nq; ++qk) {
@@ -113,20 +113,20 @@ void compute_stress_jinvt(const DCArrayKokkos<double>& sigma_qpt,
 }
 
 
-void reconstruct_thermo_at_qpts(const DCArrayKokkos<double>& coef_per_elem,
+void reconstruct_thermo_at_qpts(const DCArrayKokkos<real_t>& coef_per_elem,
                                 const ref_elem_t&            thermo_ref,
                                 const quadrature_t&          quad,
                                 const size_t                 num_elems,
-                                DCArrayKokkos<double>&       thermo_at_qpt)
+                                DCArrayKokkos<real_t>&       thermo_at_qpt)
 {
     const size_t nq = quad.num_qpts_1d;
     const size_t nt = thermo_ref.num_dofs_1d;
     const size_t n_qpts_3d = nq * nq * nq;
 
-    const DCArrayKokkos<double>& Bt = thermo_ref.basis_1d;
+    const DCArrayKokkos<real_t>& Bt = thermo_ref.basis_1d;
 
-    CArrayKokkos<double> T1(num_elems, nt, nt, nq, "ao_sgh_thermo_T1");
-    CArrayKokkos<double> T2(num_elems, nt, nq, nq, "ao_sgh_thermo_T2");
+    CArrayKokkos<real_t> T1(num_elems, nt, nt, nq, "ao_sgh_thermo_T1");
+    CArrayKokkos<real_t> T2(num_elems, nt, nq, nq, "ao_sgh_thermo_T2");
 
     FOR_ALL(elem_gid, 0, num_elems, {
         for (size_t lz = 0; lz < nt; ++lz) {
@@ -181,26 +181,26 @@ void reconstruct_thermo_at_qpts(const DCArrayKokkos<double>& coef_per_elem,
 
 
 void apply_force_mult(const DCArrayKokkos<size_t>& nodes_in_elem,
-                      const DCArrayKokkos<double>& stress_jinvt,
-                      const DCArrayKokkos<double>& thermo_at_qpt,
+                      const DCArrayKokkos<real_t>& stress_jinvt,
+                      const DCArrayKokkos<real_t>& thermo_at_qpt,
                       const ref_elem_t&            kine_ref,
                       const quadrature_t&          quad,
                       const size_t                 num_elems,
-                      DCArrayKokkos<double>&       node_force)
+                      DCArrayKokkos<real_t>&       node_force)
 {
     const size_t nq = quad.num_qpts_1d;
     const size_t nk = kine_ref.num_dofs_1d;
     const size_t n_qpts_3d = nq * nq * nq;
 
-    const DCArrayKokkos<double>& B  = kine_ref.basis_1d;
-    const DCArrayKokkos<double>& dB = kine_ref.grad_basis_1d;
+    const DCArrayKokkos<real_t>& B  = kine_ref.basis_1d;
+    const DCArrayKokkos<real_t>& dB = kine_ref.grad_basis_1d;
 
-    CArrayKokkos<double> SX(num_elems, nq, nq, nq, "ao_sgh_force_SX");
-    CArrayKokkos<double> SY(num_elems, nq, nq, nq, "ao_sgh_force_SY");
-    CArrayKokkos<double> SZ(num_elems, nq, nq, nq, "ao_sgh_force_SZ");
+    CArrayKokkos<real_t> SX(num_elems, nq, nq, nq, "ao_sgh_force_SX");
+    CArrayKokkos<real_t> SY(num_elems, nq, nq, nq, "ao_sgh_force_SY");
+    CArrayKokkos<real_t> SZ(num_elems, nq, nq, nq, "ao_sgh_force_SZ");
 
-    CArrayKokkos<double> U(num_elems, nk, nq, nq, "ao_sgh_force_U");
-    CArrayKokkos<double> V(num_elems, nk, nk, nq, "ao_sgh_force_V");
+    CArrayKokkos<real_t> U(num_elems, nk, nq, nq, "ao_sgh_force_U");
+    CArrayKokkos<real_t> V(num_elems, nk, nk, nq, "ao_sgh_force_V");
 
     for (size_t vd = 0; vd < 3; ++vd) {
 
@@ -346,13 +346,13 @@ void apply_force_mult(const DCArrayKokkos<size_t>& nodes_in_elem,
 
 
 void apply_force_mult_transpose(const DCArrayKokkos<size_t>& nodes_in_elem,
-                                const DCArrayKokkos<double>& stress_jinvt,
-                                const MPICArrayKokkos<double>& velocity_node,
+                                const DCArrayKokkos<real_t>& stress_jinvt,
+                                const MPICArrayKokkos<real_t>& velocity_node,
                                 const ref_elem_t&            kine_ref,
                                 const ref_elem_t&            thermo_ref,
                                 const quadrature_t&          quad,
                                 const size_t                 num_elems,
-                                DCArrayKokkos<double>&       thermo_force_per_elem)
+                                DCArrayKokkos<real_t>&       thermo_force_per_elem)
 {
     const size_t nq = quad.num_qpts_1d;
     const size_t nk = kine_ref.num_dofs_1d;
@@ -360,19 +360,19 @@ void apply_force_mult_transpose(const DCArrayKokkos<size_t>& nodes_in_elem,
     const size_t n_qpts_3d = nq * nq * nq;
     const size_t num_gauss_pts = num_elems * n_qpts_3d;
 
-    const DCArrayKokkos<double>& B   = kine_ref.basis_1d;
-    const DCArrayKokkos<double>& dB  = kine_ref.grad_basis_1d;
-    const DCArrayKokkos<double>& Bth = thermo_ref.basis_1d;
+    const DCArrayKokkos<real_t>& B   = kine_ref.basis_1d;
+    const DCArrayKokkos<real_t>& dB  = kine_ref.grad_basis_1d;
+    const DCArrayKokkos<real_t>& Bth = thermo_ref.basis_1d;
 
     // I(g) = sum_k sum_e grad_xi_e(v_k)(g) * stress_jinvt(g, e, k)
-    DCArrayKokkos<double> I(num_gauss_pts, "ao_sgh_forceT_I");
+    DCArrayKokkos<real_t> I(num_gauss_pts, "ao_sgh_forceT_I");
     I.set_values(0.0);
     Kokkos::fence();
 
-    CArrayKokkos<double> v_elem(num_elems, nk, nk, nk, "ao_sgh_forceT_v");
-    CArrayKokkos<double> U  (num_elems, nk, nk, nq, "ao_sgh_forceT_U");
-    CArrayKokkos<double> V  (num_elems, nk, nq, nq, "ao_sgh_forceT_V");
-    CArrayKokkos<double> Gxi(num_elems, nq, nq, nq, "ao_sgh_forceT_Gxi");
+    CArrayKokkos<real_t> v_elem(num_elems, nk, nk, nk, "ao_sgh_forceT_v");
+    CArrayKokkos<real_t> U  (num_elems, nk, nk, nq, "ao_sgh_forceT_U");
+    CArrayKokkos<real_t> V  (num_elems, nk, nq, nq, "ao_sgh_forceT_V");
+    CArrayKokkos<real_t> Gxi(num_elems, nq, nq, nq, "ao_sgh_forceT_Gxi");
 
     for (size_t k = 0; k < 3; ++k) {
 
@@ -456,8 +456,8 @@ void apply_force_mult_transpose(const DCArrayKokkos<size_t>& nodes_in_elem,
         }
     }
 
-    CArrayKokkos<double> T1(num_elems, nq, nq, nt, "ao_sgh_forceT_T1");
-    CArrayKokkos<double> T2(num_elems, nq, nt, nt, "ao_sgh_forceT_T2");
+    CArrayKokkos<real_t> T1(num_elems, nq, nq, nt, "ao_sgh_forceT_T1");
+    CArrayKokkos<real_t> T2(num_elems, nq, nt, nt, "ao_sgh_forceT_T2");
 
     FOR_ALL(elem_gid, 0, num_elems, {
         for (size_t qz = 0; qz < nq; ++qz) {
@@ -511,20 +511,20 @@ void apply_force_mult_transpose(const DCArrayKokkos<size_t>& nodes_in_elem,
 }
 
 
-void project_qpt_scalar_to_thermo_per_elem(const DCArrayKokkos<double>& qpt_field,
+void project_qpt_scalar_to_thermo_per_elem(const DCArrayKokkos<real_t>& qpt_field,
                                            const ref_elem_t&            thermo_ref,
                                            const quadrature_t&          quad,
                                            const size_t                 num_elems,
-                                           DCArrayKokkos<double>&       per_elem_out)
+                                           DCArrayKokkos<real_t>&       per_elem_out)
 {
     const size_t nq = quad.num_qpts_1d;
     const size_t nt = thermo_ref.num_dofs_1d;
     const size_t n_qpts_3d = nq * nq * nq;
 
-    const DCArrayKokkos<double>& Bth = thermo_ref.basis_1d;
+    const DCArrayKokkos<real_t>& Bth = thermo_ref.basis_1d;
 
-    CArrayKokkos<double> T1(num_elems, nq, nq, nt, "ao_sgh_proj_T1");
-    CArrayKokkos<double> T2(num_elems, nq, nt, nt, "ao_sgh_proj_T2");
+    CArrayKokkos<real_t> T1(num_elems, nq, nq, nt, "ao_sgh_proj_T1");
+    CArrayKokkos<real_t> T2(num_elems, nq, nt, nt, "ao_sgh_proj_T2");
 
     FOR_ALL(elem_gid, 0, num_elems, {
         for (size_t qz = 0; qz < nq; ++qz) {
@@ -578,11 +578,11 @@ void project_qpt_scalar_to_thermo_per_elem(const DCArrayKokkos<double>& qpt_fiel
 }
 
 
-void build_lumped_thermo_mass(const DCArrayKokkos<double>& rho0_detj0_w,
+void build_lumped_thermo_mass(const DCArrayKokkos<real_t>& rho0_detj0_w,
                               const ref_elem_t&            thermo_ref,
                               const quadrature_t&          quad,
                               const size_t                 num_elems,
-                              DCArrayKokkos<double>&       lumped_mass_per_elem)
+                              DCArrayKokkos<real_t>&       lumped_mass_per_elem)
 {
     project_qpt_scalar_to_thermo_per_elem(rho0_detj0_w,
                                           thermo_ref,
@@ -592,12 +592,12 @@ void build_lumped_thermo_mass(const DCArrayKokkos<double>& rho0_detj0_w,
 }
 
 
-void project_qpt_to_l2_basis(const DCArrayKokkos<double>& qpt_field,
-                             const DCArrayKokkos<double>& detj,
+void project_qpt_to_l2_basis(const DCArrayKokkos<real_t>& qpt_field,
+                             const DCArrayKokkos<real_t>& detj,
                              const ref_elem_t&            thermo_ref,
                              const quadrature_t&          quad,
                              const size_t                 num_elems,
-                             DCArrayKokkos<double>&       coef_per_elem)
+                             DCArrayKokkos<real_t>&       coef_per_elem)
 {
     const size_t nt = thermo_ref.num_dofs_1d;
     const size_t nq = quad.num_qpts_1d;
@@ -605,10 +605,10 @@ void project_qpt_to_l2_basis(const DCArrayKokkos<double>& qpt_field,
     const size_t n_qpts_3d   = nq * nq * nq;
     const size_t num_gauss_pts = num_elems * n_qpts_3d;
 
-    const DCArrayKokkos<double>& B  = thermo_ref.basis_1d;
-    const DCArrayKokkos<double>& w1 = quad.qpt_weights_1d;
+    const DCArrayKokkos<real_t>& B  = thermo_ref.basis_1d;
+    const DCArrayKokkos<real_t>& w1 = quad.qpt_weights_1d;
 
-    DCArrayKokkos<double> weighted_f(num_gauss_pts, "ao_sgh_l2_weighted_f");
+    DCArrayKokkos<real_t> weighted_f(num_gauss_pts, "ao_sgh_l2_weighted_f");
     FOR_ALL(elem_gid, 0, num_elems, {
         const size_t base = elem_gid * n_qpts_3d;
         for (size_t qz = 0; qz < nq; ++qz) {
@@ -632,7 +632,7 @@ void project_qpt_to_l2_basis(const DCArrayKokkos<double>& qpt_field,
                                           coef_per_elem);
 
     // Symmetric per-element L2 mass matrix.
-    DCArrayKokkos<double> M_per_elem(num_elems, n_thermo_3d, n_thermo_3d,
+    DCArrayKokkos<real_t> M_per_elem(num_elems, n_thermo_3d, n_thermo_3d,
                                      "ao_sgh_l2_M");
     FOR_ALL(elem_gid, 0, num_elems, {
         const size_t base = elem_gid * n_qpts_3d;
@@ -707,25 +707,25 @@ void project_qpt_to_l2_basis(const DCArrayKokkos<double>& qpt_field,
 
 
 void apply_kine_mass_consistent(const DCArrayKokkos<size_t>& nodes_in_elem,
-                                const DCArrayKokkos<double>& rho0_detj0_w,
+                                const DCArrayKokkos<real_t>& rho0_detj0_w,
                                 const ref_elem_t&            kine_ref,
                                 const quadrature_t&          quad,
                                 const size_t                 num_elems,
-                                const DCArrayKokkos<double>& vec_in,
-                                DCArrayKokkos<double>&       vec_out)
+                                const DCArrayKokkos<real_t>& vec_in,
+                                DCArrayKokkos<real_t>&       vec_out)
 {
     const size_t nk = kine_ref.num_dofs_1d;
     const size_t nq = quad.num_qpts_1d;
     const size_t n_qpts_3d = nq * nq * nq;
 
-    const DCArrayKokkos<double>& B = kine_ref.basis_1d;
+    const DCArrayKokkos<real_t>& B = kine_ref.basis_1d;
 
-    CArrayKokkos<double> A (num_elems, nk, nk, nk, "ao_sgh_kmass_A");
-    CArrayKokkos<double> T1(num_elems, nk, nk, nq, "ao_sgh_kmass_T1");
-    CArrayKokkos<double> T2(num_elems, nk, nq, nq, "ao_sgh_kmass_T2");
-    CArrayKokkos<double> Q (num_elems, nq, nq, nq, "ao_sgh_kmass_Q");
-    CArrayKokkos<double> U (num_elems, nk, nq, nq, "ao_sgh_kmass_U");
-    CArrayKokkos<double> V (num_elems, nk, nk, nq, "ao_sgh_kmass_V");
+    CArrayKokkos<real_t> A (num_elems, nk, nk, nk, "ao_sgh_kmass_A");
+    CArrayKokkos<real_t> T1(num_elems, nk, nk, nq, "ao_sgh_kmass_T1");
+    CArrayKokkos<real_t> T2(num_elems, nk, nq, nq, "ao_sgh_kmass_T2");
+    CArrayKokkos<real_t> Q (num_elems, nq, nq, nq, "ao_sgh_kmass_Q");
+    CArrayKokkos<real_t> U (num_elems, nk, nq, nq, "ao_sgh_kmass_U");
+    CArrayKokkos<real_t> V (num_elems, nk, nk, nq, "ao_sgh_kmass_V");
 
     vec_out.set_values(0.0);
     Kokkos::fence();
@@ -830,17 +830,17 @@ void apply_kine_mass_consistent(const DCArrayKokkos<size_t>& nodes_in_elem,
 }
 
 
-void apply_thermo_mass_consistent(const DCArrayKokkos<double>& rho0_detj0_w,
+void apply_thermo_mass_consistent(const DCArrayKokkos<real_t>& rho0_detj0_w,
                                   const ref_elem_t&            thermo_ref,
                                   const quadrature_t&          quad,
                                   const size_t                 num_elems,
-                                  const DCArrayKokkos<double>& coef_in,
-                                  DCArrayKokkos<double>&       coef_out)
+                                  const DCArrayKokkos<real_t>& coef_in,
+                                  DCArrayKokkos<real_t>&       coef_out)
 {
     const size_t nq = quad.num_qpts_1d;
     const size_t num_gauss_pts = num_elems * nq * nq * nq;
 
-    DCArrayKokkos<double> at_qpt(num_gauss_pts, "ao_sgh_tmass_qpt");
+    DCArrayKokkos<real_t> at_qpt(num_gauss_pts, "ao_sgh_tmass_qpt");
     reconstruct_thermo_at_qpts(coef_in, thermo_ref, quad, num_elems, at_qpt);
 
     FOR_ALL(g, 0, num_gauss_pts, {
@@ -854,19 +854,19 @@ void apply_thermo_mass_consistent(const DCArrayKokkos<double>& rho0_detj0_w,
 
 
 void apply_force_mult_naive(const DCArrayKokkos<size_t>& nodes_in_elem,
-                            const DCArrayKokkos<double>& stress_jinvt,
-                            const DCArrayKokkos<double>& thermo_at_qpt,
+                            const DCArrayKokkos<real_t>& stress_jinvt,
+                            const DCArrayKokkos<real_t>& thermo_at_qpt,
                             const ref_elem_t&            kine_ref,
                             const quadrature_t&          quad,
                             const size_t                 num_elems,
-                            DCArrayKokkos<double>&       node_force)
+                            DCArrayKokkos<real_t>&       node_force)
 {
     const size_t nq = quad.num_qpts_1d;
     const size_t nk = kine_ref.num_dofs_1d;
     const size_t n_qpts_3d = nq * nq * nq;
 
-    const DCArrayKokkos<double>& B  = kine_ref.basis_1d;       // (nq, nk)
-    const DCArrayKokkos<double>& dB = kine_ref.grad_basis_1d;  // (nq, nk)
+    const DCArrayKokkos<real_t>& B  = kine_ref.basis_1d;       // (nq, nk)
+    const DCArrayKokkos<real_t>& dB = kine_ref.grad_basis_1d;  // (nq, nk)
 
     // node_force is presumed zeroed by caller.
     FOR_ALL(elem_gid, 0, num_elems, {

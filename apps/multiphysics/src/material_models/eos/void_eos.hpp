@@ -56,15 +56,15 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace VoidEOSModel {
 
     // host side function
-    static void initialize(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-                           const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+    static void initialize(const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+                           const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
                            const size_t mat_pt_lid,
                            const size_t mat_id,
-                           const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                           const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                           const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+                           const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
                            const double den,
                            const double sie,
-                           const RaggedRightArrayKokkos<double> &eos_global_vars,
+                           const RaggedRightArrayKokkos<real_t> &eos_global_vars,
                            const size_t num_vars)
     {
 
@@ -74,15 +74,15 @@ namespace VoidEOSModel {
     } // end func
 
     KOKKOS_FUNCTION
-    static void calc_pressure(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-                              const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+    static void calc_pressure(const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+                              const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
                               const size_t mat_pt_lid,
                               const size_t mat_id,
-                              const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                              const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                              const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+                              const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
                               const double den,
                               const double sie,
-                              const RaggedRightArrayKokkos<double> &eos_global_vars)
+                              const RaggedRightArrayKokkos<real_t> &eos_global_vars)
     {
         // pressure of a void is 0
         MaterialPoints_pres(mat_id, mat_pt_lid) = 0.0;
@@ -91,16 +91,16 @@ namespace VoidEOSModel {
     } // end func
 
     KOKKOS_FUNCTION
-    static void calc_sound_speed(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+    static void calc_sound_speed(const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+                                 const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
                                  const size_t mat_pt_lid,
                                  const size_t mat_id,
-                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                                 const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+                                 const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
                                  const double den,
                                  const double sie,
-                                 const RaggedRightArrayKokkos<double> &eos_global_vars,
-                                 const RaggedRightArrayKokkos<double> &strength_global_vars)
+                                 const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+                                 const RaggedRightArrayKokkos<real_t> &strength_global_vars)
     {
 
         // sound speed of a void is 0, machine small must be used for CFL calculation

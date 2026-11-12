@@ -145,7 +145,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
 
     // ---- Set up sphere to act as a moving heat source ---- //
-    DCArrayKokkos<double> sphere_position(3, "sphere_position");
+    DCArrayKokkos<real_t> sphere_position(3, "sphere_position");
 
     sphere_position.host(0) = 0.0;
     sphere_position.host(1) = 0.0;

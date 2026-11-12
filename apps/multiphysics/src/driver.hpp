@@ -165,8 +165,8 @@ public:
 }; // end driver class
 
 
-inline void setting_nodes(MPICArrayKokkos<double> &node_coords,
-                   const MPICArrayKokkos<double> &final_node_coords,
+inline void setting_nodes(MPICArrayKokkos<real_t> &node_coords,
+                   const MPICArrayKokkos<real_t> &final_node_coords,
 		           const size_t num_nodes,
 		           const size_t num_dims);
 

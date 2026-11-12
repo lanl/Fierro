@@ -6,7 +6,7 @@ namespace ao_sgh
 
 void AO_SGH3D::boundary_velocity(const swage::Mesh_t&         mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
-                                 MPICArrayKokkos<double>&     node_vel,
+                                 MPICArrayKokkos<real_t>&     node_vel,
                                  const double               time_value) const
 {
     const size_t num_vel_bdy_sets =
@@ -37,7 +37,7 @@ void AO_SGH3D::boundary_velocity(const swage::Mesh_t&         mesh,
 
 void AO_SGH3D::boundary_force(const swage::Mesh_t&         mesh,
                               const BoundaryCondition_t& BoundaryConditions,
-                              DCArrayKokkos<double>&     node_force) const
+                              DCArrayKokkos<real_t>&     node_force) const
 {
     const size_t num_vel_bdy_sets =
         BoundaryConditions.num_vel_bdy_sets_in_solver.host(this->solver_id);

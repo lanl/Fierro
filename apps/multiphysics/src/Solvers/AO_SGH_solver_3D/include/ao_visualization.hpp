@@ -26,8 +26,8 @@ struct ScalarField
 // Geometry projected GLL -> equispaced via Q1 trilinear from corners.
 void write_lagrange_hex_vtu(const std::string&              path,
                             const DCArrayKokkos<size_t>&    nodes_in_elem,
-                            const MPICArrayKokkos<double>&    coords,
-                            const MPICArrayKokkos<double>&    vel,
+                            const MPICArrayKokkos<real_t>&    coords,
+                            const MPICArrayKokkos<real_t>&    vel,
                             const size_t                    num_elems,
                             const size_t                    num_nodes,
                             const size_t                    p_order,
@@ -37,25 +37,25 @@ void write_lagrange_hex_vtu(const std::string&              path,
 // Evaluate a DG Q_{k-1} thermo coefficient field at the kine GLL DoF
 // positions via cross-evaluation matrix. Boundary nodes get the value
 // from whichever element wrote last.
-void sample_thermo_at_kine_gll(const DCArrayKokkos<double>& thermo_coef_per_elem,
+void sample_thermo_at_kine_gll(const DCArrayKokkos<real_t>& thermo_coef_per_elem,
                                const DCArrayKokkos<size_t>& nodes_in_elem,
                                const ref_elem_t&            kine_ref,
                                const ref_elem_t&            thermo_ref,
                                const size_t                 num_elems,
                                const size_t                 num_nodes,
-                               DCArrayKokkos<double>&       out_kine_dof);
+                               DCArrayKokkos<real_t>&       out_kine_dof);
 
 
 // Volume-weighted per-element average of a per-qpt field, splatted into
 // every kine DoF of that element. Step-function appearance at boundaries.
-void sample_qpt_field_element_average(const DCArrayKokkos<double>& qpt_field,
-                                      const DCArrayKokkos<double>& detj,
+void sample_qpt_field_element_average(const DCArrayKokkos<real_t>& qpt_field,
+                                      const DCArrayKokkos<real_t>& detj,
                                       const DCArrayKokkos<size_t>& nodes_in_elem,
                                       const quadrature_t&          quad,
                                       const ref_elem_t&            kine_ref,
                                       const size_t                 num_elems,
                                       const size_t                 num_nodes,
-                                      DCArrayKokkos<double>&       out_kine_dof);
+                                      DCArrayKokkos<real_t>&       out_kine_dof);
 
 
 // Per-element VTK_LAGRANGE_HEXAHEDRON .vtu at the kine order p_order so
@@ -65,10 +65,10 @@ void sample_qpt_field_element_average(const DCArrayKokkos<double>& qpt_field,
 // jumps render cleanly.
 void write_lagrange_thermo_hex_vtu(const std::string&            path,
                                    const DCArrayKokkos<size_t>&  nodes_in_elem,
-                                   const MPICArrayKokkos<double>&  coords,
-                                   const DCArrayKokkos<double>&  sie_coef,
-                                   const DCArrayKokkos<double>&  pres_coef,
-                                   const DCArrayKokkos<double>&  den_coef,
+                                   const MPICArrayKokkos<real_t>&  coords,
+                                   const DCArrayKokkos<real_t>&  sie_coef,
+                                   const DCArrayKokkos<real_t>&  pres_coef,
+                                   const DCArrayKokkos<real_t>&  den_coef,
                                    const ref_elem_t&             kine_ref,
                                    const ref_elem_t&             thermo_ref,
                                    const size_t                  num_elems,
@@ -80,8 +80,8 @@ void write_lagrange_thermo_hex_vtu(const std::string&            path,
 // Q_k basis at equispaced reference points.
 void write_lagrange_kine_hex_vtu(const std::string&            path,
                                  const DCArrayKokkos<size_t>&  nodes_in_elem,
-                                 const MPICArrayKokkos<double>&  coords,
-                                 const MPICArrayKokkos<double>&  vel,
+                                 const MPICArrayKokkos<real_t>&  coords,
+                                 const MPICArrayKokkos<real_t>&  vel,
                                  const ref_elem_t&             kine_ref,
                                  const size_t                  num_elems,
                                  const size_t                  p_order);

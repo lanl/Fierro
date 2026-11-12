@@ -65,7 +65,7 @@ size_t get_id_of_ijk(size_t i, size_t j, size_t k, size_t num_x, size_t num_y){
 
 
 KOKKOS_INLINE_FUNCTION
-void get_bernstein_basis_fcns(const CArrayKokkos <double> &bern_basis,
+void get_bernstein_basis_fcns(const CArrayKokkos<real_t> &bern_basis,
                               const double xi, 
                               const double eta, 
                               const double mu,
@@ -104,8 +104,8 @@ void get_bernstein_basis_fcns(const CArrayKokkos <double> &bern_basis,
 
 
 KOKKOS_INLINE_FUNCTION
-double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
-                           const CArrayKokkos <double> &node_basis, 
+double calc_scalar_in_elem(const CArrayKokkos<real_t> &node_scalar,
+                           const CArrayKokkos<real_t> &node_basis, 
                            const DCArrayKokkos <size_t> &nodes_in_elem,
                            const size_t elem_gid,
                            const size_t eval_pnt_rid){
@@ -132,9 +132,9 @@ double calc_scalar_in_elem(const CArrayKokkos <double> &node_scalar,
 
 
 KOKKOS_INLINE_FUNCTION
-void calc_vector_in_elem(const CArrayKokkos <double> &vec_pnt,
-                         const CArrayKokkos <double> &node_vec,
-                         const CArrayKokkos <double> &node_basis, 
+void calc_vector_in_elem(const CArrayKokkos<real_t> &vec_pnt,
+                         const CArrayKokkos<real_t> &node_vec,
+                         const CArrayKokkos<real_t> &node_basis, 
                          const CArrayKokkos <size_t> &nodes_in_elem,
                          const size_t elem_gid,
                          const size_t eval_pnt_rid){
@@ -176,8 +176,8 @@ void calc_vector_in_elem(const CArrayKokkos <double> &vec_pnt,
 //     function to the surface
 //
 //------------------------------------------------------------------------
-int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill, 
-                      const MPICArrayKokkos <double> &node_coords,
+int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill, 
+                      const MPICArrayKokkos<real_t> &node_coords,
                       const DCArrayKokkos <size_t> &nodes_in_elem,
                       const size_t num_nodes,
                       const double scale_x,
@@ -355,7 +355,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
     // Getting SDF at the mesh nodes
     printf("Getting SDF at the mesh nodes \n");
 
-    CArrayKokkos <double> node_sdf(num_nodes,  "node_sdf");
+    CArrayKokkos<real_t> node_sdf(num_nodes,  "node_sdf");
 
     // loop over the nodes and calculate signed distance function (sdf)
     FOR_ALL(node_gid, 0, num_nodes, {
@@ -403,7 +403,7 @@ int paint_stl_on_mesh(DCArrayKokkos <double> &elem_geo_volfrac_fill,
     const size_t num_nodes_in_elem = 8; // WARNING WARNING WARNING
 
     // build the reference element
-    CArrayKokkos <double> bern_basis(num_eval_pnts,num_nodes_in_elem);
+    CArrayKokkos<real_t> bern_basis(num_eval_pnts,num_nodes_in_elem);
 
     // loop over the eval reference element
     FOR_ALL(k, 0, num_eval_pnts_1D,

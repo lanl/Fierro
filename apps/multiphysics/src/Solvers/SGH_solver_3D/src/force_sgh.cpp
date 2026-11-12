@@ -68,21 +68,21 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::get_force(const Material_t& Materials,
                       const swage::Mesh_t& mesh,
-                      const DCArrayKokkos<double>& GaussPoints_vol,
-                      const DCArrayKokkos<double>& GaussPoints_vel_grad,
-                      const MPICArrayKokkos<double>& GaussPoints_shock_detector,
+                      const DCArrayKokkos<real_t>& GaussPoints_vol,
+                      const DCArrayKokkos<real_t>& GaussPoints_vel_grad,
+                      const MPICArrayKokkos<real_t>& GaussPoints_shock_detector,
                       const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-                      const DCArrayKokkos<double>& corner_force,
-                      const MPICArrayKokkos<double>& node_coords,
-                      const MPICArrayKokkos<double>& node_vel,
-                      const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-                      const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-                      const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-                      const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-                      const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-                      const DRaggedRightArrayKokkos<double>& MaterialCorners_force,
-                      const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
-                      const DRaggedRightArrayKokkos<double>& MaterialPoints_geo_volfrac,
+                      const DCArrayKokkos<real_t>& corner_force,
+                      const MPICArrayKokkos<real_t>& node_coords,
+                      const MPICArrayKokkos<real_t>& node_vel,
+                      const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+                      const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+                      const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+                      const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+                      const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+                      const DRaggedRightArrayKokkos<real_t>& MaterialCorners_force,
+                      const DRaggedRightArrayKokkos<real_t>& MaterialPoints_volfrac,
+                      const DRaggedRightArrayKokkos<real_t>& MaterialPoints_geo_volfrac,
                       const corners_in_mat_t corners_in_mat_elem,
                       const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                       const size_t num_mat_elems,
@@ -131,7 +131,7 @@ void SGH3D::get_force(const Material_t& Materials,
 
 
         // create a view of the stress_matrix
-        ViewCArrayKokkos<double> stress(&MaterialPoints_stress(mat_id, mat_point_sid, 0, 0), 3, 3);
+        ViewCArrayKokkos<real_t> stress(&MaterialPoints_stress(mat_id, mat_point_sid, 0, 0), 3, 3);
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 8);

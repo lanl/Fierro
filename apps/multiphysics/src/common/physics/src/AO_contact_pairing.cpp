@@ -40,7 +40,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // 1D Lagrange basis function a and its first derivative at x
 KOKKOS_FUNCTION
-void lagrange_1D(const CArrayKokkos<double>& dof_positions_1d,
+void lagrange_1D(const CArrayKokkos<real_t>& dof_positions_1d,
                  const size_t num_dofs_1d,
                  const size_t a,
                  const double x,
@@ -69,9 +69,9 @@ void lagrange_1D(const CArrayKokkos<double>& dof_positions_1d,
 
 // build the cross product to get the normal direction
 KOKKOS_FUNCTION
-void get_normal(const CArrayKokkos<double>& dof_positions_1d,
+void get_normal(const CArrayKokkos<real_t>& dof_positions_1d,
                 const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
-                const DCArrayKokkos<double>& bdy_node_coords,
+                const DCArrayKokkos<real_t>& bdy_node_coords,
                 const size_t face_lid,
                 const double xi,
                 const double eta,
@@ -156,9 +156,9 @@ void get_bdy_surf_node_normals(const size_t num_bdy_surfs,
                                const CArrayKokkos<size_t>& bdy_surfs,
                                const CArrayKokkos<int>& faces_in_surf,
                                const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
-                               const CArrayKokkos<double>& dof_positions_1d,
-                               const DCArrayKokkos<double>& bdy_node_coords,
-                               CArrayKokkos<double>& bdy_surf_node_normals)
+                               const CArrayKokkos<real_t>& dof_positions_1d,
+                               const DCArrayKokkos<real_t>& bdy_node_coords,
+                               CArrayKokkos<real_t>& bdy_surf_node_normals)
 {
     const size_t num_dofs_1d = dof_positions_1d.dims(0);
 
@@ -196,8 +196,8 @@ void get_bdy_surf_node_normals(const size_t num_bdy_surfs,
 KOKKOS_FUNCTION
 bool check_filters(const size_t bdy_node_lid,
                    const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
-                   const ViewCArrayKokkos<double>& surf_node_normals,
-                   const DCArrayKokkos<double>& bdy_node_coords,
+                   const ViewCArrayKokkos<real_t>& surf_node_normals,
+                   const DCArrayKokkos<real_t>& bdy_node_coords,
                    const size_t num_nodes_in_surf,
                    const double filter_tol)
 {
@@ -288,7 +288,7 @@ void get_face_dims(const size_t face_lid,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void lagrange_1D_d2(const CArrayKokkos<double>& dof_positions_1d,
+void lagrange_1D_d2(const CArrayKokkos<real_t>& dof_positions_1d,
                     const size_t num_dofs_1d,
                     const size_t a,
                     const double x,
@@ -341,9 +341,9 @@ void lagrange_1D_d2(const CArrayKokkos<double>& dof_positions_1d,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void get_surf_point_and_derivs(const CArrayKokkos<double>& dof_positions_1d,
+void get_surf_point_and_derivs(const CArrayKokkos<real_t>& dof_positions_1d,
                                const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
-                               const DCArrayKokkos<double>& bdy_node_coords,
+                               const DCArrayKokkos<real_t>& bdy_node_coords,
                                const double xi,
                                const double eta,
                                double* x_s,
@@ -435,8 +435,8 @@ void get_surf_point_and_derivs(const CArrayKokkos<double>& dof_positions_1d,
 KOKKOS_FUNCTION
 bool closest_point_projected_newton(const double* x_I,
                                     const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
-                                    const DCArrayKokkos<double>& bdy_node_coords,
-                                    const CArrayKokkos<double>& dof_positions_1d,
+                                    const DCArrayKokkos<real_t>& bdy_node_coords,
+                                    const CArrayKokkos<real_t>& dof_positions_1d,
                                     double& xi,
                                     double& eta,
                                     double& f)
@@ -647,14 +647,14 @@ bool penetration_check(const size_t bdy_node_lid,
                        const size_t bdy_surf_lid,
                        const size_t node_lid,
                        const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
-                       const DCArrayKokkos<double>& bdy_node_coords,
-                       const CArrayKokkos<double>& bdy_node_vels,
-                       const CArrayKokkos<double>& dof_positions_1d,
-                       const CArrayKokkos<double>& surf_qpt_basis,
-                       const CArrayKokkos<double>& surf_qpt_positions,
+                       const DCArrayKokkos<real_t>& bdy_node_coords,
+                       const CArrayKokkos<real_t>& bdy_node_vels,
+                       const CArrayKokkos<real_t>& dof_positions_1d,
+                       const CArrayKokkos<real_t>& surf_qpt_basis,
+                       const CArrayKokkos<real_t>& surf_qpt_positions,
                        const size_t face_lid,
                        const double max_gap,
-                       const DRaggedRightArrayKokkos<double>& pairing_check_vars)
+                       const DRaggedRightArrayKokkos<real_t>& pairing_check_vars)
 {
     const size_t num_dofs_1d      = dof_positions_1d.dims(0);
     const size_t num_qpts_in_surf = surf_qpt_basis.dims(1);
@@ -676,7 +676,7 @@ bool penetration_check(const size_t bdy_node_lid,
     // ---------------------------------------------------------------
     double seed_xi    = 0.0;
     double seed_eta   = 0.0;
-    double seed_dist2 = 1.0e300;
+    double seed_dist2 = mtr::prec::numeric_max<double>();
     double seed_align = 0.0;   // |cos| between (seed - x_I) and the node velocity
 
     // node velocity, used only to break ties
@@ -891,8 +891,8 @@ bool penetration_check(const size_t bdy_node_lid,
 KOKKOS_FUNCTION
 bool refresh_closest_point(const size_t bdy_node_lid,
                            const ViewCArrayKokkos<size_t>& bdy_nodes_in_the_surf,
-                           const DCArrayKokkos<double>& bdy_node_coords,
-                           const CArrayKokkos<double>& dof_positions_1d,
+                           const DCArrayKokkos<real_t>& bdy_node_coords,
+                           const CArrayKokkos<real_t>& dof_positions_1d,
                            const double slide_tol,
                            double& xi,
                            double& eta)
@@ -1041,19 +1041,19 @@ void penetration_sweep(const size_t num_bdy_surfs,
                        const RaggedRightArrayKokkos<size_t>& elems_in_node,
                        const DCArrayKokkos<size_t>& nodes_in_elem,
                        const CArrayKokkos<size_t>& bdy_nodes_in_bdy_surf,
-                       const CArrayKokkos<double>& dof_positions_1d,
-                       const CArrayKokkos<double>& surf_qpt_basis,
-                       const CArrayKokkos<double>& surf_qpt_positions,
-                       const MPICArrayKokkos<double>& node_coords,
-                       const DCArrayKokkos<double>& bdy_node_coords,
-                       const CArrayKokkos<double>& bdy_node_vels,
-                       const CArrayKokkos<double>& bdy_surf_node_normals,
+                       const CArrayKokkos<real_t>& dof_positions_1d,
+                       const CArrayKokkos<real_t>& surf_qpt_basis,
+                       const CArrayKokkos<real_t>& surf_qpt_positions,
+                       const MPICArrayKokkos<real_t>& node_coords,
+                       const DCArrayKokkos<real_t>& bdy_node_coords,
+                       const CArrayKokkos<real_t>& bdy_node_vels,
+                       const CArrayKokkos<real_t>& bdy_surf_node_normals,
                        const RaggedRightArrayKokkos<size_t>& nodes_in_bounding_boxes,
                        const RaggedRightArrayKokkos<size_t>& surfs_in_node_boxes,
                        const RaggedRightArrayKokkos<size_t>& cols_in_node_boxes,
                        const double filter_tol,
                        const double max_gap,
-                       DRaggedRightArrayKokkos<double>& pairing_check_vars,
+                       DRaggedRightArrayKokkos<real_t>& pairing_check_vars,
                        CArrayKokkos<size_t>& num_pen_surfs_in_node,
                        CArrayKokkos<size_t>& pen_nodes,
                        DCArrayKokkos<size_t>& contact_counts,
@@ -1061,7 +1061,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
                        CArrayKokkos<size_t>& active_nodes,
                        CArrayKokkos<size_t>& num_pairs_in_node,
                        RaggedRightArrayKokkos<size_t>& contact_pair_surfs,
-                       DRaggedRightArrayKokkos<double>& contact_pair_vars,
+                       DRaggedRightArrayKokkos<real_t>& contact_pair_vars,
                        CArrayKokkos<size_t>& num_pairs_touching_node)
 {
     const double no_pair_sentinel = 100000.0;  // TODO: define once (shared with the test block)
@@ -1099,7 +1099,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
 
         // this surface's boundary node lids and nodal normals
         ViewCArrayKokkos<size_t> bdy_nodes_in_the_surf(&bdy_nodes_in_bdy_surf(bdy_surf_lid, 0), num_nodes_in_surf);
-        ViewCArrayKokkos<double> surf_node_normals(&bdy_surf_node_normals(bdy_surf_lid, 0, 0), num_nodes_in_surf, 3);
+        ViewCArrayKokkos<real_t> surf_node_normals(&bdy_surf_node_normals(bdy_surf_lid, 0, 0), num_nodes_in_surf, 3);
 
         FOR_SECOND(node_lid, 0, nodes_in_bounding_boxes.stride(bdy_surf_lid), {
 

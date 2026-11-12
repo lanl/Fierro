@@ -52,10 +52,10 @@ void SGTM3D::update_position(
     double dt,
     const size_t num_dims,
     const size_t num_nodes,
-    MPICArrayKokkos<double>& node_coords,
-    const MPICArrayKokkos<double>& node_coords_n0,
-    const MPICArrayKokkos<double>& node_vel,
-    const MPICArrayKokkos<double>& node_vel_n0) const
+    MPICArrayKokkos<real_t>& node_coords,
+    const MPICArrayKokkos<real_t>& node_coords_n0,
+    const MPICArrayKokkos<real_t>& node_vel,
+    const MPICArrayKokkos<real_t>& node_vel_n0) const
 {
     // loop over all the nodes in the mesh
     FOR_ALL(node_gid, 0, num_nodes, {

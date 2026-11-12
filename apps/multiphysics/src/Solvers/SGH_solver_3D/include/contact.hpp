@@ -15,10 +15,10 @@ static constexpr double edge_tol = 1e-3;  // tolerance for edge case solutions (
 
 struct contact_state_t
 {
-    CArrayKokkos <double> contact_forces; // contact force for each boundary node
+    CArrayKokkos<real_t> contact_forces; // contact force for each boundary node
     // WARNING: assuming first order hex elements
-    CArrayKokkos <double> xi; // xi at nodes
-    CArrayKokkos <double> eta; // eta at nodes
+    CArrayKokkos<real_t> xi; // xi at nodes
+    CArrayKokkos<real_t> eta; // eta at nodes
     double bounding_box[6]; // spatial bounds for a surface to be searched for nodes that might make contact
     size_t buckets_in_dim = 8; // max number of buckets allowed for a surface to consider when searching for nodes
     double bucket_size_dir[3]; // bucket size in each direction to make standard max_buckets_in_dim^3 buckets
@@ -27,14 +27,14 @@ struct contact_state_t
     CArrayKokkos <size_t> penetration_surfaces; // stores node gids of surface in correct local order for taking normals
     CArrayKokkos <size_t> contact_surface_map; // stores index for each node that corresponds to mesh.bdy_nodes indexing
     RaggedRightArrayKokkos <size_t> node_patch_pairs; // stores the patch contact id in the node contact id index when pair is formed
-    RaggedRightArrayKokkos <double> pair_vars; // stores xi, eta, del_tc, normal_x, normal_y, normal_z, fc_inc, and fc_inc_total in node contact id index
+    RaggedRightArrayKokkos<real_t> pair_vars; // stores xi, eta, del_tc, normal_x, normal_y, normal_z, fc_inc, and fc_inc_total in node contact id index
     CArrayKokkos <size_t> num_surfs_in_node; // strides for surfs_in_node
     RaggedRightArrayKokkos <size_t> surfs_in_node; // stores surf ids corresponding to mesh.bdy_patches that a node is part of
     DCArrayKokkos <size_t> num_active; // number of active pairs
     CArrayKokkos <size_t> active_set; // for quick referencing of active pairs
     CArrayKokkos <size_t> node_penetrations; // for use in find_penetrating_nodes
-    CArrayKokkos <double> f_c_incs; // stores contact force increments for checking convergence
-    CArrayKokkos <double> contact_force; // stores contact forces in gid locations
+    CArrayKokkos<real_t> f_c_incs; // stores contact force increments for checking convergence
+    CArrayKokkos<real_t> contact_force; // stores contact forces in gid locations
     CArrayKokkos <size_t> num_pairs_in_node; // stores number of pairs a particular node is part of for force weighting
 
     size_t max_local_iter; // max iterations for pair newton solve, defaults to 500
@@ -54,7 +54,7 @@ struct contact_state_t
                     size_t num_bdy_nodes, size_t num_bdy_patches, const CArrayKokkos <size_t> &patches_in_elem,
                     const CArrayKokkos <int> &elems_in_patch, const DCArrayKokkos <size_t> &nodes_in_elem,
                     const CArrayKokkos <size_t> &nodes_in_patch, const CArrayKokkos <size_t> &bdy_nodes, size_t num_patches,
-                    size_t num_nodes, const MPICArrayKokkos<double> &coords, const size_t contact_max_local_iter, const size_t contact_max_global_iter);
+                    size_t num_nodes, const MPICArrayKokkos<real_t> &coords, const size_t contact_max_local_iter, const size_t contact_max_global_iter);
 
     /*
      * Here is a description of each array below:
@@ -189,7 +189,7 @@ KOKKOS_FUNCTION
 void capture_box(double &vx_max, double &vy_max, double &vz_max,
                  double &ax_max, double &ay_max, double &az_max,
                  double bounding_box[],
-                 const MPICArrayKokkos<double> &coords, const CArrayKokkos <size_t> bdy_patches,
+                 const MPICArrayKokkos<real_t> &coords, const CArrayKokkos <size_t> bdy_patches,
                  const CArrayKokkos <size_t> nodes_in_patch, int surf_lid, const double &dt);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -211,7 +211,7 @@ void capture_box(double &vx_max, double &vy_max, double &vz_max,
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void penetration_capture_box(double depth_cap, double bounding_box[], size_t nodes_gid[4],
-                             const MPICArrayKokkos<double> &coords);
+                             const MPICArrayKokkos<real_t> &coords);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn construct_basis
@@ -232,11 +232,11 @@ void penetration_capture_box(double depth_cap, double bounding_box[], size_t nod
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void construct_basis(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
-                     const CArrayKokkos <double> &contact_forces, const CArrayKokkos <size_t> &contact_surface_map,
-                     const DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
-                     const DCArrayKokkos <double> &mass, const MPICArrayKokkos<double> &coords,
+                     const CArrayKokkos<real_t> &contact_forces, const CArrayKokkos <size_t> &contact_surface_map,
+                     const DCArrayKokkos<real_t> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                     const DCArrayKokkos<real_t> &mass, const MPICArrayKokkos<real_t> &coords,
                      CArrayKokkos <size_t> &num_corners_in_node,
-                     const MPICArrayKokkos <double> &vel, double A[3][4], int &surf_lid, const double &del_t);
+                     const MPICArrayKokkos<real_t> &vel, double A[3][4], int &surf_lid, const double &del_t);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn construct_penetration_basis
@@ -256,7 +256,7 @@ void construct_basis(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t>
 /// \param del_t time step to construct the basis matrix
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void construct_penetration_basis(size_t node_gids[4], const MPICArrayKokkos<double> &coords, double A[3][4]);
+void construct_penetration_basis(size_t node_gids[4], const MPICArrayKokkos<real_t> &coords, double A[3][4]);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn phi
@@ -268,7 +268,7 @@ void construct_penetration_basis(size_t node_gids[4], const MPICArrayKokkos<doub
 /// \param eta_value eta value
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////                 
 KOKKOS_FUNCTION
-void phi(double phi_k[4], double &xi_val, double &eta_val, const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta);
+void phi(double phi_k[4], const double &xi_val, const double &eta_val, const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn ref_to_physical
@@ -283,7 +283,7 @@ void phi(double phi_k[4], double &xi_val, double &eta_val, const CArrayKokkos <d
 /// \param phys 1D physical coordinates (x, y, z)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void ref_to_physical(const double ref[2], const double A[3][4], double phys[3], const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta);
+void ref_to_physical(const double ref[2], const double A[3][4], double phys[3], const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn d_phi_d_xi
@@ -296,7 +296,7 @@ void ref_to_physical(const double ref[2], const double A[3][4], double phys[3], 
 /// \param eta_value eta value
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void d_phi_d_xi(double d_phi_d_xi[4], const double &xi_value, const double &eta_value, const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta);
+void d_phi_d_xi(double d_phi_d_xi[4], const double &xi_value, const double &eta_value, const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn d_phi_d_eta
@@ -309,7 +309,7 @@ void d_phi_d_xi(double d_phi_d_xi[4], const double &xi_value, const double &eta_
 /// \param eta_value eta value
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void d_phi_d_eta(double d_phi_d_eta[4], const double &xi_value, const double &eta_value, const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta);
+void d_phi_d_eta(double d_phi_d_eta[4], const double &xi_value, const double &eta_value, const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn get_normal
@@ -323,12 +323,12 @@ void d_phi_d_eta(double d_phi_d_eta[4], const double &xi_value, const double &et
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 void get_normal(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
-                const CArrayKokkos <double> &contact_forces, const CArrayKokkos <size_t> &contact_surface_map,
-                const DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
-                const DCArrayKokkos <double> &mass, const MPICArrayKokkos<double> &coords,
+                const CArrayKokkos<real_t> &contact_forces, const CArrayKokkos <size_t> &contact_surface_map,
+                const DCArrayKokkos<real_t> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                const DCArrayKokkos<real_t> &mass, const MPICArrayKokkos<real_t> &coords,
                 CArrayKokkos <size_t> num_corners_in_node,
-                const MPICArrayKokkos <double> vel, double &xi_val, double &eta_val, const double &del_t,
-                double normal[3], const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, int &surf_lid);
+                const MPICArrayKokkos<real_t> vel, const double &xi_val, const double &eta_val, const double &del_t,
+                double normal[3], const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta, int &surf_lid);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn get_penetration_normal
@@ -341,8 +341,8 @@ void get_normal(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_
 /// \param normal kokkos view that will be changed in place
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void get_penetration_normal(const MPICArrayKokkos<double> &coords, const double &xi_val, const double &eta_val,
-                            double normal[3], const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, size_t node_gids[4]);
+void get_penetration_normal(const MPICArrayKokkos<real_t> &coords, const double &xi_val, const double &eta_val,
+                            double normal[3], const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta, size_t node_gids[4]);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn get_normal_derivatives
@@ -355,7 +355,7 @@ void get_penetration_normal(const MPICArrayKokkos<double> &coords, const double 
 /// \param normal kokkos view that will be changed in place
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void get_normal_derivatives(const MPICArrayKokkos<double> &coords, const double &xi_val, const double &eta_val,
+void get_normal_derivatives(const MPICArrayKokkos<real_t> &coords, const double &xi_val, const double &eta_val,
                             double d_n_d_xi[3], double d_n_d_eta[3], double d_phi_d_xi[4], double d_phi_d_eta[4],
                             size_t node_gids[4]);
 
@@ -378,12 +378,12 @@ void get_normal_derivatives(const MPICArrayKokkos<double> &coords, const double 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION  // will be called inside a macro
 bool get_contact_point(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
-                       CArrayKokkos <double> &contact_forces, CArrayKokkos <size_t> &contact_surface_map,
-                       DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
-                       DCArrayKokkos <double> &mass, MPICArrayKokkos<double> &coords, CArrayKokkos <size_t> bdy_nodes,
-                       CArrayKokkos <size_t> num_corners_in_node, MPICArrayKokkos <double> &vel,
+                       CArrayKokkos<real_t> &contact_forces, CArrayKokkos <size_t> &contact_surface_map,
+                       DCArrayKokkos<real_t> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                       DCArrayKokkos<real_t> &mass, MPICArrayKokkos<real_t> &coords, CArrayKokkos <size_t> bdy_nodes,
+                       CArrayKokkos <size_t> num_corners_in_node, MPICArrayKokkos<real_t> &vel,
                        size_t &node_gid, size_t &node_lid, int &surf_lid, double &xi_val, double &eta_val,
-                       double &del_tc, CArrayKokkos <double> &xi, CArrayKokkos <double> &eta);
+                       double &del_tc, CArrayKokkos<real_t> &xi, CArrayKokkos<real_t> &eta);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn contact_check
@@ -413,12 +413,12 @@ bool get_contact_point(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
-                   CArrayKokkos <double> &contact_forces, CArrayKokkos <size_t> &contact_surface_map,
-                   DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
-                   DCArrayKokkos <double> &mass, MPICArrayKokkos<double> &coords, CArrayKokkos <size_t> bdy_nodes,
-                   CArrayKokkos <size_t> num_corners_in_node, MPICArrayKokkos <double> &vel,
+                   CArrayKokkos<real_t> &contact_forces, CArrayKokkos <size_t> &contact_surface_map,
+                   DCArrayKokkos<real_t> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                   DCArrayKokkos<real_t> &mass, MPICArrayKokkos<real_t> &coords, CArrayKokkos <size_t> bdy_nodes,
+                   CArrayKokkos <size_t> num_corners_in_node, MPICArrayKokkos<real_t> &vel,
                    size_t &node_gid, size_t &node_lid, int &surf_lid, double &xi_val, double &eta_val,
-                   const double &del_t, CArrayKokkos <double> &xi, CArrayKokkos <double> &eta, double &del_tc);
+                   const double &del_t, CArrayKokkos<real_t> &xi, CArrayKokkos<real_t> &eta, double &del_tc);
 
 /// end of surface specific functions ******************************************************************************
 
@@ -438,10 +438,10 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
 /// \param del_t current time step in the analysis
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contact_id, const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, const double &del_t,
-                            MPICArrayKokkos<double> coords, CArrayKokkos <size_t> bdy_nodes, ViewCArrayKokkos <size_t> &contact_surface_map,
-                            DCArrayKokkos <double> mass, CArrayKokkos <double> contact_forces, DCArrayKokkos <double> corner_force,
-                            MPICArrayKokkos <double> vel, RaggedRightArrayKokkos <size_t> corners_in_node,
+void frictionless_increment(ViewCArrayKokkos<real_t> &pair_vars, size_t &contact_id, const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta, const double &del_t,
+                            MPICArrayKokkos<real_t> coords, CArrayKokkos <size_t> bdy_nodes, ViewCArrayKokkos <size_t> &contact_surface_map,
+                            DCArrayKokkos<real_t> mass, CArrayKokkos<real_t> contact_forces, DCArrayKokkos<real_t> corner_force,
+                            MPICArrayKokkos<real_t> vel, RaggedRightArrayKokkos <size_t> corners_in_node,
                             CArrayKokkos <size_t> num_corners_in_node, const size_t max_local_iter);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -462,8 +462,8 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
 ///                    shocks to the solving scheme
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void distribute_frictionless_force(ViewCArrayKokkos <double> &pair_vars, size_t &contact_id, ViewCArrayKokkos <size_t> &contact_surface_map,
-                                   const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, CArrayKokkos <double> contact_forces, CArrayKokkos <size_t> num_pairs_in_node,
+void distribute_frictionless_force(ViewCArrayKokkos<real_t> &pair_vars, size_t &contact_id, ViewCArrayKokkos <size_t> &contact_surface_map,
+                                   const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta, CArrayKokkos<real_t> contact_forces, CArrayKokkos <size_t> num_pairs_in_node,
                                    const double corrector_term);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -482,14 +482,14 @@ void distribute_frictionless_force(ViewCArrayKokkos <double> &pair_vars, size_t 
 /// \return true if the contact pair should be removed; false otherwise
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-bool should_remove(ViewCArrayKokkos <double> &pair_vars,
+bool should_remove(ViewCArrayKokkos<real_t> &pair_vars,
                    CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
-                   const CArrayKokkos <double> &contact_forces, const CArrayKokkos <size_t> &contact_surface_map,
-                   const DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
-                   const DCArrayKokkos <double> &mass, const MPICArrayKokkos<double> &coords,
+                   const CArrayKokkos<real_t> &contact_forces, const CArrayKokkos <size_t> &contact_surface_map,
+                   const DCArrayKokkos<real_t> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                   const DCArrayKokkos<real_t> &mass, const MPICArrayKokkos<real_t> &coords,
                    CArrayKokkos <size_t> num_corners_in_node, CArrayKokkos <size_t> bdy_nodes,
-                   MPICArrayKokkos <double> vel, const double &del_t,
-                   const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, int &surf_lid);
+                   MPICArrayKokkos<real_t> vel, const double &del_t,
+                   const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta, int &surf_lid);
 
 /// end of pair specific functions *********************************************************************************
 
@@ -505,7 +505,7 @@ bool should_remove(ViewCArrayKokkos <double> &pair_vars,
 /// \param num_nodes_found number of nodes that could potentially contact the patch (used to access possible_nodes)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void find_nodes(double &vx_max, double &vy_max, double &vz_max, double &ax_max, double &ay_max, double &az_max,
-                MPICArrayKokkos<double> &coords, CArrayKokkos <size_t> bdy_patches, CArrayKokkos <size_t> nodes_in_patch,
+                MPICArrayKokkos<real_t> &coords, CArrayKokkos <size_t> bdy_patches, CArrayKokkos <size_t> nodes_in_patch,
                 int &surf_lid, const double &del_t, size_t &Sx, size_t &Sy, size_t &Sz, double bounding_box[],
                 double &x_min, double &y_min, double &z_min, double &bucket_size, CArrayKokkos <size_t> &buckets,
                 CArrayKokkos <size_t> &possible_nodes, CArrayKokkos <size_t> &contact_surface_map, size_t &num_nodes_found,
@@ -534,11 +534,11 @@ KOKKOS_FUNCTION
 bool get_edge_pair(double normal1[3], double normal2[3], size_t &node_gid, const double &del_t,
                    double new_normal[3], CArrayKokkos <size_t> bdy_patches, size_t &contact_id,
                    CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> &contact_surface_map,
-                   CArrayKokkos <size_t> bdy_nodes, CArrayKokkos <double> &contact_forces,
-                   DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
-                   DCArrayKokkos <double> &mass,MPICArrayKokkos<double> &coords,
-                   CArrayKokkos <size_t> num_corners_in_node, MPICArrayKokkos <double> &vel,
-                   CArrayKokkos <double> &xi, CArrayKokkos <double> &eta, CArrayKokkos <size_t> &num_surfs_in_node,
+                   CArrayKokkos <size_t> bdy_nodes, CArrayKokkos<real_t> &contact_forces,
+                   DCArrayKokkos<real_t> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                   DCArrayKokkos<real_t> &mass,MPICArrayKokkos<real_t> &coords,
+                   CArrayKokkos <size_t> num_corners_in_node, MPICArrayKokkos<real_t> &vel,
+                   CArrayKokkos<real_t> &xi, CArrayKokkos<real_t> &eta, CArrayKokkos <size_t> &num_surfs_in_node,
                    RaggedRightArrayKokkos <size_t> &surfs_in_node);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -549,7 +549,7 @@ bool get_edge_pair(double normal1[3], double normal2[3], size_t &node_gid, const
 /// \param pair Contact pair object to remove
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void remove_pair(size_t &contact_id, const RaggedRightArrayKokkos <size_t> &node_patch_pairs, const RaggedRightArrayKokkos <double> &pair_vars, size_t el_id);
+void remove_pair(size_t &contact_id, const RaggedRightArrayKokkos <size_t> &node_patch_pairs, const RaggedRightArrayKokkos<real_t> &pair_vars, size_t el_id);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn penetration_check
@@ -567,7 +567,7 @@ void remove_pair(size_t &contact_id, const RaggedRightArrayKokkos <size_t> &node
 /// \return true if the node is penetrating the element; false otherwise
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-bool penetration_check(size_t node_gid, ViewCArrayKokkos <size_t> &surfaces, const MPICArrayKokkos<double> &coords,
+bool penetration_check(size_t node_gid, ViewCArrayKokkos <size_t> &surfaces, const MPICArrayKokkos<real_t> &coords,
                        const ViewCArrayKokkos <double> &xi, const ViewCArrayKokkos <double> &eta);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -618,15 +618,15 @@ void isoparametric_inverse(const double pos[3], const double elem_pos[3][8], dou
 /// \param xi stores xi values in order for patch connectivity
 /// \param eta stores eta values in order for patch connectivity
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void find_penetrating_nodes(double depth_cap, MPICArrayKokkos<double> &coords,
+void find_penetrating_nodes(double depth_cap, MPICArrayKokkos<real_t> &coords,
                             size_t num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces,
                             CArrayKokkos <size_t> bdy_patches, size_t Sx, size_t Sy, size_t Sz, double x_min,
                             double y_min, double z_min, double bucket_size, CArrayKokkos <size_t> &buckets,
                             CArrayKokkos <size_t> &node_penetrations, CArrayKokkos <size_t> &npoint,
                             size_t num_patches, CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &nsort,
                             DCArrayKokkos <size_t> nodes_in_elem, CArrayKokkos <int> elems_in_patch,
-                            size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <double> xi,
-                            CArrayKokkos <double> eta, bool preload);
+                            size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos<real_t> xi,
+                            CArrayKokkos<real_t> eta, bool preload);
 
 /// end of contact state functions *********************************************************************************
 
@@ -640,9 +640,9 @@ void find_penetrating_nodes(double depth_cap, MPICArrayKokkos<double> &coords,
 /// \param State State object
 /// \param mesh mesh object
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void sort(MPICArrayKokkos<double> &coords, size_t num_bdy_nodes, CArrayKokkos <size_t> bdy_nodes,
-          MPICArrayKokkos <double> &vel, CArrayKokkos <size_t> num_corners_in_node, RaggedRightArrayKokkos <size_t> corners_in_node,
-          DCArrayKokkos <double> &corner_force, CArrayKokkos <double> &contact_forces, DCArrayKokkos <double> &mass,
+void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <size_t> bdy_nodes,
+          MPICArrayKokkos<real_t> &vel, CArrayKokkos <size_t> num_corners_in_node, RaggedRightArrayKokkos <size_t> corners_in_node,
+          DCArrayKokkos<real_t> &corner_force, CArrayKokkos<real_t> &contact_forces, DCArrayKokkos<real_t> &mass,
           double &x_max, double &y_max, double &z_max, double &x_min, double &y_min, double &z_min, double &vx_max, double &vy_max,
           double &vz_max, double &ax_max, double &ay_max, double &az_max, size_t &Sx, size_t &Sy, size_t &Sz, double &bucket_size,
           CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &lbox, CArrayKokkos <size_t> &nsort, CArrayKokkos <size_t> &npoint);
@@ -658,16 +658,16 @@ void sort(MPICArrayKokkos<double> &coords, size_t num_bdy_nodes, CArrayKokkos <s
 /// \param State Necessary to pull nodal coords for defining penetration depth cap criterion
 /// \param mesh Necessary to pull total number of nodes
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void penetration_sweep(double x_min, double y_min, double z_min, double bounding_box[], MPICArrayKokkos<double> &coords,
+void penetration_sweep(double x_min, double y_min, double z_min, double bounding_box[], MPICArrayKokkos<real_t> &coords,
                        size_t num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces, CArrayKokkos <size_t> bdy_patches,
                        size_t Sx, size_t Sy, size_t Sz, double bucket_size, CArrayKokkos <size_t> &buckets,
                        CArrayKokkos <size_t> &node_penetrations, CArrayKokkos <size_t> &npoint, size_t num_patches,
                        CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &nsort, DCArrayKokkos <size_t> nodes_in_elem,
                        CArrayKokkos <int> elems_in_patch, size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch,
-                       const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, double x_max, double y_max, double z_max, DCArrayKokkos <size_t> &num_active,
+                       const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta, double x_max, double y_max, double z_max, DCArrayKokkos <size_t> &num_active,
                        RaggedRightArrayKokkos <size_t> elems_in_node, CArrayKokkos <size_t> num_nodes_in_elem,
                        CArrayKokkos <size_t> patches_in_elem, RaggedRightArrayKokkos <size_t> &node_patch_pairs, size_t num_elems,
-                       RaggedRightArrayKokkos <double> &pair_vars, const double &del_t, CArrayKokkos <size_t> &active_set, bool doing_preload);
+                       RaggedRightArrayKokkos<real_t> &pair_vars, const double &del_t, CArrayKokkos <size_t> &active_set, bool doing_preload);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// \fn force_resolution
@@ -678,12 +678,12 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
 ///
 /// \param del_t current time step in the analysis
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> num_active, CArrayKokkos <size_t> &active_set,
-                      RaggedRightArrayKokkos <size_t> &node_patch_pairs, RaggedRightArrayKokkos <double> &pair_vars, CArrayKokkos <size_t> &contact_surface_map,
-                      MPICArrayKokkos<double> &coords, CArrayKokkos <size_t> bdy_nodes, DCArrayKokkos <double> &mass,
-                      CArrayKokkos <double> &contact_forces, DCArrayKokkos <double> &corner_force, MPICArrayKokkos <double> &vel,
+void force_resolution(CArrayKokkos<real_t> &f_c_incs, DCArrayKokkos <size_t> num_active, CArrayKokkos <size_t> &active_set,
+                      RaggedRightArrayKokkos <size_t> &node_patch_pairs, RaggedRightArrayKokkos<real_t> &pair_vars, CArrayKokkos <size_t> &contact_surface_map,
+                      MPICArrayKokkos<real_t> &coords, CArrayKokkos <size_t> bdy_nodes, DCArrayKokkos<real_t> &mass,
+                      CArrayKokkos<real_t> &contact_forces, DCArrayKokkos<real_t> &corner_force, MPICArrayKokkos<real_t> &vel,
                       RaggedRightArrayKokkos <size_t> corners_in_node, CArrayKokkos <size_t> num_corners_in_node,
-                      const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, const double &del_t, CArrayKokkos <double> &contact_force, size_t num_bdy_nodes,
+                      const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta, const double &del_t, CArrayKokkos<real_t> &contact_force, size_t num_bdy_nodes,
                       size_t num_patches, CArrayKokkos <size_t> &num_pairs_in_node, const size_t max_local_iter, const size_t max_global_iter);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -696,14 +696,14 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
 ///
 /// \param del_t current time step in the analysis
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void remove_pairs(DCArrayKokkos <size_t> num_active, CArrayKokkos <size_t> &active_set, RaggedRightArrayKokkos <double> &pair_vars,
+void remove_pairs(DCArrayKokkos <size_t> num_active, CArrayKokkos <size_t> &active_set, RaggedRightArrayKokkos<real_t> &pair_vars,
                   RaggedRightArrayKokkos <size_t> &node_patch_pairs, CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
-                  CArrayKokkos <double> &contact_forces, CArrayKokkos <size_t> &contact_surface_map,
-                  DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
-                  DCArrayKokkos <double> &mass, MPICArrayKokkos<double> &coords,
+                  CArrayKokkos<real_t> &contact_forces, CArrayKokkos <size_t> &contact_surface_map,
+                  DCArrayKokkos<real_t> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
+                  DCArrayKokkos<real_t> &mass, MPICArrayKokkos<real_t> &coords,
                   CArrayKokkos <size_t> num_corners_in_node, CArrayKokkos <size_t> bdy_nodes,
-                  MPICArrayKokkos <double> &vel, const double &del_t,
-                  const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, size_t num_bdy_patches);
+                  MPICArrayKokkos<real_t> &vel, const double &del_t,
+                  const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta, size_t num_bdy_patches);
 
 /// end of functions called in boundary.cpp ************************************************************************
 

@@ -47,8 +47,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "region_fill.hpp"
 
-void setting_nodes(MPICArrayKokkos<double> &node_coords,
-                   MPICArrayKokkos<double> &final_node_coords,
+void setting_nodes(MPICArrayKokkos<real_t> &node_coords,
+                   MPICArrayKokkos<real_t> &final_node_coords,
 		           size_t num_nodes,
 		           size_t num_dims){
 
@@ -96,8 +96,8 @@ void Driver::initialize()
 
     // Create initial mesh on rank 0
     swage::Mesh_t initial_mesh;
-    MPICArrayKokkos<double> initial_node_coords;
-    MPICArrayKokkos<double> final_node_coords;
+    MPICArrayKokkos<real_t> initial_node_coords;
+    MPICArrayKokkos<real_t> final_node_coords;
 
     // Initialize communication plans
     // These are set up by elements::partition_mesh
@@ -153,7 +153,11 @@ void Driver::initialize()
     // Partition the mesh to all ranks
     if(world_size != 1) { // pass through the partitioning function if not a single rank
         elements::partition_mesh(initial_mesh, mesh, initial_node_coords, final_node_coords, element_communication_plan, node_communication_plan, world_size, rank);
-        MPI_Allreduce(MPI_IN_PLACE, &initial_mesh.num_gauss_in_elem, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        // num_gauss_in_elem is a size_t; it was previously reduced as MPI_DOUBLE,
+        // which reinterpreted the integer bit pattern as a float. Ranks that did
+        // not build the pre-partition mesh hold 0, so MPI_SUM propagates the one
+        // nonzero value.
+        MPI_Allreduce(MPI_IN_PLACE, &initial_mesh.num_gauss_in_elem, 1, MPI_UNSIGNED_LONG, MPI_SUM, MPI_COMM_WORLD);
         mesh.num_gauss_in_elem = initial_mesh.num_gauss_in_elem;
         // Verify communication plans (matches ELEMENTS decomp_example pattern)
         // element_communication_plan.verify_graph_communicator();
@@ -616,8 +620,8 @@ void Driver::setup_solver_vars(T& a_solver,
 
 
 // setting node coords
-inline void setting_nodes(MPICArrayKokkos<double> &node_coords,
-                   const MPICArrayKokkos<double> &final_node_coords,
+inline void setting_nodes(MPICArrayKokkos<real_t> &node_coords,
+                   const MPICArrayKokkos<real_t> &final_node_coords,
 		           const size_t num_nodes,
 		           const size_t num_dims){
 

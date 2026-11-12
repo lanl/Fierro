@@ -219,7 +219,7 @@ void MeshReader::set_mesh_file(char* MESH)
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshReader::read_mesh(swage::Mesh_t& mesh,
-               MPICArrayKokkos<double>& node_coords,
+               MPICArrayKokkos<real_t>& node_coords,
                MeshInput_t& mesh_inps,
                int           num_dims,
                bool HexN)
@@ -299,7 +299,7 @@ void MeshReader::read_mesh(swage::Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshReader::read_ensight_mesh(swage::Mesh_t& mesh,
-                       MPICArrayKokkos<double>& node_coords,
+                       MPICArrayKokkos<real_t>& node_coords,
                        MeshInput_t& mesh_inps,
                        int num_dims)
 {
@@ -332,26 +332,33 @@ void MeshReader::read_ensight_mesh(swage::Mesh_t& mesh,
     // initialize node variables
     mesh.initialize_nodes(num_nodes);
 
-    node_coords = MPICArrayKokkos<double>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
+    node_coords = MPICArrayKokkos<real_t>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
 
     // read the initial mesh coordinates
     // x-coords
     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-        fscanf(in, "%le", &node_coords.host(node_id, 0));
-        node_coords.host(node_id, 0)*= mesh_inps.scale_x;
+        // Read into a double and convert on assignment: fscanf writes
+        // sizeof(double) bytes through the pointer, so it must never be
+        // handed the address of an array slot whose element type may be
+        // narrower than double.
+        double coord = 0.0;
+        fscanf(in, "%le", &coord);
+        node_coords.host(node_id, 0) = coord * mesh_inps.scale_x;
     }
 
     // y-coords
     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-        fscanf(in, "%le", &node_coords.host(node_id, 1));
-        node_coords.host(node_id, 1)*= mesh_inps.scale_y;
+        double coord = 0.0;
+        fscanf(in, "%le", &coord);
+        node_coords.host(node_id, 1) = coord * mesh_inps.scale_y;
     }
 
     // z-coords
     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
         if (num_dims == 3) {
-            fscanf(in, "%le", &node_coords.host(node_id, 2));
-            node_coords.host(node_id, 2)*= mesh_inps.scale_z;
+            double coord = 0.0;
+            fscanf(in, "%le", &coord);
+            node_coords.host(node_id, 2) = coord * mesh_inps.scale_z;
         }
         else{
             double dummy;
@@ -438,7 +445,7 @@ void MeshReader::read_ensight_mesh(swage::Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshReader::read_Abaqus_mesh(swage::Mesh_t& mesh,
-                      MPICArrayKokkos<double>& node_coords,
+                      MPICArrayKokkos<real_t>& node_coords,
                       MeshInput_t& mesh_inps,
                       int num_dims)
 {
@@ -535,7 +542,7 @@ void MeshReader::read_Abaqus_mesh(swage::Mesh_t& mesh,
 
     size_t num_nodes = nodes.size();
 
-    node_coords = MPICArrayKokkos<double>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
+    node_coords = MPICArrayKokkos<real_t>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
 
     printf("Number of nodes read in %lu\n", num_nodes);
 
@@ -589,7 +596,7 @@ void MeshReader::read_Abaqus_mesh(swage::Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshReader::read_vtk_mesh(swage::Mesh_t& mesh,
-                   MPICArrayKokkos<double>& node_coords,
+                   MPICArrayKokkos<real_t>& node_coords,
                    MeshInput_t& mesh_inps,
                    int num_dims)
 {
@@ -642,7 +649,7 @@ void MeshReader::read_vtk_mesh(swage::Mesh_t& mesh,
         i++;
     } // end while
 
-    node_coords = MPICArrayKokkos<double>(mesh.num_nodes, num_dims, "Node_coordinates_in_mesh_io");
+    node_coords = MPICArrayKokkos<real_t>(mesh.num_nodes, num_dims, "Node_coordinates_in_mesh_io");
     
     // read the node coordinates
     for (node_gid = 0; node_gid < mesh.num_nodes; node_gid++){
@@ -807,7 +814,7 @@ void MeshReader::read_vtk_mesh(swage::Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshReader::read_vtk_hexN_mesh(swage::Mesh_t& mesh,
-                        MPICArrayKokkos<double>& node_coords,
+                        MPICArrayKokkos<real_t>& node_coords,
                         MeshInput_t& mesh_inps,
                         int num_dims)
 {
@@ -882,7 +889,7 @@ void MeshReader::read_vtk_hexN_mesh(swage::Mesh_t& mesh,
         throw std::runtime_error("read_vtk_hexN_mesh: fewer point coordinates than POINTS count");
     }
 
-    node_coords = MPICArrayKokkos<double>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
+    node_coords = MPICArrayKokkos<real_t>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
     for (size_t n = 0; n < num_nodes; n++) {
         node_coords.host(n, 0) = mesh_inps.scale_x * xyz[3 * n + 0];
         node_coords.host(n, 1) = mesh_inps.scale_y * xyz[3 * n + 1];
@@ -1008,7 +1015,7 @@ void MeshReader::read_vtk_hexN_mesh(swage::Mesh_t& mesh,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshReader::read_vtu_mesh(swage::Mesh_t& mesh,
-                   MPICArrayKokkos<double>& node_coords,
+                   MPICArrayKokkos<real_t>& node_coords,
                    MeshInput_t& mesh_inps,
                    int num_dims,
                    bool HexN)
@@ -1072,11 +1079,11 @@ void MeshReader::read_vtu_mesh(swage::Mesh_t& mesh,
     // ------------------------
     
     // temporary arrays
-    DCArrayKokkos<double> node_coords_vtu(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
+    DCArrayKokkos<real_t> node_coords_vtu(num_nodes,3, "node_coords_vtu_file"); // always 3 with vtu files
     DCArrayKokkos<int> connectivity(num_elems,num_nodes_in_elem, "connectivity_vtu_file");
     DCArrayKokkos<int> elem_types(num_elems, "elem_types_vtu_file"); // element types
 
-    node_coords = MPICArrayKokkos<double>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
+    node_coords = MPICArrayKokkos<real_t>(num_nodes, num_dims, "Node_coordinates_in_mesh_io");
 
 
     // for all fields, we stop recording when we get to "<"

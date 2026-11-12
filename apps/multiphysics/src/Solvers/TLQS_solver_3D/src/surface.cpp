@@ -41,7 +41,7 @@ void TLQS3D::get_qpt_area_normal(
         const swage::Mesh_t& mesh,
         const elements::ReferenceSurface_t& ref_surf,
         const elements::SurfaceQuadrature_t& SurfQuad,
-        const MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<real_t>& node_coords,
         const size_t qpt_lid,
         const size_t surf_gid,
         const ViewCArrayKokkos<double>& jac,
@@ -55,7 +55,7 @@ void TLQS3D::get_qpt_area_normal(
     ViewCArrayKokkos<size_t> nodes_in_the_elem(&mesh.nodes_in_elem(elem_gid,0), mesh.num_nodes_in_elem);
     const size_t face_lid = mesh.faces_in_surf(surf_gid, 0);
     // extract the grad_basis at a single quadrature point (surf,qpt,dof,3D)
-    ViewCArrayKokkos<double> a_grad_basis(&ref_surf.qpt_grad_basis(face_lid,qpt_lid,0,0), mesh.num_nodes_in_elem, 3);
+    ViewCArrayKokkos<real_t> a_grad_basis(&ref_surf.qpt_grad_basis(face_lid,qpt_lid,0,0), mesh.num_nodes_in_elem, 3);
 
     // get the jacobian for Nanson's
     jacobian(jac, node_coords, nodes_in_the_elem, a_grad_basis);
@@ -121,7 +121,7 @@ KOKKOS_FUNCTION
 void TLQS3D::get_surf_qpt_coords(
         const swage::Mesh_t& mesh,
         const elements::ReferenceSurface_t ref_surf,
-        const MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<real_t>& node_coords,
         const size_t qpt_lid,
         const size_t surf_gid,
         ViewCArrayKokkos<double>& qpt_coords) const

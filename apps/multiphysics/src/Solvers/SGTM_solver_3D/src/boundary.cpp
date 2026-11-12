@@ -50,7 +50,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::boundary_temperature(const swage::Mesh_t& mesh,
                                   const BoundaryCondition_t& BoundaryConditions,
-                                  MPICArrayKokkos<double>& node_temp,
+                                  MPICArrayKokkos<real_t>& node_temp,
                                   const double time_value) const
 {
     // ---- Loop over boundary sets ---- //
@@ -100,9 +100,9 @@ void SGTM3D::boundary_temperature(const swage::Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
-                                 const MPICArrayKokkos<double>& node_temp,
-                                 const DCArrayKokkos<double>& node_flux,
-                                 const MPICArrayKokkos<double>& node_coords,
+                                 const MPICArrayKokkos<real_t>& node_temp,
+                                 const DCArrayKokkos<real_t>& node_flux,
+                                 const MPICArrayKokkos<real_t>& node_coords,
                                  const double time_value) const
 {
     // ---- Loop over boundary sets ---- //
@@ -240,9 +240,9 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
                                 const BoundaryCondition_t& BoundaryConditions,
-                                const MPICArrayKokkos<double>& node_temp,
-                                const DCArrayKokkos<double>& node_flux,
-                                const MPICArrayKokkos<double>& node_coords,
+                                const MPICArrayKokkos<real_t>& node_temp,
+                                const DCArrayKokkos<real_t>& node_flux,
+                                const MPICArrayKokkos<real_t>& node_coords,
                                 const double time_value) const
 {
     // ---- Loop over boundary sets ---- //
@@ -388,7 +388,7 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::boundary_heat_flux(const swage::Mesh_t& mesh,
                                   const BoundaryCondition_t& BoundaryConditions,
-                                  MPICArrayKokkos<double>& node_temp,
+                                  MPICArrayKokkos<real_t>& node_temp,
                                   const double time_value) const
 {
     // // Loop over boundary sets

@@ -39,10 +39,10 @@ KOKKOS_FUNCTION
 void TLQS3D::get_gradients(
     const double material_matrix[6][6],
     ViewCArrayKokkos <size_t>& nodes_in_elem,
-    const MPICArrayKokkos <double>& coords_t0,
-    const MPICArrayKokkos <double>& displacement,
-    const CArrayKokkos <double>& displacement_step,
-    ViewCArrayKokkos <double>& gauss_point_grad_basis,
+    const MPICArrayKokkos<real_t>& coords_t0,
+    const MPICArrayKokkos<real_t>& displacement,
+    const CArrayKokkos<real_t>& displacement_step,
+    ViewCArrayKokkos<real_t>& gauss_point_grad_basis,
     double grad_u[3][3],
     double inv_J[3][3],
     double& det_J,
@@ -178,15 +178,15 @@ void TLQS3D::tally_elem_arrays(
     const double material_matrix[6][6],
     const double grad_u[3][3],
     const double inv_J[3][3],
-    ViewCArrayKokkos <double>& gauss_point_grad_basis,
+    ViewCArrayKokkos<real_t>& gauss_point_grad_basis,
     double gauss_point_weight,
     const double PK2_curr_config[6],
-    ViewCArrayKokkos <double>& Kel_packed,
-    ViewCArrayKokkos <double>& Fel,
+    ViewCArrayKokkos<real_t>& Kel_packed,
+    ViewCArrayKokkos<real_t>& Fel,
     const double vol_frac,
-    ViewCArrayKokkos <double>& glob_grad,
-    ViewCArrayKokkos <double>& B1,
-    ViewCArrayKokkos <double>& K2_row)
+    ViewCArrayKokkos<real_t>& glob_grad,
+    ViewCArrayKokkos<real_t>& B1,
+    ViewCArrayKokkos<real_t>& K2_row)
 {
     const int num_nodes = gauss_point_grad_basis.dims(0);
     const int num_dofs  = 3 * num_nodes;
@@ -293,13 +293,13 @@ void TLQS3D::tally_elem_arrays(
 
     // row pointers into B1 and the K2 row so the row updates of Kel below are
     // simple contiguous (vectorizable) loops
-    const double* B1_0 = &B1(0,0);
-    const double* B1_1 = &B1(1,0);
-    const double* B1_2 = &B1(2,0);
-    const double* B1_3 = &B1(3,0);
-    const double* B1_4 = &B1(4,0);
-    const double* B1_5 = &B1(5,0);
-    double* k2_row = &K2_row(0);
+    const real_t* B1_0 = &B1(0,0);
+    const real_t* B1_1 = &B1(1,0);
+    const real_t* B1_2 = &B1(2,0);
+    const real_t* B1_3 = &B1(3,0);
+    const real_t* B1_4 = &B1(4,0);
+    const real_t* B1_5 = &B1(5,0);
+    real_t* k2_row = &K2_row(0);
 
     // K2_row is kept all zero except (at most) one entry per 3x3 block, see the row loop below
     for (int col = 0; col < num_dofs; col++) {
@@ -382,7 +382,7 @@ void TLQS3D::tally_elem_arrays(
 
             // packed row `row` holds columns row..num_dofs-1, starting at packed_row_start(row, n);
             // offsetting the pointer by -row lets it be indexed by the full column index col >= row
-            double* Kel_row = &Kel_packed(packed_row_start(row, num_dofs)) - row;
+            real_t* Kel_row = &Kel_packed(packed_row_start(row, num_dofs)) - row;
 
             // Accumulate row p of every 3x3 block (a,b) into Kel, col = 3*b + q
             // K1(3a+p, 3b+q) = sum_m CtB1_a[m][p] * B1_b[m][q]

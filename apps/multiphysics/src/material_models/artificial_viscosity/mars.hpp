@@ -45,13 +45,13 @@ namespace MARSDissipationModel {
 
     KOKKOS_FUNCTION
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
-                                  const RaggedRightArrayKokkos <double>& dissipation_global_vars,
-                                  const DCArrayKokkos<double>& GaussPoints_vel_grad,
-                                  const MPICArrayKokkos<double>& GaussPoints_shock_detector,
+                                  const RaggedRightArrayKokkos<real_t>& dissipation_global_vars,
+                                  const DCArrayKokkos<real_t>& GaussPoints_vel_grad,
+                                  const MPICArrayKokkos<real_t>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-                                  const MPICArrayKokkos<double>& node_vel,
-                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                                  const MPICArrayKokkos<real_t>& node_vel,
+                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,
                                   const ViewCArrayKokkos<double>& area_normal,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_elem,
@@ -144,7 +144,7 @@ namespace MARSDissipationModel {
             size_t node_gid = elem_node_gids(node_lid);
 
             // Create view of nodal velocity
-            ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
+            ViewCArrayKokkos<real_t> vel(&node_vel(node_gid, 0), num_dims);
 
             // Get an estimate of the shock direction.
             mag_vel = sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
@@ -372,13 +372,13 @@ namespace DirMARSDissipationModel {
 
     KOKKOS_FUNCTION
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
-                                  const RaggedRightArrayKokkos <double>& dissipation_global_vars,
-                                  const DCArrayKokkos<double>& GaussPoints_vel_grad,
-                                  const MPICArrayKokkos<double>& GaussPoints_shock_detector,
+                                  const RaggedRightArrayKokkos<real_t>& dissipation_global_vars,
+                                  const DCArrayKokkos<real_t>& GaussPoints_vel_grad,
+                                  const MPICArrayKokkos<real_t>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-                                  const MPICArrayKokkos<double>& node_vel,
-                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                                  const MPICArrayKokkos<real_t>& node_vel,
+                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,
                                   const ViewCArrayKokkos<double>& area_normal,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_elem,
@@ -495,7 +495,7 @@ namespace DirMARSDissipationModel {
             size_t node_gid = elem_node_gids(node_lid);
 
             // Create view of nodal velocity
-            ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
+            ViewCArrayKokkos<real_t> vel(&node_vel(node_gid, 0), num_dims);
 
             // Get an estimate of the shock direction.
             mag_vel = sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
@@ -668,13 +668,13 @@ namespace MARSRZDissipationModel {
   
     KOKKOS_FUNCTION
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
-                                  const RaggedRightArrayKokkos <double>& dissipation_global_vars,
-                                  const DCArrayKokkos<double>& GaussPoints_vel_grad,
-                                  const MPICArrayKokkos<double>& GaussPoints_shock_detector,
+                                  const RaggedRightArrayKokkos<real_t>& dissipation_global_vars,
+                                  const DCArrayKokkos<real_t>& GaussPoints_vel_grad,
+                                  const MPICArrayKokkos<real_t>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-                                  const MPICArrayKokkos<double>& node_vel,
-                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                                  const MPICArrayKokkos<real_t>& node_vel,
+                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,
                                   const ViewCArrayKokkos<double>& area_normal,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_elem,
@@ -743,7 +743,7 @@ namespace MARSRZDissipationModel {
         // Get node global index and create view of nodal velocity
         int node_gid = elem_node_gids(node_lid);
 
-        ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
+        ViewCArrayKokkos<real_t> vel(&node_vel(node_gid, 0), num_dims);
 
         vel_star(0) += 0.25 * vel(0);
         vel_star(1) += 0.25 * vel(1);
@@ -765,7 +765,7 @@ namespace MARSRZDissipationModel {
         size_t node_gid = elem_node_gids(node_lid);
 
         // Create view of nodal velocity
-        ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
+        ViewCArrayKokkos<real_t> vel(&node_vel(node_gid, 0), num_dims);
 
         // Get an estimate of the shock direction.
         mag_vel = sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )
@@ -958,13 +958,13 @@ namespace DirMARSRZDissipationModel {
 
     KOKKOS_FUNCTION
     static void calc_dissipation (const ViewCArrayKokkos<size_t> elem_node_gids,
-                                  const RaggedRightArrayKokkos <double>& dissipation_global_vars,
-                                  const DCArrayKokkos<double>& GaussPoints_vel_grad,
-                                  const MPICArrayKokkos<double>& GaussPoints_shock_detector,
+                                  const RaggedRightArrayKokkos<real_t>& dissipation_global_vars,
+                                  const DCArrayKokkos<real_t>& GaussPoints_vel_grad,
+                                  const MPICArrayKokkos<real_t>& GaussPoints_shock_detector,
                                   const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-                                  const MPICArrayKokkos<double>& node_vel,
-                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-                                  const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                                  const MPICArrayKokkos<real_t>& node_vel,
+                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
                                   const ViewCArrayKokkos<double>& disp_corner_forces,
                                   const ViewCArrayKokkos<double>& area_normal,
                                   const RaggedRightArrayKokkos<size_t>& elems_in_elem,
@@ -1055,7 +1055,7 @@ namespace DirMARSRZDissipationModel {
         // Get node global index and create view of nodal velocity
         int node_gid = elem_node_gids(node_lid);
 
-        ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
+        ViewCArrayKokkos<real_t> vel(&node_vel(node_gid, 0), num_dims);
 
         vel_star(0) += 0.25 * vel(0);
         vel_star(1) += 0.25 * vel(1);
@@ -1077,7 +1077,7 @@ namespace DirMARSRZDissipationModel {
         size_t node_gid = elem_node_gids(node_lid);
 
         // Create view of nodal velocity
-        ViewCArrayKokkos<double> vel(&node_vel(node_gid, 0), num_dims);
+        ViewCArrayKokkos<real_t> vel(&node_vel(node_gid, 0), num_dims);
 
         // Get an estimate of the shock direction.
         mag_vel = sqrt( (vel(0) - vel_star(0) ) * (vel(0) - vel_star(0) )

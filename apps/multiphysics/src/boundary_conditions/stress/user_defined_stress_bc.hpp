@@ -62,8 +62,8 @@ namespace UserDefinedStressBC
 KOKKOS_FUNCTION
 static void stress(const swage::Mesh_t& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-    const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
-    const DCArrayKokkos<double>& bc_state_vars,
+    const RaggedRightArrayKokkos<real_t>& vel_bc_global_vars,
+    const DCArrayKokkos<real_t>& bc_state_vars,
     const ViewCArrayKokkos <double>& corner_surf_force,
     const ViewCArrayKokkos <double>& corner_surf_normal,
     const double time_value,

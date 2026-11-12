@@ -49,7 +49,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::boundary_velocity(const swage::Mesh_t&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
-                              MPICArrayKokkos<double>& node_vel,
+                              MPICArrayKokkos<real_t>& node_vel,
                               const double time_value) const
 {
     size_t num_vel_bdy_sets = BoundaryConditions.num_vel_bdy_sets_in_solver.host(this->solver_id);
@@ -95,7 +95,7 @@ void SGH3D::boundary_velocity(const swage::Mesh_t&      mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::boundary_contact(const swage::Mesh_t& mesh,
                              const BoundaryCondition_t& BoundaryConditions,
-                             MPICArrayKokkos<double>& node_vel,
+                             MPICArrayKokkos<real_t>& node_vel,
                              const double time_value) const
 {
     return;
@@ -230,8 +230,8 @@ void SGH3D::boundary_fracture_force(State_t& State, swage::Mesh_t &mesh, const d
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::boundary_stress(const swage::Mesh_t&      mesh,
                               const BoundaryCondition_t& BoundaryConditions,
-                              DCArrayKokkos<double>& node_bdy_force,
-                              MPICArrayKokkos<double>& node_coords,
+                              DCArrayKokkos<real_t>& node_bdy_force,
+                              MPICArrayKokkos<real_t>& node_coords,
                               const double time_value) const
 {
 

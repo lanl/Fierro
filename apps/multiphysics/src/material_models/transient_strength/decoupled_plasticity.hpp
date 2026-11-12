@@ -76,10 +76,10 @@ namespace HypoPlasticityModel {
      * @param mat_id   Material ID.
      */
     static void init_strength_state_vars(
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
+        const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+        const RaggedRightArrayKokkos<real_t> &strength_global_vars,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_id)
@@ -123,23 +123,23 @@ namespace HypoPlasticityModel {
      */
     KOKKOS_FUNCTION
     static void calc_stress(
-        const DCArrayKokkos<double>  &GaussPoints_vel_grad,
-        const MPICArrayKokkos<double> &node_coords,
-        const MPICArrayKokkos<double> &node_coords_t0,
-        const MPICArrayKokkos <double> &node_vel,
+        const DCArrayKokkos<real_t>  &GaussPoints_vel_grad,
+        const MPICArrayKokkos<real_t> &node_coords,
+        const MPICArrayKokkos<real_t> &node_coords_t0,
+        const MPICArrayKokkos<real_t> &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress_n0,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_sspd,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_stress_n0,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
+        const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+        const RaggedRightArrayKokkos<real_t> &strength_global_vars,
         const double vol,
         const double dt,
         const double rk_alpha,
@@ -182,8 +182,8 @@ namespace HypoPlasticityModel {
         // Cauchy deviatoric stress tensor, stress(rk,elem,i,j)
 
         // create a slice of the stress tensor
-        ViewCArrayKokkos <double> stress_n(&MaterialPoints_stress_n0(mat_id, MaterialPoints_lid, 0, 0), num_dims, num_dims); // stress at previous timestep
-        ViewCArrayKokkos <double> stress(&MaterialPoints_stress(mat_id, MaterialPoints_lid, 0, 0), num_dims, num_dims); // stress at this timestep
+        ViewCArrayKokkos<real_t> stress_n(&MaterialPoints_stress_n0(mat_id, MaterialPoints_lid, 0, 0), num_dims, num_dims); // stress at previous timestep
+        ViewCArrayKokkos<real_t> stress(&MaterialPoints_stress(mat_id, MaterialPoints_lid, 0, 0), num_dims, num_dims); // stress at this timestep
 
         double s_dev_n_1D[num_dims * num_dims];
         double s_dev_1D[num_dims * num_dims];
@@ -370,10 +370,10 @@ namespace HypoPlasticityRZModel {
      * @param mat_id   Material ID.
      */
     static void init_strength_state_vars(
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
+        const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+        const RaggedRightArrayKokkos<real_t> &strength_global_vars,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_id)
@@ -418,23 +418,23 @@ namespace HypoPlasticityRZModel {
      */
     KOKKOS_FUNCTION
     static void calc_stress(
-        const DCArrayKokkos<double>  &GaussPoints_vel_grad,
-        const MPICArrayKokkos<double> &node_coords,
-        const MPICArrayKokkos<double> &node_coords_t0,
-        const MPICArrayKokkos <double> &node_vel,
+        const DCArrayKokkos<real_t>  &GaussPoints_vel_grad,
+        const MPICArrayKokkos<real_t> &node_coords,
+        const MPICArrayKokkos<real_t> &node_coords_t0,
+        const MPICArrayKokkos<real_t> &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress_n0,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_sspd,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_stress_n0,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
         const double MaterialPoints_den,
         const double MaterialPoints_sie,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
+        const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+        const RaggedRightArrayKokkos<real_t> &strength_global_vars,
         const double vol,
         const double dt,
         const double rk_alpha,
@@ -454,8 +454,8 @@ namespace HypoPlasticityRZModel {
         // Cauchy deviatoric stress tensor, stress(rk,elem,i,j)
 
         // create a slice of the stress tensor
-        ViewCArrayKokkos <double> stress_n(&MaterialPoints_stress_n0(mat_id, MaterialPoints_lid, 0, 0), 3, 3); // stress from previous timestep
-        ViewCArrayKokkos <double> stress(&MaterialPoints_stress(mat_id, MaterialPoints_lid, 0, 0), 3, 3); // stress from this timestep
+        ViewCArrayKokkos<real_t> stress_n(&MaterialPoints_stress_n0(mat_id, MaterialPoints_lid, 0, 0), 3, 3); // stress from previous timestep
+        ViewCArrayKokkos<real_t> stress(&MaterialPoints_stress(mat_id, MaterialPoints_lid, 0, 0), 3, 3); // stress from this timestep
 
         double s_dev_n_1D[3 * 3];
         double s_dev_1D[3 * 3];

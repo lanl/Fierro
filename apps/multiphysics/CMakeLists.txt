@@ -42,6 +42,39 @@ set(FIERRO_DEVICE_BACKEND "" CACHE STRING "Device backend for FOR_ALL and friend
 set_property(CACHE FIERRO_HOST_BACKEND   PROPERTY STRINGS serial openmp pthreads)
 set_property(CACHE FIERRO_DEVICE_BACKEND PROPERTY STRINGS serial openmp pthreads cuda hip sycl)
 
+# --- Floating-point precision selection ---
+# Chooses what MATAR's three precision tiers mean for this build, forwarded
+# through ELEMENTS to MATAR:
+#   real_t       the default working precision for bulk field data
+#   high_real_t  fields that must stay accurate (coordinates, conserved sums)
+#   low_real_t   tolerant or bulk-storage fields
+#
+#   cmake .. -DFIERRO_REAL=float -DFIERRO_HIGH_REAL=double
+#
+# Leaving these empty keeps every tier at double, so an unset build is
+# byte-for-byte identical to before this option existed. MATAR validates the
+# values: high_real_t may not drop below float, and anything other than
+# double/float requires Kokkos. Only float is a supported, validated target
+# today -- the 16-bit tiers are reachable but not verified (magnitude
+# sentinels and atomics have not been audited for them).
+set(FIERRO_REAL      "" CACHE STRING "Precision of real_t: double|float|half|bfloat16|quad")
+set(FIERRO_HIGH_REAL "" CACHE STRING "Precision of high_real_t: double|float|quad")
+set(FIERRO_LOW_REAL  "" CACHE STRING "Precision of low_real_t: double|float|half|bfloat16")
+set_property(CACHE FIERRO_REAL      PROPERTY STRINGS double float half bfloat16 quad)
+set_property(CACHE FIERRO_HIGH_REAL PROPERTY STRINGS double float quad)
+set_property(CACHE FIERRO_LOW_REAL  PROPERTY STRINGS double float half bfloat16)
+
+foreach(_tier REAL HIGH_REAL LOW_REAL)
+  if(FIERRO_${_tier})
+    set(ELEMENTS_${_tier} "${FIERRO_${_tier}}" CACHE STRING "Set by FIERRO_${_tier}" FORCE)
+  endif()
+endforeach()
+if(FIERRO_REAL OR FIERRO_HIGH_REAL OR FIERRO_LOW_REAL)
+  message(STATUS
+    "Fierro precision: real='${FIERRO_REAL}' high_real='${FIERRO_HIGH_REAL}'"
+    " low_real='${FIERRO_LOW_REAL}' -> ELEMENTS_* -> MATAR_*")
+endif()
+
 # --- Map Options to Variables expected by subdirectories ---
 # CUDA/HIP/OPENMP/THREADS are the bare variables the solver subdirectories gate
 # their HAVE_* definitions on. The authoritative HAVE_* / HAVE_HOST_* set comes

@@ -52,7 +52,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-static void get_lobatto_nodes_1D(const CArrayKokkos<double>& lob_nodes_1D,
+static void get_lobatto_nodes_1D(const CArrayKokkos<real_t>& lob_nodes_1D,
     const int& num) 
 {
     if (num == 1) {
@@ -316,7 +316,7 @@ static void get_lobatto_nodes_1D(const CArrayKokkos<double>& lob_nodes_1D,
 
 KOKKOS_FUNCTION
 static void get_lobatto_weights_1D(
-    const CArrayKokkos<double>& lob_weights_1D,                   // Lobbatto weights
+    const CArrayKokkos<real_t>& lob_weights_1D,                   // Lobbatto weights
     const int& num)                                        // Interpolation order
 {
     if (num == 1) {
@@ -589,7 +589,7 @@ static void get_lobatto_weights_1D(
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 static void get_legendre_nodes_1D(
-    const CArrayKokkos<double>& leg_nodes_1D,
+    const CArrayKokkos<real_t>& leg_nodes_1D,
     const int& num) 
 {
     if (num == 1) {
@@ -840,7 +840,7 @@ static void get_legendre_nodes_1D(
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 static void get_legendre_weights_1D(
-    const CArrayKokkos<double>& leg_weights_1D,                    // Legendre weights
+    const CArrayKokkos<real_t>& leg_weights_1D,                    // Legendre weights
     const int& num)                                     // Interpolation order
 {
     if (num == 1) {

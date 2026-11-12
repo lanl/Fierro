@@ -34,6 +34,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef FIERRO_DYNAMIC_OPTIONS_H
 #define FIERRO_DYNAMIC_OPTIONS_H
 
+#include <algorithm>
 #include "matar.h"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -54,9 +55,16 @@ struct DynamicOptions_t
     double dt_start = 1e-5;     ///< Starting time step
     double dt_cfl   = 0.4;      ///< CFL multiplier for time step calculation
 
-    double fuzz  = 1e-16;       ///< machine precision
-    double tiny  = 1e-12;       ///< very very small (between real_t and single)
-    double small = 1e-8;        ///< single precision
+    // Guard magnitudes, scaled to the working precision. These are used as
+    // `x / (den + fuzz)` and `if (x > tiny)` throughout the solvers, so a
+    // value below the tier's resolution silently stops guarding anything:
+    // at FP32, eps is ~1.2e-7, so a literal 1e-16 fuzz is a no-op and
+    // `if (x > fuzz)` degenerates to `if (x > 0)`. The max() keeps the
+    // historical values exactly when real_t is double, so a default build is
+    // unchanged. Still YAML-overridable.
+    double fuzz  = std::max(1e-16, (double)mtr::prec::epsilon<real_t>());        ///< machine precision
+    double tiny  = std::max(1e-12, (double)mtr::prec::epsilon<real_t>() * 1e4);  ///< very very small
+    double small = std::max(1e-8,  (double)mtr::prec::epsilon<real_t>() * 1e8);  ///< single precision
 
     int rk_num_stages = 2;      ///< Number of RK stages
 

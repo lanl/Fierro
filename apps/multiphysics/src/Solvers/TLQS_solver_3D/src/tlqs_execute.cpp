@@ -119,8 +119,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // which halves its memory and the bytes read by every CG product. Kel is symmetric for the
     // supported material models (see the MATERIAL MODEL LIMITATION note in tally_elem_arrays).
     const size_t num_dof_in_elem = 3*mesh.num_nodes_in_elem;
-    CArrayKokkos <double> K_elem(mesh.num_elems, num_dof_in_elem*(num_dof_in_elem+1)/2); /// K1 + K2 (packed upper triangle)
-    CArrayKokkos <double> F_elem(mesh.num_elems,3*mesh.num_nodes_in_elem); /// - F01    note: F02 added directly to cg residual from traction conditions
+    CArrayKokkos<real_t> K_elem(mesh.num_elems, num_dof_in_elem*(num_dof_in_elem+1)/2); /// K1 + K2 (packed upper triangle)
+    CArrayKokkos<real_t> F_elem(mesh.num_elems,3*mesh.num_nodes_in_elem); /// - F01    note: F02 added directly to cg residual from traction conditions
 
     // dofs prescribed by the displacement BCs. The constraints are applied at the vector level in
     // the linear solve (A = P*K*P + (I - P), see TLQS3D::constrained_K_times_x) instead of by
@@ -128,16 +128,16 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos <bool> constrained_dof(mesh.num_nodes, 3, "constrained_dof");
 
     // per element scratch for the element based CG products (gathered x and element result)
-    CArrayKokkos <double> x_elem(mesh.num_elems, num_dof_in_elem, "x_elem");
-    CArrayKokkos <double> y_elem(mesh.num_elems, num_dof_in_elem, "y_elem");
+    CArrayKokkos<real_t> x_elem(mesh.num_elems, num_dof_in_elem, "x_elem");
+    CArrayKokkos<real_t> y_elem(mesh.num_elems, num_dof_in_elem, "y_elem");
 
     // per element scratch used by tally_elem_arrays at each material point: the global basis
     // gradients, B1 for every node, and one row of K2. Computing these once per material point
     // (instead of once per node pair) is what lets the Kel row updates vectorize.
     // Indexed by element (like K_elem) so every thread in the element loop has its own slice.
-    CArrayKokkos <double> glob_grad_elem(mesh.num_elems, mesh.num_nodes_in_elem, 3);
-    CArrayKokkos <double> B1_elem(mesh.num_elems, 6, 3*mesh.num_nodes_in_elem);
-    CArrayKokkos <double> K2_row_elem(mesh.num_elems, 3*mesh.num_nodes_in_elem);
+    CArrayKokkos<real_t> glob_grad_elem(mesh.num_elems, mesh.num_nodes_in_elem, 3);
+    CArrayKokkos<real_t> B1_elem(mesh.num_elems, 6, 3*mesh.num_nodes_in_elem);
+    CArrayKokkos<real_t> K2_row_elem(mesh.num_elems, 3*mesh.num_nodes_in_elem);
 
     // local index of each node in every element connected to it. The mesh does not change during
     // the solve, so this is built once here instead of searching nodes_in_elem for it inside every
@@ -147,29 +147,29 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     build_node_lid_in_elem(mesh.num_nodes, mesh.elems_in_node, mesh.num_nodes_in_elem, mesh.nodes_in_elem, num_elems_in_node, node_lid_in_elem);
 
     // additive schwarz preconditioning variables
-    /* CArrayKokkos <double> K_elem_inv(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
-    CArrayKokkos <double> intermediate_K_elem_inv(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
-    CArrayKokkos <double> temporary(mesh.num_elems, 3*mesh.num_nodes_in_elem);
+    /* CArrayKokkos<real_t> K_elem_inv(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
+    CArrayKokkos<real_t> intermediate_K_elem_inv(mesh.num_elems,3*mesh.num_nodes_in_elem,3*mesh.num_nodes_in_elem);
+    CArrayKokkos<real_t> temporary(mesh.num_elems, 3*mesh.num_nodes_in_elem);
     CArrayKokkos <size_t> perm(mesh.num_elems, 3*mesh.num_nodes_in_elem);
-    CArrayKokkos<double> zk(3 * mesh.num_nodes);
-    CArrayKokkos<double> zkp1(3 * mesh.num_nodes); */
+    CArrayKokkos<real_t> zk(3 * mesh.num_nodes);
+    CArrayKokkos<real_t> zkp1(3 * mesh.num_nodes); */
 
     // conjugate gradient method vectors
-    CArrayKokkos <double> p(mesh.num_nodes, 3);
-    MPICArrayKokkos <double> rk(mesh.num_nodes, 3);
-    MPICArrayKokkos <double> rkp1(mesh.num_nodes, 3);
+    CArrayKokkos<real_t> p(mesh.num_nodes, 3);
+    MPICArrayKokkos<real_t> rk(mesh.num_nodes, 3);
+    MPICArrayKokkos<real_t> rkp1(mesh.num_nodes, 3);
 
     // Anderson acceleration variables
     size_t window_size = 1;
     const size_t max_hist = (window_size > 1) ? (window_size - 1) : 1;
-    DCArrayKokkos <double> anderson_weights(max_hist);
-    //CArrayKokkos <double> curr_anderson_residual(3*mesh.num_nodes);
-    CArrayKokkos <double> hist_anderson_residual(3*mesh.num_nodes,window_size);
+    DCArrayKokkos<real_t> anderson_weights(max_hist);
+    //CArrayKokkos<real_t> curr_anderson_residual(3*mesh.num_nodes);
+    CArrayKokkos<real_t> hist_anderson_residual(3*mesh.num_nodes,window_size);
     hist_anderson_residual.set_values(0);
-    CArrayKokkos <double> hist_displacement_iter(3*mesh.num_nodes,window_size);
+    CArrayKokkos<real_t> hist_displacement_iter(3*mesh.num_nodes,window_size);
     hist_displacement_iter.set_values(0);
-    CArrayKokkos<double> DeltaF(3*mesh.num_nodes, max_hist);
-    CArrayKokkos<double> DeltaG(3*mesh.num_nodes, max_hist);
+    CArrayKokkos<real_t> DeltaF(3*mesh.num_nodes, max_hist);
+    CArrayKokkos<real_t> DeltaG(3*mesh.num_nodes, max_hist);
     const int startup_iters = 3;       // Number of initial pure Picard steps
     const double max_weight = 50.0;     // Threshold to catch exploded weights
     const double fine_floor = 1e-10;     // Residual norm below which Anderson is unsafe
@@ -177,16 +177,16 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // ***********************************************************
     // TEMPORARY ALLOCATION AS ANDERSON IS NOT BEING SET FOR MPI YET
     // ***********************************************************
-    CArrayKokkos <double> curr_anderson_residual(mesh.num_nodes,3);
+    CArrayKokkos<real_t> curr_anderson_residual(mesh.num_nodes,3);
     // ***********************************************************
     // TEMPORARY ALLOCATION AS ANDERSON IS NOT BEING SET FOR MPI YET
     // ***********************************************************
 
     // QR variables
-    FArrayKokkos <double> Q(3*mesh.num_nodes, max_hist ,"Q");
-    CArrayKokkos <double> R(max_hist, max_hist, "R");
-    CArrayKokkos <double> y(max_hist, "y");
-    DCArrayKokkos <double> v(max_hist, 3*mesh.num_nodes, "v");
+    FArrayKokkos<real_t> Q(3*mesh.num_nodes, max_hist ,"Q");
+    CArrayKokkos<real_t> R(max_hist, max_hist, "R");
+    CArrayKokkos<real_t> y(max_hist, "y");
+    DCArrayKokkos<real_t> v(max_hist, 3*mesh.num_nodes, "v");
 
     // Picard iteration vectors
     //
@@ -203,16 +203,16 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     // displacement_iter_kp1: result of the CG solve for this Picard iteration G(x_k),
     //                        then overwritten with the Anderson-accelerated update x_{k+1}.
     //                        Reset to zero before every CG solve.
-    CArrayKokkos <double> displacement_step(mesh.num_nodes,3); /// current load-step displacement estimate
-    CArrayKokkos <double> displacement_iter_k(mesh.num_nodes,3);   /// x_k  (Picard iterate in)
-    CArrayKokkos <double> displacement_iter_kp1(mesh.num_nodes,3); /// G(x_k) then x_{k+1}
+    CArrayKokkos<real_t> displacement_step(mesh.num_nodes,3); /// current load-step displacement estimate
+    CArrayKokkos<real_t> displacement_iter_k(mesh.num_nodes,3);   /// x_k  (Picard iterate in)
+    CArrayKokkos<real_t> displacement_iter_kp1(mesh.num_nodes,3); /// G(x_k) then x_{k+1}
 
     // variables for chebyshev smoothing
-    MPICArrayKokkos<double> D_inv(mesh.num_nodes, 3);
-    MPICArrayKokkos<double> zk(mesh.num_nodes, 3);
-    MPICArrayKokkos<double> zkp1(mesh.num_nodes, 3);
-    CArrayKokkos<double> delta_z(mesh.num_nodes, 3);
-    MPICArrayKokkos<double> temporary(mesh.num_nodes, 3);
+    MPICArrayKokkos<real_t> D_inv(mesh.num_nodes, 3);
+    MPICArrayKokkos<real_t> zk(mesh.num_nodes, 3);
+    MPICArrayKokkos<real_t> zkp1(mesh.num_nodes, 3);
+    CArrayKokkos<real_t> delta_z(mesh.num_nodes, 3);
+    MPICArrayKokkos<real_t> temporary(mesh.num_nodes, 3);
 
 
     // Algebraic Multigrid variables
@@ -220,26 +220,26 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     int dof_cutoff = 3000; // NOTE: LOOK INTO THIS VALUE MORE
     double theta = 0.25;
     double omega = 2/3;
-    CArrayKokkos <double> A1;
-    CArrayKokkos <double> A2;
-    CArrayKokkos <double> A3;
-    CArrayKokkos <double> A4;
-    CArrayKokkos <double> A5;
-    CArrayKokkos <double> A6;
-    CArrayKokkos <double> A7;
-    CArrayKokkos <double> A8;
-    CArrayKokkos <double> A9;
-    CArrayKokkos <double> A10;
-    CArrayKokkos <double> P1;
-    CArrayKokkos <double> P2;
-    CArrayKokkos <double> P3;
-    CArrayKokkos <double> P4;
-    CArrayKokkos <double> P5;
-    CArrayKokkos <double> P6;
-    CArrayKokkos <double> P7;
-    CArrayKokkos <double> P8;
-    CArrayKokkos <double> P9;
-    CArrayKokkos <double> P10; */
+    CArrayKokkos<real_t> A1;
+    CArrayKokkos<real_t> A2;
+    CArrayKokkos<real_t> A3;
+    CArrayKokkos<real_t> A4;
+    CArrayKokkos<real_t> A5;
+    CArrayKokkos<real_t> A6;
+    CArrayKokkos<real_t> A7;
+    CArrayKokkos<real_t> A8;
+    CArrayKokkos<real_t> A9;
+    CArrayKokkos<real_t> A10;
+    CArrayKokkos<real_t> P1;
+    CArrayKokkos<real_t> P2;
+    CArrayKokkos<real_t> P3;
+    CArrayKokkos<real_t> P4;
+    CArrayKokkos<real_t> P5;
+    CArrayKokkos<real_t> P6;
+    CArrayKokkos<real_t> P7;
+    CArrayKokkos<real_t> P8;
+    CArrayKokkos<real_t> P9;
+    CArrayKokkos<real_t> P10; */
 
     // setting comm plans to node communication plan for all MPI arrays
     auto& node_communication_plan = State.node.displacement.comm_plan_;
@@ -258,7 +258,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     AO_contact_state_t AO_contact_state;
 
     // previous load step displacement increment, bdy node velocity = this/dt for the box padding
-    CArrayKokkos <double> prev_displacement_step;
+    CArrayKokkos<real_t> prev_displacement_step;
 
     // compliance scale: 1/K_ii underestimates the nodal compliance, > 1 under-relaxes
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
@@ -323,7 +323,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         AO_contact_state.bdy_node_vels.set_values(0.0);
         AO_contact_state.bdy_node_accels.set_values(0.0);
 
-        prev_displacement_step = CArrayKokkos <double> (mesh.num_nodes, 3, "prev_displacement_step");
+        prev_displacement_step = CArrayKokkos<real_t>(mesh.num_nodes, 3, "prev_displacement_step");
         prev_displacement_step.set_values(0.0);
         Kokkos::fence();
 
@@ -333,7 +333,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         // so it holds for any displacement model. (none of the current models
         // change which dofs they constrain over time, so once at setup is enough)
         // ---------------------------------------------------------------
-        CArrayKokkos <double> scratch_disp(mesh.num_nodes, 3, "contact_scratch_disp");
+        CArrayKokkos<real_t> scratch_disp(mesh.num_nodes, 3, "contact_scratch_disp");
         constrained_dof.set_values(false);
         scratch_disp.set_values(0.0);
         Kokkos::fence();
@@ -433,8 +433,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // bdy node velocity from the previous load step's increment (zero on the first step)
             const CArrayKokkos<size_t> bdy_nodes      = mesh.bdy_nodes;
-            const CArrayKokkos<double> bdy_node_vels  = AO_contact_state.bdy_node_vels;
-            const CArrayKokkos<double> prev_disp_step = prev_displacement_step;
+            const CArrayKokkos<real_t> bdy_node_vels  = AO_contact_state.bdy_node_vels;
+            const CArrayKokkos<real_t> prev_disp_step = prev_displacement_step;
             const double inv_dt = 1.0/dt;
             FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes, {
                 for (size_t dim = 0; dim < 3; dim++) {
@@ -553,17 +553,17 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                     double det_J;
                     double PK2_curr_config[6];
                     double material_matrix[6][6];
-                    ViewCArrayKokkos<double> curr_K_elem(&K_elem(elem_id,0), num_dof_in_elem*(num_dof_in_elem+1)/2);  // packed upper triangle
-                    ViewCArrayKokkos<double> curr_F_elem(&F_elem(elem_id,0),3*mesh.num_nodes_in_elem);
+                    ViewCArrayKokkos<real_t> curr_K_elem(&K_elem(elem_id,0), num_dof_in_elem*(num_dof_in_elem+1)/2);  // packed upper triangle
+                    ViewCArrayKokkos<real_t> curr_F_elem(&F_elem(elem_id,0),3*mesh.num_nodes_in_elem);
 
-                    ViewCArrayKokkos<double> curr_glob_grad(&glob_grad_elem(elem_id,0,0), mesh.num_nodes_in_elem, 3);
-                    ViewCArrayKokkos<double> curr_B1(&B1_elem(elem_id,0,0), 6, 3*mesh.num_nodes_in_elem);
-                    ViewCArrayKokkos<double> curr_K2_row(&K2_row_elem(elem_id,0), 3*mesh.num_nodes_in_elem);
+                    ViewCArrayKokkos<real_t> curr_glob_grad(&glob_grad_elem(elem_id,0,0), mesh.num_nodes_in_elem, 3);
+                    ViewCArrayKokkos<real_t> curr_B1(&B1_elem(elem_id,0,0), 6, 3*mesh.num_nodes_in_elem);
+                    ViewCArrayKokkos<real_t> curr_K2_row(&K2_row_elem(elem_id,0), 3*mesh.num_nodes_in_elem);
 
                     // looping through material points
                     for (int mat_pt = 0; mat_pt < num_qpt_in_elem; mat_pt++) {
                         // setting up view and getting material matrix
-                        ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.qpt_grad_basis(mat_pt,0,0),ref_elem.num_dofs_in_elem, mesh.num_dims);
+                        ViewCArrayKokkos<real_t> curr_grad_basis(&ref_elem.qpt_grad_basis(mat_pt,0,0),ref_elem.num_dofs_in_elem, mesh.num_dims);
                         Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
 
                         // tallying to element array
@@ -1156,12 +1156,12 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 // looping through material points
                 for (int mat_pt = 0; mat_pt < num_qpt_in_elem; mat_pt++) {
                     // setting up view and getting material matrix
-                    ViewCArrayKokkos<double> curr_grad_basis(&ref_elem.qpt_grad_basis(mat_pt,0,0),ref_elem.num_dofs_in_elem, mesh.num_dims);
+                    ViewCArrayKokkos<real_t> curr_grad_basis(&ref_elem.qpt_grad_basis(mat_pt,0,0),ref_elem.num_dofs_in_elem, mesh.num_dims);
                     Materials.MaterialFunctions(mat_id).fill_C_matrix(Materials.strength_global_vars, material_matrix, mat_id);
 
                     // views into stress and strain
-                    ViewCArrayKokkos<double> stress_view(&State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),0,0),3,3);
-                    ViewCArrayKokkos<double> strain_view(&State.MaterialPoints.strain(mat_id, State.points_in_mat_elem(elem,mat_pt),0,0),3,3);
+                    ViewCArrayKokkos<real_t> stress_view(&State.MaterialPoints.stress(mat_id, State.points_in_mat_elem(elem,mat_pt),0,0),3,3);
+                    ViewCArrayKokkos<real_t> strain_view(&State.MaterialPoints.strain(mat_id, State.points_in_mat_elem(elem,mat_pt),0,0),3,3);
 
                     // tallying to element array
                     TLQS3D::post_process(material_matrix, nodes_in_curr_elem, State.node.coords_t0, State.node.displacement, curr_grad_basis, stress_view, strain_view);

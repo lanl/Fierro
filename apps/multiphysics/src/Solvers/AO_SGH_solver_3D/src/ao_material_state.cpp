@@ -92,7 +92,13 @@ void sym3_min_eigpair(const double a00, const double a01, const double a02,
     if (n02 > nn) { vx = c02x; vy = c02y; vz = c02z; nn = n02; }
     if (n12 > nn) { vx = c12x; vy = c12y; vz = c12z; nn = n12; }
 
-    if (nn < 1.0e-60) {
+    // Degeneracy floor tied to the storage tier: nn is a sum of squared cross
+    // products of field-derived components, so below ~eps^2 its value is pure
+    // roundoff. A fixed 1.0e-60 is far below FP32's smallest subnormal and
+    // would flush to zero, making this guard unreachable and letting the
+    // 1/sqrt(nn) below divide by ~0.
+    const double nn_floor = (double)mtr::prec::epsilon<real_t>() * (double)mtr::prec::epsilon<real_t>();
+    if (nn < nn_floor) {
         // Degenerate (repeated eigenvalue): direction arbitrary.
         ex = 1.0; ey = 0.0; ez = 0.0;
         return;
@@ -105,16 +111,16 @@ void sym3_min_eigpair(const double a00, const double a01, const double a02,
 
 } // anonymous namespace
 
-void update_qpt_density_lagrangian(const DCArrayKokkos<double>&           rho0_detj0_w,
-                                   const DCArrayKokkos<double>&           detj_curr,
+void update_qpt_density_lagrangian(const DCArrayKokkos<real_t>&           rho0_detj0_w,
+                                   const DCArrayKokkos<real_t>&           detj_curr,
                                    const quadrature_t&                    quad,
                                    const size_t                           num_elems,
                                    const size_t                           mat_id,
-                                   DRaggedRightArrayKokkos<double>&       mat_den)
+                                   DRaggedRightArrayKokkos<real_t>&       mat_den)
 {
     const size_t nq = quad.num_qpts_1d;
     const size_t n_qpts_3d = nq * nq * nq;
-    const DCArrayKokkos<double>& w1 = quad.qpt_weights_1d;
+    const DCArrayKokkos<real_t>& w1 = quad.qpt_weights_1d;
 
     FOR_ALL(elem_gid, 0, num_elems, {
         for (size_t qk = 0; qk < nq; ++qk) {
@@ -136,15 +142,15 @@ void update_qpt_density_lagrangian(const DCArrayKokkos<double>&           rho0_d
 void apply_eos_decoupled(const Material_t&                       Materials,
                          const size_t                            num_mat_pts,
                          const size_t                            mat_id,
-                         const DRaggedRightArrayKokkos<double>&  mat_den,
-                         const DRaggedRightArrayKokkos<double>&  mat_sie,
-                         const DRaggedRightArrayKokkos<double>&  mat_eos_state_vars,
-                         DRaggedRightArrayKokkos<double>&        mat_pres,
-                         DRaggedRightArrayKokkos<double>&        mat_sspd,
-                         DRaggedRightArrayKokkos<double>&        mat_stress)
+                         const DRaggedRightArrayKokkos<real_t>&  mat_den,
+                         const DRaggedRightArrayKokkos<real_t>&  mat_sie,
+                         const DRaggedRightArrayKokkos<real_t>&  mat_eos_state_vars,
+                         DRaggedRightArrayKokkos<real_t>&        mat_pres,
+                         DRaggedRightArrayKokkos<real_t>&        mat_sspd,
+                         DRaggedRightArrayKokkos<real_t>&        mat_stress)
 {
-    const RaggedRightArrayKokkos<double>& eos_global_vars = Materials.eos_global_vars;
-    const RaggedRightArrayKokkos<double>& strength_global_vars = Materials.strength_global_vars;
+    const RaggedRightArrayKokkos<real_t>& eos_global_vars = Materials.eos_global_vars;
+    const RaggedRightArrayKokkos<real_t>& strength_global_vars = Materials.strength_global_vars;
 
     FOR_ALL(mp, 0, num_mat_pts, {
         const double den = mat_den(mat_id, mp);
@@ -166,10 +172,10 @@ void apply_eos_decoupled(const Material_t&                       Materials,
 }
 
 
-void build_sigma_from_pressure(const DRaggedRightArrayKokkos<double>& mat_pres,
+void build_sigma_from_pressure(const DRaggedRightArrayKokkos<real_t>& mat_pres,
                                const size_t                           num_gauss_pts,
                                const size_t                           mat_id,
-                               DCArrayKokkos<double>&                 sigma_qpt)
+                               DCArrayKokkos<real_t>&                 sigma_qpt)
 {
     FOR_ALL(g, 0, num_gauss_pts, {
         const double mp = -mat_pres(mat_id, g);
@@ -188,17 +194,17 @@ void build_sigma_from_pressure(const DRaggedRightArrayKokkos<double>& mat_pres,
 }
 
 
-void add_artificial_viscosity(const DCArrayKokkos<double>&           vel_grad,
-                              const DCArrayKokkos<double>&           jac_inv,
-                              const DCArrayKokkos<double>&           detj,
-                              const DCArrayKokkos<double>&           jac0_inv,
-                              const DRaggedRightArrayKokkos<double>& mat_den,
-                              const DRaggedRightArrayKokkos<double>& mat_sspd,
+void add_artificial_viscosity(const DCArrayKokkos<real_t>&           vel_grad,
+                              const DCArrayKokkos<real_t>&           jac_inv,
+                              const DCArrayKokkos<real_t>&           detj,
+                              const DCArrayKokkos<real_t>&           jac0_inv,
+                              const DRaggedRightArrayKokkos<real_t>& mat_den,
+                              const DRaggedRightArrayKokkos<real_t>& mat_sspd,
                               const size_t                           num_gauss_pts,
                               const size_t                           mat_id,
                               const double                           h0,
-                              DCArrayKokkos<double>&                 sigma_qpt,
-                              DCArrayKokkos<double>&                 visc_coeff_qpt)
+                              DCArrayKokkos<real_t>&                 sigma_qpt,
+                              DCArrayKokkos<real_t>&                 visc_coeff_qpt)
 {
     FOR_ALL(g, 0, num_gauss_pts, {
         // eps = sym grad v.
@@ -279,12 +285,12 @@ void add_artificial_viscosity(const DCArrayKokkos<double>&           vel_grad,
 }
 
 
-void project_sie_to_thermo_dofs_uniform(const DRaggedRightArrayKokkos<double>& mat_pts_sie,
+void project_sie_to_thermo_dofs_uniform(const DRaggedRightArrayKokkos<real_t>& mat_pts_sie,
                                         const size_t                           mat_id,
                                         const size_t                           num_elems,
                                         const size_t                           num_gauss_in_elem,
                                         const size_t                           n_thermo_per_elem,
-                                        DRaggedRightArrayKokkos<double>&       mat_zones_sie)
+                                        DRaggedRightArrayKokkos<real_t>&       mat_zones_sie)
 {
     FOR_ALL(elem_gid, 0, num_elems, {
         const size_t first_pt_sid = elem_gid * num_gauss_in_elem;
@@ -299,11 +305,11 @@ void project_sie_to_thermo_dofs_uniform(const DRaggedRightArrayKokkos<double>& m
 }
 
 
-void gather_thermo_dofs_per_elem(const DRaggedRightArrayKokkos<double>& mat_zones_field,
+void gather_thermo_dofs_per_elem(const DRaggedRightArrayKokkos<real_t>& mat_zones_field,
                                  const size_t                           mat_id,
                                  const size_t                           num_elems,
                                  const size_t                           n_thermo_per_elem,
-                                 DCArrayKokkos<double>&                 per_elem_buf)
+                                 DCArrayKokkos<real_t>&                 per_elem_buf)
 {
     FOR_ALL(elem_gid, 0, num_elems, {
         for (size_t j = 0; j < n_thermo_per_elem; ++j) {
@@ -316,10 +322,10 @@ void gather_thermo_dofs_per_elem(const DRaggedRightArrayKokkos<double>& mat_zone
 }
 
 
-void scatter_qpt_to_material_points(const DCArrayKokkos<double>&     qpt_field,
+void scatter_qpt_to_material_points(const DCArrayKokkos<real_t>&     qpt_field,
                                     const size_t                     mat_id,
                                     const size_t                     num_gauss_pts,
-                                    DRaggedRightArrayKokkos<double>& mat_field)
+                                    DRaggedRightArrayKokkos<real_t>& mat_field)
 {
     FOR_ALL(g, 0, num_gauss_pts, {
         mat_field(mat_id, g) = qpt_field(g);
@@ -329,10 +335,10 @@ void scatter_qpt_to_material_points(const DCArrayKokkos<double>&     qpt_field,
 }
 
 
-void gather_material_points_to_qpt(const DRaggedRightArrayKokkos<double>& mat_field,
+void gather_material_points_to_qpt(const DRaggedRightArrayKokkos<real_t>& mat_field,
                                    const size_t                           mat_id,
                                    const size_t                           num_gauss_pts,
-                                   DCArrayKokkos<double>&                 qpt_field)
+                                   DCArrayKokkos<real_t>&                 qpt_field)
 {
     FOR_ALL(g, 0, num_gauss_pts, {
         qpt_field(g) = mat_field(mat_id, g);

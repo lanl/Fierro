@@ -237,11 +237,11 @@ inline std::vector<double> build_B_kine_at_thermo(const ref_elem_t& kine_ref,
 template<class FieldFn>
 void interpolate_at_thermo_dofs(FieldFn                            f,
                                 const swage::Mesh_t&                 mesh,
-                                const MPICArrayKokkos<double>&       node_coords,
+                                const MPICArrayKokkos<real_t>&       node_coords,
                                 const ref_elem_t&                  kine_ref,
                                 const ref_elem_t&                  thermo_ref,
                                 const size_t                       mat_id,
-                                DRaggedRightArrayKokkos<double>&   mat_zones_field)
+                                DRaggedRightArrayKokkos<real_t>&   mat_zones_field)
 {
     const size_t nk = kine_ref.num_dofs_1d;
     const size_t nt = thermo_ref.num_dofs_1d;
@@ -282,8 +282,8 @@ void interpolate_at_thermo_dofs(FieldFn                            f,
 // Per-DoF set of the analytic TG velocity at the kine GLL nodes. tg_velocity
 // is called by name (a direct device call); routing it through a function
 // pointer would capture the host address and misbehave on the GPU backends.
-void set_tg_velocity(const MPICArrayKokkos<double>&   node_coords,
-                     MPICArrayKokkos<double>&         node_vel,
+void set_tg_velocity(const MPICArrayKokkos<real_t>&   node_coords,
+                     MPICArrayKokkos<real_t>&         node_vel,
                      const size_t                   num_nodes)
 {
     FOR_ALL(n, 0, num_nodes, {
@@ -302,11 +302,11 @@ void set_tg_velocity(const MPICArrayKokkos<double>&   node_coords,
 
 // Scatter a per-element thermo buffer into the (mat_id, zone_sid) slice
 // of a MaterialZones field. Single-material assumes zone_sid = e * n + lex.
-void scatter_per_elem_to_material_zones(const DCArrayKokkos<double>&    per_elem,
+void scatter_per_elem_to_material_zones(const DCArrayKokkos<real_t>&    per_elem,
                                         const size_t                    mat_id,
                                         const size_t                    num_elems,
                                         const size_t                    n_per_elem,
-                                        DRaggedRightArrayKokkos<double>& mat_zones_field)
+                                        DRaggedRightArrayKokkos<real_t>& mat_zones_field)
 {
     FOR_ALL(e, 0, num_elems, {
         for (size_t j = 0; j < n_per_elem; ++j) {
@@ -319,10 +319,10 @@ void scatter_per_elem_to_material_zones(const DCArrayKokkos<double>&    per_elem
 
 
 // Copy qpt physical positions into the single-material slice of MaterialPoints.coords.
-void scatter_qpt_coords_to_material_points(const DCArrayKokkos<double>&     qpt_coords,
+void scatter_qpt_coords_to_material_points(const DCArrayKokkos<real_t>&     qpt_coords,
                                            const size_t                     mat_id,
                                            const size_t                     num_gauss_pts,
-                                           DRaggedRightArrayKokkos<double>& mat_coords)
+                                           DRaggedRightArrayKokkos<real_t>& mat_coords)
 {
     FOR_ALL(g, 0, num_gauss_pts, {
         mat_coords(mat_id, g, 0) = qpt_coords(g, 0);
@@ -378,11 +378,11 @@ double sigma_min_from_jinv(const double K00, const double K01, const double K02,
 // artificial-viscosity coefficient and h is the physical DoF spacing. On the
 // [-1, 1] reference element sigma_min(J) is half the physical cell size, so the
 // DoF spacing is h = 2 * sigma_min(J) / p_order.
-double compute_cfl_dt(const DCArrayKokkos<double>&            jac_inv,
-                      const DCArrayKokkos<double>&            detj,
-                      const DRaggedRightArrayKokkos<double>&  sspd,
-                      const DRaggedRightArrayKokkos<double>&  den,
-                      const DCArrayKokkos<double>&            visc_coeff,
+double compute_cfl_dt(const DCArrayKokkos<real_t>&            jac_inv,
+                      const DCArrayKokkos<real_t>&            detj,
+                      const DRaggedRightArrayKokkos<real_t>&  sspd,
+                      const DRaggedRightArrayKokkos<real_t>&  den,
+                      const DCArrayKokkos<real_t>&            visc_coeff,
                       const size_t                            num_gauss_pts,
                       const size_t                            mat_id,
                       const size_t                            p_order,
@@ -393,7 +393,10 @@ double compute_cfl_dt(const DCArrayKokkos<double>&            jac_inv,
     double inv_dt_local;
     FOR_REDUCE_MAX(g, 0, num_gauss_pts, inv_dt_local, {
         if (detj(g) <= 0.0) {
-            inv_dt_local = 1.0e300;
+            // Force dt -> 0 on an inverted element. Use the accumulator type's
+            // own finite max rather than a 1e300 literal, which overflows to
+            // inf in any tier narrower than double.
+            inv_dt_local = mtr::prec::numeric_max<double>();
             return;
         }
         const double sig_min = sigma_min_from_jinv(jac_inv(g, 0, 0), jac_inv(g, 0, 1), jac_inv(g, 0, 2),
@@ -438,7 +441,7 @@ void update_state_from_coords(const swage::Mesh_t&     mesh,
                                   quad, num_elems, mat_id,
                                   State.MaterialPoints.den);
 
-    DCArrayKokkos<double> qpt_coords_tmp(num_gauss_pts, 3, "ao_sgh_qpt_coords_tmp");
+    DCArrayKokkos<real_t> qpt_coords_tmp(num_gauss_pts, 3, "ao_sgh_qpt_coords_tmp");
     compute_position_at_qpts(mesh.nodes_in_elem,
                              State.node.coords,
                              kine_ref, quad, num_elems,
@@ -446,10 +449,10 @@ void update_state_from_coords(const swage::Mesh_t&     mesh,
     scatter_qpt_coords_to_material_points(qpt_coords_tmp, mat_id, num_gauss_pts,
                                           State.MaterialPoints.coords);
 
-    DCArrayKokkos<double> sie_coef(num_elems, n_thermo_per_elem, "ao_sgh_sie_coef_tmp");
+    DCArrayKokkos<real_t> sie_coef(num_elems, n_thermo_per_elem, "ao_sgh_sie_coef_tmp");
     gather_thermo_dofs_per_elem(State.MaterialZones.sie, mat_id,
                                 num_elems, n_thermo_per_elem, sie_coef);
-    DCArrayKokkos<double> sie_at_qpt(num_gauss_pts, "ao_sgh_sie_at_qpt_tmp");
+    DCArrayKokkos<real_t> sie_at_qpt(num_gauss_pts, "ao_sgh_sie_at_qpt_tmp");
     reconstruct_thermo_at_qpts(sie_coef, thermo_ref, quad, num_elems, sie_at_qpt);
 
     // Laghos: clamp the interpolated qpt value (not the DoFs) before the
@@ -487,19 +490,19 @@ void dump_viz(const swage::Mesh_t&    mesh,
     const size_t num_gauss_pts = num_elems * mesh.num_gauss_in_elem;
     const size_t n_thermo_per_elem = thermo_ref.num_dofs_in_elem;
 
-    DCArrayKokkos<double> sie_coef_e(num_elems, n_thermo_per_elem, "ao_sgh_viz_sie");
+    DCArrayKokkos<real_t> sie_coef_e(num_elems, n_thermo_per_elem, "ao_sgh_viz_sie");
     gather_thermo_dofs_per_elem(State.MaterialZones.sie, mat_id,
                                 num_elems, n_thermo_per_elem, sie_coef_e);
 
-    DCArrayKokkos<double> pres_qpt(num_gauss_pts, "ao_sgh_viz_pres_qpt");
+    DCArrayKokkos<real_t> pres_qpt(num_gauss_pts, "ao_sgh_viz_pres_qpt");
     gather_material_points_to_qpt(State.MaterialPoints.pres, mat_id, num_gauss_pts, pres_qpt);
-    DCArrayKokkos<double> pres_coef_e(num_elems, n_thermo_per_elem, "ao_sgh_viz_pres");
+    DCArrayKokkos<real_t> pres_coef_e(num_elems, n_thermo_per_elem, "ao_sgh_viz_pres");
     project_qpt_to_l2_basis(pres_qpt, State.GaussPoints.detj,
                             thermo_ref, quad, num_elems, pres_coef_e);
 
-    DCArrayKokkos<double> den_qpt(num_gauss_pts, "ao_sgh_viz_den_qpt");
+    DCArrayKokkos<real_t> den_qpt(num_gauss_pts, "ao_sgh_viz_den_qpt");
     gather_material_points_to_qpt(State.MaterialPoints.den, mat_id, num_gauss_pts, den_qpt);
-    DCArrayKokkos<double> den_coef_e(num_elems, n_thermo_per_elem, "ao_sgh_viz_den");
+    DCArrayKokkos<real_t> den_coef_e(num_elems, n_thermo_per_elem, "ao_sgh_viz_den");
     project_qpt_to_l2_basis(den_qpt, State.GaussPoints.detj,
                             thermo_ref, quad, num_elems, den_coef_e);
 
@@ -577,7 +580,7 @@ void AO_SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     // Lumped thermo mass into MaterialZones.mass. Time-invariant under the
     // pointwise rho update.
     {
-        DCArrayKokkos<double> thermo_mass_per_elem(mesh.num_elems,
+        DCArrayKokkos<real_t> thermo_mass_per_elem(mesh.num_elems,
                                                    n_thermo_dofs_per_elem,
                                                    "ao_sgh_thermo_mass_per_elem");
         build_lumped_thermo_mass(State.GaussPoints.rho0_detj0_w,
@@ -702,22 +705,22 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
            time_value, dt);
 
     // Per-stage scratch for the force operators.
-    DCArrayKokkos<double> sigma_qpt   (num_gauss_pts, 3, 3, "ao_sgh_sigma_qpt");
-    DCArrayKokkos<double> stress_jinvt(num_gauss_pts, 3, 3, "ao_sgh_stress_jinvt");
-    DCArrayKokkos<double> ones_at_qpt (num_gauss_pts,       "ao_sgh_ones_at_qpt");
-    DCArrayKokkos<double> thermo_force(mesh.num_elems, n_thermo_per_elem, "ao_sgh_thermo_force");
-    DCArrayKokkos<double> src_w_qpt   (num_gauss_pts,       "ao_sgh_src_w_qpt");
-    DCArrayKokkos<double> e_source    (mesh.num_elems, n_thermo_per_elem, "ao_sgh_e_source");
-    DCArrayKokkos<double> visc_coeff  (num_gauss_pts,       "ao_sgh_visc_coeff");
+    DCArrayKokkos<real_t> sigma_qpt   (num_gauss_pts, 3, 3, "ao_sgh_sigma_qpt");
+    DCArrayKokkos<real_t> stress_jinvt(num_gauss_pts, 3, 3, "ao_sgh_stress_jinvt");
+    DCArrayKokkos<real_t> ones_at_qpt (num_gauss_pts,       "ao_sgh_ones_at_qpt");
+    DCArrayKokkos<real_t> thermo_force(mesh.num_elems, n_thermo_per_elem, "ao_sgh_thermo_force");
+    DCArrayKokkos<real_t> src_w_qpt   (num_gauss_pts,       "ao_sgh_src_w_qpt");
+    DCArrayKokkos<real_t> e_source    (mesh.num_elems, n_thermo_per_elem, "ao_sgh_e_source");
+    DCArrayKokkos<real_t> visc_coeff  (num_gauss_pts,       "ao_sgh_visc_coeff");
     ones_at_qpt.set_values(1.0);
     visc_coeff.set_values(0.0);
     e_source.set_values(0.0);
     Kokkos::fence();
 
     // Pre-step snapshot of the evolved state (x, v, e) for step rejection.
-    DCArrayKokkos<double> coords_save(mesh.num_nodes, 3, "ao_sgh_coords_save");
-    DCArrayKokkos<double> vel_save   (mesh.num_nodes, 3, "ao_sgh_vel_save");
-    DCArrayKokkos<double> sie_save   (mesh.num_elems, n_thermo_per_elem, "ao_sgh_sie_save");
+    DCArrayKokkos<real_t> coords_save(mesh.num_nodes, 3, "ao_sgh_coords_save");
+    DCArrayKokkos<real_t> vel_save   (mesh.num_nodes, 3, "ao_sgh_vel_save");
+    DCArrayKokkos<real_t> sie_save   (mesh.num_elems, n_thermo_per_elem, "ao_sgh_sie_save");
 
     // Initial-mesh length scale (Laghos): h0 = (V/Ne)^(1/3) / p_order.
     const double total_vol0 = compute_total_volume_from_cache(State.GaussPoints.detj0,
@@ -726,12 +729,12 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     / static_cast<double>(p_order);
 
     // Mass-solve scratch (Neumann correction on linear spaces).
-    DCArrayKokkos<double> a_buf  (mesh.num_nodes, 3, "ao_sgh_a_buf");
-    DCArrayKokkos<double> r_buf  (mesh.num_nodes, 3, "ao_sgh_r_buf");
-    DCArrayKokkos<double> Ma_buf (mesh.num_nodes, 3, "ao_sgh_Ma_buf");
-    DCArrayKokkos<double> de_buf (mesh.num_elems, n_thermo_per_elem, "ao_sgh_de_buf");
-    DCArrayKokkos<double> re_buf (mesh.num_elems, n_thermo_per_elem, "ao_sgh_re_buf");
-    DCArrayKokkos<double> Mde_buf(mesh.num_elems, n_thermo_per_elem, "ao_sgh_Mde_buf");
+    DCArrayKokkos<real_t> a_buf  (mesh.num_nodes, 3, "ao_sgh_a_buf");
+    DCArrayKokkos<real_t> r_buf  (mesh.num_nodes, 3, "ao_sgh_r_buf");
+    DCArrayKokkos<real_t> Ma_buf (mesh.num_nodes, 3, "ao_sgh_Ma_buf");
+    DCArrayKokkos<real_t> de_buf (mesh.num_elems, n_thermo_per_elem, "ao_sgh_de_buf");
+    DCArrayKokkos<real_t> re_buf (mesh.num_elems, n_thermo_per_elem, "ao_sgh_re_buf");
+    DCArrayKokkos<real_t> Mde_buf(mesh.num_elems, n_thermo_per_elem, "ao_sgh_Mde_buf");
 
     // Solve M_v a = -F.1 from the clamped State.node.force into a_buf.
     // Lumped D^-1, plus one Neumann step for p_order = 1:
@@ -810,7 +813,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // sigma(Y) [+ viscosity from vel_for_visc] -> stress_jinvt -> clamped
     // F.1 into State.node.force. stress_jinvt persists for the F^T apply.
-    auto assemble_forces = [&](MPICArrayKokkos<double>& vel_for_visc) {
+    auto assemble_forces = [&](MPICArrayKokkos<real_t>& vel_for_visc) {
         build_sigma_from_pressure(State.MaterialPoints.pres, num_gauss_pts, mat_id, sigma_qpt);
 
         if (use_viscosity) {
@@ -849,7 +852,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         }
         const size_t nq = quad.num_qpts_1d;
         const size_t n_qpts_3d = nq * nq * nq;
-        const DCArrayKokkos<double>& w1 = quad.qpt_weights_1d;
+        const DCArrayKokkos<real_t>& w1 = quad.qpt_weights_1d;
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
             const size_t base = elem_gid * n_qpts_3d;
             for (size_t qz = 0; qz < nq; ++qz) {
@@ -1067,8 +1070,9 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         time_value += dt_taken;
 
         if (cycle % 10 == 0 || time_value >= time_final - 1.0e-12) {
-            double den_min =  1.0e300, den_max = -1.0e300;
-            double pres_min =  1.0e300, pres_max = -1.0e300;
+            const double big = mtr::prec::numeric_max<double>();
+            double den_min  =  big, den_max  = -big;
+            double pres_min =  big, pres_max = -big;
             State.MaterialPoints.den.update_host();
             State.MaterialPoints.pres.update_host();
             State.node.vel.update_host();
@@ -1113,7 +1117,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // TG is steady (with source), so the velocity error against the analytic
     // field at the current qpt positions measures spatial convergence.
     if (tg_problem) {
-        DCArrayKokkos<double> v_qpt(num_gauss_pts, 3, "ao_sgh_err_v_qpt");
+        DCArrayKokkos<real_t> v_qpt(num_gauss_pts, 3, "ao_sgh_err_v_qpt");
         compute_position_at_qpts(mesh.nodes_in_elem, State.node.vel,
                                  kine_ref, quad, mesh.num_elems, v_qpt);
         State.MaterialPoints.coords.update_host();

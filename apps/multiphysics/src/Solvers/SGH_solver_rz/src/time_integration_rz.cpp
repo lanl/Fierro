@@ -52,14 +52,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::rk_init_rz(
-    MPICArrayKokkos<double>& node_coords,
-    MPICArrayKokkos<double>& node_coords_n0,
-    MPICArrayKokkos<double>& node_vel,
-    MPICArrayKokkos<double>& node_vel_n0,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
+    MPICArrayKokkos<real_t>& node_coords,
+    MPICArrayKokkos<real_t>& node_coords_n0,
+    MPICArrayKokkos<real_t>& node_vel,
+    MPICArrayKokkos<real_t>& node_vel_n0,
+    DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+    DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie_n0,
+    DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+    DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress_n0,
     const size_t num_dims,
     const size_t num_elems,
     const size_t num_nodes,
@@ -111,10 +111,10 @@ void SGHRZ::rk_init_rz(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::get_timestep_rz(swage::Mesh_t& mesh,
-                            MPICArrayKokkos<double>& node_coords,
-                            MPICArrayKokkos<double>& node_vel,
-                            DCArrayKokkos<double>& GaussPoints_vol,
-                            DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
+                            MPICArrayKokkos<real_t>& node_coords,
+                            MPICArrayKokkos<real_t>& node_vel,
+                            DCArrayKokkos<real_t>& GaussPoints_vol,
+                            DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
                             DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                             DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                             size_t num_mat_elems,

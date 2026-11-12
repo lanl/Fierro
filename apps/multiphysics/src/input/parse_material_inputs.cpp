@@ -125,9 +125,9 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
     Materials.MaterialEnums = DCArrayKokkos<MaterialEnums_t>(num_materials, "material_enums");
 
     // these are temp arrays to store global variables given in the yaml input file for each material, 100 vars is the max allowable
-    DCArrayKokkos<double> tempGlobalEOSVars(num_materials, 100, "temp_array_eos_vars");
-    DCArrayKokkos<double> tempGlobalStrengthVars(num_materials, 100, "temp_array_strength_vars");
-    DCArrayKokkos<double> tempGlobalDissipationVars(num_materials, 10, "temp_array_dissipation_vars");
+    DCArrayKokkos<real_t> tempGlobalEOSVars(num_materials, 100, "temp_array_eos_vars");
+    DCArrayKokkos<real_t> tempGlobalStrengthVars(num_materials, 100, "temp_array_strength_vars");
+    DCArrayKokkos<real_t> tempGlobalDissipationVars(num_materials, 10, "temp_array_dissipation_vars");
     
     Materials.num_eos_global_vars      =  CArrayKokkos <size_t> (num_materials, "num_eos_global_vars");
     Materials.num_strength_global_vars =  CArrayKokkos <size_t> (num_materials, "num_strength_global_vars");
@@ -972,9 +972,9 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
     } // end loop over materials
 
     // allocate ragged right memory to hold the model global variables
-    Materials.eos_global_vars = RaggedRightArrayKokkos <double> (Materials.num_eos_global_vars, "Materials.eos_global_vars");
-    Materials.strength_global_vars = RaggedRightArrayKokkos <double> (Materials.num_strength_global_vars, "Materials.strength_global_vars");
-    Materials.dissipation_global_vars = RaggedRightArrayKokkos <double> (Materials.num_dissipation_global_vars, "Materials.dissipation_global_vars");
+    Materials.eos_global_vars = RaggedRightArrayKokkos<real_t>(Materials.num_eos_global_vars, "Materials.eos_global_vars");
+    Materials.strength_global_vars = RaggedRightArrayKokkos<real_t>(Materials.num_strength_global_vars, "Materials.strength_global_vars");
+    Materials.dissipation_global_vars = RaggedRightArrayKokkos<real_t>(Materials.num_dissipation_global_vars, "Materials.dissipation_global_vars");
     
     // save the global variables
     FOR_ALL(mat_id, 0, num_materials, {
@@ -1198,7 +1198,7 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
 
             size_t num_global_vars = mat_global_vars_yaml.Size();
             Materials.num_equilibration_global_vars = num_global_vars;
-            Materials.equilibration_global_vars = CArrayKokkos <double> (num_global_vars, "Materials.equilibration_global_vars");
+            Materials.equilibration_global_vars = CArrayKokkos<real_t>(num_global_vars, "Materials.equilibration_global_vars");
 
             if(num_global_vars<2){
                 throw std::runtime_error("**** The Tipton material equilibration model requires 2 inputs ****");
@@ -1221,7 +1221,7 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
 
             size_t num_global_vars = mat_global_vars_yaml.Size();
             Materials.num_geo_equilibration_global_vars = num_global_vars;
-            Materials.geo_equilibration_global_vars = CArrayKokkos <double> (num_global_vars, "Materials.geo_equilibration_global_vars");
+            Materials.geo_equilibration_global_vars = CArrayKokkos<real_t>(num_global_vars, "Materials.geo_equilibration_global_vars");
 
             if(num_global_vars<2){
                 throw std::runtime_error("**** The Tipton material geo equilibration model requires 2 inputs ****");

@@ -61,7 +61,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 KOKKOS_FUNCTION
 void geometry::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
-    const MPICArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 8;
@@ -267,9 +267,9 @@ void geometry::get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void geometry::get_vol_quad(const DCArrayKokkos<double>& elem_vol,
+void geometry::get_vol_quad(const DCArrayKokkos<real_t>& elem_vol,
     const size_t elem_gid,
-    const MPICArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     elem_vol(elem_gid) = 0.0;
@@ -313,9 +313,9 @@ void geometry::get_vol_quad(const DCArrayKokkos<double>& elem_vol,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void geometry::get_vol_hex(const DCArrayKokkos<double>& elem_vol,
+void geometry::get_vol_hex(const DCArrayKokkos<real_t>& elem_vol,
     const size_t elem_gid,
-    const MPICArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 8;
@@ -364,8 +364,8 @@ void geometry::get_vol_hex(const DCArrayKokkos<double>& elem_vol,
 /// \brief Compute Volume of each finite element
 ///
 /////////////////////////////////////////////////////////////////////////////
-void geometry::get_vol(const DCArrayKokkos<double>& elem_vol,
-    const MPICArrayKokkos<double>& node_coords,
+void geometry::get_vol(const DCArrayKokkos<real_t>& elem_vol,
+    const MPICArrayKokkos<real_t>& node_coords,
     const swage::Mesh_t& mesh)
 {
     const size_t num_dims = mesh.num_dims;
@@ -406,7 +406,7 @@ void geometry::get_vol(const DCArrayKokkos<double>& elem_vol,
 KOKKOS_FUNCTION
 void geometry::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
     const size_t elem_gid,
-    const MPICArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 4;
@@ -481,7 +481,7 @@ void geometry::get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 double geometry::get_area_quad(const size_t   elem_gid,
-    const MPICArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     double elem_area = 0.0;
@@ -567,7 +567,7 @@ double geometry::heron(const double x1,
 KOKKOS_FUNCTION
 void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
     const size_t elem_gid,
-    const MPICArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
     const size_t num_nodes = 4;
@@ -631,7 +631,7 @@ size_t check_bdy(const size_t patch_gid,
     const double  orig_y,
     const double  orig_z,
     const swage::Mesh_t& mesh,
-    const MPICArrayKokkos<double>& node_coords)
+    const MPICArrayKokkos<real_t>& node_coords)
 {
     size_t num_dims = mesh.num_dims;
 
@@ -670,7 +670,7 @@ size_t check_bdy(const size_t patch_gid,
         } // end if on type
         // cylinderical shell where radius = sqrt(dx^2 + dy^2)
         else if (this_bc_tag == 3) {
-            real_t R = sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
+            double R = sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
                             (these_patch_coords[1] - orig_y) * (these_patch_coords[1] - orig_y));
 
             if (fabs(R - val) <= tolerance) {
@@ -679,7 +679,7 @@ size_t check_bdy(const size_t patch_gid,
         } // end if on type
         // spherical shell where radius = sqrt(dx^2 + dy^2 + dz^2)
         else if (this_bc_tag == 4) {
-            real_t R = sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
+            double R = sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
                             (these_patch_coords[1] - orig_y) * (these_patch_coords[1] - orig_y) +
                             (these_patch_coords[2] - orig_z) * (these_patch_coords[2] - orig_z));
 
@@ -714,7 +714,7 @@ size_t check_bdy(const size_t patch_gid,
 /////////////////////////////////////////////////////////////////////////////
 void tag_bdys(const BoundaryCondition_t& boundary,
     swage::Mesh_t& mesh,
-    const MPICArrayKokkos<double>& node_coords)
+    const MPICArrayKokkos<real_t>& node_coords)
 {
     // size and initialize the number of boundary surfaces in set
     mesh.num_bdy_surfs_in_set = DCArrayKokkos<size_t> (mesh.num_bdy_sets);

@@ -841,9 +841,9 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
     const int Pn_order = mesh.Pn;
 
     // save the elem state to an array for exporting to graphics files
-    DCArrayKokkos<double> elem_scalar_fields(num_elem_scalar_vars, num_elems, "elem_scalars");
-    DCArrayKokkos<double> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3, "elem_tensors");
-    DCArrayKokkos<double> elem_vector_fields(num_elem_vector_vars, num_elems, 3, "elem_vectors");
+    DCArrayKokkos<real_t> elem_scalar_fields(num_elem_scalar_vars, num_elems, "elem_scalars");
+    DCArrayKokkos<real_t> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3, "elem_tensors");
+    DCArrayKokkos<real_t> elem_vector_fields(num_elem_vector_vars, num_elems, 3, "elem_vectors");
     elem_scalar_fields.set_values(0.0);
     elem_tensor_fields.set_values(0.0);
 
@@ -898,8 +898,8 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
     // ************************
 
     // save the nodal fields to an array for exporting to graphics files
-    DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
-    DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
+    DCArrayKokkos<real_t> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
+    DCArrayKokkos<real_t> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_tenors");
   
     concatenate_nodal_fields(State.node,
                              node_scalar_fields,
@@ -968,7 +968,7 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
 
         const std::string elem_fields_name = "fields";
 
-        ViewCArray<double> node_coords_host(&State.node.coords.host(0, 0), num_nodes, num_dims);
+        ViewCArray<real_t> node_coords_host(&State.node.coords.host(0, 0), num_nodes, num_dims);
         ViewCArray<size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0, 0), n_owned_elems, num_nodes_in_elem);
 
         // VTK diagnostics (optional CellData / PointData in write_vtu): host-side scratch arrays,
@@ -1063,9 +1063,9 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
                     node_vector_var_names.clear();
 
                     // the arrays storing all the material field data
-                    DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
-                    DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
-                    DCArrayKokkos<double> mat_elem_vector_fields(num_mat_pt_vector_vars, num_mat_elems, 3, "mat_pt_vectors");
+                    DCArrayKokkos<real_t> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
+                    DCArrayKokkos<real_t> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
+                    DCArrayKokkos<real_t> mat_elem_vector_fields(num_mat_pt_vector_vars, num_mat_elems, 3, "mat_pt_vectors");
 
 
                     // concatenate material fields into a single array
@@ -1101,7 +1101,7 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
                     mat_fields_name += str_mat_val;  // add the mat number
 
                     // save the nodes belonging to this part (i.e., the material)
-                    DCArrayKokkos <double> mat_node_coords(num_nodes,num_dims, "mat_node_coords");
+                    DCArrayKokkos<real_t> mat_node_coords(num_nodes,num_dims, "mat_node_coords");
                     DCArrayKokkos <size_t> mat_nodes_in_mat_elem(num_mat_elems, num_nodes_in_elem, "mat_nodes_in_mat_elem");
 
                     // the number of actual nodes belonging to the part (i.e., the material)
@@ -1119,7 +1119,7 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
                                                    num_nodes_in_elem,
                                                    num_dims);
 
-                    ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
+                    ViewCArray<real_t> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
                     ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
                     
                     // write out a vtu file this
@@ -1387,7 +1387,7 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
     int  elem_switch = 1;
 
 
-    DCArrayKokkos<double> speed(num_elems, "speed");
+    DCArrayKokkos<real_t> speed(num_elems, "speed");
     FOR_ALL(elem_gid, 0, num_elems, {
         double elem_vel[3]; // note:initialization with a list won't work
         elem_vel[0] = 0.0;
@@ -1811,7 +1811,7 @@ void MeshWriter::write_vtk_old(swage::Mesh_t& mesh,
     auto elem_fields = CArray<double>(num_elems, num_cell_scalar_vars);
     int  elem_switch = 1;
 
-    DCArrayKokkos<double> speed(num_elems, "speed");
+    DCArrayKokkos<real_t> speed(num_elems, "speed");
     FOR_ALL(elem_gid, 0, num_elems, {
         double elem_vel[3]; // note:initialization with a list won't work
         elem_vel[0] = 0.0;
@@ -2086,8 +2086,8 @@ void MeshWriter::write_vtk_old(swage::Mesh_t& mesh,
 /////////////////////////////////////////////////////////////////////////////
 void MeshWriter::concatenate_elem_fields(const MaterialPoint_t& MaterialPoints,
                              const GaussPoint_t& GaussPoints,
-                             DCArrayKokkos<double>& elem_scalar_fields,
-                             DCArrayKokkos<double>& elem_tensor_fields,
+                             DCArrayKokkos<real_t>& elem_scalar_fields,
+                             DCArrayKokkos<real_t>& elem_tensor_fields,
                              const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                              const std::vector<material_pt_state>& output_elem_state,
                              const std::vector<gauss_pt_state>& output_gauss_pt_states,
@@ -2361,9 +2361,9 @@ void MeshWriter::concatenate_elem_fields(const MaterialPoint_t& MaterialPoints,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshWriter::concatenate_mat_fields(const MaterialPoint_t& MaterialPoints,
-                            DCArrayKokkos<double>& mat_elem_scalar_fields,
-                            DCArrayKokkos<double>& mat_elem_tensor_fields,
-                            DCArrayKokkos<double>& mat_elem_vector_fields,
+                            DCArrayKokkos<real_t>& mat_elem_scalar_fields,
+                            DCArrayKokkos<real_t>& mat_elem_tensor_fields,
+                            DCArrayKokkos<real_t>& mat_elem_vector_fields,
                             const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                             const std::vector<material_pt_state>& output_material_pt_states,
                             const size_t num_mat_elems,
@@ -2555,8 +2555,8 @@ void MeshWriter::concatenate_mat_fields(const MaterialPoint_t& MaterialPoints,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshWriter::concatenate_nodal_fields(const node_t& Node,
-                                          DCArrayKokkos<double>& node_scalar_fields,
-                                          const DCArrayKokkos<double>& node_vector_fields,
+                                          DCArrayKokkos<real_t>& node_scalar_fields,
+                                          const DCArrayKokkos<real_t>& node_vector_fields,
                                           std::vector<node_state>& output_node_states,
                                           double dt,
                                           const size_t num_nodes,
@@ -2692,13 +2692,13 @@ void MeshWriter::concatenate_nodal_fields(const node_t& Node,
 ///
 /////////////////////////////////////////////////////////////////////////////
 void MeshWriter::write_vtu(
-    const ViewCArray<double>& node_coords_host,
+    const ViewCArray<real_t>& node_coords_host,
     const ViewCArray<size_t>& nodes_in_elem_host,
-    const DCArrayKokkos<double>& elem_scalar_fields,
-    const DCArrayKokkos<double>& elem_tensor_fields,
-    const DCArrayKokkos<double>& elem_vector_fields,
-    const DCArrayKokkos<double>& node_scalar_fields,
-    const DCArrayKokkos<double>& node_vector_fields,
+    const DCArrayKokkos<real_t>& elem_scalar_fields,
+    const DCArrayKokkos<real_t>& elem_tensor_fields,
+    const DCArrayKokkos<real_t>& elem_vector_fields,
+    const DCArrayKokkos<real_t>& node_scalar_fields,
+    const DCArrayKokkos<real_t>& node_vector_fields,
     const std::vector<std::string>& elem_scalar_var_names,
     const std::vector<std::string>& elem_tensor_var_names,
     const std::vector<std::string>& elem_vector_var_names,
@@ -3784,9 +3784,9 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
     const int Pn_order = mesh.Pn;
 
     // save the elem state to an array for exporting to graphics files
-    DCArrayKokkos<double> elem_scalar_fields(num_elem_scalar_vars, num_elems, "elem_scalars");
-    DCArrayKokkos<double> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3, "elem_tensors");
-    DCArrayKokkos<double> elem_vector_fields(num_elem_vector_vars, num_elems, 3, "elem_vectors");
+    DCArrayKokkos<real_t> elem_scalar_fields(num_elem_scalar_vars, num_elems, "elem_scalars");
+    DCArrayKokkos<real_t> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3, "elem_tensors");
+    DCArrayKokkos<real_t> elem_vector_fields(num_elem_vector_vars, num_elems, 3, "elem_vectors");
 
     elem_scalar_fields.set_values(0.0);
     elem_tensor_fields.set_values(0.0);
@@ -3841,8 +3841,8 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
     // ************************
 
     // save the nodal fields to an array for exporting to graphics files
-    DCArrayKokkos<double> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
-    DCArrayKokkos<double> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_vectors");
+    DCArrayKokkos<real_t> node_scalar_fields(num_node_scalar_vars, num_nodes, "node_scalars");
+    DCArrayKokkos<real_t> node_vector_fields(num_node_vector_vars, num_nodes, 3, "node_vectors");
     Kokkos::fence();
 
     concatenate_nodal_fields(State.node,
@@ -3912,7 +3912,7 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
 
         const std::string elem_fields_name = "fields";
 
-        ViewCArray<double> node_coords_host(&State.node.coords.host(0, 0), num_nodes, num_dims);
+        ViewCArray<real_t> node_coords_host(&State.node.coords.host(0, 0), num_nodes, num_dims);
         ViewCArray<size_t> nodes_in_elem_host(&mesh.nodes_in_elem.host(0, 0), n_owned_elems, num_nodes_in_elem);
 
         // VTK diagnostics (optional CellData / PointData in write_vtu): host-side scratch arrays,
@@ -4010,9 +4010,9 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
                     node_vector_var_names.clear();
 
                     // the arrays storing all the material field data
-                    DCArrayKokkos<double> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
-                    DCArrayKokkos<double> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
-                    DCArrayKokkos<double> mat_elem_vector_fields(num_mat_pt_vector_vars, num_mat_elems, 3, "mat_pt_vectors");
+                    DCArrayKokkos<real_t> mat_elem_scalar_fields(num_mat_pt_scalar_vars, num_mat_elems, "mat_pt_scalars");
+                    DCArrayKokkos<real_t> mat_elem_tensor_fields(num_mat_pt_tensor_vars, num_mat_elems, 3, 3, "mat_pt_tensors");
+                    DCArrayKokkos<real_t> mat_elem_vector_fields(num_mat_pt_vector_vars, num_mat_elems, 3, "mat_pt_vectors");
 
 
                     // concatenate material fields into a single array
@@ -4048,7 +4048,7 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
                     mat_fields_name += str_mat_val;  // add the mat number
 
                     // save the nodes belonging to this part (i.e., the material)
-                    DCArrayKokkos <double> mat_node_coords(num_nodes,num_dims, "mat_node_coords");
+                    DCArrayKokkos<real_t> mat_node_coords(num_nodes,num_dims, "mat_node_coords");
                     DCArrayKokkos <size_t> mat_nodes_in_mat_elem(num_mat_elems, num_nodes_in_elem, "mat_nodes_in_mat_elem");
 
                     // the number of actual nodes belonging to the part (i.e., the material)
@@ -4066,7 +4066,7 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
                                                    num_nodes_in_elem,
                                                    num_dims);
 
-                    ViewCArray <double> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
+                    ViewCArray<real_t> mat_node_coords_host(&mat_node_coords.host(0,0), num_mat_nodes, num_dims);
                     ViewCArray <size_t> mat_nodes_in_elem_host(&mat_nodes_in_mat_elem.host(0,0), num_mat_elems, num_nodes_in_elem);
 
                     // write out a vtu file this 
@@ -4423,7 +4423,7 @@ void MeshWriter::write_vtu_Pn(
     fprintf(fp, "        <DataArray type=\"Float64\" "
                 "NumberOfComponents=\"3\" format=\"ascii\">\n");
 
-    DCArrayKokkos <double> x_phys(num_mat_elems, num_gp_per_elem, 3);
+    DCArrayKokkos<real_t> x_phys(num_mat_elems, num_gp_per_elem, 3);
     x_phys.set_values(0);
     FOR_ALL(elem, 0, num_mat_elems, {
         const size_t elem_id =
@@ -5224,8 +5224,8 @@ void MeshWriter::write_vtm(CArray<double>& graphics_times,
 /////////////////////////////////////////////////////////////////////////////
 void MeshWriter::build_material_elem_node_lists(
     const swage::Mesh_t& mesh,
-    const MPICArrayKokkos<double>& state_node_coords,
-    DCArrayKokkos<double>& mat_node_coords,
+    const MPICArrayKokkos<real_t>& state_node_coords,
+    DCArrayKokkos<real_t>& mat_node_coords,
     DCArrayKokkos <size_t>& mat_nodes_in_mat_elem,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const size_t mat_id,
@@ -5732,7 +5732,7 @@ void MeshWriter::write_text_state(
         // ------------------------------------------------------------------
         //  Element centroid coordinates
         // ------------------------------------------------------------------
-        DCArrayKokkos<double> x_phys(num_owned_mat_elems(mat_id), 3);
+        DCArrayKokkos<real_t> x_phys(num_owned_mat_elems(mat_id), 3);
         x_phys.set_values(0);
 
         FOR_ALL(elem, 0, num_owned_mat_elems(mat_id), {
@@ -6314,7 +6314,7 @@ void MeshWriter::write_text_state_Pn(
     // -----------------------------------------------------------------------
     for (int mat_id = 0; mat_id < (int)State.MaterialToMeshMaps.num_mat_elems.dims(0); mat_id++) {
         // allocating array for storing real space locations of gauss points
-        DCArrayKokkos<double> x_phys;
+        DCArrayKokkos<real_t> x_phys;
 
         // populating the counts for num_owned_mat_elems if not already populated
         if (num_owned_mat_elems(mat_id) == -1) {
@@ -6331,7 +6331,7 @@ void MeshWriter::write_text_state_Pn(
         }
 
         // initializing array for storing real space locations of gauss points
-        x_phys = DCArrayKokkos <double> (num_owned_mat_elems(mat_id), num_gp_per_elem, 3);
+        x_phys = DCArrayKokkos<real_t>(num_owned_mat_elems(mat_id), num_gp_per_elem, 3);
         x_phys.set_values(0);
 
         FOR_ALL(elem, 0, num_owned_mat_elems(mat_id), {

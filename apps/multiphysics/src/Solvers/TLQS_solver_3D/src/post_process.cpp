@@ -39,11 +39,11 @@ KOKKOS_FUNCTION
 void TLQS3D::post_process(
     const double material_matrix[6][6],
     ViewCArrayKokkos <size_t>& nodes_in_elem,
-    const MPICArrayKokkos <double>& coords_t0,
-    const MPICArrayKokkos <double>& displacement,
-    ViewCArrayKokkos <double>& gauss_point_grad_basis,
-    ViewCArrayKokkos <double>& stress,
-    ViewCArrayKokkos <double>& strain)
+    const MPICArrayKokkos<real_t>& coords_t0,
+    const MPICArrayKokkos<real_t>& displacement,
+    ViewCArrayKokkos<real_t>& gauss_point_grad_basis,
+    ViewCArrayKokkos<real_t>& stress,
+    ViewCArrayKokkos<real_t>& strain)
 {
     // allocate and initialize Jacobian
     // dX_i / dxi_j
