@@ -84,32 +84,32 @@ void parse_dynamic_options(Yaml::Node& root, DynamicOptions_t& DynamicOptions)
 
         // Start time
         if (a_word.compare("time_initial") == 0) {
-            double time_initial = yaml[a_word].As<double>();
+            real_t time_initial = yaml[a_word].As<double>();
             DynamicOptions.time_initial = time_initial;
         } // start time
         // End time
         else if (a_word.compare("time_final") == 0) {
-            double time_final = yaml[a_word].As<double>();
+            real_t time_final = yaml[a_word].As<double>();
             DynamicOptions.time_final = time_final;
         } // end time
         // Minimum time step
         else if (a_word.compare("dt_min") == 0) {
-            double dt_min = yaml[a_word].As<double>();
+            real_t dt_min = yaml[a_word].As<double>();
             DynamicOptions.dt_min = dt_min;
         }
         // Maximum time step
         else if (a_word.compare("dt_max") == 0) {
-            double dt_max = yaml[a_word].As<double>();
+            real_t dt_max = yaml[a_word].As<double>();
             DynamicOptions.dt_max = dt_max;
         }
         // Initial time step
         else if (a_word.compare("dt_start") == 0) {
-            double dt_start = yaml[a_word].As<double>();
+            real_t dt_start = yaml[a_word].As<double>();
             DynamicOptions.dt_start = dt_start;
         }
         // CFL valid timestep
         else if (a_word.compare("dt_cfl") == 0) {
-            double dt_cfl = yaml[a_word].As<double>();
+            real_t dt_cfl = yaml[a_word].As<double>();
             DynamicOptions.dt_cfl = dt_cfl;
         }
         // End cycle count
@@ -119,17 +119,17 @@ void parse_dynamic_options(Yaml::Node& root, DynamicOptions_t& DynamicOptions)
         }
         // Machine precision small value
         else if (a_word.compare("fuzz") == 0) {
-            double fuzz = yaml[a_word].As<double>();
+            real_t fuzz = yaml[a_word].As<double>();
             DynamicOptions.fuzz = fuzz;
         }
         // Very small value
         else if (a_word.compare("tiny") == 0) {
-            double tiny = yaml[a_word].As<double>();
+            real_t tiny = yaml[a_word].As<double>();
             DynamicOptions.tiny = tiny;
         }
         // Single precision value
         else if (a_word.compare("small") == 0) {
-            double small = yaml[a_word].As<double>();
+            real_t small = yaml[a_word].As<double>();
             DynamicOptions.small = small;
         }
         //  Number of RK stages

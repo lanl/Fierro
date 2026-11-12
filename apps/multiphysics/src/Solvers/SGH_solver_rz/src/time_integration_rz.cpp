@@ -118,19 +118,19 @@ void SGHRZ::get_timestep_rz(swage::Mesh_t& mesh,
                             DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
                             DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                             size_t num_mat_elems,
-                            double time_value,
-                            const double graphics_time,
-                            const double time_final,
-                            const double dt_max,
-                            const double dt_min,
-                            const double dt_cfl,
-                            double&      dt,
-                            const double fuzz,
-                            const double tiny,
+                            real_t time_value,
+                            const real_t graphics_time,
+                            const real_t time_final,
+                            const real_t dt_max,
+                            const real_t dt_min,
+                            const real_t dt_cfl,
+                            real_t&      dt,
+                            const real_t fuzz,
+                            const real_t tiny,
                             const size_t mat_id) const
 {
     // increase dt by 10%, that is the largest dt value
-    dt = dt * 1.1;
+    dt = dt * real_t(1.1);
 
     double dt_lcl;
     double min_dt_calc;
@@ -138,11 +138,11 @@ void SGHRZ::get_timestep_rz(swage::Mesh_t& mesh,
 
         size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
-        double coords0[8];  // element coords
-        ViewCArrayKokkos<double> coords(coords0, 4, 2);
+        real_t coords0[8];  // element coords
+        ViewCArrayKokkos<real_t> coords(coords0, 4, 2);
 
-        double distance0[6];  // array for holding distances between each node
-        ViewCArrayKokkos<double> dist(distance0, 6);
+        real_t distance0[6];  // array for holding distances between each node
+        ViewCArrayKokkos<real_t> dist(distance0, 6);
 
         // Getting the coordinates of the nodes of the element
         for (size_t node_lid = 0; node_lid < 4; node_lid++) {
@@ -157,31 +157,31 @@ void SGHRZ::get_timestep_rz(swage::Mesh_t& mesh,
         for (size_t i = 0; i < 3; i++) {
             for (size_t j = i + 1; j <= 3; j++) {
                 // returns magnitude of distance between each node, 6 total options
-                dist(count) = fabs(
-                                 sqrt(pow((coords(i, 0) - coords(j, 0)), 2.0)
-                        + pow((coords(i, 1) - coords(j, 1)), 2.0) )
+                dist(count) = Kokkos::fabs(
+                                 Kokkos::sqrt(Kokkos::pow((coords(i, 0) - coords(j, 0)), real_t(2.0))
+                        + Kokkos::pow((coords(i, 1) - coords(j, 1)), real_t(2.0)) )
                     );
                 count++;
             } // end for j
         } // end for i
 
-        double dist_min = dist(0);
+        real_t dist_min = dist(0);
 
         for (int i = 0; i < 6; ++i) {
-            dist_min = fmin(dist(i), dist_min);
+            dist_min = Kokkos::fmin(dist(i), dist_min);
         }
 
         // local dt calc based on CFL
-        double dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_id, mat_elem_sid) + fuzz);
+        real_t dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_id, mat_elem_sid) + fuzz);
 
 
         if (MaterialPoints_eroded(mat_id, mat_elem_sid) == true){
-            dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
+            dt_lcl_ = real_t(1.0e32);  // a huge time step as this element doesn't exist
         }
 
         // make dt be in bounds
-        dt_lcl_ = fmin(dt_lcl_, dt_max);    // make dt small than dt_max
-        dt_lcl_ = fmax(dt_lcl_, dt_min);    // make dt larger than dt_min
+        dt_lcl_ = Kokkos::fmin(dt_lcl_, dt_max);    // make dt small than dt_max
+        dt_lcl_ = Kokkos::fmax(dt_lcl_, dt_min);    // make dt larger than dt_min
 
         if (dt_lcl_ < dt_lcl) {
             dt_lcl = dt_lcl_;
@@ -195,10 +195,10 @@ void SGHRZ::get_timestep_rz(swage::Mesh_t& mesh,
     }
 
     // ensure time step hits the graphics time intervals, adding tiny to ensure dt passes graphics time
-    dt = fmin(dt, fmax(fuzz,(graphics_time - time_value)) + tiny);
+    dt = Kokkos::fmin(dt, Kokkos::fmax(fuzz,(graphics_time - time_value)) + tiny);
 
     // make dt hit final time, adding tiny to ensure dt passes it by a little bit
-    dt = fmin(dt, time_final - time_value + tiny);
+    dt = Kokkos::fmin(dt, time_final - time_value + tiny);
 
     return;
 } // end get_timestep_rz

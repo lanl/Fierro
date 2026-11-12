@@ -62,7 +62,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 namespace QSIsotropicLinearElastic {
 
-    const double fuzz = 1.e-16;
+    const real_t fuzz = real_t(1.e-16);
     
     /**
      * @brief Initialize the strength state variables for the material points.
@@ -134,16 +134,16 @@ namespace QSIsotropicLinearElastic {
         const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
-        const double MaterialPoints_den,
-        const double MaterialPoints_sie,
+        const real_t MaterialPoints_den,
+        const real_t MaterialPoints_sie,
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos<real_t> &eos_global_vars,
         const RaggedRightArrayKokkos<real_t> &strength_global_vars,
-        const double vol,
-        const double dt,
-        const double rk_alpha,
-        const double time,
+        const real_t vol,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
@@ -156,15 +156,15 @@ namespace QSIsotropicLinearElastic {
 
     KOKKOS_FUNCTION
     static void fill_C_matrix(const RaggedRightArrayKokkos<real_t> &strength_global_vars,
-        double C[6][6],
+        real_t C[6][6],
         const size_t mat_id)
     {
         // setting youngs modulus and poissons ratio
-        double E = strength_global_vars(mat_id,0);
-        double v = strength_global_vars(mat_id,1);
+        real_t E = strength_global_vars(mat_id,0);
+        real_t v = strength_global_vars(mat_id,1);
 
         // leading coefficient
-        double coef = E / ((1-2*v)*(1+v));
+        real_t coef = E / ((1-2*v)*(1+v));
 
         // filling C
         C[0][0] = coef*(1-v);

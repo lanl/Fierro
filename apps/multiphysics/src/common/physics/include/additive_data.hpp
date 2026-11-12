@@ -71,7 +71,7 @@ public:
     ToolPathInfo(size_t npoints);
 
     // Set a data point (time, x, y, z, power) at index i
-    void set_data_point(size_t i, double time, double x, double y, double z, double power);
+    void set_data_point(size_t i, real_t time, real_t x, real_t y, real_t z, real_t power);
     
     // Update the device views (copy to the GPU from the CPU)
     void update_device();
@@ -79,7 +79,7 @@ public:
     // Compute current position of tool at time t, assuming linear motion between path points.
     // Returns a std::array<double,3> {x, y, z}
     KOKKOS_INLINE_FUNCTION
-    void get_position(const double& t, double& x, double& y, double& z) const {
+    void get_position(const real_t& t, real_t& x, real_t& y, real_t& z) const {
 
         // get the x position at time t
         x = tool_path_table.linear_interpolation(t, Fields::x, Fields::time);
@@ -93,7 +93,7 @@ public:
     // Compute current power of tool at time t, assuming linear interpolation between path points.
     // Returns the power at the time t
     KOKKOS_INLINE_FUNCTION
-    double get_power(double& t) const {
+    double get_power(real_t& t) const {
         return tool_path_table.linear_interpolation(t, Fields::power, Fields::time);
     } // end function
 };

@@ -263,7 +263,7 @@ void Driver::initialize()
     build_boundry_node_sets(mesh);
 
     // Setup the Solvers
-    double time_final = SimulationParamaters.DynamicOptions.time_final;
+    real_t time_final = SimulationParamaters.DynamicOptions.time_final;
     for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
@@ -557,7 +557,7 @@ void Driver::setup_solver_vars(T& a_solver,
 
 
     // the final time of the simulation
-    double time_final = this->SimulationParamaters.DynamicOptions.time_final;
+    real_t time_final = this->SimulationParamaters.DynamicOptions.time_final;
 
     // save the solver_id
     a_solver->solver_id = solver_id;
@@ -582,13 +582,13 @@ void Driver::setup_solver_vars(T& a_solver,
     // setting the ending times are tricky, requiring logic
             
     // set the start and ending times
-    double t_end = this->SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
+    real_t t_end = this->SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
     if(solver_id==0){
-        a_solver->time_start = 0.0;
+        a_solver->time_start = real_t(0.0);
 
-        if(t_end <= 1.0e-14){
+        if(t_end <= real_t(1.0e-14)){
             // time wasn't set so end the solver at the final time of the calculation
-            a_solver->time_end = fmax(0.0, time_final);
+            a_solver->time_end = Kokkos::fmax(real_t(0.0), time_final);
         }
         else {
             // use the specified time in the input file
@@ -597,17 +597,17 @@ void Driver::setup_solver_vars(T& a_solver,
     }
     else {
         // this is not the first solver run
-        double time_prior_solver_ends = this->solvers[solver_id-1]->time_end;
+        real_t time_prior_solver_ends = this->solvers[solver_id-1]->time_end;
 
         a_solver->time_start = time_prior_solver_ends;
 
-        if (t_end <= 1.0e-14){
+        if (t_end <= real_t(1.0e-14)){
             // time wasn't set so end the solver at the final time of the calculation
             a_solver->time_end = time_final;
         }
         else {
             // use the specified time in the input file
-            a_solver->time_end = fmin(t_end, time_final); // ensure t_end is bounded by final time
+            a_solver->time_end = Kokkos::fmin(t_end, time_final); // ensure t_end is bounded by final time
         } // end if time was set
         
     } // end if solver=0

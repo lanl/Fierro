@@ -62,8 +62,8 @@ namespace LinearElasticEOS {
                            const size_t mat_id,
                            const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
                            const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
-                           const double den,
-                           const double sie,
+                           const real_t den,
+                           const real_t sie,
                            const RaggedRightArrayKokkos<real_t> &eos_global_vars,
                            const size_t num_vars)
     {
@@ -81,16 +81,16 @@ namespace LinearElasticEOS {
                               const size_t mat_id,
                               const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
                               const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
-                              const double den,
-                              const double sie,
+                              const real_t den,
+                              const real_t sie,
                               const RaggedRightArrayKokkos<real_t> &eos_global_vars)
     {
         
-        const double B = eos_global_vars(mat_id,0); // bulk modulus
-        const double den0 = eos_global_vars(mat_id,2); // ref density
+        const real_t B = eos_global_vars(mat_id,0); // bulk modulus
+        const real_t den0 = eos_global_vars(mat_id,2); // ref density
 
         // pressure
-        MaterialPoints_pres(mat_id, mat_pt_lid) = B*(den/den0 - 1.0);
+        MaterialPoints_pres(mat_id, mat_pt_lid) = B*(den/den0 - real_t(1.0));
 
         return;
     } // end func
@@ -102,20 +102,20 @@ namespace LinearElasticEOS {
                                  const size_t mat_id,
                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
-                                 const double den,
-                                 const double sie,
+                                 const real_t den,
+                                 const real_t sie,
                                  const RaggedRightArrayKokkos<real_t> &eos_global_vars,
                                  const RaggedRightArrayKokkos<real_t> &strength_global_vars)
     {
 
-        // sspd = sqrt((B + 4/3G)/rho)
-        const double B = eos_global_vars(mat_id,0); // bulk modulus
-        const double G = eos_global_vars(mat_id,1); // shear modulus  
-        //const double den0 = eos_global_vars(mat_id,2); // ref density
-        const double csmin = eos_global_vars(mat_id,3); // minimum sound speed
+        // sspd = Kokkos::sqrt((B + 4/3G)/rho)
+        const real_t B = eos_global_vars(mat_id,0); // bulk modulus
+        const real_t G = eos_global_vars(mat_id,1); // shear modulus  
+        //const real_t den0 = eos_global_vars(mat_id,2); // ref density
+        const real_t csmin = eos_global_vars(mat_id,3); // minimum sound speed
 
         // sound speed
-        MaterialPoints_sspd(mat_id, mat_pt_lid) = fmax(csmin, sqrt((B + (4.0/3.0)*G)/den));
+        MaterialPoints_sspd(mat_id, mat_pt_lid) = Kokkos::fmax(csmin, Kokkos::sqrt((B + (real_t(4.0)/real_t(3.0))*G)/den));
 
         return;
     } // end func

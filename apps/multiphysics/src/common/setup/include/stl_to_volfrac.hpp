@@ -102,12 +102,12 @@ int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill,
                       const MPICArrayKokkos<real_t> &node_coords,
                       const DCArrayKokkos <size_t> &nodes_in_elem,
                       const size_t num_nodes,
-                      const double scale_x,
-                      const double scale_y,
-                      const double scale_z,
-                      const double origin_x,
-                      const double origin_y,
-                      const double origin_z,
+                      const real_t scale_x,
+                      const real_t scale_y,
+                      const real_t scale_z,
+                      const real_t origin_x,
+                      const real_t origin_y,
+                      const real_t origin_z,
                       const std::string &file_path);
 
 

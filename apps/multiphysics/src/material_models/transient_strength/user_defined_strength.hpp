@@ -83,7 +83,7 @@ namespace UserDefinedStrengthModel {
             size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dims(1); 
             
             for(size_t var=0; var<num_strength_state_vars; var++){
-                MaterialPoints_strength_state_vars(mat_id, mat_points_lid,var) = 0.0;
+                MaterialPoints_strength_state_vars(mat_id, mat_points_lid,var) = real_t(0.0);
             } // end for
 
         });  // end parallel for
@@ -104,16 +104,16 @@ namespace UserDefinedStrengthModel {
         const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
-        const double MaterialPoints_den,
-        const double MaterialPoints_sie,
+        const real_t MaterialPoints_den,
+        const real_t MaterialPoints_sie,
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos<real_t> &eos_global_vars,
         const RaggedRightArrayKokkos<real_t> &strength_global_vars,
-        const double vol,
-        const double dt,
-        const double rk_alpha,
-        const double time,
+        const real_t vol,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
@@ -189,7 +189,7 @@ namespace NotionalStrengthModel {
             size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dims(1); 
             
             for(size_t var=0; var<num_strength_state_vars; var++){
-                MaterialPoints_strength_state_vars(mat_id, mat_points_lid,var) = 0.0;
+                MaterialPoints_strength_state_vars(mat_id, mat_points_lid,var) = real_t(0.0);
             } // end for
 
         });  // end parallel for
@@ -209,16 +209,16 @@ namespace NotionalStrengthModel {
         const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
-        const double MaterialPoints_den,
-        const double MaterialPoints_sie,
+        const real_t MaterialPoints_den,
+        const real_t MaterialPoints_sie,
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos<real_t> &eos_global_vars,
         const RaggedRightArrayKokkos<real_t> &strength_global_vars,
-        const double vol,
-        const double dt,
-        const double rk_alpha,
-        const double time,
+        const real_t vol,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
         const size_t mat_id,

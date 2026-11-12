@@ -202,18 +202,18 @@ public:
         const swage::Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
         MPICArrayKokkos<real_t>& node_vel,
-        const double time_value) const;
+        const real_t time_value) const;
 
     void boundary_contact_rz(
         const swage::Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
         MPICArrayKokkos<real_t>& node_vel,
-        const double time_value) const;
+        const real_t time_value) const;
 
     // **** Functions defined in energy_SGHRZ.cpp **** //
     void update_energy_rz(
-        const double rk_alpha,
-        const double dt,
+        const real_t rk_alpha,
+        const real_t dt,
         const swage::Mesh_t& mesh,
         const MPICArrayKokkos<real_t>& node_vel,
         const MPICArrayKokkos<real_t>& node_vel_n0,
@@ -251,16 +251,16 @@ public:
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
-        const double fuzz,
-        const double tiny,
-        const double small,
-        const double dt,
-        const double rk_alpha) const;
+        const real_t fuzz,
+        const real_t tiny,
+        const real_t small,
+        const real_t dt,
+        const real_t rk_alpha) const;
 
     // **** Functions defined in geometry.cpp **** //
     void update_position_rz(
-        double rk_alpha,
-        double dt,
+        real_t rk_alpha,
+        real_t dt,
         const size_t num_dims,
         const size_t num_nodes,
         MPICArrayKokkos<real_t>& node_coords,
@@ -270,8 +270,8 @@ public:
 
     // **** Functions defined in momentum.cpp **** //
     void update_velocity_rz(
-        double rk_alpha,
-        double dt,
+        real_t rk_alpha,
+        real_t dt,
         const swage::Mesh_t& mesh,
         MPICArrayKokkos<real_t>& node_vel,
         const MPICArrayKokkos<real_t>& node_vel_n0,
@@ -286,9 +286,9 @@ public:
         const DCArrayKokkos<real_t>& elem_vol) const;
 
     KOKKOS_FUNCTION
-    void decompose_vel_grad_rz(const ViewCArrayKokkos<double>& D_tensor,
-                               const ViewCArrayKokkos<double>& W_tensor,
-                               const ViewCArrayKokkos<double>& vel_grad) const;
+    void decompose_vel_grad_rz(const ViewCArrayKokkos<real_t>& D_tensor,
+                               const ViewCArrayKokkos<real_t>& W_tensor,
+                               const ViewCArrayKokkos<real_t>& vel_grad) const;
 
     void get_divergence_rz(
         DCArrayKokkos<real_t>& GaussPoints_div,
@@ -321,9 +321,9 @@ public:
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad_t0,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
-        const double time_value,
-        const double dt,
-        const double rk_alpha,
+        const real_t time_value,
+        const real_t dt,
+        const real_t rk_alpha,
         const size_t cycle,
         const size_t num_material_elems,
         const size_t mat_id) const;
@@ -349,11 +349,11 @@ public:
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
-        const double fuzz,
-        const double small,
-        const double time_value,
-        const double dt,
-        const double rk_alpha,
+        const real_t fuzz,
+        const real_t small,
+        const real_t time_value,
+        const real_t dt,
+        const real_t rk_alpha,
         const size_t cycle) const;
 
 
@@ -384,15 +384,15 @@ public:
         DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
         DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         size_t num_mat_elems,
-        double time_value,
-        const double graphics_time,
-        const double time_final,
-        const double dt_max,
-        const double dt_min,
-        const double dt_cfl,
-        double&      dt,
-        const double fuzz,
-        const double tiny,
+        real_t time_value,
+        const real_t graphics_time,
+        const real_t time_final,
+        const real_t dt_max,
+        const real_t dt_min,
+        const real_t dt_cfl,
+        real_t&      dt,
+        const real_t fuzz,
+        const real_t tiny,
         const size_t mat_id) const;
 
 
@@ -417,12 +417,12 @@ void calc_node_areal_mass_rz(const swage::Mesh_t& mesh,
                              const MPICArrayKokkos<real_t>& node_coords,
                              const DCArrayKokkos<real_t>& node_mass,
                              CArrayKokkos<real_t> node_extensive_mass,
-                             double tiny);
+                             real_t tiny);
 
 void calc_node_extensive_mass_rz(const CArrayKokkos<real_t>& node_extensive_mass,
                                  const MPICArrayKokkos<real_t>& node_coords,
                                  const DCArrayKokkos<real_t>& node_mass,
-                                 double num_nodes);
+                                 real_t num_nodes);
 
 double sum_domain_internal_energy_rz(const swage::Mesh_t& mesh,
                                      const MeshtoMaterialMap_t& MeshtoMaterialMaps,

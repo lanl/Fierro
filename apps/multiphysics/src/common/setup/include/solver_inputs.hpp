@@ -69,7 +69,7 @@ struct solver_input_t
 {
     solver_input::method method = solver_input::NONE;
 
-    double time_end = 0.0;
+    real_t time_end = real_t(0.0);
 
     bool use_moving_heat_source = false;
 

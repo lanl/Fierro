@@ -62,8 +62,8 @@ namespace NoEOSModel {
                            const size_t mat_id,
                            const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
                            const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
-                           const double den,
-                           const double sie,
+                           const real_t den,
+                           const real_t sie,
                            const RaggedRightArrayKokkos<real_t> &eos_global_vars,
                            const size_t num_vars)
     {
@@ -80,8 +80,8 @@ namespace NoEOSModel {
                               const size_t mat_id,
                               const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
                               const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
-                              const double den,
-                              const double sie,
+                              const real_t den,
+                              const real_t sie,
                               const RaggedRightArrayKokkos<real_t> &eos_global_vars)
     {
         return;
@@ -94,8 +94,8 @@ namespace NoEOSModel {
                                  const size_t mat_id,
                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
                                  const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
-                                 const double den,
-                                 const double sie,
+                                 const real_t den,
+                                 const real_t sie,
                                  const RaggedRightArrayKokkos<real_t> &eos_global_vars,
                                  const RaggedRightArrayKokkos<real_t> &strength_global_vars)
     {

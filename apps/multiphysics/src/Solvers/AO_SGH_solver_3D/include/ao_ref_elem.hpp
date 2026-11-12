@@ -141,11 +141,11 @@ KOKKOS_INLINE_FUNCTION
 void lagrange_basis_1d_at(const ViewCArrayKokkos<real_t>& basis_out,
                           const ViewCArrayKokkos<real_t>& nodes_1d,
                           const size_t num_nodes_1d,
-                          const double x)
+                          const real_t x)
 {
     for (size_t i = 0; i < num_nodes_1d; i++) {
-        double numerator   = 1.0;
-        double denominator = 1.0;
+        real_t numerator   = real_t(1.0);
+        real_t denominator = real_t(1.0);
         for (size_t j = 0; j < num_nodes_1d; j++) {
             if (j != i) {
                 numerator   *= (x - nodes_1d(j));
@@ -162,15 +162,15 @@ KOKKOS_INLINE_FUNCTION
 void lagrange_basis_grad_1d_at(const ViewCArrayKokkos<real_t>& grad_basis_out,
                                const ViewCArrayKokkos<real_t>& nodes_1d,
                                const size_t num_nodes_1d,
-                               const double x)
+                               const real_t x)
 {
     for (size_t i = 0; i < num_nodes_1d; i++) {
-        double accum = 0.0;
+        double accum = real_t(0.0);
         for (size_t m = 0; m < num_nodes_1d; m++) {
             if (m == i) {
                 continue;
             }
-            double term = 1.0 / (nodes_1d(i) - nodes_1d(m));
+            real_t term = real_t(1.0) / (nodes_1d(i) - nodes_1d(m));
             for (size_t j = 0; j < num_nodes_1d; j++) {
                 if (j == i || j == m) {
                     continue;
@@ -279,7 +279,7 @@ struct ref_elem_t
             ViewCArrayKokkos<real_t> basis_view(&basis_ref(q, 0), n_dofs_1d);
             ViewCArrayKokkos<real_t> grad_view (&grad_ref (q, 0), n_dofs_1d);
 
-            const double x = qpt_pos(q);
+            const real_t x = qpt_pos(q);
             lagrange_basis_1d_at     (basis_view, nodes_view, n_dofs_1d, x);
             lagrange_basis_grad_1d_at(grad_view,  nodes_view, n_dofs_1d, x);
         });
@@ -323,7 +323,7 @@ void eval_field_at_qpts_3d(const ref_elem_t&                 ref,
     for (size_t k = 0; k < nd; k++) {
         for (size_t j = 0; j < nd; j++) {
             for (size_t qx = 0; qx < nq; qx++) {
-                double s = 0.0;
+                real_t s = real_t(0.0);
                 for (size_t i = 0; i < nd; i++) {
                     s += ref.basis_1d(qx, i) * f_dof(i + j * nd + k * nd * nd);
                 }
@@ -335,7 +335,7 @@ void eval_field_at_qpts_3d(const ref_elem_t&                 ref,
     for (size_t k = 0; k < nd; k++) {
         for (size_t qy = 0; qy < nq; qy++) {
             for (size_t qx = 0; qx < nq; qx++) {
-                double s = 0.0;
+                real_t s = real_t(0.0);
                 for (size_t j = 0; j < nd; j++) {
                     s += ref.basis_1d(qy, j) * tmp1(qx + j * nq + k * nq * nd);
                 }
@@ -347,7 +347,7 @@ void eval_field_at_qpts_3d(const ref_elem_t&                 ref,
     for (size_t qz = 0; qz < nq; qz++) {
         for (size_t qy = 0; qy < nq; qy++) {
             for (size_t qx = 0; qx < nq; qx++) {
-                double s = 0.0;
+                real_t s = real_t(0.0);
                 for (size_t k = 0; k < nd; k++) {
                     s += ref.basis_1d(qz, k) * tmp2(qx + qy * nq + k * nq * nq);
                 }
@@ -370,7 +370,7 @@ void eval_field_at_qpts_3d_naive(const ref_elem_t&               ref,
     for (size_t qz = 0; qz < nq; qz++) {
         for (size_t qy = 0; qy < nq; qy++) {
             for (size_t qx = 0; qx < nq; qx++) {
-                double s = 0.0;
+                real_t s = real_t(0.0);
                 for (size_t k = 0; k < nd; k++) {
                     for (size_t j = 0; j < nd; j++) {
                         for (size_t i = 0; i < nd; i++) {

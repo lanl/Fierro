@@ -75,15 +75,15 @@ static void stress(const swage::Mesh_t& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
     const RaggedRightArrayKokkos<real_t>& stress_bc_global_vars,
     const DCArrayKokkos<real_t>& bc_state_vars,
-    const ViewCArrayKokkos <double>& corner_surf_force,
-    const ViewCArrayKokkos <double>& corner_surf_normal,
-    const double time_value,
+    const ViewCArrayKokkos<real_t>& corner_surf_force,
+    const ViewCArrayKokkos<real_t>& corner_surf_normal,
+    const real_t time_value,
     const size_t rk_stage,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
-    double sigma_1D[9];
-    ViewCArrayKokkos<double> sigma(&sigma_1D[0], 3,3);  // its 3D even in 2D
+    real_t sigma_1D[9];
+    ViewCArrayKokkos<real_t> sigma(&sigma_1D[0], 3,3);  // its 3D even in 2D
    
     // Cauchy stress is symmetric
     sigma(0,0) = stress_bc_global_vars(bdy_set,BCVars::sig_00);

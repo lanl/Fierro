@@ -57,8 +57,8 @@ void SGTM3D::update_temperature(
     const DCArrayKokkos<real_t>& node_mass,
     const DCArrayKokkos<real_t>& node_q_transfer,
     const DRaggedRightArrayKokkos<real_t>& mat_pt_specific_heat,
-    const double rk_alpha,
-    const double dt) const
+    const real_t rk_alpha,
+    const real_t dt) const
 {
     // ---- loop over all the nodes in the mesh ---- //
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
@@ -73,7 +73,7 @@ void SGTM3D::update_temperature(
         } // end for corner_lid
 
         // ---- Calculate the average specific heat for all materials surrounding a node ---- //
-        double Cp = 0.0;
+        real_t Cp = real_t(0.0);
         for(int elem_lid = 0; elem_lid < mesh.num_corners_in_node(node_gid); elem_lid++){ // NOTE: num_corners_in_node = num_elems_in_node
             size_t elem_gid = mesh.elems_in_node(node_gid, elem_lid);
             Cp += mat_pt_specific_heat(0,elem_gid)/mesh.num_corners_in_node(node_gid);

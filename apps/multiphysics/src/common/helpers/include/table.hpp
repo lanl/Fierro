@@ -66,7 +66,7 @@ struct Table_t{
     Table_t(size_t num_rows_, size_t num_columns_, const char* name_);
 
     // Set a value in the table on the host
-    void set_value(size_t row, size_t col, double val);
+    void set_value(size_t row, size_t col, real_t val);
     
     // Update the device view with data from the host
     void update_device();
@@ -82,8 +82,8 @@ struct Table_t{
     // based on the independent variable value `x` in column `independent_idx`.
     // Assumes that the data in `independent_idx` is sorted in ascending order.
     KOKKOS_INLINE_FUNCTION
-    double linear_interpolation_host(double independent_value, size_t dependent_idx, size_t independent_idx = 0) const {
-        if (num_rows == 0) return 0.0;
+    double linear_interpolation_host(real_t independent_value, size_t dependent_idx, size_t independent_idx = 0) const {
+        if (num_rows == 0) return real_t(0.0);
         
         // Handle cases where independent_value is outside the range (clamping/extrapolation)
         // If independent_value is before the first point, return the first point's value
@@ -99,25 +99,25 @@ struct Table_t{
         // Find the segment [x0, x1] containing independent_value using linear search
         // (Note: For very large tables, binary search would be more efficient)
         for (size_t i = 0; i < num_rows - 1; ++i) {
-            double x0 = data.host(i, independent_idx);
-            double x1 = data.host(i + 1, independent_idx);
+            real_t x0 = data.host(i, independent_idx);
+            real_t x1 = data.host(i + 1, independent_idx);
 
-            double x = independent_value;
+            real_t x = independent_value;
             
             if (x >= x0 && x <= x1) {
                 // Avoid division by zero
                 if (x1 == x0) return data.host(i, dependent_idx);
 
-                double alpha = (x - x0) / (x1 - x0); // Interpolation factor
-                double y0 = data.host(i, dependent_idx);
-                double y1 = data.host(i + 1, dependent_idx);
+                real_t alpha = (x - x0) / (x1 - x0); // Interpolation factor
+                real_t y0 = data.host(i, dependent_idx);
+                real_t y1 = data.host(i + 1, dependent_idx);
                 
-                return (1.0 - alpha) * y0 + alpha * y1;
+                return (real_t(1.0) - alpha) * y0 + alpha * y1;
             }
         }
         
         // Should not be reached given the boundary checks above
-        return 0.0;
+        return real_t(0.0);
     }
 
     // Linear interpolation function for device side access
@@ -125,8 +125,8 @@ struct Table_t{
     // based on the independent variable value `x` in column `independent_idx`.
     // Assumes that the data in `independent_idx` is sorted in ascending order.
     KOKKOS_INLINE_FUNCTION
-    double linear_interpolation(double independent_value, size_t dependent_idx, size_t independent_idx = 0) const {
-        if (num_rows == 0) return 0.0;
+    double linear_interpolation(real_t independent_value, size_t dependent_idx, size_t independent_idx = 0) const {
+        if (num_rows == 0) return real_t(0.0);
         
         // Handle cases where independent_value is outside the range (clamping/extrapolation)
         // If independent_value is before the first point, return the first point's value
@@ -142,25 +142,25 @@ struct Table_t{
         // Find the segment [x0, x1] containing independent_value using linear search
         // (Note: For very large tables, binary search would be more efficient)
         for (size_t i = 0; i < num_rows - 1; ++i) {
-            double x0 = data(i, independent_idx);
-            double x1 = data(i + 1, independent_idx);
+            real_t x0 = data(i, independent_idx);
+            real_t x1 = data(i + 1, independent_idx);
 
-            double x = independent_value;
+            real_t x = independent_value;
             
             if (x >= x0 && x <= x1) {
                 // Avoid division by zero
                 if (x1 == x0) return data(i, dependent_idx);
 
-                double alpha = (x - x0) / (x1 - x0); // Interpolation factor
-                double y0 = data(i, dependent_idx);
-                double y1 = data(i + 1, dependent_idx);
+                real_t alpha = (x - x0) / (x1 - x0); // Interpolation factor
+                real_t y0 = data(i, dependent_idx);
+                real_t y1 = data(i + 1, dependent_idx);
                 
-                return (1.0 - alpha) * y0 + alpha * y1;
+                return (real_t(1.0) - alpha) * y0 + alpha * y1;
             }
         }
         
         // Should not be reached given the boundary checks above
-        return 0.0;
+        return real_t(0.0);
     }
 
     // Print the table to the console

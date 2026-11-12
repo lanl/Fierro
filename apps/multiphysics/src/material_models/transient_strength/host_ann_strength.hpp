@@ -56,7 +56,7 @@ void set_biases_host(const DCArrayKokkos <float> &biases){
     const size_t num_j = biases.size();
 
     FOR_ALL(j,0,num_j, {
-		    biases(j) = 0.0;
+		    biases(j) = real_t(0.0);
 	}); // end parallel for
 
 }; // end function
@@ -69,7 +69,7 @@ void set_weights_host(const DFArrayKokkos <float> &weights){
 	FOR_ALL(i,0,num_i,
 	        j,0,num_j, {
 		    
-		    weights(i,j) = 1.0;
+		    weights(i,j) = real_t(1.0);
 	}); // end parallel for
 
 }; // end function
@@ -101,7 +101,7 @@ void forward_propagate_layer_host(const DCArrayKokkos <float> &inputs,
             
         }, sum); // end parallel reduce
 
-        outputs(j) = 1.0/(1.0 + exp(-sum)); 
+        outputs(j) = real_t(1.0)/(real_t(1.0) + Kokkos::exp(-sum)); 
 
         
 
@@ -196,7 +196,7 @@ namespace HostANNStrengthModel {
         
         // inputs to ANN
         for (size_t i=0; i<num_nodes_in_layer[0]; i++) {
-            inputs.host(i) = 1.0;
+            inputs.host(i) = real_t(1.0);
         }
         inputs.update_device();  // copy inputs to device
 
@@ -229,16 +229,16 @@ namespace HostANNStrengthModel {
         const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
         const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
-        const double MaterialPoints_den,
-        const double MaterialPoints_sie,
+        const real_t MaterialPoints_den,
+        const real_t MaterialPoints_sie,
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const RaggedRightArrayKokkos<real_t> &eos_global_vars,
         const RaggedRightArrayKokkos<real_t> &strength_global_vars,
-        const double vol,
-        const double dt,
-        const double rk_alpha,
-        const double time,
+        const real_t vol,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
         const size_t mat_id,

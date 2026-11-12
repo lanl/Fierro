@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian" header_type="UInt64">
+  <vtkMultiBlockDataSet>
+    <Block index="0" name="Mesh">
+      <DataSet index="0" name="Field" file="Fierro.solver0.fields.00011.vtu" />
+    </Block>
+    <Block index="1" name="Mat">
+      <Block index="0" name="Mat0">
+        <DataSet index="0" name="Mat0" file="Fierro.solver0.mat0.00011.vtu" />
+      </Block>
+    </Block>
+  </vtkMultiBlockDataSet>
+</VTKFile>

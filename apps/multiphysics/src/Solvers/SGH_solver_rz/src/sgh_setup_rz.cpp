@@ -59,11 +59,11 @@ void SGHRZ::init_corner_node_masses_zero_rz(const swage::Mesh_t& mesh,
                     
     // calculate the nodal mass
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        node_mass(node_gid) = 0.0;
+        node_mass(node_gid) = real_t(0.0);
     }); // end parallel over nodes
 
     FOR_ALL(corner_gid, 0, mesh.num_corners, {
-        corner_mass(corner_gid) = 0.0;
+        corner_mass(corner_gid) = real_t(0.0);
     });  // end parallel over corners
 
 } // end setting masses equal to zero
@@ -166,9 +166,9 @@ void calc_corner_mass_rz(const Material_t& Materials,
         size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
         // facial area of the corners
-        double corner_areas_array[4];
+        real_t corner_areas_array[4];
 
-        ViewCArrayKokkos<double> corner_areas(&corner_areas_array[0], 4);
+        ViewCArrayKokkos<real_t> corner_areas(&corner_areas_array[0], 4);
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
 
         geometry::get_area_weights2D(corner_areas, elem_gid, node_coords, elem_node_gids);

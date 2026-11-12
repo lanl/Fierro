@@ -88,7 +88,7 @@ private:
     // Handy structs for parsing input meshes
     struct Node {
         int id;
-        double x, y, z;
+        real_t x, y, z;
     };
 
     struct Element {

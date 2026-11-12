@@ -155,10 +155,10 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // density
-                        double value = root["initial_conditions"][ic_id]["initial_condition"]["density"]["value"].As<double>();
+                        real_t value = root["initial_conditions"][ic_id]["initial_condition"]["density"]["value"].As<double>();
 
                         // check for a valid density, and then save it if it is
-                        if (value < 0.0) {
+                        if (value < real_t(0.0)) {
                             std::cout << "ERROR: density is negative: " << value << std::endl;
                         }
 
@@ -262,7 +262,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // specific_internal_energy value
-                        double value = root["initial_conditions"][ic_id]["initial_condition"]["specific_internal_energy"]["value"].As<double>();
+                        real_t value = root["initial_conditions"][ic_id]["initial_condition"]["specific_internal_energy"]["value"].As<double>();
                         RUN({
                         region_ics(ic_id).sie = value;
                         });
@@ -362,7 +362,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // extensive internal_energy
-                        double value = root["initial_conditions"][ic_id]["initial_condition"]["internal_energy"]["value"].As<double>();
+                        real_t value = root["initial_conditions"][ic_id]["initial_condition"]["internal_energy"]["value"].As<double>();
                         RUN({
                         region_ics(ic_id).ie = value;
                         });
@@ -461,7 +461,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // x-component of specific_heat
-                        double value = root["initial_conditions"][ic_id]["initial_condition"]["specific_heat"]["value"].As<double>();
+                        real_t value = root["initial_conditions"][ic_id]["initial_condition"]["specific_heat"]["value"].As<double>();
                         RUN({
                         region_ics(ic_id).specific_heat = value;
                         });
@@ -561,7 +561,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // thermal_conductivity
-                        double value = root["initial_conditions"][ic_id]["initial_condition"]["thermal_conductivity"]["value"].As<double>();
+                        real_t value = root["initial_conditions"][ic_id]["initial_condition"]["thermal_conductivity"]["value"].As<double>();
 
                         RUN({
                         region_ics(ic_id).thermal_conductivity = value;
@@ -654,7 +654,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // volfrac value or the intercept if linear variation
-                        double value = root["initial_conditions"][ic_id]["initial_condition"]["material_volume_fraction"]["value"].As<double>();
+                        real_t value = root["initial_conditions"][ic_id]["initial_condition"]["material_volume_fraction"]["value"].As<double>();
       
                         RUN({
                             region_ics(ic_id).mat_volfrac = value;
@@ -662,7 +662,7 @@ void parse_initial_conditions(Yaml::Node& root,
                     } // value
                     else if (a_subfield_word.compare("slope") == 0) {
                         // volfrac slope
-                        double slope = root["initial_conditions"][ic_id]["initial_condition"]["material_volume_fraction"]["slope"].As<double>();
+                        real_t slope = root["initial_conditions"][ic_id]["initial_condition"]["material_volume_fraction"]["slope"].As<double>();
       
                         RUN({
                             region_ics(ic_id).mat_volfrac_slope = slope;
@@ -674,9 +674,9 @@ void parse_initial_conditions(Yaml::Node& root,
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(origin, ",");
 
-                        double x1 = std::stod(numbers[0]);
-                        double y1 = std::stod(numbers[1]);
-                        double z1;
+                        real_t x1 = std::stod(numbers[0]);
+                        real_t y1 = std::stod(numbers[1]);
+                        real_t z1;
 
                         if(numbers.size()==3){ 
                             // 3D
@@ -684,7 +684,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         }
                         else {
                             // 2D
-                            z1 = 0.0;
+                            z1 = real_t(0.0);
                         } //
 
                         // storing the origin values as (x1,y1,z1)
@@ -826,7 +826,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         //temperature
-                        double value = root["initial_conditions"][ic_id]["initial_condition"]["temperature"]["value"].As<double>();
+                        real_t value = root["initial_conditions"][ic_id]["initial_condition"]["temperature"]["value"].As<double>();
                         RUN({
                         region_ics(ic_id).temperature = value;
                         });
@@ -926,7 +926,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("value") == 0) {
                         // level set
-                        double value = root["initial_conditions"][ic_id]["initial_condition"]["level_set"]["value"].As<double>();
+                        real_t value = root["initial_conditions"][ic_id]["initial_condition"]["level_set"]["value"].As<double>();
 
                         RUN({
                             region_ics(ic_id).level_set = value;
@@ -934,7 +934,7 @@ void parse_initial_conditions(Yaml::Node& root,
                     } // value
                     else if (a_subfield_word.compare("slope") == 0) {
                         // volfrac slope
-                        double slope = root["initial_conditions"][ic_id]["initial_condition"]["level_set"]["slope"].As<double>();
+                        real_t slope = root["initial_conditions"][ic_id]["initial_condition"]["level_set"]["slope"].As<double>();
         
                         RUN({
                             region_ics(ic_id).level_set_slope = slope;
@@ -946,9 +946,9 @@ void parse_initial_conditions(Yaml::Node& root,
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(origin, ",");
 
-                        double x1 = std::stod(numbers[0]);
-                        double y1 = std::stod(numbers[1]);
-                        double z1;
+                        real_t x1 = std::stod(numbers[0]);
+                        real_t y1 = std::stod(numbers[1]);
+                        real_t z1;
 
                         if(numbers.size()==3){ 
                             // 3D
@@ -956,7 +956,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         }
                         else {
                             // 2D
-                            z1 = 0.0;
+                            z1 = real_t(0.0);
                         } //
 
                         // storing the origin values as (x1,y1,z1)
@@ -1092,7 +1092,7 @@ void parse_initial_conditions(Yaml::Node& root,
 
                     if (a_subfield_word.compare("u") == 0) {
                         // x-component of velocity
-                        double u = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["u"].As<double>();
+                        real_t u = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["u"].As<double>();
 
                         RUN({
                         region_ics(ic_id).u = u;
@@ -1100,7 +1100,7 @@ void parse_initial_conditions(Yaml::Node& root,
                     } // u
                     else if (a_subfield_word.compare("v") == 0) {
                         // y-component of velocity
-                        double v = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["v"].As<double>();
+                        real_t v = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["v"].As<double>();
 
                         RUN({
                             region_ics(ic_id).v = v;
@@ -1109,14 +1109,14 @@ void parse_initial_conditions(Yaml::Node& root,
                     else if (a_subfield_word.compare("w") == 0) {
                         // z-component of velocity
 
-                        double w = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["w"].As<double>();
+                        real_t w = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["w"].As<double>();
 
                         RUN({
                             region_ics(ic_id).w = w;
                         });
                     } // w
                     else if (a_subfield_word.compare("speed") == 0) {
-                        double speed = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["speed"].As<double>();
+                        real_t speed = root["initial_conditions"][ic_id]["initial_condition"]["velocity"]["speed"].As<double>();
 
                         RUN({
                             region_ics(ic_id).speed = speed;

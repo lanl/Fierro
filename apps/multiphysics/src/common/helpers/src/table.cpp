@@ -48,7 +48,7 @@ Table_t::Table_t(size_t num_rows_, size_t num_columns_, const char* name_) : num
     data = DCArrayKokkos<real_t>(num_rows_, num_columns_, name_);
     
     // Hardcoded NaN. Here, we use a bit pattern for portability in device code. This is to verify that data has been initialized correctly. 
-    union { uint64_t i; double d; } nan_union;
+    union { uint64_t i; real_t d; } nan_union;
     nan_union.i = 0x7ff8000000000000ULL;
     data.set_values(nan_union.d);
 
@@ -60,7 +60,7 @@ Table_t::Table_t(size_t num_rows_, size_t num_columns_, const char* name_) : num
     name[i] = '\0';
 }
 
-void Table_t::set_value(size_t row, size_t col, double val)
+void Table_t::set_value(size_t row, size_t col, real_t val)
 {
     assert(row < num_rows && col < num_columns && "Row and column indices are out of bounds in Table_t::set_value");
     data.host(row, col) = val;

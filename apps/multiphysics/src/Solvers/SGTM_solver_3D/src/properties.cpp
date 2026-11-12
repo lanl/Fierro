@@ -83,7 +83,7 @@ void SGTM3D::update_properties(
         // get elem gid
         size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
-        double avg_temp = 0.0;
+        real_t avg_temp = real_t(0.0);
         for(int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
             avg_temp += node_temp(node_gid) / (double)num_nodes_in_elem;

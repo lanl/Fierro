@@ -88,28 +88,28 @@ struct RegionFill_t
     size_t material_id; ///< Material ID for this region
 
     // planes
-    double x1 = 0.0; ///< First X plane for creating a box
-    double x2 = 0.0; ///< Second X plane for creating a box
-    double y1 = 0.0; ///< First Y plane for creating a box
-    double y2 = 0.0; ///< Second Y plane for creating a box
-    double z1 = 0.0; ///< First Z plane for creating a box
-    double z2 = 0.0; ///< Second Z plane for creating a box
+    real_t x1 = real_t(0.0); ///< First X plane for creating a box
+    real_t x2 = real_t(0.0); ///< Second X plane for creating a box
+    real_t y1 = real_t(0.0); ///< First Y plane for creating a box
+    real_t y2 = real_t(0.0); ///< Second Y plane for creating a box
+    real_t z1 = real_t(0.0); ///< First Z plane for creating a box
+    real_t z2 = real_t(0.0); ///< Second Z plane for creating a box
 
 
-    double length = 0.0; ///< length of certain objects
+    real_t length = real_t(0.0); ///< length of certain objects
 
     // radius
-    double radius1 = 0.0;   ///< Inner radius to fill for sphere
-    double radius2 = 0.0;   ///< Outer radius to fill for sphere
+    real_t radius1 = real_t(0.0);   ///< Inner radius to fill for sphere
+    real_t radius2 = real_t(0.0);   ///< Outer radius to fill for sphere
 
     // angles
-    double half_angle = 0.0;  ///<the half angle of a cone
+    real_t half_angle = real_t(0.0);  ///<the half angle of a cone
 
     // direction
-    double unit_vector[3] = { 0.0, 0.0, 0.0 }; ///< unit vector for use to create certain shapes
+    real_t unit_vector[3] = { real_t(0.0), real_t(0.0), real_t(0.0) }; ///< unit vector for use to create certain shapes
 
     // the volume origin
-    double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region fill, its the volume origin
+    real_t origin[3] = { real_t(0.0), real_t(0.0), real_t(0.0) }; ///< Origin for region fill, its the volume origin
 
     int part_id = 1; // object_id in the .vtu file, starts at 1 and goes to N parts
 
@@ -131,12 +131,12 @@ struct RegionFill_host_t
     region::vol_tag volume; ///< Type of volume for this region eg. global, box, sphere, planes, etc.
 
     // scale parameters for input mesh files
-    double scale_x = 1.0;
-    double scale_y = 1.0;
-    double scale_z = 1.0;
+    real_t scale_x = real_t(1.0);
+    real_t scale_y = real_t(1.0);
+    real_t scale_z = real_t(1.0);
 
     // the volume origin
-    double origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for region fill, its the volume origin
+    real_t origin[3] = { real_t(0.0), real_t(0.0), real_t(0.0) }; ///< Origin for region fill, its the volume origin
 };
 
 

@@ -78,7 +78,7 @@ static void velocity(const swage::Mesh_t& mesh,
     const RaggedRightArrayKokkos<real_t>& vel_bc_global_vars,
     const DCArrayKokkos<real_t>& bc_state_vars,
     const MPICArrayKokkos<real_t>& node_vel,
-    const double time_value,
+    const real_t time_value,
     const size_t rk_stage,
     const size_t bdy_node_gid,
     const size_t bdy_set)
@@ -90,31 +90,31 @@ static void velocity(const swage::Mesh_t& mesh,
     // y_plane  = 1,
     // z_plane  = 2,
 
-    const double x_comp = vel_bc_global_vars(bdy_set, BCVars::x_comp);
-    const double y_comp = vel_bc_global_vars(bdy_set, BCVars::y_comp);
-    const double z_comp = vel_bc_global_vars(bdy_set, BCVars::z_comp);
-    const double hydro_bc_vel_0 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_0);
-    const double hydro_bc_vel_1 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_1);
-    const double hydro_bc_vel_2 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_2);
-    const double hydro_bc_vel_t_start = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_start);
-    const double hydro_bc_vel_t_end   = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_end);
+    const real_t x_comp = vel_bc_global_vars(bdy_set, BCVars::x_comp);
+    const real_t y_comp = vel_bc_global_vars(bdy_set, BCVars::y_comp);
+    const real_t z_comp = vel_bc_global_vars(bdy_set, BCVars::z_comp);
+    const real_t hydro_bc_vel_0 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_0);
+    const real_t hydro_bc_vel_1 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_1);
+    const real_t hydro_bc_vel_2 = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_2);
+    const real_t hydro_bc_vel_t_start = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_start);
+    const real_t hydro_bc_vel_t_end   = vel_bc_global_vars(bdy_set, BCVars::hydro_bc_vel_t_end);
 
     // Set velocity to that direction to specified value
     // if t_end > time > t_start
     // v(t) = v0 + v1*dt + v2*0.5*dt^2
     if (time_value >= hydro_bc_vel_t_start && time_value < hydro_bc_vel_t_end) {
         // the time difference
-        const double time_delta = time_value - hydro_bc_vel_t_start;
+        const real_t time_delta = time_value - hydro_bc_vel_t_start;
 
         // the desired velocity
-        const double vel = hydro_bc_vel_0 + hydro_bc_vel_1*time_delta + 0.5*hydro_bc_vel_2*time_delta*time_delta;
+        const real_t vel = hydro_bc_vel_0 + hydro_bc_vel_1*time_delta + real_t(0.5)*hydro_bc_vel_2*time_delta*time_delta;
 
         // magnitude of the normal in the specified direction
-        double mag = 0.0;
+        real_t mag = real_t(0.0);
         for (size_t dim = 0; dim<mesh.num_dims; dim++){
             mag += vel_bc_global_vars(bdy_set,dim)*vel_bc_global_vars(bdy_set,dim);
         } // will make sure it's a unit vector
-        mag = sqrt(mag);
+        mag = Kokkos::sqrt(mag);
 
         for (size_t dim = 0; dim<mesh.num_dims; dim++){
             // remove the velocity in the specified direction

@@ -18,7 +18,7 @@ namespace ao_sgh
 struct ScalarField
 {
     std::string                  name;
-    const DCArrayKokkos<double>* data;
+    const DCArrayKokkos<real_t>* data;
 };
 
 
@@ -91,7 +91,7 @@ void write_lagrange_kine_hex_vtu(const std::string&            path,
 // relative .vtu name; part_name distinguishes parts at the same timestep.
 struct PvdEntry
 {
-    double      time;
+    real_t      time;
     int         part;
     std::string part_name;
     std::string file_path;

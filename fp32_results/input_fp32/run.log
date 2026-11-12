@@ -1,0 +1,135 @@
+[rank 0][INFO ] Initializing Driver
+Number of regions = 2 
+Number of initial conditions = 2 
+Setting density initial conditions type to uniform 
+Setting volfrac initial conditions type to uniform 
+Setting specific_internal_energy initial conditions type to uniform 
+Setting velocity initial conditions type to cartesian 
+Setting density initial conditions type to uniform 
+Setting volfrac initial conditions type to uniform 
+Setting specific_internal_energy initial conditions type to uniform 
+Setting velocity initial conditions type to cartesian 
+[rank 0][INFO ] Finished parsing YAML file
+Creating a 3D box mesh 
+[rank 0][INFO ] num_nodes=29791 (owned=29791, ghost=0), num_elems=27000 (owned=27000, ghost=0)
+[rank 0][INFO ] Totals across all ranks: num_nodes=29791 (owned=29791, ghost=0), num_elems=27000 (owned=27000, ghost=0)
+[rank 0][INFO ] Initializing dynx_FE solver
+[rank 0][INFO ] Solver 0 start time = 0, ending time = 10
+[rank 0][INFO ] Applying fills to the mesh
+[rank 0][INFO ] Fills applied to the mesh
+[rank 0][INFO ] Populating the material point state
+[rank 0][INFO ] Material point state populated
+[rank 0][INFO ] Driver initialization complete
+
+**** Total time to initialize driver in seconds  0.070194 ****
+
+[rank 0][INFO ] Inside driver setup
+[rank 0][INFO ] Setting up SGH solver, state vars and sspd stress (num_mats=1)
+[rank 0][INFO ] Calculating corner and node masses
+[rank 0][INFO ] Calculating corner mass for material 0
+[rank 0][INFO ] Calculating node mass
+[rank 0][INFO ] Done calculating node mass
+[rank 0][INFO ] Setting up contact
+[rank 0][INFO ] Building reference elements and quadrature in SGH setup
+
+**** Total time to setup driver in seconds  0.000879 ****
+
+[rank 0][INFO ] Inside driver execute
+[rank 0][INFO ] Applying initial boundary conditions
+[rank 0][INFO ] Extensive IE = 0.003947 
+[rank 0][INFO ] nodal mass domain = 1.728000 
+[rank 0][INFO ] Writing outputs to file at 0.000000 
+[rank 0][INFO ] cycle = 0, time = 0.000000, time step = 0.000011 
+[rank 0][INFO ] cycle = 20, time = 0.000630, time step = 0.000074 
+[rank 0][INFO ] cycle = 40, time = 0.004869, time step = 0.000498 
+[rank 0][INFO ] cycle = 60, time = 0.033383, time step = 0.003349 
+[rank 0][INFO ] cycle = 80, time = 0.145723, time step = 0.007664 
+[rank 0][INFO ] cycle = 100, time = 0.328826, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 0.500000 
+[rank 0][INFO ] cycle = 120, time = 0.521192, time step = 0.010000 
+[rank 0][INFO ] cycle = 140, time = 0.721192, time step = 0.010000 
+[rank 0][INFO ] cycle = 160, time = 0.921192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 1.000000 
+[rank 0][INFO ] cycle = 180, time = 1.121192, time step = 0.010000 
+[rank 0][INFO ] cycle = 200, time = 1.321192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 1.500000 
+[rank 0][INFO ] cycle = 220, time = 1.521192, time step = 0.010000 
+[rank 0][INFO ] cycle = 240, time = 1.721192, time step = 0.010000 
+[rank 0][INFO ] cycle = 260, time = 1.921192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 2.000000 
+[rank 0][INFO ] cycle = 280, time = 2.121192, time step = 0.010000 
+[rank 0][INFO ] cycle = 300, time = 2.321192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 2.500000 
+[rank 0][INFO ] cycle = 320, time = 2.521192, time step = 0.010000 
+[rank 0][INFO ] cycle = 340, time = 2.721192, time step = 0.010000 
+[rank 0][INFO ] cycle = 360, time = 2.921192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 3.000000 
+[rank 0][INFO ] cycle = 380, time = 3.121192, time step = 0.010000 
+[rank 0][INFO ] cycle = 400, time = 3.321192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 3.500000 
+[rank 0][INFO ] cycle = 420, time = 3.521192, time step = 0.010000 
+[rank 0][INFO ] cycle = 440, time = 3.721192, time step = 0.010000 
+[rank 0][INFO ] cycle = 460, time = 3.921192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 4.000000 
+[rank 0][INFO ] cycle = 480, time = 4.121192, time step = 0.010000 
+[rank 0][INFO ] cycle = 500, time = 4.321192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 4.500000 
+[rank 0][INFO ] cycle = 520, time = 4.521192, time step = 0.010000 
+[rank 0][INFO ] cycle = 540, time = 4.721192, time step = 0.010000 
+[rank 0][INFO ] cycle = 560, time = 4.921192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 5.000000 
+[rank 0][INFO ] cycle = 580, time = 5.121192, time step = 0.010000 
+[rank 0][INFO ] cycle = 600, time = 5.321192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 5.500000 
+[rank 0][INFO ] cycle = 620, time = 5.521192, time step = 0.010000 
+[rank 0][INFO ] cycle = 640, time = 5.721192, time step = 0.010000 
+[rank 0][INFO ] cycle = 660, time = 5.921192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 6.000000 
+[rank 0][INFO ] cycle = 680, time = 6.121192, time step = 0.010000 
+[rank 0][INFO ] cycle = 700, time = 6.321192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 6.500000 
+[rank 0][INFO ] cycle = 720, time = 6.521192, time step = 0.010000 
+[rank 0][INFO ] cycle = 740, time = 6.721192, time step = 0.010000 
+[rank 0][INFO ] cycle = 760, time = 6.921192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 7.000000 
+[rank 0][INFO ] cycle = 780, time = 7.121192, time step = 0.010000 
+[rank 0][INFO ] cycle = 800, time = 7.321192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 7.500000 
+[rank 0][INFO ] cycle = 820, time = 7.521192, time step = 0.010000 
+[rank 0][INFO ] cycle = 840, time = 7.721192, time step = 0.010000 
+[rank 0][INFO ] cycle = 860, time = 7.921192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 8.000000 
+[rank 0][INFO ] cycle = 880, time = 8.121192, time step = 0.010000 
+[rank 0][INFO ] cycle = 900, time = 8.321192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 8.500000 
+[rank 0][INFO ] cycle = 920, time = 8.521192, time step = 0.010000 
+[rank 0][INFO ] cycle = 940, time = 8.721192, time step = 0.010000 
+[rank 0][INFO ] cycle = 960, time = 8.921192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 9.000000 
+[rank 0][INFO ] cycle = 980, time = 9.121192, time step = 0.010000 
+[rank 0][INFO ] cycle = 1000, time = 9.321192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 9.500000 
+[rank 0][INFO ] cycle = 1020, time = 9.521192, time step = 0.010000 
+[rank 0][INFO ] cycle = 1040, time = 9.721192, time step = 0.010000 
+[rank 0][INFO ] cycle = 1060, time = 9.921192, time step = 0.010000 
+[rank 0][INFO ] Writing outputs to file at 10.000000 
+[rank 0][INFO ] Calculation time in seconds: 20.979094 
+[rank 0][INFO ] SGH3D execute: rank 0 / 1 total nodal velocity communication time: 0.000067 s
+[rank 0][INFO ] rank 0 / 1 owned nodes: 29791, ghost nodes: 0
+[rank 0][INFO ] rank 0 node communication volume - send: 0, recv: 0, total: 0
+[rank 0][INFO ] Time=0:   KE = 0.00000000000000, IE = 0.00394711986700, TE = 0.00394711986700 
+[rank 0][INFO ] Time=End: KE = 0.00130331578556, IE = 0.00264380489848, TE = 0.00394712068404 
+[rank 0][INFO ] total energy change = 8.170402262738796e-10 
+[rank 0][INFO ] material mass conservation error = 0.000000 
+[rank 0][INFO ] nodal mass conservation error = 0.000000 
+[rank 0][INFO ] nodal and material mass error = -0.000000 
+
+
+**** Total time to execute driver in seconds  20.980584 ****
+
+[rank 0][INFO ] Inside driver finalize
+[rank 0][INFO ] Deleting solver
+
+**** Total time to run simulation in seconds  21.050786 ****
+
+**** Simulations completed **** 

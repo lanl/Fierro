@@ -116,7 +116,7 @@ void TLQS3D::get_r0(
     FOR_ALL(node_gid, 0, num_nodes, {
         const size_t num_elems_in_node = elems_in_node.stride(node_gid);
         for (size_t q = 0; q < 3; q++) {
-            double F_val = 0.0;
+            real_t F_val = real_t(0.0);
             if (!constrained_dof(node_gid, q)) {
                 for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
                     const size_t elem_gid = elems_in_node(node_gid, elem_lid);
@@ -138,7 +138,7 @@ double TLQS3D::get_alpha(
     const DCArrayKokkos<size_t>& nodes_in_elem,
     const CArrayKokkos<real_t>& K_elem,
     const CArrayKokkos<bool>& constrained_dof,
-    const double rktrk,
+    const real_t rktrk,
     const CArrayKokkos<real_t>& p,
     MPICArrayKokkos<real_t>& temporary,
     const DCArrayKokkos<bool> shared_tally_owned_nodes,
@@ -154,8 +154,8 @@ double TLQS3D::get_alpha(
     temporary.communicate();
 
     // Kernel 2: p^T * temporary over owned nodes only, then Allreduce
-    double ptkp = 0.0;
-    double loc_ptkp = 0.0;
+    double ptkp = real_t(0.0);
+    double loc_ptkp = real_t(0.0);
     FOR_REDUCE_SUM(node_gid, 0, (int)num_owned_nodes, loc_ptkp, {
         if(shared_tally_owned_nodes(node_gid)){
             for (int j = 0; j < 3; j++) {
@@ -167,14 +167,14 @@ double TLQS3D::get_alpha(
 
     MPI_Allreduce(MPI_IN_PLACE, &ptkp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-    return rktrk / (ptkp + 1e-16);
+    return rktrk / (ptkp + real_t(1e-16));
 } // end get_alpha
 
 void TLQS3D::get_rkp1(
     const size_t num_nodes,
     const MPICArrayKokkos<real_t>& rk,
     const MPICArrayKokkos<real_t>& Kp,
-    const double alpha,
+    const real_t alpha,
     MPICArrayKokkos<real_t>& rkp1)
 {
     // r_{k+1} = r_k - alpha * K * p
@@ -183,7 +183,7 @@ void TLQS3D::get_rkp1(
     // value the original recomputed, so rkp1 is unchanged.
     FOR_ALL(node_gid, 0, num_nodes, {
         for (size_t p_dir = 0; p_dir < 3; p_dir++) {
-            const double Kp_val = Kp(node_gid, p_dir);
+            const real_t Kp_val = Kp(node_gid, p_dir);
             rkp1(node_gid, p_dir) = rk(node_gid, p_dir) - alpha * Kp_val;
         }
     });

@@ -57,8 +57,8 @@ public:
 
     size_t solver_id;
 
-    double time_start;
-    double time_end;
+    real_t time_start;
+    real_t time_end;
 
 
     bool use_moving_heat_source = false; // flag for SGTM solver for additive manufacturing moving heat source
@@ -111,7 +111,7 @@ public:
     double CPU_Time();
     void init_clock();
 
-    double initial_CPU_time, communication_time, dev2host_time, host2dev_time, output_time;
+    real_t initial_CPU_time, communication_time, dev2host_time, host2dev_time, output_time;
 
     bool finalize_flag = false;
 };

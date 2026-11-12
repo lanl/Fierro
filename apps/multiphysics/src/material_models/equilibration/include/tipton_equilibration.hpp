@@ -52,10 +52,10 @@ namespace TiptonEquilibrationModel {
         CArrayKokkos<real_t>& GaussPoint_pres_denominator,
         CArrayKokkos<real_t>& GaussPoint_volfrac_min,
         CArrayKokkos<real_t>& GaussPoint_volfrac_limiter,
-        const double dt,
-        const double rk_alpha,
-        const double fuzz,
-        const double small);
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t fuzz,
+        const real_t small);
 
     void geo_equilibration(const Material_t& Materials, 
         const swage::Mesh_t& mesh, 
@@ -64,10 +64,10 @@ namespace TiptonEquilibrationModel {
         CArrayKokkos<real_t>& GaussPoint_pres_denominator,
         CArrayKokkos<real_t>& GaussPoint_volfrac_min,
         CArrayKokkos<real_t>& GaussPoint_volfrac_limiter,
-        const double dt,
-        const double rk_alpha,
-        const double fuzz,
-        const double small);
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t fuzz,
+        const real_t small);
 
     void build_gauss_point_averages (
         const swage::Mesh_t& mesh,
@@ -80,9 +80,9 @@ namespace TiptonEquilibrationModel {
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const points_in_mat_t& points_in_mat_elem,
-        const double dt,
-        const double rk_alpha,
-        const double fuzz,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t fuzz,
         const size_t num_mat_elems,
         const size_t mat_id);
 
@@ -91,7 +91,7 @@ namespace TiptonEquilibrationModel {
             const swage::Mesh_t& mesh,
             const CArrayKokkos<real_t>&  GaussPoint_pres,
             const CArrayKokkos<real_t>&  GaussPoint_pres_denominator,
-            const double fuzz);
+            const real_t fuzz);
 
     void calc_volfrac_change (
         const swage::Mesh_t& mesh,
@@ -109,9 +109,9 @@ namespace TiptonEquilibrationModel {
         const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const points_in_mat_t& points_in_mat_elem,
-        const double dt,
-        const double rk_alpha,
-        const double fuzz,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t fuzz,
         const CArrayKokkos<real_t> &equilibration_global_vars,
         const size_t num_global_vars,
         const size_t num_mat_elems,
@@ -138,9 +138,9 @@ namespace TiptonEquilibrationModel {
             const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
             const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
             const points_in_mat_t& points_in_mat_elem,
-            const double dt,
-            const double rk_alpha,
-            const double fuzz,
+            const real_t dt,
+            const real_t rk_alpha,
+            const real_t fuzz,
             const size_t num_mat_elems,
             const size_t mat_id);    
 

@@ -182,7 +182,7 @@ void parse_regions(Yaml::Node& root,
                     if (a_subfield_word.compare("radius1") == 0) {
                         // inner radius of sphere/cylinder
 
-                        double radius1 = root["regions"][r_id]["region"]["volume"]["radius1"].As<double>();
+                        real_t radius1 = root["regions"][r_id]["region"]["volume"]["radius1"].As<double>();
 
                         RUN({
                             region_fills(reg_id).radius1 = radius1;
@@ -191,7 +191,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("radius2") == 0) {
                         // outer radius of sphere/cylinder
 
-                        double radius2 = root["regions"][r_id]["region"]["volume"]["radius2"].As<double>();
+                        real_t radius2 = root["regions"][r_id]["region"]["volume"]["radius2"].As<double>();
 
                         RUN({
                             region_fills(reg_id).radius2 = radius2;
@@ -200,7 +200,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("x1") == 0) {
                         // inner plane
 
-                        double x1 = root["regions"][r_id]["region"]["volume"]["x1"].As<double>();
+                        real_t x1 = root["regions"][r_id]["region"]["volume"]["x1"].As<double>();
 
                         RUN({
                             region_fills(reg_id).x1 = x1;
@@ -209,7 +209,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("x2") == 0) {
                         // outer plane
 
-                        double x2 = root["regions"][r_id]["region"]["volume"]["x2"].As<double>();
+                        real_t x2 = root["regions"][r_id]["region"]["volume"]["x2"].As<double>();
 
                         RUN({
                             region_fills(reg_id).x2 = x2;
@@ -218,7 +218,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("y1") == 0) {
                         // inner plane
 
-                        double y1 = root["regions"][r_id]["region"]["volume"]["y1"].As<double>();
+                        real_t y1 = root["regions"][r_id]["region"]["volume"]["y1"].As<double>();
 
                         RUN({
                             region_fills(reg_id).y1 = y1;
@@ -227,7 +227,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("y2") == 0) {
                         // outer plane
 
-                        double y2 = root["regions"][r_id]["region"]["volume"]["y2"].As<double>();
+                        real_t y2 = root["regions"][r_id]["region"]["volume"]["y2"].As<double>();
 
                         RUN({
                             region_fills(reg_id).y2 = y2;
@@ -236,7 +236,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("z1") == 0) {
                         // inner plane
 
-                        double z1 = root["regions"][r_id]["region"]["volume"]["z1"].As<double>();
+                        real_t z1 = root["regions"][r_id]["region"]["volume"]["z1"].As<double>();
 
                         RUN({
                             region_fills(reg_id).z1 = z1;
@@ -245,7 +245,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("z2") == 0) {
                         // outer plane
 
-                        double z2 = root["regions"][r_id]["region"]["volume"]["z2"].As<double>();
+                        real_t z2 = root["regions"][r_id]["region"]["volume"]["z2"].As<double>();
 
                         RUN({
                             region_fills(reg_id).z2 = z2;
@@ -254,7 +254,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("half_angle") == 0) {
                         // half angle
 
-                        double half_angle = root["regions"][r_id]["region"]["volume"]["half_angle"].As<double>();
+                        real_t half_angle = root["regions"][r_id]["region"]["volume"]["half_angle"].As<double>();
 
                         RUN({
                             region_fills(reg_id).half_angle = half_angle;
@@ -263,7 +263,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("length") == 0) {
                         // half angle
 
-                        double length = root["regions"][r_id]["region"]["volume"]["length"].As<double>();
+                        real_t length = root["regions"][r_id]["region"]["volume"]["length"].As<double>();
 
                         RUN({
                             region_fills(reg_id).length = length;
@@ -272,7 +272,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("scale_x") == 0) {
                         // outer plane
 
-                        double scale_x = root["regions"][r_id]["region"]["volume"]["scale_x"].As<double>();
+                        real_t scale_x = root["regions"][r_id]["region"]["volume"]["scale_x"].As<double>();
 
                         // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_x = scale_x;
@@ -281,7 +281,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("scale_y") == 0) {
                         // outer plane
 
-                        double scale_y = root["regions"][r_id]["region"]["volume"]["scale_y"].As<double>();
+                        real_t scale_y = root["regions"][r_id]["region"]["volume"]["scale_y"].As<double>();
 
                         // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_y = scale_y;
@@ -290,7 +290,7 @@ void parse_regions(Yaml::Node& root,
                     else if (a_subfield_word.compare("scale_z") == 0) {
                         // outer plane
 
-                        double scale_z = root["regions"][r_id]["region"]["volume"]["scale_z"].As<double>();
+                        real_t scale_z = root["regions"][r_id]["region"]["volume"]["scale_z"].As<double>();
 
                         // on the host side because it relates to reading a mesh file
                         region_fills_host(reg_id).scale_z = scale_z;
@@ -422,9 +422,9 @@ void parse_regions(Yaml::Node& root,
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(unit_vector, ",");
 
-                        double x1 = std::stod(numbers[0]);
-                        double y1 = std::stod(numbers[1]);
-                        double z1;
+                        real_t x1 = std::stod(numbers[0]);
+                        real_t y1 = std::stod(numbers[1]);
+                        real_t z1;
 
                         if(numbers.size()==3){ 
                             // 3D
@@ -432,7 +432,7 @@ void parse_regions(Yaml::Node& root,
                         }
                         else {
                             // 2D
-                            z1 = 0.0;
+                            z1 = real_t(0.0);
                         } //
                         RUN({
                             region_fills(reg_id).unit_vector[0] = x1;
@@ -446,9 +446,9 @@ void parse_regions(Yaml::Node& root,
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(origin, ",");
 
-                        double x1 = std::stod(numbers[0]);
-                        double y1 = std::stod(numbers[1]);
-                        double z1;
+                        real_t x1 = std::stod(numbers[0]);
+                        real_t y1 = std::stod(numbers[1]);
+                        real_t z1;
 
                         if(numbers.size()==3){ 
                             // 3D
@@ -456,7 +456,7 @@ void parse_regions(Yaml::Node& root,
                         }
                         else {
                             // 2D
-                            z1 = 0.0;
+                            z1 = real_t(0.0);
                         } //
 
                         // storing the origin values as (x1,y1,z1)

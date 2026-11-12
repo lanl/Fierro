@@ -51,7 +51,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGTM3D::boundary_temperature(const swage::Mesh_t& mesh,
                                   const BoundaryCondition_t& BoundaryConditions,
                                   MPICArrayKokkos<real_t>& node_temp,
-                                  const double time_value) const
+                                  const real_t time_value) const
 {
     // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
@@ -103,7 +103,7 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
                                  const MPICArrayKokkos<real_t>& node_temp,
                                  const DCArrayKokkos<real_t>& node_flux,
                                  const MPICArrayKokkos<real_t>& node_coords,
-                                 const double time_value) const
+                                 const real_t time_value) const
 {
     // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
@@ -134,14 +134,14 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
 
             // calculate the total area of this patch (decompose into 2 triangles)
             // using Cayley-Menger Determinant
-            double a_[3];
-            ViewCArrayKokkos<double> a(&a_[0], 3);
+            real_t a_[3];
+            ViewCArrayKokkos<real_t> a(&a_[0], 3);
 
-            double b_[3];
-            ViewCArrayKokkos<double> b(&b_[0], 3);
+            real_t b_[3];
+            ViewCArrayKokkos<real_t> b(&b_[0], 3);
 
-            double c_[3];
-            ViewCArrayKokkos<double> c(&c_[0], 3);
+            real_t c_[3];
+            ViewCArrayKokkos<real_t> c(&c_[0], 3);
 
             // Get the global ID to the first 3 nodes
             int node_a_gid = mesh.nodes_in_patch(patch_gid, 0);
@@ -154,18 +154,18 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
                 c(dim) = node_coords(node_c_gid, dim);
             }
 
-            double A = 0.0;
-            double B = 0.0;
-            double C = 0.0;
+            real_t A = real_t(0.0);
+            real_t B = real_t(0.0);
+            real_t C = real_t(0.0);
             for(int dim = 0; dim < mesh.num_dims; dim++){
                 A += (b(dim)-c(dim))*(b(dim)-c(dim));
                 B += (a(dim)-c(dim))*(a(dim)-c(dim));
                 C += (a(dim)-b(dim))*(a(dim)-b(dim));
             }
 
-            double tmp = (4.0 * A * B) - (A+B-C)*(A+B-C);
-            tmp /= 16.0;
-            double area1 = sqrt(tmp);
+            real_t tmp = (real_t(4.0) * A * B) - (A+B-C)*(A+B-C);
+            tmp /= real_t(16.0);
+            real_t area1 = Kokkos::sqrt(tmp);
 
             // Get the global ID to the second 3 nodes (2 shared nodes)
             node_a_gid = mesh.nodes_in_patch(patch_gid, 2);
@@ -187,28 +187,28 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
                 C += (a(dim)-b(dim))*(a(dim)-b(dim));
             }
 
-            tmp = (4.0 * A * B) - (A+B-C)*(A+B-C);
+            tmp = (real_t(4.0) * A * B) - (A+B-C)*(A+B-C);
 
-            tmp /= 16.0;
-            double area2 = sqrt(tmp);
+            tmp /= real_t(16.0);
+            real_t area2 = Kokkos::sqrt(tmp);
 
-            double surface_area = area1+area2;
+            real_t surface_area = area1+area2;
 
             // std::cout << "Surface area of patch " << patch_gid << " = " << surface_area << std::endl;
 
             // Partition the total surface area to the corner patches
-            double patch_area = surface_area/4.0;
+            real_t patch_area = surface_area/real_t(4.0);
 
             // NOTE: Add parsing to the following variables
-            double ref_temp = 293.15; // room temp in Kelvin
-            double h_film = 100.0;
+            real_t ref_temp = real_t(293.15); // room temp in Kelvin
+            real_t h_film = real_t(100.0);
 
             // ---- Calculate the flux through each patch ---- //
             for(int node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
                 
                 int node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
 
-                double patch_flux = -1.0*h_film * (node_temp(node_gid) - ref_temp) * patch_area;
+                real_t patch_flux = -real_t(1.0)*h_film * (node_temp(node_gid) - ref_temp) * patch_area;
 
                 // std::cout << "Patch flux for node " << node_gid << " = " << patch_flux << std::endl;
 
@@ -243,7 +243,7 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
                                 const MPICArrayKokkos<real_t>& node_temp,
                                 const DCArrayKokkos<real_t>& node_flux,
                                 const MPICArrayKokkos<real_t>& node_coords,
-                                const double time_value) const
+                                const real_t time_value) const
 {
     // ---- Loop over boundary sets ---- //
     for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
@@ -271,14 +271,14 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
 
             // calculate the total area of this patch (decompose into 2 triangles)
             // using Cayley-Menger Determinant
-            double a_[3];
-            ViewCArrayKokkos<double> a(&a_[0], 3);
+            real_t a_[3];
+            ViewCArrayKokkos<real_t> a(&a_[0], 3);
 
-            double b_[3];
-            ViewCArrayKokkos<double> b(&b_[0], 3);
+            real_t b_[3];
+            ViewCArrayKokkos<real_t> b(&b_[0], 3);
 
-            double c_[3];
-            ViewCArrayKokkos<double> c(&c_[0], 3);
+            real_t c_[3];
+            ViewCArrayKokkos<real_t> c(&c_[0], 3);
 
             // Get the global ID to the first 3 nodes
             int node_a_gid = mesh.nodes_in_patch(patch_gid, 0);
@@ -291,18 +291,18 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
                 c(dim) = node_coords(node_c_gid, dim);
             }
 
-            double A = 0.0;
-            double B = 0.0;
-            double C = 0.0;
+            real_t A = real_t(0.0);
+            real_t B = real_t(0.0);
+            real_t C = real_t(0.0);
             for(int dim = 0; dim < mesh.num_dims; dim++){
                 A += (b(dim)-c(dim))*(b(dim)-c(dim));
                 B += (a(dim)-c(dim))*(a(dim)-c(dim));
                 C += (a(dim)-b(dim))*(a(dim)-b(dim));
             }
 
-            double tmp = (4.0 * A * B) - (A+B-C)*(A+B-C);
-            tmp /= 16.0;
-            double area1 = sqrt(tmp);
+            real_t tmp = (real_t(4.0) * A * B) - (A+B-C)*(A+B-C);
+            tmp /= real_t(16.0);
+            real_t area1 = Kokkos::sqrt(tmp);
 
             // Get the global ID to the second 3 nodes (2 shared nodes)
             node_a_gid = mesh.nodes_in_patch(patch_gid, 2);
@@ -324,39 +324,39 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
                 C += (a(dim)-b(dim))*(a(dim)-b(dim));
             }
 
-            tmp = (4.0 * A * B) - (A+B-C)*(A+B-C);
+            tmp = (real_t(4.0) * A * B) - (A+B-C)*(A+B-C);
 
-            tmp /= 16.0;
-            double area2 = sqrt(tmp);
+            tmp /= real_t(16.0);
+            real_t area2 = Kokkos::sqrt(tmp);
 
-            double surface_area = area1+area2;
+            real_t surface_area = area1+area2;
 
-            double patch_area = surface_area/4.0;
+            real_t patch_area = surface_area/real_t(4.0);
 
             // NOTE: Parse these in
-            double emmisivity = 0.2; // rough oxidized aluminum
-            double boltzmann = 5.67037442e-8;
+            real_t emmisivity = real_t(0.2); // rough oxidized aluminum
+            real_t boltzmann = real_t(5.67037442e-8);
 
-            double ref_zero_temp = 0.0;
-            double ref_ambient_temp = 0.0;
+            real_t ref_zero_temp = real_t(0.0);
+            real_t ref_ambient_temp = real_t(0.0);
 
             // Loop over all the nodes in this boundary surface
             for(int node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
                 
                 int node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
 
-                double tmp1 = (node_temp(node_gid)-ref_zero_temp)*
+                real_t tmp1 = (node_temp(node_gid)-ref_zero_temp)*
                               (node_temp(node_gid)-ref_zero_temp)*
                               (node_temp(node_gid)-ref_zero_temp)*
                               (node_temp(node_gid)-ref_zero_temp);
 
-                double tmp2 = (ref_ambient_temp - ref_zero_temp)*
+                real_t tmp2 = (ref_ambient_temp - ref_zero_temp)*
                               (ref_ambient_temp - ref_zero_temp)*
                               (ref_ambient_temp - ref_zero_temp)*
                               (ref_ambient_temp - ref_zero_temp);
 
 
-                double patch_flux = -1.0 * emmisivity * boltzmann * (tmp1 - tmp2) * patch_area;
+                real_t patch_flux = -real_t(1.0) * emmisivity * boltzmann * (tmp1 - tmp2) * patch_area;
 
                 // Add patch flux to nodal flux
                 Kokkos::atomic_add(&node_flux(node_gid), patch_flux);
@@ -389,7 +389,7 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
 void SGTM3D::boundary_heat_flux(const swage::Mesh_t& mesh,
                                   const BoundaryCondition_t& BoundaryConditions,
                                   MPICArrayKokkos<real_t>& node_temp,
-                                  const double time_value) const
+                                  const real_t time_value) const
 {
     // // Loop over boundary sets
     // for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {

@@ -61,8 +61,8 @@ void TLQS3D::QR_backsub(const CArrayKokkos<real_t> &R,
             x(i) = y(i);
         });
 
-        double sum = 0.0;
-        double sum_lcl = 0.0;
+        double sum = real_t(0.0);
+        double sum_lcl = real_t(0.0);
 
         FOR_REDUCE_SUM(j, i + 1, n_active, 
                        sum_lcl, {
@@ -90,8 +90,8 @@ void TLQS3D::QR_decompose(const CArrayKokkos<real_t> &A,
 
     const size_t m = A.dims(0);
 
-    Q.set_values(0.0);
-    R.set_values(0.0);
+    Q.set_values(real_t(0.0));
+    R.set_values(real_t(0.0));
 
     // Copy columns of A to v, and taking transpose
     FOR_ALL(i, 0, m,
@@ -104,8 +104,8 @@ void TLQS3D::QR_decompose(const CArrayKokkos<real_t> &A,
     for (size_t i = 0; i < n_active; ++i) {
 
         // find the norm of a column in matrix v for row i
-        double tally = 0.0;
-        double tally_lcl = 0.0;
+        double tally = real_t(0.0);
+        double tally_lcl = real_t(0.0);
 
 
         FOR_REDUCE_SUM(j, 0, m, 
@@ -116,7 +116,7 @@ void TLQS3D::QR_decompose(const CArrayKokkos<real_t> &A,
         Kokkos::fence();
 
         RUN({
-            R(i,i) = sqrt(tally); // row i norm
+            R(i,i) = Kokkos::sqrt(tally); // row i norm
         });
         // done with norm calc
 
@@ -149,7 +149,7 @@ void TLQS3D::QR_decompose(const CArrayKokkos<real_t> &A,
 
         FOR_FIRST(jj, i+1, n_active, {
 
-            R(i,jj) = 0.0;
+            R(i,jj) = real_t(0.0);
 
             double sum=0;
             double sum_lcl = 0;
@@ -186,7 +186,7 @@ double TLQS3D::QR_determinant(const FArrayKokkos<real_t> &Q,
     // Q(m,n,"Q");
     // R(n,n,"R");
 
-    double detR = 1.0;
+    real_t detR = real_t(1.0);
     int signQ = 1;
 
     // Accumulate det(R) and track sign adjustments
@@ -200,11 +200,11 @@ double TLQS3D::QR_determinant(const FArrayKokkos<real_t> &Q,
     // }
 
     double prod_tally;
-    double prod_lcl = 1.0;
+    double prod_lcl = real_t(1.0);
     FOR_REDUCE_PRODUCT(i, 0, n, 
                     prod_lcl, {
         
-        if (R(i,i) < 0.0) {
+        if (R(i,i) < real_t(0.0)) {
             prod_lcl *= -R(i,i);         // store magnitude in detR
         } else {
             prod_lcl *= R(i,i);
@@ -217,11 +217,11 @@ double TLQS3D::QR_determinant(const FArrayKokkos<real_t> &Q,
 
 
 
-    prod_lcl = 1.0;
+    prod_lcl = real_t(1.0);
     FOR_REDUCE_PRODUCT(i, 0, n, 
                     prod_lcl, {
         
-        if (R(i,i) < 0.0) {
+        if (R(i,i) < real_t(0.0)) {
             prod_lcl *= -1;              // negative diagonal flips Q's sign
         }
     }, prod_tally); // end j
@@ -232,7 +232,7 @@ double TLQS3D::QR_determinant(const FArrayKokkos<real_t> &Q,
 
     // Compute sign of det(Q) directly from Q if needed
     // Here we infer sign from R adjustments only.
-    double detA = signQ * detR;
+    real_t detA = signQ * detR;
     return detA;
 }
 
@@ -257,8 +257,8 @@ void TLQS3D::QR_solver(const CArrayKokkos<real_t> &A,
     // Compute Q^t * b
     FOR_FIRST(i, 0, n_active, {
 
-        double sum = 0.0;
-        double sum_lcl = 0.0;
+        double sum = real_t(0.0);
+        double sum_lcl = real_t(0.0);
 
         // Q[m,n] so Q^t[n,m] b[m]
         FOR_REDUCE_SUM_SECOND(j, 0, m, 

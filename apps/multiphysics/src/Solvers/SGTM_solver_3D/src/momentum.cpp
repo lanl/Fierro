@@ -48,8 +48,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \param View of the corner forces
 ///
 /////////////////////////////////////////////////////////////////////////////
-void SGTM3D::update_velocity(double rk_alpha,
-    double dt,
+void SGTM3D::update_velocity(real_t rk_alpha,
+    real_t dt,
     const swage::Mesh_t& mesh,
     MPICArrayKokkos<real_t>& node_vel,
     const DCArrayKokkos<real_t>& node_mass,

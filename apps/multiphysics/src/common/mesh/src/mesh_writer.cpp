@@ -78,9 +78,9 @@ static void query_world_rank_size(int& rank, int& world_size) noexcept
 void MeshWriter::write_mesh(swage::Mesh_t& mesh,
     State_t& State,
     SimulationParameters_t& SimulationParamaters,
-    double dt,
-    double time_value,
-    CArray<double> graphics_times,
+    real_t dt,
+    real_t time_value,
+    CArray<real_t> graphics_times,
     std::vector<node_state> node_states,
     std::vector<gauss_pt_state> gauss_pt_states,
     std::vector<material_pt_state> material_pt_states,
@@ -844,8 +844,8 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
     DCArrayKokkos<real_t> elem_scalar_fields(num_elem_scalar_vars, num_elems, "elem_scalars");
     DCArrayKokkos<real_t> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3, "elem_tensors");
     DCArrayKokkos<real_t> elem_vector_fields(num_elem_vector_vars, num_elems, 3, "elem_vectors");
-    elem_scalar_fields.set_values(0.0);
-    elem_tensor_fields.set_values(0.0);
+    elem_scalar_fields.set_values(real_t(0.0));
+    elem_tensor_fields.set_values(real_t(0.0));
 
 
     // -----------------------------------------------------------------------
@@ -884,7 +884,7 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
     if (sie_id>=0){
         FOR_ALL(elem_gid, 0, num_elems, {
             // get sie by dividing by the mass
-            elem_scalar_fields(sie_id, elem_gid) /= (elem_scalar_fields(mass_id, elem_gid)+1.e-20); 
+            elem_scalar_fields(sie_id, elem_gid) /= (elem_scalar_fields(mass_id, elem_gid)+real_t(1.e-20)); 
         });
     } // end if
 
@@ -977,15 +977,15 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
         //   diag_global_elem   — CellData "global_elem_id" from mesh.local_to_global_elem_mapping (or local e).
         //   diag_global_node   — PointData "global_node_id" from mesh.local_to_global_node_mapping (or local n).
         //   p_*                — nullptr until filled; passed to write_vtu (nullptr disables that array).
-        std::vector<double> diag_mpi_rank_elem;
-        std::vector<double> diag_global_elem;
-        std::vector<double> diag_global_node;
-        const double*       p_rank_elem = nullptr;
-        const double*       p_glob_elem = nullptr;
-        const double*       p_glob_node = nullptr;
+        std::vector<real_t> diag_mpi_rank_elem;
+        std::vector<real_t> diag_global_elem;
+        std::vector<real_t> diag_global_node;
+        const real_t*       p_rank_elem = nullptr;
+        const real_t*       p_glob_elem = nullptr;
+        const real_t*       p_glob_node = nullptr;
 
         if (n_owned_elems > 0 && num_nodes > 0) {
-            diag_mpi_rank_elem.assign(n_owned_elems, static_cast<double>(mpi_rank));
+            diag_mpi_rank_elem.assign(n_owned_elems, static_cast<real_t>(mpi_rank));
             p_rank_elem = diag_mpi_rank_elem.data();
 
             diag_global_elem.resize(n_owned_elems);
@@ -993,12 +993,12 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
                 mesh.local_to_global_elem_mapping.update_host();
                 for (size_t e = 0; e < n_owned_elems; e++) {
                     diag_global_elem[e] =
-                        static_cast<double>(mesh.local_to_global_elem_mapping.host(e));
+                        static_cast<real_t>(mesh.local_to_global_elem_mapping.host(e));
                 }
             }
             else {
                 for (size_t e = 0; e < n_owned_elems; e++) {
-                    diag_global_elem[e] = static_cast<double>(e);
+                    diag_global_elem[e] = static_cast<real_t>(e);
                 }
             }
             p_glob_elem = diag_global_elem.data();
@@ -1008,12 +1008,12 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
                 mesh.local_to_global_node_mapping.update_host();
                 for (size_t n = 0; n < num_nodes; n++) {
                     diag_global_node[n] =
-                        static_cast<double>(mesh.local_to_global_node_mapping.host(n));
+                        static_cast<real_t>(mesh.local_to_global_node_mapping.host(n));
                 }
             }
             else {
                 for (size_t n = 0; n < num_nodes; n++) {
-                    diag_global_node[n] = static_cast<double>(n);
+                    diag_global_node[n] = static_cast<real_t>(n);
                 }
             }
             p_glob_node = diag_global_node.data();
@@ -1326,9 +1326,9 @@ void MeshWriter::write_mesh(swage::Mesh_t& mesh,
 void MeshWriter::write_ensight(swage::Mesh_t& mesh,
     State_t& State,
     SimulationParameters_t& SimulationParamaters,
-    double dt,
-    double time_value,
-    CArray<double> graphics_times,
+    real_t dt,
+    real_t time_value,
+    CArray<real_t> graphics_times,
     std::vector<node_state> node_states,
     std::vector<gauss_pt_state> gauss_pt_states,
     std::vector<material_pt_state> material_pt_states)
@@ -1383,16 +1383,16 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
     const size_t num_dims  = mesh.num_dims;
 
     // save the cell state to an array for exporting to graphics files
-    auto elem_fields = CArray<double>(num_elems, num_scalar_vars);
+    auto elem_fields = CArray<real_t>(num_elems, num_scalar_vars);
     int  elem_switch = 1;
 
 
     DCArrayKokkos<real_t> speed(num_elems, "speed");
     FOR_ALL(elem_gid, 0, num_elems, {
-        double elem_vel[3]; // note:initialization with a list won't work
-        elem_vel[0] = 0.0;
-        elem_vel[1] = 0.0;
-        elem_vel[2] = 0.0;
+        real_t elem_vel[3]; // note:initialization with a list won't work
+        elem_vel[0] = real_t(0.0);
+        elem_vel[1] = real_t(0.0);
+        elem_vel[2] = real_t(0.0);
         // get the coordinates of the element center
         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
             elem_vel[0] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 0);
@@ -1401,18 +1401,18 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
                 elem_vel[2] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 2);
             }
             else{
-                elem_vel[2] = 0.0;
+                elem_vel[2] = real_t(0.0);
             }
         } // end loop over nodes in element
         elem_vel[0] = elem_vel[0] / mesh.num_nodes_in_elem;
         elem_vel[1] = elem_vel[1] / mesh.num_nodes_in_elem;
         elem_vel[2] = elem_vel[2] / mesh.num_nodes_in_elem;
 
-        double speed_sqrd = 0.0;
+        real_t speed_sqrd = real_t(0.0);
         for (int dim = 0; dim < num_dims; dim++) {
             speed_sqrd += elem_vel[dim] * elem_vel[dim];
         }
-        speed(elem_gid) = sqrt(speed_sqrd);
+        speed(elem_gid) = Kokkos::sqrt(speed_sqrd);
     }); // end parallel for
     speed.update_host();
     Kokkos::fence();
@@ -1444,7 +1444,7 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
     } // end parallel loop over materials
 
     // export element centric data
-    double e_switch = 1;
+    real_t e_switch = 1;
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
         elem_fields(elem_gid, 3) = State.GaussPoints.vol.host(elem_gid);
         elem_fields(elem_gid, 6) = speed.host(elem_gid);
@@ -1453,14 +1453,14 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
     } // end for elem_gid
 
     // save the vertex vector fields to an array for exporting to graphics files
-    CArray<double> vec_fields(num_nodes, num_vec_vars, 3);
+    CArray<real_t> vec_fields(num_nodes, num_vec_vars, 3);
 
     for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
         // position, var 0
         vec_fields(node_gid, 0, 0) = State.node.coords.host(node_gid, 0);
         vec_fields(node_gid, 0, 1) = State.node.coords.host(node_gid, 1);
         if (num_dims == 2) {
-            vec_fields(node_gid, 0, 2) = 0.0;
+            vec_fields(node_gid, 0, 2) = real_t(0.0);
         }
         else{
             vec_fields(node_gid, 0, 2) = State.node.coords.host(node_gid, 2);
@@ -1470,7 +1470,7 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
         vec_fields(node_gid, 1, 0) = State.node.vel.host(node_gid, 0);
         vec_fields(node_gid, 1, 1) = State.node.vel.host(node_gid, 1);
         if (num_dims == 2) {
-            vec_fields(node_gid, 1, 2) = 0.0;
+            vec_fields(node_gid, 1, 2) = real_t(0.0);
         }
         else{
             vec_fields(node_gid, 1, 2) = State.node.vel.host(node_gid, 2);
@@ -1480,7 +1480,7 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
         vec_fields(node_gid, 2, 0) = (State.node.vel.host(node_gid, 0) - State.node.vel_n0.host(node_gid, 0))/dt;
         vec_fields(node_gid, 2, 1) = (State.node.vel.host(node_gid, 1) - State.node.vel_n0.host(node_gid, 1))/dt;
         if (num_dims == 2) {
-            vec_fields(node_gid, 2, 2) = 0.0;
+            vec_fields(node_gid, 2, 2) = real_t(0.0);
         }
         else{
             vec_fields(node_gid, 2, 2) = (State.node.vel.host(node_gid, 2) - State.node.vel_n0.host(node_gid, 2))/dt;
@@ -1740,9 +1740,9 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
 void MeshWriter::write_vtk_old(swage::Mesh_t& mesh,
     State_t& State,
     SimulationParameters_t& SimulationParamaters,
-    double dt,
-    double time_value,
-    CArray<double> graphics_times,
+    real_t dt,
+    real_t time_value,
+    CArray<real_t> graphics_times,
     std::vector<node_state> node_states,
     std::vector<gauss_pt_state> gauss_pt_states,
     std::vector<material_pt_state> material_pt_states)
@@ -1808,15 +1808,15 @@ void MeshWriter::write_vtk_old(swage::Mesh_t& mesh,
     const size_t num_dims  = mesh.num_dims;
 
     // save the cell state to an array for exporting to graphics files
-    auto elem_fields = CArray<double>(num_elems, num_cell_scalar_vars);
+    auto elem_fields = CArray<real_t>(num_elems, num_cell_scalar_vars);
     int  elem_switch = 1;
 
     DCArrayKokkos<real_t> speed(num_elems, "speed");
     FOR_ALL(elem_gid, 0, num_elems, {
-        double elem_vel[3]; // note:initialization with a list won't work
-        elem_vel[0] = 0.0;
-        elem_vel[1] = 0.0;
-        elem_vel[2] = 0.0;
+        real_t elem_vel[3]; // note:initialization with a list won't work
+        elem_vel[0] = real_t(0.0);
+        elem_vel[1] = real_t(0.0);
+        elem_vel[2] = real_t(0.0);
         // get the coordinates of the element center
         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
             elem_vel[0] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 0);
@@ -1825,18 +1825,18 @@ void MeshWriter::write_vtk_old(swage::Mesh_t& mesh,
                 elem_vel[2] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 2);
             }
             else{
-                elem_vel[2] = 0.0;
+                elem_vel[2] = real_t(0.0);
             }
         } // end loop over nodes in element
         elem_vel[0] = elem_vel[0] / mesh.num_nodes_in_elem;
         elem_vel[1] = elem_vel[1] / mesh.num_nodes_in_elem;
         elem_vel[2] = elem_vel[2] / mesh.num_nodes_in_elem;
 
-        double speed_sqrd = 0.0;
+        real_t speed_sqrd = real_t(0.0);
         for (int dim = 0; dim < num_dims; dim++) {
             speed_sqrd += elem_vel[dim] * elem_vel[dim];
         }
-        speed(elem_gid) = sqrt(speed_sqrd);
+        speed(elem_gid) = Kokkos::sqrt(speed_sqrd);
     }); // end parallel for
     speed.update_host();
     Kokkos::fence();
@@ -1872,7 +1872,7 @@ void MeshWriter::write_vtk_old(swage::Mesh_t& mesh,
     } // end parallel loop over materials
 
     // export element centric data
-    double e_switch = 1;
+    real_t e_switch = 1;
     for (size_t elem_gid = 0; elem_gid < num_elems; elem_gid++) {
         elem_fields(elem_gid, 3) = State.GaussPoints.vol.host(elem_gid);
         elem_fields(elem_gid, 6) = speed.host(elem_gid);
@@ -1881,15 +1881,15 @@ void MeshWriter::write_vtk_old(swage::Mesh_t& mesh,
     } // end for elem_gid
 
     // save the vertex vector fields to an array for exporting to graphics files
-    CArray<double> vec_fields(num_nodes, num_point_vec_vars, 3);
-    CArray<double> point_scalar_fields(num_nodes, num_point_scalar_vars);
+    CArray<real_t> vec_fields(num_nodes, num_point_vec_vars, 3);
+    CArray<real_t> point_scalar_fields(num_nodes, num_point_scalar_vars);
 
     for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
         // position, var 0
         vec_fields(node_gid, 0, 0) = State.node.coords.host(node_gid, 0);
         vec_fields(node_gid, 0, 1) = State.node.coords.host(node_gid, 1);
         if (num_dims == 2) {
-            vec_fields(node_gid, 0, 2) = 0.0;
+            vec_fields(node_gid, 0, 2) = real_t(0.0);
         }
         else{
             vec_fields(node_gid, 0, 2) = State.node.coords.host(node_gid, 2);
@@ -1899,7 +1899,7 @@ void MeshWriter::write_vtk_old(swage::Mesh_t& mesh,
         vec_fields(node_gid, 1, 0) = State.node.vel.host(node_gid, 0);
         vec_fields(node_gid, 1, 1) = State.node.vel.host(node_gid, 1);
         if (num_dims == 2) {
-            vec_fields(node_gid, 1, 2) = 0.0;
+            vec_fields(node_gid, 1, 2) = real_t(0.0);
         }
         else{
             vec_fields(node_gid, 1, 2) = State.node.vel.host(node_gid, 2);
@@ -2558,7 +2558,7 @@ void MeshWriter::concatenate_nodal_fields(const node_t& Node,
                                           DCArrayKokkos<real_t>& node_scalar_fields,
                                           const DCArrayKokkos<real_t>& node_vector_fields,
                                           std::vector<node_state>& output_node_states,
-                                          double dt,
+                                          real_t dt,
                                           const size_t num_nodes,
                                           const size_t num_dims,
                                           const int node_mass_id,
@@ -2595,7 +2595,7 @@ void MeshWriter::concatenate_nodal_fields(const node_t& Node,
                     node_vector_fields(node_coord_id, node_gid, 0) = Node.coords(node_gid, 0);
                     node_vector_fields(node_coord_id, node_gid, 1) = Node.coords(node_gid, 1);
                     if (num_dims == 2) {
-                        node_vector_fields(node_coord_id, node_gid, 2) = 0.0;
+                        node_vector_fields(node_coord_id, node_gid, 2) = real_t(0.0);
                     }
                     else{
                         node_vector_fields(node_coord_id, node_gid, 2) = Node.coords(node_gid, 2);
@@ -2612,7 +2612,7 @@ void MeshWriter::concatenate_nodal_fields(const node_t& Node,
                     node_vector_fields(node_vel_id, node_gid, 0) = Node.vel(node_gid, 0);
                     node_vector_fields(node_vel_id, node_gid, 1) = Node.vel(node_gid, 1);
                     if (num_dims == 2) {
-                        node_vector_fields(node_vel_id, node_gid, 2) = 0.0;
+                        node_vector_fields(node_vel_id, node_gid, 2) = real_t(0.0);
                     }
                     else{
                         node_vector_fields(node_vel_id, node_gid, 2) = Node.vel(node_gid, 2);
@@ -2622,7 +2622,7 @@ void MeshWriter::concatenate_nodal_fields(const node_t& Node,
                     node_vector_fields(node_accel_id, node_gid, 0) = (Node.vel(node_gid, 0) - Node.vel_n0(node_gid, 0))/dt;
                     node_vector_fields(node_accel_id, node_gid, 1) = (Node.vel(node_gid, 1) - Node.vel_n0(node_gid, 1))/dt;
                     if (num_dims == 2) {
-                        node_vector_fields(node_accel_id, node_gid, 2) = 0.0;
+                        node_vector_fields(node_accel_id, node_gid, 2) = real_t(0.0);
                     }
                     else{
                         node_vector_fields(node_accel_id, node_gid, 2) = (Node.vel(node_gid, 2) - Node.vel_n0(node_gid, 2))/dt;
@@ -2652,7 +2652,7 @@ void MeshWriter::concatenate_nodal_fields(const node_t& Node,
                     node_vector_fields(node_grad_level_set_id, node_gid, 0) = Node.gradient_level_set(node_gid, 0);
                     node_vector_fields(node_grad_level_set_id, node_gid, 1) = Node.gradient_level_set(node_gid, 1);
                     if (num_dims == 2) {
-                        node_vector_fields(node_grad_level_set_id, node_gid, 2) = 0.0;
+                        node_vector_fields(node_grad_level_set_id, node_gid, 2) = real_t(0.0);
                     }
                     else{
                         node_vector_fields(node_grad_level_set_id, node_gid, 2) = Node.gradient_level_set(node_gid, 2);
@@ -2714,9 +2714,9 @@ void MeshWriter::write_vtu(
     const size_t solver_id,
     int mpi_rank,
     int mpi_size,
-    const double* diag_mpi_rank_per_elem,
-    const double* diag_global_elem_id,
-    const double* diag_global_node_id)
+    const real_t* diag_mpi_rank_per_elem,
+    const real_t* diag_global_elem_id,
+    const real_t* diag_global_node_id)
 {
     FILE* out[20];
     char  filename[512];
@@ -2774,7 +2774,7 @@ void MeshWriter::write_vtu(
 
     // write all components of the point coordinates
     for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
-        double coord_z = 0.0;
+        real_t coord_z = real_t(0.0);
         if(num_dims==3){
             coord_z = node_coords_host(node_gid, 2);
         } 
@@ -3041,9 +3041,9 @@ void MeshWriter::write_vtu(
 void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
     State_t& State,
     SimulationParameters_t& SimulationParamaters,
-    double dt,
-    double time_value,
-    CArray<double> graphics_times,
+    real_t dt,
+    real_t time_value,
+    CArray<real_t> graphics_times,
     std::vector<node_state> node_states,
     std::vector<gauss_pt_state> gauss_pt_states,
     std::vector<material_pt_state> material_pt_states,
@@ -3788,8 +3788,8 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
     DCArrayKokkos<real_t> elem_tensor_fields(num_elem_tensor_vars, num_elems, 3, 3, "elem_tensors");
     DCArrayKokkos<real_t> elem_vector_fields(num_elem_vector_vars, num_elems, 3, "elem_vectors");
 
-    elem_scalar_fields.set_values(0.0);
-    elem_tensor_fields.set_values(0.0);
+    elem_scalar_fields.set_values(real_t(0.0));
+    elem_tensor_fields.set_values(real_t(0.0));
 
 
     // -----------------------------------------------------------------------
@@ -3828,7 +3828,7 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
     if (sie_id>=0){
         FOR_ALL(elem_gid, 0, num_elems, {
             // get sie by dividing by the mass
-            elem_scalar_fields(sie_id, elem_gid) /= (elem_scalar_fields(mass_id, elem_gid)+1.e-20); 
+            elem_scalar_fields(sie_id, elem_gid) /= (elem_scalar_fields(mass_id, elem_gid)+real_t(1.e-20)); 
         });
     } // end if
 
@@ -3921,15 +3921,15 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
         //   diag_global_elem   — CellData "global_elem_id" from mesh.local_to_global_elem_mapping (or local e).
         //   diag_global_node   — PointData "global_node_id" from mesh.local_to_global_node_mapping (or local n).
         //   p_*                — nullptr until filled; passed to write_vtu (nullptr disables that array).
-        std::vector<double> diag_mpi_rank_elem;
-        std::vector<double> diag_global_elem;
-        std::vector<double> diag_global_node;
-        const double*       p_rank_elem = nullptr;
-        const double*       p_glob_elem = nullptr;
-        const double*       p_glob_node = nullptr;
+        std::vector<real_t> diag_mpi_rank_elem;
+        std::vector<real_t> diag_global_elem;
+        std::vector<real_t> diag_global_node;
+        const real_t*       p_rank_elem = nullptr;
+        const real_t*       p_glob_elem = nullptr;
+        const real_t*       p_glob_node = nullptr;
 
         if (n_owned_elems > 0 && num_nodes > 0) {
-            diag_mpi_rank_elem.assign(n_owned_elems, static_cast<double>(mpi_rank));
+            diag_mpi_rank_elem.assign(n_owned_elems, static_cast<real_t>(mpi_rank));
             p_rank_elem = diag_mpi_rank_elem.data();
 
             diag_global_elem.resize(n_owned_elems);
@@ -3937,12 +3937,12 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
                 mesh.local_to_global_elem_mapping.update_host();
                 for (size_t e = 0; e < n_owned_elems; e++) {
                     diag_global_elem[e] =
-                        static_cast<double>(mesh.local_to_global_elem_mapping.host(e));
+                        static_cast<real_t>(mesh.local_to_global_elem_mapping.host(e));
                 }
             }
             else {
                 for (size_t e = 0; e < n_owned_elems; e++) {
-                    diag_global_elem[e] = static_cast<double>(e);
+                    diag_global_elem[e] = static_cast<real_t>(e);
                 }
             }
             p_glob_elem = diag_global_elem.data();
@@ -3952,12 +3952,12 @@ void MeshWriter::write_mesh_Pn(swage::Mesh_t& mesh,
                 mesh.local_to_global_node_mapping.update_host();
                 for (size_t n = 0; n < num_nodes; n++) {
                     diag_global_node[n] =
-                        static_cast<double>(mesh.local_to_global_node_mapping.host(n));
+                        static_cast<real_t>(mesh.local_to_global_node_mapping.host(n));
                 }
             }
             else {
                 for (size_t n = 0; n < num_nodes; n++) {
-                    diag_global_node[n] = static_cast<double>(n);
+                    diag_global_node[n] = static_cast<real_t>(n);
                 }
             }
             p_glob_node = diag_global_node.data();
@@ -4433,7 +4433,7 @@ void MeshWriter::write_vtu_Pn(
 
             for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
                 const size_t node_gid = mesh.nodes_in_elem(elem_id, node_lid);
-                const double N        = ref_elem.qpt_basis(gp, node_lid);
+                const real_t N        = ref_elem.qpt_basis(gp, node_lid);
 
                 for (size_t dim = 0; dim < num_dims; dim++) {
                     x_phys(elem, gp, dim) += N * State.node.coords(node_gid, dim);
@@ -4451,7 +4451,7 @@ void MeshWriter::write_vtu_Pn(
             fprintf(fp, "          %.15e %.15e %.15e\n",
                     x_phys.host(elem, gp, 0),
                     x_phys.host(elem, gp, 1),
-                    (num_dims == 3) ? x_phys.host(elem, gp, 2) : 0.0);
+                    (num_dims == 3) ? x_phys.host(elem, gp, 2) : real_t(0.0));
 
         } // end gp
     } // end elem
@@ -4743,10 +4743,10 @@ void MeshWriter::write_vtu_Pn(
 } // end write_vtu_Pn
 
 
-void MeshWriter::write_vtm_Pn(CArray<double>& graphics_times,
+void MeshWriter::write_vtm_Pn(CArray<real_t>& graphics_times,
                   const std::string& elem_part_name,
                   const std::string& mat_part_name,
-                  double time_value,
+                  real_t time_value,
                   int graphics_id,
                   size_t num_mats_global,
                   bool write_mesh_state,
@@ -4975,8 +4975,8 @@ void MeshWriter::write_vtm_Pn(CArray<double>& graphics_times,
 /// \param graphics index
 ///
 /////////////////////////////////////////////////////////////////////////////
-void MeshWriter::write_pvd(CArray<double>& graphics_times,
-               double time_value,
+void MeshWriter::write_pvd(CArray<real_t>& graphics_times,
+               real_t time_value,
                int graphics_id,
                const size_t solver_id,
                int mpi_rank)
@@ -5027,10 +5027,10 @@ void MeshWriter::write_pvd(CArray<double>& graphics_times,
 /// \param graphics index
 ///
 /////////////////////////////////////////////////////////////////////////////
-void MeshWriter::write_vtm(CArray<double>& graphics_times,
+void MeshWriter::write_vtm(CArray<real_t>& graphics_times,
                const std::string& elem_part_name,
                const std::string& mat_part_name,
-               double time_value,
+               real_t time_value,
                int graphics_id,
                size_t num_mats_global,
                bool write_mesh_state,
@@ -5322,8 +5322,8 @@ void MeshWriter::build_material_elem_node_lists(
 void MeshWriter::write_material_point_state(swage::Mesh_t& mesh,
     State_t& State,
     SimulationParameters_t& SimulationParamaters,
-    double time_value,
-    CArray<double> graphics_times,
+    real_t time_value,
+    CArray<real_t> graphics_times,
     std::vector<node_state> node_states,
     std::vector<gauss_pt_state> gauss_pt_states,
     std::vector<material_pt_state> material_pt_states)
@@ -5386,10 +5386,10 @@ void MeshWriter::write_material_point_state(swage::Mesh_t& mesh,
                 continue;
             }
 
-            double elem_coords[3];
-            elem_coords[0] = 0.0;
-            elem_coords[1] = 0.0;
-            elem_coords[2] = 0.0;
+            real_t elem_coords[3];
+            elem_coords[0] = real_t(0.0);
+            elem_coords[1] = real_t(0.0);
+            elem_coords[2] = real_t(0.0);
 
             // get the coordinates of the element center
             for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
@@ -5400,7 +5400,7 @@ void MeshWriter::write_material_point_state(swage::Mesh_t& mesh,
                     elem_coords[2] += State.node.coords.host(mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
                 }
                 else{
-                    elem_coords[2] = 0.0;
+                    elem_coords[2] = real_t(0.0);
                 }
             } // end loop over nodes in element
 
@@ -5408,10 +5408,10 @@ void MeshWriter::write_material_point_state(swage::Mesh_t& mesh,
             elem_coords[1] = elem_coords[1] / ((double)mesh.num_nodes_in_elem);
             elem_coords[2] = elem_coords[2] / ((double)mesh.num_nodes_in_elem);
 
-            double rad2 = sqrt(elem_coords[0] * elem_coords[0] +
+            real_t rad2 = Kokkos::sqrt(elem_coords[0] * elem_coords[0] +
                                elem_coords[1] * elem_coords[1]);
 
-            double rad3 = sqrt(elem_coords[0] * elem_coords[0] +
+            real_t rad3 = Kokkos::sqrt(elem_coords[0] * elem_coords[0] +
                                elem_coords[1] * elem_coords[1] +
                                elem_coords[2] * elem_coords[2]);
 
@@ -5434,7 +5434,7 @@ void MeshWriter::write_material_point_state(swage::Mesh_t& mesh,
     // get the coordinates of the node
     for (size_t node_gid = 0; node_gid < mesh.num_owned_nodes; node_gid++) {
 
-        double node_coords[3];
+        real_t node_coords[3];
 
         node_coords[0] = State.node.coords.host(node_gid, 0);
         node_coords[1] = State.node.coords.host(node_gid, 1);
@@ -5442,16 +5442,16 @@ void MeshWriter::write_material_point_state(swage::Mesh_t& mesh,
             node_coords[2] = State.node.coords.host(node_gid, 2);
         }
         else{
-            node_coords[2] = 0.0;
+            node_coords[2] = real_t(0.0);
         }
 
-        double rad2 = sqrt(node_coords[0] * node_coords[0] +
+        real_t rad2 = Kokkos::sqrt(node_coords[0] * node_coords[0] +
                            node_coords[1] * node_coords[1]);
-        double rad3 = sqrt(node_coords[0] * node_coords[0] +
+        real_t rad3 = Kokkos::sqrt(node_coords[0] * node_coords[0] +
                            node_coords[1] * node_coords[1] +
                            node_coords[2] * node_coords[2]);
 
-        double node_vel[3];
+        real_t node_vel[3];
 
        node_vel[0] = State.node.vel.host(node_gid, 0);
        node_vel[1] = State.node.vel.host(node_gid, 1);
@@ -5459,30 +5459,30 @@ void MeshWriter::write_material_point_state(swage::Mesh_t& mesh,
            node_vel[2] = State.node.vel.host(node_gid, 2);
         }
         else{
-           node_vel[2] = 0.0;
+           node_vel[2] = real_t(0.0);
         }
 
-        double speed = sqrt(node_vel[0] * node_vel[0] +
+        real_t speed = Kokkos::sqrt(node_vel[0] * node_vel[0] +
                             node_vel[1] * node_vel[1] +
                             node_vel[2] * node_vel[2]);
 
 
 
         // looking at perfect radial motion
-        double unit_r_vec[2];
+        real_t unit_r_vec[2];
         unit_r_vec[0] = node_coords[0]/rad2;
         unit_r_vec[1] = node_coords[1]/rad2;
 
         //the radial motion
-        double v_dot_r = node_vel[0] * unit_r_vec[0] +
+        real_t v_dot_r = node_vel[0] * unit_r_vec[0] +
                          node_vel[1] * unit_r_vec[1];
         
 
-        double err_v_dot_r[3]; 
+        real_t err_v_dot_r[3]; 
         err_v_dot_r[0] = node_vel[0]-unit_r_vec[0]*v_dot_r;
         err_v_dot_r[1] = node_vel[1]-unit_r_vec[1]*v_dot_r;
 
-        double mag_err_v_dot_r = sqrt(err_v_dot_r[0]*err_v_dot_r[0] + err_v_dot_r[1]*err_v_dot_r[1]);
+        real_t mag_err_v_dot_r = Kokkos::sqrt(err_v_dot_r[0]*err_v_dot_r[0] + err_v_dot_r[1]*err_v_dot_r[1]);
 
         local_node_data.push_back(node_coords[0]);
         local_node_data.push_back(node_coords[1]);
@@ -5550,8 +5550,8 @@ void MeshWriter::write_material_point_state(swage::Mesh_t& mesh,
             node_displs[r] = node_row_displs[r] * 10;
         }
 
-        gathered_mat_pt_data.assign(total_mat_pt_rows * 11, 0.0);
-        gathered_node_data.assign(total_node_rows * 10, 0.0);
+        gathered_mat_pt_data.assign(total_mat_pt_rows * 11, real_t(0.0));
+        gathered_node_data.assign(total_node_rows * 10, real_t(0.0));
     }
 
     MPI_Gatherv(local_mat_pt_data.empty() ? nullptr : local_mat_pt_data.data(),
@@ -5655,7 +5655,7 @@ void MeshWriter::write_text_state(
     const std::vector<std::string>&      node_vector_var_names,
     const size_t                         num_nodes_in_elem,
     const size_t                         num_dims,
-    const double                         time_value,
+    const real_t                         time_value,
     // material-point field slot IDs (-1 means "not requested")
     const int mat_den_id,
     const int mat_pres_id,
@@ -5873,9 +5873,9 @@ void MeshWriter::write_text_state(
                     elem_gid, elem,
                     x_phys.host(elem, 0),
                     x_phys.host(elem, 1),
-                    (num_dims == 3) ? x_phys.host(elem, 2) : 0.0,
-                    sqrt(x_phys.host(elem, 0)*x_phys.host(elem, 0)+x_phys.host(elem, 1)*x_phys.host(elem, 1)),
-                    (num_dims == 3) ? sqrt(x_phys.host(elem, 0)*x_phys.host(elem, 0)+x_phys.host(elem, 1)*x_phys.host(elem, 1)+x_phys.host(elem, 2)*x_phys.host(elem, 2)) : 0.0);
+                    (num_dims == 3) ? x_phys.host(elem, 2) : real_t(0.0),
+                    Kokkos::sqrt(x_phys.host(elem, 0)*x_phys.host(elem, 0)+x_phys.host(elem, 1)*x_phys.host(elem, 1)),
+                    (num_dims == 3) ? Kokkos::sqrt(x_phys.host(elem, 0)*x_phys.host(elem, 0)+x_phys.host(elem, 1)*x_phys.host(elem, 1)+x_phys.host(elem, 2)*x_phys.host(elem, 2)) : real_t(0.0));
 
             // Scalar fields
             if (mat_den_id           >= 0 && State.MaterialPoints.den.size() > 0)
@@ -6003,9 +6003,9 @@ void MeshWriter::write_text_state(
         fprintf(out_point_state, "\n");
 
         // ---- Data rows --------------------------------------------------
-        auto dat_vec = [&out_point_state](double vx, double vy, double vz_raw, size_t num_dims) {
-            const double vz  = (num_dims == 3) ? vz_raw : 0.0;
-            const double mag = sqrt(vx*vx + vy*vy + vz*vz);
+        auto dat_vec = [&out_point_state](real_t vx, real_t vy, real_t vz_raw, size_t num_dims) {
+            const real_t vz  = (num_dims == 3) ? vz_raw : real_t(0.0);
+            const real_t mag = Kokkos::sqrt(vx*vx + vy*vy + vz*vz);
             fprintf(out_point_state,
                     "  %22.14e  %22.14e  %22.14e  %22.14e",
                     vx, vy, vz, mag);
@@ -6242,7 +6242,7 @@ void MeshWriter::write_text_state_Pn(
     const std::vector<std::string>&      node_vector_var_names,
     const size_t                         num_nodes_in_elem,
     const size_t                         num_dims,
-    const double                         time_value,
+    const real_t                         time_value,
     // field slot IDs (-1 means "not requested")
     const int mat_den_id,
     const int mat_pres_id,
@@ -6340,7 +6340,7 @@ void MeshWriter::write_text_state_Pn(
             for (size_t gp = 0; gp < num_gp_per_elem; gp++) {
                 for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
                     const size_t node_gid = mesh.nodes_in_elem(elem_id, node_lid);
-                    const double N        = ref_elem.qpt_basis(gp, node_lid);
+                    const real_t N        = ref_elem.qpt_basis(gp, node_lid);
                     for (size_t dim = 0; dim < num_dims; dim++) {
                         x_phys(elem, gp, dim) += N * State.node.coords(node_gid, dim);
                     }
@@ -6462,9 +6462,9 @@ void MeshWriter::write_text_state_Pn(
                         elem_gid, elem, gp,
                         x_phys.host(elem, gp, 0),
                         x_phys.host(elem, gp, 1),
-                        (num_dims == 3) ? x_phys.host(elem, gp, 2) : 0.0,
-                        sqrt(x_phys.host(elem, gp, 0)*x_phys.host(elem, gp, 0)+x_phys.host(elem, gp, 1)*x_phys.host(elem, gp, 1)),
-                        (num_dims == 3) ? sqrt(x_phys.host(elem, gp, 0)*x_phys.host(elem, gp, 0)+x_phys.host(elem, gp, 1)*x_phys.host(elem, gp, 1)+x_phys.host(elem, gp, 2)*x_phys.host(elem, gp, 2)) : 0.0);
+                        (num_dims == 3) ? x_phys.host(elem, gp, 2) : real_t(0.0),
+                        Kokkos::sqrt(x_phys.host(elem, gp, 0)*x_phys.host(elem, gp, 0)+x_phys.host(elem, gp, 1)*x_phys.host(elem, gp, 1)),
+                        (num_dims == 3) ? Kokkos::sqrt(x_phys.host(elem, gp, 0)*x_phys.host(elem, gp, 0)+x_phys.host(elem, gp, 1)*x_phys.host(elem, gp, 1)+x_phys.host(elem, gp, 2)*x_phys.host(elem, gp, 2)) : real_t(0.0));
                 
                 // Scalar fields (in the same order as the header)
                 if (mat_den_id          >= 0 && State.MaterialPoints.den.size() > 0)
@@ -6612,9 +6612,9 @@ void MeshWriter::write_text_state_Pn(
         // Lambda: write 3 components + magnitude for one vector field.
         // Raw Z value is zeroed here for 2-D runs so callers always pass
         // the full [2] index without a conditional at the call site.
-        auto dat_vec = [&out_point_state](double vx, double vy, double vz_raw, size_t num_dims) {
-            const double vz  = (num_dims == 3) ? vz_raw : 0.0;
-            const double mag = sqrt(vx*vx + vy*vy + vz*vz);
+        auto dat_vec = [&out_point_state](real_t vx, real_t vy, real_t vz_raw, size_t num_dims) {
+            const real_t vz  = (num_dims == 3) ? vz_raw : real_t(0.0);
+            const real_t mag = Kokkos::sqrt(vx*vx + vy*vy + vz*vz);
             fprintf(out_point_state,
                     "  %22.14e  %22.14e  %22.14e  %22.14e",
                     vx, vy, vz, mag);

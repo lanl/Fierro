@@ -48,8 +48,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::update_position(
-    double rk_alpha,
-    double dt,
+    real_t rk_alpha,
+    real_t dt,
     const size_t num_dims,
     const size_t num_nodes,
     MPICArrayKokkos<real_t>& node_coords,
@@ -60,7 +60,7 @@ void SGTM3D::update_position(
     // loop over all the nodes in the mesh
     FOR_ALL(node_gid, 0, num_nodes, {
         for (int dim = 0; dim < num_dims; dim++) {
-            double half_vel = (node_vel(node_gid, dim) + node_vel_n0(node_gid, dim)) * 0.5;
+            real_t half_vel = (node_vel(node_gid, dim) + node_vel_n0(node_gid, dim)) * real_t(0.5);
             node_coords(node_gid, dim) = node_coords_n0(node_gid, dim) + rk_alpha * dt * half_vel;
         }
     }); // end parallel for over nodes

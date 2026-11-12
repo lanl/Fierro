@@ -53,8 +53,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGTM3D::update_temperature(
-    const double rk_alpha,
-    const double dt,
+    const real_t rk_alpha,
+    const real_t dt,
     const swage::Mesh_t& mesh,
     const MPICArrayKokkos<real_t>& node_vel,
     const MPICArrayKokkos<real_t>& node_vel_n0,
@@ -78,7 +78,7 @@ void SGTM3D::update_temperature(
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_sid = mat_elem_sid;
 
-        double MaterialPoints_power = 0.0;
+        real_t MaterialPoints_power = real_t(0.0);
 
         // --- tally the contribution from each corner to the element ---
 
@@ -98,7 +98,7 @@ void SGTM3D::update_temperature(
 
             // calculate the Power=F dot V for this corner
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-                double half_vel = (node_vel(node_gid, dim) + node_vel_n0(node_gid, dim)) * 0.5;
+                real_t half_vel = (node_vel(node_gid, dim) + node_vel_n0(node_gid, dim)) * real_t(0.5);
                 MaterialPoints_power += MaterialCorners_force(mat_id, mat_corner_lid, dim) * half_vel;
 
             } // end for dim
@@ -106,7 +106,7 @@ void SGTM3D::update_temperature(
 
         // update the specific energy
         MaterialPoints_sie(mat_id, mat_point_sid) = MaterialPoints_sie_n0(mat_id, mat_point_sid) -
-        rk_alpha * dt / (MaterialPoints_mass(mat_id, mat_point_sid) + 1e-20) * MaterialPoints_power;
+        rk_alpha * dt / (MaterialPoints_mass(mat_id, mat_point_sid) + real_t(1e-20)) * MaterialPoints_power;
     }); // end parallel loop over the elements
 
     return;

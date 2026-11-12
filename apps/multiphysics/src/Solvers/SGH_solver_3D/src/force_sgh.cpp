@@ -87,10 +87,10 @@ void SGH3D::get_force(const Material_t& Materials,
                       const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                       const size_t num_mat_elems,
                       const size_t mat_id,
-                      const double fuzz,
-                      const double small,
-                      const double dt,
-                      const double rk_alpha) const
+                      const real_t fuzz,
+                      const real_t small,
+                      const real_t dt,
+                      const real_t rk_alpha) const
 {
     const size_t num_dims = 3;
     const size_t num_nodes_in_elem = 8;
@@ -110,24 +110,24 @@ void SGH3D::get_force(const Material_t& Materials,
 
 
         // total Cauchy stress
-        double tau_array[9];
+        real_t tau_array[9];
 
         // corner area normals
-        double area_normal_array[24];
+        real_t area_normal_array[24];
 
 
         // anti hourglass and shock disisipation corner force contributions
-        double dissipation_array[24];
+        real_t dissipation_array[24];
 
 
         // --- Create views of arrays to aid the force calculation ---
-        ViewCArrayKokkos<double> tau(&tau_array[0], num_dims, num_dims);
-        ViewCArrayKokkos<double> area_normal(&area_normal_array[0], num_nodes_in_elem, num_dims);
-        ViewCArrayKokkos<double> disp_corner_forces(&dissipation_array[0], num_nodes_in_elem, num_dims);
+        ViewCArrayKokkos<real_t> tau(&tau_array[0], num_dims, num_dims);
+        ViewCArrayKokkos<real_t> area_normal(&area_normal_array[0], num_nodes_in_elem, num_dims);
+        ViewCArrayKokkos<real_t> disp_corner_forces(&dissipation_array[0], num_nodes_in_elem, num_dims);
 
 
         // element volume
-        double vol = GaussPoints_vol(elem_gid);
+        real_t vol = GaussPoints_vol(elem_gid);
 
 
         // create a view of the stress_matrix
@@ -148,10 +148,10 @@ void SGH3D::get_force(const Material_t& Materials,
             for (size_t dim = 0; dim < num_dims; dim++) {
 
                 // the -1 is for the inward surface area normal,
-                area_normal(node_lid, dim) = (-1.0) * area_normal(node_lid, dim);
+                area_normal(node_lid, dim) = (-real_t(1.0)) * area_normal(node_lid, dim);
 
                 // initialize dissipation and anti-hourglass forces to zero
-                disp_corner_forces(node_lid, dim) = 0.0;
+                disp_corner_forces(node_lid, dim) = real_t(0.0);
             } // end for
         } // end for
 
@@ -215,15 +215,15 @@ void SGH3D::get_force(const Material_t& Materials,
             // loop over dimensions and calc corner forces
             if (MaterialPoints_eroded(mat_id, mat_point_sid) == true) { // material(mat_id).blank_mat_id)
                 for (size_t dim = 0; dim < num_dims; dim++) {
-                    corner_force(corner_gid, dim) = 0.0;
-                    MaterialCorners_force(mat_id, mat_corner_lid, dim) = 0.0;
+                    corner_force(corner_gid, dim) = real_t(0.0);
+                    MaterialCorners_force(mat_id, mat_corner_lid, dim) = real_t(0.0);
                 }
             }
             //
             else{
                 for (size_t dim = 0; dim < num_dims; dim++) {
 
-                    double force_component =
+                    real_t force_component =
                         area_normal(node_lid, 0) * tau(0, dim)
                         + area_normal(node_lid, 1) * tau(1, dim)
                         + area_normal(node_lid, 2) * tau(2, dim) 

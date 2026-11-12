@@ -147,9 +147,9 @@ void parse_mesh_inputs(Yaml::Node& root, MeshInput_t& MeshInput)
             // get the origin numbers, values are words
             std::vector<std::string> numbers = exact_array_values(origin, ",");
 
-            double x1 = std::stod(numbers[0]);
-            double y1 = std::stod(numbers[1]);
-            double z1;
+            real_t x1 = std::stod(numbers[0]);
+            real_t y1 = std::stod(numbers[1]);
+            real_t z1;
 
             if(numbers.size()==3){ 
                 // 3D
@@ -157,7 +157,7 @@ void parse_mesh_inputs(Yaml::Node& root, MeshInput_t& MeshInput)
             }
             else {
                 // 2D
-                z1 = 0.0;
+                z1 = real_t(0.0);
             } // end if
 
             // storing the origin values as
@@ -171,9 +171,9 @@ void parse_mesh_inputs(Yaml::Node& root, MeshInput_t& MeshInput)
 
             std::vector<std::string> numbers = exact_array_values(length, ",");
 
-            double l1 = std::stod(numbers[0]);
-            double l2 = std::stod(numbers[1]);
-            double l3;
+            real_t l1 = std::stod(numbers[0]);
+            real_t l2 = std::stod(numbers[1]);
+            real_t l3;
 
             if(numbers.size()==3){ 
                 // 3D
@@ -181,7 +181,7 @@ void parse_mesh_inputs(Yaml::Node& root, MeshInput_t& MeshInput)
             }
             else {
                 // 2D
-                l3 = 0.0;
+                l3 = real_t(0.0);
             } // end if
 
             // storing the length values
@@ -222,25 +222,25 @@ void parse_mesh_inputs(Yaml::Node& root, MeshInput_t& MeshInput)
         } // polynomial order
         // inner radius for 2D RZ meshes
         else if (a_word.compare("inner_radius") == 0) {
-            double inner_radius = root["mesh_options"][a_word].As<double>();
+            real_t inner_radius = root["mesh_options"][a_word].As<double>();
 
             MeshInput.inner_radius = inner_radius;
         } // inner radius for 2D RZ meshes
         // outer radius for 2D RZ meshes
         else if (a_word.compare("outer_radius") == 0) {
-            double outer_radius = root["mesh_options"][a_word].As<double>();
+            real_t outer_radius = root["mesh_options"][a_word].As<double>();
 
             MeshInput.outer_radius = outer_radius;
         } // outer radius for 2D RZ meshes
         // starting angle for 2D RZ meshes
         else if (a_word.compare("starting_angle") == 0) {
-            double starting_angle = root["mesh_options"][a_word].As<double>();
+            real_t starting_angle = root["mesh_options"][a_word].As<double>();
 
             MeshInput.starting_angle = starting_angle;
         } // starting angle for 2D RZ meshes
         // ending angle for 2D RZ meshes
         else if (a_word.compare("ending_angle") == 0) {
-            double ending_angle = root["mesh_options"][a_word].As<double>();
+            real_t ending_angle = root["mesh_options"][a_word].As<double>();
 
             MeshInput.ending_angle = ending_angle;
         } // ending angle for 2D RZ meshes
@@ -258,21 +258,21 @@ void parse_mesh_inputs(Yaml::Node& root, MeshInput_t& MeshInput)
         } // Number of angular elements for 2D RZ meshes
         else if (a_word.compare("scale_x") == 0) {
 
-            double scale_x = root["mesh_options"][a_word].As<double>();
+            real_t scale_x = root["mesh_options"][a_word].As<double>();
 
             MeshInput.scale_x = scale_x;
 
         } // end scale_x
         else if (a_word.compare("scale_y") == 0) {
 
-            double scale_y = root["mesh_options"][a_word].As<double>();
+            real_t scale_y = root["mesh_options"][a_word].As<double>();
 
             MeshInput.scale_y = scale_y;
 
         } // end scale_y
         else if (a_word.compare("scale_z") == 0) {
 
-            double scale_z = root["mesh_options"][a_word].As<double>();
+            real_t scale_z = root["mesh_options"][a_word].As<double>();
 
             MeshInput.scale_z = scale_z;
 

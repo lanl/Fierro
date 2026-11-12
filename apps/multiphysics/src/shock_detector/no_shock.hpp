@@ -40,8 +40,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace NoShockDetector {
 
     KOKKOS_FUNCTION
-    static void detect_shock(const ViewCArrayKokkos<double>& GaussPoints_vel_grad,
-                             const ViewCArrayKokkos<double>& GaussPoints_shock_detector)
+    static void detect_shock(const ViewCArrayKokkos<real_t>& GaussPoints_vel_grad,
+                             const ViewCArrayKokkos<real_t>& GaussPoints_shock_detector)
     {
         return;
     }

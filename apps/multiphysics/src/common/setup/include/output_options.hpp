@@ -85,7 +85,7 @@ struct OutputOptions_t
     output_options::format format;  ///< Format for the output files
     output_options::timer_output_level timer_level; ///< How often to output mesh WARNING: CURRENTLY UNUSED
 
-    double graphics_time_step   = 1.0;  ///< How often to write a graphics dump in time
+    real_t graphics_time_step   = real_t(1.0);  ///< How often to write a graphics dump in time
     int graphics_iteration_step = 2000000;  ///< How often to write a graphics dump by iteration count
 
     std::vector<material_pt_state> output_elem_state;

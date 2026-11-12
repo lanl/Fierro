@@ -130,7 +130,7 @@ void parse_output_options(Yaml::Node& root,
         } // timer_level
         // Graphics time step
         else if (a_word.compare("graphics_time_step") == 0) {
-            double graphics_time_step = root["output_options"][a_word].As<double>();
+            real_t graphics_time_step = root["output_options"][a_word].As<double>();
 
             OutputOptions.graphics_time_step = graphics_time_step;
         } // graphics_time_step

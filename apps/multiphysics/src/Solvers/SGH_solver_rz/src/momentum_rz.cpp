@@ -50,8 +50,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::update_velocity_rz(
-    double rk_alpha,
-    double dt,
+    real_t rk_alpha,
+    real_t dt,
     const swage::Mesh_t& mesh,
     MPICArrayKokkos<real_t>& node_vel,
     const MPICArrayKokkos<real_t>& node_vel_n0,
@@ -62,9 +62,9 @@ void SGHRZ::update_velocity_rz(
 
     // walk over the nodes to update the velocity
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        double node_force[3];
+        real_t node_force[3];
         for (size_t dim = 0; dim < num_dims; dim++) {
-            node_force[dim] = 0.0;
+            node_force[dim] = real_t(0.0);
         } // end for dim
 
         // loop over all corners around the node and calculate the nodal force
@@ -114,25 +114,25 @@ void SGHRZ::get_velgrad_rz(
         const size_t num_nodes_in_elem = 4;
         const size_t num_dims = 2;
 
-        double u_array[num_nodes_in_elem];
-        double v_array[num_nodes_in_elem];
-        ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
-        ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
+        real_t u_array[num_nodes_in_elem];
+        real_t v_array[num_nodes_in_elem];
+        ViewCArrayKokkos<real_t> u(u_array, num_nodes_in_elem); // x-dir vel component
+        ViewCArrayKokkos<real_t> v(v_array, num_nodes_in_elem); // y-dir vel component
 
         // true volume RZ
-        // double r_array[num_nodes_in_elem];
-        // ViewCArrayKokkos <double> r(r_array, num_nodes_in_elem); // r-dir coordinate
+        // real_t r_array[num_nodes_in_elem];
+        // ViewCArrayKokkos<real_t> r(r_array, num_nodes_in_elem); // r-dir coordinate
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
 
         // The b_matrix are the outward corner area normals
-        double b_matrix_array[24];
-        ViewCArrayKokkos<double> b_matrix(b_matrix_array, num_nodes_in_elem, num_dims);
+        real_t b_matrix_array[24];
+        ViewCArrayKokkos<real_t> b_matrix(b_matrix_array, num_nodes_in_elem, num_dims);
         geometry::get_bmatrix2D(b_matrix, elem_gid, node_coords, elem_node_gids);
 
         // calculate the area of the quad
-        double elem_area = geometry::get_area_quad(elem_gid, node_coords, elem_node_gids);
+        real_t elem_area = geometry::get_area_quad(elem_gid, node_coords, elem_node_gids);
         // true volume uses the elem_vol
 
         // get the vertex velocities and node coordinate for the elem
@@ -147,11 +147,11 @@ void SGHRZ::get_velgrad_rz(
         } // end for
 
 
-        double mean_radius = elem_vol(elem_gid) / elem_area;
-        double elem_vel_r  = 0.25 * (v(0) + v(1) + v(2) + v(3));
+        real_t mean_radius = elem_vol(elem_gid) / elem_area;
+        real_t elem_vel_r  = real_t(0.25) * (v(0) + v(1) + v(2) + v(3));
 
         // --- calculate the velocity gradient terms ---
-        double inverse_area = 1.0 / elem_area;
+        real_t inverse_area = real_t(1.0) / elem_area;
 
         // x-dir
         elem_vel_grad(elem_gid, 0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
@@ -176,20 +176,20 @@ void SGHRZ::get_velgrad_rz(
 
 /*
 KOKKOS_FUNCTION
-void SGHRZ::get_velgrad_rz(ViewCArrayKokkos<double>& vel_grad,
+void SGHRZ::get_velgrad_rz(ViewCArrayKokkos<real_t>& vel_grad,
     const ViewCArrayKokkos<size_t>& elem_node_gids,
     const MPICArrayKokkos<real_t>&    node_vel,
-    const ViewCArrayKokkos<double>& b_matrix,
-    const double elem_vol,
-    const double elem_area,
+    const ViewCArrayKokkos<real_t>& b_matrix,
+    const real_t elem_vol,
+    const real_t elem_area,
     const size_t elem_gid) const
 {
     const size_t num_nodes_in_elem = 4;
 
-    double u_array[num_nodes_in_elem];
-    double v_array[num_nodes_in_elem];
-    ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
-    ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
+    real_t u_array[num_nodes_in_elem];
+    real_t v_array[num_nodes_in_elem];
+    ViewCArrayKokkos<real_t> u(u_array, num_nodes_in_elem); // x-dir vel component
+    ViewCArrayKokkos<real_t> v(v_array, num_nodes_in_elem); // y-dir vel component
 
     // get the vertex velocities for the cell
     for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -207,11 +207,11 @@ void SGHRZ::get_velgrad_rz(ViewCArrayKokkos<double>& vel_grad,
         }
     }
 
-    double mean_radius = elem_vol / elem_area;
-    double elem_vel_r  = 0.25 * (v(0) + v(1) + v(2) + v(3));
+    real_t mean_radius = elem_vol / elem_area;
+    real_t elem_vel_r  = 0.25 * (v(0) + v(1) + v(2) + v(3));
 
     // --- calculate the velocity gradient terms ---
-    double inverse_area = 1.0 / elem_area;
+    real_t inverse_area = 1.0 / elem_area;
 
     // x-dir
     vel_grad(0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
@@ -258,25 +258,25 @@ void SGHRZ::get_divergence_rz(DCArrayKokkos<real_t>& elem_div,
         const size_t num_dims = 2;
         
 
-        double u_array[num_nodes_in_elem];
-        double v_array[num_nodes_in_elem];
-        ViewCArrayKokkos<double> u(u_array, num_nodes_in_elem); // x-dir vel component
-        ViewCArrayKokkos<double> v(v_array, num_nodes_in_elem); // y-dir vel component
+        real_t u_array[num_nodes_in_elem];
+        real_t v_array[num_nodes_in_elem];
+        ViewCArrayKokkos<real_t> u(u_array, num_nodes_in_elem); // x-dir vel component
+        ViewCArrayKokkos<real_t> v(v_array, num_nodes_in_elem); // y-dir vel component
 
         // true volume RZ
-        // double r_array[num_nodes_in_elem];
-        // ViewCArrayKokkos <double> r(r_array, num_nodes_in_elem); // r-dir coordinate
+        // real_t r_array[num_nodes_in_elem];
+        // ViewCArrayKokkos<real_t> r(r_array, num_nodes_in_elem); // r-dir coordinate
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), 4);
 
         // The b_matrix are the outward corner area normals
-        double b_matrix_array[24];
-        ViewCArrayKokkos<double> b_matrix(b_matrix_array, num_nodes_in_elem, num_dims);
+        real_t b_matrix_array[24];
+        ViewCArrayKokkos<real_t> b_matrix(b_matrix_array, num_nodes_in_elem, num_dims);
         geometry::get_bmatrix2D(b_matrix, elem_gid, node_coords, elem_node_gids);
 
         // calculate the area of the quad
-        double elem_area = geometry::get_area_quad(elem_gid, node_coords, elem_node_gids);
+        real_t elem_area = geometry::get_area_quad(elem_gid, node_coords, elem_node_gids);
         // true volume uses the elem_vol
 
         // get the vertex velocities and node coordinate for the elem
@@ -291,12 +291,12 @@ void SGHRZ::get_divergence_rz(DCArrayKokkos<real_t>& elem_div,
         } // end for
 
         // --- calculate the velocity divergence terms ---
-        double inverse_area = 1.0 / elem_area;
+        real_t inverse_area = real_t(1.0) / elem_area;
 
-        double mean_radius = elem_vol(elem_gid) / elem_area;
-        double elem_vel_r  = 0.25 * (v(0) + v(1) + v(2) + v(3));
+        real_t mean_radius = elem_vol(elem_gid) / elem_area;
+        real_t elem_vel_r  = real_t(0.25) * (v(0) + v(1) + v(2) + v(3));
 
-        elem_div(elem_gid) = 0.0;
+        elem_div(elem_gid) = real_t(0.0);
 
         // x-dir
         elem_div(elem_gid) += (u(0) * b_matrix(0, 0)
@@ -335,9 +335,9 @@ void SGHRZ::get_divergence_rz(DCArrayKokkos<real_t>& elem_div,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void SGHRZ::decompose_vel_grad_rz(const ViewCArrayKokkos<double>& D_tensor,
-                                  const ViewCArrayKokkos<double>& W_tensor,
-                                  const ViewCArrayKokkos<double>& vel_grad) const
+void SGHRZ::decompose_vel_grad_rz(const ViewCArrayKokkos<real_t>& D_tensor,
+                                  const ViewCArrayKokkos<real_t>& W_tensor,
+                                  const ViewCArrayKokkos<real_t>& vel_grad) const
 {
     // --- Calculate the velocity gradient ---
 
@@ -346,15 +346,15 @@ void SGHRZ::decompose_vel_grad_rz(const ViewCArrayKokkos<double>& D_tensor,
     // initialize to zero
     for (size_t i = 0; i < num_dims; i++) {
         for (size_t j = 0; j < num_dims; j++) {
-            D_tensor(i, j) = 0.0;
-            W_tensor(i, j) = 0.0;
+            D_tensor(i, j) = real_t(0.0);
+            W_tensor(i, j) = real_t(0.0);
         }
     } // end for
 
     for (size_t i = 0; i < num_dims; i++) {
         for (size_t j = 0; j < num_dims; j++) {
-            D_tensor(i, j) = 0.5 * (vel_grad(i, j) + vel_grad(j, i));
-            W_tensor(i, j) = 0.5 * (vel_grad(i, j) - vel_grad(j, i));
+            D_tensor(i, j) = real_t(0.5) * (vel_grad(i, j) + vel_grad(j, i));
+            W_tensor(i, j) = real_t(0.5) * (vel_grad(i, j) - vel_grad(j, i));
         }
     } // end for
 

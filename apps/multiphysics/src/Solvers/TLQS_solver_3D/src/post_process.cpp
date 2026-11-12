@@ -37,7 +37,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 KOKKOS_FUNCTION
 void TLQS3D::post_process(
-    const double material_matrix[6][6],
+    const real_t material_matrix[6][6],
     ViewCArrayKokkos <size_t>& nodes_in_elem,
     const MPICArrayKokkos<real_t>& coords_t0,
     const MPICArrayKokkos<real_t>& displacement,
@@ -47,10 +47,10 @@ void TLQS3D::post_process(
 {
     // allocate and initialize Jacobian
     // dX_i / dxi_j
-    double J[3][3];
+    real_t J[3][3];
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            J[i][j] = 0.0;
+            J[i][j] = real_t(0.0);
         }
     }
 
@@ -67,10 +67,10 @@ void TLQS3D::post_process(
     }
 
     // get det(J)
-    double det_J = J[0][0]*(J[1][1]*J[2][2] - J[2][1]*J[1][2]) - J[0][1]*(J[1][0]*J[2][2] - J[2][0]*J[1][2]) + J[0][2]*(J[1][0]*J[2][1] - J[2][0]*J[1][1]);
+    real_t det_J = J[0][0]*(J[1][1]*J[2][2] - J[2][1]*J[1][2]) - J[0][1]*(J[1][0]*J[2][2] - J[2][0]*J[1][2]) + J[0][2]*(J[1][0]*J[2][1] - J[2][0]*J[1][1]);
     //std::cout << "DET_J: " << det_J << std::endl;
     // get inv(J)
-    double adjoint[3][3];
+    real_t adjoint[3][3];
     adjoint[0][0] = J[1][1]*J[2][2] - J[2][1]*J[1][2];
     adjoint[0][1] = -(J[0][1]*J[2][2] - J[2][1]*J[0][2]);
     adjoint[0][2] = J[0][1]*J[1][2] - J[1][1]*J[0][2];
@@ -81,31 +81,31 @@ void TLQS3D::post_process(
     adjoint[2][1] = -(J[0][0]*J[2][1] - J[2][0]*J[0][1]);
     adjoint[2][2] = J[0][0]*J[1][1] - J[1][0]*J[0][1];
     
-    double inv_J[3][3];
+    real_t inv_J[3][3];
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             inv_J[i][j] = adjoint[i][j] / det_J;
         }
     }
 
-    double grad_u[3][3];
+    real_t grad_u[3][3];
     // get grad(displacement)
     // du_i / dX_j
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            grad_u[i][j] = 0.0;
+            grad_u[i][j] = real_t(0.0);
         }
     }
 
     for (int k = 0; k < gauss_point_grad_basis.dims(0); k++) {
         const size_t node_gid = nodes_in_elem(k);
 
-        const double dpsig_k0 = inv_J[0][0]*gauss_point_grad_basis(k,0) + inv_J[0][1]*gauss_point_grad_basis(k,1) + inv_J[0][2]*gauss_point_grad_basis(k,2);
-        const double dpsig_k1 = inv_J[1][0]*gauss_point_grad_basis(k,0) + inv_J[1][1]*gauss_point_grad_basis(k,1) + inv_J[1][2]*gauss_point_grad_basis(k,2);
-        const double dpsig_k2 = inv_J[2][0]*gauss_point_grad_basis(k,0) + inv_J[2][1]*gauss_point_grad_basis(k,1) + inv_J[2][2]*gauss_point_grad_basis(k,2);
+        const real_t dpsig_k0 = inv_J[0][0]*gauss_point_grad_basis(k,0) + inv_J[0][1]*gauss_point_grad_basis(k,1) + inv_J[0][2]*gauss_point_grad_basis(k,2);
+        const real_t dpsig_k1 = inv_J[1][0]*gauss_point_grad_basis(k,0) + inv_J[1][1]*gauss_point_grad_basis(k,1) + inv_J[1][2]*gauss_point_grad_basis(k,2);
+        const real_t dpsig_k2 = inv_J[2][0]*gauss_point_grad_basis(k,0) + inv_J[2][1]*gauss_point_grad_basis(k,1) + inv_J[2][2]*gauss_point_grad_basis(k,2);
 
         for (int j = 0; j < 3; j++) {
-            const double u_total = displacement(node_gid, j);
+            const real_t u_total = displacement(node_gid, j);
             grad_u[j][0] += u_total * dpsig_k0;
             grad_u[j][1] += u_total * dpsig_k1;
             grad_u[j][2] += u_total * dpsig_k2;
@@ -118,14 +118,14 @@ void TLQS3D::post_process(
     // WARNING: NEED TO PUT THIS INTO A SEPARATE FUNCTION
     // WARNING: POINTER CALLED CALC QUASI_STATIC STRESS
     // ***************************************************
-    strain(0,0) = grad_u[0][0] + 0.5 * (grad_u[0][0]*grad_u[0][0] + grad_u[1][0]*grad_u[1][0] + grad_u[2][0]*grad_u[2][0]);
-    strain(1,1) = grad_u[1][1] + 0.5 * (grad_u[0][1]*grad_u[0][1] + grad_u[1][1]*grad_u[1][1] + grad_u[2][1]*grad_u[2][1]);
-    strain(2,2) = grad_u[2][2] + 0.5 * (grad_u[0][2]*grad_u[0][2] + grad_u[1][2]*grad_u[1][2] + grad_u[2][2]*grad_u[2][2]);
-    strain(1,2) = 0.5 * (grad_u[1][2] + grad_u[2][1] + grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]);
+    strain(0,0) = grad_u[0][0] + real_t(0.5) * (grad_u[0][0]*grad_u[0][0] + grad_u[1][0]*grad_u[1][0] + grad_u[2][0]*grad_u[2][0]);
+    strain(1,1) = grad_u[1][1] + real_t(0.5) * (grad_u[0][1]*grad_u[0][1] + grad_u[1][1]*grad_u[1][1] + grad_u[2][1]*grad_u[2][1]);
+    strain(2,2) = grad_u[2][2] + real_t(0.5) * (grad_u[0][2]*grad_u[0][2] + grad_u[1][2]*grad_u[1][2] + grad_u[2][2]*grad_u[2][2]);
+    strain(1,2) = real_t(0.5) * (grad_u[1][2] + grad_u[2][1] + grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]);
     strain(2,1) = strain(1,2);
-    strain(0,2) = 0.5 * (grad_u[0][2] + grad_u[2][0] + grad_u[0][0]*grad_u[0][2] + grad_u[1][0]*grad_u[1][2] + grad_u[2][0]*grad_u[2][2]);
+    strain(0,2) = real_t(0.5) * (grad_u[0][2] + grad_u[2][0] + grad_u[0][0]*grad_u[0][2] + grad_u[1][0]*grad_u[1][2] + grad_u[2][0]*grad_u[2][2]);
     strain(2,0) = strain(0,2);
-    strain(0,1) = 0.5 * (grad_u[0][1] + grad_u[1][0] + grad_u[0][0]*grad_u[0][1] + grad_u[1][0]*grad_u[1][1] + grad_u[2][0]*grad_u[2][1]);
+    strain(0,1) = real_t(0.5) * (grad_u[0][1] + grad_u[1][0] + grad_u[0][0]*grad_u[0][1] + grad_u[1][0]*grad_u[1][1] + grad_u[2][0]*grad_u[2][1]);
     strain(1,0) = strain(0,1);
 
     /* for (int i = 0; i < 3; i++) {

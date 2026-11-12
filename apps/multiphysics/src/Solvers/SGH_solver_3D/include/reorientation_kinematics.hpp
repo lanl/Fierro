@@ -51,12 +51,12 @@ namespace ReorientationKinematics
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void rotation_matrix_y(double angle, double R[3][3]) {
-    double c = cos(angle);
-    double s = sin(angle);
-    R[0][0] = c;   R[0][1] = 0.0; R[0][2] = s;
-    R[1][0] = 0.0; R[1][1] = 1.0; R[1][2] = 0.0;
-    R[2][0] = -s;  R[2][1] = 0.0; R[2][2] = c;
+void rotation_matrix_y(real_t angle, real_t R[3][3]) {
+    real_t c = Kokkos::cos(angle);
+    real_t s = Kokkos::sin(angle);
+    R[0][0] = c;   R[0][1] = real_t(0.0); R[0][2] = s;
+    R[1][0] = real_t(0.0); R[1][1] = real_t(1.0); R[1][2] = real_t(0.0);
+    R[2][0] = -s;  R[2][1] = real_t(0.0); R[2][2] = c;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -67,12 +67,12 @@ void rotation_matrix_y(double angle, double R[3][3]) {
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void rotation_matrix_z(double angle, double R[3][3]) {
-    double c = cos(angle);
-    double s = sin(angle);
-    R[0][0] = c;   R[0][1] = -s;  R[0][2] = 0.0;
-    R[1][0] = s;   R[1][1] = c;   R[1][2] = 0.0;
-    R[2][0] = 0.0; R[2][1] = 0.0; R[2][2] = 1.0;
+void rotation_matrix_z(real_t angle, real_t R[3][3]) {
+    real_t c = Kokkos::cos(angle);
+    real_t s = Kokkos::sin(angle);
+    R[0][0] = c;   R[0][1] = -s;  R[0][2] = real_t(0.0);
+    R[1][0] = s;   R[1][1] = c;   R[1][2] = real_t(0.0);
+    R[2][0] = real_t(0.0); R[2][1] = real_t(0.0); R[2][2] = real_t(1.0);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -83,10 +83,10 @@ void rotation_matrix_z(double angle, double R[3][3]) {
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void mat_mult_3x3(const double A[3][3], const double B[3][3], double C[3][3]) {
+void mat_mult_3x3(const real_t A[3][3], const real_t B[3][3], real_t C[3][3]) {
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
-            C[i][j] = 0.0;
+            C[i][j] = real_t(0.0);
             for (int k = 0; k < 3; ++k) {
                 C[i][j] += A[i][k] * B[k][j];
             }
@@ -107,28 +107,28 @@ inline void prescribe_reorientation_kinematics(
     State_t& State,
     const CArrayKokkos<real_t>& initial_coords,
     const CArrayKokkos<int>&    cz_b_side_flag,
-    double time_value,
-    double dt_stage,
-    double omega_y,
-    double omega_z,
-    double cz_opening_rate)
+    real_t time_value,
+    real_t dt_stage,
+    real_t omega_y,
+    real_t omega_z,
+    real_t cz_opening_rate)
 {
     // compute scalar values on host
-    const double angle_y_t   = omega_y * time_value;
-    const double angle_z_t   = omega_z * time_value;
-    const double angle_y_tdt = omega_y * (time_value + dt_stage);
-    const double angle_z_tdt = omega_z * (time_value + dt_stage);
-    const double s_t   = cz_opening_rate * time_value;
-    const double s_tdt = cz_opening_rate * (time_value + dt_stage);
+    const real_t angle_y_t   = omega_y * time_value;
+    const real_t angle_z_t   = omega_z * time_value;
+    const real_t angle_y_tdt = omega_y * (time_value + dt_stage);
+    const real_t angle_z_tdt = omega_z * (time_value + dt_stage);
+    const real_t s_t   = cz_opening_rate * time_value;
+    const real_t s_tdt = cz_opening_rate * (time_value + dt_stage);
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
         // declare rotation matrices as thread local storage
-        double Ry_t[3][3];
-        double Rz_t[3][3];
-        double R_t[3][3];
-        double Ry_tdt[3][3];
-        double Rz_tdt[3][3];
-        double R_tdt[3][3];
+        real_t Ry_t[3][3];
+        real_t Rz_t[3][3];
+        real_t R_t[3][3];
+        real_t Ry_tdt[3][3];
+        real_t Rz_tdt[3][3];
+        real_t R_tdt[3][3];
 
         // compute rotation matrices at time t
         rotation_matrix_y(angle_y_t,   Ry_t);
@@ -142,33 +142,33 @@ inline void prescribe_reorientation_kinematics(
 
         // normal vector n(t) (defines the cohesive zone normal direction in the current configuration)
         // n(t) = R(t)*[1,0,0] => column 0
-        double n_t[3];
+        real_t n_t[3];
         n_t[0] = R_t[0][0];
         n_t[1] = R_t[1][0];
         n_t[2] = R_t[2][0];
 
         // normal vector n(t+dt)
-        double n_tdt[3];
+        real_t n_tdt[3];
         n_tdt[0] = R_tdt[0][0];
         n_tdt[1] = R_tdt[1][0];
         n_tdt[2] = R_tdt[2][0];
 
         // initial (reference) coordinates for this node
-        const double Xx = initial_coords(node_gid,0);
-        const double Xy = initial_coords(node_gid,1);
-        const double Xz = initial_coords(node_gid,2);
+        const real_t Xx = initial_coords(node_gid,0);
+        const real_t Xy = initial_coords(node_gid,1);
+        const real_t Xz = initial_coords(node_gid,2);
 
         // compute current position 
         // x(t) = R(t)*X0
-        double xt   = R_t[0][0]*Xx + R_t[0][1]*Xy + R_t[0][2]*Xz;
-        double yt   = R_t[1][0]*Xx + R_t[1][1]*Xy + R_t[1][2]*Xz;
-        double zt   = R_t[2][0]*Xx + R_t[2][1]*Xy + R_t[2][2]*Xz;
+        real_t xt   = R_t[0][0]*Xx + R_t[0][1]*Xy + R_t[0][2]*Xz;
+        real_t yt   = R_t[1][0]*Xx + R_t[1][1]*Xy + R_t[1][2]*Xz;
+        real_t zt   = R_t[2][0]*Xx + R_t[2][1]*Xy + R_t[2][2]*Xz;
 
         // compute position at t+dt
         // x(t+dt_stage) = R(t+dt_stage)*X0
-        double xtdt = R_tdt[0][0]*Xx + R_tdt[0][1]*Xy + R_tdt[0][2]*Xz;
-        double ytdt = R_tdt[1][0]*Xx + R_tdt[1][1]*Xy + R_tdt[1][2]*Xz;
-        double ztdt = R_tdt[2][0]*Xx + R_tdt[2][1]*Xy + R_tdt[2][2]*Xz;
+        real_t xtdt = R_tdt[0][0]*Xx + R_tdt[0][1]*Xy + R_tdt[0][2]*Xz;
+        real_t ytdt = R_tdt[1][0]*Xx + R_tdt[1][1]*Xy + R_tdt[1][2]*Xz;
+        real_t ztdt = R_tdt[2][0]*Xx + R_tdt[2][1]*Xy + R_tdt[2][2]*Xz;
 
         // Add opening displacement for B-side nodes
         if (cz_b_side_flag(node_gid)) {

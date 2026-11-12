@@ -232,7 +232,7 @@ public:
         const swage::Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
         MPICArrayKokkos<real_t>&     node_temp,
-        const double time_value) const;
+        const real_t time_value) const;
 
     void boundary_convection(
         const swage::Mesh_t& mesh,
@@ -240,7 +240,7 @@ public:
         const MPICArrayKokkos<real_t>& node_temp,
         const DCArrayKokkos<real_t>& node_flux,
         const MPICArrayKokkos<real_t>& node_coords,
-        const double time_value) const;
+        const real_t time_value) const;
 
 
     void boundary_radiation(
@@ -249,18 +249,18 @@ public:
         const MPICArrayKokkos<real_t>& node_temp,
         const DCArrayKokkos<real_t>& node_flux,
         const MPICArrayKokkos<real_t>& node_coords,
-        const double time_value) const;
+        const real_t time_value) const;
 
     void boundary_heat_flux(
         const swage::Mesh_t& mesh,
         const BoundaryCondition_t& Boundary,
         MPICArrayKokkos<real_t>&     node_temp,
-        const double time_value) const;
+        const real_t time_value) const;
 
     // **** Functions defined in energy_sgtm.cpp **** //
     //void update_temperature(
-    //    const double rk_alpha,
-    //    const double dt,
+    //    const real_t rk_alpha,
+    //    const real_t dt,
     //    const swage::Mesh_t& mesh,
     //    const MPICArrayKokkos<real_t>& node_vel,
     //    const MPICArrayKokkos<real_t>& node_vel_n0,
@@ -283,8 +283,8 @@ public:
             const DCArrayKokkos<real_t>& node_mass,
             const DCArrayKokkos<real_t>& node_q_transfer,
             const DRaggedRightArrayKokkos<real_t>& mat_pt_specific_heat,
-            const double rk_alpha,
-            const double dt) const;
+            const real_t rk_alpha,
+            const real_t dt) const;
 
     // **** Functions defined in heat_flux.cpp **** //
     void get_heat_flux(
@@ -302,10 +302,10 @@ public:
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
         const size_t mat_id,
-        const double fuzz,
-        const double small,
-        const double dt,
-        const double rk_alpha) const;
+        const real_t fuzz,
+        const real_t small,
+        const real_t dt,
+        const real_t rk_alpha) const;
 
     void moving_flux(
         const Material_t& Materials,
@@ -317,17 +317,17 @@ public:
         const corners_in_mat_t corners_in_mat_elem,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_mat_elems,
-        const double power,
+        const real_t power,
         const size_t mat_id,
-        const double fuzz,
-        const double small,
-        const double dt,
-        const double rk_alpha) const;
+        const real_t fuzz,
+        const real_t small,
+        const real_t dt,
+        const real_t rk_alpha) const;
 
     // **** Functions defined in geometry.cpp **** //
     void update_position(
-        double rk_alpha,
-        double dt,
+        real_t rk_alpha,
+        real_t dt,
         const size_t num_dims,
         const size_t num_nodes,
         MPICArrayKokkos<real_t>& node_coords,
@@ -338,8 +338,8 @@ public:
 
     // **** Functions defined in momentum.cpp **** //
     void update_velocity(
-        double rk_alpha,
-        double dt,
+        real_t rk_alpha,
+        real_t dt,
         const swage::Mesh_t& mesh,
         MPICArrayKokkos<real_t>& node_vel,
         const DCArrayKokkos<real_t>& node_mass,
@@ -385,15 +385,15 @@ public:
         DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
         DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         size_t num_mat_elems,
-        double time_value,
-        const double graphics_time,
-        const double time_final,
-        const double dt_max,
-        const double dt_min,
-        const double dt_cfl,
-        double&      dt,
-        const double fuzz,
-        const double tiny,
+        real_t time_value,
+        const real_t graphics_time,
+        const real_t time_final,
+        const real_t dt_max,
+        const real_t dt_min,
+        const real_t dt_cfl,
+        real_t&      dt,
+        const real_t fuzz,
+        const real_t tiny,
         const size_t mat_id) const;
 
 };

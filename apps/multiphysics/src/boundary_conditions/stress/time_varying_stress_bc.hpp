@@ -63,7 +63,7 @@ enum BCVars
 ///        pressure that varies in time.  The function form is an exponential
 ///        decay, given by:
 ///         if (t_end > time > t_start) then
-///              sigma(t) = sigma0 exp(-varDecay*(time - time_start) )
+///              sigma(t) = sigma0 Kokkos::exp(-varDecay*(time - time_start) )
 ///
 /// \param Mesh object
 /// \param Boundary condition enums to select options
@@ -80,16 +80,16 @@ static void stress(const swage::Mesh_t& mesh,
     const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
     const RaggedRightArrayKokkos<real_t>& stress_bc_global_vars,
     const DCArrayKokkos<real_t>& bc_state_vars,
-    const ViewCArrayKokkos <double>& corner_surf_force,
-    const ViewCArrayKokkos <double>& corner_surf_normal,
-    const double time_value,
+    const ViewCArrayKokkos<real_t>& corner_surf_force,
+    const ViewCArrayKokkos<real_t>& corner_surf_normal,
+    const real_t time_value,
     const size_t rk_stage,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
 
-    double sigma_1D[9];
-    ViewCArrayKokkos<double> sigma(&sigma_1D[0], 3,3);  // its 3D even in 2D
+    real_t sigma_1D[9];
+    ViewCArrayKokkos<real_t> sigma(&sigma_1D[0], 3,3);  // its 3D even in 2D
    
     // Cauchy stress is symmetric
     sigma(0,0) = stress_bc_global_vars(bdy_set,BCVars::sig_00);
@@ -105,9 +105,9 @@ static void stress(const swage::Mesh_t& mesh,
     sigma(0,1) = stress_bc_global_vars(bdy_set,BCVars::sig_01);
     sigma(1,0) = stress_bc_global_vars(bdy_set,BCVars::sig_01);
 
-    const double var_decay = stress_bc_global_vars(bdy_set, BCVars::var_decay);
-    const double time_start = stress_bc_global_vars(bdy_set, BCVars::time_start);
-    const double time_end   = stress_bc_global_vars(bdy_set, BCVars::time_end);
+    const real_t var_decay = stress_bc_global_vars(bdy_set, BCVars::var_decay);
+    const real_t time_start = stress_bc_global_vars(bdy_set, BCVars::time_start);
+    const real_t time_end   = stress_bc_global_vars(bdy_set, BCVars::time_end);
 
     // directions are as follows:
     // x_plane  = 0,
@@ -116,13 +116,13 @@ static void stress(const swage::Mesh_t& mesh,
 
     // Set pressure in that direction to specified value
     // if t_end > time > t_start
-    // simga(t) = simga0 exp(-varDecay*(time - time_start) )
+    // simga(t) = simga0 Kokkos::exp(-varDecay*(time - time_start) )
     if (time_value >= time_start && time_value <= time_end) {
         // the time difference
-        const double time_delta = time_value - time_start;
+        const real_t time_delta = time_value - time_start;
 
         // the desired mag
-        const double mag = exp(-var_decay * time_delta);
+        const real_t mag = Kokkos::exp(-var_decay * time_delta);
 
         
         // sigma(0,0)*normal(0) + sigma(0,1)*normal(1) + sigma(0,2)*normal(2)
