@@ -1,0 +1,102 @@
+# num_dims: 3
+# TLQS uniaxial-stress patch test on a distorted (non-axis-aligned) mesh.
+# Checks the physical shape-function gradients (J^{-T}): every other TLQS test uses
+# axis-aligned boxes, where J is diagonal and J^{-1} = J^{-T}, so they cannot see it.
+# Exact answer at every Gauss point: stress_xx = 2e6, all other stresses = 0,
+#   strain_xx = 1.0e-5, strain_yy = strain_zz = -0.33e-5.
+
+dynamic_options:
+    time_final: 1.0
+    dt_min: 1.e-8
+    dt_max: 1.0
+    dt_start: 1.0
+    cycle_stop: 10
+
+mesh_options:
+    source: file
+    file_path: ./meshes/distorted_cube.vtk
+    num_dims: 3
+    polynomial_order: 1
+
+output_options:
+    timer_output_level: thorough
+    output_file_format: state
+    graphics_time_step: 1.0
+    mat_pt_field_outputs:
+        - stress
+        - strain
+    node_field_outputs:
+        - disp
+
+solver_options:
+  - solver:
+        method: qstatx_FE
+        id: 0
+
+boundary_conditions:
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 0.0
+        displacement_model: roller
+        displacement_bc_global_vars:
+            - 0   #dir
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: y_plane
+            plane_position: 0.0
+        displacement_model: roller
+        displacement_bc_global_vars:
+            - 1   #dir
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: z_plane
+            plane_position: 0.0
+        displacement_model: roller
+        displacement_bc_global_vars:
+            - 2   #dir
+
+    - boundary_condition:
+        solver_id: 0
+        surface:
+            type: x_plane
+            plane_position: 1.0
+        qstatx_stress_model: uniform
+        qstatx_stress_bc_global_vars:
+            - 2.0e6   #tx
+            - 0.0     #ty
+            - 0.0     #tz
+
+materials:
+    - material:
+        id: 0
+        strength_model: qstatx_isotropic_linear_elastic
+        strength_global_vars:
+            - 2E11    # Young's modulus
+            - 0.33    # Poisson's ratio
+
+regions:
+    - region:
+        id: 0
+        volume:
+            type: global
+        solver_id: 0
+
+initial_conditions:
+    - initial_condition:
+        region_id: 0
+        material_id: 0
+        density:
+            type: uniform
+            value: 1.0
+        specific_internal_energy:
+            type: uniform
+            value: 1.e-10
+        material_volume_fraction:
+            type: uniform
+            value: 1.0

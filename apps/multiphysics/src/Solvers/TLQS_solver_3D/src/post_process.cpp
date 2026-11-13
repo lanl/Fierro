@@ -46,7 +46,7 @@ void TLQS3D::post_process(
     ViewCArrayKokkos <double>& strain)
 {
     // allocate and initialize Jacobian
-    // dX_i / dxi_j
+    // J[i][j] = dX_j / dxi_i
     double J[3][3];
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
@@ -54,14 +54,11 @@ void TLQS3D::post_process(
         }
     }
 
-    // ***************************************************
-    // FIX THIS TO LOOP CORRECTLY FOR C DATA LAYOUT
-    // ***************************************************
     // get Jacobian at the mat point
     for (int k = 0; k < gauss_point_grad_basis.dims(0); k++) {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                J[j][i] += coords_t0(nodes_in_elem(k), j) * gauss_point_grad_basis(k, i);
+                J[i][j] += coords_t0(nodes_in_elem(k), j) * gauss_point_grad_basis(k, i);
             }
         }
     }
