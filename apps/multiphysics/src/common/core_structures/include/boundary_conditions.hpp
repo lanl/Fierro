@@ -157,7 +157,6 @@ extern std::map<std::string, boundary_conditions::BCFcnLocation> bc_location_map
 /////////////////////////////////////////////////////////////////////////////
 struct BoundaryConditionSetup_t
 {
-    bool is_node = false;
     boundary_conditions::BdyTag surface;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
     double origin[3] = { 0.0, 0.0, 0.0 };  ///< origin of surface being tagged, e.g., sphere or cylinder surface
     double value     = 0.0;                ///< value = position, radius, etc. defining the surface geometric shape
@@ -322,6 +321,7 @@ struct BoundaryCondition_t
     DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver_id)
 
 
+    CArray<bool> is_node; // var to decide to tag surfaces or nodes, accessed using (bc_id)
     CArrayKokkos<BoundaryConditionSetup_t> BoundaryConditionSetup;  // vars to setup the bcs, accessed using (bc_id)
 
     // device functions and associated data

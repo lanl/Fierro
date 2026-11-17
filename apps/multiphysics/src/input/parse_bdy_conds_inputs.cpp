@@ -123,6 +123,8 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     BoundaryConditions.num_bcs = num_bcs;
     BoundaryConditions.BoundaryConditionSetup = CArrayKokkos <BoundaryConditionSetup_t>(num_bcs, "bc_setup_vars");
 
+    BoundaryConditions.is_node = CArray <bool>(num_bcs);
+
     // device functions
     BoundaryConditions.BoundaryConditionFunctions = CArrayKokkos <BoundaryConditionFunctions_t>(num_bcs, "bc_fcns");
 
@@ -757,7 +759,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 Yaml::Node& inps_subfields_yaml = bc_yaml[bc_id]["boundary_condition"]["node"];
 
                 // store that this BC is going to tag nodes
-                BoundaryConditions.BoundaryConditionSetup(bc_id).is_node = true;
+                BoundaryConditions.is_node(bc_id) = true;
 
                 // get the bc_geometery variables names set by the user
                 std::vector<std::string> user_bc_node_inputs;

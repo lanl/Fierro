@@ -273,6 +273,6 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 /// \param Simulation mesh
 ///
 /////////////////////////////////////////////////////////////////////////////
-void build_boundry_node_sets(swage::Mesh_t& mesh, DynamicRaggedRightArrayKokkos<size_t>& temp_bdy_nodes_in_set, const CArrayKokkos<BoundaryConditionSetup_t>& BoundaryConditionSetup);
+void build_boundry_node_sets(swage::Mesh_t& mesh, DynamicRaggedRightArrayKokkos<size_t>& temp_bdy_nodes_in_set, const CArray<bool>& is_node);
 
 #endif

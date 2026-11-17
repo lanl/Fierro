@@ -819,7 +819,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 
     for (int bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         // tag boundaries
-        if (!is_node) { // if surface tagging
+        if (!boundary.is_node(bdy_set)) { // if surface tagging
             // save the boundary patches to this set that are on the plane, spheres, etc.
             FOR_ALL(bdy_patch_lid, 0, mesh.num_bdy_patches, {
                 const int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).surface;
@@ -828,7 +828,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
                 const double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
                 const double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
                 const double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
-                const bool is_node = boundary.BoundaryConditionSetup(bdy_set).is_node;
+
                 // save the patch index
                 size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
 
@@ -864,7 +864,6 @@ void tag_bdys(const BoundaryCondition_t& boundary,
                 const double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
                 const double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
                 const double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
-                const bool is_node = boundary.BoundaryConditionSetup(bdy_set).is_node;
                 
                 // save the patch index
                 size_t bdy_node_gid = mesh.bdy_nodes(bdy_node_lid);
@@ -901,8 +900,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     // save the bdy_patches_gid in temp_bdy_patches_in_set to bdy_patches_in_set
     for(size_t bdy_set = 0; bdy_set<mesh.num_bdy_sets; bdy_set++){
 
-        const bool is_node = boundary.BoundaryConditionSetup(bdy_set).is_node;
-        if (!is_node) {
+        if (!boundary.is_node(bdy_set)) {
             FOR_ALL(patch_lid, 0, mesh.num_bdy_patches_in_set.host(bdy_set), {
 
                 // save the bdy_patch_gid to RaggedRightArray
@@ -914,7 +912,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     } // end for bdy_set
 
     // build the boundary node sets
-    build_boundry_node_sets(mesh, temp_bdy_nodes_in_set, boundary.BoundaryConditionSetup);
+    build_boundry_node_sets(mesh, temp_bdy_nodes_in_set, boundary.is_node);
 
     // temporary array allocation for tracking which surfaces are in the set
     CArrayKokkos<size_t> temp_bdy_surfs_in_set (mesh.num_bdy_sets, mesh.num_surfs, "temp_bdy_surfs_in_set");
@@ -969,7 +967,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 /// \brief Build sets of boundary nodes
 ///
 /////////////////////////////////////////////////////////////////////////////
-void build_boundry_node_sets(swage::Mesh_t& mesh, DynamicRaggedRightArrayKokkos<size_t>& temp_bdy_nodes_in_set, const CArrayKokkos<BoundaryConditionSetup_t>& BoundaryConditionSetup)
+void build_boundry_node_sets(swage::Mesh_t& mesh, DynamicRaggedRightArrayKokkos<size_t>& temp_bdy_nodes_in_set, const CArray<bool>& is_node)
 {
     const size_t num_bdy_sets       = mesh.num_bdy_sets;
     const size_t num_nodes_in_patch = mesh.num_nodes_in_patch;
@@ -988,7 +986,7 @@ void build_boundry_node_sets(swage::Mesh_t& mesh, DynamicRaggedRightArrayKokkos<
 
     // find the unique nodes in each set
     for (size_t bdy_set = 0; bdy_set < num_bdy_sets; bdy_set++) {
-        if (!BoundaryConditionSetup(bdy_set).is_node) {
+        if (!is_node(bdy_set)) {
             // loop bound is evaluated on the host
             const size_t num_patches = mesh.num_bdy_patches_in_set.host(bdy_set);
 
