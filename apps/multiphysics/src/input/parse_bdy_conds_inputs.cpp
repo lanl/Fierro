@@ -124,6 +124,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
     BoundaryConditions.BoundaryConditionSetup = CArrayKokkos <BoundaryConditionSetup_t>(num_bcs, "bc_setup_vars");
 
     BoundaryConditions.is_node = CArray <bool>(num_bcs);
+    BoundaryConditions.is_node.set_values(false);
 
     // device functions
     BoundaryConditions.BoundaryConditionFunctions = CArrayKokkos <BoundaryConditionFunctions_t>(num_bcs, "bc_fcns");
