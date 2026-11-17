@@ -242,6 +242,14 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
             throw std::runtime_error("**** Solver_id is missing ****");
         } // end check on m_id range
 
+        // node tagging cannot be used with stress-type boundary conditions ----
+        auto has_word = [&](const char* w) {
+            return std::find(user_str_bc_inps.begin(), user_str_bc_inps.end(), w) != user_str_bc_inps.end();
+        };
+
+        if (has_word("node") && (has_word("stress_model") || has_word("qstatx_stress_model"))) {
+            throw std::runtime_error("**** node tagging is not allowed with stress_model or qstatx_stress_model ****");
+        }
 
         // loop over the words in the boundary condition input definition
         for (auto& a_word : user_str_bc_inps) {
