@@ -740,6 +740,111 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 } // end if
             } // location
 
+            // get boundary condition node geometry
+            else if (a_word.compare("node") == 0) {
+
+                // -----
+                // loop over the sub fields under node
+                // -----
+                Yaml::Node& inps_subfields_yaml = bc_yaml[bc_id]["boundary_condition"]["node"];
+
+                // store that this BC is going to tag nodes
+                BoundaryConditions.BoundaryConditionSetup(bc_id).is_node = true;
+
+                // get the bc_geometery variables names set by the user
+                std::vector<std::string> user_bc_node_inputs;
+                
+                // extract words from the input file and validate they are correct
+                validate_inputs(inps_subfields_yaml, user_bc_node_inputs, str_bc_node_inps, bc_node_required_inps);
+
+
+                // loop over the subfield words
+                for(auto& a_subfield_word : user_bc_node_inputs){ 
+
+                    if (a_subfield_word.compare("type") == 0){
+                        std::string surface = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<std::string>();
+
+                        auto map = bc_surface_map;
+
+                        // set the surface
+                        if (map.find(surface) != map.end()) {
+                            auto bc_surface = map[surface];
+                            RUN({
+                                BoundaryConditions.BoundaryConditionSetup(bc_id).surface = bc_surface;
+                            });
+
+                        }
+                        else{
+                            std::cout << "ERROR: invalid boundary condition option input in YAML file: " << surface << std::endl;
+                            std::cout << "Valid options are: " << std::endl;
+
+                            for (const auto& pair : map) {
+                                std::cout << "\t" << pair.first << std::endl;
+                            }
+                            throw std::runtime_error("**** Boundary Condition Surface Inputs Not Understood ****");
+                        } // end if
+
+                    } // end if type
+                    else if (a_subfield_word.compare("plane_position") == 0) {
+                        double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
+                        });
+                    } // end if plane position
+                    else if (a_subfield_word.compare("radius") == 0) {
+                        double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
+                        });
+                    } // end if radius
+                    else if (a_subfield_word.compare("tolerance") == 0) {
+                        // the tolerance to tag a surface
+                        double tolerance = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).tolerance = tolerance;
+                        });
+                    } // end if tolerance 
+                    else if (a_subfield_word.compare("origin") == 0) {
+                        std::string origin = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<std::string>();
+
+                        // get the origin numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(origin, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+
+                        // storing the origin values as (x1,y1,z1)
+
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).origin[0] = x1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).origin[1] = y1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).origin[2] = z1;
+                        });
+
+                    } //end origin
+                    else {
+                        // word is unknown
+                        std::cout << "ERROR: invalid input under boundary condition geometery: " << a_subfield_word << std::endl;
+                        std::cout << "Valid options are: " << std::endl;
+                        for (const auto& element : str_bc_surface_inps) {
+                            std::cout << element << std::endl;
+                        }
+                        throw std::runtime_error("**** Boundary Conditions Not Understood ****");
+                    }
+
+                } // end loop over words in the subfield
+            } // node
+
             // get boundary condition surface geometry
             else if (a_word.compare("surface") == 0) {
 

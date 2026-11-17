@@ -611,7 +611,7 @@ void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn check_bdy
+/// \fn check_bdy_patch
 ///
 /// \brief routine for checking to see if a vertex is on a boundary
 ///
@@ -623,7 +623,7 @@ void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-size_t check_bdy(const size_t patch_gid,
+size_t check_bdy_patch(const size_t patch_gid,
     const int     this_bc_tag,
     const double  val,
     const double  tolerance,
@@ -700,6 +700,83 @@ size_t check_bdy(const size_t patch_gid,
     return is_on_bdy;
 } // end method to check bdy
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn check_bdy_node
+///
+/// \brief routine for checking to see if a vertex is on a boundary
+///
+/// \param Global id of a patch
+/// \param Boundary condition tag (bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell)
+/// \param Plane value
+/// \param Simulation mesh
+/// \param Nodal coordinates
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+size_t check_bdy_node(const size_t node_gid,
+    const int     this_bc_tag,
+    const double  val,
+    const double  tolerance,
+    const double  orig_x,
+    const double  orig_y,
+    const double  orig_z,
+    const swage::Mesh_t& mesh,
+    const MPICArrayKokkos<double>& node_coords)
+{
+    size_t num_dims = mesh.num_dims;
+
+    // default bool is not on the boundary
+    size_t is_on_bdy = 0;
+
+    // the patch coordinates
+    double these_node_coords[3];  // Note: cannot allocated array with num_dims
+
+    for (size_t dim = 0; dim < num_dims; dim++) {
+        these_node_coords[dim] = node_coords(node_gid, dim); 
+    } // end for dim
+
+    // a x-plane
+    if (this_bc_tag == 0) {
+        if (fabs(these_node_coords[0] - val) <= tolerance) {
+            is_on_bdy = 1;
+        }
+    } // end if on type
+    // a y-plane
+    else if (this_bc_tag == 1) {
+        if (fabs(these_node_coords[1] - val) <= tolerance) {
+            is_on_bdy = 1;
+        }
+    } // end if on type
+    // a z-plane
+    else if (this_bc_tag == 2) {
+        if (fabs(these_node_coords[2] - val) <= tolerance) {
+            is_on_bdy = 1;
+        }
+    } // end if on type
+    // cylinderical shell where radius = sqrt(dx^2 + dy^2)
+    else if (this_bc_tag == 3) {
+        real_t R = sqrt((these_node_coords[0] - orig_x) * (these_node_coords[0] - orig_x) +
+                        (these_node_coords[1] - orig_y) * (these_node_coords[1] - orig_y));
+
+        if (fabs(R - val) <= tolerance) {
+            is_on_bdy = 1;
+        }
+    } // end if on type
+    // spherical shell where radius = sqrt(dx^2 + dy^2 + dz^2)
+    else if (this_bc_tag == 4) {
+        real_t R = sqrt((these_node_coords[0] - orig_x) * (these_node_coords[0] - orig_x) +
+                        (these_node_coords[1] - orig_y) * (these_node_coords[1] - orig_y) +
+                        (these_node_coords[2] - orig_z) * (these_node_coords[2] - orig_z));
+
+        if (fabs(R - val) <= tolerance) {
+            is_on_bdy = 1;
+        }
+    } // end if on type
+
+    return is_on_bdy;
+} // end method to check bdy
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -722,6 +799,16 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 
     // create a temporary storage for the bdy patches in a set
     DynamicRaggedRightArrayKokkos<size_t> temp_bdy_patches_in_set (mesh.num_bdy_sets, mesh.num_bdy_patches, "temp_bdy_patches_in_set");
+
+    // create a temporary storage for the bdy nodes in a set
+    DynamicRaggedRightArrayKokkos<size_t> temp_bdy_nodes_in_set (mesh.num_bdy_sets, mesh.num_bdy_nodes, "temp_bdy_nodes_in_set");
+
+    // in tag_bdys, right after constructing the temporaries
+    FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
+        temp_bdy_patches_in_set.stride(bdy_set) = 0;
+        temp_bdy_nodes_in_set.stride(bdy_set)   = 0;
+    });
+    Kokkos::fence();
     
     // initialize the number of bdy patches in a set to zero
     mesh.num_bdy_patches_in_set.set_values(0.0); // array length is num_bdy_sets
@@ -730,48 +817,73 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     if(mesh.num_bdy_sets == 0) return;
 
 
-
-    FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
+    for (int bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         // tag boundaries
-        int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).surface;
-        double value  = boundary.BoundaryConditionSetup(bdy_set).value;
-        double tolerance = boundary.BoundaryConditionSetup(bdy_set).tolerance;
-        double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
-        double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
-        double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
-        
+        const int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).surface;
+        const double value  = boundary.BoundaryConditionSetup(bdy_set).value;
+        const double tolerance = boundary.BoundaryConditionSetup(bdy_set).tolerance;
+        const double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
+        const double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
+        const double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
+        const bool is_node = boundary.BoundaryConditionSetup(bdy_set).is_node;
 
+        if (!is_node) { // if surface tagging
+            // save the boundary patches to this set that are on the plane, spheres, etc.
+            FOR_ALL(bdy_patch_lid, 0, mesh.num_bdy_patches, {
+                // save the patch index
+                size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
 
-        // save the boundary patches to this set that are on the plane, spheres, etc.
-        for (size_t bdy_patch_lid = 0; bdy_patch_lid < mesh.num_bdy_patches; bdy_patch_lid++) {
-            // save the patch index
-            size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
+                // check to see if this patch is on the specified plane
+                size_t is_on_bdy = check_bdy_patch(bdy_patch_gid,
+                                                   bc_tag_id,
+                                                   value,
+                                                   tolerance,
+                                                   orig_x,
+                                                   orig_y,
+                                                   orig_z,
+                                                   mesh,
+                                                   node_coords); // no=0, yes=1
 
-            // check to see if this patch is on the specified plane
-            size_t is_on_bdy = check_bdy(bdy_patch_gid,
-                                         bc_tag_id,
-                                         value,
-                                         tolerance,
-                                         orig_x,
-                                         orig_y,
-                                         orig_z,
-                                         mesh,
-                                         node_coords); // no=0, yes=1
+                if (is_on_bdy == 1) {
+                    // atomically claim a unique slot and increment the stride
+                    const size_t index = Kokkos::atomic_fetch_add(&temp_bdy_patches_in_set.stride(bdy_set), static_cast<size_t>(1));
 
-            if (is_on_bdy == 1) {
-                size_t index =temp_bdy_patches_in_set.stride(bdy_set);
+                    Kokkos::atomic_increment(&mesh.num_bdy_patches_in_set(bdy_set));
 
-                // increment the number of boundary patches saved
-                temp_bdy_patches_in_set.stride(bdy_set)++;
-                mesh.num_bdy_patches_in_set(bdy_set)++;
+                    // save the bdy_patch_gid
+                    temp_bdy_patches_in_set(bdy_set, index) = bdy_patch_gid;
+                } // end if
+            });
+            Kokkos::fence();
+        } // end if
+        else { // else node tagging
+            // save the boundary nodes to this set that are on the plane, spheres, etc.
+            FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes, {
+                // save the patch index
+                size_t bdy_node_gid = mesh.bdy_nodes(bdy_node_lid);
 
-                // save the bdy_patch_gid
-                temp_bdy_patches_in_set(bdy_set, index) = bdy_patch_gid;
-            } // end if
-        } // end for bdy_patch
+                // check to see if this patch is on the specified plane
+                size_t is_on_bdy = check_bdy_node(bdy_node_gid,
+                                                  bc_tag_id,
+                                                  value,
+                                                  tolerance,
+                                                  orig_x,
+                                                  orig_y,
+                                                  orig_z,
+                                                  mesh,
+                                                  node_coords); // no=0, yes=1
 
-    });  // end FOR_ALL bdy_sets
-    Kokkos::fence();
+                if (is_on_bdy == 1) {
+                    // atomically claim a unique slot and increment the stride
+                    const size_t index = Kokkos::atomic_fetch_add(&temp_bdy_nodes_in_set.stride(bdy_set), static_cast<size_t>(1));
+
+                    // save the bdy_patch_gid
+                    temp_bdy_nodes_in_set(bdy_set, index) = bdy_node_gid;
+                } // end if
+            });
+            Kokkos::fence();
+        } // end else
+    } // end for over boundary sets
     mesh.num_bdy_patches_in_set.update_host(); // save to host
 
 
@@ -782,14 +894,20 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     // save the bdy_patches_gid in temp_bdy_patches_in_set to bdy_patches_in_set
     for(size_t bdy_set = 0; bdy_set<mesh.num_bdy_sets; bdy_set++){
 
-        FOR_ALL(patch_lid, 0, mesh.num_bdy_patches_in_set.host(bdy_set), {
+        const bool is_node = boundary.BoundaryConditionSetup(bdy_set).is_node;
+        if (!is_node) {
+            FOR_ALL(patch_lid, 0, mesh.num_bdy_patches_in_set.host(bdy_set), {
 
-            // save the bdy_patch_gid to RaggedRightArray
-            mesh.bdy_patches_in_set(bdy_set, patch_lid) = temp_bdy_patches_in_set(bdy_set, patch_lid);
+                // save the bdy_patch_gid to RaggedRightArray
+                mesh.bdy_patches_in_set(bdy_set, patch_lid) = temp_bdy_patches_in_set(bdy_set, patch_lid);
 
-        }); // end FOR_ALL over all pathces
+            }); // end FOR_ALL over all patches
+        }
 
     } // end for bdy_set
+
+    // build the boundary node sets
+    build_boundry_node_sets(mesh, temp_bdy_nodes_in_set, boundary.BoundaryConditionSetup);
 
     // temporary array allocation for tracking which surfaces are in the set
     CArrayKokkos<size_t> temp_bdy_surfs_in_set (mesh.num_bdy_sets, mesh.num_surfs, "temp_bdy_surfs_in_set");
@@ -844,73 +962,68 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 /// \brief Build sets of boundary nodes
 ///
 /////////////////////////////////////////////////////////////////////////////
-void build_boundry_node_sets(swage::Mesh_t& mesh)
+void build_boundry_node_sets(swage::Mesh_t& mesh, DynamicRaggedRightArrayKokkos<size_t>& temp_bdy_nodes_in_set, const CArrayKokkos<BoundaryConditionSetup_t>& BoundaryConditionSetup)
 {
-    // build boundary nodes in each boundary set
+    const size_t num_bdy_sets       = mesh.num_bdy_sets;
+    const size_t num_nodes_in_patch = mesh.num_nodes_in_patch;
 
-    mesh.num_bdy_nodes_in_set = DCArrayKokkos<size_t>(mesh.num_bdy_sets, "mesh.num_bdy_nodes_in_set");
-    mesh.num_bdy_nodes_in_set.set_values(0.0);
+    mesh.num_bdy_nodes_in_set = DCArrayKokkos<size_t>(num_bdy_sets, "mesh.num_bdy_nodes_in_set");
+    mesh.num_bdy_nodes_in_set.set_values(0);
 
-    CArrayKokkos<long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes, "temp_count_num_bdy_nodes_in_set");
+    // Shallow (view) copies so the lambdas don't capture the entire mesh struct
+    auto num_bdy_nodes_in_set = mesh.num_bdy_nodes_in_set;
+    auto bdy_patches_in_set   = mesh.bdy_patches_in_set;
+    auto nodes_in_patch       = mesh.nodes_in_patch;
 
-    DynamicRaggedRightArrayKokkos<size_t> temp_nodes_in_set(mesh.num_bdy_sets, mesh.num_bdy_patches * mesh.num_nodes_in_patch, "temp_nodes_in_set");
+    // last boundary set that claimed each node (-1 = never claimed)
+    CArrayKokkos<long long int> node_last_set(mesh.num_nodes, "node_last_set");
+    node_last_set.set_values(-1);
 
-    // Parallel loop over boundary sets on device
-    FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
-        // find the number of patches_in_set
+    // find the unique nodes in each set
+    for (size_t bdy_set = 0; bdy_set < num_bdy_sets; bdy_set++) {
+        if (!BoundaryConditionSetup(bdy_set).is_node) {
+            // loop bound is evaluated on the host
+            const size_t num_patches = mesh.num_bdy_patches_in_set.host(bdy_set);
 
-        // Loop over boundary patches in boundary set
-        for (size_t bdy_patch_gid = 0; bdy_patch_gid < mesh.num_bdy_patches_in_set(bdy_set); bdy_patch_gid++) {
-            // get the global id for this boundary patch
-            size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+            FOR_ALL(bdy_patch_lid, 0, num_patches,
+                    node_lid,      0, num_nodes_in_patch, {
 
-            // apply boundary condition at nodes on boundary
-            for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++) {
-                size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+                const size_t patch_gid = bdy_patches_in_set(bdy_set, bdy_patch_lid);
+                const size_t node_gid  = nodes_in_patch(patch_gid, node_lid);
 
-                temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = -1;
-            }     // end for node_lid
-        } // end for bdy_patch_gid
+                // only one thread per (set, node) sees a value != bdy_set
+                const long long int old =
+                    Kokkos::atomic_exchange(&node_last_set(node_gid), (long long int)bdy_set);
 
-        // Loop over boundary patches in boundary set
-        for (size_t bdy_patch_gid = 0; bdy_patch_gid < mesh.num_bdy_patches_in_set(bdy_set); bdy_patch_gid++) {
-            // get the global id for this boundary patch
-            size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+                if (old != (long long int)bdy_set) {
+                    // reserve a unique slot; stride is incremented before the write,
+                    // matching the original stride++ then write ordering
+                    const size_t slot =
+                        Kokkos::atomic_fetch_add(&temp_bdy_nodes_in_set.stride(bdy_set), size_t(1));
 
-            // apply boundary condition at nodes on boundary
-            for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++) {
-                size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+                    temp_bdy_nodes_in_set(bdy_set, slot) = node_gid;
+                }
+            });
+        }
+    } // end for bdy_set
 
-                if (temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) == -1) {
-                    size_t num_saved = mesh.num_bdy_nodes_in_set(bdy_set);
-
-                    mesh.num_bdy_nodes_in_set(bdy_set)++;
-
-                    // replace -1 with node_gid to denote the node was already saved
-                    temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = node_gid;
-
-                    // increment the number of saved nodes, create memory
-                    temp_nodes_in_set.stride(bdy_set)++;
-                    temp_nodes_in_set(bdy_set, num_saved) = node_gid;
-                }     // end if
-            }     // end for node_lid
-        } // end for bdy_patch_gid
-    }); // end FOR_ALL bdy_set
+    // the counts are just the final strides
+    FOR_ALL(bdy_set, 0, num_bdy_sets, {
+        num_bdy_nodes_in_set(bdy_set) = temp_bdy_nodes_in_set.stride(bdy_set);
+    });
     Kokkos::fence();
+
+    // make sure the host has the counts before building the ragged array
+    mesh.num_bdy_nodes_in_set.update_host();
 
     // allocate the RaggedRight bdy_nodes_in_set array
     mesh.bdy_nodes_in_set = RaggedRightArrayKokkos<size_t>(mesh.num_bdy_nodes_in_set, "mesh.bdy_nodes_in_set");
+    auto bdy_nodes_in_set = mesh.bdy_nodes_in_set;
 
-    FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
-        // Loop over boundary patches in boundary set
-        for (size_t bdy_node_lid = 0; bdy_node_lid < mesh.num_bdy_nodes_in_set(bdy_set); bdy_node_lid++) {
-            // save the bdy_node_gid
-            mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid) = temp_nodes_in_set(bdy_set, bdy_node_lid);
-        } // end for
-    }); // end FOR_ALL bdy_set
-
-    // update the host side for the number nodes in a bdy_set
-    mesh.num_bdy_nodes_in_set.update_host();
-
-    return;
-} // end method to build boundary nodes
+    FOR_ALL(bdy_set, 0, num_bdy_sets, {
+        for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes_in_set(bdy_set); bdy_node_lid++) {
+            bdy_nodes_in_set(bdy_set, bdy_node_lid) = temp_bdy_nodes_in_set(bdy_set, bdy_node_lid);
+        }
+    });
+    Kokkos::fence();
+}

@@ -111,6 +111,7 @@ std::vector<std::string> str_bc_inps
 {
     "solver_id",
     "surface",
+    "node",
     "velocity_model",
     "velocity_bc_global_vars",
     "displacement_model",
@@ -135,12 +136,24 @@ std::vector<std::string> str_bc_surface_inps
     "origin"
 };
 
+std::vector<std::string> str_bc_node_inps
+{
+    "type",
+    "plane_position",
+    "radius",
+    "tolerance",
+    "origin"
+};
+
 std::vector<std::string> bc_required_inps
 {
-    "solver_id",
-    "surface"
+    "solver_id"
 };
 
 std::vector<std::string> bc_surface_required_inps
+{
+};
+
+std::vector<std::string> bc_node_required_inps
 {
 };

@@ -157,6 +157,7 @@ extern std::map<std::string, boundary_conditions::BCFcnLocation> bc_location_map
 /////////////////////////////////////////////////////////////////////////////
 struct BoundaryConditionSetup_t
 {
+    bool is_node = false;
     boundary_conditions::BdyTag surface;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
     double origin[3] = { 0.0, 0.0, 0.0 };  ///< origin of surface being tagged, e.g., sphere or cylinder surface
     double value     = 0.0;                ///< value = position, radius, etc. defining the surface geometric shape
@@ -367,10 +368,14 @@ extern std::vector<std::string> str_bc_inps;
 // subfields under surface
 extern std::vector<std::string> str_bc_surface_inps;
 
+// subfields under surface
+extern std::vector<std::string> str_bc_node_inps;
+
 // ----------------------------------
 // required inputs for boundary condition options
 // ----------------------------------
 extern std::vector<std::string> bc_required_inps;
 extern std::vector<std::string> bc_surface_required_inps;
+extern std::vector<std::string> bc_node_required_inps;
 
 #endif // end Header Guard
