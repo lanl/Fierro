@@ -819,17 +819,16 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 
     for (int bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         // tag boundaries
-        const int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).surface;
-        const double value  = boundary.BoundaryConditionSetup(bdy_set).value;
-        const double tolerance = boundary.BoundaryConditionSetup(bdy_set).tolerance;
-        const double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
-        const double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
-        const double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
-        const bool is_node = boundary.BoundaryConditionSetup(bdy_set).is_node;
-
         if (!is_node) { // if surface tagging
             // save the boundary patches to this set that are on the plane, spheres, etc.
             FOR_ALL(bdy_patch_lid, 0, mesh.num_bdy_patches, {
+                const int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).surface;
+                const double value  = boundary.BoundaryConditionSetup(bdy_set).value;
+                const double tolerance = boundary.BoundaryConditionSetup(bdy_set).tolerance;
+                const double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
+                const double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
+                const double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
+                const bool is_node = boundary.BoundaryConditionSetup(bdy_set).is_node;
                 // save the patch index
                 size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
 
@@ -859,6 +858,14 @@ void tag_bdys(const BoundaryCondition_t& boundary,
         else { // else node tagging
             // save the boundary nodes to this set that are on the plane, spheres, etc.
             FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes, {
+                const int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).surface;
+                const double value  = boundary.BoundaryConditionSetup(bdy_set).value;
+                const double tolerance = boundary.BoundaryConditionSetup(bdy_set).tolerance;
+                const double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
+                const double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
+                const double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
+                const bool is_node = boundary.BoundaryConditionSetup(bdy_set).is_node;
+                
                 // save the patch index
                 size_t bdy_node_gid = mesh.bdy_nodes(bdy_node_lid);
 
