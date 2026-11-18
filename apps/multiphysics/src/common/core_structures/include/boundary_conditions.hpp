@@ -321,6 +321,7 @@ struct BoundaryCondition_t
     DCArrayKokkos<size_t> num_temperature_bdy_sets_in_solver; // (solver_id)
 
 
+    CArray<bool> is_node; // var to decide to tag surfaces or nodes, accessed using (bc_id)
     CArrayKokkos<BoundaryConditionSetup_t> BoundaryConditionSetup;  // vars to setup the bcs, accessed using (bc_id)
 
     // device functions and associated data
@@ -367,10 +368,14 @@ extern std::vector<std::string> str_bc_inps;
 // subfields under surface
 extern std::vector<std::string> str_bc_surface_inps;
 
+// subfields under node
+extern std::vector<std::string> str_bc_node_inps;
+
 // ----------------------------------
 // required inputs for boundary condition options
 // ----------------------------------
 extern std::vector<std::string> bc_required_inps;
 extern std::vector<std::string> bc_surface_required_inps;
+extern std::vector<std::string> bc_node_required_inps;
 
 #endif // end Header Guard

@@ -202,9 +202,9 @@ void get_area_weights2D(const ViewCArrayKokkos<real_t>& corner_areas,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn check_bdy
+/// \fn check_bdy_patch
 ///
-/// \brief routine for checking to see if a vertex is on a boundary
+/// \brief routine for checking to see if a patch is on a boundary
 ///
 /// \param Global id of a patch
 /// \param Boundary condition tag (bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell)
@@ -214,7 +214,31 @@ void get_area_weights2D(const ViewCArrayKokkos<real_t>& corner_areas,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-size_t check_bdy(const size_t patch_gid,
+size_t check_bdy_patch(const size_t patch_gid,
+    const int     this_bc_tag,
+    const real_t  value,
+    const real_t  tolerance,
+    const real_t  orig_x,
+    const real_t  orig_y,
+    const real_t  orig_z,
+    const swage::Mesh_t& mesh,
+    const MPICArrayKokkos<real_t>& node_coords);
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn check_bdy_node
+///
+/// \brief routine for checking to see if a node is on a boundary
+///
+/// \param Global id of a node
+/// \param Boundary condition tag (bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell)
+/// \param Plane value
+/// \param Simulation mesh
+/// \param Nodal coordinates
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+size_t check_bdy_node(const size_t node_gid,
     const int     this_bc_tag,
     const real_t  value,
     const real_t  tolerance,
@@ -249,6 +273,6 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 /// \param Simulation mesh
 ///
 /////////////////////////////////////////////////////////////////////////////
-void build_boundry_node_sets(swage::Mesh_t& mesh);
+void build_boundry_node_sets(swage::Mesh_t& mesh, DynamicRaggedRightArrayKokkos<size_t>& temp_bdy_nodes_in_set, const CArray<bool>& is_node);
 
 #endif

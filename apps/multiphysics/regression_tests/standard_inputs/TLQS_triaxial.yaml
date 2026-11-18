@@ -39,7 +39,7 @@ solver_options:
 boundary_conditions:
     - boundary_condition:
         solver_id: 0
-        surface: 
+        node: 
             type: x_plane
             plane_position: 0.0
         displacement_model: roller

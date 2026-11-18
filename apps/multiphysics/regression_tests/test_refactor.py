@@ -33,7 +33,7 @@ sgh_fracture = ["fracture_mode_1", "fracture_mode_2", \
 sgtm = ["SGTM_cooling_cube"]
 
 tlqs = ["TLQS_cantilever_beam", "TLQS_triaxial", \
-        "TLQS_test_ao_read"]
+        "TLQS_test_ao_read", "TLQS_distorted_uniaxial"]
 
 tlqs_contact = ["TLQS_uniaxial_contact_p1", "TLQS_uniaxial_contact_p2", "TLQS_uniaxial_contact_p3"]
 
