@@ -443,15 +443,14 @@ size_t cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids,
 /// \fn compute_face_geometry
 /// \brief Computes face geometry vectors and centroid for a given element surface
 ///
-/// This function computes the geometric properties of a specified surface (face)  
-/// also referred to as a "patch" per the nodal indexing convention in mesh.h  
-/// for a first-order hexahedral element.
+/// This function computes the geometric properties of a specified surface (face)
+/// of a first-order hexahedral element, per the nodal indexing convention in mesh.h.
 /// Specifically, it calculates the orthonormal in-plane basis vectors r and s, 
 /// the outward unit normal vector n, and the centroid cenface of the face in physical space
 ///
 /// \param nodes_in_elem Nodes in an element
 /// \param node_coords Global nodal coordinates array (num_nodes x 3) from the mesh
-/// \param surf Local surface (patch) ID [0-5] corresponding to a face of a hex element 
+/// \param surf Local surface ID [0-5] corresponding to a face of a hex element 
 ///             (per the face-node ordering in mesh.h) (which face)
 /// \param elem Index of the element from which the surface is extracted (whcihc element)
 /// \param n Output normal vector to the face (length 3, unit magnitude)
@@ -1444,7 +1443,7 @@ void cohesive_zone_loads(
             // gp = 1/sqrt(3) for 2-point gauss quadrature for integrating over a quad HEX8 face
             const double gp = 0.5773502691896257;
 
-            // building 4 GPs on the patch fA (Fierro patch numbering)
+            // building 4 GPs on the surface fA (Fierro surface numbering)
             double gps[4][3]; // gps[k][0] = xi
                               // gps[k][1] = eta
                               // gps[k][2] = zeta
