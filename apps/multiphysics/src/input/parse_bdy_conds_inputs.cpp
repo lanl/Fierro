@@ -797,26 +797,26 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                     } // end if type
                     else if (a_subfield_word.compare("plane_position") == 0) {
-                        double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        double value = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<double>();
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
                     } // end if plane position
                     else if (a_subfield_word.compare("radius") == 0) {
-                        double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        double value = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<double>();
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
                     } // end if radius
                     else if (a_subfield_word.compare("tolerance") == 0) {
                         // the tolerance to tag a surface
-                        double tolerance = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        double tolerance = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<double>();
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).tolerance = tolerance;
                         });
                     } // end if tolerance 
                     else if (a_subfield_word.compare("origin") == 0) {
-                        std::string origin = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<std::string>();
+                        std::string origin = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<std::string>();
 
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(origin, ",");
@@ -847,7 +847,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         // word is unknown
                         std::cout << "ERROR: invalid input under boundary condition geometery: " << a_subfield_word << std::endl;
                         std::cout << "Valid options are: " << std::endl;
-                        for (const auto& element : str_bc_surface_inps) {
+                        for (const auto& element : str_bc_node_inps) {
                             std::cout << element << std::endl;
                         }
                         throw std::runtime_error("**** Boundary Conditions Not Understood ****");

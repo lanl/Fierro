@@ -613,7 +613,7 @@ void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 ///
 /// \fn check_bdy_patch
 ///
-/// \brief routine for checking to see if a vertex is on a boundary
+/// \brief routine for checking to see if a patch is on a boundary
 ///
 /// \param Global id of a patch
 /// \param Boundary condition tag (bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell)
@@ -704,9 +704,9 @@ size_t check_bdy_patch(const size_t patch_gid,
 ///
 /// \fn check_bdy_node
 ///
-/// \brief routine for checking to see if a vertex is on a boundary
+/// \brief routine for checking to see if a node is on a boundary
 ///
-/// \param Global id of a patch
+/// \param Global id of a node
 /// \param Boundary condition tag (bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell)
 /// \param Plane value
 /// \param Simulation mesh
@@ -813,8 +813,12 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     // initialize the number of bdy patches in a set to zero
     mesh.num_bdy_patches_in_set.set_values(0.0); // array length is num_bdy_sets
 
-    // If no boundaries, return
-    if(mesh.num_bdy_sets == 0) return;
+    // If no boundaries, still build the (empty) boundary node sets so
+    // mesh.num_bdy_nodes_in_set and mesh.bdy_nodes_in_set are allocated, then return
+    if(mesh.num_bdy_sets == 0) {
+        build_boundry_node_sets(mesh, temp_bdy_nodes_in_set, boundary.is_node);
+        return;
+    }
 
 
     for (int bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
@@ -865,10 +869,10 @@ void tag_bdys(const BoundaryCondition_t& boundary,
                 const double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
                 const double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
                 
-                // save the patch index
+                // save the node index
                 size_t bdy_node_gid = mesh.bdy_nodes(bdy_node_lid);
 
-                // check to see if this patch is on the specified plane
+                // check to see if this node is on the specified plane
                 size_t is_on_bdy = check_bdy_node(bdy_node_gid,
                                                   bc_tag_id,
                                                   value,
@@ -883,7 +887,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
                     // atomically claim a unique slot and increment the stride
                     const size_t index = Kokkos::atomic_fetch_add(&temp_bdy_nodes_in_set.stride(bdy_set), static_cast<size_t>(1));
 
-                    // save the bdy_patch_gid
+                    // save the bdy_node_gid
                     temp_bdy_nodes_in_set(bdy_set, index) = bdy_node_gid;
                 } // end if
             });

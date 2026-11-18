@@ -202,9 +202,9 @@ void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn check_bdy
+/// \fn check_bdy_patch
 ///
-/// \brief routine for checking to see if a vertex is on a boundary
+/// \brief routine for checking to see if a patch is on a boundary
 ///
 /// \param Global id of a patch
 /// \param Boundary condition tag (bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell)
@@ -226,11 +226,11 @@ size_t check_bdy_patch(const size_t patch_gid,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn check_bdy
+/// \fn check_bdy_node
 ///
-/// \brief routine for checking to see if a vertex is on a boundary
+/// \brief routine for checking to see if a node is on a boundary
 ///
-/// \param Global id of a patch
+/// \param Global id of a node
 /// \param Boundary condition tag (bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell)
 /// \param Plane value
 /// \param Simulation mesh

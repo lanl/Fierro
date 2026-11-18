@@ -368,7 +368,7 @@ extern std::vector<std::string> str_bc_inps;
 // subfields under surface
 extern std::vector<std::string> str_bc_surface_inps;
 
-// subfields under surface
+// subfields under node
 extern std::vector<std::string> str_bc_node_inps;
 
 // ----------------------------------
