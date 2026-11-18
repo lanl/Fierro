@@ -256,7 +256,6 @@ void Driver::initialize()
     // --- calculate bdy sets ---//
     mesh.initialize_bdy_sets(num_bcs);
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
-    build_boundry_node_sets(mesh);
 
     // Setup the Solvers
     double time_final = SimulationParamaters.DynamicOptions.time_final;
