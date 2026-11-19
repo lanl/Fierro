@@ -236,8 +236,10 @@ public:
     const real_t time_end) const;
 
     // **** Functions defined in surface.cpp **** //
+    // Static: they use no solver state, so FOR_ALL lambdas can call them
+    // without capturing `this` (a host pointer on GPU backends).
     KOKKOS_FUNCTION
-    void get_qpt_area_normal(
+    static void get_qpt_area_normal(
         const swage::Mesh_t& mesh,
         const elements::ReferenceSurface_t& ref_surf,
         const elements::SurfaceQuadrature_t& SurfQuad,
@@ -247,16 +249,16 @@ public:
         const ViewCArrayKokkos<real_t>& jac,
         const ViewCArrayKokkos<real_t>& inv_jac,
         ViewCArrayKokkos<real_t>& normal,
-        real_t& qpt_weighted_area) const;
+        real_t& qpt_weighted_area);
 
     KOKKOS_FUNCTION
-    void get_surf_qpt_coords(
+    static void get_surf_qpt_coords(
         const swage::Mesh_t& mesh,
         const elements::ReferenceSurface_t ref_surf,
         const MPICArrayKokkos<real_t>& node_coords,
         const size_t qpt_lid,
         const size_t surf_gid,
-        ViewCArrayKokkos<real_t>& qpt_coords) const;
+        ViewCArrayKokkos<real_t>& qpt_coords);
 
     // **** Functions defined in time_integration.cpp **** //
     void timestep_init(
