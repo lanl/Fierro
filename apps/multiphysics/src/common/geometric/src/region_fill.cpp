@@ -315,7 +315,7 @@ void fill_regions(
     DCArrayKokkos<real_t> elem_geo_volfrac_a_fill(mesh.num_elems);  // the geometric volfracs in elements for a region fill
     DCArrayKokkos<real_t> elem_geo_volfrac_region_fills(mesh.num_elems,max_num_mats_per_elem);  // the geo volfracs for all region fills in an element
     // NOTE: more then one material can be painted on a region, so for instance, elem_geo_volfrac_reg of 2 might apply to 4 materials
-    elem_geo_volfrac_region_fills.set_values((real_t)0.0);  // initialized to zero
+    elem_geo_volfrac_region_fills.set_values(0.0);  // initialized to zero
 
     
     // ----------------------------------------------------------------------------
@@ -375,14 +375,14 @@ void fill_regions(
         switch (region_fills_host(reg_id).volume) {
             case region::global:
             {
-                elem_geo_volfrac_a_fill.set_values((real_t)1.0);
+                elem_geo_volfrac_a_fill.set_values(1.0);
                 Kokkos::fence();
                 break;
             } // end case
             // ---
             case region::box:
             {
-                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
 
 
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -409,7 +409,7 @@ void fill_regions(
             // ---
             case region::cylinder:
             {
-                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
 
                 RUN({
                     const real_t unit_x = region_fills(reg_id).unit_vector[0];
@@ -479,7 +479,7 @@ void fill_regions(
             // ---
             case region::cone:
             {
-                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
 
                 RUN({
                     const real_t unit_x = region_fills(reg_id).unit_vector[0];
@@ -577,7 +577,7 @@ void fill_regions(
             case region::sphere:
             {
 
-                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
             
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
@@ -605,7 +605,7 @@ void fill_regions(
             case region::readVoxelFile:
             {
 
-                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
 
                 // read voxel mesh to get the values in the fcn interface
                 // voxel_elem_mat_id is read here
@@ -663,7 +663,7 @@ void fill_regions(
             // ---
             case region::readSTLFile:
             {
-                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
 
                 // read .STL file and paint vol fractions on mesh
                 int paint_sucessful = paint_stl_on_mesh(elem_geo_volfrac_a_fill, 
@@ -1297,7 +1297,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
 
     // --- set the level set field ---
     if( State.GaussPoints.level_set.size()>0 ){
-        State.GaussPoints.level_set.set_values((real_t)1.0e32); // make level set have a default huge
+        State.GaussPoints.level_set.set_values(1.0e32); // make level set have a default huge
         Kokkos::fence();
         State.GaussPoints.level_set.update_host();
     }

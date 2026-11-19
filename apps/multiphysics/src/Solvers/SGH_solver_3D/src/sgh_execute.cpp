@@ -344,7 +344,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 
                 // compute the shock detector at each gauss point for each material
-                State.GaussPoints.shock_detector.set_values((real_t)0.0);
+                State.GaussPoints.shock_detector.set_values(0.0);
                 MATAR_FENCE();
 
                 MachShockDetector::detect_shock(mesh,
@@ -428,7 +428,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 // ---- Calculate boundary and body forces ---- //
                 // setting nodal force to zero here, 
                 // the node force stores the BCs supplied forces and body forces
-                State.node.force.set_values((real_t)0.0);
+                State.node.force.set_values(0.0);
 
                 // call stress BC's routine
                 boundary_stress(mesh, 
@@ -439,7 +439,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             } else {
                 // kinematics-only: start forces at zero (you can still add cohesive forces below)
-                State.node.force.set_values((real_t)0.0);
+                State.node.force.set_values(0.0);
                 set_corner_force_zero(mesh, State.corner.force);
             }
 

@@ -166,7 +166,7 @@ void SGH3D::boundary_fracture_force(State_t& State, swage::Mesh_t &mesh, const r
     reset_delta_internal_vars(cohesive_zones_bank.delta_internal_vars);
 
     // reset F_cz for this stage
-    cohesive_zones_bank.F_cz.set_values((real_t)0.0);
+    cohesive_zones_bank.F_cz.set_values(0.0);
 
     // compute cohesive forces (orientation, openings, constitutive, loads)
     compute_cohesive_zone_nodal_forces(

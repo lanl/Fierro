@@ -211,19 +211,19 @@ void cohesive_zones_t::initialize_fracture_bc(
     } else {
         // allocate minimal array to avoid null issues (debug aid)
         prony_params = CArrayKokkos<real_t>(1, 2, "cz_prony_params_empty");
-        prony_params.set_values((real_t)0.0);
+        prony_params.set_values(0.0);
     }
 
     // ensure persistent storage for cohesive internal vars
     // internal_vars = persistent history carried across full tme steps
     const int width = 4 + num_prony_terms;
     internal_vars = CArrayKokkos<real_t>(npairs, width, "cz_internal_vars");
-    internal_vars.set_values((real_t)0.0);
+    internal_vars.set_values(0.0);
 
     // ensure persistent storage for cohesive delta internal vars
     // delta_internal_vars = stage local predicted updates for current RK stage
     delta_internal_vars = CArrayKokkos<real_t>(npairs, width, "cz_delta_internal_vars");
-    delta_internal_vars.set_values((real_t)0.0);
+    delta_internal_vars.set_values(0.0);
 
     // this node gather map (thread safe force accumulation) algorithm will eventually be replaced by Nathaniels parallel algorithm: build_multi_node_connectivity
     // node gather map (built once) so cohesive_zone_loads can gather pairwise forces to nodes without atomics
@@ -322,7 +322,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
     DCArrayKokkos<real_t> reorient_params(5, "reorient_params");
     DCArrayKokkos<int> found_reorient(1, "found_reorient");
     found_reorient.set_values(0); // initialize to zero
-    reorient_params.set_values((real_t)0.0); // initialize to zero
+    reorient_params.set_values(0.0); // initialize to zero
 
     // local references for device access, so RUN kernel can read BC data
     auto bc_enums = BoundaryConditions.BoundaryConditionEnums;
@@ -412,7 +412,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
 // zero out delta_internal_vars at the strat of each RK stage
 void reset_delta_internal_vars(CArrayKokkos<real_t>& delta_internal_vars)
 {
-    delta_internal_vars.set_values((real_t)0.0);
+    delta_internal_vars.set_values(0.0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1388,7 +1388,7 @@ void cohesive_zone_loads(
 )
 {
     // zero out the cohesive zone force vector
-    F_cz.set_values((real_t)0.0);
+    F_cz.set_values(0.0);
 
     const size_t num_nodes_coords = node_coords.dims(0);
     const size_t num_elems = nodes_in_elem.dims(0);
@@ -1398,7 +1398,7 @@ void cohesive_zone_loads(
     auto pair_force_dev = pair_force;
 
     // zero the per-pair force buffer so skipped/invalid pairs dont't contribute
-    pair_force.set_values((real_t)0.0);
+    pair_force.set_values(0.0);
 
     // phase 1 (parallel over pairs): compute the per-pair cohesive force vector F into pair_force(i, 0..2)
     // node A receives +F and node B receives -F
@@ -1727,7 +1727,7 @@ void compute_cohesive_zone_nodal_forces(
 
     // 1) cohesive zone interface orientation (normal at t and t+dt)
     CArrayKokkos<real_t> cz_orientation(npairs, 6, "cz_orientation");
-    cz_orientation.set_values((real_t)0.0);
+    cz_orientation.set_values(0.0);
 
     // calling the function oriented()
     // computes cohesive zone interface orientation (normal at t and t+dt) for each cohesive zone node pair
@@ -1743,7 +1743,7 @@ void compute_cohesive_zone_nodal_forces(
     // 2) local openings (un_t, utan_t, un_tdt, utan_tdt)
     // map global nodal motion to local cohesive zone openings for each pair
     CArrayKokkos<real_t> local_opening(npairs, 4, "cz_local_opening");
-    local_opening.set_values((real_t)0.0);
+    local_opening.set_values(0.0);
 
     // calling the function ucmap()
     // maps global nodal motion to local cohesive zone openings for each cohesive zone node pair
@@ -1774,7 +1774,7 @@ void compute_cohesive_zone_nodal_forces(
 
     // 4) assemble cohesive zone nodal forces
     CArrayKokkos<real_t> pair_area(npairs, "cz_pair_area");
-    pair_area.set_values((real_t)0.0);
+    pair_area.set_values(0.0);
 
     // F_cz should already be sized and zeroed by caller
     cohesive_zone_loads(

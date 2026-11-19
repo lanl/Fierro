@@ -50,7 +50,7 @@ void assemble_lumped_mass(const DCArrayKokkos<size_t>& nodes_in_elem,
     });
     Kokkos::fence();
 
-    node_mass.set_values((real_t)0.0);
+    node_mass.set_values(0.0);
     Kokkos::fence();
 
     FOR_ALL(elem_gid, 0, num_elems, {
@@ -366,7 +366,7 @@ void apply_force_mult_transpose(const DCArrayKokkos<size_t>& nodes_in_elem,
 
     // I(g) = sum_k sum_e grad_xi_e(v_k)(g) * stress_jinvt(g, e, k)
     DCArrayKokkos<real_t> I(num_gauss_pts, "ao_sgh_forceT_I");
-    I.set_values((real_t)0.0);
+    I.set_values(0.0);
     Kokkos::fence();
 
     CArrayKokkos<real_t> v_elem(num_elems, nk, nk, nk, "ao_sgh_forceT_v");
@@ -727,7 +727,7 @@ void apply_kine_mass_consistent(const DCArrayKokkos<size_t>& nodes_in_elem,
     CArrayKokkos<real_t> U (num_elems, nk, nq, nq, "ao_sgh_kmass_U");
     CArrayKokkos<real_t> V (num_elems, nk, nk, nq, "ao_sgh_kmass_V");
 
-    vec_out.set_values((real_t)0.0);
+    vec_out.set_values(0.0);
     Kokkos::fence();
 
     for (size_t d = 0; d < 3; ++d) {

@@ -712,9 +712,9 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     DCArrayKokkos<real_t> src_w_qpt   (num_gauss_pts,       "ao_sgh_src_w_qpt");
     DCArrayKokkos<real_t> e_source    (mesh.num_elems, n_thermo_per_elem, "ao_sgh_e_source");
     DCArrayKokkos<real_t> visc_coeff  (num_gauss_pts,       "ao_sgh_visc_coeff");
-    ones_at_qpt.set_values((real_t)1.0);
-    visc_coeff.set_values((real_t)0.0);
-    e_source.set_values((real_t)0.0);
+    ones_at_qpt.set_values(1.0);
+    visc_coeff.set_values(0.0);
+    e_source.set_values(0.0);
     Kokkos::fence();
 
     // Pre-step snapshot of the evolved state (x, v, e) for step rejection.
@@ -834,7 +834,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         compute_stress_jinvt(sigma_qpt, State.GaussPoints.jac_inv, State.GaussPoints.detj,
                              quad, mesh.num_elems, stress_jinvt);
 
-        State.node.force.set_values((real_t)0.0);
+        State.node.force.set_values(0.0);
         Kokkos::fence();
         apply_force_mult(mesh.nodes_in_elem, stress_jinvt, ones_at_qpt,
                          kine_ref, quad, mesh.num_elems, State.node.force);

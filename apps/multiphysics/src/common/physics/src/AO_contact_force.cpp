@@ -189,7 +189,7 @@ void assemble_contact_forces(const size_t num_active,
                              const CArrayKokkos<real_t>& dof_positions_1d,
                              CArrayKokkos<real_t>& contact_forces)
 {
-    contact_forces.set_values((real_t)0.0);
+    contact_forces.set_values(0.0);
     Kokkos::fence();
 
     if (num_active == 0) return;
@@ -872,7 +872,7 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
 
         // no pairs this load step
         if (num_active == 0) {
-            contact_forces.set_values((real_t)0.0);
+            contact_forces.set_values(0.0);
             Kokkos::fence();
             settled = true;
             break;

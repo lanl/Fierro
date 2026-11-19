@@ -320,11 +320,11 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // this solver doesn't carry velocity or acceleration
         // velocities are set per load step from the previous step's displacement increment
-        AO_contact_state.bdy_node_vels.set_values((real_t)0.0);
-        AO_contact_state.bdy_node_accels.set_values((real_t)0.0);
+        AO_contact_state.bdy_node_vels.set_values(0.0);
+        AO_contact_state.bdy_node_accels.set_values(0.0);
 
         prev_displacement_step = CArrayKokkos<real_t>(mesh.num_nodes, 3, "prev_displacement_step");
-        prev_displacement_step.set_values((real_t)0.0);
+        prev_displacement_step.set_values(0.0);
         Kokkos::fence();
 
         // ---------------------------------------------------------------
@@ -335,7 +335,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---------------------------------------------------------------
         CArrayKokkos<real_t> scratch_disp(mesh.num_nodes, 3, "contact_scratch_disp");
         constrained_dof.set_values(false);
-        scratch_disp.set_values((real_t)0.0);
+        scratch_disp.set_values(0.0);
         Kokkos::fence();
 
         boundary_displacement(mesh, BoundaryConditions, constrained_dof, scratch_disp, dt, time_value, time_start, time_end);

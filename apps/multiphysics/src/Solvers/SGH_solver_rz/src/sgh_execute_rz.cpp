@@ -265,7 +265,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                            State.GaussPoints.vol);
                            
             // compute the shock detector at each gauss point for each material
-            State.GaussPoints.shock_detector.set_values((real_t)0.0);
+            State.GaussPoints.shock_detector.set_values(0.0);
             MATAR_FENCE();
 
             MachShockDetectorRZ::detect_shock(mesh,

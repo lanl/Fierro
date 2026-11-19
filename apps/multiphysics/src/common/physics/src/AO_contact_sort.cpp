@@ -157,7 +157,7 @@ void get_bdy_node_mass(const size_t num_nodes,
     // ---------------------------------------------------------------
     CArrayKokkos<size_t> bdy_lid_in_node(num_nodes, "bdy_lid_in_node");
     bdy_lid_in_node.set_values(num_bdy_nodes);
-    bdy_node_mass.set_values((real_t)0.0);
+    bdy_node_mass.set_values(0.0);
     Kokkos::fence();
 
     FOR_ALL(bdy_node_lid, 0, num_bdy_nodes, {
@@ -364,13 +364,13 @@ void AO_contact_initialize(const size_t num_bdy_nodes,
     bdy_node_vels   = CArrayKokkos<real_t>(num_bdy_nodes, 3, "bdy_node_vels");
     bdy_node_accels = CArrayKokkos<real_t>(num_bdy_nodes, 3, "bdy_node_accels");
     bdy_node_mass   = CArrayKokkos<real_t>(num_bdy_nodes, "bdy_node_mass");
-    bdy_node_mass.set_values((real_t)0.0);
+    bdy_node_mass.set_values(0.0);
 
     // compliance is set by the calling solver (get_dynamic_compliance or get_quasi_static_compliance)
     // constrained dofs are marked by the calling solver; explicit solvers leave them all free
     bdy_node_compliance = CArrayKokkos<real_t>(num_bdy_nodes, 3, "bdy_node_compliance");
     bdy_dof_fixed       = CArrayKokkos<size_t>(num_bdy_nodes, 3, "bdy_dof_fixed");
-    bdy_node_compliance.set_values((real_t)0.0);
+    bdy_node_compliance.set_values(0.0);
     bdy_dof_fixed.set_values(0);
 
     // ---------------------------------------------------------------
@@ -411,8 +411,8 @@ void AO_contact_initialize(const size_t num_bdy_nodes,
     // ---------------------------------------------------------------
     contact_forces      = CArrayKokkos<real_t>(num_bdy_nodes, 3, "contact_forces");
     contact_forces_used = CArrayKokkos<real_t>(num_bdy_nodes, 3, "contact_forces_used");
-    contact_forces.set_values((real_t)0.0);
-    contact_forces_used.set_values((real_t)0.0);
+    contact_forces.set_values(0.0);
+    contact_forces_used.set_values(0.0);
     Kokkos::fence();
 
     return;
