@@ -144,8 +144,8 @@ void lagrange_basis_1d_at(const ViewCArrayKokkos<real_t>& basis_out,
                           const real_t x)
 {
     for (size_t i = 0; i < num_nodes_1d; i++) {
-        real_t numerator   = (real_t)1.0;
-        real_t denominator = (real_t)1.0;
+        real_t numerator   = 1.0;
+        real_t denominator = 1.0;
         for (size_t j = 0; j < num_nodes_1d; j++) {
             if (j != i) {
                 numerator   *= (x - nodes_1d(j));
@@ -323,7 +323,7 @@ void eval_field_at_qpts_3d(const ref_elem_t&                 ref,
     for (size_t k = 0; k < nd; k++) {
         for (size_t j = 0; j < nd; j++) {
             for (size_t qx = 0; qx < nq; qx++) {
-                real_t s = (real_t)0.0;
+                real_t s = 0.0;
                 for (size_t i = 0; i < nd; i++) {
                     s += ref.basis_1d(qx, i) * f_dof(i + j * nd + k * nd * nd);
                 }
@@ -335,7 +335,7 @@ void eval_field_at_qpts_3d(const ref_elem_t&                 ref,
     for (size_t k = 0; k < nd; k++) {
         for (size_t qy = 0; qy < nq; qy++) {
             for (size_t qx = 0; qx < nq; qx++) {
-                real_t s = (real_t)0.0;
+                real_t s = 0.0;
                 for (size_t j = 0; j < nd; j++) {
                     s += ref.basis_1d(qy, j) * tmp1(qx + j * nq + k * nq * nd);
                 }
@@ -347,7 +347,7 @@ void eval_field_at_qpts_3d(const ref_elem_t&                 ref,
     for (size_t qz = 0; qz < nq; qz++) {
         for (size_t qy = 0; qy < nq; qy++) {
             for (size_t qx = 0; qx < nq; qx++) {
-                real_t s = (real_t)0.0;
+                real_t s = 0.0;
                 for (size_t k = 0; k < nd; k++) {
                     s += ref.basis_1d(qz, k) * tmp2(qx + qy * nq + k * nq * nq);
                 }
@@ -370,7 +370,7 @@ void eval_field_at_qpts_3d_naive(const ref_elem_t&               ref,
     for (size_t qz = 0; qz < nq; qz++) {
         for (size_t qy = 0; qy < nq; qy++) {
             for (size_t qx = 0; qx < nq; qx++) {
-                real_t s = (real_t)0.0;
+                real_t s = 0.0;
                 for (size_t k = 0; k < nd; k++) {
                     for (size_t j = 0; j < nd; j++) {
                         for (size_t i = 0; i < nd; i++) {

@@ -49,7 +49,7 @@
 
 using namespace mtr;
 
-const real_t PI = (real_t)3.14159265358979323846;
+const real_t PI = 3.14159265358979323846;
 
 
 //
@@ -361,7 +361,7 @@ int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill,
     FOR_ALL(node_gid, 0, num_nodes, {
 
         // initialize to a big value
-        node_sdf(node_gid) = (real_t)1.e32;
+        node_sdf(node_gid) = 1.e32;
         
         // loop over all triangles in the file
         // Note: future work should make this an oct-tree search
@@ -431,7 +431,7 @@ int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill,
     // evaluate SDF at this eval point
     FOR_ALL(elem_gid, 0, num_elems, {
 
-        real_t num_inside_part = (real_t)0.0;
+        real_t num_inside_part = 0.0;
 
         // loop over the eval points in this element
         for(size_t k=0; k<num_eval_pnts_1D; k++){

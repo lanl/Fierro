@@ -182,16 +182,16 @@ KOKKOS_INLINE_FUNCTION
 void tg_velocity(const real_t x, const real_t y, const double /*z*/,
                  real_t& vx, real_t& vy, real_t& vz)
 {
-    const real_t tg_pi = (real_t)3.14159265358979323846;
+    const real_t tg_pi = 3.14159265358979323846;
     vx =  Kokkos::sin(tg_pi * x) * Kokkos::cos(tg_pi * y);
     vy = -Kokkos::cos(tg_pi * x) * Kokkos::sin(tg_pi * y);
-    vz =  (real_t)0.0;
+    vz =  0.0;
 }
 
 KOKKOS_INLINE_FUNCTION
 double tg_sie(const real_t x, const real_t y, const double /*z*/)
 {
-    const real_t tg_two_pi = (real_t)6.283185307179586;
+    const real_t tg_two_pi = 6.283185307179586;
     return (real_t)1.5 + ((real_t)3.0 / (real_t)8.0) * (Kokkos::cos(tg_two_pi * x) + Kokkos::cos(tg_two_pi * y));
 }
 
@@ -200,7 +200,7 @@ double tg_sie(const real_t x, const real_t y, const double /*z*/)
 KOKKOS_INLINE_FUNCTION
 double tg_energy_source(const real_t x, const real_t y, const double /*z*/)
 {
-    const real_t tg_pi = (real_t)3.14159265358979323846;
+    const real_t tg_pi = 3.14159265358979323846;
     return ((real_t)3.0 / (real_t)8.0) * tg_pi * (Kokkos::cos((real_t)3.0 * tg_pi * x) * Kokkos::cos(tg_pi * y)
                                 - Kokkos::cos(tg_pi * x)       * Kokkos::cos((real_t)3.0 * tg_pi * y));
 }
@@ -220,7 +220,7 @@ inline std::vector<double> build_B_kine_at_thermo(const ref_elem_t& kine_ref,
     std::vector<double> B(nt * nk);
     for (size_t i = 0; i < nt; ++i) {
         for (size_t a = 0; a < nk; ++a) {
-            real_t v = (real_t)1.0;
+            real_t v = 1.0;
             for (size_t m = 0; m < nk; ++m) {
                 if (m != a) v *= (xi_thermo[i] - xi_kine[m]) / (xi_kine[a] - xi_kine[m]);
             }
@@ -251,7 +251,7 @@ void interpolate_at_thermo_dofs(FieldFn                            f,
         for (size_t jz = 0; jz < nt; ++jz) {
             for (size_t jy = 0; jy < nt; ++jy) {
                 for (size_t jx = 0; jx < nt; ++jx) {
-                    real_t px = (real_t)0.0, py = (real_t)0.0, pz = (real_t)0.0;
+                    real_t px = 0.0, py = 0.0, pz = 0.0;
                     for (size_t c = 0; c < nk; ++c) {
                         const real_t bz = B[jz * nk + c];
                         for (size_t b = 0; b < nk; ++b) {
@@ -287,9 +287,9 @@ void set_tg_velocity(const MPICArrayKokkos<real_t>&   node_coords,
                      const size_t                   num_nodes)
 {
     FOR_ALL(n, 0, num_nodes, {
-        real_t vx = (real_t)0.0;
-        real_t vy = (real_t)0.0;
-        real_t vz = (real_t)0.0;
+        real_t vx = 0.0;
+        real_t vy = 0.0;
+        real_t vz = 0.0;
         tg_velocity(node_coords(n, 0), node_coords(n, 1), node_coords(n, 2), vx, vy, vz);
         node_vel(n, 0) = vx;
         node_vel(n, 1) = vy;
@@ -951,14 +951,14 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     auto total_energy = [&]() -> double {
         State.node.vel.update_host();
         State.MaterialZones.sie.update_host();
-        real_t ke = (real_t)0.0;
+        real_t ke = 0.0;
         for (size_t n = 0; n < mesh.num_nodes; ++n) {
             const real_t vx = State.node.vel.host(n, 0);
             const real_t vy = State.node.vel.host(n, 1);
             const real_t vz = State.node.vel.host(n, 2);
             ke += (real_t)0.5 * State.node.mass.host(n) * (vx*vx + vy*vy + vz*vz);
         }
-        real_t ie = (real_t)0.0;
+        real_t ie = 0.0;
         const size_t num_zones = mesh.num_elems * n_thermo_per_elem;
         for (size_t z = 0; z < num_zones; ++z) {
             ie += State.MaterialZones.mass.host(mat_id, z)
@@ -1085,7 +1085,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 if (p < pres_min) pres_min = p;
                 if (p > pres_max) pres_max = p;
             }
-            real_t v_max = (real_t)0.0;
+            real_t v_max = 0.0;
             for (size_t n = 0; n < mesh.num_nodes; ++n) {
                 const real_t vx = State.node.vel.host(n, 0);
                 const real_t vy = State.node.vel.host(n, 1);
@@ -1126,11 +1126,11 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         State.MaterialPoints.sie.update_host();
 
         const size_t nq = quad.num_qpts_1d;
-        real_t l1 = (real_t)0.0;
-        real_t l2 = (real_t)0.0;
-        real_t e_l1 = (real_t)0.0;
-        real_t e_l2 = (real_t)0.0;
-        real_t vol = (real_t)0.0;
+        real_t l1 = 0.0;
+        real_t l2 = 0.0;
+        real_t e_l1 = 0.0;
+        real_t e_l2 = 0.0;
+        real_t vol = 0.0;
         for (size_t e = 0; e < mesh.num_elems; ++e) {
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t qy = 0; qy < nq; ++qy) {
@@ -1143,9 +1143,9 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                         const real_t px = State.MaterialPoints.coords.host(mat_id, g, 0);
                         const real_t py = State.MaterialPoints.coords.host(mat_id, g, 1);
                         const real_t pz = State.MaterialPoints.coords.host(mat_id, g, 2);
-                        real_t vex = (real_t)0.0;
-                        real_t vey = (real_t)0.0;
-                        real_t vez = (real_t)0.0;
+                        real_t vex = 0.0;
+                        real_t vey = 0.0;
+                        real_t vez = 0.0;
                         tg_velocity(px, py, pz, vex, vey, vez);
                         const real_t dx = v_qpt.host(g, 0) - vex;
                         const real_t dy = v_qpt.host(g, 1) - vey;

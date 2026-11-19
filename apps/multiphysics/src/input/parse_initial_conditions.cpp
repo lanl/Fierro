@@ -684,7 +684,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         }
                         else {
                             // 2D
-                            z1 = (real_t)0.0;
+                            z1 = 0.0;
                         } //
 
                         // storing the origin values as (x1,y1,z1)
@@ -956,7 +956,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         }
                         else {
                             // 2D
-                            z1 = (real_t)0.0;
+                            z1 = 0.0;
                         } //
 
                         // storing the origin values as (x1,y1,z1)

@@ -75,9 +75,9 @@ static void qstatx_stress(const swage::Mesh_t& mesh,
     const real_t omega = 2*(real_t)3.14159265358979323846*qstatx_stress_bc_global_vars(bdy_set, 1);
     const int dir = int(qstatx_stress_bc_global_vars(bdy_set, 2));
 
-    traction(0) = (real_t)0.0;
-    traction(1) = (real_t)0.0;
-    traction(2) = (real_t)0.0;
+    traction(0) = 0.0;
+    traction(1) = 0.0;
+    traction(2) = 0.0;
 
     traction(dir) = amplitude * Kokkos::sin((time_value+dt-time_start)*omega);
 

@@ -130,7 +130,7 @@ void LevelSet::nodal_gradient(
 
         // initialize grad lvl set to zero
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            node_grad_level_set(node_gid, dim) = (real_t)0.0;
+            node_grad_level_set(node_gid, dim) = 0.0;
         } // end for dim
 
         // loop over all corners around the node and calculate nodal quantities
@@ -155,7 +155,7 @@ void LevelSet::nodal_gradient(
         } // end for corner_lid
 
         // divide by the nodal vol to get the nodal gradient, also calculate its magnitude
-        real_t mag = (real_t)0.0;
+        real_t mag = 0.0;
         for (int dim = 0; dim < mesh.num_dims; dim++) {
             node_grad_level_set(node_gid, dim) /= node_vol;
 
@@ -227,7 +227,7 @@ void LevelSet::update_level_set(
         // it is a 1-point quadrature point element
         size_t gauss_point = elem_gid;
 
-        real_t elem_HJ = (real_t)0.0;  // the right hand side of level set equation, HJ
+        real_t elem_HJ = 0.0;  // the right hand side of level set equation, HJ
 
         // front velocity
         const real_t front_vel = Materials.MaterialFunctions(mat_id).normal_velocity;
@@ -253,7 +253,7 @@ void LevelSet::update_level_set(
             // calculate the norm
 
             // nodal HJ = ||node grad phi||
-            real_t node_HJ = (real_t)0.0;
+            real_t node_HJ = 0.0;
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
                 node_HJ += node_level_set_vel(node_gid, dim) * node_grad_level_set(node_gid, dim); // 
             } // end for dim
@@ -267,7 +267,7 @@ void LevelSet::update_level_set(
             // Get corner gid
             size_t corner_gid = mesh.corners_in_elem(elem_gid, node_lid);  // node_lid = corner_lid
 
-            real_t corner_weight = (real_t)0.0;  // weight = max(0, (vel dot normal)), here the normal is inward to the element
+            real_t corner_weight = 0.0;  // weight = max(0, (vel dot normal)), here the normal is inward to the element
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
                 corner_weight += (front_vel + signum)*node_level_set_vel(node_gid, dim) * corner_normal(corner_gid, dim); 
             } // end for dim

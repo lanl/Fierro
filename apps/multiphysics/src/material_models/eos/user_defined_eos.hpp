@@ -179,7 +179,7 @@ namespace NotionalEOSModel {
                               const RaggedRightArrayKokkos<real_t> &eos_global_vars)
     {
         // pressure of a void is 0
-        MaterialPoints_pres(mat_id, mat_pt_lid) = (real_t)0.0;
+        MaterialPoints_pres(mat_id, mat_pt_lid) = 0.0;
 
         return;
     } // end func
@@ -198,7 +198,7 @@ namespace NotionalEOSModel {
     {
 
         // sound speed of a void is 0, machine small must be used for CFL calculation
-        MaterialPoints_sspd(mat_id, mat_pt_lid) = (real_t)1.0e-32;
+        MaterialPoints_sspd(mat_id, mat_pt_lid) = 1.0e-32;
 
         return;
     } // end func

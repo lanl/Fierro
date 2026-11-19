@@ -385,7 +385,7 @@ public:
                 const size_t node_gid = nodes_in_elem(elem_gid, a);
                 for (size_t q = 0; q < 3; q++) {
                     xe[3*a+q] = constrained_dof(node_gid, q) ? (real_t)0.0 : x(node_gid, q);
-                    ye[3*a+q] = (real_t)0.0;
+                    ye[3*a+q] = 0.0;
                 }
             }
 
@@ -405,9 +405,9 @@ public:
                 // so the reduction is not one serial dependency chain (it is summed in a
                 // fixed order, so the result does not depend on the number of threads)
                 real_t s0 = Krow[i] * xi;
-                real_t s1 = (real_t)0.0;
-                real_t s2 = (real_t)0.0;
-                real_t s3 = (real_t)0.0;
+                real_t s1 = 0.0;
+                real_t s2 = 0.0;
+                real_t s3 = 0.0;
                 size_t j = i + 1;
                 for (; j + 3 < n; j += 4) {
                     s0 += Krow[j]   * xe[j];
@@ -460,7 +460,7 @@ public:
     {
         FOR_ALL(node_gid, 0, num_nodes, {
             for (size_t q = 0; q < 3; q++) {
-                y(node_gid, q) = (real_t)0.0;
+                y(node_gid, q) = 0.0;
             }
         });
         Kokkos::fence();

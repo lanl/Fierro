@@ -116,7 +116,7 @@ void TLQS3D::get_r0(
     FOR_ALL(node_gid, 0, num_nodes, {
         const size_t num_elems_in_node = elems_in_node.stride(node_gid);
         for (size_t q = 0; q < 3; q++) {
-            real_t F_val = (real_t)0.0;
+            real_t F_val = 0.0;
             if (!constrained_dof(node_gid, q)) {
                 for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
                     const size_t elem_gid = elems_in_node(node_gid, elem_lid);

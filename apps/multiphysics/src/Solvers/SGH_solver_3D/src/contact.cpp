@@ -554,7 +554,7 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_surf, CArrayKokkos <size_t> bd
     real_t centroid[3];
     for (int i = 0; i < 3; i++)
     {
-        centroid[i] = (real_t)0.0;
+        centroid[i] = 0.0;
         for (int j = 0; j < 4; j++)
         {
             centroid[i] += A[i][j];
@@ -581,11 +581,11 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_surf, CArrayKokkos <size_t> bd
     real_t b1[3];
     real_t b2[3];
     real_t p1[2];
-    p1[0] = (real_t)1.0;
-    p1[1] = (real_t)0.0;
+    p1[0] = 1.0;
+    p1[1] = 0.0;
     real_t p2[2];
-    p2[0] = (real_t)0.0;
-    p2[1] = (real_t)1.0;
+    p2[0] = 0.0;
+    p2[1] = 1.0;
     ref_to_physical(p1, A, b1, xi, eta);
     ref_to_physical(p2, A, b2, xi, eta);
 
@@ -954,7 +954,7 @@ void frictionless_increment(ViewCArrayKokkos<real_t> &pair_vars, size_t &contact
                 J[0][2]*(J[1][0]*J[2][1] - J[1][1]*J[2][0]);  // there should be no singularities in this calculation
         if (J_det == (real_t)0.0)
         {
-            pair_vars(6) = (real_t)0.0;
+            pair_vars(6) = 0.0;
             printf("Error: Singularity detected in frictionless_increment\n");
             break;
         }
@@ -1060,7 +1060,7 @@ void distribute_frictionless_force(ViewCArrayKokkos<real_t> &pair_vars, size_t &
     real_t force_scale;
     /* force_scale = (num_pairs_in_node(contact_id)+num_pairs_in_node(contact_surface_map(0))+num_pairs_in_node(contact_surface_map(1))+num_pairs_in_node(contact_surface_map(2))+num_pairs_in_node(contact_surface_map(3)))/5;
     force_scale = 1/force_scale; */
-    force_scale = (real_t)0.2;
+    force_scale = 0.2;
     real_t force_val = force_scale*(pair_vars(6) + corrector_term);
     //std::cout << "increment: " << pair_vars(6) << "   corrector: " << corrector_term << std::endl;
     //std::cout << "increment: " << pair_vars(6) << std::endl;
@@ -1091,8 +1091,8 @@ void distribute_frictionless_force(ViewCArrayKokkos<real_t> &pair_vars, size_t &
                 //surface_node.contact_force(i) += fc_inc_total*normal(i)*phi_k(k);
             }
         }
-        pair_vars(7) = (real_t)0.0;
-        pair_vars(6) = (real_t)0.0;
+        pair_vars(7) = 0.0;
+        pair_vars(6) = 0.0;
     } else
     {
         pair_vars(7) += force_val;
@@ -1130,7 +1130,7 @@ bool should_remove(ViewCArrayKokkos<real_t> &pair_vars,
 {
     if (pair_vars(7) == (real_t)0.0 || Kokkos::fabs(pair_vars(0)) > (real_t)1.0 + edge_tol || Kokkos::fabs(pair_vars(1)) > (real_t)1.0 + edge_tol)
     {
-        pair_vars(7) = (real_t)0.0;
+        pair_vars(7) = 0.0;
         return true;
     } else
     {
@@ -1143,7 +1143,7 @@ bool should_remove(ViewCArrayKokkos<real_t> &pair_vars,
         {
             pair_vars(i+3) = new_normal[i];
         }
-        pair_vars(7) = (real_t)0.0;
+        pair_vars(7) = 0.0;
 
         return false;
     }
@@ -1242,7 +1242,7 @@ bool get_edge_pair(real_t normal1[3], real_t normal2[3], size_t &node_gid, const
     // zero node normal
     for (int i = 0; i < 3; i++)
     {
-        node_normal[i] = (real_t)0.0;
+        node_normal[i] = 0.0;
     }
 
     size_t num_surfs = num_surfs_in_node(contact_id);
@@ -1324,7 +1324,7 @@ void remove_pair(size_t &contact_id, const RaggedRightArrayKokkos <size_t> &node
 {
     node_surf_pairs(contact_id, el_id) = num_bdy_surfs;
     for (int i = 0; i < 8; i++) {
-        pair_vars(contact_id,el_id*8 + i) = (real_t)0.0;
+        pair_vars(contact_id,el_id*8 + i) = 0.0;
     }
 }  // end remove_pair
 
@@ -1554,10 +1554,10 @@ void find_penetrating_nodes(real_t depth_cap, MPICArrayKokkos<real_t> &coords,
             min_edge_len = Kokkos::fmin(min_edge_len, Kokkos::sqrt(Kokkos::pow(coords(nodes_gid[3],0) - coords(nodes_gid[2],0),2) + Kokkos::pow(coords(nodes_gid[3],1) - coords(nodes_gid[2],1),2) + Kokkos::pow(coords(nodes_gid[3],2) - coords(nodes_gid[2],2),2)));
             min_edge_len = Kokkos::fmin(min_edge_len, Kokkos::sqrt(Kokkos::pow(coords(nodes_gid[0],0) - coords(nodes_gid[3],0),2) + Kokkos::pow(coords(nodes_gid[0],1) - coords(nodes_gid[3],1),2) + Kokkos::pow(coords(nodes_gid[0],2) - coords(nodes_gid[3],2),2)));
             // defining a factor for distance cutoff (need to pass preload for here)
-            real_t dist_factor = (real_t)0.1;
+            real_t dist_factor = 0.1;
             if (preload) {
                 // THIS NEEDS TO BE A USER INPUT
-                dist_factor = (real_t)1.0;
+                dist_factor = 1.0;
             }
             
 
@@ -2461,7 +2461,7 @@ void mat_mul(const ViewCArrayKokkos<real_t> &A, const ViewCArrayKokkos<real_t> &
     {
         for (size_t i = 0; i < m; i++)
         {
-            b(i) = (real_t)0.0;
+            b(i) = 0.0;
             for (size_t k = 0; k < n; k++)
             {
                 b(i) += A(i, k)*x(k);
@@ -2474,7 +2474,7 @@ void mat_mul(const ViewCArrayKokkos<real_t> &A, const ViewCArrayKokkos<real_t> &
         {
             for (size_t j = 0; j < p; j++)
             {
-                b(i, j) = (real_t)0.0;
+                b(i, j) = 0.0;
                 for (size_t k = 0; k < n; k++)
                 {
                     b(i, j) += A(i, k)*x(k, j);
@@ -2599,13 +2599,13 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_surf, cons
     eta = CArrayKokkos<real_t>(4);
     RUN_CLASS({
         xi(0) = -(real_t)1.0;
-        xi(1) = (real_t)1.0;
-        xi(2) = (real_t)1.0;
+        xi(1) = 1.0;
+        xi(2) = 1.0;
         xi(3) = -(real_t)1.0;
         eta(0) = -(real_t)1.0;
         eta(1) = -(real_t)1.0;
-        eta(2) = (real_t)1.0;
-        eta(3) = (real_t)1.0;
+        eta(2) = 1.0;
+        eta(3) = 1.0;
     });
 
     // sizing possible nodes and buckets

@@ -253,9 +253,9 @@ void SGH3D::boundary_stress(const swage::Mesh_t&      mesh,
 
             // --- calculate surfaced area ---
             real_t avg_coords[3];
-            avg_coords[0] = (real_t)0.0;
-            avg_coords[1] = (real_t)0.0;
-            avg_coords[2] = (real_t)0.0;
+            avg_coords[0] = 0.0;
+            avg_coords[1] = 0.0;
+            avg_coords[2] = 0.0;
             for (size_t node_lid=0; node_lid<mesh.num_nodes_in_surf; node_lid++){
                 
                 // get the node id
@@ -282,8 +282,8 @@ void SGH3D::boundary_stress(const swage::Mesh_t&      mesh,
             
             // inialize corner surface vector to zero
             for (size_t dim=0; dim<mesh.num_dims; dim++){
-                corn_surf_area_normal(dim) = (real_t)0.0;
-                corn_surf_force(dim) = (real_t)0.0;
+                corn_surf_area_normal(dim) = 0.0;
+                corn_surf_force(dim) = 0.0;
             } // end for dim
 
             real_t vec_a[3];

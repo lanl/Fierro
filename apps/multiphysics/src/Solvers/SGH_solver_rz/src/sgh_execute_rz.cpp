@@ -102,9 +102,9 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
 
     // extensive energy tallies over the entire mesh
-    real_t IE_t0 = (real_t)0.0;
-    real_t KE_t0 = (real_t)0.0;
-    real_t TE_t0 = (real_t)0.0;
+    real_t IE_t0 = 0.0;
+    real_t KE_t0 = 0.0;
+    real_t TE_t0 = 0.0;
 
 
     // the number of materials specified by the user input
@@ -128,8 +128,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
 
     // domain mass for each material (they are at material points)
-    real_t mass_domain_all_mats_t0 = (real_t)0.0;
-    real_t mass_domain_nodes_t0 = (real_t)0.0;
+    real_t mass_domain_all_mats_t0 = 0.0;
+    real_t mass_domain_nodes_t0 = 0.0;
 
     for(size_t mat_id=0; mat_id<num_mats; mat_id++){
 
@@ -502,9 +502,9 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     if (log) log->info("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 
     // ---- Calculate energy tallies ----
-    real_t IE_tend = (real_t)0.0;
-    real_t KE_tend = (real_t)0.0;
-    real_t TE_tend = (real_t)0.0;
+    real_t IE_tend = 0.0;
+    real_t KE_tend = 0.0;
+    real_t TE_tend = 0.0;
 
     // extensive IE
     for(size_t mat_id=0; mat_id<num_mats; mat_id++){
@@ -528,8 +528,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
 
     // domain mass for each material (they are at material points)
-    real_t mass_domain_all_mats_tend = (real_t)0.0;
-    real_t mass_domain_nodes_tend = (real_t)0.0;
+    real_t mass_domain_all_mats_tend = 0.0;
+    real_t mass_domain_nodes_tend = 0.0;
 
     for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
@@ -640,7 +640,7 @@ double sum_domain_node_mass_rz(const swage::Mesh_t& mesh,
 {
     double mass_domain = (real_t)0.0;
     double mass_loc_domain = (real_t)0.0;
-    real_t global_mass = (real_t)0.0;
+    real_t global_mass = 0.0;
 
     FOR_REDUCE_SUM(node_gid, 0, mesh.num_owned_nodes, mass_loc_domain, {
         if(mesh.shared_tally_owned_nodes(node_gid)){
@@ -707,7 +707,7 @@ void calc_node_areal_mass_rz(const swage::Mesh_t& mesh,
     // calculate the nodal areal mass
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
         
-        node_mass(node_gid) = (real_t)0.0;
+        node_mass(node_gid) = 0.0;
 
         if (node_coords(node_gid, 1) > tiny) {
             node_mass(node_gid) = node_extensive_mass(node_gid) / node_coords(node_gid, 1);
@@ -750,7 +750,7 @@ void set_corner_force_zero_rz(const swage::Mesh_t& mesh,
     // set corner force to zero
     FOR_ALL(corner_gid, 0, mesh.num_corners, {
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            corner_force(corner_gid, dim) = (real_t)0.0;
+            corner_force(corner_gid, dim) = 0.0;
         }
     }); // end parallel for corners
 } // end function

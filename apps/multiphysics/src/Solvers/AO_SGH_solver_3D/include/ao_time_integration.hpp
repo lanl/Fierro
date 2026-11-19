@@ -111,10 +111,10 @@ inline IMEXTableau make_rk3hc_a_alpha()
 {
     IMEXTableau t;
     t.num_stages = 4;
-    const real_t b1 = (real_t)0.0;
-    const real_t b2 = (real_t)1.1449072677736679441;
+    const real_t b1 = 0.0;
+    const real_t b2 = 1.1449072677736679441;
     const real_t b3 = -(real_t)1.9300000000000000000;
-    const real_t b4 = (real_t)1.7850927322263320559;
+    const real_t b4 = 1.7850927322263320559;
     t.b = {b1, b2, b3, b4};
     t.A_E = {
         (real_t)0.0,                       (real_t)0.0,                       (real_t)0.0,                      (real_t)0.0,
@@ -265,12 +265,12 @@ public:
         const size_t nt = n_thermo_;
 
         FOR_ALL(n, 0, num_nodes_, {
-            real_t ux = (real_t)0.0;
-            real_t uy = (real_t)0.0;
-            real_t uz = (real_t)0.0;
-            real_t dx = (real_t)0.0;
-            real_t dy = (real_t)0.0;
-            real_t dz = (real_t)0.0;
+            real_t ux = 0.0;
+            real_t uy = 0.0;
+            real_t uz = 0.0;
+            real_t dx = 0.0;
+            real_t dy = 0.0;
+            real_t dz = 0.0;
             for (int j = 0; j < row; ++j) {
                 const real_t a = AE(row, j);
                 ux += a * fs(j, n, 0);
@@ -294,7 +294,7 @@ public:
 
         FOR_ALL(e, 0, num_elems_, {
             for (size_t k = 0; k < nt; ++k) {
-                real_t de = (real_t)0.0;
+                real_t de = 0.0;
                 for (int j = 0; j < row; ++j) {
                     de += AE(row, j) * des(j, e, k);
                 }
@@ -315,9 +315,9 @@ public:
         auto& AI = AI_;
 
         FOR_ALL(n, 0, num_nodes_, {
-            real_t ax = (real_t)0.0;
-            real_t ay = (real_t)0.0;
-            real_t az = (real_t)0.0;
+            real_t ax = 0.0;
+            real_t ay = 0.0;
+            real_t az = 0.0;
             for (int j = 0; j <= row; ++j) {
                 const real_t a = AI(row, j);
                 ax += a * fs(j, n, 0);
@@ -349,12 +349,12 @@ public:
         const size_t nt = n_thermo_;
 
         FOR_ALL(n, 0, num_nodes_, {
-            real_t ax = (real_t)0.0;
-            real_t ay = (real_t)0.0;
-            real_t az = (real_t)0.0;
-            real_t dx = (real_t)0.0;
-            real_t dy = (real_t)0.0;
-            real_t dz = (real_t)0.0;
+            real_t ax = 0.0;
+            real_t ay = 0.0;
+            real_t az = 0.0;
+            real_t dx = 0.0;
+            real_t dy = 0.0;
+            real_t dz = 0.0;
             for (int j = 0; j < S; ++j) {
                 const real_t w = b(j);
                 ax += w * fs(j, n, 0);
@@ -375,7 +375,7 @@ public:
 
         FOR_ALL(e, 0, num_elems_, {
             for (size_t k = 0; k < nt; ++k) {
-                real_t de = (real_t)0.0;
+                real_t de = 0.0;
                 for (int j = 0; j < S; ++j) {
                     de += b(j) * des(j, e, k);
                 }
@@ -510,9 +510,9 @@ public:
 
         // 1. velocity
         FOR_ALL(n, 0, num_nodes_, {
-            real_t dvx = (real_t)0.0;
-            real_t dvy = (real_t)0.0;
-            real_t dvz = (real_t)0.0;
+            real_t dvx = 0.0;
+            real_t dvy = 0.0;
+            real_t dvz = 0.0;
             for (int j = 0; j < J_max; ++j) {
                 const real_t wj = w(row, j);
                 dvx += wj * sa(j, n, 0);
@@ -528,7 +528,7 @@ public:
         // 2. internal energy
         FOR_ALL(e, 0, num_elems_, {
             for (size_t k = 0; k < nt; ++k) {
-                real_t de = (real_t)0.0;
+                real_t de = 0.0;
                 for (int j = 0; j < J_max; ++j) {
                     de += w(row, j) * sde(j, e, k);
                 }
@@ -539,9 +539,9 @@ public:
 
         // 3. position
         FOR_ALL(n, 0, num_nodes_, {
-            real_t dx = (real_t)0.0;
-            real_t dy = (real_t)0.0;
-            real_t dz = (real_t)0.0;
+            real_t dx = 0.0;
+            real_t dy = 0.0;
+            real_t dz = 0.0;
             for (int j = 0; j < J_max; ++j) {
                 const real_t wj = w(row, j);
                 dx += wj * sv(j, n, 0);

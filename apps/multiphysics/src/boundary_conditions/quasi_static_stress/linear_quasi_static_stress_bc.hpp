@@ -78,9 +78,9 @@ static void qstatx_stress(const swage::Mesh_t& mesh,
     const int dir = int(qstatx_stress_bc_global_vars(bdy_set, 3));
 
     // resetting traction output vector
-    traction(0) = (real_t)0.0;
-    traction(1) = (real_t)0.0;
-    traction(2) = (real_t)0.0;
+    traction(0) = 0.0;
+    traction(1) = 0.0;
+    traction(2) = 0.0;
 
     // assigning the linearly interpolated value
     traction(dir) = (slope * qpt_coords(axis) + intercept) * (time_value+dt - time_start) / (time_end - time_start);

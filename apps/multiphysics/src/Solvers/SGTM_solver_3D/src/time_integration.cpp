@@ -176,7 +176,7 @@ void SGTM3D::get_timestep(swage::Mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        real_t dt_cfl = (real_t)1.0; //dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_sid) + fuzz);
+        real_t dt_cfl = 1.0; //dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_sid) + fuzz);
 
         // Thermal diffusivity
         real_t alpha = MaterialPoints_conductivity(mat_id, mat_elem_sid) / 

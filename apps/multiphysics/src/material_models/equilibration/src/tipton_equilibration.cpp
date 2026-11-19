@@ -363,7 +363,7 @@ namespace TiptonEquilibrationModel {
                 else {
                     // single material
                     GaussPoint_pres(gauss_gid) = MaterialPoints_pres(mat_id, mat_point_storage_lid);
-                    GaussPoint_pres_denominator(gauss_gid) = (real_t)1.0;
+                    GaussPoint_pres_denominator(gauss_gid) = 1.0;
                 } // end if
 
             } // end for gauss point loop 
@@ -447,7 +447,7 @@ namespace TiptonEquilibrationModel {
                 size_t mat_point_storage_lid = points_in_mat_elem(mat_elem_sid, gauss_pt_lid);
 
                 // divergence at the Gauss point
-                real_t div = (real_t)0.0;
+                real_t div = 0.0;
                 for (size_t dim=0; dim<mesh.num_dims; dim++){
                     div += GaussPoint_vel_grad(gauss_gid, dim, dim);
                 }
@@ -476,8 +476,8 @@ namespace TiptonEquilibrationModel {
                 } // end if volfrac<1
                 else {
                     // single material 
-                    MaterialPoints_delta_volfrac(mat_id, mat_point_storage_lid) = (real_t)0.0; 
-                    GaussPoint_volfrac_limiter(gauss_gid) = (real_t)1.0;  
+                    MaterialPoints_delta_volfrac(mat_id, mat_point_storage_lid) = 0.0; 
+                    GaussPoint_volfrac_limiter(gauss_gid) = 1.0;  
                 } // end check if multiple materials are present
 
             } // end for gauss point loop 

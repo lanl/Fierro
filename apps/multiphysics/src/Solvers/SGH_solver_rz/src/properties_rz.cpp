@@ -258,13 +258,13 @@ void SGHRZ::update_state_rz(
 
             // apply a void eos if mat_point is eroded
             if (MaterialPoints_eroded(mat_id, mat_point_sid)) {
-                MaterialPoints_pres(mat_id, mat_point_sid) = (real_t)0.0;
-                MaterialPoints_sspd(mat_id, mat_point_sid) = (real_t)1.0e-32;
-                MaterialPoints_den(mat_id, mat_point_sid) = (real_t)1.0e-32;
+                MaterialPoints_pres(mat_id, mat_point_sid) = 0.0;
+                MaterialPoints_sspd(mat_id, mat_point_sid) = 1.0e-32;
+                MaterialPoints_den(mat_id, mat_point_sid) = 1.0e-32;
 
                 for (size_t i = 0; i < 3; i++) {
                     for (size_t j = 0; j < 3; j++) {
-                        MaterialPoints_stress(mat_id, mat_point_sid, i, j) = (real_t)0.0;
+                        MaterialPoints_stress(mat_id, mat_point_sid, i, j) = 0.0;
                     }
                 }  // end for i,j
             } // end if on eroded

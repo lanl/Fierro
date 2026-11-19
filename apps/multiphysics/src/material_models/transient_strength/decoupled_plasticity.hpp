@@ -62,7 +62,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 namespace HypoPlasticityModel {
 
-    const real_t fuzz = (real_t)1.e-16;
+    const real_t fuzz = 1.e-16;
     
     /**
      * @brief Initialize the strength state variables for the material points.
@@ -293,7 +293,7 @@ namespace HypoPlasticityModel {
         }
         
         // scale to be on the yield surface, J2 plasticity
-        real_t J2 = (real_t)0.0;
+        real_t J2 = 0.0;
         
         for (int i = 0; i < num_dims; i++) {
             for (int j = 0; j < num_dims; j++) {
@@ -356,7 +356,7 @@ namespace HypoPlasticityModel {
 /////////////////////////////////////////////////////////////////////////////
 namespace HypoPlasticityRZModel {
 
-    const real_t fuzz = (real_t)1.e-16;
+    const real_t fuzz = 1.e-16;
 
     /**
      * @brief Initialize the strength state variables for the material points (RZ version).
@@ -471,8 +471,8 @@ namespace HypoPlasticityRZModel {
         }
 
         // subtract 1/3*trace*I from the stress tensor to get the stress deviators
-        real_t trace_n = (real_t)0.0;
-        real_t trace = (real_t)0.0;
+        real_t trace_n = 0.0;
+        real_t trace = 0.0;
         for (int i = 0; i < 3; i++) {
         trace_n += s_dev_n(i, i);
         trace += s_dev(i, i);
@@ -596,7 +596,7 @@ namespace HypoPlasticityRZModel {
             
 
             // scale to be on the yield surface, J2 plasticity
-            real_t J2 = (real_t)0.0;
+            real_t J2 = 0.0;
 
             for (int i = 0; i < 3; i++) {
                 for (int j = 0; j < 3; j++) {
@@ -625,10 +625,10 @@ namespace HypoPlasticityRZModel {
             }
             
 
-            stress(0, 2) = (real_t)0.0;
-            stress(1, 2) = (real_t)0.0;
-            stress(2, 0) = (real_t)0.0;
-            stress(2, 1) = (real_t)0.0;
+            stress(0, 2) = 0.0;
+            stress(1, 2) = 0.0;
+            stress(2, 0) = 0.0;
+            stress(2, 1) = 0.0;
         }
         else {
                 
@@ -638,13 +638,13 @@ namespace HypoPlasticityRZModel {
                                         + s_dev_n(0, 1)*((W(0, 1) * s_dev(1, 0)) - (s_dev(0, 1) * W(1, 0)));
             stress_dev_rhs(0, 1) = (G_stress * D(0, 1)) + ((s_dev_n(0, 1)*((((D(0, 0)*s_dev(0, 1))+(s_dev(0, 0)*D(0, 1))) + ((D(0, 1)*s_dev(1, 1))+(s_dev(0, 1)*D(1, 1))))))
                                     - term*(((W(0, 0) * s_dev(0, 1)) - (s_dev(0, 0) * W(0, 1)))+ ((W(0, 1)*s_dev(1, 1))-(s_dev(0, 1)*W(1, 1)))));
-            stress_dev_rhs(0, 2) = (real_t)0.0;
+            stress_dev_rhs(0, 2) = 0.0;
             stress_dev_rhs(1, 0) = (G_stress * D(1, 0)) + ((s_dev_n(1, 0)*((((D(1, 0)*s_dev(0, 0))+(s_dev(1, 0)*D(0, 0))) + ((D(1, 1)*s_dev(1, 0))+(s_dev(1, 1)*D(1, 0))))))
                                     - term*(((W(1, 0) * s_dev(0, 0)) - (s_dev(1, 0) * W(0, 0))) + ((W(1, 1)*s_dev(1, 0))-(s_dev(1, 1)*W(1, 0)))));
             stress_dev_rhs(1, 1) = ((real_t)2.0 * G_stress * (D(1, 1) - ((div / (real_t)3.0)*eye(1, 1)))) + ((W(1, 0) * s_dev(0, 1)) - (s_dev(1, 0) * W(0, 1)));
-            stress_dev_rhs(1, 2) = (real_t)0.0;
-            stress_dev_rhs(2, 0) = (real_t)0.0;
-            stress_dev_rhs(2, 1) = (real_t)0.0;
+            stress_dev_rhs(1, 2) = 0.0;
+            stress_dev_rhs(2, 0) = 0.0;
+            stress_dev_rhs(2, 1) = 0.0;
             stress_dev_rhs(2, 2) = ((real_t)2.0 * G_stress * (D(2, 2) - ((div / (real_t)3.0)*eye(2, 2))));
 
             // calculate the next stress
@@ -655,7 +655,7 @@ namespace HypoPlasticityRZModel {
             }
 
             // scale to be on the yield surface, J2 plasticity
-            real_t J2 = (real_t)0.0;
+            real_t J2 = 0.0;
             
             for (int i = 0; i < num_dims; i++) {
                 for (int j = 0; j < num_dims; j++) {
@@ -681,12 +681,12 @@ namespace HypoPlasticityRZModel {
             // set the new stress
             stress(0, 0) = s_dev(0, 0);
             stress(0, 1) = s_dev(0, 1);
-            stress(0, 2) = (real_t)0.0;
+            stress(0, 2) = 0.0;
             stress(1, 0) = s_dev(0, 1);
             stress(1, 1) = s_dev(1, 1);
-            stress(1, 2) = (real_t)0.0;
-            stress(2, 0) = (real_t)0.0;
-            stress(2, 1) = (real_t)0.0;
+            stress(1, 2) = 0.0;
+            stress(2, 0) = 0.0;
+            stress(2, 1) = 0.0;
             stress(2, 2) = s_dev(2, 2);
         
         }

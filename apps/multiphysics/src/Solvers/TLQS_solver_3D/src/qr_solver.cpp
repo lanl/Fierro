@@ -149,7 +149,7 @@ void TLQS3D::QR_decompose(const CArrayKokkos<real_t> &A,
 
         FOR_FIRST(jj, i+1, n_active, {
 
-            R(i,jj) = (real_t)0.0;
+            R(i,jj) = 0.0;
 
             double sum=0;
             double sum_lcl = 0;
@@ -186,7 +186,7 @@ double TLQS3D::QR_determinant(const FArrayKokkos<real_t> &Q,
     // Q(m,n,"Q");
     // R(n,n,"R");
 
-    real_t detR = (real_t)1.0;
+    real_t detR = 1.0;
     int signQ = 1;
 
     // Accumulate det(R) and track sign adjustments

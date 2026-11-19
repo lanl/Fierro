@@ -147,14 +147,14 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     // ---- Set up sphere to act as a moving heat source ---- //
     DCArrayKokkos<real_t> sphere_position(3, "sphere_position");
 
-    sphere_position.host(0) = (real_t)0.0;
-    sphere_position.host(1) = (real_t)0.0;
-    sphere_position.host(2) = (real_t)0.0;
+    sphere_position.host(0) = 0.0;
+    sphere_position.host(1) = 0.0;
+    sphere_position.host(2) = 0.0;
     sphere_position.update_device();
 
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        State.node.q_transfer(node_gid) = (real_t)0.0;
+        State.node.q_transfer(node_gid) = 0.0;
     }); // end for parallel for over nodes
 
     // ---- Update the material properties ---- //
@@ -263,7 +263,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // ---- Initialize the nodal flux to zero for this RK stage ---- //
             FOR_ALL(node_gid, 0, mesh.num_nodes, {
-                State.node.q_transfer(node_gid) = (real_t)0.0;
+                State.node.q_transfer(node_gid) = 0.0;
             }); // end for parallel for over nodes
 
             // ---- Calculate the corner heat flux from conduction per material ---- //
@@ -368,9 +368,9 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---- Move heat source ---- //
         if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source) {
             RUN({
-                real_t x = (real_t)0.0;
-                real_t y = (real_t)0.0;
-                real_t z = (real_t)0.0;
+                real_t x = 0.0;
+                real_t y = 0.0;
+                real_t z = 0.0;
                 path.get_position(time_value, x, y, z);
                 sphere_position(0) = x;
                 sphere_position(1) = y;

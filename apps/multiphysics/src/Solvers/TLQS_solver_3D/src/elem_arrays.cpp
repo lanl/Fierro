@@ -53,7 +53,7 @@ void TLQS3D::get_gradients(
     real_t J[3][3];
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            J[i][j] = (real_t)0.0;
+            J[i][j] = 0.0;
         }
     }
 
@@ -90,7 +90,7 @@ void TLQS3D::get_gradients(
     // du_i / dX_j
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            grad_u[i][j] = (real_t)0.0;
+            grad_u[i][j] = 0.0;
         }
     }
 
@@ -300,7 +300,7 @@ void TLQS3D::tally_elem_arrays(
 
     // K2_row is kept all zero except (at most) one entry per 3x3 block, see the row loop below
     for (int col = 0; col < num_dofs; col++) {
-        k2_row[col] = (real_t)0.0;
+        k2_row[col] = 0.0;
     }
 
     // temp arrays for forming element matrix
@@ -319,7 +319,7 @@ void TLQS3D::tally_elem_arrays(
         // Used in inner loop as: K1(3a+p, 3b+q) = sum_m CtB1_a[m][p] * B1_b[m][q]
         for (int i = 0; i < 6; i++) {
             for (int j = 0; j < 3; j++) {
-                CT_matmul_B1_a[i][j] = (real_t)0.0;
+                CT_matmul_B1_a[i][j] = 0.0;
             }
         }
         for (int n = 0; n < num_C_nonzero; n++) {
@@ -341,7 +341,7 @@ void TLQS3D::tally_elem_arrays(
         // Fel: Fel(3a+p) -= weight * sum_k B1_a[k][p] * PK2[k]
         // minus because Fel = boundarcy forces - current force in the element aka Fel = F02 - F01
         for (int p = 0; p < 3; p++) {
-            real_t fel_val = (real_t)0.0;
+            real_t fel_val = 0.0;
             for (int k = 0; k < 6; k++) {
                 fel_val += B1(k, 3*a+p) * PK2_curr_config[k];
             }
@@ -371,7 +371,7 @@ void TLQS3D::tally_elem_arrays(
             if (p > 0) {
                 for (int b = a; b < num_nodes; b++) {
                     k2_row[3*b+p]   = k2_row[3*b+p-1];
-                    k2_row[3*b+p-1] = (real_t)0.0;
+                    k2_row[3*b+p-1] = 0.0;
                 }
             }
 
@@ -420,7 +420,7 @@ void TLQS3D::tally_elem_arrays(
         // reset the q==2 slots so K2_row is all zero again for the next node a
         // (only the slots of nodes b >= a were written)
         for (int b = a; b < num_nodes; b++) {
-            k2_row[3*b+2] = (real_t)0.0;
+            k2_row[3*b+2] = 0.0;
         }
 
     }

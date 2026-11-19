@@ -272,7 +272,7 @@ void geometry::get_vol_quad(const DCArrayKokkos<real_t>& elem_vol,
     const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
-    elem_vol(elem_gid) = (real_t)0.0;
+    elem_vol(elem_gid) = 0.0;
 
     const size_t num_nodes = 4;
 
@@ -484,7 +484,7 @@ double geometry::get_area_quad(const size_t   elem_gid,
     const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
-    real_t elem_area = (real_t)0.0;
+    real_t elem_area = 0.0;
 
     const size_t num_nodes = 4;
 
@@ -537,7 +537,7 @@ double geometry::heron(const real_t x1,
 {
     real_t S, a, b, c, area;
 
-    S  = (real_t)0.0;
+    S  = 0.0;
     a  = Kokkos::sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
     S += a;
     b  = Kokkos::sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
@@ -583,7 +583,7 @@ void geometry::get_area_weights2D(const ViewCArrayKokkos<real_t>& corner_areas,
     ViewCArrayKokkos<real_t> y(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    rc = zc = (real_t)0.0;
+    rc = zc = 0.0;
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(elem_node_gids(node_lid), 1);

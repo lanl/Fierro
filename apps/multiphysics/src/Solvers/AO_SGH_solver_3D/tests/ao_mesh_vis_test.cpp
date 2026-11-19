@@ -117,13 +117,13 @@ static void apply_tg_vortex_inline(const MPICArrayKokkos<real_t>& coords,
                                    MPICArrayKokkos<real_t>&       vel,
                                    const size_t                 num_nodes)
 {
-    const real_t PI = (real_t)3.14159265358979323846;
+    const real_t PI = 3.14159265358979323846;
     for (size_t n = 0; n < num_nodes; ++n) {
         const real_t x = coords.host(n, 0);
         const real_t y = coords.host(n, 1);
         vel.host(n, 0) =  Kokkos::sin(PI * x) * Kokkos::cos(PI * y);
         vel.host(n, 1) = -Kokkos::cos(PI * x) * Kokkos::sin(PI * y);
-        vel.host(n, 2) = (real_t)0.0;
+        vel.host(n, 2) = 0.0;
     }
     vel.update_device();
 }

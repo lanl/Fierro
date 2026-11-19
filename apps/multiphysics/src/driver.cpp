@@ -583,7 +583,7 @@ void Driver::setup_solver_vars(T& a_solver,
     // set the start and ending times
     real_t t_end = this->SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
     if(solver_id==0){
-        a_solver->time_start = (real_t)0.0;
+        a_solver->time_start = 0.0;
 
         if(t_end <= (real_t)1.0e-14){
             // time wasn't set so end the solver at the final time of the calculation

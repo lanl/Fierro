@@ -50,7 +50,7 @@ void TLQS3D::post_process(
     real_t J[3][3];
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            J[i][j] = (real_t)0.0;
+            J[i][j] = 0.0;
         }
     }
 
@@ -90,7 +90,7 @@ void TLQS3D::post_process(
     // du_i / dX_j
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            grad_u[i][j] = (real_t)0.0;
+            grad_u[i][j] = 0.0;
         }
     }
 

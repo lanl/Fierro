@@ -23,7 +23,7 @@ void assemble_lumped_mass(const DCArrayKokkos<size_t>& nodes_in_elem,
         for (size_t qk = 0; qk < nq; ++qk) {
             for (size_t qj = 0; qj < nq; ++qj) {
                 for (size_t a = 0; a < nd; ++a) {
-                    real_t acc = (real_t)0.0;
+                    real_t acc = 0.0;
                     for (size_t qi = 0; qi < nq; ++qi) {
                         const size_t gauss_gid = base + qi + qj * nq + qk * nq * nq;
                         acc += B(qi, a) * rho0_detj0_w(gauss_gid);
@@ -39,7 +39,7 @@ void assemble_lumped_mass(const DCArrayKokkos<size_t>& nodes_in_elem,
         for (size_t qk = 0; qk < nq; ++qk) {
             for (size_t b = 0; b < nd; ++b) {
                 for (size_t a = 0; a < nd; ++a) {
-                    real_t acc = (real_t)0.0;
+                    real_t acc = 0.0;
                     for (size_t qj = 0; qj < nq; ++qj) {
                         acc += B(qj, b) * U(elem_gid, a, qj, qk);
                     }
@@ -97,7 +97,7 @@ void compute_stress_jinvt(const DCArrayKokkos<real_t>& sigma_qpt,
 
                     for (size_t vd = 0; vd < 3; ++vd) {
                         for (size_t gd = 0; gd < 3; ++gd) {
-                            real_t acc = (real_t)0.0;
+                            real_t acc = 0.0;
                             for (size_t r = 0; r < 3; ++r) {
                                 acc += sigma_qpt(g, vd, r) * jac_inv(g, gd, r);
                             }
@@ -132,7 +132,7 @@ void reconstruct_thermo_at_qpts(const DCArrayKokkos<real_t>& coef_per_elem,
         for (size_t lz = 0; lz < nt; ++lz) {
             for (size_t ly = 0; ly < nt; ++ly) {
                 for (size_t qx = 0; qx < nq; ++qx) {
-                    real_t acc = (real_t)0.0;
+                    real_t acc = 0.0;
                     for (size_t lx = 0; lx < nt; ++lx) {
                         const size_t lex = lx + ly * nt + lz * nt * nt;
                         acc += Bt(qx, lx) * coef_per_elem(elem_gid, lex);
@@ -148,7 +148,7 @@ void reconstruct_thermo_at_qpts(const DCArrayKokkos<real_t>& coef_per_elem,
         for (size_t lz = 0; lz < nt; ++lz) {
             for (size_t qy = 0; qy < nq; ++qy) {
                 for (size_t qx = 0; qx < nq; ++qx) {
-                    real_t acc = (real_t)0.0;
+                    real_t acc = 0.0;
                     for (size_t ly = 0; ly < nt; ++ly) {
                         acc += Bt(qy, ly) * T1(elem_gid, lz, ly, qx);
                     }
@@ -163,7 +163,7 @@ void reconstruct_thermo_at_qpts(const DCArrayKokkos<real_t>& coef_per_elem,
         for (size_t qz = 0; qz < nq; ++qz) {
             for (size_t qy = 0; qy < nq; ++qy) {
                 for (size_t qx = 0; qx < nq; ++qx) {
-                    real_t acc = (real_t)0.0;
+                    real_t acc = 0.0;
                     for (size_t lz = 0; lz < nt; ++lz) {
                         acc += Bt(qz, lz) * T2(elem_gid, lz, qy, qx);
                     }
@@ -225,7 +225,7 @@ void apply_force_mult(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t qy = 0; qy < nq; ++qy) {
                     for (size_t hx = 0; hx < nk; ++hx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t qx = 0; qx < nq; ++qx) {
                             acc += dB(qx, hx) * SX(elem_gid, qz, qy, qx);
                         }
@@ -236,7 +236,7 @@ void apply_force_mult(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t hy = 0; hy < nk; ++hy) {
                     for (size_t hx = 0; hx < nk; ++hx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t qy = 0; qy < nq; ++qy) {
                             acc += B(qy, hy) * U(elem_gid, hx, qy, qz);
                         }
@@ -247,7 +247,7 @@ void apply_force_mult(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t hz = 0; hz < nk; ++hz) {
                 for (size_t hy = 0; hy < nk; ++hy) {
                     for (size_t hx = 0; hx < nk; ++hx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t qz = 0; qz < nq; ++qz) {
                             acc += B(qz, hz) * V(elem_gid, hx, hy, qz);
                         }
@@ -265,7 +265,7 @@ void apply_force_mult(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t qy = 0; qy < nq; ++qy) {
                     for (size_t hx = 0; hx < nk; ++hx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t qx = 0; qx < nq; ++qx) {
                             acc += B(qx, hx) * SY(elem_gid, qz, qy, qx);
                         }
@@ -276,7 +276,7 @@ void apply_force_mult(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t hy = 0; hy < nk; ++hy) {
                     for (size_t hx = 0; hx < nk; ++hx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t qy = 0; qy < nq; ++qy) {
                             acc += dB(qy, hy) * U(elem_gid, hx, qy, qz);
                         }
@@ -287,7 +287,7 @@ void apply_force_mult(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t hz = 0; hz < nk; ++hz) {
                 for (size_t hy = 0; hy < nk; ++hy) {
                     for (size_t hx = 0; hx < nk; ++hx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t qz = 0; qz < nq; ++qz) {
                             acc += B(qz, hz) * V(elem_gid, hx, hy, qz);
                         }
@@ -305,7 +305,7 @@ void apply_force_mult(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t qy = 0; qy < nq; ++qy) {
                     for (size_t hx = 0; hx < nk; ++hx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t qx = 0; qx < nq; ++qx) {
                             acc += B(qx, hx) * SZ(elem_gid, qz, qy, qx);
                         }
@@ -316,7 +316,7 @@ void apply_force_mult(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t hy = 0; hy < nk; ++hy) {
                     for (size_t hx = 0; hx < nk; ++hx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t qy = 0; qy < nq; ++qy) {
                             acc += B(qy, hy) * U(elem_gid, hx, qy, qz);
                         }
@@ -327,7 +327,7 @@ void apply_force_mult(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t hz = 0; hz < nk; ++hz) {
                 for (size_t hy = 0; hy < nk; ++hy) {
                     for (size_t hx = 0; hx < nk; ++hx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t qz = 0; qz < nq; ++qz) {
                             acc += dB(qz, hz) * V(elem_gid, hx, hy, qz);
                         }
@@ -395,7 +395,7 @@ void apply_force_mult_transpose(const DCArrayKokkos<size_t>& nodes_in_elem,
                 for (size_t lz = 0; lz < nk; ++lz) {
                     for (size_t ly = 0; ly < nk; ++ly) {
                         for (size_t qx = 0; qx < nq; ++qx) {
-                            real_t acc = (real_t)0.0;
+                            real_t acc = 0.0;
                             for (size_t lx = 0; lx < nk; ++lx) {
                                 const real_t bx = (e == 0) ? dB(qx, lx) : B(qx, lx);
                                 acc += bx * v_elem(elem_gid, lz, ly, lx);
@@ -411,7 +411,7 @@ void apply_force_mult_transpose(const DCArrayKokkos<size_t>& nodes_in_elem,
                 for (size_t lz = 0; lz < nk; ++lz) {
                     for (size_t qy = 0; qy < nq; ++qy) {
                         for (size_t qx = 0; qx < nq; ++qx) {
-                            real_t acc = (real_t)0.0;
+                            real_t acc = 0.0;
                             for (size_t ly = 0; ly < nk; ++ly) {
                                 const real_t by = (e == 1) ? dB(qy, ly) : B(qy, ly);
                                 acc += by * U(elem_gid, lz, ly, qx);
@@ -427,7 +427,7 @@ void apply_force_mult_transpose(const DCArrayKokkos<size_t>& nodes_in_elem,
                 for (size_t qz = 0; qz < nq; ++qz) {
                     for (size_t qy = 0; qy < nq; ++qy) {
                         for (size_t qx = 0; qx < nq; ++qx) {
-                            real_t acc = (real_t)0.0;
+                            real_t acc = 0.0;
                             for (size_t lz = 0; lz < nk; ++lz) {
                                 const real_t bz = (e == 2) ? dB(qz, lz) : B(qz, lz);
                                 acc += bz * V(elem_gid, lz, qy, qx);
@@ -463,7 +463,7 @@ void apply_force_mult_transpose(const DCArrayKokkos<size_t>& nodes_in_elem,
         for (size_t qz = 0; qz < nq; ++qz) {
             for (size_t qy = 0; qy < nq; ++qy) {
                 for (size_t jx = 0; jx < nt; ++jx) {
-                    real_t acc = (real_t)0.0;
+                    real_t acc = 0.0;
                     for (size_t qx = 0; qx < nq; ++qx) {
                         const size_t local_q = qx + qy * nq + qz * nq * nq;
                         const size_t g       = elem_gid * n_qpts_3d + local_q;
@@ -480,7 +480,7 @@ void apply_force_mult_transpose(const DCArrayKokkos<size_t>& nodes_in_elem,
         for (size_t qz = 0; qz < nq; ++qz) {
             for (size_t jy = 0; jy < nt; ++jy) {
                 for (size_t jx = 0; jx < nt; ++jx) {
-                    real_t acc = (real_t)0.0;
+                    real_t acc = 0.0;
                     for (size_t qy = 0; qy < nq; ++qy) {
                         acc += Bth(qy, jy) * T1(elem_gid, qz, qy, jx);
                     }
@@ -495,7 +495,7 @@ void apply_force_mult_transpose(const DCArrayKokkos<size_t>& nodes_in_elem,
         for (size_t jz = 0; jz < nt; ++jz) {
             for (size_t jy = 0; jy < nt; ++jy) {
                 for (size_t jx = 0; jx < nt; ++jx) {
-                    real_t acc = (real_t)0.0;
+                    real_t acc = 0.0;
                     for (size_t qz = 0; qz < nq; ++qz) {
                         acc += Bth(qz, jz) * T2(elem_gid, qz, jy, jx);
                     }
@@ -530,7 +530,7 @@ void project_qpt_scalar_to_thermo_per_elem(const DCArrayKokkos<real_t>& qpt_fiel
         for (size_t qz = 0; qz < nq; ++qz) {
             for (size_t qy = 0; qy < nq; ++qy) {
                 for (size_t jx = 0; jx < nt; ++jx) {
-                    real_t acc = (real_t)0.0;
+                    real_t acc = 0.0;
                     for (size_t qx = 0; qx < nq; ++qx) {
                         const size_t local_q = qx + qy * nq + qz * nq * nq;
                         const size_t g       = elem_gid * n_qpts_3d + local_q;
@@ -547,7 +547,7 @@ void project_qpt_scalar_to_thermo_per_elem(const DCArrayKokkos<real_t>& qpt_fiel
         for (size_t qz = 0; qz < nq; ++qz) {
             for (size_t jy = 0; jy < nt; ++jy) {
                 for (size_t jx = 0; jx < nt; ++jx) {
-                    real_t acc = (real_t)0.0;
+                    real_t acc = 0.0;
                     for (size_t qy = 0; qy < nq; ++qy) {
                         acc += Bth(qy, jy) * T1(elem_gid, qz, qy, jx);
                     }
@@ -562,7 +562,7 @@ void project_qpt_scalar_to_thermo_per_elem(const DCArrayKokkos<real_t>& qpt_fiel
         for (size_t jz = 0; jz < nt; ++jz) {
             for (size_t jy = 0; jy < nt; ++jy) {
                 for (size_t jx = 0; jx < nt; ++jx) {
-                    real_t acc = (real_t)0.0;
+                    real_t acc = 0.0;
                     for (size_t qz = 0; qz < nq; ++qz) {
                         acc += Bth(qz, jz) * T2(elem_gid, qz, jy, jx);
                     }
@@ -644,7 +644,7 @@ void project_qpt_to_l2_basis(const DCArrayKokkos<real_t>& qpt_field,
                 const size_t jx = jflat % nt;
                 const size_t jy = (jflat / nt) % nt;
                 const size_t jz = jflat / (nt * nt);
-                real_t acc = (real_t)0.0;
+                real_t acc = 0.0;
                 for (size_t qz = 0; qz < nq; ++qz) {
                     for (size_t qy = 0; qy < nq; ++qy) {
                         for (size_t qx = 0; qx < nq; ++qx) {
@@ -750,7 +750,7 @@ void apply_kine_mass_consistent(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t lz = 0; lz < nk; ++lz) {
                 for (size_t ly = 0; ly < nk; ++ly) {
                     for (size_t qx = 0; qx < nq; ++qx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t lx = 0; lx < nk; ++lx) {
                             acc += B(qx, lx) * A(elem_gid, lz, ly, lx);
                         }
@@ -761,7 +761,7 @@ void apply_kine_mass_consistent(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t lz = 0; lz < nk; ++lz) {
                 for (size_t qy = 0; qy < nq; ++qy) {
                     for (size_t qx = 0; qx < nq; ++qx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t ly = 0; ly < nk; ++ly) {
                             acc += B(qy, ly) * T1(elem_gid, lz, ly, qx);
                         }
@@ -772,7 +772,7 @@ void apply_kine_mass_consistent(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t qy = 0; qy < nq; ++qy) {
                     for (size_t qx = 0; qx < nq; ++qx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t lz = 0; lz < nk; ++lz) {
                             acc += B(qz, lz) * T2(elem_gid, lz, qy, qx);
                         }
@@ -790,7 +790,7 @@ void apply_kine_mass_consistent(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t qy = 0; qy < nq; ++qy) {
                     for (size_t hx = 0; hx < nk; ++hx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t qx = 0; qx < nq; ++qx) {
                             acc += B(qx, hx) * Q(elem_gid, qz, qy, qx);
                         }
@@ -801,7 +801,7 @@ void apply_kine_mass_consistent(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t hy = 0; hy < nk; ++hy) {
                     for (size_t hx = 0; hx < nk; ++hx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t qy = 0; qy < nq; ++qy) {
                             acc += B(qy, hy) * U(elem_gid, hx, qy, qz);
                         }
@@ -812,7 +812,7 @@ void apply_kine_mass_consistent(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t hz = 0; hz < nk; ++hz) {
                 for (size_t hy = 0; hy < nk; ++hy) {
                     for (size_t hx = 0; hx < nk; ++hx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t qz = 0; qz < nq; ++qz) {
                             acc += B(qz, hz) * V(elem_gid, hx, hy, qz);
                         }
@@ -874,9 +874,9 @@ void apply_force_mult_naive(const DCArrayKokkos<size_t>& nodes_in_elem,
         for (size_t hz = 0; hz < nk; ++hz) {
             for (size_t hy = 0; hy < nk; ++hy) {
                 for (size_t hx = 0; hx < nk; ++hx) {
-                    real_t acc_x = (real_t)0.0;
-                    real_t acc_y = (real_t)0.0;
-                    real_t acc_z = (real_t)0.0;
+                    real_t acc_x = 0.0;
+                    real_t acc_y = 0.0;
+                    real_t acc_z = 0.0;
                     for (size_t qz = 0; qz < nq; ++qz) {
                         for (size_t qy = 0; qy < nq; ++qy) {
                             for (size_t qx = 0; qx < nq; ++qx) {

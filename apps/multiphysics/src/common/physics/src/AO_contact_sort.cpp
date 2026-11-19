@@ -54,9 +54,9 @@ double get_lebesgue_constant_1d(const CArrayKokkos<real_t>& dof_positions_1d,
         const real_t xi = -(real_t)1.0 + h*double(sample);
 
         // Lebesgue function L(xi) = sum_i |N_i(xi)|
-        real_t L = (real_t)0.0;
+        real_t L = 0.0;
         for (size_t i = 0; i < num_dofs_1d; i++) {
-            real_t Ni = (real_t)1.0;
+            real_t Ni = 1.0;
             for (size_t j = 0; j < num_dofs_1d; j++) {
                 if (j != i) {
                     Ni *= (xi - dof_positions_1d(j))
@@ -84,12 +84,12 @@ void get_surf_overshoot_factor(const CArrayKokkos<real_t>& dof_positions_1d,
     const double lambda_1d = get_lebesgue_constant_1d(dof_positions_1d, num_dofs_1d);
 
     // faces are tensor products in (elem_dims - 1) directions
-    real_t lambda_surf = (real_t)1.0;
+    real_t lambda_surf = 1.0;
     for (size_t dim = 0; dim < elem_dims - 1; dim++) {
         lambda_surf *= lambda_1d;
     }
 
-    const real_t safety = (real_t)1.001; // covers sampling error
+    const real_t safety = 1.001; // covers sampling error
     lebesgue_overshoot = (real_t)0.5*(lambda_surf - (real_t)1.0)*safety;
 
     return;
@@ -183,7 +183,7 @@ void get_bdy_node_mass(const size_t num_nodes,
                 real_t J[3][3];
                 for (size_t i = 0; i < 3; i++) {
                     for (size_t j = 0; j < 3; j++) {
-                        J[i][j] = (real_t)0.0;
+                        J[i][j] = 0.0;
                     }
                 }
                 for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -623,7 +623,7 @@ double get_min_bdy_elem_edge_length(const size_t num_bdy_surfs,
                     const size_t node_b = nodes_in_elem(elem_gid, elements::get_dof_rid(idx_b[0], idx_b[1], idx_b[2], num_dofs_1d));
 
                     // chord length between the two corner vertices
-                    real_t len2 = (real_t)0.0;
+                    real_t len2 = 0.0;
                     for (size_t dim = 0; dim < 3; dim++) {
                         const real_t diff = node_coords(node_b, dim) - node_coords(node_a, dim);
                         len2 += diff*diff;
@@ -811,8 +811,8 @@ void AO_contact_sort(DCArrayKokkos<real_t>& bdy_node_coords,
     FOR_ALL(bdy_node_lid, 0, num_bdy_nodes, {
         for (size_t dim = 0; dim < 3; dim++) {
             bdy_node_coords(bdy_node_lid, dim)     = node_coords(bdy_nodes(bdy_node_lid), dim);
-            contact_forces(bdy_node_lid, dim)      = (real_t)0.0;
-            contact_forces_used(bdy_node_lid, dim) = (real_t)0.0;
+            contact_forces(bdy_node_lid, dim)      = 0.0;
+            contact_forces_used(bdy_node_lid, dim) = 0.0;
         }
         num_pairs_in_node(bdy_node_lid) = 0;
         is_active(bdy_node_lid)         = 0;
@@ -832,7 +832,7 @@ void AO_contact_sort(DCArrayKokkos<real_t>& bdy_node_coords,
     // smallest boundary element per load step; time step control will enforce this later
     // computed before the boxes, which are padded by at least max_gap
     // ---------------------------------------------------------------
-    const real_t max_gap_frac = (real_t)0.4;   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t max_gap_frac = 0.4;   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     max_gap = max_gap_frac*get_min_bdy_elem_edge_length(num_bdy_surfs, num_dofs_1d,
                                                         bdy_surfs, elems_in_surf,
                                                         nodes_in_elem, node_coords);
@@ -966,10 +966,10 @@ void carry_over_pairs(const size_t num_bdy_nodes,
                 contact_pair_vars(bdy_node_lid, num_kept, var) = old_contact_pair_vars(bdy_node_lid, p, var);
             }
             const real_t F_tot = old_contact_pair_vars(bdy_node_lid, p, 5);
-            contact_pair_vars(bdy_node_lid, num_kept, 6) = (real_t)0.0;     // f_inc
+            contact_pair_vars(bdy_node_lid, num_kept, 6) = 0.0;     // f_inc
             contact_pair_vars(bdy_node_lid, num_kept, 7) = F_tot;   // F_prop: no proposal yet this load step
             contact_pair_vars(bdy_node_lid, num_kept, 8) = F_tot;   // F_used
-            contact_pair_vars(bdy_node_lid, num_kept, 9) = (real_t)0.0;     // r_prev (history is reset per load step)
+            contact_pair_vars(bdy_node_lid, num_kept, 9) = 0.0;     // r_prev (history is reset per load step)
             num_kept++;
         } // end for p
 

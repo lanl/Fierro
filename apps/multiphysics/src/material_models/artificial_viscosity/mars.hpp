@@ -113,7 +113,7 @@ namespace MARSDissipationModel {
 
         // initialize to Riemann velocity to zero
         for (size_t dim = 0; dim < num_dims; dim++) {
-            vel_star(dim) = (real_t)0.0;
+            vel_star(dim) = 0.0;
         }
 
         // loop over nodes and calculate an average velocity, which is
@@ -132,11 +132,11 @@ namespace MARSDissipationModel {
 
         // initialize sum term in MARS to zero
         for (size_t i = 0; i < 4; i++) {
-            sum(i) = (real_t)0.0;
+            sum(i) = 0.0;
         }
 
-        real_t mag = (real_t)0.0;       // magnitude of the area normal
-        real_t mag_vel = (real_t)0.0;   // magnitude of velocity
+        real_t mag = 0.0;       // magnitude of the area normal
+        real_t mag_vel = 0.0;   // magnitude of velocity
 
         // loop over the nodes of the elem
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -207,7 +207,7 @@ namespace MARSDissipationModel {
         }
         else{
             for (int i = 0; i < num_dims; i++) {
-                vel_star(i) = (real_t)0.0;
+                vel_star(i) = 0.0;
             }
         } // end if
 
@@ -464,7 +464,7 @@ namespace DirMARSDissipationModel {
 
         // initialize to Riemann velocity to zero
         for (size_t dim = 0; dim < num_dims; dim++) {
-            vel_star(dim) = (real_t)0.0;
+            vel_star(dim) = 0.0;
         }
 
         // loop over nodes and calculate an average velocity, which is
@@ -483,7 +483,7 @@ namespace DirMARSDissipationModel {
 
         // initialize sum term in MARS to zero
         for (size_t i = 0; i < 4; i++) {
-            sum(i) = (real_t)0.0;
+            sum(i) = 0.0;
         }
 
         real_t mag;       // magnitude of the area normal
@@ -573,7 +573,7 @@ namespace DirMARSDissipationModel {
         }
         else{
             for (int i = 0; i < num_dims; i++) {
-                vel_star(i) = (real_t)0.0;
+                vel_star(i) = 0.0;
             }
         } // end if
 
@@ -590,12 +590,12 @@ namespace DirMARSDissipationModel {
         //      phi = 1 first order solution
         //
 
-        real_t phi    = (real_t)0.0;  // the shock detector
-        real_t r_face = (real_t)1.0;  // the ratio on the face
-        real_t r_min  = (real_t)1.0;  // the min ratio for the cell
-        real_t r_coef = (real_t)0.9;  // 0.9; the coefficient on the ratio
+        real_t phi    = 0.0;  // the shock detector
+        real_t r_face = 1.0;  // the ratio on the face
+        real_t r_min  = 1.0;  // the min ratio for the cell
+        real_t r_coef = 0.9;  // 0.9; the coefficient on the ratio
                               //   (1=minmod and 2=superbee)
-        real_t n_coef = (real_t)1.0;  // the power on the limiting coefficient
+        real_t n_coef = 1.0;  // the power on the limiting coefficient
                               //   (1=nominal, and n_coeff > 1 oscillatory)
 
         // loop over the neighboring cells
@@ -619,7 +619,7 @@ namespace DirMARSDissipationModel {
         phi = Kokkos::pow(phi, n_coef);
 
         //  Mach number shock detector
-        real_t omega    = (real_t)20.0; // 20.0;    // weighting factor on Mach number
+        real_t omega    = 20.0; // 20.0;    // weighting factor on Mach number
         real_t third    = (real_t)1.0 / (real_t)3.0;
         real_t c_length = Kokkos::pow(vol, third); // characteristic length
         real_t alpha    = Kokkos::fmin((real_t)1.0, omega * (c_length * Kokkos::fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
@@ -734,7 +734,7 @@ namespace MARSRZDissipationModel {
 
     // initialize to Riemann velocity to zero
     for (size_t dim = 0; dim < num_dims; dim++) {
-        vel_star(dim) = (real_t)0.0;
+        vel_star(dim) = 0.0;
     }
 
     // loop over nodes and calculate an average velocity, which is
@@ -753,7 +753,7 @@ namespace MARSRZDissipationModel {
 
     // initialize sum term in MARS to zero
     for (int i = 0; i < 4; i++) {
-        sum(i) = (real_t)0.0;
+        sum(i) = 0.0;
     }
 
     real_t mag;       // magnitude of the area normal
@@ -824,7 +824,7 @@ namespace MARSRZDissipationModel {
     }
     else{
         for (int i = 0; i < num_dims; i++) {
-            vel_star(i) = (real_t)0.0;
+            vel_star(i) = 0.0;
         }
     } // end if
 
@@ -1046,7 +1046,7 @@ namespace DirMARSRZDissipationModel {
 
     // initialize to Riemann velocity to zero
     for (size_t dim = 0; dim < num_dims; dim++) {
-        vel_star(dim) = (real_t)0.0;
+        vel_star(dim) = 0.0;
     }
 
     // loop over nodes and calculate an average velocity, which is
@@ -1065,7 +1065,7 @@ namespace DirMARSRZDissipationModel {
 
     // initialize sum term in MARS to zero
     for (int i = 0; i < 4; i++) {
-        sum(i) = (real_t)0.0;
+        sum(i) = 0.0;
     }
 
     real_t mag;       // magnitude of the area normal
@@ -1142,7 +1142,7 @@ namespace DirMARSRZDissipationModel {
     }
     else{
         for (int i = 0; i < num_dims; i++) {
-            vel_star(i) = (real_t)0.0;
+            vel_star(i) = 0.0;
         }
     } // end if
 
@@ -1159,12 +1159,12 @@ namespace DirMARSRZDissipationModel {
     //      phi = 1 first order solution
     //
 
-    real_t phi    = (real_t)0.0;  // the shock detector
-    real_t r_face = (real_t)1.0;  // the ratio on the face
-    real_t r_min  = (real_t)1.0;  // the min ratio for the cell
-    real_t r_coef = (real_t)0.9;  // 0.9; the coefficient on the ratio
+    real_t phi    = 0.0;  // the shock detector
+    real_t r_face = 1.0;  // the ratio on the face
+    real_t r_min  = 1.0;  // the min ratio for the cell
+    real_t r_coef = 0.9;  // 0.9; the coefficient on the ratio
                             //   (1=minmod and 2=superbee)
-    real_t n_coef = (real_t)1.0;  // the power on the limiting coefficient
+    real_t n_coef = 1.0;  // the power on the limiting coefficient
                             //   (1=nominal, and n_coeff > 1 oscillatory)
 
     // loop over the neighboring cells
@@ -1188,7 +1188,7 @@ namespace DirMARSRZDissipationModel {
     phi = Kokkos::pow(phi, n_coef);
 
     //  Mach number shock detector
-    real_t omega    = (real_t)20.0; // 20.0;    // weighting factor on Mach number
+    real_t omega    = 20.0; // 20.0;    // weighting factor on Mach number
     real_t c_length = Kokkos::sqrt(elem_area); // characteristic length
     real_t alpha    = Kokkos::fmin((real_t)1.0, omega * (c_length * Kokkos::fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 

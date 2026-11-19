@@ -152,9 +152,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
 
     // extensive energy tallies over the entire mesh
-    real_t IE_t0 = (real_t)0.0;
-    real_t KE_t0 = (real_t)0.0;
-    real_t TE_t0 = (real_t)0.0;
+    real_t IE_t0 = 0.0;
+    real_t KE_t0 = 0.0;
+    real_t TE_t0 = 0.0;
 
     real_t cached_pregraphics_dt = fuzz;
 
@@ -182,7 +182,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         State.MaterialPoints.mass);
 
     // node mass of the domain. 
-    real_t mass_domain_nodes_t0 = (real_t)0.0;
+    real_t mass_domain_nodes_t0 = 0.0;
     mass_domain_nodes_t0 = sum_domain_node_mass(mesh,
                                                 State.node.coords,
                                                 State.node.mass);
@@ -698,9 +698,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         
     // ---- Calculate energy tallies ----
-    real_t IE_tend = (real_t)0.0;
-    real_t KE_tend = (real_t)0.0;
-    real_t TE_tend = (real_t)0.0;
+    real_t IE_tend = 0.0;
+    real_t KE_tend = 0.0;
+    real_t TE_tend = 0.0;
 
     // // extensive IE
     IE_tend = sum_domain_internal_energy(mesh,
@@ -720,14 +720,14 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     if (log) log->info("total energy change = %.15e \n", TE_tend - TE_t0);
 
     // domain mass for each material (they are at material points)
-    real_t mass_domain_all_mats_tend = (real_t)0.0;
+    real_t mass_domain_all_mats_tend = 0.0;
     mass_domain_all_mats_tend = sum_domain_material_mass(
         mesh,
         State.MeshtoMaterialMaps,
         State.MaterialPoints.mass);
 
     // node mass of the domain
-    real_t mass_domain_nodes_tend = (real_t)0.0;
+    real_t mass_domain_nodes_tend = 0.0;
     mass_domain_nodes_tend = sum_domain_node_mass(mesh,
                                                   State.node.coords,
                                                   State.node.mass);
@@ -751,7 +751,7 @@ double max_Eigen3D(const ViewCArrayKokkos<real_t> tensor)
 {
     // Compute largest eigenvalue of a 3x3 tensor
     // Algorithm only works if tensor is symmetric
-    real_t pi  = (real_t)3.141592653589793;
+    real_t pi  = 3.141592653589793;
     size_t dim = tensor.dims(0);
     real_t trace, det;
     trace  = tensor(0, 0) + tensor(1, 1) + tensor(2, 2);
@@ -976,7 +976,7 @@ void set_corner_force_zero(const swage::Mesh_t& mesh,
     // set corner force to zero
     FOR_ALL(corner_gid, 0, mesh.num_corners, {
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            corner_force(corner_gid, dim) = (real_t)0.0;
+            corner_force(corner_gid, dim) = 0.0;
         }
     }); // end parallel for corners
 } // end function

@@ -75,7 +75,7 @@ void SGH3D::update_energy(const real_t rk_alpha,
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_sid = mat_elem_sid;
 
-        real_t MaterialPoints_power = (real_t)0.0;
+        real_t MaterialPoints_power = 0.0;
 
         // --- tally the contribution from each corner to the element ---
 

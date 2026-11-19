@@ -64,7 +64,7 @@ void SGHRZ::update_velocity_rz(
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
         real_t node_force[3];
         for (size_t dim = 0; dim < num_dims; dim++) {
-            node_force[dim] = (real_t)0.0;
+            node_force[dim] = 0.0;
         } // end for dim
 
         // loop over all corners around the node and calculate the nodal force
@@ -296,7 +296,7 @@ void SGHRZ::get_divergence_rz(DCArrayKokkos<real_t>& elem_div,
         real_t mean_radius = elem_vol(elem_gid) / elem_area;
         real_t elem_vel_r  = (real_t)0.25 * (v(0) + v(1) + v(2) + v(3));
 
-        elem_div(elem_gid) = (real_t)0.0;
+        elem_div(elem_gid) = 0.0;
 
         // x-dir
         elem_div(elem_gid) += (u(0) * b_matrix(0, 0)
@@ -346,8 +346,8 @@ void SGHRZ::decompose_vel_grad_rz(const ViewCArrayKokkos<real_t>& D_tensor,
     // initialize to zero
     for (size_t i = 0; i < num_dims; i++) {
         for (size_t j = 0; j < num_dims; j++) {
-            D_tensor(i, j) = (real_t)0.0;
-            W_tensor(i, j) = (real_t)0.0;
+            D_tensor(i, j) = 0.0;
+            W_tensor(i, j) = 0.0;
         }
     } // end for
 

@@ -389,7 +389,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
     auto b_side_flag = cz_b_side_flag;
     
     FOR_ALL(e, 0, num_elems, {
-        real_t xc = (real_t)0.0;
+        real_t xc = 0.0;
         // compute element centroid x coordinate
         for (size_t a = 0; a < nne; ++a) {
             const size_t gid = nodes_in_elem(e,a);
@@ -520,7 +520,7 @@ void compute_face_geometry(
     }
 
     // evaluate bilinear face shape function derivatives at face center (xi = 0, eta = 0)
-    real_t xi = (real_t)0.0, eta = (real_t)0.0;
+    real_t xi = 0.0, eta = 0.0;
     real_t dN_dxi[4], dN_deta[4];
 
     dN_dxi[0]  = -(real_t)0.25 * ((real_t)1.0 - eta);
@@ -537,14 +537,14 @@ void compute_face_geometry(
     // r = (rx, ry, rz)
     // s = (sx, sy, sz)
     // orthogonal in-plane vectors
-    real_t rx = (real_t)0.0;
-    real_t ry = (real_t)0.0;
-    real_t rz = (real_t)0.0;
-    real_t sx = (real_t)0.0;
-    real_t sy = (real_t)0.0;
-    real_t sz = (real_t)0.0;
+    real_t rx = 0.0;
+    real_t ry = 0.0;
+    real_t rz = 0.0;
+    real_t sx = 0.0;
+    real_t sy = 0.0;
+    real_t sz = 0.0;
 
-    for (int j = 0; j < 3; ++j) cenface(j) = (real_t)0.0;
+    for (int j = 0; j < 3; ++j) cenface(j) = 0.0;
 
     for (int a = 0; a < 4; ++a) {
         size_t node_id = face_gid[a];
@@ -571,11 +571,11 @@ void compute_face_geometry(
     // normalize r and s; nan guard against degenerate faces
     const real_t mag_r = Kokkos::sqrt(rx*rx + ry*ry + rz*rz);
     const real_t mag_s = Kokkos::sqrt(sx*sx + sy*sy + sz*sz);
-    const real_t eps_geom = (real_t)1.0e-20;
+    const real_t eps_geom = 1.0e-20;
     if (!(mag_r > eps_geom) || !(mag_s > eps_geom)) {
-        n(0) = (real_t)0.0; n(1) = (real_t)0.0; n(2) = (real_t)0.0;
-        r(0) = (real_t)0.0; r(1) = (real_t)0.0; r(2) = (real_t)0.0;
-        s(0) = (real_t)0.0; s(1) = (real_t)0.0; s(2) = (real_t)0.0;
+        n(0) = 0.0; n(1) = 0.0; n(2) = 0.0;
+        r(0) = 0.0; r(1) = 0.0; r(2) = 0.0;
+        s(0) = 0.0; s(1) = 0.0; s(2) = 0.0;
         return;
     }
     r(0) = rx / mag_r;
@@ -597,13 +597,13 @@ void compute_face_geometry(
         n(1) = ny / mag_n;
         n(2) = nz / mag_n;
     } else {
-        n(0) = (real_t)0.0;
-        n(1) = (real_t)0.0;
-        n(2) = (real_t)0.0;
+        n(0) = 0.0;
+        n(1) = 0.0;
+        n(2) = 0.0;
     }
                             
     // final cleanup of the -0.0s in the output vectors
-    auto zap0 = [](real_t &v){ if (Kokkos::fabs(v) < (real_t)1e-13) v = (real_t)0.0; };
+    auto zap0 = [](real_t &v){ if (Kokkos::fabs(v) < (real_t)1e-13) v = 0.0; };
     zap0(r(0)); zap0(r(1)); zap0(r(2));
     zap0(s(0)); zap0(s(1)); zap0(s(2));
     zap0(n(0)); zap0(n(1)); zap0(n(2));
@@ -949,12 +949,12 @@ void oriented(
         //double sum_dt [3] = {0.0, 0.0, 0.0};
         real_t sum_t [3];
         real_t sum_dt [3];
-        sum_t[0] = (real_t)0.0;
-        sum_t[1] = (real_t)0.0;
-        sum_t[2] = (real_t)0.0;
-        sum_dt[0] = (real_t)0.0;
-        sum_dt[1] = (real_t)0.0;
-        sum_dt[2] = (real_t)0.0;
+        sum_t[0] = 0.0;
+        sum_t[1] = 0.0;
+        sum_t[2] = 0.0;
+        sum_dt[0] = 0.0;
+        sum_dt[1] = 0.0;
+        sum_dt[2] = 0.0;
         int cnt = 0;
 
         // find first matched face on A side (block[2]) and B side (block[3]) that is greater than or equal to zero
@@ -1010,12 +1010,12 @@ void oriented(
 
         real_t current_norm[3];
         real_t next_norm[3];
-        current_norm[0] = (real_t)0.0;
-        current_norm[1] = (real_t)0.0;
-        current_norm[2] = (real_t)0.0;
-        next_norm[0] = (real_t)0.0;
-        next_norm[1] = (real_t)0.0;
-        next_norm[2] = (real_t)0.0;
+        current_norm[0] = 0.0;
+        current_norm[1] = 0.0;
+        current_norm[2] = 0.0;
+        next_norm[0] = 0.0;
+        next_norm[1] = 0.0;
+        next_norm[2] = 0.0;
 
         if (mag_t  > (real_t)0.0) { current_norm[0] = sum_t [0]/mag_t;  
                             current_norm[1] = sum_t [1]/mag_t;  
@@ -1243,10 +1243,10 @@ void cohesive_zone_var_update(
         real_t lambda_t = Kokkos::sqrt((u_norm_mag_t / u_n_star) * (u_norm_mag_t / u_n_star) + (u_tan_mag_t / u_t_star) * (u_tan_mag_t / u_t_star));
         real_t lambda_tdt = Kokkos::sqrt((u_norm_mag_tdt / u_n_star) * (u_norm_mag_tdt / u_n_star) + (u_tan_mag_tdt / u_t_star) * (u_tan_mag_tdt / u_t_star));
         if (!Kokkos::isfinite(lambda_t) || !Kokkos::isfinite(lambda_tdt)) {
-            delta_internal_vars(i,0) = (real_t)0.0;
-            delta_internal_vars(i,1) = (real_t)0.0;
-            delta_internal_vars(i,2) = (real_t)0.0;
-            delta_internal_vars(i,3) = (real_t)0.0;
+            delta_internal_vars(i,0) = 0.0;
+            delta_internal_vars(i,1) = 0.0;
+            delta_internal_vars(i,2) = 0.0;
+            delta_internal_vars(i,3) = 0.0;
             for (int j = 0; j < num_prony_terms; ++j) {
                 delta_internal_vars(i, 4 + j) = internal_vars(i, 4 + j);
             }
@@ -1262,7 +1262,7 @@ void cohesive_zone_var_update(
             const real_t lambda_mid = (real_t)0.5*(lambda_tdt + lambda_t); // forward euler mid-point; growth when loading > 0
             d_alpha_dt = a1 * Kokkos::pow(lambda_mid, n_exp);
         }else {
-            d_alpha_dt = (real_t)0.0;
+            d_alpha_dt = 0.0;
         } 
         delta_internal_vars(i,1) = d_alpha_dt * dt_stage;
 
@@ -1425,7 +1425,7 @@ void cohesive_zone_loads(
         const real_t nz = cohesive_zone_orientation(i,5);
 
         // effective area for this cohesive zone node pair
-        real_t area_total = (real_t)0.0;
+        real_t area_total = 0.0;
 
         // from cohesive zone info, loop over elements connected to this cohesive zone node pair
         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
@@ -1441,7 +1441,7 @@ void cohesive_zone_loads(
             }
 
             // gp = 1/Kokkos::sqrt(3) for 2-point gauss quadrature for integrating over a quad HEX8 face
-            const real_t gp = (real_t)0.5773502691896257;
+            const real_t gp = 0.5773502691896257;
 
             // building 4 GPs on the surface fA (Fierro surface numbering)
             real_t gps[4][3]; // gps[k][0] = xi
@@ -1456,10 +1456,10 @@ void cohesive_zone_loads(
                 gps[3][0] = -(real_t)1.0; gps[3][1] =  gp; gps[3][2] =  gp;
                 break;
             case 1: // xi-plus face
-                gps[0][0] =  (real_t)1.0; gps[0][1] = -gp; gps[0][2] = -gp;
-                gps[1][0] =  (real_t)1.0; gps[1][1] =  gp; gps[1][2] = -gp;
-                gps[2][0] =  (real_t)1.0; gps[2][1] = -gp; gps[2][2] =  gp;
-                gps[3][0] =  (real_t)1.0; gps[3][1] =  gp; gps[3][2] =  gp;
+                gps[0][0] =  1.0; gps[0][1] = -gp; gps[0][2] = -gp;
+                gps[1][0] =  1.0; gps[1][1] =  gp; gps[1][2] = -gp;
+                gps[2][0] =  1.0; gps[2][1] = -gp; gps[2][2] =  gp;
+                gps[3][0] =  1.0; gps[3][1] =  gp; gps[3][2] =  gp;
                 break;
             case 2: // eta-minus face
                 gps[0][1] = -(real_t)1.0; gps[0][0] = -gp; gps[0][2] = -gp;
@@ -1468,10 +1468,10 @@ void cohesive_zone_loads(
                 gps[3][1] = -(real_t)1.0; gps[3][0] =  gp; gps[3][2] =  gp;
                 break;
             case 3: // eta-plus face
-                gps[0][1] =  (real_t)1.0; gps[0][0] = -gp; gps[0][2] = -gp;
-                gps[1][1] =  (real_t)1.0; gps[1][0] =  gp; gps[1][2] = -gp;
-                gps[2][1] =  (real_t)1.0; gps[2][0] = -gp; gps[2][2] =  gp;
-                gps[3][1] =  (real_t)1.0; gps[3][0] =  gp; gps[3][2] =  gp;
+                gps[0][1] =  1.0; gps[0][0] = -gp; gps[0][2] = -gp;
+                gps[1][1] =  1.0; gps[1][0] =  gp; gps[1][2] = -gp;
+                gps[2][1] =  1.0; gps[2][0] = -gp; gps[2][2] =  gp;
+                gps[3][1] =  1.0; gps[3][0] =  gp; gps[3][2] =  gp;
                 break;
             case 4: // zeta-minus face
                 gps[0][2] = -(real_t)1.0; gps[0][0] = -gp; gps[0][1] = -gp;
@@ -1480,10 +1480,10 @@ void cohesive_zone_loads(
                 gps[3][2] = -(real_t)1.0; gps[3][0] =  gp; gps[3][1] =  gp;
                 break;
             case 5: // zeta-plus face
-                gps[0][2] =  (real_t)1.0; gps[0][0] = -gp; gps[0][1] = -gp;
-                gps[1][2] =  (real_t)1.0; gps[1][0] =  gp; gps[1][1] = -gp;
-                gps[2][2] =  (real_t)1.0; gps[2][0] = -gp; gps[2][1] =  gp;
-                gps[3][2] =  (real_t)1.0; gps[3][0] =  gp; gps[3][1] =  gp;
+                gps[0][2] =  1.0; gps[0][0] = -gp; gps[0][1] = -gp;
+                gps[1][2] =  1.0; gps[1][0] =  gp; gps[1][1] = -gp;
+                gps[2][2] =  1.0; gps[2][0] = -gp; gps[2][1] =  gp;
+                gps[3][2] =  1.0; gps[3][0] =  gp; gps[3][1] =  gp;
                 break;
             default:
                 // bad face id
@@ -1496,9 +1496,9 @@ void cohesive_zone_loads(
                 // element connectivity
                 const size_t nid = nodes_in_elem((size_t)eA, (size_t)a);
                 if (nid >= num_nodes_coords) {
-                    x[a][0] = (real_t)0.0;
-                    x[a][1] = (real_t)0.0;
-                    x[a][2] = (real_t)0.0;
+                    x[a][0] = 0.0;
+                    x[a][1] = 0.0;
+                    x[a][2] = 0.0;
                 } else {
                     x[a][0] = node_coords(nid,0);
                     x[a][1] = node_coords(nid,1);
@@ -1538,7 +1538,7 @@ void cohesive_zone_loads(
             sign_zeta[6] = +1;
             sign_zeta[7] = +1;
 
-            real_t area_face = (real_t)0.0;
+            real_t area_face = 0.0;
 
             // loop over 4 surface gauss points to compute area
             for (int k = 0; k < 4; ++k) {
@@ -1637,7 +1637,7 @@ void cohesive_zone_loads(
 
         } else {
             // if no tangential opening, just skip tangential traction
-            tx = ty = tz = (real_t)0.0;
+            tx = ty = tz = 0.0;
         }
 
         // tangential force vectors
@@ -1670,9 +1670,9 @@ void cohesive_zone_loads(
         const size_t n = gather_nodes_dev(u);
         const int c = gather_counts_dev(u);
 
-        real_t fx = (real_t)0.0; // local variables thread-private; no collision occurs while summing
-        real_t fy = (real_t)0.0; // local variables thread-private; no collision occurs while summing
-        real_t fz = (real_t)0.0; // local variables thread-private; no collision occurs while summing
+        real_t fx = 0.0; // local variables thread-private; no collision occurs while summing
+        real_t fy = 0.0; // local variables thread-private; no collision occurs while summing
+        real_t fz = 0.0; // local variables thread-private; no collision occurs while summing
 
         for (int j = 0; j < c; ++j){
             const int val = gather_entries_dev(u, j);

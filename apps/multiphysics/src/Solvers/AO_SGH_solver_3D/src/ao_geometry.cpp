@@ -31,15 +31,15 @@ double compute_total_volume(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t qj = 0; qj < n_qpts_1d; ++qj) {
                 for (size_t qi = 0; qi < n_qpts_1d; ++qi) {
 
-                    real_t J00 = (real_t)0.0;
-                    real_t J01 = (real_t)0.0;
-                    real_t J02 = (real_t)0.0;
-                    real_t J10 = (real_t)0.0;
-                    real_t J11 = (real_t)0.0;
-                    real_t J12 = (real_t)0.0;
-                    real_t J20 = (real_t)0.0;
-                    real_t J21 = (real_t)0.0;
-                    real_t J22 = (real_t)0.0;
+                    real_t J00 = 0.0;
+                    real_t J01 = 0.0;
+                    real_t J02 = 0.0;
+                    real_t J10 = 0.0;
+                    real_t J11 = 0.0;
+                    real_t J12 = 0.0;
+                    real_t J20 = 0.0;
+                    real_t J21 = 0.0;
+                    real_t J22 = 0.0;
 
                     for (size_t c = 0; c < n_dofs_1d; ++c) {
                         for (size_t b = 0; b < n_dofs_1d; ++b) {
@@ -117,15 +117,15 @@ void compute_reference_qpt_data(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t qj = 0; qj < n_qpts_1d; ++qj) {
                 for (size_t qi = 0; qi < n_qpts_1d; ++qi) {
 
-                    real_t J00 = (real_t)0.0;
-                    real_t J01 = (real_t)0.0;
-                    real_t J02 = (real_t)0.0;
-                    real_t J10 = (real_t)0.0;
-                    real_t J11 = (real_t)0.0;
-                    real_t J12 = (real_t)0.0;
-                    real_t J20 = (real_t)0.0;
-                    real_t J21 = (real_t)0.0;
-                    real_t J22 = (real_t)0.0;
+                    real_t J00 = 0.0;
+                    real_t J01 = 0.0;
+                    real_t J02 = 0.0;
+                    real_t J10 = 0.0;
+                    real_t J11 = 0.0;
+                    real_t J12 = 0.0;
+                    real_t J20 = 0.0;
+                    real_t J21 = 0.0;
+                    real_t J22 = 0.0;
 
                     for (size_t c = 0; c < n_dofs_1d; ++c) {
                         for (size_t b = 0; b < n_dofs_1d; ++b) {
@@ -323,7 +323,7 @@ void compute_jacobian_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
                 for (size_t lz = 0; lz < nk; ++lz) {
                     for (size_t ly = 0; ly < nk; ++ly) {
                         for (size_t qx = 0; qx < nq; ++qx) {
-                            real_t acc = (real_t)0.0;
+                            real_t acc = 0.0;
                             for (size_t lx = 0; lx < nk; ++lx) {
                                 const real_t bx = (e == 0) ? dB(qx, lx) : B(qx, lx);
                                 acc += bx * X(elem_gid, lz, ly, lx);
@@ -339,7 +339,7 @@ void compute_jacobian_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
                 for (size_t lz = 0; lz < nk; ++lz) {
                     for (size_t qy = 0; qy < nq; ++qy) {
                         for (size_t qx = 0; qx < nq; ++qx) {
-                            real_t acc = (real_t)0.0;
+                            real_t acc = 0.0;
                             for (size_t ly = 0; ly < nk; ++ly) {
                                 const real_t by = (e == 1) ? dB(qy, ly) : B(qy, ly);
                                 acc += by * U(elem_gid, lz, ly, qx);
@@ -355,7 +355,7 @@ void compute_jacobian_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
                 for (size_t qz = 0; qz < nq; ++qz) {
                     for (size_t qy = 0; qy < nq; ++qy) {
                         for (size_t qx = 0; qx < nq; ++qx) {
-                            real_t acc = (real_t)0.0;
+                            real_t acc = 0.0;
                             for (size_t lz = 0; lz < nk; ++lz) {
                                 const real_t bz = (e == 2) ? dB(qz, lz) : B(qz, lz);
                                 acc += bz * V(elem_gid, lz, qy, qx);
@@ -448,7 +448,7 @@ void compute_position_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t lz = 0; lz < nk; ++lz) {
                 for (size_t ly = 0; ly < nk; ++ly) {
                     for (size_t qx = 0; qx < nq; ++qx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t lx = 0; lx < nk; ++lx) {
                             acc += B(qx, lx) * X(elem_gid, lz, ly, lx);
                         }
@@ -463,7 +463,7 @@ void compute_position_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t lz = 0; lz < nk; ++lz) {
                 for (size_t qy = 0; qy < nq; ++qy) {
                     for (size_t qx = 0; qx < nq; ++qx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t ly = 0; ly < nk; ++ly) {
                             acc += B(qy, ly) * U(elem_gid, lz, ly, qx);
                         }
@@ -478,7 +478,7 @@ void compute_position_at_qpts(const DCArrayKokkos<size_t>& nodes_in_elem,
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t qy = 0; qy < nq; ++qy) {
                     for (size_t qx = 0; qx < nq; ++qx) {
-                        real_t acc = (real_t)0.0;
+                        real_t acc = 0.0;
                         for (size_t lz = 0; lz < nk; ++lz) {
                             acc += B(qz, lz) * V(elem_gid, lz, qy, qx);
                         }
@@ -539,7 +539,7 @@ void compute_velocity_gradient_at_qpts(const DCArrayKokkos<size_t>& nodes_in_ele
                 for (size_t lz = 0; lz < nk; ++lz) {
                     for (size_t ly = 0; ly < nk; ++ly) {
                         for (size_t qx = 0; qx < nq; ++qx) {
-                            real_t acc = (real_t)0.0;
+                            real_t acc = 0.0;
                             for (size_t lx = 0; lx < nk; ++lx) {
                                 const real_t bx = (e == 0) ? dB(qx, lx) : B(qx, lx);
                                 acc += bx * V_elem(elem_gid, lz, ly, lx);
@@ -555,7 +555,7 @@ void compute_velocity_gradient_at_qpts(const DCArrayKokkos<size_t>& nodes_in_ele
                 for (size_t lz = 0; lz < nk; ++lz) {
                     for (size_t qy = 0; qy < nq; ++qy) {
                         for (size_t qx = 0; qx < nq; ++qx) {
-                            real_t acc = (real_t)0.0;
+                            real_t acc = 0.0;
                             for (size_t ly = 0; ly < nk; ++ly) {
                                 const real_t by = (e == 1) ? dB(qy, ly) : B(qy, ly);
                                 acc += by * U(elem_gid, lz, ly, qx);
@@ -571,7 +571,7 @@ void compute_velocity_gradient_at_qpts(const DCArrayKokkos<size_t>& nodes_in_ele
                 for (size_t qz = 0; qz < nq; ++qz) {
                     for (size_t qy = 0; qy < nq; ++qy) {
                         for (size_t qx = 0; qx < nq; ++qx) {
-                            real_t acc = (real_t)0.0;
+                            real_t acc = 0.0;
                             for (size_t lz = 0; lz < nk; ++lz) {
                                 const real_t bz = (e == 2) ? dB(qz, lz) : B(qz, lz);
                                 acc += bz * W(elem_gid, lz, qy, qx);
@@ -590,7 +590,7 @@ void compute_velocity_gradient_at_qpts(const DCArrayKokkos<size_t>& nodes_in_ele
     FOR_ALL(g, 0, num_gauss_pts, {
         for (size_t d = 0; d < 3; ++d) {
             for (size_t r = 0; r < 3; ++r) {
-                real_t acc = (real_t)0.0;
+                real_t acc = 0.0;
                 for (size_t e = 0; e < 3; ++e) {
                     acc += G(g, d, e) * jac_inv(g, e, r);
                 }

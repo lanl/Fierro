@@ -171,8 +171,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos<real_t> DeltaF(3*mesh.num_nodes, max_hist);
     CArrayKokkos<real_t> DeltaG(3*mesh.num_nodes, max_hist);
     const int startup_iters = 3;       // Number of initial pure Picard steps
-    const real_t max_weight = (real_t)50.0;     // Threshold to catch exploded weights
-    const real_t fine_floor = (real_t)1e-10;     // Residual norm below which Anderson is unsafe
+    const real_t max_weight = 50.0;     // Threshold to catch exploded weights
+    const real_t fine_floor = 1e-10;     // Residual norm below which Anderson is unsafe
 
     // ***********************************************************
     // TEMPORARY ALLOCATION AS ANDERSON IS NOT BEING SET FOR MPI YET
@@ -266,16 +266,16 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // Picard convergence on the contact force the last solve has not seen
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t contact_force_tol = (real_t)1.0e-6;
+    const real_t contact_force_tol = 1.0e-6;
 
     // Aitken relaxation of the contact force between Picard solves
     // omega_init: relaxation before any history exists (first load step); later load steps
     //             warm start from the omega the previous load step ended with
     // [omega_min, omega_max]: bounds on the adaptive omega
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t contact_aitken_omega_init = (real_t)0.5;
-    const real_t contact_aitken_omega_min  = (real_t)0.01;
-    const real_t contact_aitken_omega_max  = (real_t)1.0;
+    const real_t contact_aitken_omega_init = 0.5;
+    const real_t contact_aitken_omega_min  = 0.01;
+    const real_t contact_aitken_omega_max  = 1.0;
 
     if (doing_contact) {
 
@@ -707,8 +707,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // getting spectral bounds for chebyshev smoothing
             // We pass zk and temporary here safely because they are currently uninitialized 
             // scratch space before the CG loop kicks off.
-            real_t alpha = (real_t)0.0;
-            real_t beta = (real_t)0.0;
+            real_t alpha = 0.0;
+            real_t beta = 0.0;
             const int cheb_degree = 3; // Choose your Chebyshev polynomial degree (typically 2 to 5)
             
             get_chebyshev_bounds(alpha, beta, D_inv, K_elem, constrained_dof, mesh.num_elems, mesh.num_nodes,

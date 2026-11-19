@@ -197,7 +197,7 @@ void SGH3D::update_state(
             real_t F_total[3][3];
             for (size_t i=0; i<3; i++)
             for (size_t j=0; j<3; j++){
-                F_total[i][j] = (real_t)0.0;
+                F_total[i][j] = 0.0;
             }
 
             // remember: Fmodel(t) = F(t)*F0, where F(t) = I + grad_X0(displacement)
@@ -287,13 +287,13 @@ void SGH3D::update_state(
 
             // apply a void eos if mat_point is eroded
             if (MaterialPoints_eroded(mat_id, mat_point_sid)) {
-                MaterialPoints_pres(mat_id, mat_point_sid) = (real_t)0.0;
-                MaterialPoints_sspd(mat_id, mat_point_sid) = (real_t)1.0e-32;
-                MaterialPoints_den(mat_id, mat_point_sid) = (real_t)1.0e-32;
+                MaterialPoints_pres(mat_id, mat_point_sid) = 0.0;
+                MaterialPoints_sspd(mat_id, mat_point_sid) = 1.0e-32;
+                MaterialPoints_den(mat_id, mat_point_sid) = 1.0e-32;
 
                 for (size_t i = 0; i < 3; i++) {
                     for (size_t j = 0; j < 3; j++) {
-                        MaterialPoints_stress(mat_id, mat_point_sid, i, j) = (real_t)0.0;
+                        MaterialPoints_stress(mat_id, mat_point_sid, i, j) = 0.0;
                     }
                 }  // end for i,j
             } // end if on eroded

@@ -151,7 +151,7 @@ namespace OrthotropicLinearElasticStrengthModel {
                 eigvec(i,j) = (i == j) ? (real_t)1.0 : (real_t)0.0;
 
         const int max_sweeps = 50;
-        const real_t tol = (real_t)1.0e-14;
+        const real_t tol = 1.0e-14;
 
         for (int sweep = 0; sweep < max_sweeps; sweep++) {
             // Off-diagonal norm (convergence check)
@@ -176,8 +176,8 @@ namespace OrthotropicLinearElasticStrengthModel {
 
                 A(p,p) = App - t * Apq;
                 A(q,q) = Aqq + t * Apq;
-                A(p,q) = (real_t)0.0;
-                A(q,p) = (real_t)0.0;
+                A(p,q) = 0.0;
+                A(q,p) = 0.0;
 
                 for (int k = 0; k < 3; k++) {
                     if (k != p && k != q) {
@@ -263,8 +263,8 @@ namespace OrthotropicLinearElasticStrengthModel {
 
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++) {
-                sqrtLambda(i,j) = (real_t)0.0;
-                invSqrtLambda(i,j) = (real_t)0.0;
+                sqrtLambda(i,j) = 0.0;
+                invSqrtLambda(i,j) = 0.0;
             }
 
         for (int i = 0; i < 3; i++) {
@@ -513,7 +513,7 @@ namespace OrthotropicLinearElasticStrengthModel {
 
         for (int i = 0; i < 6; i++)
             for (int j = 0; j < 6; j++)
-                C_ref[i][j] = (real_t)0.0;
+                C_ref[i][j] = 0.0;
 
         // Compliance sub-block (normal-normal), using symmetry nu_ij/E_i = nu_ji/E_j
         const real_t S11 =  (real_t)1.0 / E1;

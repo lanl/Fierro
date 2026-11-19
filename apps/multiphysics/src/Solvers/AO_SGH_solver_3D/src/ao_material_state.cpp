@@ -31,14 +31,14 @@ void sym3_min_eigpair(const real_t a00, const real_t a01, const real_t a02,
     if (p1 == (real_t)0.0) {
         // Diagonal: pick the axis of the smallest entry.
         lam_min = a00;
-        ex = (real_t)1.0; ey = (real_t)0.0; ez = (real_t)0.0;
+        ex = 1.0; ey = 0.0; ez = 0.0;
         if (a11 < lam_min) {
             lam_min = a11;
-            ex = (real_t)0.0; ey = (real_t)1.0; ez = (real_t)0.0;
+            ex = 0.0; ey = 1.0; ez = 0.0;
         }
         if (a22 < lam_min) {
             lam_min = a22;
-            ex = (real_t)0.0; ey = (real_t)0.0; ez = (real_t)1.0;
+            ex = 0.0; ey = 0.0; ez = 1.0;
         }
         return;
     }
@@ -100,7 +100,7 @@ void sym3_min_eigpair(const real_t a00, const real_t a01, const real_t a02,
     const real_t nn_floor = (double)mtr::prec::epsilon<real_t>() * (double)mtr::prec::epsilon<real_t>();
     if (nn < nn_floor) {
         // Degenerate (repeated eigenvalue): direction arbitrary.
-        ex = (real_t)1.0; ey = (real_t)0.0; ez = (real_t)0.0;
+        ex = 1.0; ey = 0.0; ez = 0.0;
         return;
     }
     const real_t inv_n = (real_t)1.0 / Kokkos::sqrt(nn);
@@ -180,13 +180,13 @@ void build_sigma_from_pressure(const DRaggedRightArrayKokkos<real_t>& mat_pres,
     FOR_ALL(g, 0, num_gauss_pts, {
         const real_t mp = -mat_pres(mat_id, g);
         sigma_qpt(g, 0, 0) = mp;
-        sigma_qpt(g, 0, 1) = (real_t)0.0;
-        sigma_qpt(g, 0, 2) = (real_t)0.0;
-        sigma_qpt(g, 1, 0) = (real_t)0.0;
+        sigma_qpt(g, 0, 1) = 0.0;
+        sigma_qpt(g, 0, 2) = 0.0;
+        sigma_qpt(g, 1, 0) = 0.0;
         sigma_qpt(g, 1, 1) = mp;
-        sigma_qpt(g, 1, 2) = (real_t)0.0;
-        sigma_qpt(g, 2, 0) = (real_t)0.0;
-        sigma_qpt(g, 2, 1) = (real_t)0.0;
+        sigma_qpt(g, 1, 2) = 0.0;
+        sigma_qpt(g, 2, 0) = 0.0;
+        sigma_qpt(g, 2, 1) = 0.0;
         sigma_qpt(g, 2, 2) = mp;
     });
     Kokkos::fence();
@@ -215,10 +215,10 @@ void add_artificial_viscosity(const DCArrayKokkos<real_t>&           vel_grad,
         const real_t e02 = (real_t)0.5 * (vel_grad(g, 0, 2) + vel_grad(g, 2, 0));
         const real_t e12 = (real_t)0.5 * (vel_grad(g, 1, 2) + vel_grad(g, 2, 1));
 
-        real_t mu = (real_t)0.0;
-        real_t cx = (real_t)0.0;
-        real_t cy = (real_t)0.0;
-        real_t cz = (real_t)0.0;
+        real_t mu = 0.0;
+        real_t cx = 0.0;
+        real_t cy = 0.0;
+        real_t cz = 0.0;
         sym3_min_eigpair(e00, e01, e02, e11, e12, e22, mu, cx, cy, cz);
 
         // J = inv(K) = adj(K) * detJ with K = J^-1 (det K = 1/detJ).
@@ -264,7 +264,7 @@ void add_artificial_viscosity(const DCArrayKokkos<real_t>&           vel_grad,
         const real_t c   = mat_sspd(mat_id, g);
 
         real_t visc = (real_t)2.0 * rho * h * h * Kokkos::fabs(mu);
-        const real_t eps_sw = (real_t)1.0e-12;
+        const real_t eps_sw = 1.0e-12;
         visc += (real_t)0.5 * rho * h * c * ((real_t)1.0 - smooth_step_01(mu - (real_t)2.0 * eps_sw, eps_sw));
 
         sigma_qpt(g, 0, 0) += visc * e00;

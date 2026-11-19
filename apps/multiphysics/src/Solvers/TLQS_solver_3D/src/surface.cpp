@@ -65,9 +65,9 @@ void TLQS3D::get_qpt_area_normal(
     invert_3x3(jac,inv_jac,det_jac);
 
     // Nanson's: s*J^-1*j*f*w
-    normal(0) = (real_t)0.0;
-    normal(1) = (real_t)0.0;
-    normal(2) = (real_t)0.0;
+    normal(0) = 0.0;
+    normal(1) = 0.0;
+    normal(2) = 0.0;
     for(size_t j=0; j<3; j++){ 
         for(size_t i=0; i<3; i++){
             normal(j) += ref_surf.outward_normal(face_lid,i)*inv_jac(i,j);
@@ -127,9 +127,9 @@ void TLQS3D::get_surf_qpt_coords(
         ViewCArrayKokkos<real_t>& qpt_coords)
 {
     // resetting output array
-    qpt_coords(0) = (real_t)0.0;
-    qpt_coords(1) = (real_t)0.0;
-    qpt_coords(2) = (real_t)0.0;
+    qpt_coords(0) = 0.0;
+    qpt_coords(1) = 0.0;
+    qpt_coords(2) = 0.0;
 
     const size_t face_lid = mesh.faces_in_surf(surf_gid, 0);
 

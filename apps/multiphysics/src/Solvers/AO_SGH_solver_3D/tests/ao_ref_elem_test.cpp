@@ -214,7 +214,7 @@ static void test_gl_quadrature_exactness()
 
         const size_t max_deg = 2 * n - 1;
         for (size_t p = 0; p <= max_deg; p++) {
-            real_t approx = (real_t)0.0;
+            real_t approx = 0.0;
             for (size_t q = 0; q < n; q++) {
                 const real_t x = quad.qpt_positions_1d.host(q);
                 const real_t w = quad.qpt_weights_1d.host(q);
@@ -284,7 +284,7 @@ static void test_sum_factorization_equivalence()
 
         const std::vector<double> sf    = to_host_1d(f_qpt_sf,    nqpts);
         const std::vector<double> naive = to_host_1d(f_qpt_naive, nqpts);
-        real_t max_abs_diff = (real_t)0.0;
+        real_t max_abs_diff = 0.0;
         for (size_t i = 0; i < nqpts; i++) {
             const real_t d = Kokkos::fabs(sf[i] - naive[i]);
             if (d > max_abs_diff) {

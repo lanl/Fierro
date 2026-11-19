@@ -56,7 +56,7 @@ void set_biases_host(const DCArrayKokkos <float> &biases){
     const size_t num_j = biases.size();
 
     FOR_ALL(j,0,num_j, {
-		    biases(j) = (real_t)0.0;
+		    biases(j) = 0.0;
 	}); // end parallel for
 
 }; // end function
@@ -69,7 +69,7 @@ void set_weights_host(const DFArrayKokkos <float> &weights){
 	FOR_ALL(i,0,num_i,
 	        j,0,num_j, {
 		    
-		    weights(i,j) = (real_t)1.0;
+		    weights(i,j) = 1.0;
 	}); // end parallel for
 
 }; // end function
@@ -196,7 +196,7 @@ namespace HostANNStrengthModel {
         
         // inputs to ANN
         for (size_t i=0; i<num_nodes_in_layer[0]; i++) {
-            inputs.host(i) = (real_t)1.0;
+            inputs.host(i) = 1.0;
         }
         inputs.update_device();  // copy inputs to device
 

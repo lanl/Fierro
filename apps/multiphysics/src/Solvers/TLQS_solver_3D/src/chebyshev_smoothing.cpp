@@ -65,7 +65,7 @@ void TLQS3D::apply_chebyshev_preconditioner(const MPICArrayKokkos<real_t>& rk,
     // --- Step 1: Initialize the 3-term recurrence (Iteration k = 0) ---
     FOR_ALL(i, 0, (int)num_nodes,
             j, 0, 3, {
-        zk(i,j) = (real_t)0.0;
+        zk(i,j) = 0.0;
         delta_z(i,j) = ((real_t)1.0 / d) * D_inv(i,j) * rk(i,j);
         zk(i,j) += delta_z(i,j);
     });
@@ -129,10 +129,10 @@ void TLQS3D::get_diagonal_inverse(MPICArrayKokkos<real_t>& D_inv,
         const size_t num_elems_in_node = elems_in_node.stride(node_gid);
 
         for (size_t p_dir = 0; p_dir < 3; p_dir++) {
-            real_t diag = (real_t)1.0;  // constrained dof: A_ii = 1
+            real_t diag = 1.0;  // constrained dof: A_ii = 1
 
             if (!constrained_dof(node_gid, p_dir)) {
-                diag = (real_t)0.0;
+                diag = 0.0;
                 for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
                     const size_t elem_gid = elems_in_node(node_gid, elem_lid);
 
@@ -173,12 +173,12 @@ void TLQS3D::get_chebyshev_bounds(real_t& alpha,
                                   const int num_owned_nodes,
                                   const DCArrayKokkos<bool> shared_tally_owned_nodes)
 {
-    real_t lambda_max = (real_t)0.0;
+    real_t lambda_max = 0.0;
 
     // Initialize initial guess vector v to 1.0
     FOR_ALL(i, 0, (int)num_nodes, 
             j, 0, 3, {
-        v_scratch(i,j) = (real_t)1.0;
+        v_scratch(i,j) = 1.0;
     });
     MATAR_FENCE();
 

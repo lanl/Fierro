@@ -50,7 +50,7 @@ void lagrange_1D(const CArrayKokkos<real_t>& dof_positions_1d,
     const real_t xa = dof_positions_1d(a);
 
     double num  = (real_t)1.0;  // prod_{b != a} (x - x_b)
-    real_t dnum = (real_t)0.0;  // derivative of num
+    real_t dnum = 0.0;  // derivative of num
     double den  = (real_t)1.0;  // prod_{b != a} (x_a - x_b)
 
     for (size_t b = 0; b < num_dofs_1d; b++) {
@@ -83,8 +83,8 @@ void get_normal(const CArrayKokkos<real_t>& dof_positions_1d,
     real_t dx_dxi[3];
     real_t dx_deta[3];
     for (int i = 0; i < 3; i++) {
-        dx_dxi[i] = (real_t)0.0;
-        dx_deta[i] = (real_t)0.0;
+        dx_dxi[i] = 0.0;
+        dx_deta[i] = 0.0;
     }
 
     // loop over dof indices in the surface xi direction
@@ -218,7 +218,7 @@ bool check_filters(const size_t bdy_node_lid,
         // filter 2: is the node outside wrt this surface node by more than filter_tol?
         // (skipped once any surface node shows the node is not outside)
         if (outside_all) {
-            real_t dot = (real_t)0.0;
+            real_t dot = 0.0;
             for (size_t dim = 0; dim < 3; dim++) {
                 dot += (x_node[dim] - bdy_node_coords(surf_bdy_node_lid, dim))*surf_node_normals(surf_node_rid, dim);
             }
@@ -299,8 +299,8 @@ void lagrange_1D_d2(const CArrayKokkos<real_t>& dof_positions_1d,
     const real_t xa = dof_positions_1d(a);
 
     double num   = (real_t)1.0;  // prod_{b != a} (x - x_b)
-    real_t dnum  = (real_t)0.0;  // first derivative of num
-    real_t ddnum = (real_t)0.0;  // second derivative of num
+    real_t dnum  = 0.0;  // first derivative of num
+    real_t ddnum = 0.0;  // second derivative of num
     double den   = (real_t)1.0;  // prod_{b != a} (x_a - x_b)
 
     for (size_t b = 0; b < num_dofs_1d; b++) {
@@ -356,12 +356,12 @@ void get_surf_point_and_derivs(const CArrayKokkos<real_t>& dof_positions_1d,
     const size_t num_dofs_1d = dof_positions_1d.dims(0);
 
     for (size_t dim = 0; dim < 3; dim++) {
-        x_s[dim]      = (real_t)0.0;
-        x_xi[dim]     = (real_t)0.0;
-        x_eta[dim]    = (real_t)0.0;
-        x_xixi[dim]   = (real_t)0.0;
-        x_xieta[dim]  = (real_t)0.0;
-        x_etaeta[dim] = (real_t)0.0;
+        x_s[dim]      = 0.0;
+        x_xi[dim]     = 0.0;
+        x_eta[dim]    = 0.0;
+        x_xixi[dim]   = 0.0;
+        x_xieta[dim]  = 0.0;
+        x_etaeta[dim] = 0.0;
     }
 
     // loop over dofs in the surface xi direction
@@ -443,7 +443,7 @@ bool closest_point_projected_newton(const real_t* x_I,
 {
     const size_t max_iters    = 25;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const size_t max_ls_iters = 5;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t newton_tol   = (real_t)1.0e-12; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t newton_tol   = 1.0e-12; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
 
     real_t x_s[3], x_xi[3], x_eta[3], x_xixi[3], x_xieta[3], x_etaeta[3];
     real_t d[3];
@@ -451,7 +451,7 @@ bool closest_point_projected_newton(const real_t* x_I,
     // surface state and objective at the seed
     get_surf_point_and_derivs(dof_positions_1d, bdy_nodes_in_the_surf, bdy_node_coords,
                               xi, eta, x_s, x_xi, x_eta, x_xixi, x_xieta, x_etaeta);
-    f = (real_t)0.0;
+    f = 0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         d[dim] = x_I[dim] - x_s[dim];
         f += (real_t)0.5*d[dim]*d[dim];
@@ -460,9 +460,9 @@ bool closest_point_projected_newton(const real_t* x_I,
     for (size_t iter = 0; iter < max_iters; iter++) {
 
         // residual F (= -grad f), surface metric g, curvature terms k
-        real_t F0 = (real_t)0.0, F1 = (real_t)0.0;
-        real_t g00 = (real_t)0.0, g01 = (real_t)0.0, g11 = (real_t)0.0;
-        real_t k00 = (real_t)0.0, k01 = (real_t)0.0, k11 = (real_t)0.0;
+        real_t F0 = 0.0, F1 = 0.0;
+        real_t g00 = 0.0, g01 = 0.0, g11 = 0.0;
+        real_t k00 = 0.0, k01 = 0.0, k11 = 0.0;
         for (size_t dim = 0; dim < 3; dim++) {
             F0  += x_xi[dim]*d[dim];
             F1  += x_eta[dim]*d[dim];
@@ -482,8 +482,8 @@ bool closest_point_projected_newton(const real_t* x_I,
         if (xi_active && eta_active) return true;
 
         // Newton step on the free coordinates
-        real_t dxi  = (real_t)0.0;
-        real_t deta = (real_t)0.0;
+        real_t dxi  = 0.0;
+        real_t deta = 0.0;
 
         if (!xi_active && !eta_active) {
             // full 2x2 Newton
@@ -532,7 +532,7 @@ bool closest_point_projected_newton(const real_t* x_I,
         }
 
         // backtracking line search on the clamped trial point
-        real_t step     = (real_t)1.0;
+        real_t step     = 1.0;
         real_t xi_new   = xi;
         real_t eta_new  = eta;
         bool   accepted = false;
@@ -546,7 +546,7 @@ bool closest_point_projected_newton(const real_t* x_I,
             get_surf_point_and_derivs(dof_positions_1d, bdy_nodes_in_the_surf, bdy_node_coords,
                                       xi_new, eta_new, x_s, x_xi, x_eta, x_xixi, x_xieta, x_etaeta);
 
-            real_t f_new = (real_t)0.0;
+            real_t f_new = 0.0;
             for (size_t dim = 0; dim < 3; dim++) {
                 d[dim] = x_I[dim] - x_s[dim];
                 f_new += (real_t)0.5*d[dim]*d[dim];
@@ -597,8 +597,8 @@ double seed_vel_alignment(const real_t* x_I,
                           const real_t* v,
                           const real_t  v_mag)
 {
-    real_t dot   = (real_t)0.0;
-    real_t mag2  = (real_t)0.0;
+    real_t dot   = 0.0;
+    real_t mag2  = 0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         const real_t diff = x_c[dim] - x_I[dim];
         dot  += diff*v[dim];
@@ -674,14 +674,14 @@ bool penetration_check(const size_t bdy_node_lid,
     // 1. seed: closest candidate among surface nodes and surface quadrature points
     //    ties (equal dist2) go to the candidate most collinear with the node velocity
     // ---------------------------------------------------------------
-    real_t seed_xi    = (real_t)0.0;
-    real_t seed_eta   = (real_t)0.0;
+    real_t seed_xi    = 0.0;
+    real_t seed_eta   = 0.0;
     real_t seed_dist2 = mtr::prec::numeric_max<double>();
-    real_t seed_align = (real_t)0.0;   // |cos| between (seed - x_I) and the node velocity
+    real_t seed_align = 0.0;   // |cos| between (seed - x_I) and the node velocity
 
     // node velocity, used only to break ties
     real_t v_I[3];
-    real_t v_mag2 = (real_t)0.0;
+    real_t v_mag2 = 0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         v_I[dim] = bdy_node_vels(bdy_node_lid, dim);
         v_mag2  += v_I[dim]*v_I[dim];
@@ -695,7 +695,7 @@ bool penetration_check(const size_t bdy_node_lid,
             const size_t surf_bdy_node_lid = bdy_nodes_in_the_surf(elements::get_dof_rid(a, b, num_dofs_1d));
 
             real_t x_c[3];
-            real_t dist2 = (real_t)0.0;
+            real_t dist2 = 0.0;
             for (size_t dim = 0; dim < 3; dim++) {
                 x_c[dim] = bdy_node_coords(surf_bdy_node_lid, dim);
                 const real_t diff = x_I[dim] - x_c[dim];
@@ -727,9 +727,9 @@ bool penetration_check(const size_t bdy_node_lid,
         // (with GLL dofs every off-face volume basis is zero on the face,
         //  so summing over the face nodes only is exact)
         real_t x_q[3];
-        x_q[0] = (real_t)0.0;
-        x_q[1] = (real_t)0.0;
-        x_q[2] = (real_t)0.0;
+        x_q[0] = 0.0;
+        x_q[1] = 0.0;
+        x_q[2] = 0.0;
 
         for (size_t b = 0; b < num_dofs_1d; b++) {
             for (size_t a = 0; a < num_dofs_1d; a++) {
@@ -750,7 +750,7 @@ bool penetration_check(const size_t bdy_node_lid,
             } // end for a
         } // end for b
 
-        real_t dist2 = (real_t)0.0;
+        real_t dist2 = 0.0;
         for (size_t dim = 0; dim < 3; dim++) {
             const real_t diff = x_I[dim] - x_q[dim];
             dist2 += diff*diff;
@@ -779,7 +779,7 @@ bool penetration_check(const size_t bdy_node_lid,
     // ---------------------------------------------------------------
     real_t xi  = seed_xi;
     real_t eta = seed_eta;
-    real_t f   = (real_t)0.0;
+    real_t f   = 0.0;
 
     if (!closest_point_projected_newton(x_I, bdy_nodes_in_the_surf, bdy_node_coords,
                                         dof_positions_1d, xi, eta, f)) return false;
@@ -793,7 +793,7 @@ bool penetration_check(const size_t bdy_node_lid,
 
     // vector from the closest point to the node
     real_t d[3];
-    real_t dist2 = (real_t)0.0;
+    real_t dist2 = 0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         d[dim] = x_I[dim] - x_s[dim];
         dist2 += d[dim]*d[dim];
@@ -809,7 +809,7 @@ bool penetration_check(const size_t bdy_node_lid,
                face_lid, xi, eta, normal);
 
     // side check: d . n < 0 means the node is inside
-    real_t gap = (real_t)0.0;
+    real_t gap = 0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         gap += d[dim]*normal[dim];
     }
@@ -825,12 +825,12 @@ bool penetration_check(const size_t bdy_node_lid,
     //   Kokkos::cos(theta) = (d . d_n) / (|d| |d_n|)
     // theta = 0 for pure normal penetration
     // ---------------------------------------------------------------
-    const real_t collinear_tol = (real_t)5.0;   // degrees, TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t collinear_tol = 5.0;   // degrees, TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const real_t pi = Kokkos::acos(-(real_t)1.0);
 
     real_t d_n[3];
-    real_t d_n_mag2 = (real_t)0.0;
-    real_t d_dot_dn = (real_t)0.0;
+    real_t d_n_mag2 = 0.0;
+    real_t d_dot_dn = 0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         d_n[dim]  = gap*normal[dim];        // normal part of d
         d_n_mag2 += d_n[dim]*d_n[dim];
@@ -899,7 +899,7 @@ bool refresh_closest_point(const size_t bdy_node_lid,
 {
     const size_t num_dofs_1d = dof_positions_1d.dims(0);
     const size_t max_iter    = 20;        // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t step_tol    = (real_t)1.0e-12;   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t step_tol    = 1.0e-12;   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
 
     // start on the face (constrained problem, Eqs. 3.5-3.7)
     xi  = Kokkos::fmin(Kokkos::fmax(xi,  -(real_t)1.0), (real_t)1.0);
@@ -912,9 +912,9 @@ bool refresh_closest_point(const size_t bdy_node_lid,
         real_t dx_dxi[3];
         real_t dx_deta[3];
         for (size_t dim = 0; dim < 3; dim++) {
-            x_s[dim]     = (real_t)0.0;
-            dx_dxi[dim]  = (real_t)0.0;
-            dx_deta[dim] = (real_t)0.0;
+            x_s[dim]     = 0.0;
+            dx_dxi[dim]  = 0.0;
+            dx_deta[dim] = 0.0;
         }
 
         for (size_t a = 0; a < num_dofs_1d; a++) {
@@ -943,11 +943,11 @@ bool refresh_closest_point(const size_t bdy_node_lid,
         } // end for a
 
         // residual and Gauss-Newton Hessian
-        real_t r_xi  = (real_t)0.0;
-        real_t r_eta = (real_t)0.0;
-        real_t h11   = (real_t)0.0;
-        real_t h12   = (real_t)0.0;
-        real_t h22   = (real_t)0.0;
+        real_t r_xi  = 0.0;
+        real_t r_eta = 0.0;
+        real_t h11   = 0.0;
+        real_t h12   = 0.0;
+        real_t h22   = 0.0;
         for (size_t dim = 0; dim < 3; dim++) {
             const real_t d = bdy_node_coords(bdy_node_lid, dim) - x_s[dim];
             r_xi  += dx_dxi[dim]*d;
@@ -1064,9 +1064,9 @@ void penetration_sweep(const size_t num_bdy_surfs,
                        DRaggedRightArrayKokkos<real_t>& contact_pair_vars,
                        CArrayKokkos<size_t>& num_pairs_touching_node)
 {
-    const real_t no_pair_sentinel = (real_t)100000.0;  // TODO: define once (shared with the test block)
-    const real_t dir_tol          = (real_t)1.0e-2;    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t slide_tol        = (real_t)1.01;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t no_pair_sentinel = 100000.0;  // TODO: define once (shared with the test block)
+    const real_t dir_tol          = 1.0e-2;    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t slide_tol        = 1.01;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
 
     // ---------------------------------------------------------------
     // reset per-sweep data
@@ -1175,9 +1175,9 @@ void penetration_sweep(const size_t num_bdy_surfs,
             const size_t node_gid = bdy_nodes(bdy_node_lid);
 
             real_t centroid[3];
-            centroid[0] = (real_t)0.0;
-            centroid[1] = (real_t)0.0;
-            centroid[2] = (real_t)0.0;
+            centroid[0] = 0.0;
+            centroid[1] = 0.0;
+            centroid[2] = 0.0;
 
             const size_t num_own_elems = elems_in_node.stride(node_gid);
             for (size_t e = 0; e < num_own_elems; e++) {
@@ -1191,7 +1191,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
             }
 
             real_t to_body[3];
-            real_t to_body_mag2 = (real_t)0.0;
+            real_t to_body_mag2 = 0.0;
             for (size_t dim = 0; dim < 3; dim++) {
                 centroid[dim] /= (double)(num_own_elems*num_nodes_in_elem);
                 to_body[dim]   = centroid[dim] - bdy_node_coords(bdy_node_lid, dim);
@@ -1232,7 +1232,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
 
                                         // direction filter: target outward normal must face the node's body
                     // this_dot is also the tie-break when two surfaces of the same element have equal |gap|
-                    real_t this_dot = (real_t)0.0;
+                    real_t this_dot = 0.0;
                     for (size_t dim = 0; dim < 3; dim++) {
                         this_dot += n_S[dim]*to_body[dim];
                     }
@@ -1281,7 +1281,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
                         // current best: |gap| from the scratch slot, alignment recomputed
                         // from its stored normal (no extra storage needed)
                         const real_t best_abs = contact_pair_vars(bdy_node_lid, pair, 6);   // scratch |gap|
-                        real_t best_dot = (real_t)0.0;
+                        real_t best_dot = 0.0;
                         for (size_t dim = 0; dim < 3; dim++) {
                             best_dot += contact_pair_vars(bdy_node_lid, pair, 2 + dim)*to_body[dim];
                         }
@@ -1297,17 +1297,17 @@ void penetration_sweep(const size_t num_bdy_surfs,
                         contact_pair_vars(bdy_node_lid, pair, 2) = n_S[0];
                         contact_pair_vars(bdy_node_lid, pair, 3) = n_S[1];
                         contact_pair_vars(bdy_node_lid, pair, 4) = n_S[2];
-                        contact_pair_vars(bdy_node_lid, pair, 5) = (real_t)0.0;        // F_tot: new pair starts unloaded
+                        contact_pair_vars(bdy_node_lid, pair, 5) = 0.0;        // F_tot: new pair starts unloaded
                         contact_pair_vars(bdy_node_lid, pair, 6) = this_abs;   // scratch |gap|, zeroed after the merge
-                        contact_pair_vars(bdy_node_lid, pair, 7) = (real_t)0.0;        // F_prop
-                        contact_pair_vars(bdy_node_lid, pair, 8) = (real_t)0.0;        // F_used: the last solve saw no force from it
-                        contact_pair_vars(bdy_node_lid, pair, 9) = (real_t)0.0;        // r_prev
+                        contact_pair_vars(bdy_node_lid, pair, 7) = 0.0;        // F_prop
+                        contact_pair_vars(bdy_node_lid, pair, 8) = 0.0;        // F_used: the last solve saw no force from it
+                        contact_pair_vars(bdy_node_lid, pair, 9) = 0.0;        // r_prev
                     }
                 } // end for slot
 
                 // clear the scratch: new pairs start with f_inc = 0
                 for (size_t p = num_old; p < num_pairs; p++) {
-                    contact_pair_vars(bdy_node_lid, p, 6) = (real_t)0.0;
+                    contact_pair_vars(bdy_node_lid, p, 6) = 0.0;
                 }
 
                 // penetrating, but no surface faces the node's body: upstream problem
@@ -1362,7 +1362,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
             contact_pair_vars(bdy_node_lid, p, 3) = n_S[1];
             contact_pair_vars(bdy_node_lid, p, 4) = n_S[2];
             // index 5, F_tot: kept, the force persists with its pair
-            contact_pair_vars(bdy_node_lid, p, 6) = (real_t)0.0;   // f_inc
+            contact_pair_vars(bdy_node_lid, p, 6) = 0.0;   // f_inc
         } // end for p
 
         num_pairs_in_node(bdy_node_lid) = num_pairs;

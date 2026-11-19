@@ -186,7 +186,7 @@ void SGH3D::get_timestep(swage::Mesh_t& mesh,
         real_t dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_id, mat_elem_sid) + fuzz);
 
         if (MaterialPoints_eroded(mat_id, mat_elem_sid) == true) {
-            dt_lcl_ = (real_t)1.0e32;  // a huge time step as this element doesn't exist
+            dt_lcl_ = 1.0e32;  // a huge time step as this element doesn't exist
         }
 
         // make dt be in bounds

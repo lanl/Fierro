@@ -1390,9 +1390,9 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
     DCArrayKokkos<real_t> speed(num_elems, "speed");
     FOR_ALL(elem_gid, 0, num_elems, {
         real_t elem_vel[3]; // note:initialization with a list won't work
-        elem_vel[0] = (real_t)0.0;
-        elem_vel[1] = (real_t)0.0;
-        elem_vel[2] = (real_t)0.0;
+        elem_vel[0] = 0.0;
+        elem_vel[1] = 0.0;
+        elem_vel[2] = 0.0;
         // get the coordinates of the element center
         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
             elem_vel[0] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 0);
@@ -1401,14 +1401,14 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
                 elem_vel[2] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 2);
             }
             else{
-                elem_vel[2] = (real_t)0.0;
+                elem_vel[2] = 0.0;
             }
         } // end loop over nodes in element
         elem_vel[0] = elem_vel[0] / mesh.num_nodes_in_elem;
         elem_vel[1] = elem_vel[1] / mesh.num_nodes_in_elem;
         elem_vel[2] = elem_vel[2] / mesh.num_nodes_in_elem;
 
-        real_t speed_sqrd = (real_t)0.0;
+        real_t speed_sqrd = 0.0;
         for (int dim = 0; dim < num_dims; dim++) {
             speed_sqrd += elem_vel[dim] * elem_vel[dim];
         }
@@ -1460,7 +1460,7 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
         vec_fields(node_gid, 0, 0) = State.node.coords.host(node_gid, 0);
         vec_fields(node_gid, 0, 1) = State.node.coords.host(node_gid, 1);
         if (num_dims == 2) {
-            vec_fields(node_gid, 0, 2) = (real_t)0.0;
+            vec_fields(node_gid, 0, 2) = 0.0;
         }
         else{
             vec_fields(node_gid, 0, 2) = State.node.coords.host(node_gid, 2);
@@ -1470,7 +1470,7 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
         vec_fields(node_gid, 1, 0) = State.node.vel.host(node_gid, 0);
         vec_fields(node_gid, 1, 1) = State.node.vel.host(node_gid, 1);
         if (num_dims == 2) {
-            vec_fields(node_gid, 1, 2) = (real_t)0.0;
+            vec_fields(node_gid, 1, 2) = 0.0;
         }
         else{
             vec_fields(node_gid, 1, 2) = State.node.vel.host(node_gid, 2);
@@ -1480,7 +1480,7 @@ void MeshWriter::write_ensight(swage::Mesh_t& mesh,
         vec_fields(node_gid, 2, 0) = (State.node.vel.host(node_gid, 0) - State.node.vel_n0.host(node_gid, 0))/dt;
         vec_fields(node_gid, 2, 1) = (State.node.vel.host(node_gid, 1) - State.node.vel_n0.host(node_gid, 1))/dt;
         if (num_dims == 2) {
-            vec_fields(node_gid, 2, 2) = (real_t)0.0;
+            vec_fields(node_gid, 2, 2) = 0.0;
         }
         else{
             vec_fields(node_gid, 2, 2) = (State.node.vel.host(node_gid, 2) - State.node.vel_n0.host(node_gid, 2))/dt;
@@ -1814,9 +1814,9 @@ void MeshWriter::write_vtk_old(swage::Mesh_t& mesh,
     DCArrayKokkos<real_t> speed(num_elems, "speed");
     FOR_ALL(elem_gid, 0, num_elems, {
         real_t elem_vel[3]; // note:initialization with a list won't work
-        elem_vel[0] = (real_t)0.0;
-        elem_vel[1] = (real_t)0.0;
-        elem_vel[2] = (real_t)0.0;
+        elem_vel[0] = 0.0;
+        elem_vel[1] = 0.0;
+        elem_vel[2] = 0.0;
         // get the coordinates of the element center
         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
             elem_vel[0] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 0);
@@ -1825,14 +1825,14 @@ void MeshWriter::write_vtk_old(swage::Mesh_t& mesh,
                 elem_vel[2] += State.node.vel(mesh.nodes_in_elem(elem_gid, node_lid), 2);
             }
             else{
-                elem_vel[2] = (real_t)0.0;
+                elem_vel[2] = 0.0;
             }
         } // end loop over nodes in element
         elem_vel[0] = elem_vel[0] / mesh.num_nodes_in_elem;
         elem_vel[1] = elem_vel[1] / mesh.num_nodes_in_elem;
         elem_vel[2] = elem_vel[2] / mesh.num_nodes_in_elem;
 
-        real_t speed_sqrd = (real_t)0.0;
+        real_t speed_sqrd = 0.0;
         for (int dim = 0; dim < num_dims; dim++) {
             speed_sqrd += elem_vel[dim] * elem_vel[dim];
         }
@@ -1889,7 +1889,7 @@ void MeshWriter::write_vtk_old(swage::Mesh_t& mesh,
         vec_fields(node_gid, 0, 0) = State.node.coords.host(node_gid, 0);
         vec_fields(node_gid, 0, 1) = State.node.coords.host(node_gid, 1);
         if (num_dims == 2) {
-            vec_fields(node_gid, 0, 2) = (real_t)0.0;
+            vec_fields(node_gid, 0, 2) = 0.0;
         }
         else{
             vec_fields(node_gid, 0, 2) = State.node.coords.host(node_gid, 2);
@@ -1899,7 +1899,7 @@ void MeshWriter::write_vtk_old(swage::Mesh_t& mesh,
         vec_fields(node_gid, 1, 0) = State.node.vel.host(node_gid, 0);
         vec_fields(node_gid, 1, 1) = State.node.vel.host(node_gid, 1);
         if (num_dims == 2) {
-            vec_fields(node_gid, 1, 2) = (real_t)0.0;
+            vec_fields(node_gid, 1, 2) = 0.0;
         }
         else{
             vec_fields(node_gid, 1, 2) = State.node.vel.host(node_gid, 2);
@@ -2595,7 +2595,7 @@ void MeshWriter::concatenate_nodal_fields(const node_t& Node,
                     node_vector_fields(node_coord_id, node_gid, 0) = Node.coords(node_gid, 0);
                     node_vector_fields(node_coord_id, node_gid, 1) = Node.coords(node_gid, 1);
                     if (num_dims == 2) {
-                        node_vector_fields(node_coord_id, node_gid, 2) = (real_t)0.0;
+                        node_vector_fields(node_coord_id, node_gid, 2) = 0.0;
                     }
                     else{
                         node_vector_fields(node_coord_id, node_gid, 2) = Node.coords(node_gid, 2);
@@ -2612,7 +2612,7 @@ void MeshWriter::concatenate_nodal_fields(const node_t& Node,
                     node_vector_fields(node_vel_id, node_gid, 0) = Node.vel(node_gid, 0);
                     node_vector_fields(node_vel_id, node_gid, 1) = Node.vel(node_gid, 1);
                     if (num_dims == 2) {
-                        node_vector_fields(node_vel_id, node_gid, 2) = (real_t)0.0;
+                        node_vector_fields(node_vel_id, node_gid, 2) = 0.0;
                     }
                     else{
                         node_vector_fields(node_vel_id, node_gid, 2) = Node.vel(node_gid, 2);
@@ -2622,7 +2622,7 @@ void MeshWriter::concatenate_nodal_fields(const node_t& Node,
                     node_vector_fields(node_accel_id, node_gid, 0) = (Node.vel(node_gid, 0) - Node.vel_n0(node_gid, 0))/dt;
                     node_vector_fields(node_accel_id, node_gid, 1) = (Node.vel(node_gid, 1) - Node.vel_n0(node_gid, 1))/dt;
                     if (num_dims == 2) {
-                        node_vector_fields(node_accel_id, node_gid, 2) = (real_t)0.0;
+                        node_vector_fields(node_accel_id, node_gid, 2) = 0.0;
                     }
                     else{
                         node_vector_fields(node_accel_id, node_gid, 2) = (Node.vel(node_gid, 2) - Node.vel_n0(node_gid, 2))/dt;
@@ -2652,7 +2652,7 @@ void MeshWriter::concatenate_nodal_fields(const node_t& Node,
                     node_vector_fields(node_grad_level_set_id, node_gid, 0) = Node.gradient_level_set(node_gid, 0);
                     node_vector_fields(node_grad_level_set_id, node_gid, 1) = Node.gradient_level_set(node_gid, 1);
                     if (num_dims == 2) {
-                        node_vector_fields(node_grad_level_set_id, node_gid, 2) = (real_t)0.0;
+                        node_vector_fields(node_grad_level_set_id, node_gid, 2) = 0.0;
                     }
                     else{
                         node_vector_fields(node_grad_level_set_id, node_gid, 2) = Node.gradient_level_set(node_gid, 2);
@@ -2774,7 +2774,7 @@ void MeshWriter::write_vtu(
 
     // write all components of the point coordinates
     for (size_t node_gid = 0; node_gid < num_nodes; node_gid++) {
-        real_t coord_z = (real_t)0.0;
+        real_t coord_z = 0.0;
         if(num_dims==3){
             coord_z = node_coords_host(node_gid, 2);
         } 
@@ -5387,9 +5387,9 @@ void MeshWriter::write_material_point_state(swage::Mesh_t& mesh,
             }
 
             real_t elem_coords[3];
-            elem_coords[0] = (real_t)0.0;
-            elem_coords[1] = (real_t)0.0;
-            elem_coords[2] = (real_t)0.0;
+            elem_coords[0] = 0.0;
+            elem_coords[1] = 0.0;
+            elem_coords[2] = 0.0;
 
             // get the coordinates of the element center
             for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
@@ -5400,7 +5400,7 @@ void MeshWriter::write_material_point_state(swage::Mesh_t& mesh,
                     elem_coords[2] += State.node.coords.host(mesh.nodes_in_elem.host(elem_gid, node_lid), 2);
                 }
                 else{
-                    elem_coords[2] = (real_t)0.0;
+                    elem_coords[2] = 0.0;
                 }
             } // end loop over nodes in element
 
@@ -5442,7 +5442,7 @@ void MeshWriter::write_material_point_state(swage::Mesh_t& mesh,
             node_coords[2] = State.node.coords.host(node_gid, 2);
         }
         else{
-            node_coords[2] = (real_t)0.0;
+            node_coords[2] = 0.0;
         }
 
         real_t rad2 = Kokkos::sqrt(node_coords[0] * node_coords[0] +
@@ -5459,7 +5459,7 @@ void MeshWriter::write_material_point_state(swage::Mesh_t& mesh,
            node_vel[2] = State.node.vel.host(node_gid, 2);
         }
         else{
-           node_vel[2] = (real_t)0.0;
+           node_vel[2] = 0.0;
         }
 
         real_t speed = Kokkos::sqrt(node_vel[0] * node_vel[0] +

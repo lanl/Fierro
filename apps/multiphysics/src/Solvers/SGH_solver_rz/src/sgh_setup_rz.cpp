@@ -59,11 +59,11 @@ void SGHRZ::init_corner_node_masses_zero_rz(const swage::Mesh_t& mesh,
                     
     // calculate the nodal mass
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        node_mass(node_gid) = (real_t)0.0;
+        node_mass(node_gid) = 0.0;
     }); // end parallel over nodes
 
     FOR_ALL(corner_gid, 0, mesh.num_corners, {
-        corner_mass(corner_gid) = (real_t)0.0;
+        corner_mass(corner_gid) = 0.0;
     });  // end parallel over corners
 
 } // end setting masses equal to zero

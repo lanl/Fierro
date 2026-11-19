@@ -119,7 +119,7 @@ void SGTM3D::get_heat_flux(
 
 
         // ---- Calculate the element average temperature ---- //
-        real_t avg_temp = (real_t)0.0;
+        real_t avg_temp = 0.0;
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
             // Get node gid
             size_t node_gid = elem_node_gids(node_lid);
@@ -136,9 +136,9 @@ void SGTM3D::get_heat_flux(
         // ---- Calculate the temperature gradient ---- //
         real_t inverse_vol = (real_t)1.0 / vol;
 
-        temp_grad(0) = (real_t)0.0;
-        temp_grad(1) = (real_t)0.0;
-        temp_grad(2) = (real_t)0.0;
+        temp_grad(0) = 0.0;
+        temp_grad(1) = 0.0;
+        temp_grad(2) = 0.0;
 
         for(int dim = 0; dim < mesh.num_dims; dim++){
             for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -175,7 +175,7 @@ void SGTM3D::get_heat_flux(
             size_t mat_corner_lid = corners_in_mat_elem(mat_elem_sid, corner_lid);
 
             // Zero out flux at material corners
-            corner_q_transfer(corner_gid) = (real_t)0.0;
+            corner_q_transfer(corner_gid) = 0.0;
 
             // Dot the flux into the corner normal
             for(int dim = 0; dim < mesh.num_dims; dim++){
@@ -242,16 +242,16 @@ void SGTM3D::moving_flux(
         size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
         // check if element center is within the sphere
-        real_t radius = (real_t)8.0;
+        real_t radius = 8.0;
         real_t radius_squared = radius * radius;
         real_t volume = ((real_t)4.0/3) * (real_t)3.14159 * radius_squared * radius;
         
         // calculate the coordinates and radius of the element
         real_t elem_coords_1D[3]; // note:initialization with a list won't work
         ViewCArrayKokkos<real_t> elem_coords(&elem_coords_1D[0], 3);
-        elem_coords(0) = (real_t)0.0;
-        elem_coords(1) = (real_t)0.0;
-        elem_coords(2) = (real_t)0.0;
+        elem_coords(0) = 0.0;
+        elem_coords(1) = 0.0;
+        elem_coords(2) = 0.0;
 
         // get the coordinates of the element center (using rk_level=1 or node coords)
         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
@@ -263,7 +263,7 @@ void SGTM3D::moving_flux(
         elem_coords(1) = (elem_coords(1) / mesh.num_nodes_in_elem);
         elem_coords(2) = (elem_coords(2) / mesh.num_nodes_in_elem);
 
-        real_t dist_squared = (real_t)0.0;
+        real_t dist_squared = 0.0;
         for(int dim = 0; dim < mesh.num_dims; dim++){
             dist_squared +=  (sphere_position(dim) - elem_coords(dim))*(sphere_position(dim) - elem_coords(dim));
         }

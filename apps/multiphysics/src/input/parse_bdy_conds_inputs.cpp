@@ -831,7 +831,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         }
                         else {
                             // 2D
-                            z1 = (real_t)0.0;
+                            z1 = 0.0;
                         } //
 
                         // storing the origin values as (x1,y1,z1)
@@ -933,7 +933,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         }
                         else {
                             // 2D
-                            z1 = (real_t)0.0;
+                            z1 = 0.0;
                         } //
 
                         // storing the origin values as (x1,y1,z1)
@@ -1002,16 +1002,16 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     std::string var_str = bc_yaml[bc_id]["boundary_condition"]["displacement_bc_global_vars"][global_var_id].As<std::string>();
 
-                    real_t displacement_bc_var = (real_t)0.0;
+                    real_t displacement_bc_var = 0.0;
 
                     if (var_str == "x" || var_str == "X") {
-                        displacement_bc_var = (real_t)0.0;
+                        displacement_bc_var = 0.0;
                     }
                     else if (var_str == "y" || var_str == "Y") {
-                        displacement_bc_var = (real_t)1.0;
+                        displacement_bc_var = 1.0;
                     }
                     else if (var_str == "z" || var_str == "Z") {
-                        displacement_bc_var = (real_t)2.0;
+                        displacement_bc_var = 2.0;
                     }
                     else {
                         // 2. If it's not x, y, or z, try to parse it as a number
@@ -1116,16 +1116,16 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     std::string var_str = bc_yaml[bc_id]["boundary_condition"]["qstatx_stress_bc_global_vars"][global_var_id].As<std::string>();
 
-                    real_t qstatx_stress_bc_var = (real_t)0.0;
+                    real_t qstatx_stress_bc_var = 0.0;
 
                     if (var_str == "x" || var_str == "X") {
-                        qstatx_stress_bc_var = (real_t)0.0;
+                        qstatx_stress_bc_var = 0.0;
                     }
                     else if (var_str == "y" || var_str == "Y") {
-                        qstatx_stress_bc_var = (real_t)1.0;
+                        qstatx_stress_bc_var = 1.0;
                     }
                     else if (var_str == "z" || var_str == "Z") {
-                        qstatx_stress_bc_var = (real_t)2.0;
+                        qstatx_stress_bc_var = 2.0;
                     }
                     else {
                         // 2. If it's not x, y, or z, try to parse it as a number

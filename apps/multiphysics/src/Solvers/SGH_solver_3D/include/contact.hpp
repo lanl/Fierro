@@ -8,8 +8,8 @@ using namespace mtr;
 
 // solving options
 static constexpr size_t max_iter = 100;
-static constexpr real_t tol = (real_t)1e-15;  // tolerance for the things that are supposed to be zero
-static constexpr real_t edge_tol = (real_t)1e-3;  // tolerance for edge case solutions (see contact_check for more info)
+static constexpr real_t tol = 1e-15;  // tolerance for the things that are supposed to be zero
+static constexpr real_t edge_tol = 1e-3;  // tolerance for edge case solutions (see contact_check for more info)
 
 
 

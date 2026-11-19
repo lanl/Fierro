@@ -154,9 +154,9 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
                 c(dim) = node_coords(node_c_gid, dim);
             }
 
-            real_t A = (real_t)0.0;
-            real_t B = (real_t)0.0;
-            real_t C = (real_t)0.0;
+            real_t A = 0.0;
+            real_t B = 0.0;
+            real_t C = 0.0;
             for(int dim = 0; dim < mesh.num_dims; dim++){
                 A += (b(dim)-c(dim))*(b(dim)-c(dim));
                 B += (a(dim)-c(dim))*(a(dim)-c(dim));
@@ -200,8 +200,8 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
             real_t corner_area = surface_area/(real_t)4.0;
 
             // NOTE: Add parsing to the following variables
-            real_t ref_temp = (real_t)293.15; // room temp in Kelvin
-            real_t h_film = (real_t)100.0;
+            real_t ref_temp = 293.15; // room temp in Kelvin
+            real_t h_film = 100.0;
 
             // ---- Calculate the flux through each surface ---- //
             for(int node_lid = 0; node_lid < mesh.num_nodes_in_surf; node_lid++){
@@ -291,9 +291,9 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
                 c(dim) = node_coords(node_c_gid, dim);
             }
 
-            real_t A = (real_t)0.0;
-            real_t B = (real_t)0.0;
-            real_t C = (real_t)0.0;
+            real_t A = 0.0;
+            real_t B = 0.0;
+            real_t C = 0.0;
             for(int dim = 0; dim < mesh.num_dims; dim++){
                 A += (b(dim)-c(dim))*(b(dim)-c(dim));
                 B += (a(dim)-c(dim))*(a(dim)-c(dim));
@@ -334,11 +334,11 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
             real_t corner_area = surface_area/(real_t)4.0;
 
             // NOTE: Parse these in
-            real_t emmisivity = (real_t)0.2; // rough oxidized aluminum
-            real_t boltzmann = (real_t)5.67037442e-8;
+            real_t emmisivity = 0.2; // rough oxidized aluminum
+            real_t boltzmann = 5.67037442e-8;
 
-            real_t ref_zero_temp = (real_t)0.0;
-            real_t ref_ambient_temp = (real_t)0.0;
+            real_t ref_zero_temp = 0.0;
+            real_t ref_ambient_temp = 0.0;
 
             // Loop over all the nodes in this boundary surface
             for(int node_lid = 0; node_lid < mesh.num_nodes_in_surf; node_lid++){

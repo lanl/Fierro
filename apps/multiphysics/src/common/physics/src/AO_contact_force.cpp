@@ -146,14 +146,14 @@ void scatter_pair_force(const size_t bdy_node_lid,
     // target surface nodes: equal and opposite, distributed by the basis
     for (size_t a = 0; a < num_dofs_1d; a++) {
 
-        real_t l_xi  = (real_t)0.0;
-        real_t dl_xi = (real_t)0.0;
+        real_t l_xi  = 0.0;
+        real_t dl_xi = 0.0;
         lagrange_1D(dof_positions_1d, num_dofs_1d, a, xi, l_xi, dl_xi);
 
         for (size_t b = 0; b < num_dofs_1d; b++) {
 
-            real_t l_eta  = (real_t)0.0;
-            real_t dl_eta = (real_t)0.0;
+            real_t l_eta  = 0.0;
+            real_t dl_eta = 0.0;
             lagrange_1D(dof_positions_1d, num_dofs_1d, b, eta, l_eta, dl_eta);
 
             const real_t N            = l_xi*l_eta;
@@ -276,7 +276,7 @@ int frictionless_increment(const size_t bdy_node_lid,
     const size_t num_dofs_1d    = dof_positions_1d.dims(0);
     const size_t num_surf_nodes = num_dofs_1d*num_dofs_1d;
     const size_t max_iter       = 100;        // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t n_tol          = (real_t)1.0e-10;   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t n_tol          = 1.0e-10;   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
 
     // inputs, restored on failure
     const real_t xi_in  = xi;
@@ -284,7 +284,7 @@ int frictionless_increment(const size_t bdy_node_lid,
     real_t n_in[3];
     for (size_t dim = 0; dim < 3; dim++) n_in[dim] = n[dim];
 
-    f_inc = (real_t)0.0;
+    f_inc = 0.0;
 
     // ---------------------------------------------------------------
     // compliance must be set (filled by the solver after initialize)
@@ -309,7 +309,7 @@ int frictionless_increment(const size_t bdy_node_lid,
                   + c_I[dim]*(contact_forces(bdy_node_lid, dim) - contact_forces_used(bdy_node_lid, dim));
     }
 
-    real_t f = (real_t)0.0;
+    real_t f = 0.0;
     bool converged = false;
 
     for (size_t iter = 0; iter < max_iter; iter++) {
@@ -322,29 +322,29 @@ int frictionless_increment(const size_t bdy_node_lid,
         real_t t_xi[3];
         real_t t_eta[3];
         for (size_t dim = 0; dim < 3; dim++) {
-            S[dim]     = (real_t)0.0;
-            t_xi[dim]  = (real_t)0.0;
-            t_eta[dim] = (real_t)0.0;
+            S[dim]     = 0.0;
+            t_xi[dim]  = 0.0;
+            t_eta[dim] = 0.0;
         }
         real_t s_NN[3];      // sum_k c_k phi_k^2,          per direction
         real_t s_NNxi[3];    // sum_k c_k phi_k dphi_k/dxi,  per direction
         real_t s_NNeta[3];   // sum_k c_k phi_k dphi_k/deta, per direction
         for (size_t dim = 0; dim < 3; dim++) {
-            s_NN[dim]    = (real_t)0.0;
-            s_NNxi[dim]  = (real_t)0.0;
-            s_NNeta[dim] = (real_t)0.0;
+            s_NN[dim]    = 0.0;
+            s_NNxi[dim]  = 0.0;
+            s_NNeta[dim] = 0.0;
         }
 
         for (size_t a = 0; a < num_dofs_1d; a++) {
 
-            real_t l_xi  = (real_t)0.0;
-            real_t dl_xi = (real_t)0.0;
+            real_t l_xi  = 0.0;
+            real_t dl_xi = 0.0;
             lagrange_1D(dof_positions_1d, num_dofs_1d, a, xi, l_xi, dl_xi);
 
             for (size_t b = 0; b < num_dofs_1d; b++) {
 
-                real_t l_eta  = (real_t)0.0;
-                real_t dl_eta = (real_t)0.0;
+                real_t l_eta  = 0.0;
+                real_t dl_eta = 0.0;
                 lagrange_1D(dof_positions_1d, num_dofs_1d, b, eta, l_eta, dl_eta);
 
                 const real_t N       = l_xi*l_eta;
@@ -372,7 +372,7 @@ int frictionless_increment(const size_t bdy_node_lid,
 
         // residual: predicted node minus predicted surface point
         real_t R[3];
-        real_t R_norm2 = (real_t)0.0;
+        real_t R_norm2 = 0.0;
         for (size_t dim = 0; dim < 3; dim++) {
             R[dim]   = x_I0[dim] + c_I[dim]*f*n[dim] - S[dim];
             R_norm2 += R[dim]*R[dim];
@@ -390,7 +390,7 @@ int frictionless_increment(const size_t bdy_node_lid,
 
         const real_t n_dot   = n_new[0]*n[0] + n_new[1]*n[1] + n_new[2]*n[2];
         const real_t n_scale = (n_dot < (real_t)0.0) ? -(real_t)1.0/n_new_mag : (real_t)1.0/n_new_mag;   // keep outward orientation
-        real_t dn2 = (real_t)0.0;
+        real_t dn2 = 0.0;
         for (size_t dim = 0; dim < 3; dim++) {
             n_new[dim] *= n_scale;
             dn2 += (n_new[dim] - n[dim])*(n_new[dim] - n[dim]);
@@ -581,7 +581,7 @@ bool force_resolution(const size_t num_active,
                     n[1] = contact_pair_vars(bdy_node_lid, p, 3);
                     n[2] = contact_pair_vars(bdy_node_lid, p, 4);
                     const real_t F_tot = contact_pair_vars(bdy_node_lid, p, 5);
-                    real_t f_inc = (real_t)0.0;
+                    real_t f_inc = 0.0;
 
                     const int status = frictionless_increment(bdy_node_lid, surf_nodes, bdy_node_coords,
                                                               bdy_node_compliance, contact_forces, contact_forces_used,
@@ -605,7 +605,7 @@ bool force_resolution(const size_t num_active,
 
                     if (status == 2) {
                         // failed local solve: keep the pair as is for this iteration
-                        contact_pair_vars(bdy_node_lid, p, 6) = (real_t)0.0;
+                        contact_pair_vars(bdy_node_lid, p, 6) = 0.0;
                         contact_pair_vars(bdy_node_lid, p, 7) = F_tot;   // F_prop: no new information
                         F_lcl = Kokkos::fmax(F_lcl, F_tot);
                         Kokkos::atomic_add(&res_counts(1), (size_t)1);
@@ -835,8 +835,8 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
 {
     const size_t max_sweeps      = 10;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const size_t max_global_iter = 100000;    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t rel_tol         = (real_t)1.0e-8; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t slide_tol       = (real_t)1.01;   // TODO: define once (shared with penetration_sweep)
+    const real_t rel_tol         = 1.0e-8; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t slide_tol       = 1.01;   // TODO: define once (shared with penetration_sweep)
     const real_t res_tol         = (real_t)1.0e-10*max_gap;   // length scale from the mesh
 
     settled       = false;

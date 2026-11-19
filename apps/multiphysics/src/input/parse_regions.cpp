@@ -432,7 +432,7 @@ void parse_regions(Yaml::Node& root,
                         }
                         else {
                             // 2D
-                            z1 = (real_t)0.0;
+                            z1 = 0.0;
                         } //
                         RUN({
                             region_fills(reg_id).unit_vector[0] = x1;
@@ -456,7 +456,7 @@ void parse_regions(Yaml::Node& root,
                         }
                         else {
                             // 2D
-                            z1 = (real_t)0.0;
+                            z1 = 0.0;
                         } //
 
                         // storing the origin values as (x1,y1,z1)

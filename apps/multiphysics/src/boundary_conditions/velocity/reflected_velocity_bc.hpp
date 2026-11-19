@@ -70,7 +70,7 @@ static void velocity(const swage::Mesh_t& mesh,
     const size_t bdy_node_gid,
     const size_t bdy_set)
 {
-    real_t mag = (real_t)0.0;
+    real_t mag = 0.0;
     for (size_t dim = 0; dim<mesh.num_dims; dim++){
         mag += vel_bc_global_vars(bdy_set,dim)*vel_bc_global_vars(bdy_set,dim);
     } // will make sure it's a unit vector

@@ -79,7 +79,7 @@ void LevelSet::boundary_velocity(const swage::Mesh_t&      mesh,
                 bdy_set);
 
             // scale node vel to be a unit vector, if evolving front
-            real_t mag = (real_t)0.0;
+            real_t mag = 0.0;
             for (size_t dim=0; dim<mesh.num_dims; dim++){
                 mag += node_level_set_vel(bdy_node_gid, dim)*node_level_set_vel(bdy_node_gid, dim);
             }

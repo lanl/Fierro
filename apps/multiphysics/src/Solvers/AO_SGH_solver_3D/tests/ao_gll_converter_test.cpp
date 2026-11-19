@@ -121,7 +121,7 @@ static void test_single_element_p3()
         return nodes_in_elem.host(0, lex(i, j, k));
     };
 
-    const real_t tol = (real_t)1.0e-14;
+    const real_t tol = 1.0e-14;
 
     // (1) Corners unchanged.
     const size_t cv[8][3] = {
@@ -198,7 +198,7 @@ static void test_shared_face_consistency_2x1x1_p3()
         return i + j * n1d + k * n1d * n1d;
     };
 
-    const real_t tol = (real_t)1.0e-14;
+    const real_t tol = 1.0e-14;
 
     for (size_t k = 0; k <= p; ++k) {
         for (size_t j = 0; j <= p; ++j) {
@@ -250,7 +250,7 @@ static void test_roundtrip_equi_gll_equi_2x1x1_p3()
     DCArrayKokkos<real_t> equi_out(num_nodes, 3, "rt_equi_out");
     gll_to_equispaced(nodes_in_elem, equi_in, equi_out, /*num_elems*/ 2, p);
 
-    const real_t tol = (real_t)1.0e-13;
+    const real_t tol = 1.0e-13;
     for (size_t n = 0; n < num_nodes; ++n) {
         for (int d = 0; d < 3; ++d) {
             check_close(equi_out.host(n, d), equi_orig.host(n, d), tol,

@@ -62,7 +62,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 namespace QSIsotropicLinearElastic {
 
-    const real_t fuzz = (real_t)1.e-16;
+    const real_t fuzz = 1.e-16;
     
     /**
      * @brief Initialize the strength state variables for the material points.
