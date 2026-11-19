@@ -1106,7 +1106,7 @@ void MeshReader::read_vtu_mesh(swage::Mesh_t& mesh,
     if(found==false){
         // throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
         std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
-        mesh_inps.object_ids.host.set_values((real_t)0.0);
+        mesh_inps.object_ids.host.set_values(0);
     }
     mesh_inps.object_ids.update_device();
 

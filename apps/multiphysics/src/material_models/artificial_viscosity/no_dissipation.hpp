@@ -56,7 +56,7 @@ namespace NoDissipationModel {
                                   const real_t vol,
                                   const real_t fuzz,
                                   const real_t small,
-                                  const real_t elem_gid,
+                                  const size_t elem_gid,
                                   const size_t mat_point_sid,
                                   const size_t mat_id)
                                   {

@@ -2528,8 +2528,8 @@ void paint_node_scalar(const real_t scalar,
                        const CArrayKokkos<RegionICs_t>& region_ics,
                        const DCArrayKokkos<real_t>& node_scalar,
                        const MPICArrayKokkos<real_t>& node_coords,
-                       const real_t node_gid,
-                       const real_t num_dims,
+                       const size_t node_gid,
+                       const size_t num_dims,
                        const size_t f_id)
 {
 
