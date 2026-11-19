@@ -81,10 +81,10 @@ namespace TiptonEquilibrationModel {
 
         const size_t num_mats = Materials.num_mats;
 
-        GaussPoint_pres.set_values((0.0);
-        GaussPoint_pres_denominator.set_values((0.0);
-        GaussPoint_volfrac_min.set_values((1.0);
-        GaussPoint_volfrac_limiter.set_values((1.0);
+        GaussPoint_pres.set_values(0.0);
+        GaussPoint_pres_denominator.set_values(0.0);
+        GaussPoint_volfrac_min.set_values(1.0);
+        GaussPoint_volfrac_limiter.set_values(1.0);
 
         // calculate weigted average pressure at gauss points
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
@@ -202,10 +202,10 @@ namespace TiptonEquilibrationModel {
 
         const size_t num_mats = Materials.num_mats;
 
-        GaussPoint_pres.set_values((0.0);
-        GaussPoint_pres_denominator.set_values((0.0);
-        GaussPoint_volfrac_min.set_values((1.0);
-        GaussPoint_volfrac_limiter.set_values((1.0);
+        GaussPoint_pres.set_values(0.0);
+        GaussPoint_pres_denominator.set_values(0.0);
+        GaussPoint_volfrac_min.set_values(1.0);
+        GaussPoint_volfrac_limiter.set_values(1.0);
 
         // calculate weigted average pressure at gauss points
         for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
