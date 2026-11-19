@@ -630,6 +630,13 @@ size_t check_bdy_surf(const size_t surf_gid,
     const double  orig_x,
     const double  orig_y,
     const double  orig_z,
+    double  height,
+    const double  dx,
+    const double  dy,
+    const double  dz,
+    const double  dir_x,
+    const double  dir_y,
+    const double  dir_z,
     const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_coords)
 {
@@ -668,24 +675,80 @@ size_t check_bdy_surf(const size_t surf_gid,
                 is_on_bdy += 1;
             }
         } // end if on type
-        // cylinderical shell where radius = sqrt(dx^2 + dy^2)
+        // cylindrical shell
         else if (this_bc_tag == 3) {
-            real_t R = sqrt((these_surf_coords[0] - orig_x) * (these_surf_coords[0] - orig_x) +
-                            (these_surf_coords[1] - orig_y) * (these_surf_coords[1] - orig_y));
+            if (num_dims == 2) {
+                height = 1.0;
+            }
+            // origin is the center of the cylinder
+            // get vector from node to origin
+            const double vx = these_surf_coords[0] - orig_x;
+            const double vy = these_surf_coords[1] - orig_y;
+            const double vz = these_surf_coords[2] - orig_z;
+            // dot product with direction vector to get signed distance along orientation direction
+            double signed_dist;
+            if (num_dims == 3) {
+                signed_dist = vx*dir_x + vy*dir_y + vz*dir_z;
+            } else {
+                signed_dist = vx*dir_x + vy*dir_y;
+            }
+            // get distance from the axis
+            double rho;
+            if (num_dims == 3) {
+                rho = sqrt(fmax(((vx*vx + vy*vy + vz*vz) - signed_dist*signed_dist), 0.0));
+            } else {
+                rho = sqrt(fmax(((vx*vx + vy*vy) - signed_dist*signed_dist), 0.0));
+            }
 
-            if (fabs(R - val) <= tolerance) {
+            // inside the cylinder if:
+            // distance along orientation direction is less than half the height
+            // inside the radius of the cylinder
+            if (fabs(signed_dist) <= 0.5*height + tolerance && fabs(rho - val) <= tolerance) {
                 is_on_bdy += 1;
             }
+
         } // end if on type
-        // spherical shell where radius = sqrt(dx^2 + dy^2 + dz^2)
+        // spherical volume where radius = sqrt(dx^2 + dy^2 + dz^2)
         else if (this_bc_tag == 4) {
             real_t R = sqrt((these_surf_coords[0] - orig_x) * (these_surf_coords[0] - orig_x) +
                             (these_surf_coords[1] - orig_y) * (these_surf_coords[1] - orig_y) +
                             (these_surf_coords[2] - orig_z) * (these_surf_coords[2] - orig_z));
 
-            if (fabs(R - val) <= tolerance) {
+            if (R <= val + tolerance) {
                 is_on_bdy += 1;
             }
+        } // end if on type
+        // conical volume
+        else if (this_bc_tag == 6) {
+            // origin is the tip of the cone
+            // radius is the radius at the height of the cone
+            // direction is from tip towards base of cone
+
+            // get vector from node to origin
+            const double vx = these_surf_coords[0] - orig_x;
+            const double vy = these_surf_coords[1] - orig_y;
+            const double vz = these_surf_coords[2] - orig_z;
+            // dot product with direction vector to get signed distance along orientation direction
+            const double signed_dist = vx*dir_x + vy*dir_y + vz*dir_z;
+            // get distance from the axis
+            const double rho = sqrt(fmax(((vx*vx + vy*vy + vz*vz) - signed_dist*signed_dist), 0.0));
+
+            // inside the cone if:
+            // 0 <= signed_dist <= height: since origin is at the tip the point of interest must be within the entire height of the cone
+            // inside the radius of the cone accounting for the linear variation of radius
+            if (signed_dist >= 0.0 - tolerance && signed_dist <= height + tolerance && rho <= (val / height) * signed_dist + tolerance) {
+                is_on_bdy += 1;
+            }
+
+        } // end if on type
+        // hexahedral volume
+        else if (this_bc_tag == 7) {
+
+            // origin is the center of the box
+            if (fabs(these_surf_coords[0] - orig_x) <= 0.5*dx + tolerance && fabs(these_surf_coords[1] - orig_y) <= 0.5*dy + tolerance && fabs(these_surf_coords[2] - orig_z) <= 0.5*dz + tolerance) {
+                is_on_bdy += 1;
+            }
+
         } // end if on type
     } // end for nodes in the surface
 
@@ -721,6 +784,13 @@ size_t check_bdy_node(const size_t node_gid,
     const double  orig_x,
     const double  orig_y,
     const double  orig_z,
+    double  height,
+    const double  dx,
+    const double  dy,
+    const double  dz,
+    const double  dir_x,
+    const double  dir_y,
+    const double  dir_z,
     const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_coords)
 {
@@ -754,24 +824,80 @@ size_t check_bdy_node(const size_t node_gid,
             is_on_bdy = 1;
         }
     } // end if on type
-    // cylinderical shell where radius = sqrt(dx^2 + dy^2)
+    // cylindrical shell
     else if (this_bc_tag == 3) {
-        real_t R = sqrt((these_node_coords[0] - orig_x) * (these_node_coords[0] - orig_x) +
-                        (these_node_coords[1] - orig_y) * (these_node_coords[1] - orig_y));
-
-        if (fabs(R - val) <= tolerance) {
-            is_on_bdy = 1;
+        if (num_dims == 2) {
+            height = 1.0;
         }
+        // origin is the center of the cylinder
+        // get vector from node to origin
+        const double vx = these_node_coords[0] - orig_x;
+        const double vy = these_node_coords[1] - orig_y;
+        const double vz = these_node_coords[2] - orig_z;
+        // dot product with direction vector to get signed distance along orientation direction
+        double signed_dist;
+        if (num_dims == 3) {
+            signed_dist = vx*dir_x + vy*dir_y + vz*dir_z;
+        } else {
+            signed_dist = vx*dir_x + vy*dir_y;
+        }
+        // get distance from the axis
+        double rho;
+        if (num_dims == 3) {
+            rho = sqrt(fmax(((vx*vx + vy*vy + vz*vz) - signed_dist*signed_dist), 0.0));
+        } else {
+            rho = sqrt(fmax(((vx*vx + vy*vy) - signed_dist*signed_dist), 0.0));
+        }
+
+        // inside the cylinder if:
+        // distance along orientation direction is less than half the height
+        // inside the radius of the cylinder
+        if (fabs(signed_dist) <= 0.5*height + tolerance && fabs(rho - val) <= tolerance) {
+            is_on_bdy += 1;
+        }
+
     } // end if on type
-    // spherical shell where radius = sqrt(dx^2 + dy^2 + dz^2)
+    // spherical volume where radius = sqrt(dx^2 + dy^2 + dz^2)
     else if (this_bc_tag == 4) {
         real_t R = sqrt((these_node_coords[0] - orig_x) * (these_node_coords[0] - orig_x) +
                         (these_node_coords[1] - orig_y) * (these_node_coords[1] - orig_y) +
                         (these_node_coords[2] - orig_z) * (these_node_coords[2] - orig_z));
 
-        if (fabs(R - val) <= tolerance) {
+        if (R <= val + tolerance) {
             is_on_bdy = 1;
         }
+    } // end if on type
+    // conical volume
+    else if (this_bc_tag == 6) {
+        // origin is the tip of the cone
+        // radius is the radius at the height of the cone
+        // direction is from tip towards base of cone
+
+        // get vector from node to origin
+        const double vx = these_node_coords[0] - orig_x;
+        const double vy = these_node_coords[1] - orig_y;
+        const double vz = these_node_coords[2] - orig_z;
+        // dot product with direction vector to get signed distance along orientation direction
+        const double signed_dist = vx*dir_x + vy*dir_y + vz*dir_z;
+        // get distance from the axis
+        const double rho = sqrt(fmax(((vx*vx + vy*vy + vz*vz) - signed_dist*signed_dist), 0.0));
+
+        // inside the cone if:
+        // 0 <= signed_dist <= height: since origin is at the tip the point of interest must be within the entire height of the cone
+        // inside the radius of the cone accounting for the linear variation of radius
+        if (signed_dist >= 0.0 - tolerance && signed_dist <= height + tolerance && rho <= (val / height) * signed_dist + tolerance) {
+            is_on_bdy += 1;
+        }
+
+    } // end if on type
+    // hexahedral volume
+    else if (this_bc_tag == 7) {
+
+        // origin is the center of the box
+        if (fabs(these_node_coords[0] - orig_x) <= 0.5*dx + tolerance && fabs(these_node_coords[1] - orig_y) <= 0.5*dy + tolerance && fabs(these_node_coords[2] - orig_z) <= 0.5*dz + tolerance) {
+            is_on_bdy += 1;
+        }
+
     } // end if on type
 
     return is_on_bdy;
@@ -829,6 +955,13 @@ void tag_bdys(const BoundaryCondition_t& boundary,
                 const double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
                 const double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
                 const double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
+                double height = boundary.BoundaryConditionSetup(bdy_set).height;
+                const double dx = boundary.BoundaryConditionSetup(bdy_set).edge_lengths[0];
+                const double dy = boundary.BoundaryConditionSetup(bdy_set).edge_lengths[1];
+                const double dz = boundary.BoundaryConditionSetup(bdy_set).edge_lengths[2];
+                const double dir_x = boundary.BoundaryConditionSetup(bdy_set).direction[0];
+                const double dir_y = boundary.BoundaryConditionSetup(bdy_set).direction[1];
+                const double dir_z = boundary.BoundaryConditionSetup(bdy_set).direction[2];
 
                 // save the surface index
                 size_t bdy_surf_gid = mesh.bdy_surfs(bdy_surf_lid);
@@ -841,6 +974,13 @@ void tag_bdys(const BoundaryCondition_t& boundary,
                                                   orig_x,
                                                   orig_y,
                                                   orig_z,
+                                                  height,
+                                                  dx,
+                                                  dy,
+                                                  dz,
+                                                  dir_x,
+                                                  dir_y,
+                                                  dir_z,
                                                   mesh,
                                                   node_coords); // no=0, yes=1
 
@@ -865,6 +1005,13 @@ void tag_bdys(const BoundaryCondition_t& boundary,
                 const double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
                 const double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
                 const double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
+                double height = boundary.BoundaryConditionSetup(bdy_set).height;
+                const double dx = boundary.BoundaryConditionSetup(bdy_set).edge_lengths[0];
+                const double dy = boundary.BoundaryConditionSetup(bdy_set).edge_lengths[1];
+                const double dz = boundary.BoundaryConditionSetup(bdy_set).edge_lengths[2];
+                const double dir_x = boundary.BoundaryConditionSetup(bdy_set).direction[0];
+                const double dir_y = boundary.BoundaryConditionSetup(bdy_set).direction[1];
+                const double dir_z = boundary.BoundaryConditionSetup(bdy_set).direction[2];
                 
                 // save the node index
                 size_t bdy_node_gid = mesh.bdy_nodes(bdy_node_lid);
@@ -877,6 +1024,13 @@ void tag_bdys(const BoundaryCondition_t& boundary,
                                                   orig_x,
                                                   orig_y,
                                                   orig_z,
+                                                  height,
+                                                  dx,
+                                                  dy,
+                                                  dz,
+                                                  dir_x,
+                                                  dir_y,
+                                                  dir_z,
                                                   mesh,
                                                   node_coords); // no=0, yes=1
 

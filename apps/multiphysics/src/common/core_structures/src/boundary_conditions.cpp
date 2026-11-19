@@ -41,7 +41,9 @@ std::map<std::string, boundary_conditions::BdyTag> bc_surface_map
     { "z_plane", boundary_conditions::zPlane },
     { "cylinder", boundary_conditions::cylinder },
     { "sphere", boundary_conditions::sphere },
-    { "global", boundary_conditions::global }
+    { "global", boundary_conditions::global },
+    { "cone", boundary_conditions::cone },
+    { "box", boundary_conditions::box }
 };
 
 std::map<std::string, boundary_conditions::BCVelocityModels> bc_velocity_model_map
@@ -133,7 +135,10 @@ std::vector<std::string> str_bc_surface_inps
     "plane_position",
     "radius",
     "tolerance",
-    "origin"
+    "origin",
+    "direction",
+    "height",
+    "edge_lengths"
 };
 
 std::vector<std::string> str_bc_node_inps
@@ -142,7 +147,10 @@ std::vector<std::string> str_bc_node_inps
     "plane_position",
     "radius",
     "tolerance",
-    "origin"
+    "origin",
+    "direction",
+    "height",
+    "edge_lengths"
 };
 
 std::vector<std::string> bc_required_inps

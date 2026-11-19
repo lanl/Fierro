@@ -48,11 +48,13 @@ namespace boundary_conditions
 enum BdyTag
 {
     xPlane = 0,     // tag an x-plane
-    yPlane = 1,     // tag an y-plane
-    zPlane = 2,     // tag an z-plane
-    cylinder = 3,   // tag an cylindrical surface
-    sphere = 4,     // tag a spherical surface
-    global = 5      // tag the full boundary (used by contact or fracture)
+    yPlane = 1,     // tag a y-plane
+    zPlane = 2,     // tag a z-plane
+    cylinder = 3,   // tag a cylindrical surface
+    sphere = 4,     // tag a spherical volume
+    global = 5,     // tag the full boundary (used by contact or fracture)
+    cone = 6,       // tag a conical volume
+    box = 7         // tag a hexahedral volume
 };
 // future options
 //     read_file = 5   // read from a file currently unsupported
@@ -157,10 +159,14 @@ extern std::map<std::string, boundary_conditions::BCFcnLocation> bc_location_map
 /////////////////////////////////////////////////////////////////////////////
 struct BoundaryConditionSetup_t
 {
-    boundary_conditions::BdyTag surface;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
-    double origin[3] = { 0.0, 0.0, 0.0 };  ///< origin of surface being tagged, e.g., sphere or cylinder surface
-    double value     = 0.0;                ///< value = position, radius, etc. defining the surface geometric shape
-    double tolerance = 1.0e-7;  ///< tolerance for tagging a boundary surface
+    boundary_conditions::BdyTag surface;         ///< Geometry boundary condition is applied to, e.g., sphere, plane
+    double origin[3] = { 0.0, 0.0, 0.0 };        ///< origin of surface being tagged, e.g., sphere or cylinder surface
+    double value     = 0.0;                      ///< value = position, radius, etc. defining the surface geometric shape
+    double tolerance = 1.0e-7;                   ///< tolerance for tagging a boundary surface
+    double direction[3] = {0.0, 0.0, 1.0 };      ///< direction for orientable bdytag options (cylinder, cone)
+    double height    = 0.0;                     ///< height for cone and cylinder
+    double edge_lengths[3] = { 0.0, 0.0, 0.0 };  ///< edge lengths box
+
 }; // end boundary condition setup
 
 /////////////////////////////////////////////////////////////////////////////

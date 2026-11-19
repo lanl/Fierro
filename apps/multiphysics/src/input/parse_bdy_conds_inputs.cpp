@@ -804,6 +804,9 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     } // end if plane position
                     else if (a_subfield_word.compare("radius") == 0) {
                         double value = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<double>();
+                        if (value <= 0.0) {
+                            Kokkos::abort("Exiting simulation. Radius must be greater than zero.");
+                        }
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
@@ -843,6 +846,73 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         });
 
                     } //end origin
+                    else if (a_subfield_word.compare("direction") == 0) {
+                        std::string direction = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<std::string>();
+
+                        // get the direction numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(direction, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1 = std::stod(numbers[2]);
+                        // normalizing
+                        double norm = sqrt(x1*x1 + y1*y1 + z1*z1);
+                        if (norm == 0.0) {
+                            Kokkos::abort("Please input non-zero direction.");
+                        }
+                        x1 = x1/norm;
+                        y1 = y1/norm;
+                        z1 = z1/norm;
+
+                        // storing the direction values as (x1,y1,z1)
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).direction[0] = x1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).direction[1] = y1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).direction[2] = z1;
+                        });
+
+                    } // end direction
+                    else if (a_subfield_word.compare("height") == 0) {
+                        double value = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<double>();
+                        if (value <= 0.0) {
+                            Kokkos::abort("Exiting simulation. Height must be greater than zero.");
+                        }
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).height = value;
+                        });
+                    } // end if height
+                    else if (a_subfield_word.compare("edge_lengths") == 0) {
+                        std::string edge_lengths = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<std::string>();
+
+                        // get the edge_lengths numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(edge_lengths, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+
+                        if (x1 <= 0.0 || y1 <= 0.0 || z1 <= 0.0) {
+                            Kokkos::abort("Exiting simulation. Box is meant for 3D. Please set all 3 edge lengths.");
+                        }
+
+                        // storing the edge_lengths values as (x1,y1,z1)
+
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).edge_lengths[0] = x1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).edge_lengths[1] = y1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).edge_lengths[2] = z1;
+                        });
+
+                    } // end edge_lengths
                     else {
                         // word is unknown
                         std::cout << "ERROR: invalid input under boundary condition geometery: " << a_subfield_word << std::endl;
@@ -906,6 +976,9 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                     } // end if plane position
                     else if (a_subfield_word.compare("radius") == 0) {
                         double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        if (value <= 0.0) {
+                            Kokkos::abort("Exiting simulation. Radius must be greater than zero.");
+                        }
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
@@ -945,6 +1018,73 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         });
 
                     } //end origin
+                    else if (a_subfield_word.compare("direction") == 0) {
+                        std::string direction = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<std::string>();
+
+                        // get the direction numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(direction, ",");
+                        
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1 = std::stod(numbers[2]);
+                        // normalizing
+                        double norm = sqrt(x1*x1 + y1*y1 + z1*z1);
+                        if (norm == 0.0) {
+                            Kokkos::abort("Please input non-zero direction.");
+                        }
+                        x1 = x1/norm;
+                        y1 = y1/norm;
+                        z1 = z1/norm;
+
+                        // storing the direction values as (x1,y1,z1)
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).direction[0] = x1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).direction[1] = y1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).direction[2] = z1;
+                        });
+
+                    } //end direction
+                    else if (a_subfield_word.compare("height") == 0) {
+                        double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        if (value <= 0.0) {
+                            Kokkos::abort("Exiting simulation. Height must be greater than zero.");
+                        }
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).height = value;
+                        });
+                    } // end if height
+                    else if (a_subfield_word.compare("edge_lengths") == 0) {
+                        std::string edge_lengths = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<std::string>();
+
+                        // get the edge_lengths numbers, values are words
+                        std::vector<std::string> numbers = exact_array_values(edge_lengths, ",");
+
+                        double x1 = std::stod(numbers[0]);
+                        double y1 = std::stod(numbers[1]);
+                        double z1;
+
+                        if(numbers.size()==3){ 
+                            // 3D
+                            z1 = std::stod(numbers[2]);
+                        }
+                        else {
+                            // 2D
+                            z1 = 0.0;
+                        } //
+
+                        if (x1 <= 0.0 || y1 <= 0.0 || z1 <= 0.0) {
+                            Kokkos::abort("Exiting simulation. Box is meant for 3D. Please set all 3 edge lengths.");
+                        }
+
+                        // storing the edge_lengths values as (x1,y1,z1)
+
+                        RUN({
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).edge_lengths[0] = x1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).edge_lengths[1] = y1;
+                            BoundaryConditions.BoundaryConditionSetup(bc_id).edge_lengths[2] = z1;
+                        });
+
+                    } // end edge_lengths
                     else {
                         // word is unknown
                         std::cout << "ERROR: invalid input under boundary condition geometery: " << a_subfield_word << std::endl;
