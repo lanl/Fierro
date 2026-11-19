@@ -60,11 +60,14 @@ static void check_close(const real_t actual,
                         const std::string& label)
 {
     g_num_checks++;
+    // never test tighter than a few ulps of real_t; the literal tolerances
+    // below are written for double and are unreachable in narrower builds
+    const real_t eff_tol = mtr::prec::fmax(tol, (real_t)4 * mtr::prec::epsilon<real_t>());
     const real_t diff = Kokkos::fabs(actual - expected);
-    if (diff > tol) {
+    if (diff > eff_tol) {
         g_num_failures++;
         printf("  [FAIL] %s : actual=%.16e expected=%.16e diff=%.3e tol=%.3e\n",
-               label.c_str(), actual, expected, diff, tol);
+               label.c_str(), (double)actual, (double)expected, (double)diff, (double)eff_tol);
     }
     else if (g_verbose) {
         printf("  [ ok ] %s : actual=%.16e expected=%.16e diff=%.3e\n",

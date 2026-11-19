@@ -8,7 +8,9 @@ using namespace mtr;
 
 // solving options
 static constexpr size_t max_iter = 100;
-static constexpr real_t tol = 1e-15;  // tolerance for the things that are supposed to be zero
+// tolerance for the things that are supposed to be zero; never below a few ulps of real_t
+// (1e-15 is below float resolution, so the Newton solve could never converge in a float build)
+static constexpr real_t tol = Kokkos::max((real_t)1e-15, (real_t)4 * std::numeric_limits<real_t>::epsilon());
 static constexpr real_t edge_tol = 1e-3;  // tolerance for edge case solutions (see contact_check for more info)
 
 

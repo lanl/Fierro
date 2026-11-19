@@ -443,7 +443,7 @@ bool closest_point_projected_newton(const real_t* x_I,
 {
     const size_t max_iters    = 25;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const size_t max_ls_iters = 5;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t newton_tol   = 1.0e-12; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t newton_tol   = mtr::prec::fmax((real_t)1.0e-12, (real_t)10 * mtr::prec::epsilon<real_t>()); // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
 
     real_t x_s[3], x_xi[3], x_eta[3], x_xixi[3], x_xieta[3], x_etaeta[3];
     real_t d[3];

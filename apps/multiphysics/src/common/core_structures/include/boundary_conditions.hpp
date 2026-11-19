@@ -160,7 +160,7 @@ struct BoundaryConditionSetup_t
     boundary_conditions::BdyTag surface;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
     real_t origin[3] = { 0.0, 0.0, 0.0 };  ///< origin of surface being tagged, e.g., sphere or cylinder surface
     real_t value     = 0.0;                ///< value = position, radius, etc. defining the surface geometric shape
-    real_t tolerance = 1.0e-7;  ///< tolerance for tagging a boundary surface
+    real_t tolerance = mtr::prec::fmax((real_t)1.0e-7, (real_t)10 * mtr::prec::epsilon<real_t>());  ///< tolerance for tagging a boundary surface (never below real_t resolution)
 }; // end boundary condition setup
 
 /////////////////////////////////////////////////////////////////////////////

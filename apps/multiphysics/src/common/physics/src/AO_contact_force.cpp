@@ -276,7 +276,7 @@ int frictionless_increment(const size_t bdy_node_lid,
     const size_t num_dofs_1d    = dof_positions_1d.dims(0);
     const size_t num_surf_nodes = num_dofs_1d*num_dofs_1d;
     const size_t max_iter       = 100;        // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t n_tol          = 1.0e-10;   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t n_tol          = mtr::prec::fmax((real_t)1.0e-10, (real_t)10 * mtr::prec::epsilon<real_t>());   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
 
     // inputs, restored on failure
     const real_t xi_in  = xi;
@@ -835,9 +835,9 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
 {
     const size_t max_sweeps      = 10;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const size_t max_global_iter = 100000;    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t rel_tol         = 1.0e-8; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t rel_tol         = mtr::prec::fmax((real_t)1.0e-8, (real_t)10 * mtr::prec::epsilon<real_t>()); // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const real_t slide_tol       = 1.01;   // TODO: define once (shared with penetration_sweep)
-    const real_t res_tol         = (real_t)1.0e-10*max_gap;   // length scale from the mesh
+    const real_t res_tol         = mtr::prec::fmax((real_t)1.0e-10, (real_t)10 * mtr::prec::epsilon<real_t>())*max_gap;   // length scale from the mesh
 
     settled       = false;
     pairs_changed = false;
