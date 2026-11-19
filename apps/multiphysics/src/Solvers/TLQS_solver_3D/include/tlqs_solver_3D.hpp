@@ -237,7 +237,7 @@ public:
 
     // **** Functions defined in surface.cpp **** //
     KOKKOS_FUNCTION
-    void get_qpt_area_normal(
+    static void get_qpt_area_normal(
         const swage::Mesh_t& mesh,
         const elements::ReferenceSurface_t& ref_surf,
         const elements::SurfaceQuadrature_t& SurfQuad,
@@ -247,16 +247,16 @@ public:
         const ViewCArrayKokkos<double>& jac,
         const ViewCArrayKokkos<double>& inv_jac,
         ViewCArrayKokkos<double>& normal,
-        double& qpt_weighted_area) const;
+        double& qpt_weighted_area);
 
     KOKKOS_FUNCTION
-    void get_surf_qpt_coords(
+    static void get_surf_qpt_coords(
         const swage::Mesh_t& mesh,
         const elements::ReferenceSurface_t ref_surf,
         const MPICArrayKokkos<double>& node_coords,
         const size_t qpt_lid,
         const size_t surf_gid,
-        ViewCArrayKokkos<double>& qpt_coords) const;
+        ViewCArrayKokkos<double>& qpt_coords);
 
     // **** Functions defined in time_integration.cpp **** //
     void timestep_init(

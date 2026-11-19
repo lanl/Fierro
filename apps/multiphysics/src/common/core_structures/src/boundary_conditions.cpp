@@ -133,7 +133,10 @@ std::vector<std::string> str_bc_surface_inps
     "plane_position",
     "radius",
     "tolerance",
-    "origin"
+    "origin",
+    "direction",
+    "height",
+    "edge_lengths"
 };
 
 std::vector<std::string> str_bc_node_inps
@@ -142,7 +145,10 @@ std::vector<std::string> str_bc_node_inps
     "plane_position",
     "radius",
     "tolerance",
-    "origin"
+    "origin",
+    "direction",
+    "height",
+    "edge_lengths"
 };
 
 std::vector<std::string> bc_required_inps
