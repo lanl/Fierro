@@ -9,8 +9,8 @@ KOKKOS_FUNCTION
 void capture_box(double &vx_max, double &vy_max, double &vz_max,
                  double &ax_max, double &ay_max, double &az_max,
                  double bounding_box[],
-                 const MPICArrayKokkos <double> &coords, const CArrayKokkos <size_t> bdy_patches,
-                 const CArrayKokkos <size_t> nodes_in_patch, int surf_lid, const double &dt)
+                 const MPICArrayKokkos <double> &coords, const CArrayKokkos <size_t> bdy_surfs,
+                 const CArrayKokkos <size_t> nodes_in_surf, int surf_lid, const double &dt)
 {
     // WARNING: specific to first order hex elements
     // [- or +][x y z][node0 node1 node2 node3]
@@ -27,8 +27,8 @@ void capture_box(double &vx_max, double &vy_max, double &vz_max,
     {
         for (int j = 0; j < 3; j++)
         {
-            add_sub[0][j][i] = coords(nodes_in_patch(bdy_patches(surf_lid),i),j) + max_v_arr[j]*dt + 0.5*max_a_arr[j]*dt*dt;
-            add_sub[1][j][i] = coords(nodes_in_patch(bdy_patches(surf_lid),i),j) - max_v_arr[j]*dt - 0.5*max_a_arr[j]*dt*dt;
+            add_sub[0][j][i] = coords(nodes_in_surf(bdy_surfs(surf_lid),i),j) + max_v_arr[j]*dt + 0.5*max_a_arr[j]*dt*dt;
+            add_sub[1][j][i] = coords(nodes_in_surf(bdy_surfs(surf_lid),i),j) - max_v_arr[j]*dt - 0.5*max_a_arr[j]*dt*dt;
         }
     };
 
@@ -85,7 +85,7 @@ void penetration_capture_box(double depth_cap, double bounding_box[], size_t nod
 }
 
 KOKKOS_FUNCTION
-void construct_basis(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+void construct_basis(CArrayKokkos <size_t> nodes_in_surf, CArrayKokkos <size_t> bdy_surfs,
                      const CArrayKokkos <double> &contact_forces, const CArrayKokkos <size_t> &contact_surface_map,
                      const DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
                      const DCArrayKokkos <double> &mass, const MPICArrayKokkos <double> &coords,
@@ -96,7 +96,7 @@ void construct_basis(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t>
     {
         for (int j = 0; j < 4; j++)
         {
-            size_t node_gid = nodes_in_patch(bdy_patches(surf_lid),j);
+            size_t node_gid = nodes_in_surf(bdy_surfs(surf_lid),j);
             double a = contact_forces(contact_surface_map(surf_lid,j),i);
             for (size_t corner_lid = 0; corner_lid < num_corners_in_node(node_gid); corner_lid++)
             {
@@ -163,7 +163,7 @@ void d_phi_d_eta(double d_phi_d_eta[4], const double &xi_value, const double &et
 }
 
 KOKKOS_FUNCTION
-void get_normal(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+void get_normal(CArrayKokkos <size_t> nodes_in_surf, CArrayKokkos <size_t> bdy_surfs,
                 const CArrayKokkos <double> &contact_forces, const CArrayKokkos <size_t> &contact_surface_map,
                 const DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
                 const DCArrayKokkos <double> &mass, const MPICArrayKokkos <double> &coords,
@@ -180,7 +180,7 @@ void get_normal(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_
 
     // Construct the basis matrix A
     double A[3][4];
-    construct_basis(nodes_in_patch, bdy_patches, contact_forces,
+    construct_basis(nodes_in_surf, bdy_surfs, contact_forces,
                     contact_surface_map, corner_force, corners_in_node,
                     mass, coords, num_corners_in_node, vel,
                     A, surf_lid, del_t);
@@ -333,7 +333,7 @@ void get_normal_derivatives(const MPICArrayKokkos <double> &coords, const double
 } // end get_normal_derivatives
 
 KOKKOS_FUNCTION  // will be called inside a macro
-bool get_contact_point(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+bool get_contact_point(CArrayKokkos <size_t> nodes_in_surf, CArrayKokkos <size_t> bdy_surfs,
                        CArrayKokkos <double> &contact_forces, CArrayKokkos <size_t> &contact_surface_map,
                        DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
                        DCArrayKokkos <double> &mass, MPICArrayKokkos <double> &coords, CArrayKokkos <size_t> bdy_nodes,
@@ -386,7 +386,7 @@ bool get_contact_point(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_
     for (int i = 0; i < max_iter; i++)
     {
         iters = i;
-        construct_basis(nodes_in_patch, bdy_patches, contact_forces,
+        construct_basis(nodes_in_surf, bdy_surfs, contact_forces,
                         contact_surface_map, corner_force, corners_in_node,
                         mass, coords, num_corners_in_node, vel,
                         A, surf_lid, del_tc);
@@ -425,14 +425,14 @@ bool get_contact_point(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_
         {
             for (int k = 0; k < 4; k++)
             {
-                size_t patch_node_gid = bdy_nodes(contact_surface_map(surf_lid, k));
+                size_t surf_node_gid = bdy_nodes(contact_surface_map(surf_lid, k));
                 double a = contact_forces(contact_surface_map(surf_lid,k),j);
-                for (size_t corner_lid = 0; corner_lid < num_corners_in_node(patch_node_gid); corner_lid++)
+                for (size_t corner_lid = 0; corner_lid < num_corners_in_node(surf_node_gid); corner_lid++)
                 {
-                    a += corner_force(corners_in_node(patch_node_gid, corner_lid), j);
+                    a += corner_force(corners_in_node(surf_node_gid, corner_lid), j);
                 }
-                a /= mass(patch_node_gid);
-                d_A_d_del_t[j][k] = vel(patch_node_gid, j) + a*del_tc;
+                a /= mass(surf_node_gid);
+                d_A_d_del_t[j][k] = vel(surf_node_gid, j) + a*del_tc;
             }
         }
 
@@ -483,8 +483,8 @@ bool get_contact_point(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_
             J[j][2] = J2[j];
         }
 
-        // Construct the inverse of the Jacobian and check for singularity. Singularities occur when the node and patch
-        // are travelling at the same velocity (same direction) or if the patch is perfectly planar and the node travels
+        // Construct the inverse of the Jacobian and check for singularity. Singularities occur when the node and surface
+        // are travelling at the same velocity (same direction) or if the surface is perfectly planar and the node travels
         // parallel to the plane. Both cases mean no force resolution is needed and will return a false condition. These
         // conditions can be seen in singularity_detection_check.py in the python version.
         J_det = J[0][0]*(J[1][1]*J[2][2] - J[1][2]*J[2][1]) - J[0][1]*(J[1][0]*J[2][2] - J[1][2]*J[2][0]) +
@@ -533,7 +533,7 @@ bool get_contact_point(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_
 }  // end get_contact_point
 
 KOKKOS_FUNCTION
-bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+bool contact_check(CArrayKokkos <size_t> nodes_in_surf, CArrayKokkos <size_t> bdy_surfs,
                    CArrayKokkos <double> &contact_forces, CArrayKokkos <size_t> &contact_surface_map,
                    DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
                    DCArrayKokkos <double> &mass, MPICArrayKokkos <double> &coords, CArrayKokkos <size_t> bdy_nodes,
@@ -542,11 +542,11 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
                    const double &del_t, CArrayKokkos <double> &xi, CArrayKokkos <double> &eta, double &del_tc)
 {
     // Constructing the guess value
-    // The guess is determined by projecting the node onto a plane formed by the patch at del_t/2.
-    // First, compute the centroid of the patch at time del_t/2
+    // The guess is determined by projecting the node onto a plane formed by the surface at del_t/2.
+    // First, compute the centroid of the surface at time del_t/2
     double A[3][4];
     double half_dt = del_t/2;
-    construct_basis(nodes_in_patch, bdy_patches, contact_forces,
+    construct_basis(nodes_in_surf, bdy_surfs, contact_forces,
                     contact_surface_map, corner_force, corners_in_node,
                     mass, coords, num_corners_in_node, vel,
                     A, surf_lid, half_dt);
@@ -576,7 +576,7 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
     }
 
     // Construct the basis vectors. The first row of the matrix is the vector from the centroid to the reference point
-    // (1, 0) on the patch. The second row of the matrix is the vector from the centroid to the reference point (0, 1).
+    // (1, 0) on the surface. The second row of the matrix is the vector from the centroid to the reference point (0, 1).
     // The basis matrix is a 2x3 matrix always.
     double b1[3];
     double b2[3];
@@ -623,7 +623,7 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
         A_basis[1][i] = b2[i];
     }
 
-    // The matrix multiplication of A_basis*v is the projection of the node onto the plane formed by the patch.
+    // The matrix multiplication of A_basis*v is the projection of the node onto the plane formed by the surface.
     double guess[2];
     guess[0] = 0;
     guess[1] = 0;
@@ -637,7 +637,7 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
     del_tc = del_t/2;
 
     // Get the solution
-    bool solution_found = get_contact_point(nodes_in_patch, bdy_patches, contact_forces,
+    bool solution_found = get_contact_point(nodes_in_surf, bdy_surfs, contact_forces,
                                             contact_surface_map, corner_force, corners_in_node,
                                             mass, coords, bdy_nodes, num_corners_in_node, vel,
                                             node_gid, node_lid, surf_lid, xi_val, eta_val, del_tc,
@@ -678,7 +678,7 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
 
     double d_phi_d_eta_arr[4];
 
-    double ak;  // place to store acceleration of a patch node
+    double ak;  // place to store acceleration of a surface node
     double as;  // place to store acceleration of the penetrating node
 
     double rhs[3];  // right hand side (A_arr*phi_k)
@@ -991,7 +991,7 @@ void frictionless_increment(ViewCArrayKokkos <double> &pair_vars, size_t &contac
         d_phi_d_xi(d_phi_d_xi_arr, sol[0], sol[1], xi, eta);
         d_phi_d_eta(d_phi_d_eta_arr, sol[0], sol[1], xi, eta);
 
-        // get the next patch locations
+        // get the next surface locations
         double next_A[3][4];
         for (int j = 0; j < 3; j++) {
             for (int k = 0; k < 4; k++) {
@@ -1080,15 +1080,15 @@ void distribute_frictionless_force(ViewCArrayKokkos <double> &pair_vars, size_t 
             //node.contact_force(i) -= fc_inc_total*normal(i);
         }
 
-        // update patch nodes
+        // update surface nodes
         for (int k = 0; k < 4; k++)
         {
-            size_t patch_node_contact_id = contact_surface_map(k);
+            size_t surf_node_contact_id = contact_surface_map(k);
             for (int i = 0; i < 3; i++)
             {
-                Kokkos::atomic_add(&contact_forces(patch_node_contact_id, i), pair_vars(7)*pair_vars(i+3)*phi_k[k]);
-                //contact_forces(patch_node_contact_id, i) = 0;
-                //patch_node.contact_force(i) += fc_inc_total*normal(i)*phi_k(k);
+                Kokkos::atomic_add(&contact_forces(surf_node_contact_id, i), pair_vars(7)*pair_vars(i+3)*phi_k[k]);
+                //contact_forces(surf_node_contact_id, i) = 0;
+                //surface_node.contact_force(i) += fc_inc_total*normal(i)*phi_k(k);
             }
         }
         pair_vars(7) = 0.0;
@@ -1104,14 +1104,14 @@ void distribute_frictionless_force(ViewCArrayKokkos <double> &pair_vars, size_t 
             //node.contact_force(i) += force_val*normal(i);
         }
 
-        // update patch nodes
+        // update surface nodes
         for (int k = 0; k < 4; k++)
         {
-            size_t patch_node_contact_id = contact_surface_map(k);
+            size_t surf_node_contact_id = contact_surface_map(k);
             for (int i = 0; i < 3; i++)
             {
-                Kokkos::atomic_add(&contact_forces(patch_node_contact_id, i), -force_val*pair_vars(i+3)*phi_k[k]);
-                //patch_node.contact_force(i) -= force_val*normal(i)*phi_k(k);
+                Kokkos::atomic_add(&contact_forces(surf_node_contact_id, i), -force_val*pair_vars(i+3)*phi_k[k]);
+                //surface_node.contact_force(i) -= force_val*normal(i)*phi_k(k);
             }
         }
     }
@@ -1120,7 +1120,7 @@ void distribute_frictionless_force(ViewCArrayKokkos <double> &pair_vars, size_t 
 
 KOKKOS_FUNCTION
 bool should_remove(ViewCArrayKokkos <double> &pair_vars,
-                   CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                   CArrayKokkos <size_t> nodes_in_surf, CArrayKokkos <size_t> bdy_surfs,
                    const CArrayKokkos <double> &contact_forces, const CArrayKokkos <size_t> &contact_surface_map,
                    const DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
                    const DCArrayKokkos <double> &mass, const MPICArrayKokkos <double> &coords,
@@ -1136,7 +1136,7 @@ bool should_remove(ViewCArrayKokkos <double> &pair_vars,
     {
         // update the normal and zero fc_inc_total for the next iteration
         double new_normal[3];
-        get_normal(nodes_in_patch, bdy_patches, contact_forces, contact_surface_map, corner_force,
+        get_normal(nodes_in_surf, bdy_surfs, contact_forces, contact_surface_map, corner_force,
                    corners_in_node, mass, coords, num_corners_in_node, vel, pair_vars(0),
                    pair_vars(1), del_t, new_normal, xi, eta, surf_lid);
         for (int i = 0; i < 3; i++)
@@ -1154,7 +1154,7 @@ bool should_remove(ViewCArrayKokkos <double> &pair_vars,
 /// start of contact state functions *******************************************************************************
 
 void find_nodes(double &vx_max, double &vy_max, double &vz_max, double &ax_max, double &ay_max, double &az_max,
-                MPICArrayKokkos <double> &coords, CArrayKokkos <size_t> bdy_patches, CArrayKokkos <size_t> nodes_in_patch,
+                MPICArrayKokkos <double> &coords, CArrayKokkos <size_t> bdy_surfs, CArrayKokkos <size_t> nodes_in_surf,
                 int &surf_lid, const double &del_t, size_t &Sx, size_t &Sy, size_t &Sz, double bounding_box[],
                 double &x_min, double &y_min, double &z_min, double &bucket_size, CArrayKokkos <size_t> &buckets,
                 CArrayKokkos <size_t> &possible_nodes, CArrayKokkos <size_t> &contact_surface_map, size_t &num_nodes_found,
@@ -1163,8 +1163,8 @@ void find_nodes(double &vx_max, double &vy_max, double &vz_max, double &ax_max, 
 {
     // Get capture box
     capture_box(vx_max, vy_max, vz_max, ax_max, ay_max, az_max, 
-                bounding_box, coords, bdy_patches,
-                nodes_in_patch, surf_lid, del_t);
+                bounding_box, coords, bdy_surfs,
+                nodes_in_surf, surf_lid, del_t);
 
     // Determine the buckets that intersect with the capture box
     size_t ibox_max = fmax(0, fmin(Sx - 1, floor((bounding_box[0] - x_min)/bucket_size))); // NOLINT(*-narrowing-conversions)
@@ -1200,7 +1200,7 @@ void find_nodes(double &vx_max, double &vy_max, double &vz_max, double &ax_max, 
         {
             size_t node_gid = nsort(npoint(b) + i);
             bool add_node = true;
-            // If the node is in the current contact_patch, then continue; else, add it to possible_nodes
+            // If the node is in the current contact_surf, then continue; else, add it to possible_nodes
             for (int j = 0; j < 4; j++)
             {
                 if (node_gid == bdy_nodes(contact_surface_map(surf_lid,j)))
@@ -1227,8 +1227,8 @@ void find_nodes(double &vx_max, double &vy_max, double &vz_max, double &ax_max, 
 // ***************************************************************************************************************
 KOKKOS_FUNCTION
 bool get_edge_pair(double normal1[3], double normal2[3], size_t &node_gid, const double &del_t,
-                   double new_normal[3], CArrayKokkos <size_t> bdy_patches, size_t &contact_id,
-                   CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> &contact_surface_map,
+                   double new_normal[3], CArrayKokkos <size_t> bdy_surfs, size_t &contact_id,
+                   CArrayKokkos <size_t> nodes_in_surf, CArrayKokkos <size_t> &contact_surface_map,
                    CArrayKokkos <size_t> bdy_nodes, CArrayKokkos <double> &contact_forces,
                    DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
                    DCArrayKokkos <double> &mass, MPICArrayKokkos <double> &coords,
@@ -1237,7 +1237,7 @@ bool get_edge_pair(double normal1[3], double normal2[3], size_t &node_gid, const
                    RaggedRightArrayKokkos <size_t> &surfs_in_node)
 {
     // Get the surface normal of the penetrating node by averaging all the normals at that node
-    // we do this by looping through all the patches that the node is in
+    // we do this by looping through all the surfaces that the node is in
     double node_normal[3];
     // zero node normal
     for (int i = 0; i < 3; i++)
@@ -1245,21 +1245,21 @@ bool get_edge_pair(double normal1[3], double normal2[3], size_t &node_gid, const
         node_normal[i] = 0.0;
     }
 
-    size_t num_patches = num_surfs_in_node(contact_id);
+    size_t num_surfs = num_surfs_in_node(contact_id);
     double local_normal[3];
-    for (size_t i = 0; i < num_patches; i++)
+    for (size_t i = 0; i < num_surfs; i++)
     {
-        int patch_contact_id = (int)surfs_in_node(contact_id, i);
-        // loop through the nodes in the patch until we find the node_gid the index matches with patch.xi and patch.eta
+        int surf_contact_id = (int)surfs_in_node(contact_id, i);
+        // loop through the nodes in the surface until we find the node_gid the index matches with surface.xi and surface.eta
         for (int j = 0; j < 4; j++)
         {
-            if (bdy_nodes(contact_surface_map(patch_contact_id),j) == node_gid)
+            if (bdy_nodes(contact_surface_map(surf_contact_id),j) == node_gid)
             {
                 // get the normal at that node
-                get_normal(nodes_in_patch, bdy_patches, contact_forces, contact_surface_map,
+                get_normal(nodes_in_surf, bdy_surfs, contact_forces, contact_surface_map,
                            corner_force, corners_in_node, mass, coords, num_corners_in_node,
                            vel, xi(j), eta(j), del_t, local_normal, xi, eta,
-                           patch_contact_id);
+                           surf_contact_id);
                 for (int k = 0; k < 3; k++)
                 {
                     node_normal[k] += local_normal[k];
@@ -1271,7 +1271,7 @@ bool get_edge_pair(double normal1[3], double normal2[3], size_t &node_gid, const
     // finish getting the average
     for (int i = 0; i < 3; i++)
     {
-        node_normal[i] /= num_patches;
+        node_normal[i] /= num_surfs;
     }
     // Make it a unit vector
     double normal_norm = sqrt(node_normal[0]*node_normal[0] + node_normal[1]*node_normal[1] + node_normal[2]*node_normal[2]);
@@ -1320,9 +1320,9 @@ bool get_edge_pair(double normal1[3], double normal2[3], size_t &node_gid, const
 }  // end get_edge_pair
 
 KOKKOS_FUNCTION
-void remove_pair(size_t &contact_id, const RaggedRightArrayKokkos <size_t> &node_patch_pairs, const RaggedRightArrayKokkos <double> &pair_vars, size_t num_bdy_patches, size_t el_id)
+void remove_pair(size_t &contact_id, const RaggedRightArrayKokkos <size_t> &node_surf_pairs, const RaggedRightArrayKokkos <double> &pair_vars, size_t num_bdy_surfs, size_t el_id)
 {
-    node_patch_pairs(contact_id, el_id) = num_bdy_patches;
+    node_surf_pairs(contact_id, el_id) = num_bdy_surfs;
     for (int i = 0; i < 8; i++) {
         pair_vars(contact_id,el_id*8 + i) = 0.0;
     }
@@ -1356,7 +1356,7 @@ bool penetration_check(size_t node_gid, ViewCArrayKokkos <size_t> &surfaces, con
 
     double pen_dot_product;
 
-    // checking each surface of the element in penetration_patches(i,:) -> stored in surfaces(i)
+    // checking each surface of the element in penetration_surfaces(i,:) -> stored in surfaces(i)
     int count = 0;
     for (int i = 0; i < 5; i++) {
         // pulling node gids
@@ -1384,7 +1384,7 @@ bool penetration_check(size_t node_gid, ViewCArrayKokkos <size_t> &surfaces, con
             count += 1;
         }
 
-        // resetting global location of patch point due to mat mul command being += not just =
+        // resetting global location of surface point due to mat mul command being += not just =
         surf_glob[0] = 0;
         surf_glob[1] = 0;
         surf_glob[2] = 0;
@@ -1529,23 +1529,23 @@ void isoparametric_inverse(const double pos[3], const double elem_pos[3][8], dou
 } // end isoparametric_inverse
 
 void find_penetrating_nodes(double depth_cap, MPICArrayKokkos <double> &coords,
-                            size_t num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces,
-                            CArrayKokkos <size_t> bdy_patches, size_t Sx, size_t Sy, size_t Sz, double x_min,
+                            size_t num_bdy_surfs, CArrayKokkos <size_t> &penetration_surfaces,
+                            CArrayKokkos <size_t> bdy_surfs, size_t Sx, size_t Sy, size_t Sz, double x_min,
                             double y_min, double z_min, double bucket_size, CArrayKokkos <size_t> &buckets,
                             CArrayKokkos <size_t> &node_penetrations, CArrayKokkos <size_t> &npoint,
-                            size_t num_patches, CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &nsort,
-                            DCArrayKokkos <size_t> nodes_in_elem, CArrayKokkos <int> elems_in_patch,
-                            size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <double> xi,
+                            size_t num_surfs, CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &nsort,
+                            DCArrayKokkos <size_t> nodes_in_elem, CArrayKokkos <int> elems_in_surf,
+                            size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_surf, CArrayKokkos <double> xi,
                             CArrayKokkos <double> eta, bool preload)
 {
     RUN({
         double bounding_box[6];
         double surf_normal[3];
         // running find nodes for each contact surface with capture box size set to depth_cap in all directions
-        for (int patch_lid = 0; patch_lid < num_bdy_patches; patch_lid++) {
+        for (int bdy_surf_lid = 0; bdy_surf_lid < num_bdy_surfs; bdy_surf_lid++) {
             size_t nodes_gid[4];
             for (int i = 0; i < 4; i++) {
-                nodes_gid[i] = nodes_in_patch(bdy_patches(patch_lid),i);
+                nodes_gid[i] = nodes_in_surf(bdy_surfs(bdy_surf_lid),i);
             }
             // finding min edge length for a distance cutoff
             double min_edge_len;
@@ -1603,15 +1603,15 @@ void find_penetrating_nodes(double depth_cap, MPICArrayKokkos <double> &coords,
                     size_t node_gid = nsort(npoint(b) + i);
                     
                     // finding distance for cutoff check, looking at nodes and mid point of path
-                    /* double dist_to_patch;
-                    dist_to_patch = sqrt(pow(coords(nodes_gid[0],0) - coords(node_gid,0),2) + pow(coords(nodes_gid[0],1) - coords(node_gid,1),2) + pow(coords(nodes_gid[0],2) - coords(node_gid,2),2));
-                    dist_to_patch = fmin(dist_to_patch, sqrt(pow(coords(nodes_gid[1],0) - coords(node_gid,0),2) + pow(coords(nodes_gid[1],1) - coords(node_gid,1),2) + pow(coords(nodes_gid[1],2) - coords(node_gid,2),2)));
-                    dist_to_patch = fmin(dist_to_patch, sqrt(pow(coords(nodes_gid[2],0) - coords(node_gid,0),2) + pow(coords(nodes_gid[2],1) - coords(node_gid,1),2) + pow(coords(nodes_gid[2],2) - coords(node_gid,2),2)));
-                    dist_to_patch = fmin(dist_to_patch, sqrt(pow(coords(nodes_gid[3],0) - coords(node_gid,0),2) + pow(coords(nodes_gid[3],1) - coords(node_gid,1),2) + pow(coords(nodes_gid[3],2) - coords(node_gid,2),2)));
+                    /* double dist_to_surf;
+                    dist_to_surf = sqrt(pow(coords(nodes_gid[0],0) - coords(node_gid,0),2) + pow(coords(nodes_gid[0],1) - coords(node_gid,1),2) + pow(coords(nodes_gid[0],2) - coords(node_gid,2),2));
+                    dist_to_surf = fmin(dist_to_surf, sqrt(pow(coords(nodes_gid[1],0) - coords(node_gid,0),2) + pow(coords(nodes_gid[1],1) - coords(node_gid,1),2) + pow(coords(nodes_gid[1],2) - coords(node_gid,2),2)));
+                    dist_to_surf = fmin(dist_to_surf, sqrt(pow(coords(nodes_gid[2],0) - coords(node_gid,0),2) + pow(coords(nodes_gid[2],1) - coords(node_gid,1),2) + pow(coords(nodes_gid[2],2) - coords(node_gid,2),2)));
+                    dist_to_surf = fmin(dist_to_surf, sqrt(pow(coords(nodes_gid[3],0) - coords(node_gid,0),2) + pow(coords(nodes_gid[3],1) - coords(node_gid,1),2) + pow(coords(nodes_gid[3],2) - coords(node_gid,2),2)));
                     double mid_x = (coords(nodes_gid[0],0)+coords(nodes_gid[1],0)+coords(nodes_gid[2],0)+coords(nodes_gid[3],0))/4;
                     double mid_y = (coords(nodes_gid[0],1)+coords(nodes_gid[1],1)+coords(nodes_gid[2],1)+coords(nodes_gid[3],1))/4;
                     double mid_z = (coords(nodes_gid[0],2)+coords(nodes_gid[1],2)+coords(nodes_gid[2],2)+coords(nodes_gid[3],2))/4;
-                    dist_to_patch = fmin(dist_to_patch, sqrt(pow(mid_x - coords(node_gid,0),2) + pow(mid_y - coords(node_gid,1),2) + pow(mid_z - coords(node_gid,2),2))); */
+                    dist_to_surf = fmin(dist_to_surf, sqrt(pow(mid_x - coords(node_gid,0),2) + pow(mid_y - coords(node_gid,1),2) + pow(mid_z - coords(node_gid,2),2))); */
                     double zero = 0;
                     get_penetration_normal(coords, zero, zero, surf_normal, xi, eta, nodes_gid);
                     double px = coords(node_gid,0);
@@ -1624,18 +1624,18 @@ void find_penetrating_nodes(double depth_cap, MPICArrayKokkos <double> &coords,
                     double Px = px + c*surf_normal[0];
                     double Py = py + c*surf_normal[1];
                     double Pz = pz + c*surf_normal[2];
-                    double dist_to_patch = sqrt((px-Px)*(px-Px)+(py-Py)*(py-Py)+(pz-Pz)*(pz-Pz));
+                    double dist_to_surf = sqrt((px-Px)*(px-Px)+(py-Py)*(py-Py)+(pz-Pz)*(pz-Pz));
                     // distance cutoff
-                    if (dist_to_patch > dist_factor*min_edge_len) {
+                    if (dist_to_surf > dist_factor*min_edge_len) {
                         continue;
                     }
 
-                    ViewCArrayKokkos <size_t> surfs(&penetration_surfaces(patch_lid, 0, 0), 5, 4);
+                    ViewCArrayKokkos <size_t> surfs(&penetration_surfaces(bdy_surf_lid, 0, 0), 5, 4);
                     bool add_node = penetration_check(node_gid, surfs, coords, xi, eta);
                     // If the node is in the current element, then continue; else, add it to node_penetrations
                     for (int j = 0; j < 8; j++)
                     {
-                        if (node_gid == nodes_in_elem(elems_in_patch(bdy_patches(patch_lid),0),j))
+                        if (node_gid == nodes_in_elem(elems_in_surf(bdy_surfs(bdy_surf_lid),0),j))
                         {
                             add_node = false;
                             break;
@@ -1648,8 +1648,8 @@ void find_penetrating_nodes(double depth_cap, MPICArrayKokkos <double> &coords,
                         for (int j = 0; j < num_bdy_nodes; j++) {
                             if (node_penetrations(j,0) == node_gid) {
                                 for (int k = 0; k < (node_penetrations.dims(1) - 1); k++) {
-                                    if (node_penetrations(j,k+1) == num_patches) {
-                                        node_penetrations(j,k+1) = bdy_patches(patch_lid);
+                                    if (node_penetrations(j,k+1) == num_surfs) {
+                                        node_penetrations(j,k+1) = bdy_surfs(bdy_surf_lid);
                                         break;
                                     }
                                 } // end k
@@ -1658,7 +1658,7 @@ void find_penetrating_nodes(double depth_cap, MPICArrayKokkos <double> &coords,
                     }
                 } // end i
             } // end bucket_lid
-        } // end patch_lid
+        } // end bdy_surf_lid
     }); // end RUN
 } // end find_penetrating_nodes
 
@@ -1821,7 +1821,7 @@ void sort(MPICArrayKokkos <double> &coords, size_t num_bdy_nodes, CArrayKokkos <
     az_max = temp;
     
     // If the max velocity is zero, then we want to set it to a small value. The max velocity and acceleration are used
-    // for creating a capture box around the contact patch. We want there to be at least some thickness to the box.
+    // for creating a capture box around the contact surface. We want there to be at least some thickness to the box.
     if (vx_max == 0) {
         vx_max = 1.0e-3;
     }
@@ -1900,14 +1900,14 @@ void sort(MPICArrayKokkos <double> &coords, size_t num_bdy_nodes, CArrayKokkos <
 }  // end sort
 
 void penetration_sweep(double x_min, double y_min, double z_min, double bounding_box[], MPICArrayKokkos <double> &coords,
-                       size_t num_bdy_patches, CArrayKokkos <size_t> &penetration_surfaces, CArrayKokkos <size_t> bdy_patches,
+                       size_t num_bdy_surfs, CArrayKokkos <size_t> &penetration_surfaces, CArrayKokkos <size_t> bdy_surfs,
                        size_t Sx, size_t Sy, size_t Sz, double bucket_size, CArrayKokkos <size_t> &buckets,
-                       CArrayKokkos <size_t> &node_penetrations, CArrayKokkos <size_t> &npoint, size_t num_patches,
+                       CArrayKokkos <size_t> &node_penetrations, CArrayKokkos <size_t> &npoint, size_t num_surfs,
                        CArrayKokkos <size_t> &nbox, CArrayKokkos <size_t> &nsort, DCArrayKokkos <size_t> nodes_in_elem,
-                       CArrayKokkos <int> elems_in_patch, size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_patch,
+                       CArrayKokkos <int> elems_in_surf, size_t num_bdy_nodes, CArrayKokkos <size_t> nodes_in_surf,
                        const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, double x_max, double y_max, double z_max, DCArrayKokkos <size_t> &num_active,
                        RaggedRightArrayKokkos <size_t> elems_in_node, CArrayKokkos <size_t> num_nodes_in_elem,
-                       CArrayKokkos <size_t> patches_in_elem, RaggedRightArrayKokkos <size_t> &node_patch_pairs, size_t num_elems,
+                       CArrayKokkos <size_t> surfs_in_elem, RaggedRightArrayKokkos <size_t> &node_surf_pairs, size_t num_elems,
                        RaggedRightArrayKokkos <double> &pair_vars, const double &del_t, CArrayKokkos <size_t> &active_set, bool doing_preload)
 {
     // finding penetration depth criterion
@@ -1918,35 +1918,35 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
     // todo: bucket size is bad now after stability update to sort
     double depth_cap = std::min(dim_min/4,3*bucket_size);
 
-    // setting all values to an initially impossible number for surf ids (i.e. greater than total number of patches)
+    // setting all values to an initially impossible number for surf ids (i.e. greater than total number of surfaces)
     FOR_ALL(i,0,num_bdy_nodes,{
         for (int j = 0; j < (node_penetrations.dims(1) - 1); j++) {
-            node_penetrations(i,j+1) = num_patches;
+            node_penetrations(i,j+1) = num_surfs;
         }
     });
     Kokkos::fence();
     
-    find_penetrating_nodes(depth_cap, coords, num_bdy_patches, penetration_surfaces,
-                           bdy_patches, Sx, Sy, Sz, x_min, y_min, z_min, bucket_size, buckets,
-                           node_penetrations, npoint, num_patches, nbox, nsort, nodes_in_elem,
-                           elems_in_patch, num_bdy_nodes, nodes_in_patch, xi, eta, doing_preload);
+    find_penetrating_nodes(depth_cap, coords, num_bdy_surfs, penetration_surfaces,
+                           bdy_surfs, Sx, Sy, Sz, x_min, y_min, z_min, bucket_size, buckets,
+                           node_penetrations, npoint, num_surfs, nbox, nsort, nodes_in_elem,
+                           elems_in_surf, num_bdy_nodes, nodes_in_surf, xi, eta, doing_preload);
     
     // testing element limited pairing
     CArrayKokkos <size_t> elem_count(num_bdy_nodes, "elem_count");
     RUN({
-        // counting unique elements from boundary patches to find which penetrating nodes are inside MORE THAN ONE element
+        // counting unique elements from boundary surfaces to find which penetrating nodes are inside MORE THAN ONE element
         for (int i = 0; i < num_bdy_nodes; i++) {
             // initializing the count variable for the boundary node
             int count = 0;
             for (int j = 0; j < (node_penetrations.dims(1) - 1); j++) {
-                if (node_penetrations(i,j+1) == num_patches) {
-                    break; // break, not continue because node_penetrations is filled from left to right and once num_patches pops up it means the rest is filler
+                if (node_penetrations(i,j+1) == num_surfs) {
+                    break; // break, not continue because node_penetrations is filled from left to right and once num_surfs pops up it means the rest is filler
                 }
                 // initially assuming not a duplicate
                 bool dup = false;
                 for (int k = 0; k < j; k++) {
                     // if a duplicate value prior in the row indexes, it's a duplicate
-                    if (elems_in_patch(node_penetrations(i,j+1),0) == elems_in_patch(node_penetrations(i,k+1),0)) {
+                    if (elems_in_surf(node_penetrations(i,j+1),0) == elems_in_surf(node_penetrations(i,k+1),0)) {
                         dup = true;
                         break;
                     }
@@ -1971,18 +1971,18 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
         for (int i = 0; i < num_bdy_nodes; i++) {
             for (int j = 0; j < elem_count(i); j++) {
                 for (int k = 0; k < (node_penetrations.dims(1) - 1); k++) {
-                    if (node_penetrations(i,k+1) == num_patches) {
-                        break; // break, not continue because node_penetrations is filled from left to right and once num_patches pops up it means the rest is filler
+                    if (node_penetrations(i,k+1) == num_surfs) {
+                        break; // break, not continue because node_penetrations is filled from left to right and once num_surfs pops up it means the rest is filler
                     }
                     bool dup = false;
-                    for (int m = 0; m < j; m++) { // tracking which patches are already found to be duplicates and changing the start value on this loop could speed up a little
-                        if (elems_in_patch(node_penetrations(i, k+1),0) == elems_penetrated(i,m)) {
+                    for (int m = 0; m < j; m++) { // tracking which surfaces are already found to be duplicates and changing the start value on this loop could speed up a little
+                        if (elems_in_surf(node_penetrations(i, k+1),0) == elems_penetrated(i,m)) {
                             dup = true;
                             break;
                         }
                     }
                     if (!dup) {
-                        elems_penetrated(i,j) = elems_in_patch(node_penetrations(i, k+1),0);
+                        elems_penetrated(i,j) = elems_in_surf(node_penetrations(i, k+1),0);
                         break;
                     }
                 }
@@ -1991,8 +1991,8 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
     });
 
     // allocating pair arrays
-    node_patch_pairs = RaggedRightArrayKokkos <size_t> (elem_count);
-    node_patch_pairs.set_values(num_patches);
+    node_surf_pairs = RaggedRightArrayKokkos <size_t> (elem_count);
+    node_surf_pairs.set_values(num_surfs);
     CArrayKokkos <size_t> pair_vars_stride(num_bdy_nodes, "pair_vars_stride");
     RUN({
         for (int i = 0; i < num_bdy_nodes; i++) {
@@ -2029,7 +2029,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                 // array for global frame point calculated in pairing step 5
                 double P[3];
 
-                // array for storing node gids of a patch
+                // array for storing node gids of a surface
                 size_t node_gids[4];
 
                 // reference centroid
@@ -2060,7 +2060,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                 n_to_c[1] /= n_to_c_mag;
                 n_to_c[2] /= n_to_c_mag;
 
-                // for each element, find the most opposing patch normal considering only boundary patches
+                // for each element, find the most opposing surface normal considering only boundary surfaces
                 // pairing step 3) dot product of vector from (2) with normal of each surf being penetrated by the node
                 // todo: need to get nodes_penetrations as a dynamic ragged type to make this loop more efficient
                 // todo: what are the edge cases for pairing step 3?
@@ -2068,10 +2068,10 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                     dot_prod = -1;
                     ptoPmag = pow(10,16);
                     for (int j = 0; j < (node_penetrations.dims(1) - 1); j++) {
-                        if (node_penetrations(node_lid, j+1) != num_patches) {
-                            if (elems_in_patch(node_penetrations(node_lid, j+1), 0) == elems_penetrated(node_lid, el_id)) {
+                        if (node_penetrations(node_lid, j+1) != num_surfs) {
+                            if (elems_in_surf(node_penetrations(node_lid, j+1), 0) == elems_penetrated(node_lid, el_id)) {
                                 for (int k = 0; k < 4; k++){
-                                    node_gids[k] = nodes_in_patch(node_penetrations(node_lid, j+1),k);
+                                    node_gids[k] = nodes_in_surf(node_penetrations(node_lid, j+1),k);
                                 }
                                 get_penetration_normal(coords, ref_cen[0], ref_cen[1], surf_normal, xi, eta, node_gids);
                                 dot_prod_loc = surf_normal[0]*n_to_c[0] + surf_normal[1]*n_to_c[1] + surf_normal[2]*n_to_c[2];
@@ -2101,7 +2101,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                             }
                         }
                     }
-                    //std::cout << "NODE: " << node_penetrations(node_lid,0) << " ELEM: " << elems_penetrated(node_lid, el_id) << " PATCH NODES: " << nodes_in_patch(node_penetrations(node_lid, surf_lid),0) << " " << nodes_in_patch(node_penetrations(node_lid, surf_lid),1) << " " << nodes_in_patch(node_penetrations(node_lid, surf_lid),2) << " " << nodes_in_patch(node_penetrations(node_lid, surf_lid),3) << std::endl;
+                    //std::cout << "NODE: " << node_penetrations(node_lid,0) << " ELEM: " << elems_penetrated(node_lid, el_id) << " SURFACE NODES: " << nodes_in_surf(node_penetrations(node_lid, surf_lid),0) << " " << nodes_in_surf(node_penetrations(node_lid, surf_lid),1) << " " << nodes_in_surf(node_penetrations(node_lid, surf_lid),2) << " " << nodes_in_surf(node_penetrations(node_lid, surf_lid),3) << std::endl;
                     if (surf_lid == -1) {
                         continue;
                     }
@@ -2111,10 +2111,10 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                     // P = p + c*norm_vec, solve for c from equation of plane
                     // todo: is it necessary to define these as double or should it just be one line to calculate c? readability would bad if one line
                     // todo: replace if statement with known in order to remove outer loop entirely
-                    for (int i = 0; i < num_bdy_patches; i++) {
-                        if (bdy_patches(i) == node_penetrations(node_lid,surf_lid)) {
+                    for (int i = 0; i < num_bdy_surfs; i++) {
+                        if (bdy_surfs(i) == node_penetrations(node_lid,surf_lid)) {
                             for (int j = 0; j < 4; j++){
-                                node_gids[j] = nodes_in_patch(bdy_patches(i),j);
+                                node_gids[j] = nodes_in_surf(bdy_surfs(i),j);
                             }
                             get_penetration_normal(coords, ref_cen[0], ref_cen[1], surf_normal, xi, eta, node_gids);
                             double px = coords(node_penetrations(node_lid,0),0);
@@ -2132,7 +2132,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                             double elem_pos[3][8];
                             for (int j = 0; j < 3; j++) {
                                 for (int k = 0; k < 8; k++) {
-                                    elem_pos[j][k] = coords(nodes_in_elem(elems_in_patch(node_penetrations(node_lid,surf_lid),0),k),j);
+                                    elem_pos[j][k] = coords(nodes_in_elem(elems_in_surf(node_penetrations(node_lid,surf_lid),0),k),j);
                                 }
                             }
                             double iso_P[3];
@@ -2141,12 +2141,12 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                             // finding contact surface local id wrt the element
                             size_t surf_elem_id;
                             for (int j = 0; j < 6; j++) {
-                                if (node_penetrations(node_lid,surf_lid) == patches_in_elem(elems_in_patch(bdy_patches(i), 0),j)) {
+                                if (node_penetrations(node_lid,surf_lid) == surfs_in_elem(elems_in_surf(bdy_surfs(i), 0),j)) {
                                     surf_elem_id = j;
                                     break;
                                 }
                             }
-                            // map (xi,eta,zeta) to patch local (xi,eta)
+                            // map (xi,eta,zeta) to surface local (xi,eta)
                             double xi_val;
                             double eta_val;
                             switch (surf_elem_id) {
@@ -2177,7 +2177,7 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
                             }
 
                             // storing the pair
-                            node_patch_pairs(node_lid, el_id) = i;
+                            node_surf_pairs(node_lid, el_id) = i;
                             pair_vars(node_lid,8*el_id) = xi_val;
                             pair_vars(node_lid,8*el_id+1) = eta_val;
                             pair_vars(node_lid,8*el_id+2) = del_t;
@@ -2215,12 +2215,12 @@ void penetration_sweep(double x_min, double y_min, double z_min, double bounding
 } // end penetration_sweep
 
 void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> num_active, CArrayKokkos <size_t> &active_set,
-                      RaggedRightArrayKokkos <size_t> &node_patch_pairs, RaggedRightArrayKokkos <double> &pair_vars, CArrayKokkos <size_t> &contact_surface_map,
+                      RaggedRightArrayKokkos <size_t> &node_surf_pairs, RaggedRightArrayKokkos <double> &pair_vars, CArrayKokkos <size_t> &contact_surface_map,
                       MPICArrayKokkos <double> &coords, CArrayKokkos <size_t> bdy_nodes, DCArrayKokkos <double> &mass,
                       CArrayKokkos <double> &contact_forces, DCArrayKokkos <double> &corner_force, MPICArrayKokkos <double> &vel,
                       RaggedRightArrayKokkos <size_t> corners_in_node, CArrayKokkos <size_t> num_corners_in_node,
                       const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, const double &del_t, CArrayKokkos <double> &contact_force, size_t num_bdy_nodes,
-                      size_t num_patches, CArrayKokkos <size_t> &num_pairs_in_node, const size_t max_local_iter, const size_t max_global_iter)
+                      size_t num_surfs, CArrayKokkos <size_t> &num_pairs_in_node, const size_t max_local_iter, const size_t max_global_iter)
 {
     f_c_incs.set_values(0);
     DCArrayKokkos <double> norm_incs(1);
@@ -2233,13 +2233,13 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
             // pull node id
             size_t contact_id = active_set(i);
             // loop through each surface paired to
-            for (int j = 0; j < node_patch_pairs.stride(contact_id); j++) {
-                if (node_patch_pairs(contact_id,j) != num_patches) {
+            for (int j = 0; j < node_surf_pairs.stride(contact_id); j++) {
+                if (node_surf_pairs(contact_id,j) != num_surfs) {
                     // count the penetrating node
                     num_pairs_in_node(contact_id) += 1;
-                    // count the nodes in the patch
+                    // count the nodes in the surface
                     for (int k = 0; k < 4; k++) {
-                        num_pairs_in_node(contact_surface_map(node_patch_pairs(contact_id,j),k)) += 1;
+                        num_pairs_in_node(contact_surface_map(node_surf_pairs(contact_id,j),k)) += 1;
                     }
                 }
             }
@@ -2255,9 +2255,9 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
         {
             ViewCArrayKokkos<double> incs_view(&f_c_incs(0), num_active(0));
             size_t contact_id = active_set(j);
-            for (int k = 0; k < node_patch_pairs.stride(contact_id); k++) {
-                if (node_patch_pairs(contact_id,k) != num_patches) {
-                    ViewCArrayKokkos <size_t> surface_map(&contact_surface_map(node_patch_pairs(contact_id,k),0), 4);
+            for (int k = 0; k < node_surf_pairs.stride(contact_id); k++) {
+                if (node_surf_pairs(contact_id,k) != num_surfs) {
+                    ViewCArrayKokkos <size_t> surface_map(&contact_surface_map(node_surf_pairs(contact_id,k),0), 4);
                     ViewCArrayKokkos <double> pair(&pair_vars(contact_id,8*k), 8);
                     
                     frictionless_increment(pair, contact_id, xi, eta, del_t, coords, bdy_nodes, surface_map, mass,
@@ -2277,21 +2277,21 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
             // pull node id
             size_t contact_id = active_set(j);
             // loop through each surface paired to
-            for (int k = 0; k < node_patch_pairs.stride(contact_id); k++) {
-                if (node_patch_pairs(contact_id,j) != num_patches) {
+            for (int k = 0; k < node_surf_pairs.stride(contact_id); k++) {
+                if (node_surf_pairs(contact_id,j) != num_surfs) {
                     // tally normal velocity of the penetrating node
                     av_norm_vel += pair_vars(contact_id, 8*k + 3)*vel(bdy_nodes(contact_id),0) +
                                     pair_vars(contact_id, 8*k + 4)*vel(bdy_nodes(contact_id),1) +
                                     pair_vars(contact_id, 8*k + 5)*vel(bdy_nodes(contact_id),2) + // end dot product of velocity with normal direction
                                     (pair_vars(contact_id, 8*k +7) / mass(bdy_nodes(contact_id))) * del_t; // correction based on contact iteration
-                    // tally normal velocity of nodes in the patch
+                    // tally normal velocity of nodes in the surface
                     double phi_k[4];
                     phi(phi_k, pair_vars(contact_id, 8*k), pair_vars(contact_id, 8*k + 1), xi, eta);
                     for (int m = 0; m < 4; m++) {
-                        av_norm_vel += pair_vars(contact_id, 8*k + 3)*vel(bdy_nodes(contact_surface_map(node_patch_pairs(contact_id,k),m)),0) +
-                                        pair_vars(contact_id, 8*k + 4)*vel(bdy_nodes(contact_surface_map(node_patch_pairs(contact_id,k),m)),1) +
-                                        pair_vars(contact_id, 8*k + 5)*vel(bdy_nodes(contact_surface_map(node_patch_pairs(contact_id,k),m)),2) - // end dot product of vel with normal dir
-                                        (pair_vars(contact_id, 8*k +7)*phi_k[m] / mass(contact_surface_map(node_patch_pairs(contact_id,k),m))) * del_t; // correction based on contact iteration
+                        av_norm_vel += pair_vars(contact_id, 8*k + 3)*vel(bdy_nodes(contact_surface_map(node_surf_pairs(contact_id,k),m)),0) +
+                                        pair_vars(contact_id, 8*k + 4)*vel(bdy_nodes(contact_surface_map(node_surf_pairs(contact_id,k),m)),1) +
+                                        pair_vars(contact_id, 8*k + 5)*vel(bdy_nodes(contact_surface_map(node_surf_pairs(contact_id,k),m)),2) - // end dot product of vel with normal dir
+                                        (pair_vars(contact_id, 8*k +7)*phi_k[m] / mass(contact_surface_map(node_surf_pairs(contact_id,k),m))) * del_t; // correction based on contact iteration
                     }
                 } // end if
             } // end k
@@ -2313,17 +2313,17 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
         {
             for (int j = 0; j < num_active(0); j++) {
             size_t contact_id = active_set(j);
-            for (int k = 0; k < node_patch_pairs.stride(contact_id); k++) {
-                if (node_patch_pairs(contact_id,k) != num_patches) {
-                    ViewCArrayKokkos <size_t> surface_map(&contact_surface_map(node_patch_pairs(contact_id,k),0), 4);
+            for (int k = 0; k < node_surf_pairs.stride(contact_id); k++) {
+                if (node_surf_pairs(contact_id,k) != num_surfs) {
+                    ViewCArrayKokkos <size_t> surface_map(&contact_surface_map(node_surf_pairs(contact_id,k),0), 4);
                     ViewCArrayKokkos <double> pair(&pair_vars(contact_id,8*k), 8);
 
                     /* // getting corrector term: m*del_v/dt
                     double pair_mass = mass(bdy_nodes(contact_id)) + 
-                                        mass(bdy_nodes(contact_surface_map(node_patch_pairs(contact_id,k),0))) +
-                                        mass(bdy_nodes(contact_surface_map(node_patch_pairs(contact_id,k),1))) +
-                                        mass(bdy_nodes(contact_surface_map(node_patch_pairs(contact_id,k),2))) +
-                                        mass(bdy_nodes(contact_surface_map(node_patch_pairs(contact_id,k),3)));
+                                        mass(bdy_nodes(contact_surface_map(node_surf_pairs(contact_id,k),0))) +
+                                        mass(bdy_nodes(contact_surface_map(node_surf_pairs(contact_id,k),1))) +
+                                        mass(bdy_nodes(contact_surface_map(node_surf_pairs(contact_id,k),2))) +
+                                        mass(bdy_nodes(contact_surface_map(node_surf_pairs(contact_id,k),3)));
                     double av_pair_norm_vel = pair_vars(contact_id, 8*k + 3)*vel(bdy_nodes(contact_id),0) +
                                                 pair_vars(contact_id, 8*k + 4)*vel(bdy_nodes(contact_id),1) +
                                                 pair_vars(contact_id, 8*k + 5)*vel(bdy_nodes(contact_id),2) + // end dot product of velocity with normal direction
@@ -2331,10 +2331,10 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
                     double phi_k[4];
                     phi(phi_k, pair_vars(contact_id, 8*k), pair_vars(contact_id, 8*k + 1), xi, eta);
                     for (int m = 0; m < 4; m++) {
-                        av_pair_norm_vel += pair_vars(contact_id, 8*k + 3)*vel(bdy_nodes(contact_surface_map(node_patch_pairs(contact_id,k),m)),0) +
-                                                pair_vars(contact_id, 8*k + 4)*vel(bdy_nodes(contact_surface_map(node_patch_pairs(contact_id,k),m)),1) +
-                                                pair_vars(contact_id, 8*k + 5)*vel(bdy_nodes(contact_surface_map(node_patch_pairs(contact_id,k),m)),2) - // end dot product of vel with normal dir
-                                                (pair_vars(contact_id, 8*k +7)*phi_k[m] / mass(contact_surface_map(node_patch_pairs(contact_id,k),m))) * del_t; // correction based on contact iteration
+                        av_pair_norm_vel += pair_vars(contact_id, 8*k + 3)*vel(bdy_nodes(contact_surface_map(node_surf_pairs(contact_id,k),m)),0) +
+                                                pair_vars(contact_id, 8*k + 4)*vel(bdy_nodes(contact_surface_map(node_surf_pairs(contact_id,k),m)),1) +
+                                                pair_vars(contact_id, 8*k + 5)*vel(bdy_nodes(contact_surface_map(node_surf_pairs(contact_id,k),m)),2) - // end dot product of vel with normal dir
+                                                (pair_vars(contact_id, 8*k +7)*phi_k[m] / mass(contact_surface_map(node_surf_pairs(contact_id,k),m))) * del_t; // correction based on contact iteration
                     }
                     av_pair_norm_vel /= 5;
                     double corrector_term = 0.1*(pair_mass * (av_norm_vel - av_pair_norm_vel) / del_t); */
@@ -2354,7 +2354,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
         /* bool checking = false;
         for (int j = 0; j < num_active(0); j++) {
             size_t contact_id = active_set(j);
-            for (int k = 0; k < node_patch_pairs.stride(contact_id); k++) {
+            for (int k = 0; k < node_surf_pairs.stride(contact_id); k++) {
                 if (pair_vars(contact_id,8*k + 6) > 0) {
                     checking = true;
                 }
@@ -2371,7 +2371,7 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
             //printf("INCREMENTS ON ITER:, %d\n", i);
             for (int j = 0; j < num_active(0); j++) {
                 size_t contact_id = active_set(j);
-                for (int k = 0; k < node_patch_pairs.stride(contact_id); k++) {
+                for (int k = 0; k < node_surf_pairs.stride(contact_id); k++) {
                     //norm_incs(0) += 0.2*incs_view(j)*0.2*incs_view(j)/pow(mass(bdy_nodes(active_set(j))),2);
                     //norm_incs(0) += 0.2*incs_view(j)*0.2*incs_view(j);
                     //printf("%e\n", incs_view(j));
@@ -2415,30 +2415,30 @@ void force_resolution(CArrayKokkos <double> &f_c_incs, DCArrayKokkos <size_t> nu
 } // end force_resolution
 
 void remove_pairs(DCArrayKokkos <size_t> num_active, CArrayKokkos <size_t> &active_set, RaggedRightArrayKokkos <double> &pair_vars,
-                  RaggedRightArrayKokkos <size_t> &node_patch_pairs, CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> bdy_patches,
+                  RaggedRightArrayKokkos <size_t> &node_surf_pairs, CArrayKokkos <size_t> nodes_in_surf, CArrayKokkos <size_t> bdy_surfs,
                   CArrayKokkos <double> &contact_forces, CArrayKokkos <size_t> &contact_surface_map,
                   DCArrayKokkos <double> &corner_force, RaggedRightArrayKokkos <size_t> corners_in_node,
                   DCArrayKokkos <double> &mass, MPICArrayKokkos <double> &coords,
                   CArrayKokkos <size_t> num_corners_in_node, CArrayKokkos <size_t> bdy_nodes,
                   MPICArrayKokkos <double> &vel, const double &del_t,
-                  const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, size_t num_bdy_patches)
+                  const CArrayKokkos <double> &xi, const CArrayKokkos <double> &eta, size_t num_bdy_surfs)
 {
     RUN({
         for (int i = 0; i < num_active(0); i++)
         {
             size_t contact_id = active_set(i);
-            for (size_t j = 0; j < node_patch_pairs.stride(contact_id); j++) {
-                int surf_lid = node_patch_pairs(contact_id,j);
+            for (size_t j = 0; j < node_surf_pairs.stride(contact_id); j++) {
+                int surf_lid = node_surf_pairs(contact_id,j);
                 ViewCArrayKokkos <double> pair(&pair_vars(contact_id,j*8), 8);
 
                 bool remove = false;
-                remove = should_remove(pair, nodes_in_patch, bdy_patches, contact_forces, contact_surface_map,
+                remove = should_remove(pair, nodes_in_surf, bdy_surfs, contact_forces, contact_surface_map,
                                     corner_force, corners_in_node, mass, coords, num_corners_in_node,
                                     bdy_nodes, vel, del_t, xi, eta, surf_lid);
 
                 if (remove)
                 {
-                    remove_pair(contact_id, node_patch_pairs, pair_vars, num_bdy_patches, j);
+                    remove_pair(contact_id, node_surf_pairs, pair_vars, num_bdy_surfs, j);
                 }
             }
         }
@@ -2571,10 +2571,10 @@ bool any(const ViewCArrayKokkos<bool> &a, const size_t &size)
 
 
 /// beginning of contact_state_t member functions ////////////////////////////////////////////////////////////////////
-void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, const CArrayKokkos<size_t> &bdy_patches,
-                                 size_t num_bdy_nodes, size_t num_bdy_patches, const CArrayKokkos <size_t> &patches_in_elem,
-                                 const CArrayKokkos <int> &elems_in_patch, const DCArrayKokkos <size_t> &nodes_in_elem,
-                                 const CArrayKokkos <size_t> &nodes_in_patch, const CArrayKokkos <size_t> &bdy_nodes, size_t num_patches,
+void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_surf, const CArrayKokkos<size_t> &bdy_surfs,
+                                 size_t num_bdy_nodes, size_t num_bdy_surfs, const CArrayKokkos <size_t> &surfs_in_elem,
+                                 const CArrayKokkos <int> &elems_in_surf, const DCArrayKokkos <size_t> &nodes_in_elem,
+                                 const CArrayKokkos <size_t> &nodes_in_surf, const CArrayKokkos <size_t> &bdy_nodes, size_t num_surfs,
                                  size_t num_nodes, const MPICArrayKokkos <double> &coords, const size_t contact_max_local_iter, const size_t contact_max_global_iter)
 {
     // Contact is only supported in 3D
@@ -2583,7 +2583,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
         std::cerr << "Error: contact is only supported in 3D" << std::endl;
         exit(1);
     }
-    if (num_nodes_in_patch != 4) {
+    if (num_nodes_in_surf != 4) {
         std::cerr << "Error: contact is only supported for first order hex elements" << std::endl;
         exit(1);
     }
@@ -2612,35 +2612,35 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     possible_nodes = CArrayKokkos<size_t>(num_bdy_nodes, "possible_nodes");
     buckets = CArrayKokkos<size_t>(pow(64,3), "buckets");
 
-    // sizing arrays based on num of bdy patches and bdy nodes
+    // sizing arrays based on num of bdy surfaces and bdy nodes
     contact_forces = CArrayKokkos<double>(num_bdy_nodes,3, "contact_forces");
     contact_forces.set_values(0);
-    penetration_surfaces = CArrayKokkos<size_t>(num_bdy_patches,5,4, "penetration_surfaces");
+    penetration_surfaces = CArrayKokkos<size_t>(num_bdy_surfs,5,4, "penetration_surfaces");
 
     // sizing contact_surface_map
-    contact_surface_map = CArrayKokkos<size_t>(num_bdy_patches,4, "contact_surface_map");
+    contact_surface_map = CArrayKokkos<size_t>(num_bdy_surfs,4, "contact_surface_map");
 
     // sizing and filling pairing arrays
-    //node_patch_pairs = CArrayKokkos <size_t> (num_bdy_nodes);
+    //node_surf_pairs = CArrayKokkos <size_t> (num_bdy_nodes);
     //pair_vars = CArrayKokkos <double> (num_bdy_nodes, 8);
-    //node_patch_pairs.set_values(num_patches);
+    //node_surf_pairs.set_values(num_surfs);
     //pair_vars.set_values(0);
     active_set = CArrayKokkos <size_t> (num_bdy_nodes, "active_set");
     num_active = DCArrayKokkos <size_t> (1);
 
     RUN_CLASS({
         // populating penetration_surfaces and pen_surface_node_gids
-        for (int i = 0; i < num_bdy_patches; i++) {
+        for (int i = 0; i < num_bdy_surfs; i++) {
             // finding contact surface local id wrt the element (a boundary surface is only part of one element)
             size_t surf_lid;
             for (int j = 0; j < 6; j++) {
-                if (bdy_patches(i) == patches_in_elem(elems_in_patch(bdy_patches(i), 0),j)) {
+                if (bdy_surfs(i) == surfs_in_elem(elems_in_surf(bdy_surfs(i), 0),j)) {
                     surf_lid = j;
                     break;
                 }
             }
 
-            // defining which patch should be left out of penetration column definition (isoparametric opposite of boundary surf lid)
+            // defining which surface should be left out of penetration column definition (isoparametric opposite of boundary surf lid)
             size_t surfs_for_column[5];
             switch (surf_lid) {
                 case(0):
@@ -2691,50 +2691,50 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
             for (int j = 0; j < 5; j++) {
                 switch (surfs_for_column[j]) {
                     case 0:
-                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),0);
-                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),4);
-                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),6);
-                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),2);
+                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),0);
+                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),4);
+                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),6);
+                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),2);
                         break;
                     case 1:
-                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),1);
-                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),3);
-                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),7);
-                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),5);
+                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),1);
+                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),3);
+                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),7);
+                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),5);
                         break;
                     case 2:
-                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),0);
-                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),1);
-                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),5);
-                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),4);
+                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),0);
+                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),1);
+                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),5);
+                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),4);
                         break;
                     case 3:
-                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),3);
-                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),2);
-                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),6);
-                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),7);
+                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),3);
+                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),2);
+                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),6);
+                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),7);
                         break;
                     case 4:
-                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),0);
-                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),2);
-                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),3);
-                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),1);
+                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),0);
+                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),2);
+                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),3);
+                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),1);
                         break;
                     case 5:
-                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),4);
-                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),5);
-                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),7);
-                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_patch(bdy_patches(i), 0),6);
+                        penetration_surfaces(i,j,0) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),4);
+                        penetration_surfaces(i,j,1) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),5);
+                        penetration_surfaces(i,j,2) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),7);
+                        penetration_surfaces(i,j,3) = nodes_in_elem(elems_in_surf(bdy_surfs(i), 0),6);
                         break;
                 }
             }
         }
         
         // filling contact_surface_map
-        for (int i = 0; i < num_bdy_patches; i++) {
+        for (int i = 0; i < num_bdy_surfs; i++) {
             for (int j = 0; j < 4; j++) {
                 for (int k = 0; k < num_bdy_nodes; k++) {
-                    if (nodes_in_patch(bdy_patches(i),j) == bdy_nodes(k)) {
+                    if (nodes_in_surf(bdy_surfs(i),j) == bdy_nodes(k)) {
                         contact_surface_map(i,j) = k;
                     }
                 }
@@ -2748,9 +2748,9 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     num_surfs_in_node.set_values(0);
     FOR_ALL_CLASS(i, 0, num_bdy_nodes, {
         size_t node_gid = bdy_nodes(i);
-        for (int j = 0; j < num_bdy_patches; j++) {
+        for (int j = 0; j < num_bdy_surfs; j++) {
             for (int k = 0; k < 4; k++) {
-                if (nodes_in_patch(bdy_patches(j),k) == node_gid) {
+                if (nodes_in_surf(bdy_surfs(j),k) == node_gid) {
                     num_surfs_in_node(i) += 1;
                 }
             }
@@ -2763,9 +2763,9 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     FOR_ALL_CLASS(i, 0, num_bdy_nodes, {
         size_t node_gid = bdy_nodes(i);
         size_t stride_index = 0;
-        for (int j = 0; j < num_bdy_patches; j++) {
+        for (int j = 0; j < num_bdy_surfs; j++) {
             for (int k = 0; k < 4; k++) {
-                if (node_gid == nodes_in_patch(bdy_patches(j),k)) {
+                if (node_gid == nodes_in_surf(bdy_surfs(j),k)) {
                     surfs_in_node(i,stride_index) = j;
                     stride_index += 1;
                 }
@@ -2777,13 +2777,13 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     // *****************************************************************************************************************************
     // if code segfaults due to accessing nodes_pen_surfs, increase number of columns
     // segfaulting on accessing this array means that the penetrating node is in a face or corner of so many elements that it
-    // is penetrating more boundary patches than the column number will allow
+    // is penetrating more boundary surfaces than the column number will allow
     // *****************************************************************************************************************************
 
     // sizing and filling node_penetrations
     // todo: this should be a dynamic ragged type
     node_penetrations = CArrayKokkos <size_t> (num_bdy_nodes,101, "node_penetrations");
-    node_penetrations.set_values(num_patches);
+    node_penetrations.set_values(num_surfs);
     FOR_ALL_CLASS(i, 0, num_bdy_nodes, {
         node_penetrations(i,0) = bdy_nodes(i);
     });
@@ -2803,13 +2803,13 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     // getting bucket_size
     double local_min_dist = 0;
     double min_distance = 0;
-    FOR_REDUCE_MIN_CLASS(i, 0, (int)num_bdy_patches,
+    FOR_REDUCE_MIN_CLASS(i, 0, (int)num_bdy_surfs,
                    j, 0, 4, local_min_dist, {
                       double local_distance = 0;
                       if (j < 3)
                       {
-                          size_t n1 = nodes_in_patch(bdy_patches(i),j); // current node
-                          size_t n2 = nodes_in_patch(bdy_patches(i),j+1); // next node
+                          size_t n1 = nodes_in_surf(bdy_surfs(i),j); // current node
+                          size_t n2 = nodes_in_surf(bdy_surfs(i),j+1); // next node
 
                           double sum_sq = 0.0;
 
@@ -2821,8 +2821,8 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
                           local_distance = sqrt(sum_sq);
                       } else
                       {
-                          size_t n1 = nodes_in_patch(bdy_patches(i),0); // current node
-                          size_t n2 = nodes_in_patch(bdy_patches(i),3); // next node
+                          size_t n1 = nodes_in_surf(bdy_surfs(i),0); // current node
+                          size_t n2 = nodes_in_surf(bdy_surfs(i),3); // next node
 
                           double sum_sq = 0.0;
 

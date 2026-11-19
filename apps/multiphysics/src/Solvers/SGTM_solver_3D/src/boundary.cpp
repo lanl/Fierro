@@ -112,27 +112,27 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
         if (BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCTemperatureModel != boundary_conditions::BCTemperatureModels::convectionTemperatureBC) continue;
 
 
-        // ---- Get number of boundary patches associated with this boundary set ---- // NOTE: Messy, find better solution
-        DCArrayKokkos<int> num_bdy_patches(1);
+        // ---- Get number of boundary surfaces associated with this boundary set ---- // NOTE: Messy, find better solution
+        DCArrayKokkos<int> num_bdy_surfs(1);
         RUN({
-            num_bdy_patches(0) = mesh.bdy_patches_in_set.stride(bdy_set);
+            num_bdy_surfs(0) = mesh.bdy_surfs_in_set.stride(bdy_set);
         });
-        num_bdy_patches.update_host();
+        num_bdy_surfs.update_host();
 
-        // std::cout << "Num bdy patches in set " << bdy_set << " = " << num_bdy_patches.host(0) << std::endl;
+        // std::cout << "Num bdy surfaces in set " << bdy_set << " = " << num_bdy_surfs.host(0) << std::endl;
 
-        // ---- Loop over the boundary patches in the set ---- //
-        FOR_ALL(bdy_patch_gid, 0, num_bdy_patches.host(0),{
+        // ---- Loop over the boundary surfaces in the set ---- //
+        FOR_ALL(bdy_surf_gid, 0, num_bdy_surfs.host(0),{
 
-            // ---- For each boundary patch, calculate the flux contribution to each node from convection ---- //
+            // ---- For each boundary surface, calculate the flux contribution to each node from convection ---- //
 
 
             // First: Calculate the surface area
-            // Get the global id for this patch
-            size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+            // Get the global id for this surface
+            size_t surf_gid = mesh.bdy_surfs_in_set(bdy_set, bdy_surf_gid);
 
 
-            // calculate the total area of this patch (decompose into 2 triangles)
+            // calculate the total area of this surface (decompose into 2 triangles)
             // using Cayley-Menger Determinant
             double a_[3];
             ViewCArrayKokkos<double> a(&a_[0], 3);
@@ -144,9 +144,9 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
             ViewCArrayKokkos<double> c(&c_[0], 3);
 
             // Get the global ID to the first 3 nodes
-            int node_a_gid = mesh.nodes_in_patch(patch_gid, 0);
-            int node_b_gid = mesh.nodes_in_patch(patch_gid, 1);
-            int node_c_gid = mesh.nodes_in_patch(patch_gid, 2);
+            int node_a_gid = mesh.nodes_in_surf(surf_gid, 0);
+            int node_b_gid = mesh.nodes_in_surf(surf_gid, 1);
+            int node_c_gid = mesh.nodes_in_surf(surf_gid, 2);
 
             for(int dim = 0; dim < 3; dim++){
                 a(dim) = node_coords(node_a_gid, dim);
@@ -168,9 +168,9 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
             double area1 = sqrt(tmp);
 
             // Get the global ID to the second 3 nodes (2 shared nodes)
-            node_a_gid = mesh.nodes_in_patch(patch_gid, 2);
-            node_b_gid = mesh.nodes_in_patch(patch_gid, 3);
-            node_c_gid = mesh.nodes_in_patch(patch_gid, 0);
+            node_a_gid = mesh.nodes_in_surf(surf_gid, 2);
+            node_b_gid = mesh.nodes_in_surf(surf_gid, 3);
+            node_c_gid = mesh.nodes_in_surf(surf_gid, 0);
 
             for(int dim = 0; dim < mesh.num_dims; dim++){
                 a(dim) = node_coords(node_a_gid, dim);
@@ -194,26 +194,26 @@ void SGTM3D::boundary_convection(const swage::Mesh_t& mesh,
 
             double surface_area = area1+area2;
 
-            // std::cout << "Surface area of patch " << patch_gid << " = " << surface_area << std::endl;
+            // std::cout << "Surface area of surface " << surf_gid << " = " << surface_area << std::endl;
 
-            // Partition the total surface area to the corner patches
-            double patch_area = surface_area/4.0;
+            // Partition the total surface area to the corners
+            double corner_area = surface_area/4.0;
 
             // NOTE: Add parsing to the following variables
             double ref_temp = 293.15; // room temp in Kelvin
             double h_film = 100.0;
 
-            // ---- Calculate the flux through each patch ---- //
-            for(int node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
+            // ---- Calculate the flux through each surface ---- //
+            for(int node_lid = 0; node_lid < mesh.num_nodes_in_surf; node_lid++){
                 
-                int node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+                int node_gid = mesh.nodes_in_surf(surf_gid, node_lid);
 
-                double patch_flux = -1.0*h_film * (node_temp(node_gid) - ref_temp) * patch_area;
+                double corner_flux = -1.0*h_film * (node_temp(node_gid) - ref_temp) * corner_area;
 
-                // std::cout << "Patch flux for node " << node_gid << " = " << patch_flux << std::endl;
+                // std::cout << "Surface flux for node " << node_gid << " = " << corner_flux << std::endl;
 
-                // Add patch flux to nodal flux, atomic for thread safety
-                Kokkos::atomic_add(&node_flux(node_gid), patch_flux);
+                // Add surface flux to nodal flux, atomic for thread safety
+                Kokkos::atomic_add(&node_flux(node_gid), corner_flux);
             }
         });
 
@@ -251,25 +251,25 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
         // ---- Skip non radiation BCs ---- // 
          if (BoundaryConditions.BoundaryConditionEnums.host(bdy_set).BCTemperatureModel != boundary_conditions::BCTemperatureModels::radiationTemperatureBC) continue;
 
-        // ---- Get number of boundary patches associated with this boundary set ---- // NOTE: Messy, find better solution
-        DCArrayKokkos<int> num_bdy_patches(1);
+        // ---- Get number of boundary surfaces associated with this boundary set ---- // NOTE: Messy, find better solution
+        DCArrayKokkos<int> num_bdy_surfs(1);
         RUN({
-            num_bdy_patches(0) = mesh.bdy_patches_in_set.stride(bdy_set);
+            num_bdy_surfs(0) = mesh.bdy_surfs_in_set.stride(bdy_set);
         });
-        num_bdy_patches.update_host();
+        num_bdy_surfs.update_host();
 
-        // ---- Loop over the boundary patches in the set ---- //
-        FOR_ALL(bdy_patch_gid, 0, num_bdy_patches.host(0),{
+        // ---- Loop over the boundary surfaces in the set ---- //
+        FOR_ALL(bdy_surf_gid, 0, num_bdy_surfs.host(0),{
 
-            // For each boundary patch, calculate the flux contribution to each node from radiation
+            // For each boundary surface, calculate the flux contribution to each node from radiation
 
 
             // First: Calculate the surface area
-            // Get the global id for this patch
-            size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+            // Get the global id for this surface
+            size_t surf_gid = mesh.bdy_surfs_in_set(bdy_set, bdy_surf_gid);
 
 
-            // calculate the total area of this patch (decompose into 2 triangles)
+            // calculate the total area of this surface (decompose into 2 triangles)
             // using Cayley-Menger Determinant
             double a_[3];
             ViewCArrayKokkos<double> a(&a_[0], 3);
@@ -281,9 +281,9 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
             ViewCArrayKokkos<double> c(&c_[0], 3);
 
             // Get the global ID to the first 3 nodes
-            int node_a_gid = mesh.nodes_in_patch(patch_gid, 0);
-            int node_b_gid = mesh.nodes_in_patch(patch_gid, 1);
-            int node_c_gid = mesh.nodes_in_patch(patch_gid, 2);
+            int node_a_gid = mesh.nodes_in_surf(surf_gid, 0);
+            int node_b_gid = mesh.nodes_in_surf(surf_gid, 1);
+            int node_c_gid = mesh.nodes_in_surf(surf_gid, 2);
 
             for(int dim = 0; dim < 3; dim++){
                 a(dim) = node_coords(node_a_gid, dim);
@@ -305,9 +305,9 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
             double area1 = sqrt(tmp);
 
             // Get the global ID to the second 3 nodes (2 shared nodes)
-            node_a_gid = mesh.nodes_in_patch(patch_gid, 2);
-            node_b_gid = mesh.nodes_in_patch(patch_gid, 3);
-            node_c_gid = mesh.nodes_in_patch(patch_gid, 0);
+            node_a_gid = mesh.nodes_in_surf(surf_gid, 2);
+            node_b_gid = mesh.nodes_in_surf(surf_gid, 3);
+            node_c_gid = mesh.nodes_in_surf(surf_gid, 0);
 
             for(int dim = 0; dim < mesh.num_dims; dim++){
                 a(dim) = node_coords(node_a_gid, dim);
@@ -331,7 +331,7 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
 
             double surface_area = area1+area2;
 
-            double patch_area = surface_area/4.0;
+            double corner_area = surface_area/4.0;
 
             // NOTE: Parse these in
             double emmisivity = 0.2; // rough oxidized aluminum
@@ -341,9 +341,9 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
             double ref_ambient_temp = 0.0;
 
             // Loop over all the nodes in this boundary surface
-            for(int node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++){
+            for(int node_lid = 0; node_lid < mesh.num_nodes_in_surf; node_lid++){
                 
-                int node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+                int node_gid = mesh.nodes_in_surf(surf_gid, node_lid);
 
                 double tmp1 = (node_temp(node_gid)-ref_zero_temp)*
                               (node_temp(node_gid)-ref_zero_temp)*
@@ -356,10 +356,10 @@ void SGTM3D::boundary_radiation(const swage::Mesh_t& mesh,
                               (ref_ambient_temp - ref_zero_temp);
 
 
-                double patch_flux = -1.0 * emmisivity * boltzmann * (tmp1 - tmp2) * patch_area;
+                double corner_flux = -1.0 * emmisivity * boltzmann * (tmp1 - tmp2) * corner_area;
 
-                // Add patch flux to nodal flux
-                Kokkos::atomic_add(&node_flux(node_gid), patch_flux);
+                // Add surface flux to nodal flux
+                Kokkos::atomic_add(&node_flux(node_gid), corner_flux);
 
             }
         });
@@ -395,15 +395,15 @@ void SGTM3D::boundary_heat_flux(const swage::Mesh_t& mesh,
     // for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
         
 
-    //     size_t num_bdy_patches_in_set = 2; //mesh.bdy_patches_in_set.stride.host(bdy_set);
+    //     size_t num_bdy_surfs_in_set = 2; //mesh.bdy_surfs_in_set.stride.host(bdy_set);
 
-    //     std::cout<<"Num bdy patches in set "<<bdy_set<<" = "<<num_bdy_patches_in_set<<std::endl;
+    //     std::cout<<"Num bdy surfaces in set "<<bdy_set<<" = "<<num_bdy_surfs_in_set<<std::endl;
 
     //     // Loop over boundary nodes in a boundary set
-    //     FOR_ALL(bdy_patch_lid, 0, num_bdy_patches_in_set, {
+    //     FOR_ALL(bdy_surf_lid, 0, num_bdy_surfs_in_set, {
             
     //         // get the global index for this node on the boundary
-    //         size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_patch_lid);
+    //         size_t bdy_node_gid = mesh.bdy_nodes_in_set(bdy_set, bdy_surf_lid);
 
     //         // // evaluate temperature on this boundary node
     //         // BoundaryConditions.BoundaryConditionFunctions(bdy_set).heat_flux(mesh,

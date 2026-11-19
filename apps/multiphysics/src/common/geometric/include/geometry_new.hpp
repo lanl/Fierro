@@ -202,11 +202,11 @@ void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn check_bdy_patch
+/// \fn check_bdy_surf
 ///
-/// \brief routine for checking to see if a patch is on a boundary
+/// \brief routine for checking to see if a surface is on a boundary
 ///
-/// \param Global id of a patch
+/// \param Global id of a surface
 /// \param Boundary condition tag (bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell)
 /// \param Plane value
 /// \param Simulation mesh
@@ -214,7 +214,7 @@ void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-size_t check_bdy_patch(const size_t patch_gid,
+size_t check_bdy_surf(const size_t surf_gid,
     const int     this_bc_tag,
     const double  value,
     const double  tolerance,
@@ -252,7 +252,7 @@ size_t check_bdy_node(const size_t node_gid,
 ///
 /// \fn tag_bdys
 ///
-/// \brief set planes for tagging sub sets of boundary patches
+/// \brief set planes for tagging sub sets of boundary surfaces and nodes
 ///
 /// \param Boundary condition
 /// \param Simulation mesh
