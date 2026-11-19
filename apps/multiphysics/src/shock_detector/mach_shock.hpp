@@ -114,7 +114,7 @@ namespace MachShockDetector {
 
                     //  Mach number shock detector
                     real_t omega    = 20.0; // 20.0;    // weighting factor on Mach number
-                    real_t third    = (real_t)1.0 / (real_t)3.0;
+                    real_t third    = 1.0 / 3.0;
                     real_t c_length = Kokkos::pow(vol, third); // characteristic length
                     real_t alpha    = Kokkos::fmin((real_t)1.0, omega * (c_length * Kokkos::fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 
@@ -216,7 +216,7 @@ namespace MachShockDetectorRZ {
 
                     //  Mach number shock detector
                     real_t omega    = 20.0; // 20.0;    // weighting factor on Mach number
-                    real_t third    = (real_t)1.0 / (real_t)3.0;
+                    real_t third    = 1.0 / 3.0;
                     real_t c_length = Kokkos::pow(vol, third); // characteristic length
                     real_t alpha    = Kokkos::fmin((real_t)1.0, omega * (c_length * Kokkos::fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 

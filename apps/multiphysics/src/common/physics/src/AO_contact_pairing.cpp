@@ -826,7 +826,7 @@ bool penetration_check(const size_t bdy_node_lid,
     // theta = 0 for pure normal penetration
     // ---------------------------------------------------------------
     const real_t collinear_tol = 5.0;   // degrees, TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t pi = Kokkos::acos(-(real_t)1.0);
+    const real_t pi = Kokkos::acos(-1.0);
 
     real_t d_n[3];
     real_t d_n_mag2 = 0.0;

@@ -113,7 +113,7 @@ inline IMEXTableau make_rk3hc_a_alpha()
     t.num_stages = 4;
     const real_t b1 = 0.0;
     const real_t b2 = 1.1449072677736679441;
-    const real_t b3 = -(real_t)1.9300000000000000000;
+    const real_t b3 = -1.9300000000000000000;
     const real_t b4 = 1.7850927322263320559;
     t.b = {b1, b2, b3, b4};
     t.A_E = {

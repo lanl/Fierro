@@ -2598,12 +2598,12 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_surf, cons
     xi = CArrayKokkos<real_t>(4);
     eta = CArrayKokkos<real_t>(4);
     RUN_CLASS({
-        xi(0) = -(real_t)1.0;
+        xi(0) = -1.0;
         xi(1) = 1.0;
         xi(2) = 1.0;
-        xi(3) = -(real_t)1.0;
-        eta(0) = -(real_t)1.0;
-        eta(1) = -(real_t)1.0;
+        xi(3) = -1.0;
+        eta(0) = -1.0;
+        eta(1) = -1.0;
         eta(2) = 1.0;
         eta(3) = 1.0;
     });

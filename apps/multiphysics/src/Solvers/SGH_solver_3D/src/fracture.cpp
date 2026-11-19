@@ -1450,10 +1450,10 @@ void cohesive_zone_loads(
 
             switch (fA) {
             case 0: // xi-minus face
-                gps[0][0] = -(real_t)1.0; gps[0][1] = -gp; gps[0][2] = -gp;
-                gps[1][0] = -(real_t)1.0; gps[1][1] =  gp; gps[1][2] = -gp;
-                gps[2][0] = -(real_t)1.0; gps[2][1] = -gp; gps[2][2] =  gp;
-                gps[3][0] = -(real_t)1.0; gps[3][1] =  gp; gps[3][2] =  gp;
+                gps[0][0] = -1.0; gps[0][1] = -gp; gps[0][2] = -gp;
+                gps[1][0] = -1.0; gps[1][1] =  gp; gps[1][2] = -gp;
+                gps[2][0] = -1.0; gps[2][1] = -gp; gps[2][2] =  gp;
+                gps[3][0] = -1.0; gps[3][1] =  gp; gps[3][2] =  gp;
                 break;
             case 1: // xi-plus face
                 gps[0][0] =  1.0; gps[0][1] = -gp; gps[0][2] = -gp;
@@ -1462,10 +1462,10 @@ void cohesive_zone_loads(
                 gps[3][0] =  1.0; gps[3][1] =  gp; gps[3][2] =  gp;
                 break;
             case 2: // eta-minus face
-                gps[0][1] = -(real_t)1.0; gps[0][0] = -gp; gps[0][2] = -gp;
-                gps[1][1] = -(real_t)1.0; gps[1][0] =  gp; gps[1][2] = -gp;
-                gps[2][1] = -(real_t)1.0; gps[2][0] = -gp; gps[2][2] =  gp;
-                gps[3][1] = -(real_t)1.0; gps[3][0] =  gp; gps[3][2] =  gp;
+                gps[0][1] = -1.0; gps[0][0] = -gp; gps[0][2] = -gp;
+                gps[1][1] = -1.0; gps[1][0] =  gp; gps[1][2] = -gp;
+                gps[2][1] = -1.0; gps[2][0] = -gp; gps[2][2] =  gp;
+                gps[3][1] = -1.0; gps[3][0] =  gp; gps[3][2] =  gp;
                 break;
             case 3: // eta-plus face
                 gps[0][1] =  1.0; gps[0][0] = -gp; gps[0][2] = -gp;
@@ -1474,10 +1474,10 @@ void cohesive_zone_loads(
                 gps[3][1] =  1.0; gps[3][0] =  gp; gps[3][2] =  gp;
                 break;
             case 4: // zeta-minus face
-                gps[0][2] = -(real_t)1.0; gps[0][0] = -gp; gps[0][1] = -gp;
-                gps[1][2] = -(real_t)1.0; gps[1][0] =  gp; gps[1][1] = -gp;
-                gps[2][2] = -(real_t)1.0; gps[2][0] = -gp; gps[2][1] =  gp;
-                gps[3][2] = -(real_t)1.0; gps[3][0] =  gp; gps[3][1] =  gp;
+                gps[0][2] = -1.0; gps[0][0] = -gp; gps[0][1] = -gp;
+                gps[1][2] = -1.0; gps[1][0] =  gp; gps[1][1] = -gp;
+                gps[2][2] = -1.0; gps[2][0] = -gp; gps[2][1] =  gp;
+                gps[3][2] = -1.0; gps[3][0] =  gp; gps[3][1] =  gp;
                 break;
             case 5: // zeta-plus face
                 gps[0][2] =  1.0; gps[0][0] = -gp; gps[0][1] = -gp;

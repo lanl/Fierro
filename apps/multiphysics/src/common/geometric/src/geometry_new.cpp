@@ -83,7 +83,7 @@ void geometry::get_bmatrix(const ViewCArrayKokkos<real_t>& B_matrix,
     }     // end for
 
 
-    real_t twelth = (real_t)1. / (real_t)12.;
+    real_t twelth = 1. / 12.;
 
     B_matrix(0, 0) = (+y(1) * (-z(3) - z(2) + z(4) + z(5) )
         + y(3) * (+z(1) - z(2) )
@@ -336,7 +336,7 @@ void geometry::get_vol_hex(const DCArrayKokkos<real_t>& elem_vol,
         z(node_lid) = node_coords(elem_node_gids(node_lid), 2);
     }     // end for
 
-    real_t twelth = (real_t)1. / (real_t)12.;
+    real_t twelth = 1. / 12.;
 
     // element volume
     elem_vol(elem_gid) =

@@ -108,7 +108,7 @@ static void test_gll_and_gl_nodes_1d()
     printf("\n=== Test 1: GLL and Gauss-Legendre 1D node values ===\n");
 
     // GLL(5) reference values.
-    const real_t sqrt_3_7 = Kokkos::sqrt((real_t)3.0 / (real_t)7.0);
+    const real_t sqrt_3_7 = Kokkos::sqrt(3.0 / 7.0);
     quadrature_t gll_quad; // misuse the quadrature struct here as a node holder for the test
     (void)gll_quad;
 
@@ -134,7 +134,7 @@ static void test_gll_and_gl_nodes_1d()
     ref_elem_t thermo_ref;
     thermo_ref.init(/*p_order=*/1, /*num_dim=*/3,
                     BasisType::LagrangeGL, shared_quad);
-    const real_t inv_sqrt_3 = (real_t)1.0 / Kokkos::sqrt((real_t)3.0);
+    const real_t inv_sqrt_3 = 1.0 / Kokkos::sqrt(3.0);
     check_close(thermo_ref.dof_positions_1d.host(0), -inv_sqrt_3, 1e-15, "GL(2) thermo dof 0");
     check_close(thermo_ref.dof_positions_1d.host(1),  inv_sqrt_3, 1e-15, "GL(2) thermo dof 1");
 } // end test_gll_and_gl_nodes_1d
