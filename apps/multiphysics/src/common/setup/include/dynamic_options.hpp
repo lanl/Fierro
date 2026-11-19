@@ -48,12 +48,12 @@ struct DynamicOptions_t
 {
     unsigned long cycle_stop = 2000000;
 
-    real_t time_initial = (real_t)1e-10; ///< Starting time
-    real_t time_final   = (real_t)1.0;  ///< Final simulation time
-    real_t dt_min   = (real_t)1e-8;     ///< Minimum time step
-    real_t dt_max   = (real_t)1e-2;     ///< Maximum time step
-    real_t dt_start = (real_t)1e-5;     ///< Starting time step
-    real_t dt_cfl   = (real_t)0.4;      ///< CFL multiplier for time step calculation
+    real_t time_initial = 1e-10; ///< Starting time
+    real_t time_final   = 1.0;  ///< Final simulation time
+    real_t dt_min   = 1e-8;     ///< Minimum time step
+    real_t dt_max   = 1e-2;     ///< Maximum time step
+    real_t dt_start = 1e-5;     ///< Starting time step
+    real_t dt_cfl   = 0.4;      ///< CFL multiplier for time step calculation
 
     // Guard magnitudes, scaled to the working precision. These are used as
     // `x / (den + fuzz)` and `if (x > tiny)` throughout the solvers, so a

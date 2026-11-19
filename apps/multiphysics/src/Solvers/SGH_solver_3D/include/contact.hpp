@@ -81,12 +81,12 @@ struct contact_state_t
     static real_t bucket_size;  // bucket size (defined as 1.001*min_node_distance)
     static size_t num_contact_nodes;  // total number of contact nodes (always less than or equal to mesh.num_bdy_nodes)
     static size_t num_pen_nodes; // total number of nodes being considered for penetration checks
-    real_t x_max = (real_t)0.0;  // maximum x coordinate
-    real_t y_max = (real_t)0.0;  // maximum y coordinate
-    real_t z_max = (real_t)0.0;  // maximum z coordinate
-    real_t x_min = (real_t)0.0;  // minimum x coordinate
-    real_t y_min = (real_t)0.0;  // minimum y coordinate
-    real_t z_min = (real_t)0.0;  // minimum z coordinate
+    real_t x_max = 0.0;  // maximum x coordinate
+    real_t y_max = 0.0;  // maximum y coordinate
+    real_t z_max = 0.0;  // maximum z coordinate
+    real_t x_min = 0.0;  // minimum x coordinate
+    real_t y_min = 0.0;  // minimum y coordinate
+    real_t z_min = 0.0;  // minimum z coordinate
     double vx_max = (real_t)0.0;  // maximum x velocity
     double vy_max = (real_t)0.0;  // maximum y velocity
     double vz_max = (real_t)0.0;  // maximum z velocity

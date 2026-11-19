@@ -397,7 +397,7 @@ int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill,
     printf("building reference element \n");
 
     const size_t num_eval_pnts_1D = 9;  
-    const real_t ref_pnts_1D[9]={(real_t)0.0, (real_t)0.125, (real_t)0.24, (real_t)0.375, (real_t)0.5, (real_t)0.625, (real_t)0.75, (real_t)0.875, (real_t)1.0};
+    const real_t ref_pnts_1D[9]={0.0, 0.125, 0.24, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0};
 
     const size_t num_eval_pnts = num_eval_pnts_1D*num_eval_pnts_1D*num_eval_pnts_1D;
     const size_t num_nodes_in_elem = 8; // WARNING WARNING WARNING
