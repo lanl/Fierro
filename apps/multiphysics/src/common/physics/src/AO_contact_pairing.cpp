@@ -676,7 +676,7 @@ bool penetration_check(const size_t bdy_node_lid,
     // ---------------------------------------------------------------
     real_t seed_xi    = 0.0;
     real_t seed_eta   = 0.0;
-    real_t seed_dist2 = mtr::prec::numeric_max<double>();
+    real_t seed_dist2 = mtr::prec::numeric_max<real_t>();
     real_t seed_align = 0.0;   // |cos| between (seed - x_I) and the node velocity
 
     // node velocity, used only to break ties

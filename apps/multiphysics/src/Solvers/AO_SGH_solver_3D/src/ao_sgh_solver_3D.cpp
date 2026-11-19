@@ -1070,7 +1070,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         time_value += dt_taken;
 
         if (cycle % 10 == 0 || time_value >= time_final - (real_t)1.0e-12) {
-            const real_t big = mtr::prec::numeric_max<double>();
+            const real_t big = mtr::prec::numeric_max<real_t>();
             real_t den_min  =  big, den_max  = -big;
             real_t pres_min =  big, pres_max = -big;
             State.MaterialPoints.den.update_host();
