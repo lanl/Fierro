@@ -9,7 +9,7 @@ on:
 
 jobs:
   Regression-Tests:
-    runs-on: macos-latest
+    runs-on: macos-26
     strategy:
       fail-fast: false
       matrix:
@@ -22,7 +22,7 @@ jobs:
             omp_threads: 2
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         submodules: recursive
         fetch-depth: 1
@@ -31,7 +31,7 @@ jobs:
       uses: conda-incubator/setup-miniconda@v3
       with:
         auto-update-conda: true
-        python-version: 3.9
+        python-version: "3.11"
 
     - name: Configure Conda
       shell: bash -l {0}
