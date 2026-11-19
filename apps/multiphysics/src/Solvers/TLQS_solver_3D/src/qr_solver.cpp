@@ -50,9 +50,9 @@ using namespace mtr;
 
 
 // Back substitution to solve Rx = y
-void TLQS3D::QR_backsub(const CArrayKokkos <double> &R, 
-                     const CArrayKokkos <double> &y,
-                     DCArrayKokkos <double> &x,
+void TLQS3D::QR_backsub(const CArrayKokkos<real_t> &R, 
+                     const CArrayKokkos<real_t> &y,
+                     DCArrayKokkos<real_t> &x,
                      const size_t n_active) {
     
     for (int i = (int)n_active - 1; i >= 0; --i) {
@@ -81,10 +81,10 @@ void TLQS3D::QR_backsub(const CArrayKokkos <double> &R,
 } // end function
 
 // QR Decomposition using Modified Gram-Schmidt
-void TLQS3D::QR_decompose(const CArrayKokkos <double> &A, 
-                       FArrayKokkos <double> &Q, 
-                       CArrayKokkos <double> &R,
-                       DCArrayKokkos <double> &v,
+void TLQS3D::QR_decompose(const CArrayKokkos<real_t> &A, 
+                       FArrayKokkos<real_t> &Q, 
+                       CArrayKokkos<real_t> &R,
+                       DCArrayKokkos<real_t> &v,
                        const size_t n_active) {
 
 
@@ -116,7 +116,7 @@ void TLQS3D::QR_decompose(const CArrayKokkos <double> &A,
         Kokkos::fence();
 
         RUN({
-            R(i,i) = sqrt(tally); // row i norm
+            R(i,i) = Kokkos::sqrt(tally); // row i norm
         });
         // done with norm calc
 
@@ -178,15 +178,15 @@ void TLQS3D::QR_decompose(const CArrayKokkos <double> &A,
 } // end function
 
 
-double TLQS3D::QR_determinant(const FArrayKokkos <double> &Q,
-                           const CArrayKokkos <double> &R)
+double TLQS3D::QR_determinant(const FArrayKokkos<real_t> &Q,
+                           const CArrayKokkos<real_t> &R)
 {
     //const size_t m = Q.dims(0);
     const size_t n = Q.dims(1);
     // Q(m,n,"Q");
     // R(n,n,"R");
 
-    double detR = 1.0;
+    real_t detR = 1.0;
     int signQ = 1;
 
     // Accumulate det(R) and track sign adjustments
@@ -232,7 +232,7 @@ double TLQS3D::QR_determinant(const FArrayKokkos <double> &Q,
 
     // Compute sign of det(Q) directly from Q if needed
     // Here we infer sign from R adjustments only.
-    double detA = signQ * detR;
+    real_t detA = signQ * detR;
     return detA;
 }
 
@@ -241,13 +241,13 @@ double TLQS3D::QR_determinant(const FArrayKokkos <double> &Q,
 // A[m,n]
 // x[n]
 // b[m]
-void TLQS3D::QR_solver(const CArrayKokkos <double> &A, 
-                    const CArrayKokkos <double> &b,
-                    DCArrayKokkos <double> &x,
-                    FArrayKokkos <double> &Q,
-                    CArrayKokkos <double> &R,
-                    CArrayKokkos <double> &y,
-                    DCArrayKokkos <double> &v,
+void TLQS3D::QR_solver(const CArrayKokkos<real_t> &A, 
+                    const CArrayKokkos<real_t> &b,
+                    DCArrayKokkos<real_t> &x,
+                    FArrayKokkos<real_t> &Q,
+                    CArrayKokkos<real_t> &R,
+                    CArrayKokkos<real_t> &y,
+                    DCArrayKokkos<real_t> &v,
                     const size_t n_active) {
     
     const size_t m = A.dims(0);

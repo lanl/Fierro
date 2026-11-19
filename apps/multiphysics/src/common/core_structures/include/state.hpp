@@ -74,23 +74,23 @@ struct fillGaussState_t
 {
     size_t max_mats_in_elem;      ///< the max number of materials possible per element
 
-    DCArrayKokkos<double> den;    ///< Gauss Point density
-    DCArrayKokkos<double> sie;    ///< Gauss Point specific internal energy
-    DCArrayKokkos<double> ie;     ///< Gauss Point extensive internal energy
+    DCArrayKokkos<real_t> den;    ///< Gauss Point density
+    DCArrayKokkos<real_t> sie;    ///< Gauss Point specific internal energy
+    DCArrayKokkos<real_t> ie;     ///< Gauss Point extensive internal energy
     DCArrayKokkos<bool> use_sie;  ///< use sie to set sie, else use ie
 
-    DCArrayKokkos<double> stress; ///< Gauss Point stress
+    DCArrayKokkos<real_t> stress; ///< Gauss Point stress
 
-    DCArrayKokkos<double> strain; ///< Gauss Point strain
+    DCArrayKokkos<real_t> strain; ///< Gauss Point strain
 
-    DCArrayKokkos<double> thermal_conductivity; ///< Thermal conductivity
-    DCArrayKokkos<double> specific_heat;        ///< Specific Heat
+    DCArrayKokkos<real_t> thermal_conductivity; ///< Thermal conductivity
+    DCArrayKokkos<real_t> specific_heat;        ///< Specific Heat
 
-    DCArrayKokkos<double> elastic_modulii;  ///<  Gauss Point elastic modulii Exx, Eyy, Ezz
-    DCArrayKokkos<double> shear_modulii;    ///<  Gauss Point shear modulii Gxy, Gxz, Gyz
-    DCArrayKokkos<double> poisson_ratios;   ///<  Gauss Point poisson ratios nu_xy, nu_xz, nu_yz
+    DCArrayKokkos<real_t> elastic_modulii;  ///<  Gauss Point elastic modulii Exx, Eyy, Ezz
+    DCArrayKokkos<real_t> shear_modulii;    ///<  Gauss Point shear modulii Gxy, Gxz, Gyz
+    DCArrayKokkos<real_t> poisson_ratios;   ///<  Gauss Point poisson ratios nu_xy, nu_xz, nu_yz
 
-    DCArrayKokkos<double> level_set;        ///< level set
+    DCArrayKokkos<real_t> level_set;        ///< level set
 
 
     // initialization method 
@@ -113,8 +113,8 @@ struct fillElemState_t
 {
     size_t max_mats_in_elem;    ///< the max number of materials possible per element
 
-    DCArrayKokkos<double> mat_volfrac;     ///< element volume fraction
-    DCArrayKokkos<double> geo_volfrac;  ///< element geometric (the part) volume fraction
+    DCArrayKokkos<real_t> mat_volfrac;     ///< element volume fraction
+    DCArrayKokkos<real_t> geo_volfrac;  ///< element geometric (the part) volume fraction
 
     // arrays for building material index space:
     //    mat_id                     material ids in the element (num_elems, num_mats_saved)
@@ -169,18 +169,18 @@ enum class node_state
 /////////////////////////////////////////////////////////////////////////////
 struct node_t
 {
-    MPICArrayKokkos<double> coords;     ///< Nodal coordinates
-    MPICArrayKokkos<double> coords_n0;  ///< Nodal coordinates at tn=0 of time integration
-    MPICArrayKokkos<double> coords_t0;  ///< Nodal coordinates in reference configuration
-    MPICArrayKokkos<double> vel;        ///< Nodal velocity
-    MPICArrayKokkos<double> vel_n0;     ///< Nodal velocity at tn=0 of time integration
-    DCArrayKokkos<double> mass;       ///< Nodal mass
-    DCArrayKokkos<double> force;      ///< Nodal force
-    MPICArrayKokkos<double> temp;       ///< Nodal temperature
-    MPICArrayKokkos<double> temp_n0;    ///< Nodal temperature at tn=0 of time integration
-    DCArrayKokkos<double> q_transfer; ///< Nodal heat flux
-    DCArrayKokkos<double> gradient_level_set;   ///< Nodal gradient of the level set function
-    MPICArrayKokkos<double> displacement; ///< nodal displacement
+    MPICArrayKokkos<real_t> coords;     ///< Nodal coordinates
+    MPICArrayKokkos<real_t> coords_n0;  ///< Nodal coordinates at tn=0 of time integration
+    MPICArrayKokkos<real_t> coords_t0;  ///< Nodal coordinates in reference configuration
+    MPICArrayKokkos<real_t> vel;        ///< Nodal velocity
+    MPICArrayKokkos<real_t> vel_n0;     ///< Nodal velocity at tn=0 of time integration
+    DCArrayKokkos<real_t> mass;       ///< Nodal mass
+    DCArrayKokkos<real_t> force;      ///< Nodal force
+    MPICArrayKokkos<real_t> temp;       ///< Nodal temperature
+    MPICArrayKokkos<real_t> temp_n0;    ///< Nodal temperature at tn=0 of time integration
+    DCArrayKokkos<real_t> q_transfer; ///< Nodal heat flux
+    DCArrayKokkos<real_t> gradient_level_set;   ///< Nodal gradient of the level set function
+    MPICArrayKokkos<real_t> displacement; ///< nodal displacement
 
     // initialization method (num_nodes, num_dims, state to allocate)
     void initialize(size_t num_nodes, size_t num_dims, std::vector<node_state> node_states);
@@ -216,20 +216,20 @@ enum class gauss_pt_state
 struct GaussPoint_t
 {
 
-    DCArrayKokkos<double> vol;  ///< GaussPoint volume
-    DCArrayKokkos<double> div;  ///< GaussPoint divergence of velocity
-    DCArrayKokkos<double> vel_grad;  ///< GaussPoint velocity gradient tensor
+    DCArrayKokkos<real_t> vol;  ///< GaussPoint volume
+    DCArrayKokkos<real_t> div;  ///< GaussPoint divergence of velocity
+    DCArrayKokkos<real_t> vel_grad;  ///< GaussPoint velocity gradient tensor
 
-    MPICArrayKokkos<double> level_set;  ///< GaussPoint level set field
-    MPICArrayKokkos<double> level_set_n0;  ///< GaussPoint level set field
+    MPICArrayKokkos<real_t> level_set;  ///< GaussPoint level set field
+    MPICArrayKokkos<real_t> level_set_n0;  ///< GaussPoint level set field
 
-    MPICArrayKokkos<double> shock_detector;  ///< GaussPoint shock detector field
+    MPICArrayKokkos<real_t> shock_detector;  ///< GaussPoint shock detector field
 
-    DCArrayKokkos<double> detj0;         ///< det(J0) at t=0, frozen ref-to-physical Jacobian determinant
-    DCArrayKokkos<double> jac0_inv;      ///< inv(J0) at t=0, shape (num_gauss_pnts, num_dims, num_dims)
-    DCArrayKokkos<double> rho0_detj0_w;  ///< rho0 * det(J0) * w_q, per-qpt conserved mass weight
-    DCArrayKokkos<double> detj;          ///< det(J(t)) at current time
-    DCArrayKokkos<double> jac_inv;       ///< inv(J(t)) at current time, shape (num_gauss_pnts, num_dims, num_dims)
+    DCArrayKokkos<real_t> detj0;         ///< det(J0) at t=0, frozen ref-to-physical Jacobian determinant
+    DCArrayKokkos<real_t> jac0_inv;      ///< inv(J0) at t=0, shape (num_gauss_pnts, num_dims, num_dims)
+    DCArrayKokkos<real_t> rho0_detj0_w;  ///< rho0 * det(J0) * w_q, per-qpt conserved mass weight
+    DCArrayKokkos<real_t> detj;          ///< det(J(t)) at current time
+    DCArrayKokkos<real_t> jac_inv;       ///< inv(J(t)) at current time, shape (num_gauss_pnts, num_dims, num_dims)
 
     // initialization method (num_cells, num_dims)
     void initialize(size_t num_gauss_pnts, size_t num_dims, std::vector<gauss_pt_state> gauss_pt_states);
@@ -313,46 +313,46 @@ struct MaterialPoint_t
     DCArrayKokkos <size_t> num_material_points;    ///< the actual number of material points, omitting the buffer
     DCArrayKokkos <size_t> num_material_points_buffer; ///< number of material points plus a buffer
 
-    DRaggedRightArrayKokkos<double> den;    ///< MaterialPoint density
-    DRaggedRightArrayKokkos<double> pres;   ///< MaterialPoint pressure
+    DRaggedRightArrayKokkos<real_t> den;    ///< MaterialPoint density
+    DRaggedRightArrayKokkos<real_t> pres;   ///< MaterialPoint pressure
 
-    DRaggedRightArrayKokkos<double> stress;    ///< MaterialPoint stress
-    DRaggedRightArrayKokkos<double> stress_n0; ///< MaterialPoint stress at t=n0 of time integration
+    DRaggedRightArrayKokkos<real_t> stress;    ///< MaterialPoint stress
+    DRaggedRightArrayKokkos<real_t> stress_n0; ///< MaterialPoint stress at t=n0 of time integration
 
-    DRaggedRightArrayKokkos<double> strain;    ///< MaterialPoint strain
+    DRaggedRightArrayKokkos<real_t> strain;    ///< MaterialPoint strain
 
-    DRaggedRightArrayKokkos<double> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
-    DRaggedRightArrayKokkos<double> sie_n0; ///< coefficients for the sie in strong form at t=n0 of time integration
+    DRaggedRightArrayKokkos<real_t> sie;    ///< coefficients for the sie in strong form, only used in some methods e.g., FE-SGH and MPM
+    DRaggedRightArrayKokkos<real_t> sie_n0; ///< coefficients for the sie in strong form at t=n0 of time integration
 
-    DRaggedRightArrayKokkos<double> sspd;   ///< MaterialPoint sound speed
-    DRaggedRightArrayKokkos<double> mass;   ///< MaterialPoint mass
+    DRaggedRightArrayKokkos<real_t> sspd;   ///< MaterialPoint sound speed
+    DRaggedRightArrayKokkos<real_t> mass;   ///< MaterialPoint mass
 
-    DRaggedRightArrayKokkos<double> q_flux; ///< Divergence of heat flux
-    DRaggedRightArrayKokkos<double> conductivity;  ///< Thermal conductivity
-    DRaggedRightArrayKokkos<double> specific_heat; ///< Specific Heat
+    DRaggedRightArrayKokkos<real_t> q_flux; ///< Divergence of heat flux
+    DRaggedRightArrayKokkos<real_t> conductivity;  ///< Thermal conductivity
+    DRaggedRightArrayKokkos<real_t> specific_heat; ///< Specific Heat
 
-    DRaggedRightArrayKokkos<double> elastic_modulii;  ///<  MaterialPoint elastic modulii Exx, Eyy, Ezz
-    DRaggedRightArrayKokkos<double> shear_modulii;    ///<  MaterialPoint shear modulii Gxy, Gxz, Gyz
-    DRaggedRightArrayKokkos<double> poisson_ratios;   ///<  MaterialPoint poisson ratios nu_xy, nu_xz, nu_yz
+    DRaggedRightArrayKokkos<real_t> elastic_modulii;  ///<  MaterialPoint elastic modulii Exx, Eyy, Ezz
+    DRaggedRightArrayKokkos<real_t> shear_modulii;    ///<  MaterialPoint shear modulii Gxy, Gxz, Gyz
+    DRaggedRightArrayKokkos<real_t> poisson_ratios;   ///<  MaterialPoint poisson ratios nu_xy, nu_xz, nu_yz
     
-    DRaggedRightArrayKokkos<double> deformation_grad;    ///<  MaterialPoint deformation gradient
-    DRaggedRightArrayKokkos<double> deformation_grad_t0; ///<  MaterialPoint deformation gradient at t0 or after a remap step
+    DRaggedRightArrayKokkos<real_t> deformation_grad;    ///<  MaterialPoint deformation gradient
+    DRaggedRightArrayKokkos<real_t> deformation_grad_t0; ///<  MaterialPoint deformation gradient at t0 or after a remap step
 
-    DRaggedRightArrayKokkos<double> coords;           ///< physical position at the material point
+    DRaggedRightArrayKokkos<real_t> coords;           ///< physical position at the material point
 
 
     // Material Models are stored on Material points
-    DRaggedRightArrayKokkos<double> eos_state_vars;        ///< Array of state variables for the EOS, accessed as (mat_id, mat_elem_sid, var_lid)
-    DRaggedRightArrayKokkos<double> strength_state_vars;   ///< Array of state variables for the strength, accessed as (mat_id, mat_elem_sid, var_lid)
-    DRaggedRightArrayKokkos<double> num_strength_state_vars;   ///< Array of number of state variables for the strength
-    DRaggedRightArrayKokkos<double> user_physics_state_vars;   ///< Array of state variables for the physics models, accessed as (mat_id, mat_elem_sid, var_lid)
-    DRaggedRightArrayKokkos<double> num_user_physics_state_vars;   ///< Array of number of user physics state variables for the strength
+    DRaggedRightArrayKokkos<real_t> eos_state_vars;        ///< Array of state variables for the EOS, accessed as (mat_id, mat_elem_sid, var_lid)
+    DRaggedRightArrayKokkos<real_t> strength_state_vars;   ///< Array of state variables for the strength, accessed as (mat_id, mat_elem_sid, var_lid)
+    DRaggedRightArrayKokkos<real_t> num_strength_state_vars;   ///< Array of number of state variables for the strength
+    DRaggedRightArrayKokkos<real_t> user_physics_state_vars;   ///< Array of state variables for the physics models, accessed as (mat_id, mat_elem_sid, var_lid)
+    DRaggedRightArrayKokkos<real_t> num_user_physics_state_vars;   ///< Array of number of user physics state variables for the strength
 
-    DRaggedRightArrayKokkos<double> temp_grad;     ///< Temperature gradient
-    DRaggedRightArrayKokkos<double> mat_volfrac;       ///< MaterialPoint volume fraction
-    DRaggedRightArrayKokkos<double> delta_mat_volfrac; ///< change in MaterialPoint volume fraction
-    DRaggedRightArrayKokkos<double> geo_volfrac;   ///< change in MaterialPoint geometric (part) volume fraction (interface reconstruction)
-    DRaggedRightArrayKokkos<double> delta_geo_volfrac; ///< change in MaterialPoint geometric (part) volume fraction (interface reconstruction)
+    DRaggedRightArrayKokkos<real_t> temp_grad;     ///< Temperature gradient
+    DRaggedRightArrayKokkos<real_t> mat_volfrac;       ///< MaterialPoint volume fraction
+    DRaggedRightArrayKokkos<real_t> delta_mat_volfrac; ///< change in MaterialPoint volume fraction
+    DRaggedRightArrayKokkos<real_t> geo_volfrac;   ///< change in MaterialPoint geometric (part) volume fraction (interface reconstruction)
+    DRaggedRightArrayKokkos<real_t> delta_geo_volfrac; ///< change in MaterialPoint geometric (part) volume fraction (interface reconstruction)
     DRaggedRightArrayKokkos<bool> eroded;              ///< MaterialPoint eroded or not flag
 
 
@@ -384,9 +384,9 @@ struct MaterialZone_t
     DCArrayKokkos <size_t> num_material_zones; ///< the actual number of material zones, omitting the buffer
     DCArrayKokkos <size_t> num_material_zones_buffer; ///< the number of material zones plus a buffer
 
-    DRaggedRightArrayKokkos<double> sie;     ///< coefficients for the sie polynomial field
-    DRaggedRightArrayKokkos<double> sie_n0;  ///< coefficients for the sie polynomial field at t=n0 of time integration
-    DRaggedRightArrayKokkos<double> mass;    ///< lumped row-sum mass per zone DoF
+    DRaggedRightArrayKokkos<real_t> sie;     ///< coefficients for the sie polynomial field
+    DRaggedRightArrayKokkos<real_t> sie_n0;  ///< coefficients for the sie polynomial field at t=n0 of time integration
+    DRaggedRightArrayKokkos<real_t> mass;    ///< lumped row-sum mass per zone DoF
 
 
     void initialize_num_mats(size_t num_mats);
@@ -421,14 +421,14 @@ struct MaterialCorner_t
     DCArrayKokkos<size_t>num_material_corners;   ///< the actual number of material corners, omitting the buffer
     DCArrayKokkos<size_t>num_material_corners_buffer;   ///< the number of material corners plus a buffer
 
-    DRaggedRightArrayKokkos<double> force;   ///< Corner force for the material
-    DRaggedRightArrayKokkos<double> q_transfer;  ///< Corner heat tranfer per material
+    DRaggedRightArrayKokkos<real_t> force;   ///< Corner force for the material
+    DRaggedRightArrayKokkos<real_t> q_transfer;  ///< Corner heat tranfer per material
 
     // Material state arrays for remap
-    DRaggedRightArrayKokkos<double> density;  ///< Density used for remap
-    DRaggedRightArrayKokkos<double> specific_internal_energy;  ///< Specific internal energy used for remap
-    DRaggedRightArrayKokkos<double> kinetic_energy;  ///< Kinetic energy used for remap
-    DRaggedRightArrayKokkos<double> velocity;  ///< Velocity used for remap
+    DRaggedRightArrayKokkos<real_t> density;  ///< Density used for remap
+    DRaggedRightArrayKokkos<real_t> specific_internal_energy;  ///< Specific internal energy used for remap
+    DRaggedRightArrayKokkos<real_t> kinetic_energy;  ///< Kinetic energy used for remap
+    DRaggedRightArrayKokkos<real_t> velocity;  ///< Velocity used for remap
     
     void initialize_num_mats(size_t num_mats);
 
@@ -456,11 +456,11 @@ enum class corner_state
 /////////////////////////////////////////////////////////////////////////////
 struct corner_t
 {
-    DCArrayKokkos<double> force;  ///< Corner force
-    DCArrayKokkos<double> mass;   ///< Corner mass
-    DCArrayKokkos<double> q_transfer;  ///< Corner heat transfer
-    DCArrayKokkos<double> normal; ///< Corner normal
-    DCArrayKokkos<double> volume; ///< Corner volume
+    DCArrayKokkos<real_t> force;  ///< Corner force
+    DCArrayKokkos<real_t> mass;   ///< Corner mass
+    DCArrayKokkos<real_t> q_transfer;  ///< Corner heat transfer
+    DCArrayKokkos<real_t> normal; ///< Corner normal
+    DCArrayKokkos<real_t> volume; ///< Corner volume
 
     // initialization method (num_corners, num_dims)
     void initialize(size_t num_corners, size_t num_dims, std::vector<corner_state> corner_states);

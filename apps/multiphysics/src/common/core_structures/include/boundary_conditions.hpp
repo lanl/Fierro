@@ -158,9 +158,9 @@ extern std::map<std::string, boundary_conditions::BCFcnLocation> bc_location_map
 struct BoundaryConditionSetup_t
 {
     boundary_conditions::BdyTag surface;   ///< Geometry boundary condition is applied to, e.g., sphere, plane
-    double origin[3] = { 0.0, 0.0, 0.0 };  ///< origin of surface being tagged, e.g., sphere or cylinder surface
-    double value     = 0.0;                ///< value = position, radius, etc. defining the surface geometric shape
-    double tolerance = 1.0e-7;  ///< tolerance for tagging a boundary surface
+    real_t origin[3] = { 0.0, 0.0, 0.0 };  ///< origin of surface being tagged, e.g., sphere or cylinder surface
+    real_t value     = 0.0;                ///< value = position, radius, etc. defining the surface geometric shape
+    real_t tolerance = mtr::prec::fmax((real_t)1.0e-7, (real_t)10 * mtr::prec::epsilon<real_t>());  ///< tolerance for tagging a boundary surface (never below real_t resolution)
 }; // end boundary condition setup
 
 /////////////////////////////////////////////////////////////////////////////
@@ -204,10 +204,10 @@ struct BoundaryConditionFunctions_t
     // function pointer for velocity BC's
     void (*velocity) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-        const RaggedRightArrayKokkos<double>& vel_bc_global_vars,
-        const DCArrayKokkos<double>& bc_state_vars,
-        const MPICArrayKokkos<double>& node_vel,
-        const double time_value,
+        const RaggedRightArrayKokkos<real_t>& vel_bc_global_vars,
+        const DCArrayKokkos<real_t>& bc_state_vars,
+        const MPICArrayKokkos<real_t>& node_vel,
+        const real_t time_value,
         const size_t rk_stage,
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
@@ -217,24 +217,24 @@ struct BoundaryConditionFunctions_t
     // displacement_step(node_gid, dir) is set to the prescribed displacement increment
     void (*displacement) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-        const RaggedRightArrayKokkos<double>& disp_bc_global_vars,
-        const DCArrayKokkos<double>& bc_state_vars,
+        const RaggedRightArrayKokkos<real_t>& disp_bc_global_vars,
+        const DCArrayKokkos<real_t>& bc_state_vars,
         const CArrayKokkos<bool>& constrained_dof,
-        const CArrayKokkos<double>& displacement_step,
-        const double dt,
-        const double time_value,
-        const double time_start,
-        const double time_end,
+        const CArrayKokkos<real_t>& displacement_step,
+        const real_t dt,
+        const real_t time_value,
+        const real_t time_start,
+        const real_t time_end,
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
 
     // function pointer for temperature BC's
     void (*temperature) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-        const RaggedRightArrayKokkos<double>& temp_bc_global_vars,
-        const DCArrayKokkos<double>& bc_state_vars,
-        const MPICArrayKokkos<double>& node_temp,
-        const double time_value,
+        const RaggedRightArrayKokkos<real_t>& temp_bc_global_vars,
+        const DCArrayKokkos<real_t>& bc_state_vars,
+        const MPICArrayKokkos<real_t>& node_temp,
+        const real_t time_value,
         const size_t rk_stage,
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
@@ -242,10 +242,10 @@ struct BoundaryConditionFunctions_t
     // Function pointer to heat flux BCs
     void (*heat_flux) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-        const RaggedRightArrayKokkos<double>& heat_flux_bc_global_vars,
-        const DCArrayKokkos<double>& bc_state_vars,
-        const MPICArrayKokkos<double>& node_temp,
-        const double time_value,
+        const RaggedRightArrayKokkos<real_t>& heat_flux_bc_global_vars,
+        const DCArrayKokkos<real_t>& bc_state_vars,
+        const MPICArrayKokkos<real_t>& node_temp,
+        const real_t time_value,
         const size_t rk_stage,
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
@@ -254,11 +254,11 @@ struct BoundaryConditionFunctions_t
     // function pointer for stress BC's
     void (*stress) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-        const RaggedRightArrayKokkos<double>& stress_bc_global_vars,
-        const DCArrayKokkos<double>& bc_state_vars,
-        const ViewCArrayKokkos <double>& corner_surf_force,
-        const ViewCArrayKokkos <double>& corner_surf_normal,
-        const double time_value,
+        const RaggedRightArrayKokkos<real_t>& stress_bc_global_vars,
+        const DCArrayKokkos<real_t>& bc_state_vars,
+        const ViewCArrayKokkos <real_t>& corner_surf_force,
+        const ViewCArrayKokkos <real_t>& corner_surf_normal,
+        const real_t time_value,
         const size_t rk_stage,
         const size_t bdy_node_gid,
         const size_t bdy_set) = NULL;
@@ -266,15 +266,15 @@ struct BoundaryConditionFunctions_t
     // function pointer for stress BC's
     void (*qstatx_stress) (const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-        const RaggedRightArrayKokkos<double>& qstatx_stress_bc_global_vars,
-        const DCArrayKokkos<double>& bc_state_vars,
-        ViewCArrayKokkos <double>& traction,
-        const ViewCArrayKokkos <double>& surf_normal,
-        const double dt,
-        const double time_value,
-        const double time_start,
-        const double time_end,
-        const ViewCArrayKokkos <double>& qpt_coords,
+        const RaggedRightArrayKokkos<real_t>& qstatx_stress_bc_global_vars,
+        const DCArrayKokkos<real_t>& bc_state_vars,
+        ViewCArrayKokkos <real_t>& traction,
+        const ViewCArrayKokkos <real_t>& surf_normal,
+        const real_t dt,
+        const real_t time_value,
+        const real_t time_start,
+        const real_t time_end,
+        const ViewCArrayKokkos <real_t>& qpt_coords,
         const size_t bdy_set) = NULL;
 
 
@@ -334,27 +334,27 @@ struct BoundaryCondition_t
 
 
     // global variables for velocity boundary condition models
-    RaggedRightArrayKokkos<double> velocity_bc_global_vars;  // (bc_id, vars...)
+    RaggedRightArrayKokkos<real_t> velocity_bc_global_vars;  // (bc_id, vars...)
     CArrayKokkos<size_t> num_velocity_bc_global_vars;
 
     // global variables for displacement boundary condition models
-    RaggedRightArrayKokkos<double> displacement_bc_global_vars;  // (bc_id, vars...)
+    RaggedRightArrayKokkos<real_t> displacement_bc_global_vars;  // (bc_id, vars...)
     CArrayKokkos<size_t> num_displacement_bc_global_vars;
 
     // global variables for stress boundary condition models
-    RaggedRightArrayKokkos<double> stress_bc_global_vars;  // (bc_id, vars...)
+    RaggedRightArrayKokkos<real_t> stress_bc_global_vars;  // (bc_id, vars...)
     CArrayKokkos<size_t> num_stress_bc_global_vars;
 
     // global variables for qstatx stress boundary condition models
-    RaggedRightArrayKokkos<double> qstatx_stress_bc_global_vars;  // (bc_id, vars...)
+    RaggedRightArrayKokkos<real_t> qstatx_stress_bc_global_vars;  // (bc_id, vars...)
     CArrayKokkos<size_t> num_qstatx_stress_bc_global_vars;
 
     // global variables for temperature boundary condition models
-    RaggedRightArrayKokkos<double> temperature_bc_global_vars;
+    RaggedRightArrayKokkos<real_t> temperature_bc_global_vars;
     CArrayKokkos<size_t> num_temperature_bc_global_vars;
 
     // state variables for boundary conditions
-    DCArrayKokkos<double> bc_state_vars;
+    DCArrayKokkos<real_t> bc_state_vars;
 
     // the boundary condition id for the fracture stress BC, -1 if none set (debugging aid)
     int fracture_bc_id = -1; 

@@ -51,8 +51,8 @@ void cohesive_zones_t::initialize(
     RaggedRightArrayKokkos<size_t>& elems_in_node,   // elems_in_node
     CArrayKokkos<size_t>& bdy_nodes,                 // mesh.bdy_nodes
     size_t num_bdy_nodes,                            // mesh.num_bdy_nodes
-    MPICArrayKokkos<double>& node_coords,            // node_coords
-    double geom_tol){                                // SimulationParameters.DynamicOptions.small
+    MPICArrayKokkos<real_t>& node_coords,            // node_coords
+    real_t geom_tol){                                // SimulationParameters.DynamicOptions.small
 
     // this overlapping_node_gids algorithm will eventually be replaced by Nathaniels parallel algorithm: build_multi_node_connectivity
     // pass 1 (parallel count): for each boundary node i, count how i > i overlap it
@@ -68,7 +68,7 @@ void cohesive_zones_t::initialize(
             const size_t node_j = bdy_nodes(j);
             bool overlap = true;
             for (size_t k = 0; k < 3; ++k) {
-                if (fabs(node_coords(node_i, k) - node_coords(node_j, k)) > geom_tol){
+                if (Kokkos::fabs(node_coords(node_i, k) - node_coords(node_j, k)) > geom_tol){
                     overlap = false;
                     break;
                 }
@@ -104,7 +104,7 @@ void cohesive_zones_t::initialize(
             const size_t node_j = bdy_nodes(j);
             bool overlap = true;
             for (size_t k = 0; k < 3; ++k) {
-                if (fabs(node_coords(node_i, k) - node_coords(node_j, k)) > geom_tol) {
+                if (Kokkos::fabs(node_coords(node_i, k) - node_coords(node_j, k)) > geom_tol) {
                     overlap = false;
                     break;
                 }
@@ -151,13 +151,13 @@ void cohesive_zones_t::initialize_fracture_bc(
     const size_t npairs = overlapping_node_gids.dims(0);
 
     // allocate cohesive zone force array
-    F_cz = CArrayKokkos<double>(3 * num_nodes, "cz_nodal_forces");
+    F_cz = CArrayKokkos<real_t>(3 * num_nodes, "cz_nodal_forces");
     
     // extract BC parameters from device to host
     const auto& BC = BoundaryConditions;
     
     // temporary staging array to copy from device
-    DCArrayKokkos<double> bc_params(30, "bc_params");
+    DCArrayKokkos<real_t> bc_params(30, "bc_params");
 
     FOR_ALL(i, 0, 1, {
         // store the cohsive zone consituitive parameters ina compact temp array
@@ -178,7 +178,7 @@ void cohesive_zones_t::initialize_fracture_bc(
 
         // copy prony coefficients
         // prony terms (E_j, tau_j pairs starting at index 6)
-        int nprony = static_cast<int>(bc_params(5) + 0.5);
+        int nprony = static_cast<int>(bc_params(5) + (real_t)0.5);
         for (int j = 0; j < nprony && j < 10; ++j) {
             int prony_base = fractureStressBC::BCVars::prony_base + 2*j;
             bc_params(6 + 2*j)     = BC.stress_bc_global_vars(fracture_bdy_set, prony_base);     // E_j
@@ -194,12 +194,12 @@ void cohesive_zones_t::initialize_fracture_bc(
     n_exp           = bc_params.host(2);
     u_n_star        = bc_params.host(3);
     u_t_star        = bc_params.host(4);
-    num_prony_terms = static_cast<int>(bc_params.host(5) + 0.5);
+    num_prony_terms = static_cast<int>(bc_params.host(5) + (real_t)0.5);
 
     // device-accessible Prony parameters (E_j, tau_j pairs)
     if (num_prony_terms > 0) {
         // 2D array: row j contains [E_j, tau_j] for Prony term j
-        prony_params = CArrayKokkos<double>(num_prony_terms, 2, "cz_prony_params");
+        prony_params = CArrayKokkos<real_t>(num_prony_terms, 2, "cz_prony_params");
         FOR_ALL_CLASS(i, 0, 1, {
             for (int j = 0; j < num_prony_terms; ++j) {
                 prony_params(j, 0) = bc_params(6 + 2*j);     // E_j
@@ -210,19 +210,19 @@ void cohesive_zones_t::initialize_fracture_bc(
 
     } else {
         // allocate minimal array to avoid null issues (debug aid)
-        prony_params = CArrayKokkos<double>(1, 2, "cz_prony_params_empty");
+        prony_params = CArrayKokkos<real_t>(1, 2, "cz_prony_params_empty");
         prony_params.set_values(0.0);
     }
 
     // ensure persistent storage for cohesive internal vars
     // internal_vars = persistent history carried across full tme steps
     const int width = 4 + num_prony_terms;
-    internal_vars = CArrayKokkos<double>(npairs, width, "cz_internal_vars");
+    internal_vars = CArrayKokkos<real_t>(npairs, width, "cz_internal_vars");
     internal_vars.set_values(0.0);
 
     // ensure persistent storage for cohesive delta internal vars
     // delta_internal_vars = stage local predicted updates for current RK stage
-    delta_internal_vars = CArrayKokkos<double>(npairs, width, "cz_delta_internal_vars");
+    delta_internal_vars = CArrayKokkos<real_t>(npairs, width, "cz_delta_internal_vars");
     delta_internal_vars.set_values(0.0);
 
     // this node gather map (thread safe force accumulation) algorithm will eventually be replaced by Nathaniels parallel algorithm: build_multi_node_connectivity
@@ -298,7 +298,7 @@ void cohesive_zones_t::initialize_fracture_bc(
     // per pair collision free buffer for cohesive forces (npairs x 3); each pair writes its force contribution here, then gather map is used to sum to nodes without atomics
     // in cohesive_zone_loads each paur writes its own row pair_force(i, :) one thread per pair, so no collisions happen and no atomics are needed
     // gather map is then used to sum those rows onto nodes wiht one thread per node
-    pair_force = CArrayKokkos<double>(npairs, 3, "cz_pair_force");  
+    pair_force = CArrayKokkos<real_t>(npairs, 3, "cz_pair_force");  
 
 }
 
@@ -312,14 +312,14 @@ void cohesive_zones_t::initialize_reorientation_mode(
     size_t num_nodes,                                // num_nodes
     size_t num_elems,                                // num_elems
     size_t num_nodes_in_elem,                        // num_nodes_in_elem
-    MPICArrayKokkos<double>& node_coords,            // node_coords
+    MPICArrayKokkos<real_t>& node_coords,            // node_coords
     const BoundaryCondition_t& BoundaryConditions,
     bool doing_fracture)   
 {
     reorientation_validation_mode = false;
     
     // temporary scratch array used to scan BC data for reorientaion mode
-    DCArrayKokkos<double> reorient_params(5, "reorient_params");
+    DCArrayKokkos<real_t> reorient_params(5, "reorient_params");
     DCArrayKokkos<int> found_reorient(1, "found_reorient");
     found_reorient.set_values(0); // initialize to zero
     reorient_params.set_values(0.0); // initialize to zero
@@ -340,7 +340,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
 
             // read validation mode flag from BC parameter array
             const bool reorientation_mode =
-                vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::reorientation_mode) > 0.5;
+                vel_bc_vars(bdy_set, UserDefinedVelocityBC::BCVars::reorientation_mode) > (real_t)0.5;
 
             // treat values > 0.5 as true
             if (reorientation_mode) {
@@ -371,7 +371,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
     x_interface = reorient_params.host(4);
 
     // allocate reorientation-only storage; this happens only when validation mode is enabled
-    initial_coords = CArrayKokkos<double>(num_nodes, 3, "initial_coords");
+    initial_coords = CArrayKokkos<real_t>(num_nodes, 3, "initial_coords");
     cz_b_side_flag = CArrayKokkos<int>(num_nodes, "cz_b_side_flag");
     cz_b_side_flag.set_values(0);
 
@@ -385,11 +385,11 @@ void cohesive_zones_t::initialize_reorientation_mode(
 
     // initialize b-side flags using x_interface parameter from .yaml
     const size_t nne = num_nodes_in_elem;
-    const double x_int = x_interface;
+    const real_t x_int = x_interface;
     auto b_side_flag = cz_b_side_flag;
     
     FOR_ALL(e, 0, num_elems, {
-        double xc = 0.0;
+        real_t xc = 0.0;
         // compute element centroid x coordinate
         for (size_t a = 0; a < nne; ++a) {
             const size_t gid = nodes_in_elem(e,a);
@@ -410,7 +410,7 @@ void cohesive_zones_t::initialize_reorientation_mode(
 }
 
 // zero out delta_internal_vars at the strat of each RK stage
-void reset_delta_internal_vars(CArrayKokkos<double>& delta_internal_vars)
+void reset_delta_internal_vars(CArrayKokkos<real_t>& delta_internal_vars)
 {
     delta_internal_vars.set_values(0.0);
 }
@@ -464,13 +464,13 @@ size_t cohesive_zone_elem_count(DCArrayKokkos<size_t>& overlapping_node_gids,
 KOKKOS_FUNCTION
 void compute_face_geometry(
     const DCArrayKokkos<size_t>& nodes_in_elem,  
-    const MPICArrayKokkos<double>& node_coords,
+    const MPICArrayKokkos<real_t>& node_coords,
     const size_t surf,
     const size_t elem,
-    ViewCArrayKokkos<double>& n,
-    ViewCArrayKokkos<double>& r,
-    ViewCArrayKokkos<double>& s,
-    ViewCArrayKokkos<double>& cenface
+    ViewCArrayKokkos<real_t>& n,
+    ViewCArrayKokkos<real_t>& r,
+    ViewCArrayKokkos<real_t>& s,
+    ViewCArrayKokkos<real_t>& cenface
 )
 {
  
@@ -520,43 +520,43 @@ void compute_face_geometry(
     }
 
     // evaluate bilinear face shape function derivatives at face center (xi = 0, eta = 0)
-    double xi = 0.0, eta = 0.0;
-    double dN_dxi[4], dN_deta[4];
+    real_t xi = 0.0, eta = 0.0;
+    real_t dN_dxi[4], dN_deta[4];
 
-    dN_dxi[0]  = -0.25 * (1.0 - eta);
-    dN_dxi[1]  =  0.25 * (1.0 - eta);
-    dN_dxi[2]  =  0.25 * (1.0 + eta);
-    dN_dxi[3]  = -0.25 * (1.0 + eta);
+    dN_dxi[0]  = -(real_t)0.25 * ((real_t)1.0 - eta);
+    dN_dxi[1]  =  (real_t)0.25 * ((real_t)1.0 - eta);
+    dN_dxi[2]  =  (real_t)0.25 * ((real_t)1.0 + eta);
+    dN_dxi[3]  = -(real_t)0.25 * ((real_t)1.0 + eta);
 
-    dN_deta[0] = -0.25 * (1.0 - xi);
-    dN_deta[1] = -0.25 * (1.0 + xi);
-    dN_deta[2] =  0.25 * (1.0 + xi);
-    dN_deta[3] =  0.25 * (1.0 - xi);
+    dN_deta[0] = -(real_t)0.25 * ((real_t)1.0 - xi);
+    dN_deta[1] = -(real_t)0.25 * ((real_t)1.0 + xi);
+    dN_deta[2] =  (real_t)0.25 * ((real_t)1.0 + xi);
+    dN_deta[3] =  (real_t)0.25 * ((real_t)1.0 - xi);
 
     // zero out accumulators
     // r = (rx, ry, rz)
     // s = (sx, sy, sz)
     // orthogonal in-plane vectors
-    double rx = 0.0;
-    double ry = 0.0;
-    double rz = 0.0;
-    double sx = 0.0;
-    double sy = 0.0;
-    double sz = 0.0;
+    real_t rx = 0.0;
+    real_t ry = 0.0;
+    real_t rz = 0.0;
+    real_t sx = 0.0;
+    real_t sy = 0.0;
+    real_t sz = 0.0;
 
     for (int j = 0; j < 3; ++j) cenface(j) = 0.0;
 
     for (int a = 0; a < 4; ++a) {
         size_t node_id = face_gid[a];
 
-        double x = node_coords(node_id, 0);
-        double y = node_coords(node_id, 1);
-        double z = node_coords(node_id, 2);
+        real_t x = node_coords(node_id, 0);
+        real_t y = node_coords(node_id, 1);
+        real_t z = node_coords(node_id, 2);
 
         // centroid (mean of the 4 face corner coordinates)
-        cenface(0) += 0.25 * x;
-        cenface(1) += 0.25 * y;
-        cenface(2) += 0.25 * z;
+        cenface(0) += (real_t)0.25 * x;
+        cenface(1) += (real_t)0.25 * y;
+        cenface(2) += (real_t)0.25 * z;
 
         // derivatives
         rx += dN_dxi[a]  * x;
@@ -569,9 +569,9 @@ void compute_face_geometry(
     }
 
     // normalize r and s; nan guard against degenerate faces
-    const double mag_r = sqrt(rx*rx + ry*ry + rz*rz);
-    const double mag_s = sqrt(sx*sx + sy*sy + sz*sz);
-    const double eps_geom = 1.0e-20;
+    const real_t mag_r = Kokkos::sqrt(rx*rx + ry*ry + rz*rz);
+    const real_t mag_s = Kokkos::sqrt(sx*sx + sy*sy + sz*sz);
+    const real_t eps_geom = 1.0e-20;
     if (!(mag_r > eps_geom) || !(mag_s > eps_geom)) {
         n(0) = 0.0; n(1) = 0.0; n(2) = 0.0;
         r(0) = 0.0; r(1) = 0.0; r(2) = 0.0;
@@ -586,12 +586,12 @@ void compute_face_geometry(
     s(2) = sz / mag_s;
 
     // cross product n = r x s
-    double nx = r(1)*s(2) - r(2)*s(1);
-    double ny = r(2)*s(0) - r(0)*s(2);
-    double nz = r(0)*s(1) - r(1)*s(0);
+    real_t nx = r(1)*s(2) - r(2)*s(1);
+    real_t ny = r(2)*s(0) - r(0)*s(2);
+    real_t nz = r(0)*s(1) - r(1)*s(0);
 
     // normalize n
-    const double mag_n = sqrt(nx*nx + ny*ny + nz*nz);
+    const real_t mag_n = Kokkos::sqrt(nx*nx + ny*ny + nz*nz);
     if (mag_n > eps_geom) {
         n(0) = nx / mag_n;
         n(1) = ny / mag_n;
@@ -603,7 +603,7 @@ void compute_face_geometry(
     }
                             
     // final cleanup of the -0.0s in the output vectors
-    auto zap0 = [](double &v){ if (fabs(v) < 1e-13) v = 0.0; };
+    auto zap0 = [](real_t &v){ if (Kokkos::fabs(v) < (real_t)1e-13) v = 0.0; };
     zap0(r(0)); zap0(r(1)); zap0(r(2));
     zap0(s(0)); zap0(s(1)); zap0(s(2));
     zap0(n(0)); zap0(n(1)); zap0(n(2));
@@ -653,7 +653,7 @@ void compute_face_geometry(
 CArrayKokkos<int> build_cohesive_zone_info(
     RaggedRightArrayKokkos<size_t>& elems_in_node,
     DCArrayKokkos<size_t>& nodes_in_elem,
-    MPICArrayKokkos<double>& node_coords,
+    MPICArrayKokkos<real_t>& node_coords,
     DCArrayKokkos<size_t>& overlapping_node_gids,
     size_t max_elem_in_cohesive_zone,
     const double geom_tol
@@ -727,22 +727,22 @@ CArrayKokkos<int> build_cohesive_zone_info(
     FOR_ALL(i, 0, overlapping_node_gids.dims(0), {
     // find ALL opposing/coincident face matches (one per element slot)
         // void top-level commas in macro body so RUN(...) is parsed as one argument
-        double nA[3];
-        double rA[3];
-        double sA[3];
-        double cA[3];
-        double nB[3];
-        double rB[3];
-        double sB[3];
-        double cB[3];
-        ViewCArrayKokkos<double> nAj(&nA[0], 3);
-        ViewCArrayKokkos<double> rAj(&rA[0], 3);
-        ViewCArrayKokkos<double> sAj(&sA[0], 3);
-        ViewCArrayKokkos<double> cAj(&cA[0], 3);
-        ViewCArrayKokkos<double> nBk(&nB[0], 3);
-        ViewCArrayKokkos<double> rBk(&rB[0], 3);
-        ViewCArrayKokkos<double> sBk(&sB[0], 3);
-        ViewCArrayKokkos<double> cBk(&cB[0], 3);
+        real_t nA[3];
+        real_t rA[3];
+        real_t sA[3];
+        real_t cA[3];
+        real_t nB[3];
+        real_t rB[3];
+        real_t sB[3];
+        real_t cB[3];
+        ViewCArrayKokkos<real_t> nAj(&nA[0], 3);
+        ViewCArrayKokkos<real_t> rAj(&rA[0], 3);
+        ViewCArrayKokkos<real_t> sAj(&sA[0], 3);
+        ViewCArrayKokkos<real_t> cAj(&cA[0], 3);
+        ViewCArrayKokkos<real_t> nBk(&nB[0], 3);
+        ViewCArrayKokkos<real_t> rBk(&rB[0], 3);
+        ViewCArrayKokkos<real_t> sBk(&sB[0], 3);
+        ViewCArrayKokkos<real_t> cBk(&cB[0], 3);
 
         // IDs of three faces per corner k 
         auto push_three_faces = [](int k, int (&out)[3]) {
@@ -813,18 +813,18 @@ CArrayKokkos<int> build_cohesive_zone_info(
                             nBk, rBk, sBk, cBk);
 
                         // ABS centroid distance + opposite normals
-                        const double dx = cAj(0) - cBk(0);
-                        const double dy = cAj(1) - cBk(1);
-                        const double dz = cAj(2) - cBk(2);
-                        const double dist = sqrt(dx*dx + dy*dy + dz*dz);
-                        const double dot  = nAj(0)*nBk(0) + nAj(1)*nBk(1) + nAj(2)*nBk(2);
+                        const real_t dx = cAj(0) - cBk(0);
+                        const real_t dy = cAj(1) - cBk(1);
+                        const real_t dz = cAj(2) - cBk(2);
+                        const real_t dist = Kokkos::sqrt(dx*dx + dy*dy + dz*dz);
+                        const real_t dot  = nAj(0)*nBk(0) + nAj(1)*nBk(1) + nAj(2)*nBk(2);
 
                         // check that match is within tolerance
                         // A and B faces are considered the same physical interface if:
                         // 1) their representative centroids are within tol, AND
                         // 2) their normals are nearly opposite (dot <= -1 + tol)
 
-                        if (dist <= geom_tol && dot <= -1.0 + geom_tol) {
+                        if (dist <= geom_tol && dot <= -(real_t)1.0 + geom_tol) {
 
                             // record the match in the following slots
                             cohesive_zone_info(i, 2*max_elem_in_cohesive_zone + slotA) = fA; // A-face for A slot
@@ -894,12 +894,12 @@ CArrayKokkos<int> build_cohesive_zone_info(
 
 void oriented(
     DCArrayKokkos<size_t>& nodes_in_elem,
-    MPICArrayKokkos<double>& node_coords,      // current  coords (num_nodes x 3)
+    MPICArrayKokkos<real_t>& node_coords,      // current  coords (num_nodes x 3)
     DCArrayKokkos<size_t>& overlapping_node_gids, // (nvcz x 2): A and B node ids per cohesive pair
     CArrayKokkos<int>& cz_info,      // from build_cohesive_zone_info()
     size_t max_elem_in_cohesive_zone,
-    double geom_tol,                 // centroid coincidence tolerance (ABS distance)
-    CArrayKokkos<double>& cohesive_zone_orientation       // (overlapping_node_gids.dims(0) x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
+    real_t geom_tol,                 // centroid coincidence tolerance (ABS distance)
+    CArrayKokkos<real_t>& cohesive_zone_orientation       // (overlapping_node_gids.dims(0) x 6): [nx_t,ny_t,nz_t, nx_tdt,ny_tdt,nz_tdt]
 ) 
 {
     // pull the single matched faces that build_cohesive_zone_info() wrote:
@@ -911,44 +911,44 @@ void oriented(
 
     // looping through each cohesive zone pair
     FOR_ALL(i, 0, overlapping_node_gids.dims(0), {
-        double nA_t_buf[3];
-        double rA_t_buf[3];
-        double sA_t_buf[3];
-        double cA_t_buf[3];
-        double nB_t_buf[3];
-        double rB_t_buf[3];
-        double sB_t_buf[3];
-        double cB_t_buf[3];
-        double nA_dt_buf[3];
-        double rA_dt_buf[3];
-        double sA_dt_buf[3];
-        double cA_dt_buf[3];
-        double nB_dt_buf[3];
-        double rB_dt_buf[3];
-        double sB_dt_buf[3];
-        double cB_dt_buf[3];
-        ViewCArrayKokkos<double> nA_t (&nA_t_buf[0], 3);
-        ViewCArrayKokkos<double> rA_t (&rA_t_buf[0], 3);
-        ViewCArrayKokkos<double> sA_t (&sA_t_buf[0], 3);
-        ViewCArrayKokkos<double> cA_t (&cA_t_buf[0], 3);
-        ViewCArrayKokkos<double> nB_t (&nB_t_buf[0], 3);
-        ViewCArrayKokkos<double> rB_t (&rB_t_buf[0], 3);
-        ViewCArrayKokkos<double> sB_t (&sB_t_buf[0], 3);
-        ViewCArrayKokkos<double> cB_t (&cB_t_buf[0], 3);
-        ViewCArrayKokkos<double> nA_dt(&nA_dt_buf[0], 3);
-        ViewCArrayKokkos<double> rA_dt(&rA_dt_buf[0], 3);
-        ViewCArrayKokkos<double> sA_dt(&sA_dt_buf[0], 3);
-        ViewCArrayKokkos<double> cA_dt(&cA_dt_buf[0], 3);
-        ViewCArrayKokkos<double> nB_dt(&nB_dt_buf[0], 3);
-        ViewCArrayKokkos<double> rB_dt(&rB_dt_buf[0], 3);
-        ViewCArrayKokkos<double> sB_dt(&sB_dt_buf[0], 3);
-        ViewCArrayKokkos<double> cB_dt(&cB_dt_buf[0], 3);
+        real_t nA_t_buf[3];
+        real_t rA_t_buf[3];
+        real_t sA_t_buf[3];
+        real_t cA_t_buf[3];
+        real_t nB_t_buf[3];
+        real_t rB_t_buf[3];
+        real_t sB_t_buf[3];
+        real_t cB_t_buf[3];
+        real_t nA_dt_buf[3];
+        real_t rA_dt_buf[3];
+        real_t sA_dt_buf[3];
+        real_t cA_dt_buf[3];
+        real_t nB_dt_buf[3];
+        real_t rB_dt_buf[3];
+        real_t sB_dt_buf[3];
+        real_t cB_dt_buf[3];
+        ViewCArrayKokkos<real_t> nA_t (&nA_t_buf[0], 3);
+        ViewCArrayKokkos<real_t> rA_t (&rA_t_buf[0], 3);
+        ViewCArrayKokkos<real_t> sA_t (&sA_t_buf[0], 3);
+        ViewCArrayKokkos<real_t> cA_t (&cA_t_buf[0], 3);
+        ViewCArrayKokkos<real_t> nB_t (&nB_t_buf[0], 3);
+        ViewCArrayKokkos<real_t> rB_t (&rB_t_buf[0], 3);
+        ViewCArrayKokkos<real_t> sB_t (&sB_t_buf[0], 3);
+        ViewCArrayKokkos<real_t> cB_t (&cB_t_buf[0], 3);
+        ViewCArrayKokkos<real_t> nA_dt(&nA_dt_buf[0], 3);
+        ViewCArrayKokkos<real_t> rA_dt(&rA_dt_buf[0], 3);
+        ViewCArrayKokkos<real_t> sA_dt(&sA_dt_buf[0], 3);
+        ViewCArrayKokkos<real_t> cA_dt(&cA_dt_buf[0], 3);
+        ViewCArrayKokkos<real_t> nB_dt(&nB_dt_buf[0], 3);
+        ViewCArrayKokkos<real_t> rB_dt(&rB_dt_buf[0], 3);
+        ViewCArrayKokkos<real_t> sB_dt(&sB_dt_buf[0], 3);
+        ViewCArrayKokkos<real_t> cB_dt(&cB_dt_buf[0], 3);
 
         // accumulators for averaving normals of cohesive zone faces
         //double sum_t [3] = {0.0, 0.0, 0.0};
         //double sum_dt [3] = {0.0, 0.0, 0.0};
-        double sum_t [3];
-        double sum_dt [3];
+        real_t sum_t [3];
+        real_t sum_dt [3];
         sum_t[0] = 0.0;
         sum_t[1] = 0.0;
         sum_t[2] = 0.0;
@@ -997,19 +997,19 @@ void oriented(
         }        
 
         // align t+dt sum to t sum (keep a consistent sign across time)
-        double dot_align = sum_t[0]*sum_dt[0] + sum_t[1]*sum_dt[1] + sum_t[2]*sum_dt[2];
-        if (dot_align < 0.0) {
+        real_t dot_align = sum_t[0]*sum_dt[0] + sum_t[1]*sum_dt[1] + sum_t[2]*sum_dt[2];
+        if (dot_align < (real_t)0.0) {
             sum_dt[0] = -sum_dt[0];
             sum_dt[1] = -sum_dt[1];
             sum_dt[2] = -sum_dt[2];
         }
 
         // normalize
-        const double mag_t  = sqrt(sum_t [0]*sum_t [0] + sum_t [1]*sum_t [1] + sum_t [2]*sum_t [2]);
-        const double mag_dt = sqrt(sum_dt[0]*sum_dt[0] + sum_dt[1]*sum_dt[1] + sum_dt[2]*sum_dt[2]);
+        const real_t mag_t  = Kokkos::sqrt(sum_t [0]*sum_t [0] + sum_t [1]*sum_t [1] + sum_t [2]*sum_t [2]);
+        const real_t mag_dt = Kokkos::sqrt(sum_dt[0]*sum_dt[0] + sum_dt[1]*sum_dt[1] + sum_dt[2]*sum_dt[2]);
 
-        double current_norm[3];
-        double next_norm[3];
+        real_t current_norm[3];
+        real_t next_norm[3];
         current_norm[0] = 0.0;
         current_norm[1] = 0.0;
         current_norm[2] = 0.0;
@@ -1017,12 +1017,12 @@ void oriented(
         next_norm[1] = 0.0;
         next_norm[2] = 0.0;
 
-        if (mag_t  > 0.0) { current_norm[0] = sum_t [0]/mag_t;  
+        if (mag_t  > (real_t)0.0) { current_norm[0] = sum_t [0]/mag_t;  
                             current_norm[1] = sum_t [1]/mag_t;  
                             current_norm[2] = sum_t [2]/mag_t; 
         }
 
-        if (mag_dt > 0.0) { next_norm[0] = sum_dt[0]/mag_dt;
+        if (mag_dt > (real_t)0.0) { next_norm[0] = sum_dt[0]/mag_dt;
                             next_norm[1] = sum_dt[1]/mag_dt;
                             next_norm[2] = sum_dt[2]/mag_dt; 
         }
@@ -1095,12 +1095,12 @@ void oriented(
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ucmap(
-    const MPICArrayKokkos<double>& node_coords, // State.node.coords // rename as pos
-    const MPICArrayKokkos<double>& vel, // State.node.vel //rename as vel
-    const CArrayKokkos<double>& cohesive_zone_orientation,
+    const MPICArrayKokkos<real_t>& node_coords, // State.node.coords // rename as pos
+    const MPICArrayKokkos<real_t>& vel, // State.node.vel //rename as vel
+    const CArrayKokkos<real_t>& cohesive_zone_orientation,
     DCArrayKokkos<size_t>& overlapping_node_gids,
-    const double dt_stage, 
-    CArrayKokkos<double>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
+    const real_t dt_stage, 
+    CArrayKokkos<real_t>& local_opening    // (overlapping_node_gids.dims(0) x 4): [un_t, utan_t, un_tdt, utan_tdt]
 )
 {
 
@@ -1109,50 +1109,50 @@ void ucmap(
         const size_t NodeB = overlapping_node_gids(i,1);
 
         // calulate displacement between overlapping node pairs in global frame at time t
-        const double u_rel_x_t = node_coords(NodeB,0) - node_coords(NodeA,0);
-        const double u_rel_y_t = node_coords(NodeB,1) - node_coords(NodeA,1);
-        const double u_rel_z_t = node_coords(NodeB,2) - node_coords(NodeA,2);
+        const real_t u_rel_x_t = node_coords(NodeB,0) - node_coords(NodeA,0);
+        const real_t u_rel_y_t = node_coords(NodeB,1) - node_coords(NodeA,1);
+        const real_t u_rel_z_t = node_coords(NodeB,2) - node_coords(NodeA,2);
 
         // calculate velocity difference between overlapping node pairs in global frame at time t
-        const double v_rel_x_t = vel(NodeB,0) - vel(NodeA,0);
-        const double v_rel_y_t = vel(NodeB,1) - vel(NodeA,1);
-        const double v_rel_z_t = vel(NodeB,2) - vel(NodeA,2);
+        const real_t v_rel_x_t = vel(NodeB,0) - vel(NodeA,0);
+        const real_t v_rel_y_t = vel(NodeB,1) - vel(NodeA,1);
+        const real_t v_rel_z_t = vel(NodeB,2) - vel(NodeA,2);
 
         // normal at time t from oriented() (already unitized)
-        const double current_norm_x = cohesive_zone_orientation(i,0); // current normal at time t x direx
-        const double current_norm_y = cohesive_zone_orientation(i,1); // current normal at time t y direc
-        const double current_norm_z = cohesive_zone_orientation(i,2); // current normal at time t z direc
+        const real_t current_norm_x = cohesive_zone_orientation(i,0); // current normal at time t x direx
+        const real_t current_norm_y = cohesive_zone_orientation(i,1); // current normal at time t y direc
+        const real_t current_norm_z = cohesive_zone_orientation(i,2); // current normal at time t z direc
 
         // dotting with the normal vector to get the normal component of displacement at time t
-        const double u_norm_mag_t = (u_rel_x_t*current_norm_x + u_rel_y_t*current_norm_y + u_rel_z_t*current_norm_z);
+        const real_t u_norm_mag_t = (u_rel_x_t*current_norm_x + u_rel_y_t*current_norm_y + u_rel_z_t*current_norm_z);
 
         // tangential components of dispacement at time t
-        const double u_tan_x_t = u_rel_x_t - u_norm_mag_t*current_norm_x;
-        const double u_tan_y_t = u_rel_y_t - u_norm_mag_t*current_norm_y;
-        const double u_tan_z_t = u_rel_z_t - u_norm_mag_t*current_norm_z;
+        const real_t u_tan_x_t = u_rel_x_t - u_norm_mag_t*current_norm_x;
+        const real_t u_tan_y_t = u_rel_y_t - u_norm_mag_t*current_norm_y;
+        const real_t u_tan_z_t = u_rel_z_t - u_norm_mag_t*current_norm_z;
 
         // tangential magnitude of displacement at time t assuming that us* == ur*
-        const double u_tan_mag_t = sqrt(u_tan_x_t*u_tan_x_t + u_tan_y_t*u_tan_y_t + u_tan_z_t*u_tan_z_t);
+        const real_t u_tan_mag_t = Kokkos::sqrt(u_tan_x_t*u_tan_x_t + u_tan_y_t*u_tan_y_t + u_tan_z_t*u_tan_z_t);
 
         // relative velocity (velocity difference) vel components projected onto normal/tangent directions
 
         // velocity components dotted with normal vector to get normal rate of velocity
-        const double v_norm_t = v_rel_x_t*current_norm_x + v_rel_y_t*current_norm_y + v_rel_z_t*current_norm_z;
+        const real_t v_norm_t = v_rel_x_t*current_norm_x + v_rel_y_t*current_norm_y + v_rel_z_t*current_norm_z;
 
         // tangential rates of velocity
-        const double v_tan_x_t  = v_rel_x_t - v_norm_t*current_norm_x;
-        const double v_tan_y_t  = v_rel_y_t - v_norm_t*current_norm_y;
-        const double v_tan_z_t  = v_rel_z_t - v_norm_t*current_norm_z;
+        const real_t v_tan_x_t  = v_rel_x_t - v_norm_t*current_norm_x;
+        const real_t v_tan_y_t  = v_rel_y_t - v_norm_t*current_norm_y;
+        const real_t v_tan_z_t  = v_rel_z_t - v_norm_t*current_norm_z;
 
         // Forward-Euler update 
-        const double u_norm_mag_tdt   = u_norm_mag_t + dt_stage*v_norm_t; // 2/2 add
+        const real_t u_norm_mag_tdt   = u_norm_mag_t + dt_stage*v_norm_t; // 2/2 add
 
-        const double u_tan_x_tdt   = u_tan_x_t + dt_stage*v_tan_x_t;
-        const double u_tan_y_tdt   = u_tan_y_t + dt_stage*v_tan_y_t;
-        const double u_tan_z_tdt   = u_tan_z_t + dt_stage*v_tan_z_t;
+        const real_t u_tan_x_tdt   = u_tan_x_t + dt_stage*v_tan_x_t;
+        const real_t u_tan_y_tdt   = u_tan_y_t + dt_stage*v_tan_y_t;
+        const real_t u_tan_z_tdt   = u_tan_z_t + dt_stage*v_tan_z_t;
 
         // tangential magnitude at time t+dt
-        const double u_tan_mag_tdt = sqrt(u_tan_x_tdt*u_tan_x_tdt + u_tan_y_tdt*u_tan_y_tdt + u_tan_z_tdt*u_tan_z_tdt);
+        const real_t u_tan_mag_tdt = Kokkos::sqrt(u_tan_x_tdt*u_tan_x_tdt + u_tan_y_tdt*u_tan_y_tdt + u_tan_z_tdt*u_tan_z_tdt);
         
         // store
         local_opening(i,0) = u_norm_mag_t; // normal crack opening magnitude at time t
@@ -1171,7 +1171,7 @@ void ucmap(
 /// This routine advances (in an increment form) the cohesive-zone state associated with each cohesive node pair i.
 /// Given the local openings [un, ut] at time t and their Forward-Euler predictions at time t+dt_stage (provided by ucmap()),
 /// it computes the mixed-mode effective opening
-///     lambda = sqrt( (un/u_n_star)^2 + (ut/u_t_star)^2 )
+///     lambda = Kokkos::sqrt( (un/u_n_star)^2 + (ut/u_t_star)^2 )
 /// at t and t+dt_stage, forms the stage rate lambda_dot_t, and then:
 ///   - computes a damage growth rate d_alpha_dt (loading only, lambda_dot_t > 0),
 ///   - stores the damage increment delta_a = d_alpha_dt * dt_stage (with clamping so alpha <= 1),
@@ -1209,39 +1209,39 @@ void ucmap(
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void cohesive_zone_var_update(
-    const CArrayKokkos<double>& local_opening,
-    const double dt_stage, 
-    const double time_value, 
+    const CArrayKokkos<real_t>& local_opening,
+    const real_t dt_stage, 
+    const real_t time_value, 
     DCArrayKokkos<size_t>& overlapping_node_gids,
-    const double E_inf, const double a1, const double n_exp, const double u_n_star, const double u_t_star, const int num_prony_terms, // cohesive zone parameters
-    const CArrayKokkos<double>& prony_params, // E_j, tau_j pairs
-    const CArrayKokkos<double>& internal_vars, // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
-    CArrayKokkos<double>& delta_internal_vars // (overlapping_node_gids.dims(0), 4 + num_prony_terms) 
+    const real_t E_inf, const real_t a1, const real_t n_exp, const real_t u_n_star, const real_t u_t_star, const int num_prony_terms, // cohesive zone parameters
+    const CArrayKokkos<real_t>& prony_params, // E_j, tau_j pairs
+    const CArrayKokkos<real_t>& internal_vars, // current values (overlapping_node_gids.dims(0), 4 + num_prony_terms)
+    CArrayKokkos<real_t>& delta_internal_vars // (overlapping_node_gids.dims(0), 4 + num_prony_terms) 
 )
 {
     // loop over each cohesive zone node pair
     FOR_ALL(i, 0, overlapping_node_gids.dims(0), {
 
         // stage-effective modulus: E_inf + Prony contribution
-        double E_dt = E_inf;
+        real_t E_dt = E_inf;
         for (int j = 0; j < num_prony_terms; ++j) {
-            const double E_j  = prony_params(j, 0);
-            const double tau_j = prony_params(j, 1);
-            const double tau_eff       = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min();
-            const double one_minus_exp = 1.0 - exp(-dt_stage / tau_eff);
+            const real_t E_j  = prony_params(j, 0);
+            const real_t tau_j = prony_params(j, 1);
+            const real_t tau_eff       = (tau_j > (real_t)0.0) ? tau_j : mtr::prec::numeric_min<real_t>();
+            const real_t one_minus_exp = (real_t)1.0 - Kokkos::exp(-dt_stage / tau_eff);
             E_dt += E_j * tau_eff * (one_minus_exp / dt_stage);
         }
 
        
         // reading in local openings (normal and tangential displacements) at t and t+dt
-        const double u_norm_mag_t = local_opening(i,0);
-        const double u_tan_mag_t = local_opening(i,1);
-        const double u_norm_mag_tdt = local_opening(i,2);
-        const double u_tan_mag_tdt = local_opening(i,3);
+        const real_t u_norm_mag_t = local_opening(i,0);
+        const real_t u_tan_mag_t = local_opening(i,1);
+        const real_t u_norm_mag_tdt = local_opening(i,2);
+        const real_t u_tan_mag_tdt = local_opening(i,3);
 
         // calculating lambda_t and lambda_tdt values
-        double lambda_t = sqrt((u_norm_mag_t / u_n_star) * (u_norm_mag_t / u_n_star) + (u_tan_mag_t / u_t_star) * (u_tan_mag_t / u_t_star));
-        double lambda_tdt = sqrt((u_norm_mag_tdt / u_n_star) * (u_norm_mag_tdt / u_n_star) + (u_tan_mag_tdt / u_t_star) * (u_tan_mag_tdt / u_t_star));
+        real_t lambda_t = Kokkos::sqrt((u_norm_mag_t / u_n_star) * (u_norm_mag_t / u_n_star) + (u_tan_mag_t / u_t_star) * (u_tan_mag_t / u_t_star));
+        real_t lambda_tdt = Kokkos::sqrt((u_norm_mag_tdt / u_n_star) * (u_norm_mag_tdt / u_n_star) + (u_tan_mag_tdt / u_t_star) * (u_tan_mag_tdt / u_t_star));
         if (!Kokkos::isfinite(lambda_t) || !Kokkos::isfinite(lambda_tdt)) {
             delta_internal_vars(i,0) = 0.0;
             delta_internal_vars(i,1) = 0.0;
@@ -1252,15 +1252,15 @@ void cohesive_zone_var_update(
             }
             return;
         }
-        const double lambda_dot_t = (lambda_tdt - lambda_t) / dt_stage;
+        const real_t lambda_dot_t = (lambda_tdt - lambda_t) / dt_stage;
         delta_internal_vars(i,0) = lambda_dot_t; // lambda rate at t
 
 
         // d_alpha_dt (damage growth/increment) over this step
-        double d_alpha_dt;
-        if (lambda_dot_t > 0.0){
-            const double lambda_mid = 0.5*(lambda_tdt + lambda_t); // forward euler mid-point; growth when loading > 0
-            d_alpha_dt = a1 * pow(lambda_mid, n_exp);
+        real_t d_alpha_dt;
+        if (lambda_dot_t > (real_t)0.0){
+            const real_t lambda_mid = (real_t)0.5*(lambda_tdt + lambda_t); // forward euler mid-point; growth when loading > 0
+            d_alpha_dt = a1 * Kokkos::pow(lambda_mid, n_exp);
         }else {
             d_alpha_dt = 0.0;
         } 
@@ -1268,59 +1268,59 @@ void cohesive_zone_var_update(
 
         // updating delta prony stresses for prony terms
        for (int j = 0; j < num_prony_terms; ++j) {
-            //const double E_j     = stress_bc_global_vars(bdy_set, prony_base); // in Gavin's code, this is Eandrhom(j,0)
-            //const double tau_j   = stress_bc_global_vars(bdy_set, prony_base + 1); // in Gavin's code, this is Eandrhom(j,1)
-            const double E_j  = prony_params(j, 0);
-            const double tau_j = prony_params(j, 1);
-            const double tau_eff = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min(); // same logic as Gavin's code to avoid div by zero
-            const double a       = exp(-dt_stage / tau_eff);
-            delta_internal_vars(i, 4 + j) = a * internal_vars(i, 4 + j) + E_j * tau_eff * lambda_dot_t * (1.0 - a); // prony branch stresses 4 columns 
+            //const real_t E_j     = stress_bc_global_vars(bdy_set, prony_base); // in Gavin's code, this is Eandrhom(j,0)
+            //const real_t tau_j   = stress_bc_global_vars(bdy_set, prony_base + 1); // in Gavin's code, this is Eandrhom(j,1)
+            const real_t E_j  = prony_params(j, 0);
+            const real_t tau_j = prony_params(j, 1);
+            const real_t tau_eff = (tau_j > (real_t)0.0) ? tau_j : mtr::prec::numeric_min<real_t>(); // same logic as Gavin's code to avoid div by zero
+            const real_t a       = Kokkos::exp(-dt_stage / tau_eff);
+            delta_internal_vars(i, 4 + j) = a * internal_vars(i, 4 + j) + E_j * tau_eff * lambda_dot_t * ((real_t)1.0 - a); // prony branch stresses 4 columns 
         }
 
         // calculating sigma sums and sigma product sums (deltaE_term in the residual traction)
-        double sigma_sum = 0.0;
-        double sigma_sum_exp = 0.0;
+        double sigma_sum = (real_t)0.0;
+        double sigma_sum_exp = (real_t)0.0;
         for (int j = 0; j < num_prony_terms; ++j) {
-            //const double tau_j   = stress_bc_global_vars(bdy_set, prony_base + 1); // in Gavin's code, this is Eandrhom(j,1)
-            const double tau_j = prony_params(j, 1);
-            const double tau_eff = (tau_j > 0.0) ? tau_j : std::numeric_limits<double>::min(); // same logic as Gavin's code to avoid div by zero
-            const double sigma_j = delta_internal_vars(i, 4 + j); // used to update prony stresses
+            //const real_t tau_j   = stress_bc_global_vars(bdy_set, prony_base + 1); // in Gavin's code, this is Eandrhom(j,1)
+            const real_t tau_j = prony_params(j, 1);
+            const real_t tau_eff = (tau_j > (real_t)0.0) ? tau_j : mtr::prec::numeric_min<real_t>(); // same logic as Gavin's code to avoid div by zero
+            const real_t sigma_j = delta_internal_vars(i, 4 + j); // used to update prony stresses
             sigma_sum     += sigma_j;
-            sigma_sum_exp += (1.0 - exp(-dt_stage / tau_eff)) * sigma_j;
+            sigma_sum_exp += ((real_t)1.0 - Kokkos::exp(-dt_stage / tau_eff)) * sigma_j;
         }
 
         // enforcing alpha domain limitations (clamp to 0 or 1)
-        const double alpha_t  = internal_vars(i,1); // damage at time t beginning of step
-        double       delta_a  = delta_internal_vars(i,1);
-        if (alpha_t + delta_a > 1.0) {
-            delta_a = 1.0 - alpha_t;
+        const real_t alpha_t  = internal_vars(i,1); // damage at time t beginning of step
+        real_t       delta_a  = delta_internal_vars(i,1);
+        if (alpha_t + delta_a > (real_t)1.0) {
+            delta_a = (real_t)1.0 - alpha_t;
             delta_internal_vars(i,1) = delta_a;
         }
 
         // damage at the end of the step
-        const double alpha_tdt = alpha_t + delta_a;
+        const real_t alpha_tdt = alpha_t + delta_a;
 
-        const double deltaE_term  = E_dt * lambda_dot_t * dt_stage;  
-        const double elastic_term = E_inf * lambda_t + sigma_sum;  
-        const double damp_term    = -sigma_sum_exp;
+        const real_t deltaE_term  = E_dt * lambda_dot_t * dt_stage;  
+        const real_t elastic_term = E_inf * lambda_t + sigma_sum;  
+        const real_t damp_term    = -sigma_sum_exp;
 
         // inverses gaurded
-        const double inv_uns_lambda_tdt = (u_n_star > 0.0 && lambda_tdt > 0.0) ? 1.0 / (u_n_star * lambda_tdt) : 0.0; // if lambda = 0, set inv to 0 to avoid div by zero (lambda == 0, traction == 0)
-        const double inv_uns_lambda_t   = (u_n_star > 0.0 && lambda_t   > 0.0) ? 1.0 / (u_n_star * lambda_t  ) : 0.0;
-        const double inv_uts_lambda_tdt = (u_t_star > 0.0 && lambda_tdt > 0.0) ? 1.0 / (u_t_star * lambda_tdt) : 0.0;
-        const double inv_uts_lambda_t   = (u_t_star > 0.0 && lambda_t   > 0.0) ? 1.0 / (u_t_star * lambda_t  ) : 0.0;
+        const real_t inv_uns_lambda_tdt = (u_n_star > (real_t)0.0 && lambda_tdt > (real_t)0.0) ? (real_t)1.0 / (u_n_star * lambda_tdt) : (real_t)0.0; // if lambda = 0, set inv to 0 to avoid div by zero (lambda == 0, traction == 0)
+        const real_t inv_uns_lambda_t   = (u_n_star > (real_t)0.0 && lambda_t   > (real_t)0.0) ? (real_t)1.0 / (u_n_star * lambda_t  ) : (real_t)0.0;
+        const real_t inv_uts_lambda_tdt = (u_t_star > (real_t)0.0 && lambda_tdt > (real_t)0.0) ? (real_t)1.0 / (u_t_star * lambda_tdt) : (real_t)0.0;
+        const real_t inv_uts_lambda_t   = (u_t_star > (real_t)0.0 && lambda_t   > (real_t)0.0) ? (real_t)1.0 / (u_t_star * lambda_t  ) : (real_t)0.0;
         
         delta_internal_vars(i,2) = // normal traction increment
-              u_norm_mag_tdt * inv_uns_lambda_tdt * (1.0 - alpha_tdt) * deltaE_term
-            + u_norm_mag_tdt * inv_uns_lambda_tdt * (1.0 - alpha_tdt) * elastic_term
-            - u_norm_mag_t   * inv_uns_lambda_t   * (1.0 - alpha_t  ) * elastic_term // subtracting the elastic contribution at time t
-            + u_norm_mag_tdt * inv_uns_lambda_tdt * (1.0 - alpha_tdt) * damp_term;
+              u_norm_mag_tdt * inv_uns_lambda_tdt * ((real_t)1.0 - alpha_tdt) * deltaE_term
+            + u_norm_mag_tdt * inv_uns_lambda_tdt * ((real_t)1.0 - alpha_tdt) * elastic_term
+            - u_norm_mag_t   * inv_uns_lambda_t   * ((real_t)1.0 - alpha_t  ) * elastic_term // subtracting the elastic contribution at time t
+            + u_norm_mag_tdt * inv_uns_lambda_tdt * ((real_t)1.0 - alpha_tdt) * damp_term;
 
         delta_internal_vars(i,3) = // tangential traction increment
-              u_tan_mag_tdt * inv_uts_lambda_tdt * (1.0 - alpha_tdt) * deltaE_term
-            + u_tan_mag_tdt * inv_uts_lambda_tdt * (1.0 - alpha_tdt) * elastic_term
-            - u_tan_mag_t   * inv_uts_lambda_t   * (1.0 - alpha_t  ) * elastic_term
-            + u_tan_mag_tdt * inv_uts_lambda_tdt * (1.0 - alpha_tdt) * damp_term;
+              u_tan_mag_tdt * inv_uts_lambda_tdt * ((real_t)1.0 - alpha_tdt) * deltaE_term
+            + u_tan_mag_tdt * inv_uts_lambda_tdt * ((real_t)1.0 - alpha_tdt) * elastic_term
+            - u_tan_mag_t   * inv_uts_lambda_t   * ((real_t)1.0 - alpha_t  ) * elastic_term
+            + u_tan_mag_tdt * inv_uts_lambda_tdt * ((real_t)1.0 - alpha_tdt) * damp_term;
 
         // everything stored:
         // delta_internal_vars(i,0) : lambda_dot_t
@@ -1371,20 +1371,20 @@ void cohesive_zone_var_update(
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void cohesive_zone_loads(
     DCArrayKokkos<size_t>& nodes_in_elem,
-    const MPICArrayKokkos<double> &node_coords,
+    const MPICArrayKokkos<real_t> &node_coords,
     DCArrayKokkos<size_t> &overlapping_node_gids,
-    const CArrayKokkos<double> &cohesive_zone_orientation,
+    const CArrayKokkos<real_t> &cohesive_zone_orientation,
     CArrayKokkos<int> &cz_info,
     const size_t max_elem_in_cohesive_zone,
-    const CArrayKokkos<double> &internal_vars,
-    const CArrayKokkos<double> &delta_internal_vars,
-    CArrayKokkos<double> &pair_area,
-    CArrayKokkos<double> &pair_force,
+    const CArrayKokkos<real_t> &internal_vars,
+    const CArrayKokkos<real_t> &delta_internal_vars,
+    CArrayKokkos<real_t> &pair_area,
+    CArrayKokkos<real_t> &pair_force,
     DCArrayKokkos<size_t> &gather_nodes,
     DCArrayKokkos<int> &gather_counts,
     DCArrayKokkos<int> &gather_entries,
     size_t gather_node_count,
-    CArrayKokkos<double> &F_cz
+    CArrayKokkos<real_t> &F_cz
 )
 {
     // zero out the cohesive zone force vector
@@ -1416,16 +1416,16 @@ void cohesive_zone_loads(
         }
 
         // tractions at t+dt (normal and tangential)
-        const double Tn_tdt = internal_vars(i,2) + delta_internal_vars(i,2);  // normal traction
-        const double Tt_tdt = internal_vars(i,3) + delta_internal_vars(i,3);  // tangential traction
+        const real_t Tn_tdt = internal_vars(i,2) + delta_internal_vars(i,2);  // normal traction
+        const real_t Tt_tdt = internal_vars(i,3) + delta_internal_vars(i,3);  // tangential traction
 
         // normal direction from cohesive zone orientation
-        const double nx = cohesive_zone_orientation(i,3);
-        const double ny = cohesive_zone_orientation(i,4);
-        const double nz = cohesive_zone_orientation(i,5);
+        const real_t nx = cohesive_zone_orientation(i,3);
+        const real_t ny = cohesive_zone_orientation(i,4);
+        const real_t nz = cohesive_zone_orientation(i,5);
 
         // effective area for this cohesive zone node pair
-        double area_total = 0.0;
+        real_t area_total = 0.0;
 
         // from cohesive zone info, loop over elements connected to this cohesive zone node pair
         for (size_t j = 0; j < max_elem_in_cohesive_zone; ++j) {
@@ -1440,11 +1440,11 @@ void cohesive_zone_loads(
                 continue;
             }
 
-            // gp = 1/sqrt(3) for 2-point gauss quadrature for integrating over a quad HEX8 face
-            const double gp = 0.5773502691896257;
+            // gp = 1/Kokkos::sqrt(3) for 2-point gauss quadrature for integrating over a quad HEX8 face
+            const real_t gp = 0.5773502691896257;
 
             // building 4 GPs on the surface fA (Fierro surface numbering)
-            double gps[4][3]; // gps[k][0] = xi
+            real_t gps[4][3]; // gps[k][0] = xi
                               // gps[k][1] = eta
                               // gps[k][2] = zeta
 
@@ -1491,7 +1491,7 @@ void cohesive_zone_loads(
             }
 
             // local array for element nodal coords (pos) 8 nodes x 3 coords
-            double x[8][3];
+            real_t x[8][3];
             for (int a = 0; a < 8; ++a) {
                 // element connectivity
                 const size_t nid = nodes_in_elem((size_t)eA, (size_t)a);
@@ -1508,7 +1508,7 @@ void cohesive_zone_loads(
 
             // signs at each node for Fierro HEX8 ordering:
             // node 0(-,-,-) node 1(+,-,-) node 2(-,+,-) node 3(+,+,-) node 4(-,-,+) node 5(+,-,+) node 6(-,+,+) node 7(+,+,+)
-            double sign_xi[8]; //= {-1, +1, -1, +1, -1, +1, -1, +1};
+            real_t sign_xi[8]; //= {-1, +1, -1, +1, -1, +1, -1, +1};
             sign_xi[0] = -1;
             sign_xi[1] = +1;
             sign_xi[2] = -1;
@@ -1518,7 +1518,7 @@ void cohesive_zone_loads(
             sign_xi[6] = -1;
             sign_xi[7] = +1;
         
-            double sign_eta[8]; //= {-1, -1, +1, +1, -1, -1, +1, +1};
+            real_t sign_eta[8]; //= {-1, -1, +1, +1, -1, -1, +1, +1};
             sign_eta[0] = -1;
             sign_eta[1] = -1;
             sign_eta[2] = +1;
@@ -1528,7 +1528,7 @@ void cohesive_zone_loads(
             sign_eta[6] = +1;
             sign_eta[7] = +1;
 
-            double sign_zeta[8]; //= {-1, -1, -1, -1, +1, +1, +1, +1};
+            real_t sign_zeta[8]; //= {-1, -1, -1, -1, +1, +1, +1, +1};
             sign_zeta[0] = -1;
             sign_zeta[1] = -1;
             sign_zeta[2] = -1;
@@ -1538,17 +1538,17 @@ void cohesive_zone_loads(
             sign_zeta[6] = +1;
             sign_zeta[7] = +1;
 
-            double area_face = 0.0;
+            real_t area_face = 0.0;
 
             // loop over 4 surface gauss points to compute area
             for (int k = 0; k < 4; ++k) {
-                const double xi   = gps[k][0];
-                const double eta  = gps[k][1];
-                const double zeta = gps[k][2];
+                const real_t xi   = gps[k][0];
+                const real_t eta  = gps[k][1];
+                const real_t zeta = gps[k][2];
 
                 // initialize jacobian to zero
                 // jacobian J(m,o): m=0(xi),1(eta),2(zeta); o=0(x),1(y),2(z)
-                double J[3][3]; // = {{0,0,0},{0,0,0},{0,0,0}};
+                real_t J[3][3]; // = {{0,0,0},{0,0,0},{0,0,0}};
                 J[0][0] = 0;
                 J[0][1] = 0;
                 J[0][2] = 0;
@@ -1562,9 +1562,9 @@ void cohesive_zone_loads(
                 // compute jacobian by summing over element nodes
                 for (int a = 0; a < 8; ++a) {
                     // shape function derivatives
-                    const double dN_dxi   = 0.125 * sign_xi[a] * (1.0 + sign_eta[a]*eta)  * (1.0 + sign_zeta[a]*zeta);
-                    const double dN_deta  = 0.125 * sign_eta[a] * (1.0 + sign_xi[a]*xi)   * (1.0 + sign_zeta[a]*zeta);
-                    const double dN_dzeta = 0.125 * sign_zeta[a] * (1.0 + sign_xi[a]*xi)   * (1.0 + sign_eta[a]*eta);
+                    const real_t dN_dxi   = (real_t)0.125 * sign_xi[a] * ((real_t)1.0 + sign_eta[a]*eta)  * ((real_t)1.0 + sign_zeta[a]*zeta);
+                    const real_t dN_deta  = (real_t)0.125 * sign_eta[a] * ((real_t)1.0 + sign_xi[a]*xi)   * ((real_t)1.0 + sign_zeta[a]*zeta);
+                    const real_t dN_dzeta = (real_t)0.125 * sign_zeta[a] * ((real_t)1.0 + sign_xi[a]*xi)   * ((real_t)1.0 + sign_eta[a]*eta);
 
                     for (int o = 0; o < 3; ++o) {
                     J[0][o] += x[a][o] * dN_dxi;
@@ -1581,24 +1581,24 @@ void cohesive_zone_loads(
                 if (fA == 4 || fA == 5) { a_row = 0; b_row = 1; } // zeta fixed = xi,eta
 
                 // extract tangent vectors 1 and 2 (tangent vectors on the face)
-                const double tan_1_x = J[a_row][0];
-                const double tan_1_y = J[a_row][1]; 
-                const double tan_1_z = J[a_row][2];
-                const double tan_2_x = J[b_row][0]; 
-                const double tan_2_y = J[b_row][1]; 
-                const double tan_2_z = J[b_row][2];
+                const real_t tan_1_x = J[a_row][0];
+                const real_t tan_1_y = J[a_row][1]; 
+                const real_t tan_1_z = J[a_row][2];
+                const real_t tan_2_x = J[b_row][0]; 
+                const real_t tan_2_y = J[b_row][1]; 
+                const real_t tan_2_z = J[b_row][2];
 
                 // crossing tangent vectors to get normal vector (normal to the surface at that gauss point)
-                const double cross_x = tan_1_y*tan_2_z - tan_1_z*tan_2_y;
-                const double cross_y = tan_1_z*tan_2_x - tan_1_x*tan_2_z;
-                const double cross_z = tan_1_x*tan_2_y - tan_1_y*tan_2_x;
+                const real_t cross_x = tan_1_y*tan_2_z - tan_1_z*tan_2_y;
+                const real_t cross_y = tan_1_z*tan_2_x - tan_1_x*tan_2_z;
+                const real_t cross_z = tan_1_x*tan_2_y - tan_1_y*tan_2_x;
 
                 // are contribution from this gauss point
-                area_face += sqrt(cross_x*cross_x + cross_y*cross_y + cross_z*cross_z); 
+                area_face += Kokkos::sqrt(cross_x*cross_x + cross_y*cross_y + cross_z*cross_z); 
             }
 
             // lump one quarter of each matched face area to the cohesive zone node pair
-            area_total += 0.25 * area_face;
+            area_total += (real_t)0.25 * area_face;
 
         }
 
@@ -1606,31 +1606,31 @@ void cohesive_zone_loads(
         pair_area(i) = area_total;
 
         // guard: if there are no faces contributing to area, skip
-        if (area_total <= 0.0) return;
+        if (area_total <= (real_t)0.0) return;
 
         // normal force vectors
-        double Fn_x = Tn_tdt * area_total * nx;
-        double Fn_y = Tn_tdt * area_total * ny;
-        double Fn_z = Tn_tdt * area_total * nz;
+        real_t Fn_x = Tn_tdt * area_total * nx;
+        real_t Fn_y = Tn_tdt * area_total * ny;
+        real_t Fn_z = Tn_tdt * area_total * nz;
 
         // tangential unit vector for B-A seperation
-        const double dx = node_coords(gidB,0) - node_coords(gidA,0);
-        const double dy = node_coords(gidB,1) - node_coords(gidA,1);
-        const double dz = node_coords(gidB,2) - node_coords(gidA,2);
+        const real_t dx = node_coords(gidB,0) - node_coords(gidA,0);
+        const real_t dy = node_coords(gidB,1) - node_coords(gidA,1);
+        const real_t dz = node_coords(gidB,2) - node_coords(gidA,2);
 
         // component of sepration in normal direction
-        const double udotn = dx*nx + dy*ny + dz*nz;
+        const real_t udotn = dx*nx + dy*ny + dz*nz;
 
         // project out normal component to get tangential component
-        double tx = dx - udotn * nx;
-        double ty = dy - udotn * ny;
-        double tz = dz - udotn * nz;
+        real_t tx = dx - udotn * nx;
+        real_t ty = dy - udotn * ny;
+        real_t tz = dz - udotn * nz;
 
         // normalize tangential vector
-        double tmag = sqrt(tx*tx + ty*ty + tz*tz);
+        real_t tmag = Kokkos::sqrt(tx*tx + ty*ty + tz*tz);
 
         // if tmag > 0 divide to get unit vector
-        if (tmag > 0.0) {
+        if (tmag > (real_t)0.0) {
             tx /= tmag;
             ty /= tmag;
             tz /= tmag;
@@ -1641,14 +1641,14 @@ void cohesive_zone_loads(
         }
 
         // tangential force vectors
-        double Ft_x = Tt_tdt * area_total * tx;
-        double Ft_y = Tt_tdt * area_total * ty;
-        double Ft_z = Tt_tdt * area_total * tz;
+        real_t Ft_x = Tt_tdt * area_total * tx;
+        real_t Ft_y = Tt_tdt * area_total * ty;
+        real_t Ft_z = Tt_tdt * area_total * tz;
 
         // total cohesive zone force on the pair (equal and opposite)
-        const double Fx = Fn_x + Ft_x;
-        const double Fy = Fn_y + Ft_y;
-        const double Fz = Fn_z + Ft_z;
+        const real_t Fx = Fn_x + Ft_x;
+        const real_t Fy = Fn_y + Ft_y;
+        const real_t Fz = Fn_z + Ft_z;
 
         // write the pair's force vector to its own row: no collision or atomics
         pair_force_dev(i,0) = Fx;
@@ -1670,15 +1670,15 @@ void cohesive_zone_loads(
         const size_t n = gather_nodes_dev(u);
         const int c = gather_counts_dev(u);
 
-        double fx = 0.0; // local variables thread-private; no collision occurs while summing
-        double fy = 0.0; // local variables thread-private; no collision occurs while summing
-        double fz = 0.0; // local variables thread-private; no collision occurs while summing
+        real_t fx = 0.0; // local variables thread-private; no collision occurs while summing
+        real_t fy = 0.0; // local variables thread-private; no collision occurs while summing
+        real_t fz = 0.0; // local variables thread-private; no collision occurs while summing
 
         for (int j = 0; j < c; ++j){
             const int val = gather_entries_dev(u, j);
             const size_t p = static_cast<size_t>(val >> 1);
             const int s = static_cast<int>(val & 1); 
-            const double sgn = (s == 0) ? 1.0 : -1.0;
+            const real_t sgn = (s == 0) ? (real_t)1.0 : -(real_t)1.0;
 
             fx += sgn * pair_force_dev(p, 0);
             fy += sgn * pair_force_dev(p, 1);
@@ -1700,33 +1700,33 @@ void cohesive_zone_loads(
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 void compute_cohesive_zone_nodal_forces(
     DCArrayKokkos<size_t>& nodes_in_elem,            // mesh.nodes_in_elem
-    MPICArrayKokkos<double>& node_coords,            // State.node.coords
-    MPICArrayKokkos<double>& vel,                    // State.node.vel
+    MPICArrayKokkos<real_t>& node_coords,            // State.node.coords
+    MPICArrayKokkos<real_t>& vel,                    // State.node.vel
     DCArrayKokkos<size_t>& overlapping_node_gids,
     CArrayKokkos<int>& cz_info,
     size_t max_elem_in_cohesive_zone,
-    double geom_tol,
-    const double E_inf, const double a1, const double n_exp,
-    const double u_n_star, const double u_t_star, const int num_prony_terms,
-    CArrayKokkos<double>& prony_params,
-    CArrayKokkos<double>& internal_vars,
-    CArrayKokkos<double>& delta_internal_vars,
-    CArrayKokkos<double>& pair_force,
+    real_t geom_tol,
+    const real_t E_inf, const real_t a1, const real_t n_exp,
+    const real_t u_n_star, const real_t u_t_star, const int num_prony_terms,
+    CArrayKokkos<real_t>& prony_params,
+    CArrayKokkos<real_t>& internal_vars,
+    CArrayKokkos<real_t>& delta_internal_vars,
+    CArrayKokkos<real_t>& pair_force,
     DCArrayKokkos<size_t>& gather_nodes,
     DCArrayKokkos<int>& gather_counts,
     DCArrayKokkos<int>& gather_entries,
     size_t gather_node_count,
-    double dt_stage,
-    double time_value,
+    real_t dt_stage,
+    real_t time_value,
     size_t cycle,
     size_t rk_stage,
     size_t rk_num_stages,
-    CArrayKokkos<double>& F_cz)
+    CArrayKokkos<real_t>& F_cz)
 {
     const size_t npairs = overlapping_node_gids.dims(0);
 
     // 1) cohesive zone interface orientation (normal at t and t+dt)
-    CArrayKokkos<double> cz_orientation(npairs, 6, "cz_orientation");
+    CArrayKokkos<real_t> cz_orientation(npairs, 6, "cz_orientation");
     cz_orientation.set_values(0.0);
 
     // calling the function oriented()
@@ -1742,7 +1742,7 @@ void compute_cohesive_zone_nodal_forces(
 
     // 2) local openings (un_t, utan_t, un_tdt, utan_tdt)
     // map global nodal motion to local cohesive zone openings for each pair
-    CArrayKokkos<double> local_opening(npairs, 4, "cz_local_opening");
+    CArrayKokkos<real_t> local_opening(npairs, 4, "cz_local_opening");
     local_opening.set_values(0.0);
 
     // calling the function ucmap()
@@ -1773,7 +1773,7 @@ void compute_cohesive_zone_nodal_forces(
         delta_internal_vars);
 
     // 4) assemble cohesive zone nodal forces
-    CArrayKokkos<double> pair_area(npairs, "cz_pair_area");
+    CArrayKokkos<real_t> pair_area(npairs, "cz_pair_area");
     pair_area.set_values(0.0);
 
     // F_cz should already be sized and zeroed by caller
@@ -1805,8 +1805,8 @@ void compute_cohesive_zone_nodal_forces(
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 // void cohesive_zones_t::commit_internal_vars(size_t rk_stage, size_t rk_num_stages)
 void commit_internal_vars(
-    CArrayKokkos<double>& internal_vars,
-    CArrayKokkos<double>& delta_internal_vars,
+    CArrayKokkos<real_t>& internal_vars,
+    CArrayKokkos<real_t>& delta_internal_vars,
     DCArrayKokkos<size_t>& overlapping_node_gids,
     int num_prony_terms,
     size_t rk_stage,
@@ -1889,8 +1889,8 @@ void commit_internal_vars(
 /// \brief add cohesive zon foces to global nodal force array (State.node.force)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
 void add_cohesive_zone_nodal_forces(
-    DCArrayKokkos<double>& node_force,
-    const CArrayKokkos<double>& F_cz,
+    DCArrayKokkos<real_t>& node_force,
+    const CArrayKokkos<real_t>& F_cz,
     size_t num_nodes)   
 {
     // 5) add F_cz into solver's global nodal force array State.node.force

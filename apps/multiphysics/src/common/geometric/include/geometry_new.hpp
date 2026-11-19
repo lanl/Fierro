@@ -68,9 +68,9 @@ namespace geometry
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
+void get_bmatrix(const ViewCArrayKokkos<real_t>& B_matrix,
     const size_t elem_gid,
-    const MPICArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids);
 
 /////////////////////////////////////////////////////////////////////////////
@@ -86,9 +86,9 @@ void get_bmatrix(const ViewCArrayKokkos<double>& B_matrix,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void get_vol_quad(const DCArrayKokkos<double>& elem_vol,
+void get_vol_quad(const DCArrayKokkos<real_t>& elem_vol,
     const size_t elem_gid,
-    const MPICArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids);
 
 /////////////////////////////////////////////////////////////////////////////
@@ -104,9 +104,9 @@ void get_vol_quad(const DCArrayKokkos<double>& elem_vol,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void get_vol_hex(const DCArrayKokkos<double>& elem_vol,
+void get_vol_hex(const DCArrayKokkos<real_t>& elem_vol,
     const size_t elem_gid,
-    const MPICArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids);
 
 /////////////////////////////////////////////////////////////////////////////
@@ -116,8 +116,8 @@ void get_vol_hex(const DCArrayKokkos<double>& elem_vol,
 /// \brief Compute Volume of each finite element
 ///
 /////////////////////////////////////////////////////////////////////////////
-void get_vol(const DCArrayKokkos<double>& elem_vol,
-    const MPICArrayKokkos<double>& node_coords,
+void get_vol(const DCArrayKokkos<real_t>& elem_vol,
+    const MPICArrayKokkos<real_t>& node_coords,
     const swage::Mesh_t& mesh);
 
 /////////////////////////////////////////////////////////////////////////////
@@ -133,9 +133,9 @@ void get_vol(const DCArrayKokkos<double>& elem_vol,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
+void get_bmatrix2D(const ViewCArrayKokkos<real_t>& B_matrix,
     const size_t elem_gid,
-    const MPICArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids);
 
 /////////////////////////////////////////////////////////////////////////////
@@ -153,7 +153,7 @@ void get_bmatrix2D(const ViewCArrayKokkos<double>& B_matrix,
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
 double get_area_quad(const size_t   elem_gid,
-    const MPICArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids);
 
 /////////////////////////////////////////////////////////////////////////////
@@ -173,12 +173,12 @@ double get_area_quad(const size_t   elem_gid,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-double heron(const double x1,
-    const double y1,
-    const double x2,
-    const double y2,
-    const double x3,
-    const double y3);
+double heron(const real_t x1,
+    const real_t y1,
+    const real_t x2,
+    const real_t y2,
+    const real_t x3,
+    const real_t y3);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -193,9 +193,9 @@ double heron(const double x1,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
+void get_area_weights2D(const ViewCArrayKokkos<real_t>& corner_areas,
     const size_t elem_gid,
-    const MPICArrayKokkos<double>&    node_coords,
+    const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids);
 
 } // end namespace
@@ -216,13 +216,13 @@ void get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 KOKKOS_FUNCTION
 size_t check_bdy_surf(const size_t surf_gid,
     const int     this_bc_tag,
-    const double  value,
-    const double  tolerance,
-    const double  orig_x,
-    const double  orig_y,
-    const double  orig_z,
+    const real_t  value,
+    const real_t  tolerance,
+    const real_t  orig_x,
+    const real_t  orig_y,
+    const real_t  orig_z,
     const swage::Mesh_t& mesh,
-    const MPICArrayKokkos<double>& node_coords);
+    const MPICArrayKokkos<real_t>& node_coords);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -240,13 +240,13 @@ size_t check_bdy_surf(const size_t surf_gid,
 KOKKOS_FUNCTION
 size_t check_bdy_node(const size_t node_gid,
     const int     this_bc_tag,
-    const double  value,
-    const double  tolerance,
-    const double  orig_x,
-    const double  orig_y,
-    const double  orig_z,
+    const real_t  value,
+    const real_t  tolerance,
+    const real_t  orig_x,
+    const real_t  orig_y,
+    const real_t  orig_z,
     const swage::Mesh_t& mesh,
-    const MPICArrayKokkos<double>& node_coords);
+    const MPICArrayKokkos<real_t>& node_coords);
 
 /////////////////////////////////////////////////////////////////////////////
 ///
@@ -261,7 +261,7 @@ size_t check_bdy_node(const size_t node_gid,
 /////////////////////////////////////////////////////////////////////////////
 void tag_bdys(const BoundaryCondition_t& boundary,
     swage::Mesh_t& mesh,
-    const MPICArrayKokkos<double>& node_coords);
+    const MPICArrayKokkos<real_t>& node_coords);
 
 
 /////////////////////////////////////////////////////////////////////////////

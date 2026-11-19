@@ -62,14 +62,14 @@ namespace PistonDisplacementBC
 KOKKOS_FUNCTION
 static void displacement(const swage::Mesh_t& mesh,
         const DCArrayKokkos<BoundaryConditionEnums_t>& BoundaryConditionEnums,
-        const RaggedRightArrayKokkos<double>& disp_bc_global_vars,
-        const DCArrayKokkos<double>& bc_state_vars,
+        const RaggedRightArrayKokkos<real_t>& disp_bc_global_vars,
+        const DCArrayKokkos<real_t>& bc_state_vars,
         const CArrayKokkos<bool>& constrained_dof,
-        const CArrayKokkos<double>& displacement_step,
-        const double dt,
-        const double time_value,
-        const double time_start,
-        const double time_end,
+        const CArrayKokkos<real_t>& displacement_step,
+        const real_t dt,
+        const real_t time_value,
+        const real_t time_start,
+        const real_t time_end,
         const size_t bdy_node_gid,
         const size_t bdy_set)
 {
@@ -79,7 +79,7 @@ static void displacement(const swage::Mesh_t& mesh,
 
     const size_t constrained_dir  = static_cast<size_t>(disp_bc_global_vars(bdy_set, 1));
 
-    const double total_step_target = disp_bc_global_vars(bdy_set, 0) * (dt / (time_end - time_start));
+    const real_t total_step_target = disp_bc_global_vars(bdy_set, 0) * (dt / (time_end - time_start));
 
     displacement_step(bdy_node_gid, constrained_dir) = total_step_target;
 

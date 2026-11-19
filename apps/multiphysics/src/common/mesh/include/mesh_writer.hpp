@@ -67,9 +67,9 @@ public:
     void write_mesh(swage::Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
-        double dt,
-        double time_value,
-        CArray<double> graphics_times,
+        real_t dt,
+        real_t time_value,
+        CArray<real_t> graphics_times,
         std::vector<node_state> node_states,
         std::vector<gauss_pt_state> gauss_pt_states,
         std::vector<material_pt_state> material_pt_states,
@@ -78,9 +78,9 @@ public:
     void write_ensight(swage::Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
-        double dt,
-        double time_value,
-        CArray<double> graphics_times,
+        real_t dt,
+        real_t time_value,
+        CArray<real_t> graphics_times,
         std::vector<node_state> node_states,
         std::vector<gauss_pt_state> gauss_pt_states,
         std::vector<material_pt_state> material_pt_states);
@@ -88,17 +88,17 @@ public:
     void write_vtk_old(swage::Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
-        double dt,
-        double time_value,
-        CArray<double> graphics_times,
+        real_t dt,
+        real_t time_value,
+        CArray<real_t> graphics_times,
         std::vector<node_state> node_states,
         std::vector<gauss_pt_state> gauss_pt_states,
         std::vector<material_pt_state> material_pt_states);
 
     void concatenate_elem_fields(const MaterialPoint_t& MaterialPoints,
                                  const GaussPoint_t& GaussPoints,
-                                 DCArrayKokkos<double>& elem_scalar_fields,
-                                 DCArrayKokkos<double>& elem_tensor_fields,
+                                 DCArrayKokkos<real_t>& elem_scalar_fields,
+                                 DCArrayKokkos<real_t>& elem_tensor_fields,
                                  const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                                  const std::vector<material_pt_state>& output_elem_state,
                                  const std::vector<gauss_pt_state>& output_gauss_pt_states,
@@ -121,9 +121,9 @@ public:
                                  const int specific_heat_id);
 
     void concatenate_mat_fields(const MaterialPoint_t& MaterialPoints,
-                                DCArrayKokkos<double>& mat_elem_scalar_fields,
-                                DCArrayKokkos<double>& mat_elem_tensor_fields,
-                                DCArrayKokkos<double>& mat_elem_vector_fields,
+                                DCArrayKokkos<real_t>& mat_elem_scalar_fields,
+                                DCArrayKokkos<real_t>& mat_elem_tensor_fields,
+                                DCArrayKokkos<real_t>& mat_elem_vector_fields,
                                 const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                                 const std::vector<material_pt_state>& output_material_pt_states,
                                 const size_t num_mat_elems,
@@ -143,10 +143,10 @@ public:
                                 const int mat_heat_flux_id);
 
     void concatenate_nodal_fields(const node_t& Node,
-                                  DCArrayKokkos<double>& node_scalar_fields,
-                                  const DCArrayKokkos<double>& node_vector_fields,
+                                  DCArrayKokkos<real_t>& node_scalar_fields,
+                                  const DCArrayKokkos<real_t>& node_vector_fields,
                                   std::vector<node_state>& output_node_states,
-                                  double dt,
+                                  real_t dt,
                                   const size_t num_nodes,
                                   const size_t num_dims,
                                   const int node_mass_id,
@@ -158,13 +158,13 @@ public:
                                   const int node_disp_id);
 
     void write_vtu(
-        const ViewCArray<double>& node_coords_host,
+        const ViewCArray<real_t>& node_coords_host,
         const ViewCArray<size_t>& nodes_in_elem_host,
-        const DCArrayKokkos<double>& elem_scalar_fields,
-        const DCArrayKokkos<double>& elem_tensor_fields,
-        const DCArrayKokkos<double>& elem_vector_fields,
-        const DCArrayKokkos<double>& node_scalar_fields,
-        const DCArrayKokkos<double>& node_vector_fields,
+        const DCArrayKokkos<real_t>& elem_scalar_fields,
+        const DCArrayKokkos<real_t>& elem_tensor_fields,
+        const DCArrayKokkos<real_t>& elem_vector_fields,
+        const DCArrayKokkos<real_t>& node_scalar_fields,
+        const DCArrayKokkos<real_t>& node_vector_fields,
         const std::vector<std::string>& elem_scalar_var_names,
         const std::vector<std::string>& elem_tensor_var_names,
         const std::vector<std::string>& elem_vector_var_names,
@@ -180,16 +180,16 @@ public:
         const size_t solver_id,
         int mpi_rank,
         int mpi_size,
-        const double* diag_mpi_rank_per_elem,
-        const double* diag_global_elem_id,
-        const double* diag_global_node_id);
+        const real_t* diag_mpi_rank_per_elem,
+        const real_t* diag_global_elem_id,
+        const real_t* diag_global_node_id);
 
     void write_mesh_Pn(swage::Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
-        double dt,
-        double time_value,
-        CArray<double> graphics_times,
+        real_t dt,
+        real_t time_value,
+        CArray<real_t> graphics_times,
         std::vector<node_state> node_states,
         std::vector<gauss_pt_state> gauss_pt_states,
         std::vector<material_pt_state> material_pt_states,
@@ -226,10 +226,10 @@ public:
         const int mat_specific_heat_id
     );
 
-    void write_vtm_Pn(CArray<double>& graphics_times,
+    void write_vtm_Pn(CArray<real_t>& graphics_times,
                       const std::string& elem_part_name,
                       const std::string& mat_part_name,
-                      double time_value,
+                      real_t time_value,
                       int graphics_id,
                       size_t num_mats_global,
                       bool write_mesh_state,
@@ -239,16 +239,16 @@ public:
                       const unsigned long long* owned_elems_by_rank,
                       const unsigned long long* mat_elem_counts_by_rank);
 
-    void write_pvd(CArray<double>& graphics_times,
-                   double time_value,
+    void write_pvd(CArray<real_t>& graphics_times,
+                   real_t time_value,
                    int graphics_id,
                    const size_t solver_id,
                    int mpi_rank);
 
-    void write_vtm(CArray<double>& graphics_times,
+    void write_vtm(CArray<real_t>& graphics_times,
                    const std::string& elem_part_name,
                    const std::string& mat_part_name,
-                   double time_value,
+                   real_t time_value,
                    int graphics_id,
                    size_t num_mats_global,
                    bool write_mesh_state,
@@ -260,8 +260,8 @@ public:
 
     void build_material_elem_node_lists(
         const swage::Mesh_t& mesh,
-        const MPICArrayKokkos<double>& state_node_coords,
-        DCArrayKokkos<double>& mat_node_coords,
+        const MPICArrayKokkos<real_t>& state_node_coords,
+        DCArrayKokkos<real_t>& mat_node_coords,
         DCArrayKokkos <size_t>& mat_nodes_in_mat_elem,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t mat_id,
@@ -273,8 +273,8 @@ public:
     void write_material_point_state(swage::Mesh_t& mesh,
         State_t& State,
         SimulationParameters_t& SimulationParamaters,
-        double time_value,
-        CArray<double> graphics_times,
+        real_t time_value,
+        CArray<real_t> graphics_times,
         std::vector<node_state> node_states,
         std::vector<gauss_pt_state> gauss_pt_states,
         std::vector<material_pt_state> material_pt_states);
@@ -289,7 +289,7 @@ public:
         const std::vector<std::string>&      node_vector_var_names,
         const size_t                         num_nodes_in_elem,
         const size_t                         num_dims,
-        const double                         time_value,
+        const real_t                         time_value,
         // material-point field slot IDs (-1 means "not requested")
         const int mat_den_id,
         const int mat_pres_id,
@@ -323,7 +323,7 @@ public:
         const std::vector<std::string>&      node_vector_var_names,
         const size_t                         num_nodes_in_elem,
         const size_t                         num_dims,
-        const double                         time_value,
+        const real_t                         time_value,
         // field slot IDs (-1 means "not requested")
         const int mat_den_id,
         const int mat_pres_id,

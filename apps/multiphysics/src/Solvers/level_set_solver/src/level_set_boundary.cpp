@@ -50,9 +50,9 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void LevelSet::boundary_velocity(const swage::Mesh_t&      mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
-                                 MPICArrayKokkos<double>& node_level_set_vel,
-                                 const double time_value,
-                                 const double small) const
+                                 MPICArrayKokkos<real_t>& node_level_set_vel,
+                                 const real_t time_value,
+                                 const real_t small) const
 {
     size_t num_vel_bdy_sets = BoundaryConditions.num_vel_bdy_sets_in_solver.host(this->solver_id);
 
@@ -79,11 +79,11 @@ void LevelSet::boundary_velocity(const swage::Mesh_t&      mesh,
                 bdy_set);
 
             // scale node vel to be a unit vector, if evolving front
-            double mag = 0.0;
+            real_t mag = 0.0;
             for (size_t dim=0; dim<mesh.num_dims; dim++){
                 mag += node_level_set_vel(bdy_node_gid, dim)*node_level_set_vel(bdy_node_gid, dim);
             }
-            mag = sqrt(mag);
+            mag = Kokkos::sqrt(mag);
             for (size_t dim=0; dim<mesh.num_dims; dim++){
                 node_level_set_vel(bdy_node_gid, dim) /= (mag+small);
             }

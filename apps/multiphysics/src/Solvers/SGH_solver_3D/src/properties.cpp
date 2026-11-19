@@ -66,29 +66,29 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGH3D::update_state(
     const Material_t& Materials,
     const swage::Mesh_t&     mesh,
-    const MPICArrayKokkos<double> & node_coords,
-    const MPICArrayKokkos<double> & node_coords_t0,
-    const MPICArrayKokkos<double> & node_vel,
-    const DCArrayKokkos<double>   & GaussPoints_vel_grad,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_geo_volfrac,
-    const DCArrayKokkos<double>& GaussPoints_vol,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
+    const MPICArrayKokkos<real_t> & node_coords,
+    const MPICArrayKokkos<real_t> & node_coords_t0,
+    const MPICArrayKokkos<real_t> & node_vel,
+    const DCArrayKokkos<real_t>   & GaussPoints_vel_grad,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress_n0,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_volfrac,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_geo_volfrac,
+    const DCArrayKokkos<real_t>& GaussPoints_vol,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_strength_state_vars,
     const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-    DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
+    DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad_t0,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
-    const double time_value,
-    const double dt,
-    const double rk_alpha,
+    const real_t time_value,
+    const real_t dt,
+    const real_t rk_alpha,
     const size_t cycle,
     const size_t num_material_elems,
     const size_t mat_id) const
@@ -112,7 +112,7 @@ void SGH3D::update_state(
 
             // --- Density ---
             MaterialPoints_den(mat_id, mat_point_sid) = MaterialPoints_mass(mat_id, mat_point_sid) / 
-                  (GaussPoints_vol(gauss_gid)*MaterialPoints_volfrac(mat_id, mat_point_sid)*MaterialPoints_geo_volfrac(mat_id, mat_point_sid) + 1.0e-20);
+                  (GaussPoints_vol(gauss_gid)*MaterialPoints_volfrac(mat_id, mat_point_sid)*MaterialPoints_geo_volfrac(mat_id, mat_point_sid) + (real_t)1.0e-20);
 
             // --- Pressure ---
             Materials.MaterialFunctions(mat_id).calc_pressure(
@@ -159,7 +159,7 @@ void SGH3D::update_state(
             size_t gauss_gid = elem_gid;
 
             // --- Density ---
-            MaterialPoints_den(mat_id, mat_point_sid) = MaterialPoints_mass(mat_id, mat_point_sid) / (GaussPoints_vol(gauss_gid) + 1.0e-20);
+            MaterialPoints_den(mat_id, mat_point_sid) = MaterialPoints_mass(mat_id, mat_point_sid) / (GaussPoints_vol(gauss_gid) + (real_t)1.0e-20);
         }); // end parallel for over mat elem lid
         Kokkos::fence();
     } // end if
@@ -194,7 +194,7 @@ void SGH3D::update_state(
             size_t gauss_gid = elem_gid;
 
             // acocunt for the reference deformation 
-            double F_total[3][3];
+            real_t F_total[3][3];
             for (size_t i=0; i<3; i++)
             for (size_t j=0; j<3; j++){
                 F_total[i][j] = 0.0;
@@ -337,29 +337,29 @@ void SGH3D::update_state(
 void SGH3D::update_stress(
     const Material_t& Materials,
     const swage::Mesh_t& mesh,
-    const DCArrayKokkos<double>& GaussPoints_vol,
-    const MPICArrayKokkos<double>& node_coords,
-    const MPICArrayKokkos<double>& node_coords_t0,
-    const MPICArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& GaussPoints_vel_grad,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
+    const DCArrayKokkos<real_t>& GaussPoints_vol,
+    const MPICArrayKokkos<real_t>& node_coords,
+    const MPICArrayKokkos<real_t>& node_coords_t0,
+    const MPICArrayKokkos<real_t>& node_vel,
+    const DCArrayKokkos<real_t>& GaussPoints_vel_grad,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress_n0,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_strength_state_vars,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad_t0,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const size_t num_mat_elems,
     const size_t mat_id,
-    const double fuzz,
-    const double small,
-    const double time_value,
-    const double dt,
-    const double rk_alpha,
+    const real_t fuzz,
+    const real_t small,
+    const real_t time_value,
+    const real_t dt,
+    const real_t rk_alpha,
     const size_t cycle) const
 {
     // --- Update Stress ---
@@ -493,10 +493,10 @@ void SGH3D::update_stress(
 ///
 /////////////////////////////////////////////////////////////////////////////
 void SGH3D::get_deformation_grad(
-    DRaggedRightArrayKokkos<double>& elem_deformation_grad,
+    DRaggedRightArrayKokkos<real_t>& elem_deformation_grad,
     const swage::Mesh_t& mesh,
-    const MPICArrayKokkos<double>& node_coords,
-    const MPICArrayKokkos<double>& node_coords_t0,
+    const MPICArrayKokkos<real_t>& node_coords,
+    const MPICArrayKokkos<real_t>& node_coords_t0,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const size_t num_mat_elems,
     const size_t mat_id) const
@@ -504,7 +504,7 @@ void SGH3D::get_deformation_grad(
     const size_t num_nodes_in_elem = 8;
     const size_t num_dims = 3;
 
-    DCArrayKokkos<double> elem_vol_t0(mesh.num_elems); // This will hold the intial elem volumes
+    DCArrayKokkos<real_t> elem_vol_t0(mesh.num_elems); // This will hold the intial elem volumes
 
     geometry::get_vol(elem_vol_t0, node_coords_t0, mesh);
 
@@ -518,20 +518,20 @@ void SGH3D::get_deformation_grad(
         size_t mat_point_sid = mat_elem_sid;
 
         // displacements in x, y, z directions at the nodes
-        double u_array[num_nodes_in_elem];
-        double v_array[num_nodes_in_elem];
-        double w_array[num_nodes_in_elem];
+        real_t u_array[num_nodes_in_elem];
+        real_t v_array[num_nodes_in_elem];
+        real_t w_array[num_nodes_in_elem];
 
-        ViewCArrayKokkos<double> u(&u_array[0], num_nodes_in_elem); // x-dir displacement component
-        ViewCArrayKokkos<double> v(&v_array[0], num_nodes_in_elem); // y-dir displacement component
-        ViewCArrayKokkos<double> w(&w_array[0], num_nodes_in_elem); // z-dir displacement component
+        ViewCArrayKokkos<real_t> u(&u_array[0], num_nodes_in_elem); // x-dir displacement component
+        ViewCArrayKokkos<real_t> v(&v_array[0], num_nodes_in_elem); // y-dir displacement component
+        ViewCArrayKokkos<real_t> w(&w_array[0], num_nodes_in_elem); // z-dir displacement component
 
         // cut out the node_gids for this element
         ViewCArrayKokkos<size_t> elem_node_gids(&mesh.nodes_in_elem(elem_gid, 0), num_nodes_in_elem);
 
         // The b_matrix are the outward corner area normals
-        double b_matrix_array[24];
-        ViewCArrayKokkos<double> b_matrix(b_matrix_array, num_nodes_in_elem, num_dims);
+        real_t b_matrix_array[24];
+        ViewCArrayKokkos<real_t> b_matrix(b_matrix_array, num_nodes_in_elem, num_dims);
         geometry::get_bmatrix(b_matrix, elem_gid, node_coords_t0, elem_node_gids);  // Bmatrix must use initial coords
 
         // get the vertex displacments for the elem
@@ -546,9 +546,9 @@ void SGH3D::get_deformation_grad(
 
         // --- calculate the deformation gradient terms ---
         // MaterialPoints_deformation_grad(mat_id,mat_point_sid,i,k)
-        double inverse_vol = 1.0 / elem_vol_t0(elem_gid);
+        real_t inverse_vol = (real_t)1.0 / elem_vol_t0(elem_gid);
         // x-dir
-        elem_deformation_grad(mat_id, mat_point_sid, 0, 0) = 1.0 + (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
+        elem_deformation_grad(mat_id, mat_point_sid, 0, 0) = (real_t)1.0 + (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
             + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)
             + u(4) * b_matrix(4, 0) + u(5) * b_matrix(5, 0)
             + u(6) * b_matrix(6, 0) + u(7) * b_matrix(7, 0)) * inverse_vol;
@@ -571,7 +571,7 @@ void SGH3D::get_deformation_grad(
             + v(4) * b_matrix(4, 0) + v(5) * b_matrix(5, 0)
             + v(6) * b_matrix(6, 0) + v(7) * b_matrix(7, 0)) * inverse_vol;
 
-        elem_deformation_grad(mat_id, mat_point_sid, 1, 1) = 1.0 + (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
+        elem_deformation_grad(mat_id, mat_point_sid, 1, 1) = (real_t)1.0 + (v(0) * b_matrix(0, 1) + v(1) * b_matrix(1, 1)
             + v(2) * b_matrix(2, 1) + v(3) * b_matrix(3, 1)
             + v(4) * b_matrix(4, 1) + v(5) * b_matrix(5, 1)
             + v(6) * b_matrix(6, 1) + v(7) * b_matrix(7, 1)) * inverse_vol;
@@ -592,7 +592,7 @@ void SGH3D::get_deformation_grad(
             + w(4) * b_matrix(4, 1) + w(5) * b_matrix(5, 1)
             + w(6) * b_matrix(6, 1) + w(7) * b_matrix(7, 1)) * inverse_vol;
 
-        elem_deformation_grad(mat_id, mat_point_sid, 2, 2) = 1.0 + (w(0) * b_matrix(0, 2) + w(1) * b_matrix(1, 2)
+        elem_deformation_grad(mat_id, mat_point_sid, 2, 2) = (real_t)1.0 + (w(0) * b_matrix(0, 2) + w(1) * b_matrix(1, 2)
             + w(2) * b_matrix(2, 2) + w(3) * b_matrix(3, 2)
             + w(4) * b_matrix(4, 2) + w(5) * b_matrix(5, 2)
             + w(6) * b_matrix(6, 2) + w(7) * b_matrix(7, 2)) * inverse_vol;

@@ -218,56 +218,58 @@ public:
     void boundary_displacement(const swage::Mesh_t& mesh,
     const BoundaryCondition_t& BoundaryConditions,
     const CArrayKokkos<bool>& constrained_dof,
-    const CArrayKokkos<double>& displacement_step,
-    const double dt,
-    const double time_value,
-    const double time_start,
-    const double time_end) const;
+    const CArrayKokkos<real_t>& displacement_step,
+    const real_t dt,
+    const real_t time_value,
+    const real_t time_start,
+    const real_t time_end) const;
 
     void boundary_stress(const swage::Mesh_t& mesh,
     const BoundaryCondition_t& BoundaryConditions,
-    const MPICArrayKokkos<double>& cg_residual,
+    const MPICArrayKokkos<real_t>& cg_residual,
     const elements::ReferenceSurface_t ref_surf,
     const elements::SurfaceQuadrature_t SurfQuad,
-    const MPICArrayKokkos<double> node_coords,
-    const double dt,
-    const double time_value,
-    const double time_start,
-    const double time_end) const;
+    const MPICArrayKokkos<real_t> node_coords,
+    const real_t dt,
+    const real_t time_value,
+    const real_t time_start,
+    const real_t time_end) const;
 
     // **** Functions defined in surface.cpp **** //
+    // Static: they use no solver state, so FOR_ALL lambdas can call them
+    // without capturing `this` (a host pointer on GPU backends).
     KOKKOS_FUNCTION
-    void get_qpt_area_normal(
+    static void get_qpt_area_normal(
         const swage::Mesh_t& mesh,
         const elements::ReferenceSurface_t& ref_surf,
         const elements::SurfaceQuadrature_t& SurfQuad,
-        const MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<real_t>& node_coords,
         const size_t qpt_lid,
         const size_t surf_gid,
-        const ViewCArrayKokkos<double>& jac,
-        const ViewCArrayKokkos<double>& inv_jac,
-        ViewCArrayKokkos<double>& normal,
-        double& qpt_weighted_area) const;
+        const ViewCArrayKokkos<real_t>& jac,
+        const ViewCArrayKokkos<real_t>& inv_jac,
+        ViewCArrayKokkos<real_t>& normal,
+        real_t& qpt_weighted_area);
 
     KOKKOS_FUNCTION
-    void get_surf_qpt_coords(
+    static void get_surf_qpt_coords(
         const swage::Mesh_t& mesh,
         const elements::ReferenceSurface_t ref_surf,
-        const MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<real_t>& node_coords,
         const size_t qpt_lid,
         const size_t surf_gid,
-        ViewCArrayKokkos<double>& qpt_coords) const;
+        ViewCArrayKokkos<real_t>& qpt_coords);
 
     // **** Functions defined in time_integration.cpp **** //
     void timestep_init(
-        MPICArrayKokkos<double>& node_coords,
-        MPICArrayKokkos<double>& node_coords_n0,
-        MPICArrayKokkos<double>& node_vel,
-        MPICArrayKokkos<double>& node_vel_n0,
-        DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-        DRaggedRightArrayKokkos<double>& MaterialPoints_sie_n0,
-        DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-        DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
+        MPICArrayKokkos<real_t>& node_coords,
+        MPICArrayKokkos<real_t>& node_coords_n0,
+        MPICArrayKokkos<real_t>& node_vel,
+        MPICArrayKokkos<real_t>& node_vel_n0,
+        DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+        DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie_n0,
+        DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+        DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress_n0,
         const size_t num_dims,
         const size_t num_elems,
         const size_t num_nodes,
@@ -279,16 +281,16 @@ public:
     // outputs: displacement gradient, inverse of jacobian, jacobian determinant, 2nd PK stress in current configuration
     KOKKOS_FUNCTION
     static void get_gradients(
-        const double material_matrix[6][6],
+        const real_t material_matrix[6][6],
         ViewCArrayKokkos <size_t>& nodes_in_elem,
-        const MPICArrayKokkos <double>& coords_t0,
-        const MPICArrayKokkos <double>& displacement,
-        const CArrayKokkos <double>& displacement_step,
-        ViewCArrayKokkos <double>& gauss_point_grad_basis,
-        double grad_u[3][3],
-        double inv_J[3][3],
-        double& det_J,
-        double PK2_curr_config[6]
+        const MPICArrayKokkos<real_t>& coords_t0,
+        const MPICArrayKokkos<real_t>& displacement,
+        const CArrayKokkos<real_t>& displacement_step,
+        ViewCArrayKokkos<real_t>& gauss_point_grad_basis,
+        real_t grad_u[3][3],
+        real_t inv_J[3][3],
+        real_t& det_J,
+        real_t PK2_curr_config[6]
     );
 
     // inputs: material_matrix, displacement gradient, inverse Jacobian, basis gradients wrt master element, current PK2 stress
@@ -297,18 +299,18 @@ public:
     // outputs: updated element stiffness matrix (packed upper triangle, see packed_row_start), updated element force vector
     KOKKOS_FUNCTION
     static void tally_elem_arrays(
-        const double material_matrix[6][6],
-        const double grad_u[3][3],
-        const double inv_J[3][3],
-        ViewCArrayKokkos <double>& gauss_point_grad_basis,
-        double gauss_point_weight,
-        const double PK2_curr_config[6],
-        ViewCArrayKokkos <double>& Kel_packed,
-        ViewCArrayKokkos <double>& Fel,
-        const double vol_frac,
-        ViewCArrayKokkos <double>& glob_grad,
-        ViewCArrayKokkos <double>& B1,
-        ViewCArrayKokkos <double>& K2_row
+        const real_t material_matrix[6][6],
+        const real_t grad_u[3][3],
+        const real_t inv_J[3][3],
+        ViewCArrayKokkos<real_t>& gauss_point_grad_basis,
+        real_t gauss_point_weight,
+        const real_t PK2_curr_config[6],
+        ViewCArrayKokkos<real_t>& Kel_packed,
+        ViewCArrayKokkos<real_t>& Fel,
+        const real_t vol_frac,
+        ViewCArrayKokkos<real_t>& glob_grad,
+        ViewCArrayKokkos<real_t>& B1,
+        ViewCArrayKokkos<real_t>& K2_row
     );
 
     /////////////////////////////////////////////////////////////////////////////
@@ -364,25 +366,25 @@ public:
         const size_t num_elems,
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
-        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<real_t>& K_elem,
         const CArrayKokkos<bool>& constrained_dof,
         const XArray& x,
         const YArray& y,
-        const CArrayKokkos<double>& x_elem,
-        const CArrayKokkos<double>& y_elem)
+        const CArrayKokkos<real_t>& x_elem,
+        const CArrayKokkos<real_t>& y_elem)
     {
         const size_t n = 3 * num_nodes_in_elem;
 
         FOR_ALL(elem_gid, 0, num_elems, {
-            double* xe = &x_elem(elem_gid, 0);
-            double* ye = &y_elem(elem_gid, 0);
-            const double* Ke = &K_elem(elem_gid, 0);
+            real_t* xe = &x_elem(elem_gid, 0);
+            real_t* ye = &y_elem(elem_gid, 0);
+            const real_t* Ke = &K_elem(elem_gid, 0);
 
             // gather P * x for the element dofs, zero the element result
             for (size_t a = 0; a < num_nodes_in_elem; a++) {
                 const size_t node_gid = nodes_in_elem(elem_gid, a);
                 for (size_t q = 0; q < 3; q++) {
-                    xe[3*a+q] = constrained_dof(node_gid, q) ? 0.0 : x(node_gid, q);
+                    xe[3*a+q] = constrained_dof(node_gid, q) ? (real_t)0.0 : x(node_gid, q);
                     ye[3*a+q] = 0.0;
                 }
             }
@@ -390,8 +392,8 @@ public:
             // y_e = K_e * x_e using the packed upper triangle: row i holds K(i, i..n-1),
             // contiguous, so the element's stiffness is streamed once front to back
             for (size_t i = 0; i < n; i++) {
-                const double* Krow = Ke + packed_row_start(i, n) - i;  // Krow[j] = K(i,j) for j >= i
-                const double xi = xe[i];
+                const real_t* Krow = Ke + packed_row_start(i, n) - i;  // Krow[j] = K(i,j) for j >= i
+                const real_t xi = xe[i];
 
                 // column use of row i: y_j += K(j,i) x_i = K(i,j) x_i for j > i
                 // (contiguous axpy, vectorizes)
@@ -402,10 +404,10 @@ public:
                 // row use of row i: y_i += sum_j K(i,j) x_j for j >= i. Four partial sums
                 // so the reduction is not one serial dependency chain (it is summed in a
                 // fixed order, so the result does not depend on the number of threads)
-                double s0 = Krow[i] * xi;
-                double s1 = 0.0;
-                double s2 = 0.0;
-                double s3 = 0.0;
+                real_t s0 = Krow[i] * xi;
+                real_t s1 = 0.0;
+                real_t s2 = 0.0;
+                real_t s3 = 0.0;
                 size_t j = i + 1;
                 for (; j + 3 < n; j += 4) {
                     s0 += Krow[j]   * xe[j];
@@ -449,12 +451,12 @@ public:
         const size_t num_nodes,
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
-        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<real_t>& K_elem,
         const CArrayKokkos<bool>& constrained_dof,
         const XArray& x,
         const YArray& y,
-        const CArrayKokkos<double>& x_elem,
-        const CArrayKokkos<double>& y_elem)
+        const CArrayKokkos<real_t>& x_elem,
+        const CArrayKokkos<real_t>& y_elem)
     {
         FOR_ALL(node_gid, 0, num_nodes, {
             for (size_t q = 0; q < 3; q++) {
@@ -496,13 +498,13 @@ public:
         const DCArrayKokkos<size_t>& nodes_in_elem,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
         const RaggedRightArrayKokkos<size_t>& node_lid_in_elem,
-        const CArrayKokkos<double>& F_elem,
-        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<real_t>& F_elem,
+        const CArrayKokkos<real_t>& K_elem,
         const CArrayKokkos<bool>& constrained_dof,
-        const CArrayKokkos<double>& displacement_iter,
-        MPICArrayKokkos<double>& r0,
-        const CArrayKokkos<double>& x_elem,
-        const CArrayKokkos<double>& y_elem
+        const CArrayKokkos<real_t>& displacement_iter,
+        MPICArrayKokkos<real_t>& r0,
+        const CArrayKokkos<real_t>& x_elem,
+        const CArrayKokkos<real_t>& y_elem
     );
 
     // inputs: mesh sizes and connectivity, packed K_elem, constrained_dof, rk^T zk, p, per element scratch
@@ -513,24 +515,24 @@ public:
         const size_t num_nodes_in_elem,
         const size_t num_owned_nodes,
         const DCArrayKokkos<size_t>& nodes_in_elem,
-        const CArrayKokkos<double>& K_elem,
+        const CArrayKokkos<real_t>& K_elem,
         const CArrayKokkos<bool>& constrained_dof,
-        const double rktrk,
-        const CArrayKokkos<double>& p,
-        MPICArrayKokkos<double>& temporary,
+        const real_t rktrk,
+        const CArrayKokkos<real_t>& p,
+        MPICArrayKokkos<real_t>& temporary,
         const DCArrayKokkos<bool> shared_tally_owned_nodes,
-        const CArrayKokkos<double>& x_elem,
-        const CArrayKokkos<double>& y_elem
+        const CArrayKokkos<real_t>& x_elem,
+        const CArrayKokkos<real_t>& y_elem
     );
 
     // inputs: rk, Kp = K * p (computed by get_alpha), alpha
     // outputs: rkp1 = rk - alpha * K * p
     void get_rkp1(
         const size_t num_nodes,
-        const MPICArrayKokkos<double>& rk,
-        const MPICArrayKokkos<double>& Kp,
-        const double alpha,
-        MPICArrayKokkos<double>& rkp1
+        const MPICArrayKokkos<real_t>& rk,
+        const MPICArrayKokkos<real_t>& Kp,
+        const real_t alpha,
+        MPICArrayKokkos<real_t>& rkp1
     );
 
     // **** Functions defined in post_process.cpp **** //
@@ -538,40 +540,40 @@ public:
     // postprocessing function: updates stress and strain material point fields
     KOKKOS_FUNCTION
     static void post_process(
-        const double material_matrix[6][6],
+        const real_t material_matrix[6][6],
         ViewCArrayKokkos <size_t>& nodes_in_elem,
-        const MPICArrayKokkos <double>& coords_t0,
-        const MPICArrayKokkos <double>& displacement,
-        ViewCArrayKokkos <double>& gauss_point_grad_basis,
-        ViewCArrayKokkos <double>& stress,
-        ViewCArrayKokkos <double>& strain
+        const MPICArrayKokkos<real_t>& coords_t0,
+        const MPICArrayKokkos<real_t>& displacement,
+        ViewCArrayKokkos<real_t>& gauss_point_grad_basis,
+        ViewCArrayKokkos<real_t>& stress,
+        ViewCArrayKokkos<real_t>& strain
     );
 
     // **** Functions defined in qr_solver.cpp **** //
-    void QR_backsub(const CArrayKokkos <double> &R, 
-        const CArrayKokkos <double> &y,
-        DCArrayKokkos <double> &x,
+    void QR_backsub(const CArrayKokkos<real_t> &R, 
+        const CArrayKokkos<real_t> &y,
+        DCArrayKokkos<real_t> &x,
         const size_t n_active
     );
 
-    void QR_decompose(const CArrayKokkos <double> &A, 
-        FArrayKokkos <double> &Q, 
-        CArrayKokkos <double> &R,
-        DCArrayKokkos <double> &v,
+    void QR_decompose(const CArrayKokkos<real_t> &A, 
+        FArrayKokkos<real_t> &Q, 
+        CArrayKokkos<real_t> &R,
+        DCArrayKokkos<real_t> &v,
         const size_t n_active
     );
     
-    double QR_determinant(const FArrayKokkos <double> &Q,
-        const CArrayKokkos <double> &R
+    double QR_determinant(const FArrayKokkos<real_t> &Q,
+        const CArrayKokkos<real_t> &R
     );
 
-    void QR_solver(const CArrayKokkos <double> &A, 
-        const CArrayKokkos <double> &b,
-        DCArrayKokkos <double> &x,
-        FArrayKokkos <double> &Q,
-        CArrayKokkos <double> &R,
-        CArrayKokkos <double> &y,
-        DCArrayKokkos <double> &v,
+    void QR_solver(const CArrayKokkos<real_t> &A, 
+        const CArrayKokkos<real_t> &b,
+        DCArrayKokkos<real_t> &x,
+        FArrayKokkos<real_t> &Q,
+        CArrayKokkos<real_t> &R,
+        CArrayKokkos<real_t> &y,
+        DCArrayKokkos<real_t> &v,
         const size_t n_active
     );
 
@@ -581,9 +583,9 @@ public:
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
-        const CArrayKokkos<double>& K_elem,
-        const CArrayKokkos<double>& rk,
-        CArrayKokkos<double>& zk
+        const CArrayKokkos<real_t>& K_elem,
+        const CArrayKokkos<real_t>& rk,
+        CArrayKokkos<real_t>& zk
     );
 
     void get_zkp1(
@@ -591,35 +593,35 @@ public:
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
-        const CArrayKokkos<double>& K_elem,
-        const CArrayKokkos<double>& rk,
-        CArrayKokkos<double>& zk
+        const CArrayKokkos<real_t>& K_elem,
+        const CArrayKokkos<real_t>& rk,
+        CArrayKokkos<real_t>& zk
     ); */
 
     // **** Functions defined in chebyshev_smoothing.cpp **** //
     // All products use the constrained operator A = P*K*P + (I - P) (see elem_K_times_x)
-    void apply_chebyshev_preconditioner(const MPICArrayKokkos<double>& rk,
-        const MPICArrayKokkos<double>& zkp1,
-        const MPICArrayKokkos<double>& D_inv,
-        const MPICArrayKokkos<double>& zk,
-        const CArrayKokkos<double>& delta_z,
-        MPICArrayKokkos<double>& temporary,
-        const CArrayKokkos<double>& K_elem,
+    void apply_chebyshev_preconditioner(const MPICArrayKokkos<real_t>& rk,
+        const MPICArrayKokkos<real_t>& zkp1,
+        const MPICArrayKokkos<real_t>& D_inv,
+        const MPICArrayKokkos<real_t>& zk,
+        const CArrayKokkos<real_t>& delta_z,
+        MPICArrayKokkos<real_t>& temporary,
+        const CArrayKokkos<real_t>& K_elem,
         const CArrayKokkos<bool>& constrained_dof,
         const size_t num_elems,
         const size_t num_nodes,
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
-        const CArrayKokkos<double>& x_elem,
-        const CArrayKokkos<double>& y_elem,
-        const double alpha,
-        const double beta,
+        const CArrayKokkos<real_t>& x_elem,
+        const CArrayKokkos<real_t>& y_elem,
+        const real_t alpha,
+        const real_t beta,
         const int degree
     );
 
     // D_inv = 1 / diag(A): the summed element diagonals for free dofs, 1 for constrained dofs
-    void get_diagonal_inverse(MPICArrayKokkos<double>& D_inv,
-        const CArrayKokkos<double>& K_elem,
+    void get_diagonal_inverse(MPICArrayKokkos<real_t>& D_inv,
+        const CArrayKokkos<real_t>& K_elem,
         const CArrayKokkos<bool>& constrained_dof,
         const size_t num_nodes,
         const RaggedRightArrayKokkos<size_t>& elems_in_node,
@@ -627,19 +629,19 @@ public:
         const size_t num_nodes_in_elem
     );
 
-    void get_chebyshev_bounds(double& alpha,
-        double& beta,
-        const MPICArrayKokkos<double>& D_inv,
-        const CArrayKokkos<double>& K_elem,
+    void get_chebyshev_bounds(real_t& alpha,
+        real_t& beta,
+        const MPICArrayKokkos<real_t>& D_inv,
+        const CArrayKokkos<real_t>& K_elem,
         const CArrayKokkos<bool>& constrained_dof,
         const size_t num_elems,
         const size_t num_nodes,
         const size_t num_nodes_in_elem,
         const DCArrayKokkos<size_t>& nodes_in_elem,
-        const CArrayKokkos<double>& x_elem,
-        const CArrayKokkos<double>& y_elem,
-        MPICArrayKokkos<double>& v_scratch,
-        MPICArrayKokkos<double>& w_scratch,
+        const CArrayKokkos<real_t>& x_elem,
+        const CArrayKokkos<real_t>& y_elem,
+        MPICArrayKokkos<real_t>& v_scratch,
+        MPICArrayKokkos<real_t>& w_scratch,
         const int max_iters,
         const int num_owned_nodes,
         const DCArrayKokkos<bool> shared_tally_owned_nodes

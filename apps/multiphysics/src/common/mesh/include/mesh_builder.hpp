@@ -84,24 +84,24 @@ public:
     ~MeshBuilder();
 
     void build_mesh(swage::Mesh_t& mesh,
-                    MPICArrayKokkos<double>& node_coords,
+                    MPICArrayKokkos<real_t>& node_coords,
                     SimulationParameters_t& SimulationParamaters,
                     bool HexN);
 
     void build_2d_box(swage::Mesh_t& mesh,
-                      MPICArrayKokkos<double>& node_coords,
+                      MPICArrayKokkos<real_t>& node_coords,
                       SimulationParameters_t& SimulationParamaters) const;
 
     void build_2d_polar(swage::Mesh_t& mesh,
-                        MPICArrayKokkos<double>& node_coords,
+                        MPICArrayKokkos<real_t>& node_coords,
                         SimulationParameters_t& SimulationParamaters) const;
 
     void build_3d_box(swage::Mesh_t& mesh,
-                      MPICArrayKokkos<double>& node_coords,
+                      MPICArrayKokkos<real_t>& node_coords,
                       SimulationParameters_t& SimulationParamaters) const;
 
     void build_3d_HexN_box(swage::Mesh_t& mesh,
-                           MPICArrayKokkos<double>& node_coords,
+                           MPICArrayKokkos<real_t>& node_coords,
                            SimulationParameters_t& SimulationParamaters) const;
 };
 

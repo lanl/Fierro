@@ -291,53 +291,53 @@ struct MaterialFunctions_t
 
     // Equation of state (EOS) function pointers
     void (*calc_pressure)(
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-        const double den,
-        const double sie,
-        const RaggedRightArrayKokkos<double>& eos_global_vars) = NULL;
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+        const real_t den,
+        const real_t sie,
+        const RaggedRightArrayKokkos<real_t>& eos_global_vars) = NULL;
 
     void (*calc_sound_speed)(
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-        const double den,
-        const double sie,
-        const RaggedRightArrayKokkos<double>& eos_global_vars,
-        const RaggedRightArrayKokkos<double>& strength_global_vars) = NULL;
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+        const real_t den,
+        const real_t sie,
+        const RaggedRightArrayKokkos<real_t>& eos_global_vars,
+        const RaggedRightArrayKokkos<real_t>& strength_global_vars) = NULL;
 
     // -- Strength --
 
     // Material strength model function pointers
     void (*calc_stress)(
-        const DCArrayKokkos<double>   &GaussPoints_vel_grad,
-        const MPICArrayKokkos<double> &node_coords,
-        const MPICArrayKokkos<double> &coords_t0,
-        const MPICArrayKokkos<double> &node_vel,
+        const DCArrayKokkos<real_t>   &GaussPoints_vel_grad,
+        const MPICArrayKokkos<real_t> &node_coords,
+        const MPICArrayKokkos<real_t> &coords_t0,
+        const MPICArrayKokkos<real_t> &node_vel,
         const DCArrayKokkos<size_t>   &nodes_in_elem,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress_n0,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_sspd,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_strength_state_vars,
-        const double MaterialPoints_den,
-        const double MaterialPoints_sie,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_stress_n0,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_strength_state_vars,
+        const real_t MaterialPoints_den,
+        const real_t MaterialPoints_sie,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const double vol,
-        const double dt,
-        const double rk_alpha,
-        const double time,
+        const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+        const RaggedRightArrayKokkos<real_t> &strength_global_vars,
+        const real_t vol,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
@@ -345,33 +345,33 @@ struct MaterialFunctions_t
         const size_t elem_gid) = NULL;
     
     void (*init_strength_state_vars)(
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
+        const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+        const RaggedRightArrayKokkos<real_t> &strength_global_vars,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_id) = NULL;
 
      void (*fill_C_matrix) (
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
-        double C[6][6],
+        const RaggedRightArrayKokkos<real_t> &strength_global_vars,
+        real_t C[6][6],
         const size_t mat_id) = NULL;
 
     // -- Erosion --
 
-    double erode_tension_val;   ///< tension threshold to initiate erosion
-    double erode_density_val;   ///< density threshold to initiate erosion
-    // above should be removed, they go in CArrayKokkos<double> erosion_global_vars;
+    real_t erode_tension_val;   ///< tension threshold to initiate erosion
+    real_t erode_density_val;   ///< density threshold to initiate erosion
+    // above should be removed, they go in CArrayKokkos<real_t> erosion_global_vars;
     void (*erode)(
         const DRaggedRightArrayKokkos<bool>& MaterialPoints_eroded,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-        const double MaterialPoint_pres,
-        const double MaterialPoint_den,
-        const double MaterialPoint_sie,
-        const double MaterialPoint_sspd,
-        const double erode_tension_val,
-        const double erode_density_val,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+        const real_t MaterialPoint_pres,
+        const real_t MaterialPoint_den,
+        const real_t MaterialPoint_sie,
+        const real_t MaterialPoint_sspd,
+        const real_t erode_tension_val,
+        const real_t erode_density_val,
         const size_t mat_point_sid,
         const size_t mat_id) = NULL;
 
@@ -379,21 +379,21 @@ struct MaterialFunctions_t
     // -- Dissipation --
     void (*calc_dissipation) (
         const ViewCArrayKokkos<size_t> elem_node_gids,
-        const RaggedRightArrayKokkos <double>& dissipation_global_vars,
-        const DCArrayKokkos<double>& GaussPoints_vel_grad,
-        const MPICArrayKokkos<double>& GaussPoints_shock_detector,
+        const RaggedRightArrayKokkos<real_t>& dissipation_global_vars,
+        const DCArrayKokkos<real_t>& GaussPoints_vel_grad,
+        const MPICArrayKokkos<real_t>& GaussPoints_shock_detector,
         const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-        const MPICArrayKokkos<double>& node_vel,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-        const ViewCArrayKokkos<double>& disp_corner_forces,
-        const ViewCArrayKokkos<double>& area_normal,
+        const MPICArrayKokkos<real_t>& node_vel,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+        const ViewCArrayKokkos<real_t>& disp_corner_forces,
+        const ViewCArrayKokkos<real_t>& area_normal,
         const RaggedRightArrayKokkos<size_t>& elems_in_elem,
         const CArrayKokkos<size_t>& num_elems_in_elem,
-        const double vol,
-        const double fuzz,
-        const double small,
-        const double elem_gid,
+        const real_t vol,
+        const real_t fuzz,
+        const real_t small,
+        const size_t elem_gid,
         const size_t mat_point_sid,
         const size_t mat_id) = NULL;
         // in 2D, in place of vol, the elem facial area is passed
@@ -401,17 +401,17 @@ struct MaterialFunctions_t
 
     // -- level set --
     // front_velocity = (normal_velocity - curvature*Kappa)
-    double normal_velocity = 0.0;    ///< level set velocity in normal direction
-    double curvature_velocity = 0.0; ///< level set velocity contribution from curvature
+    real_t normal_velocity = 0.0;    ///< level set velocity in normal direction
+    real_t curvature_velocity = 0.0; ///< level set velocity contribution from curvature
 
 
     // -- tabular --
     // Tabular density as a function of temperature
-    double (*get_density_from_temperature)(const Table_t& data_table, const double temperature) = NULL;
+    double (*get_density_from_temperature)(const Table_t& data_table, const real_t temperature) = NULL;
     // Tabular thermal conductivity as a function of temperature
-    double (*get_thermal_conductivity_from_temperature)(const Table_t& data_table, const double temperature) = NULL;
+    double (*get_thermal_conductivity_from_temperature)(const Table_t& data_table, const real_t temperature) = NULL;
     // Tabular specific heat as a function of temperature
-    double (*get_specific_heat_from_temperature)(const Table_t& data_table, const double temperature) = NULL;
+    double (*get_specific_heat_from_temperature)(const Table_t& data_table, const real_t temperature) = NULL;
 
 }; // end MaterialFunctions_t
 
@@ -467,17 +467,17 @@ struct Material_t
 
     ///<enums can be implemented in the model namespaces to unpack e.g., physics_global_vars
 
-    RaggedRightArrayKokkos<double> eos_global_vars;      ///< Array of global variables for the EOS
+    RaggedRightArrayKokkos<real_t> eos_global_vars;      ///< Array of global variables for the EOS
     CArrayKokkos<size_t> num_eos_global_vars;
 
-    RaggedRightArrayKokkos<double> strength_global_vars; ///< Array of global variables for the strength model
+    RaggedRightArrayKokkos<real_t> strength_global_vars; ///< Array of global variables for the strength model
     CArrayKokkos<size_t> num_strength_global_vars;
 
-    RaggedRightArrayKokkos<double> failure_global_vars;  ///< Array of global variables for the failure model
+    RaggedRightArrayKokkos<real_t> failure_global_vars;  ///< Array of global variables for the failure model
 
-    RaggedRightArrayKokkos<double> erosion_global_vars;  ///< Array of global variables for the erosion model
+    RaggedRightArrayKokkos<real_t> erosion_global_vars;  ///< Array of global variables for the erosion model
 
-    RaggedRightArrayKokkos<double> dissipation_global_vars; ///< Array holding q1, q1ex, q2, ... for artificial viscosity
+    RaggedRightArrayKokkos<real_t> dissipation_global_vars; ///< Array holding q1, q1ex, q2, ... for artificial viscosity
     CArrayKokkos<size_t> num_dissipation_global_vars;
 
 
@@ -496,12 +496,12 @@ struct Material_t
 
     // -- material-material equilibration --
     model::EquilibrationModels EquilibrationModels = model::noEquilibration;
-    CArrayKokkos<double> equilibration_global_vars; ///< Array holding vars for equilibration models
+    CArrayKokkos<real_t> equilibration_global_vars; ///< Array holding vars for equilibration models
     size_t num_equilibration_global_vars;
 
     // -- geometric-material equilibration --
     model::EquilibrationModels GeoEquilibrationModels = model::noEquilibration;
-    CArrayKokkos<double> geo_equilibration_global_vars; ///< Array holding vars for geo equilibration models
+    CArrayKokkos<real_t> geo_equilibration_global_vars; ///< Array holding vars for geo equilibration models
     size_t num_geo_equilibration_global_vars;
 
     size_t max_num_mats_per_element = 3; ///< default is to allow up to 3 materials in an element in setup

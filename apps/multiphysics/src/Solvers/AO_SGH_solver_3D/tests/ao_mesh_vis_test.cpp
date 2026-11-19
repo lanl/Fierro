@@ -1,7 +1,6 @@
 // End-to-end test: equispaced box -> GLL projection -> tg_vortex IC ->
 // VTK_LAGRANGE_HEXAHEDRON .vtu writer.
 
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -22,13 +21,13 @@ static int  g_num_checks   = 0;
 static bool g_verbose      = false;
 
 
-static void check_close(const double actual,
-                        const double expected,
-                        const double tol,
+static void check_close(const real_t actual,
+                        const real_t expected,
+                        const real_t tol,
                         const std::string& label)
 {
     g_num_checks++;
-    const double diff = std::fabs(actual - expected);
+    const real_t diff = Kokkos::fabs(actual - expected);
     if (diff > tol) {
         g_num_failures++;
         printf("  [FAIL] %s : actual=%.16e expected=%.16e diff=%.3e tol=%.3e\n",
@@ -56,7 +55,7 @@ static void check_true(const bool cond, const std::string& label)
 
 // Equispaced (nx, ny, nz) Pn box on [0,1]^3 with IJK-lex per-elem connectivity.
 static void build_equispaced_box(DCArrayKokkos<size_t>& nodes_in_elem,
-                                 MPICArrayKokkos<double>& coords,
+                                 MPICArrayKokkos<real_t>& coords,
                                  const size_t nx,
                                  const size_t ny,
                                  const size_t nz,
@@ -71,11 +70,11 @@ static void build_equispaced_box(DCArrayKokkos<size_t>& nodes_in_elem,
     const size_t npk = nz * p_order + 1;
     const size_t num_nodes = npi * npj * npk;
 
-    const double dxe = 1.0 / (nx * p_order);
-    const double dye = 1.0 / (ny * p_order);
-    const double dze = 1.0 / (nz * p_order);
+    const real_t dxe = (real_t)1.0 / (nx * p_order);
+    const real_t dye = (real_t)1.0 / (ny * p_order);
+    const real_t dze = (real_t)1.0 / (nz * p_order);
 
-    coords        = MPICArrayKokkos<double>(num_nodes, 3, "vis_test_coords");
+    coords        = MPICArrayKokkos<real_t>(num_nodes, 3, "vis_test_coords");
     nodes_in_elem = DCArrayKokkos<size_t>(num_elems, npe, "vis_test_nodes_in_elem");
 
     for (size_t k = 0; k < npk; ++k) {
@@ -114,16 +113,16 @@ static void build_equispaced_box(DCArrayKokkos<size_t>& nodes_in_elem,
 
 
 // Canonical tg_vortex velocity IC.
-static void apply_tg_vortex_inline(const MPICArrayKokkos<double>& coords,
-                                   MPICArrayKokkos<double>&       vel,
+static void apply_tg_vortex_inline(const MPICArrayKokkos<real_t>& coords,
+                                   MPICArrayKokkos<real_t>&       vel,
                                    const size_t                 num_nodes)
 {
-    const double PI = 3.14159265358979323846;
+    const real_t PI = 3.14159265358979323846;
     for (size_t n = 0; n < num_nodes; ++n) {
-        const double x = coords.host(n, 0);
-        const double y = coords.host(n, 1);
-        vel.host(n, 0) =  std::sin(PI * x) * std::cos(PI * y);
-        vel.host(n, 1) = -std::cos(PI * x) * std::sin(PI * y);
+        const real_t x = coords.host(n, 0);
+        const real_t y = coords.host(n, 1);
+        vel.host(n, 0) =  Kokkos::sin(PI * x) * Kokkos::cos(PI * y);
+        vel.host(n, 1) = -Kokkos::cos(PI * x) * Kokkos::sin(PI * y);
         vel.host(n, 2) = 0.0;
     }
     vel.update_device();
@@ -154,7 +153,7 @@ static void test_full_pipeline_2x2x2_p3()
     const size_t p  = 3;
 
     DCArrayKokkos<size_t> nodes_in_elem;
-    MPICArrayKokkos<double> coords;
+    MPICArrayKokkos<real_t> coords;
     build_equispaced_box(nodes_in_elem, coords, nx, ny, nz, p);
 
     const size_t n1d = p + 1;
@@ -164,7 +163,7 @@ static void test_full_pipeline_2x2x2_p3()
 
     equispaced_to_gll(nodes_in_elem, coords, num_elems, p);
 
-    MPICArrayKokkos<double> vel(num_nodes, 3, "vis_test_vel");
+    MPICArrayKokkos<real_t> vel(num_nodes, 3, "vis_test_vel");
     apply_tg_vortex_inline(coords, vel, num_nodes);
 
     {

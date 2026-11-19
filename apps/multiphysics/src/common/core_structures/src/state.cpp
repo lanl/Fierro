@@ -47,45 +47,45 @@ void fillGaussState_t::initialize(size_t num_gauss_points,
     for (auto field : fill_gauss_states){
         switch(field){
             case fill_gauss_state::density:
-                if (den.size() == 0) this->den = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_density");
+                if (den.size() == 0) this->den = DCArrayKokkos<real_t>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_density");
                 break;
             case fill_gauss_state::stress:
-                if (stress.size() == 0) this->stress = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, num_dims, num_dims, "fill_gauss_point_stress");
+                if (stress.size() == 0) this->stress = DCArrayKokkos<real_t>(num_gauss_points, max_mats_in_elem, num_dims, num_dims, "fill_gauss_point_stress");
                 break;
             case fill_gauss_state::strain:
-                if (strain.size() == 0) this->strain = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, num_dims, num_dims, "fill_gauss_point_strain");
+                if (strain.size() == 0) this->strain = DCArrayKokkos<real_t>(num_gauss_points, max_mats_in_elem, num_dims, num_dims, "fill_gauss_point_strain");
                 break;
             case fill_gauss_state::elastic_modulii:
-                if (elastic_modulii.size() == 0) this->elastic_modulii = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "fill_gauss_point_elastic_modulii");
+                if (elastic_modulii.size() == 0) this->elastic_modulii = DCArrayKokkos<real_t>(num_gauss_points, max_mats_in_elem, 3, "fill_gauss_point_elastic_modulii");
                 break;
             case fill_gauss_state::shear_modulii:
-                if (shear_modulii.size() == 0) this->shear_modulii = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "fill_gauss_point_shear_modulii");
+                if (shear_modulii.size() == 0) this->shear_modulii = DCArrayKokkos<real_t>(num_gauss_points, max_mats_in_elem, 3, "fill_gauss_point_shear_modulii");
                 break;
             case fill_gauss_state::poisson_ratios:
-                if (poisson_ratios.size() == 0) this->poisson_ratios = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, 3, "fill_gauss_point_poisson_ratios");
+                if (poisson_ratios.size() == 0) this->poisson_ratios = DCArrayKokkos<real_t>(num_gauss_points, max_mats_in_elem, 3, "fill_gauss_point_poisson_ratios");
                 break;
             case fill_gauss_state::specific_internal_energy:
-                if (sie.size() == 0) this->sie = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_sie");
+                if (sie.size() == 0) this->sie = DCArrayKokkos<real_t>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_sie");
                 if (use_sie.size() == 0){ 
                     this->use_sie = DCArrayKokkos<bool>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_use_sie");
                     use_sie.set_values(false);
                 }
                 break;
             case fill_gauss_state::internal_energy:
-                if (sie.size() == 0) this->ie = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_ie");
+                if (sie.size() == 0) this->ie = DCArrayKokkos<real_t>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_ie");
                 if (use_sie.size() == 0){ 
                     this->use_sie = DCArrayKokkos<bool>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_use_sie");
                     use_sie.set_values(false);
                 }
                 break;
             case fill_gauss_state::thermal_conductivity:
-                if (thermal_conductivity.size() == 0) this->thermal_conductivity = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_thermal_conductivity");
+                if (thermal_conductivity.size() == 0) this->thermal_conductivity = DCArrayKokkos<real_t>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_thermal_conductivity");
                 break;
             case fill_gauss_state::specific_heat:
-                if (specific_heat.size() == 0) this->specific_heat = DCArrayKokkos<double>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_specific_heat");
+                if (specific_heat.size() == 0) this->specific_heat = DCArrayKokkos<real_t>(num_gauss_points, max_mats_in_elem, "fill_gauss_point_specific_heat");
                 break;
             case fill_gauss_state::level_set:
-                if (level_set.size() == 0) this->level_set = DCArrayKokkos<double>(num_gauss_points,max_mats_in_elem, "fill_gauss_level_set");
+                if (level_set.size() == 0) this->level_set = DCArrayKokkos<real_t>(num_gauss_points,max_mats_in_elem, "fill_gauss_level_set");
                 break;
             default:
                 std::cout<<"Desired Gauss point fill state not understood in initialize"<<std::endl;
@@ -101,11 +101,11 @@ void fillElemState_t::initialize(size_t num_elems,
     this-> max_mats_in_elem = max_mat_storage_in_elem;
 
     if (mat_volfrac.size() == 0){
-        this->mat_volfrac = DCArrayKokkos<double>(num_elems, max_mats_in_elem, "elem_mat_volfrac");
+        this->mat_volfrac = DCArrayKokkos<real_t>(num_elems, max_mats_in_elem, "elem_mat_volfrac");
     }
 
     if (geo_volfrac.size() == 0){
-        this->geo_volfrac = DCArrayKokkos<double>(num_elems, max_mats_in_elem, "elem_geo_volfrac");
+        this->geo_volfrac = DCArrayKokkos<real_t>(num_elems, max_mats_in_elem, "elem_geo_volfrac");
     }
 
     // voxel_elem_mat_id is allocated in the voxel file read
@@ -169,34 +169,34 @@ void node_t::initialize(size_t num_nodes, size_t num_dims, std::vector<node_stat
     for (auto field : node_states){
         switch(field){
             case node_state::coords:
-                if (coords.size() == 0) this->coords = MPICArrayKokkos<double>(num_nodes, num_dims, "node_coordinates");
-                if (coords_n0.size() == 0) this->coords_n0 = MPICArrayKokkos<double>(num_nodes, num_dims, "node_coordinates_n0");
+                if (coords.size() == 0) this->coords = MPICArrayKokkos<real_t>(num_nodes, num_dims, "node_coordinates");
+                if (coords_n0.size() == 0) this->coords_n0 = MPICArrayKokkos<real_t>(num_nodes, num_dims, "node_coordinates_n0");
                 break;
             case node_state::coords_t0:
-                if (coords_t0.size() == 0) this->coords_t0 = MPICArrayKokkos<double>(num_nodes, num_dims, "node_reference_coordinates");
+                if (coords_t0.size() == 0) this->coords_t0 = MPICArrayKokkos<real_t>(num_nodes, num_dims, "node_reference_coordinates");
                 break;
             case node_state::velocity:
-                if (vel.size() == 0) this->vel = MPICArrayKokkos<double>(num_nodes, num_dims, "node_velocity");
-                if (vel_n0.size() == 0) this->vel_n0 = MPICArrayKokkos<double>(num_nodes, num_dims, "node_velocity_n0");
+                if (vel.size() == 0) this->vel = MPICArrayKokkos<real_t>(num_nodes, num_dims, "node_velocity");
+                if (vel_n0.size() == 0) this->vel_n0 = MPICArrayKokkos<real_t>(num_nodes, num_dims, "node_velocity_n0");
                 break;
             case node_state::force:
-                if (force.size() == 0) this->force = DCArrayKokkos<double>(num_nodes, num_dims, "node_force");
+                if (force.size() == 0) this->force = DCArrayKokkos<real_t>(num_nodes, num_dims, "node_force");
                 break;
             case node_state::mass:
-                if (mass.size() == 0) this->mass = DCArrayKokkos<double>(num_nodes, "node_mass");
+                if (mass.size() == 0) this->mass = DCArrayKokkos<real_t>(num_nodes, "node_mass");
                 break;
             case node_state::temp:
-                if (temp.size() == 0) this->temp = MPICArrayKokkos<double>(num_nodes, "node_temp");
-                if (temp_n0.size() == 0) this->temp_n0 = MPICArrayKokkos<double>(num_nodes, "node_temp_n0");
+                if (temp.size() == 0) this->temp = MPICArrayKokkos<real_t>(num_nodes, "node_temp");
+                if (temp_n0.size() == 0) this->temp_n0 = MPICArrayKokkos<real_t>(num_nodes, "node_temp_n0");
                 break;
             case node_state::heat_transfer:
-                if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_nodes, "node_q_transfer");
+                if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<real_t>(num_nodes, "node_q_transfer");
                 break;
             case node_state::gradient_level_set:
-                if (gradient_level_set.size() == 0) this->gradient_level_set = DCArrayKokkos<double>(num_nodes, num_dims, "node_grad_levelset");
+                if (gradient_level_set.size() == 0) this->gradient_level_set = DCArrayKokkos<real_t>(num_nodes, num_dims, "node_grad_levelset");
                 break;
             case node_state::displacement:
-                if (displacement.size() == 0) this->displacement = MPICArrayKokkos<double>(num_nodes, num_dims, "node_force_displacement");
+                if (displacement.size() == 0) this->displacement = MPICArrayKokkos<real_t>(num_nodes, num_dims, "node_force_displacement");
                 break;
             default:
                 std::cout<<"Desired node state not understood in node_t initialize"<<std::endl;
@@ -211,33 +211,33 @@ void node_t::initialize(size_t num_nodes, size_t num_dims, std::vector<node_stat
         switch(field){
             case node_state::coords:
                 if (coords.size() == 0){
-                    this->coords = MPICArrayKokkos<double>(num_nodes, num_dims, "node_coordinates");
+                    this->coords = MPICArrayKokkos<real_t>(num_nodes, num_dims, "node_coordinates");
                     this->coords.initialize_comm_plan(comm_plan);
                 }
                 if (coords_n0.size() == 0){
-                    this->coords_n0 = MPICArrayKokkos<double>(num_nodes, num_dims, "node_coordinates_n0");
+                    this->coords_n0 = MPICArrayKokkos<real_t>(num_nodes, num_dims, "node_coordinates_n0");
                     this->coords_n0.initialize_comm_plan(comm_plan);
                 }
                 break;
 
             case node_state::velocity:
                 if (vel.size() == 0){
-                    this->vel = MPICArrayKokkos<double>(num_nodes, num_dims, "node_velocity");
+                    this->vel = MPICArrayKokkos<real_t>(num_nodes, num_dims, "node_velocity");
                     this->vel.initialize_comm_plan(comm_plan);
                 } 
                 if (vel_n0.size() == 0){
-                    this->vel_n0 = MPICArrayKokkos<double>(num_nodes, num_dims, "node_velocity_n0");
+                    this->vel_n0 = MPICArrayKokkos<real_t>(num_nodes, num_dims, "node_velocity_n0");
                     this->vel_n0.initialize_comm_plan(comm_plan);
                 }
                 break;
 
             case node_state::temp:
                 if (temp.size() == 0){
-                    this->temp = MPICArrayKokkos<double>(num_nodes, "node_temp");
+                    this->temp = MPICArrayKokkos<real_t>(num_nodes, "node_temp");
                     this->temp.initialize_comm_plan(comm_plan);
                 }
                 if (temp_n0.size() == 0){
-                    this->temp_n0 = MPICArrayKokkos<double>(num_nodes, "node_temp_n0");
+                    this->temp_n0 = MPICArrayKokkos<real_t>(num_nodes, "node_temp_n0");
                     this->temp_n0.initialize_comm_plan(comm_plan);
                 }
                 break;
@@ -255,36 +255,36 @@ void GaussPoint_t::initialize(size_t num_gauss_pnts, size_t num_dims, std::vecto
     for (auto field : gauss_pt_states){
         switch(field){
             case gauss_pt_state::volume:
-                if (vol.size() == 0) this->vol = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_volume");
+                if (vol.size() == 0) this->vol = DCArrayKokkos<real_t>(num_gauss_pnts, "gauss_point_volume");
                 break;
             case gauss_pt_state::divergence_velocity:
-                if (div.size() == 0) this->div = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_div");
+                if (div.size() == 0) this->div = DCArrayKokkos<real_t>(num_gauss_pnts, "gauss_point_div");
                 break;
             case gauss_pt_state::gradient_velocity:
                 // Note: all current solvers treat velocity gradient as a 3d tensor, even the rz solver.
-                if (vel_grad.size() == 0) this->vel_grad = DCArrayKokkos<double>(num_gauss_pnts, 3, 3, "gauss_point_vel_grad");
+                if (vel_grad.size() == 0) this->vel_grad = DCArrayKokkos<real_t>(num_gauss_pnts, 3, 3, "gauss_point_vel_grad");
                 break;
             case gauss_pt_state::level_set:
-                if (level_set.size() == 0) this->level_set = MPICArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set");
-                if (level_set_n0.size() == 0) this->level_set_n0 = MPICArrayKokkos<double>(num_gauss_pnts, "gauss_point_level_set_n0");
+                if (level_set.size() == 0) this->level_set = MPICArrayKokkos<real_t>(num_gauss_pnts, "gauss_point_level_set");
+                if (level_set_n0.size() == 0) this->level_set_n0 = MPICArrayKokkos<real_t>(num_gauss_pnts, "gauss_point_level_set_n0");
                 break;
             case gauss_pt_state::shock_detector:
-                if (shock_detector.size() == 0) this->shock_detector = MPICArrayKokkos<double>(num_gauss_pnts, "gauss_point_shock_detector");
+                if (shock_detector.size() == 0) this->shock_detector = MPICArrayKokkos<real_t>(num_gauss_pnts, "gauss_point_shock_detector");
                 break;
             case gauss_pt_state::detj0:
-                if (detj0.size() == 0) this->detj0 = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_detj0");
+                if (detj0.size() == 0) this->detj0 = DCArrayKokkos<real_t>(num_gauss_pnts, "gauss_point_detj0");
                 break;
             case gauss_pt_state::jac0_inv:
-                if (jac0_inv.size() == 0) this->jac0_inv = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_jac0_inv");
+                if (jac0_inv.size() == 0) this->jac0_inv = DCArrayKokkos<real_t>(num_gauss_pnts, num_dims, num_dims, "gauss_point_jac0_inv");
                 break;
             case gauss_pt_state::rho0_detj0_w:
-                if (rho0_detj0_w.size() == 0) this->rho0_detj0_w = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_rho0_detj0_w");
+                if (rho0_detj0_w.size() == 0) this->rho0_detj0_w = DCArrayKokkos<real_t>(num_gauss_pnts, "gauss_point_rho0_detj0_w");
                 break;
             case gauss_pt_state::detj:
-                if (detj.size() == 0) this->detj = DCArrayKokkos<double>(num_gauss_pnts, "gauss_point_detj");
+                if (detj.size() == 0) this->detj = DCArrayKokkos<real_t>(num_gauss_pnts, "gauss_point_detj");
                 break;
             case gauss_pt_state::jac_inv:
-                if (jac_inv.size() == 0) this->jac_inv = DCArrayKokkos<double>(num_gauss_pnts, num_dims, num_dims, "gauss_point_jac_inv");
+                if (jac_inv.size() == 0) this->jac_inv = DCArrayKokkos<real_t>(num_gauss_pnts, num_dims, num_dims, "gauss_point_jac_inv");
                 break;
             default:
                 std::cout<<"Desired gauss point state not understood in GaussPoint_t initialize"<<std::endl;
@@ -299,7 +299,7 @@ void GaussPoint_t::initialize(size_t num_gauss_pnts, size_t num_dims, std::vecto
         switch(field){
             case gauss_pt_state::shock_detector:
                 if (shock_detector.size() == 0){
-                    this->shock_detector = MPICArrayKokkos<double>(num_gauss_pnts, "gauss_point_shock_detector");
+                    this->shock_detector = MPICArrayKokkos<real_t>(num_gauss_pnts, "gauss_point_shock_detector");
                     this->shock_detector.initialize_comm_plan(comm_plan);
                 }
                 break;
@@ -368,69 +368,69 @@ void MaterialPoint_t::initialize(size_t num_dims, std::vector<material_pt_state>
 {
     // WARNING: this should be moved to for loop over mat_pt_states
     if (temp_grad.size() == 0){
-        this->temp_grad = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, "material_point_temperature_gradient"); 
+        this->temp_grad = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, 3, "material_point_temperature_gradient"); 
     }
 
     for (auto field : material_pt_states){
         switch(field){
             case material_pt_state::density:
-                if (den.size() == 0) this->den = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_density");
+                if (den.size() == 0) this->den = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, "material_point_density");
                 break;
             case material_pt_state::pressure:
-                if (pres.size() == 0) this->pres = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_pressure");
+                if (pres.size() == 0) this->pres = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, "material_point_pressure");
                 break;
             case material_pt_state::stress:
                 // Note: all current solvers treat stress as a 3d tensor, even the rz solver.
-                if (stress.size() == 0) this->stress = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, 3, "material_point_stress");  
-                if (stress_n0.size() == 0) this->stress_n0 = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, 3, "material_point_stress_n0"); 
+                if (stress.size() == 0) this->stress = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, 3, 3, "material_point_stress");  
+                if (stress_n0.size() == 0) this->stress_n0 = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, 3, 3, "material_point_stress_n0"); 
                 break;
             case material_pt_state::strain:
-                if (strain.size() == 0) this->strain = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, num_dims, "material_point_strain");  
+                if (strain.size() == 0) this->strain = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, num_dims, num_dims, "material_point_strain");  
                 break;
             case material_pt_state::elastic_modulii:
-                if (elastic_modulii.size() == 0) this->elastic_modulii = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, "material_elastic_modulii");
+                if (elastic_modulii.size() == 0) this->elastic_modulii = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, 3, "material_elastic_modulii");
                 break;
             case material_pt_state::shear_modulii:
-                if (shear_modulii.size() == 0) this->shear_modulii = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, "material_shear_modulii");
+                if (shear_modulii.size() == 0) this->shear_modulii = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, 3, "material_shear_modulii");
                 break;
             case material_pt_state::poisson_ratios:
-                if (poisson_ratios.size() == 0) this->poisson_ratios = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, "material_poisson_ratios");
+                if (poisson_ratios.size() == 0) this->poisson_ratios = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, 3, "material_poisson_ratios");
                 break;
             case material_pt_state::deformation_grad:
-                if (deformation_grad.size() == 0) this->deformation_grad = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, 3, "material_deformation_grad");
-                if (deformation_grad_t0.size() == 0) this->deformation_grad_t0 = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, 3, 3, "material_deformation_grad_t0");
+                if (deformation_grad.size() == 0) this->deformation_grad = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, 3, 3, "material_deformation_grad");
+                if (deformation_grad_t0.size() == 0) this->deformation_grad_t0 = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, 3, 3, "material_deformation_grad_t0");
                 break;
             case material_pt_state::sound_speed:
-                if (sspd.size() == 0) this->sspd = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_sspd");
+                if (sspd.size() == 0) this->sspd = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, "material_point_sspd");
                 break;
             case material_pt_state::mass:
-                if (mass.size() == 0) this->mass = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_mass");
+                if (mass.size() == 0) this->mass = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, "material_point_mass");
                 break;
             case material_pt_state::volume_fraction:
-                if (mat_volfrac.size() == 0) this->mat_volfrac = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_mat_volfrac");
-                if (geo_volfrac.size() == 0) this->geo_volfrac = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_geo_volfrac");
+                if (mat_volfrac.size() == 0) this->mat_volfrac = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, "material_point_mat_volfrac");
+                if (geo_volfrac.size() == 0) this->geo_volfrac = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, "material_point_geo_volfrac");
                 // changes in volume fraction
-                if (delta_mat_volfrac.size() == 0) this->delta_mat_volfrac = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_mat_volfrac_delta");
-                if (delta_geo_volfrac.size() == 0) this->delta_geo_volfrac = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_geo_volfrac_delta");
+                if (delta_mat_volfrac.size() == 0) this->delta_mat_volfrac = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, "material_point_mat_volfrac_delta");
+                if (delta_geo_volfrac.size() == 0) this->delta_geo_volfrac = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, "material_point_geo_volfrac_delta");
                 break;
             case material_pt_state::specific_internal_energy:
-                if (sie.size() == 0)  this->sie = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_sie");
-                if (sie_n0.size() == 0) this->sie_n0 = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_sie_n0");
+                if (sie.size() == 0)  this->sie = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, "material_point_sie");
+                if (sie_n0.size() == 0) this->sie_n0 = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, "material_point_sie_n0");
                 break;
             case material_pt_state::heat_flux:
-                if (q_flux.size() == 0) this->q_flux = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, "material_point_q_flux");
+                if (q_flux.size() == 0) this->q_flux = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, num_dims, "material_point_q_flux");
                 break;
             case material_pt_state::thermal_conductivity:
-                if (conductivity.size() == 0) this->conductivity = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_thermal_conductivity");
+                if (conductivity.size() == 0) this->conductivity = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, "material_point_thermal_conductivity");
                 break;
             case material_pt_state::specific_heat:
-                if (specific_heat.size() == 0) this->specific_heat = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, "material_point_specific_heat");
+                if (specific_heat.size() == 0) this->specific_heat = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, "material_point_specific_heat");
                 break;
             case material_pt_state::eroded_flag:
                 if (eroded.size() == 0) this->eroded = DRaggedRightArrayKokkos<bool>(this->num_material_points_buffer, "material_point_eroded");
                 break;
             case material_pt_state::coords:
-                if (coords.size() == 0) this->coords = DRaggedRightArrayKokkos<double>(this->num_material_points_buffer, num_dims, "material_point_coords");
+                if (coords.size() == 0) this->coords = DRaggedRightArrayKokkos<real_t>(this->num_material_points_buffer, num_dims, "material_point_coords");
                 break;
             default:
                 std::cout<<"Desired material point state not understood in MaterialPoint_t initialize"<<std::endl;
@@ -458,11 +458,11 @@ void MaterialZone_t::initialize_Pn(std::vector<material_zone_state> material_zon
     for (auto field : material_zone_states){
         switch(field){
             case material_zone_state::specific_internal_energy:
-                if (sie.size() == 0) this->sie = DRaggedRightArrayKokkos<double>(this->num_material_zones_buffer, "material_zone_sie");
-                if (sie_n0.size() == 0) this->sie_n0 = DRaggedRightArrayKokkos<double>(this->num_material_zones_buffer, "material_zone_sie_n0");
+                if (sie.size() == 0) this->sie = DRaggedRightArrayKokkos<real_t>(this->num_material_zones_buffer, "material_zone_sie");
+                if (sie_n0.size() == 0) this->sie_n0 = DRaggedRightArrayKokkos<real_t>(this->num_material_zones_buffer, "material_zone_sie_n0");
                 break;
             case material_zone_state::mass:
-                if (mass.size() == 0) this->mass = DRaggedRightArrayKokkos<double>(this->num_material_zones_buffer, "material_zone_mass");
+                if (mass.size() == 0) this->mass = DRaggedRightArrayKokkos<real_t>(this->num_material_zones_buffer, "material_zone_mass");
                 break;
             default:
                 std::cout<<"Desired material zone state not understood in MaterialZone_t initialize"<<std::endl;
@@ -491,22 +491,22 @@ void MaterialCorner_t::initialize(size_t num_dims, std::vector<material_corner_s
     for (auto field : material_corner_states){
         switch(field){
             case material_corner_state::force:
-                if (force.size() == 0) this->force = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, num_dims, "material_corner_force");
+                if (force.size() == 0) this->force = DRaggedRightArrayKokkos<real_t>(this->num_material_corners_buffer, num_dims, "material_corner_force");
                 break;
             case material_corner_state::heat_transfer:
-                if (q_transfer.size() == 0) this->q_transfer =DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_q_transfer"); 
+                if (q_transfer.size() == 0) this->q_transfer =DRaggedRightArrayKokkos<real_t>(this->num_material_corners_buffer, "material_corner_q_transfer"); 
                 break;
             case material_corner_state::density:
-                if (density.size() == 0) this->density = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_density");
+                if (density.size() == 0) this->density = DRaggedRightArrayKokkos<real_t>(this->num_material_corners_buffer, "material_corner_density");
                 break;
             case material_corner_state::specific_internal_energy:
-                if (specific_internal_energy.size() == 0) this->specific_internal_energy = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_specific_internal_energy");
+                if (specific_internal_energy.size() == 0) this->specific_internal_energy = DRaggedRightArrayKokkos<real_t>(this->num_material_corners_buffer, "material_corner_specific_internal_energy");
                 break;
             case material_corner_state::kinetic_energy:
-                if (kinetic_energy.size() == 0) this->kinetic_energy = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, "material_corner_kinetic_energy");
+                if (kinetic_energy.size() == 0) this->kinetic_energy = DRaggedRightArrayKokkos<real_t>(this->num_material_corners_buffer, "material_corner_kinetic_energy");
                 break;
             case material_corner_state::velocity:
-                if (velocity.size() == 0) this->velocity = DRaggedRightArrayKokkos<double>(this->num_material_corners_buffer, num_dims, "material_corner_velocity");
+                if (velocity.size() == 0) this->velocity = DRaggedRightArrayKokkos<real_t>(this->num_material_corners_buffer, num_dims, "material_corner_velocity");
                 break;
             default:
                 std::cout<<"Desired material corner state not understood in MaterialCorner_t initialize"<<std::endl;
@@ -521,19 +521,19 @@ void corner_t::initialize(size_t num_corners, size_t num_dims, std::vector<corne
     for (auto field : corner_states){
         switch(field){
             case corner_state::force:
-                if (force.size() == 0) this->force = DCArrayKokkos<double>(num_corners, num_dims, "corner_force");
+                if (force.size() == 0) this->force = DCArrayKokkos<real_t>(num_corners, num_dims, "corner_force");
                 break;
             case corner_state::mass:
-                if (mass.size() == 0) this->mass  = DCArrayKokkos<double>(num_corners, "corner_mass");
+                if (mass.size() == 0) this->mass  = DCArrayKokkos<real_t>(num_corners, "corner_mass");
                 break;
             case corner_state::heat_transfer:
-                if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<double>(num_corners, "corner_q_transfer"); 
+                if (q_transfer.size() == 0) this->q_transfer = DCArrayKokkos<real_t>(num_corners, "corner_q_transfer"); 
                 break;
             case corner_state::normal:
-                if (normal.size() == 0) this->normal = DCArrayKokkos<double>(num_corners, num_dims, "corner_normal");
+                if (normal.size() == 0) this->normal = DCArrayKokkos<real_t>(num_corners, num_dims, "corner_normal");
                 break;
             case corner_state::volume:
-                if (volume.size() == 0) this->volume  = DCArrayKokkos<double>(num_corners, "corner_volume");
+                if (volume.size() == 0) this->volume  = DCArrayKokkos<real_t>(num_corners, "corner_volume");
                 break;
             default:
                 std::cout<<"Desired corner state not understood in corner_t initialize"<<std::endl;

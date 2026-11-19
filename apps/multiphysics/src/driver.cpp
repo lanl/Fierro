@@ -47,8 +47,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "region_fill.hpp"
 
-void setting_nodes(MPICArrayKokkos<double> &node_coords,
-                   MPICArrayKokkos<double> &final_node_coords,
+void setting_nodes(MPICArrayKokkos<real_t> &node_coords,
+                   MPICArrayKokkos<real_t> &final_node_coords,
 		           size_t num_nodes,
 		           size_t num_dims){
 
@@ -96,8 +96,8 @@ void Driver::initialize()
 
     // Create initial mesh on rank 0
     swage::Mesh_t initial_mesh;
-    MPICArrayKokkos<double> initial_node_coords;
-    MPICArrayKokkos<double> final_node_coords;
+    MPICArrayKokkos<real_t> initial_node_coords;
+    MPICArrayKokkos<real_t> final_node_coords;
 
     // Initialize communication plans
     // These are set up by elements::partition_mesh
@@ -153,7 +153,11 @@ void Driver::initialize()
     // Partition the mesh to all ranks
     if(world_size != 1) { // pass through the partitioning function if not a single rank
         elements::partition_mesh(initial_mesh, mesh, initial_node_coords, final_node_coords, element_communication_plan, node_communication_plan, world_size, rank);
-        MPI_Allreduce(MPI_IN_PLACE, &initial_mesh.num_gauss_in_elem, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        // num_gauss_in_elem is a size_t; it was previously reduced as MPI_DOUBLE,
+        // which reinterpreted the integer bit pattern as a float. Ranks that did
+        // not build the pre-partition mesh hold 0, so MPI_SUM propagates the one
+        // nonzero value.
+        MPI_Allreduce(MPI_IN_PLACE, &initial_mesh.num_gauss_in_elem, 1, MPI_UNSIGNED_LONG, MPI_SUM, MPI_COMM_WORLD);
         mesh.num_gauss_in_elem = initial_mesh.num_gauss_in_elem;
         // Verify communication plans (matches ELEMENTS decomp_example pattern)
         // element_communication_plan.verify_graph_communicator();
@@ -258,7 +262,7 @@ void Driver::initialize()
     tag_bdys(BoundaryConditions, mesh, State.node.coords);
 
     // Setup the Solvers
-    double time_final = SimulationParamaters.DynamicOptions.time_final;
+    real_t time_final = SimulationParamaters.DynamicOptions.time_final;
     for (size_t solver_id = 0; solver_id < SimulationParamaters.solver_inputs.size(); solver_id++) {
 
         if (SimulationParamaters.solver_inputs[solver_id].method == solver_input::SGH3D) {
@@ -552,7 +556,7 @@ void Driver::setup_solver_vars(T& a_solver,
 
 
     // the final time of the simulation
-    double time_final = this->SimulationParamaters.DynamicOptions.time_final;
+    real_t time_final = this->SimulationParamaters.DynamicOptions.time_final;
 
     // save the solver_id
     a_solver->solver_id = solver_id;
@@ -577,13 +581,13 @@ void Driver::setup_solver_vars(T& a_solver,
     // setting the ending times are tricky, requiring logic
             
     // set the start and ending times
-    double t_end = this->SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
+    real_t t_end = this->SimulationParamaters.solver_inputs[solver_id].time_end;  // default is t=0
     if(solver_id==0){
         a_solver->time_start = 0.0;
 
-        if(t_end <= 1.0e-14){
+        if(t_end <= (real_t)1.0e-14){
             // time wasn't set so end the solver at the final time of the calculation
-            a_solver->time_end = fmax(0.0, time_final);
+            a_solver->time_end = Kokkos::fmax((real_t)0.0, time_final);
         }
         else {
             // use the specified time in the input file
@@ -592,17 +596,17 @@ void Driver::setup_solver_vars(T& a_solver,
     }
     else {
         // this is not the first solver run
-        double time_prior_solver_ends = this->solvers[solver_id-1]->time_end;
+        real_t time_prior_solver_ends = this->solvers[solver_id-1]->time_end;
 
         a_solver->time_start = time_prior_solver_ends;
 
-        if (t_end <= 1.0e-14){
+        if (t_end <= (real_t)1.0e-14){
             // time wasn't set so end the solver at the final time of the calculation
             a_solver->time_end = time_final;
         }
         else {
             // use the specified time in the input file
-            a_solver->time_end = fmin(t_end, time_final); // ensure t_end is bounded by final time
+            a_solver->time_end = Kokkos::fmin(t_end, time_final); // ensure t_end is bounded by final time
         } // end if time was set
         
     } // end if solver=0
@@ -615,8 +619,8 @@ void Driver::setup_solver_vars(T& a_solver,
 
 
 // setting node coords
-inline void setting_nodes(MPICArrayKokkos<double> &node_coords,
-                   const MPICArrayKokkos<double> &final_node_coords,
+inline void setting_nodes(MPICArrayKokkos<real_t> &node_coords,
+                   const MPICArrayKokkos<real_t> &final_node_coords,
 		           const size_t num_nodes,
 		           const size_t num_dims){
 

@@ -1,6 +1,5 @@
 // Tests for ao_sgh::equispaced_to_gll and gll_to_equispaced.
 
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -18,17 +17,20 @@ static int  g_num_checks   = 0;
 static bool g_verbose      = false;
 
 
-static void check_close(const double actual,
-                        const double expected,
-                        const double tol,
+static void check_close(const real_t actual,
+                        const real_t expected,
+                        const real_t tol,
                         const std::string& label)
 {
     g_num_checks++;
-    const double diff = std::fabs(actual - expected);
-    if (diff > tol) {
+    // never test tighter than a few ulps of real_t; the literal tolerances
+    // below are written for double and are unreachable in narrower builds
+    const real_t eff_tol = mtr::prec::fmax(tol, (real_t)4 * mtr::prec::epsilon<real_t>());
+    const real_t diff = Kokkos::fabs(actual - expected);
+    if (diff > eff_tol) {
         g_num_failures++;
         printf("  [FAIL] %s : actual=%.16e expected=%.16e diff=%.3e tol=%.3e\n",
-               label.c_str(), actual, expected, diff, tol);
+               label.c_str(), (double)actual, (double)expected, (double)diff, (double)eff_tol);
     }
     else if (g_verbose) {
         printf("  [ ok ] %s : actual=%.16e expected=%.16e diff=%.3e\n",
@@ -39,7 +41,7 @@ static void check_close(const double actual,
 
 // Equispaced (nx, ny, nz) Pn box on [0,1]^3 with IJK-lex per-elem connectivity.
 static void build_equispaced_box(DCArrayKokkos<size_t>& nodes_in_elem,
-                                 MPICArrayKokkos<double>& coords,
+                                 MPICArrayKokkos<real_t>& coords,
                                  const size_t nx,
                                  const size_t ny,
                                  const size_t nz,
@@ -54,11 +56,11 @@ static void build_equispaced_box(DCArrayKokkos<size_t>& nodes_in_elem,
     const size_t npk = nz * p_order + 1;
     const size_t num_nodes = npi * npj * npk;
 
-    const double dxe = 1.0 / (nx * p_order);
-    const double dye = 1.0 / (ny * p_order);
-    const double dze = 1.0 / (nz * p_order);
+    const real_t dxe = (real_t)1.0 / (nx * p_order);
+    const real_t dye = (real_t)1.0 / (ny * p_order);
+    const real_t dze = (real_t)1.0 / (nz * p_order);
 
-    coords        = MPICArrayKokkos<double>(num_nodes, 3, "test_coords");
+    coords        = MPICArrayKokkos<real_t>(num_nodes, 3, "test_coords");
     nodes_in_elem = DCArrayKokkos<size_t>(num_elems, npe, "test_nodes_in_elem");
 
     for (size_t k = 0; k < npk; ++k) {
@@ -104,16 +106,16 @@ static void test_single_element_p3()
     const size_t p = 3;
     const size_t n1d = p + 1;
     DCArrayKokkos<size_t> nodes_in_elem;
-    MPICArrayKokkos<double> coords;
+    MPICArrayKokkos<real_t> coords;
     build_equispaced_box(nodes_in_elem, coords, 1, 1, 1, p);
 
     equispaced_to_gll(nodes_in_elem, coords, /*num_elems*/ 1, p);
 
     // For [0,1]^3, the projected x-coord at GLL index i is (1 + xi_i)/2.
-    // For p=3: xi_0 = -1, xi_1 = -1/sqrt(5), xi_2 = +1/sqrt(5), xi_3 = +1.
-    const double inv_sqrt5 = 1.0 / std::sqrt(5.0);
-    const double xi[4]     = { -1.0, -inv_sqrt5, +inv_sqrt5, +1.0 };
-    auto pos = [&](int i) { return 0.5 * (1.0 + xi[i]); };
+    // For p=3: xi_0 = -1, xi_1 = -1/Kokkos::sqrt(5), xi_2 = +1/Kokkos::sqrt(5), xi_3 = +1.
+    const real_t inv_sqrt5 = 1.0 / Kokkos::sqrt(5.0);
+    const real_t xi[4]     = { -(real_t)1.0, -inv_sqrt5, +inv_sqrt5, +(real_t)1.0 };
+    auto pos = [&](int i) { return (real_t)0.5 * ((real_t)1.0 + xi[i]); };
 
     auto lex = [&](size_t i, size_t j, size_t k) {
         return i + j * n1d + k * n1d * n1d;
@@ -122,7 +124,7 @@ static void test_single_element_p3()
         return nodes_in_elem.host(0, lex(i, j, k));
     };
 
-    const double tol = 1.0e-14;
+    const real_t tol = 1.0e-14;
 
     // (1) Corners unchanged.
     const size_t cv[8][3] = {
@@ -130,9 +132,9 @@ static void test_single_element_p3()
         {0,0,p}, {p,0,p}, {0,p,p}, {p,p,p}
     };
     for (int v = 0; v < 8; ++v) {
-        const double ex = (cv[v][0] == p) ? 1.0 : 0.0;
-        const double ey = (cv[v][1] == p) ? 1.0 : 0.0;
-        const double ez = (cv[v][2] == p) ? 1.0 : 0.0;
+        const real_t ex = (cv[v][0] == p) ? (real_t)1.0 : (real_t)0.0;
+        const real_t ey = (cv[v][1] == p) ? (real_t)1.0 : (real_t)0.0;
+        const real_t ez = (cv[v][2] == p) ? (real_t)1.0 : (real_t)0.0;
         const size_t g  = gid(cv[v][0], cv[v][1], cv[v][2]);
         check_close(coords.host(g, 0), ex, tol, "corner_x v=" + std::to_string(v));
         check_close(coords.host(g, 1), ey, tol, "corner_y v=" + std::to_string(v));
@@ -187,7 +189,7 @@ static void test_shared_face_consistency_2x1x1_p3()
     const size_t n1d = p + 1;
 
     DCArrayKokkos<size_t> nodes_in_elem;
-    MPICArrayKokkos<double> coords;
+    MPICArrayKokkos<real_t> coords;
     build_equispaced_box(nodes_in_elem, coords, 2, 1, 1, p);
 
     equispaced_to_gll(nodes_in_elem, coords, /*num_elems*/ 2, p);
@@ -199,7 +201,7 @@ static void test_shared_face_consistency_2x1x1_p3()
         return i + j * n1d + k * n1d * n1d;
     };
 
-    const double tol = 1.0e-14;
+    const real_t tol = 1.0e-14;
 
     for (size_t k = 0; k <= p; ++k) {
         for (size_t j = 0; j <= p; ++j) {
@@ -207,9 +209,9 @@ static void test_shared_face_consistency_2x1x1_p3()
             const size_t g1 = nodes_in_elem.host(1, lex(0, j, k));
             check_close(static_cast<double>(g0),
                         static_cast<double>(g1),
-                        0.5,
+                        (real_t)0.5,
                         "shared_gid j=" + std::to_string(j) + " k=" + std::to_string(k));
-            check_close(coords.host(g0, 0), 0.5, tol,
+            check_close(coords.host(g0, 0), (real_t)0.5, tol,
                         "shared_face_x j=" + std::to_string(j) + " k=" + std::to_string(k));
         }
     }
@@ -231,12 +233,12 @@ static void test_roundtrip_equi_gll_equi_2x1x1_p3()
 
     const size_t p = 3;
     DCArrayKokkos<size_t> nodes_in_elem;
-    MPICArrayKokkos<double> equi_in;
+    MPICArrayKokkos<real_t> equi_in;
     build_equispaced_box(nodes_in_elem, equi_in, 2, 1, 1, p);
 
     // Take a snapshot of the original equispaced coords for comparison.
     const size_t num_nodes = equi_in.dims(0);
-    DCArrayKokkos<double> equi_orig(num_nodes, 3, "rt_equi_orig");
+    DCArrayKokkos<real_t> equi_orig(num_nodes, 3, "rt_equi_orig");
     for (size_t n = 0; n < num_nodes; ++n) {
         equi_orig.host(n, 0) = equi_in.host(n, 0);
         equi_orig.host(n, 1) = equi_in.host(n, 1);
@@ -248,10 +250,10 @@ static void test_roundtrip_equi_gll_equi_2x1x1_p3()
     equispaced_to_gll(nodes_in_elem, equi_in, /*num_elems*/ 2, p);
 
     // GLL -> equispaced (writes to a separate buffer).
-    DCArrayKokkos<double> equi_out(num_nodes, 3, "rt_equi_out");
+    DCArrayKokkos<real_t> equi_out(num_nodes, 3, "rt_equi_out");
     gll_to_equispaced(nodes_in_elem, equi_in, equi_out, /*num_elems*/ 2, p);
 
-    const double tol = 1.0e-13;
+    const real_t tol = 1.0e-13;
     for (size_t n = 0; n < num_nodes; ++n) {
         for (int d = 0; d < 3; ++d) {
             check_close(equi_out.host(n, d), equi_orig.host(n, d), tol,

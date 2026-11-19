@@ -41,10 +41,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdexcept>
 
 std::tuple<
-    CArray<double>,   // normal
-    CArray<double>, CArray<double>, CArray<double>,   // v0X, v0Y, v0Z 
-    CArray<double>, CArray<double>, CArray<double>,   // v1X, v1Y, v1Z
-    CArray<double>, CArray<double>, CArray<double>,   // v2X, v2Y, v2Z
+    CArray<real_t>,   // normal
+    CArray<real_t>, CArray<real_t>, CArray<real_t>,   // v0X, v0Y, v0Z 
+    CArray<real_t>, CArray<real_t>, CArray<real_t>,   // v1X, v1Y, v1Z
+    CArray<real_t>, CArray<real_t>, CArray<real_t>,   // v2X, v2Y, v2Z
     size_t // n_facets
 > binary_stl_reader(const std::string& path)
 {
@@ -109,10 +109,10 @@ std::tuple<
     std::cout << "STL facets: " << n_facets << '\n';
 
     // ---- allocate MATAR arrays -----------------------------------------
-    CArray<double> normal(n_facets, 3);
-    CArray<double> v0X(n_facets), v0Y(n_facets), v0Z(n_facets);
-    CArray<double> v1X(n_facets), v1Y(n_facets), v1Z(n_facets);
-    CArray<double> v2X(n_facets), v2Y(n_facets), v2Z(n_facets);
+    CArray<real_t> normal(n_facets, 3);
+    CArray<real_t> v0X(n_facets), v0Y(n_facets), v0Z(n_facets);
+    CArray<real_t> v1X(n_facets), v1Y(n_facets), v1Z(n_facets);
+    CArray<real_t> v2X(n_facets), v2Y(n_facets), v2Z(n_facets);
 
     // ---- read facet records --------------------------------------------
     float nrm[3], v0[3], v1[3], v2[3];

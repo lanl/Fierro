@@ -2,9 +2,17 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mod
 include(cmake/Modules/FindVector.cmake OPTIONAL)
 
 
-# Setup nvcc_wrapper if compiling with CUDA
-if(FIERRO_ENABLE_CUDA)
-    find_program(NVCC_WRAPPER_PATH nvcc_wrapper HINTS ${kokkos_SOURCE_DIR}/bin ${CMAKE_BINARY_DIR}/_deps/kokkos-src/bin)
+# Setup nvcc_wrapper if compiling with CUDA.
+# Gate on CUDA rather than FIERRO_ENABLE_CUDA so this also covers
+# -DFIERRO_DEVICE_BACKEND=cuda. Kokkos now comes from the MATAR submodule under
+# ELEMENTS, so Kokkos_SOURCE_DIR (set by its project() call) is the live hint;
+# the FetchContent-era hints are kept for an externally fetched Kokkos.
+if(CUDA)
+    find_program(NVCC_WRAPPER_PATH nvcc_wrapper
+        HINTS ${Kokkos_SOURCE_DIR}/bin
+              ${PROJECT_SOURCE_DIR}/../../lib/Elements/matar/src/Kokkos/kokkos/bin
+              ${kokkos_SOURCE_DIR}/bin
+              ${CMAKE_BINARY_DIR}/_deps/kokkos-src/bin)
     if(NVCC_WRAPPER_PATH)
         set(CMAKE_CXX_COMPILER ${NVCC_WRAPPER_PATH})
         message(STATUS "Setting C++ compiler to nvcc_wrapper: ${NVCC_WRAPPER_PATH}")

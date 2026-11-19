@@ -71,15 +71,15 @@ namespace GammaLawGasEOSModel {
     };
 
     // host side function
-    static void initialize(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-                           const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+    static void initialize(const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+                           const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
                            const size_t mat_pt_lid,
                            const size_t mat_id,
-                           const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                           const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-                           const double den,
-                           const double sie,
-                           const RaggedRightArrayKokkos<double> &eos_global_vars,
+                           const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+                           const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+                           const real_t den,
+                           const real_t sie,
+                           const RaggedRightArrayKokkos<real_t> &eos_global_vars,
                            const size_t num_vars)
     {
 
@@ -89,45 +89,45 @@ namespace GammaLawGasEOSModel {
     } // end func
 
     KOKKOS_FUNCTION
-    static void calc_pressure(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-                              const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+    static void calc_pressure(const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+                              const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
                               const size_t mat_pt_lid,
                               const size_t mat_id,
-                              const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                              const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-                              const double den,
-                              const double sie,
-                              const RaggedRightArrayKokkos<double> &eos_global_vars)
+                              const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+                              const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+                              const real_t den,
+                              const real_t sie,
+                              const RaggedRightArrayKokkos<real_t> &eos_global_vars)
     {
 
-        double gamma = eos_global_vars(mat_id, VarNames::gamma);
+        real_t gamma = eos_global_vars(mat_id, VarNames::gamma);
 
         // pressure
-        MaterialPoints_pres(mat_id, mat_pt_lid) = (gamma - 1.0) * sie * den;
+        MaterialPoints_pres(mat_id, mat_pt_lid) = (gamma - (real_t)1.0) * sie * den;
 
         return;
     } // end func
 
 
     KOKKOS_FUNCTION
-    static void calc_sound_speed(const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
+    static void calc_sound_speed(const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+                                 const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
                                  const size_t mat_pt_lid,
                                  const size_t mat_id,
-                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                                 const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-                                 const double den,
-                                 const double sie,
-                                 const RaggedRightArrayKokkos<double> &eos_global_vars,
-                                 const RaggedRightArrayKokkos<double> &strength_global_vars)
+                                 const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+                                 const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+                                 const real_t den,
+                                 const real_t sie,
+                                 const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+                                 const RaggedRightArrayKokkos<real_t> &strength_global_vars)
     {
 
-        double gamma = eos_global_vars(mat_id, VarNames::gamma);
-        double csmin = eos_global_vars(mat_id, VarNames::min_sound_speed);
+        real_t gamma = eos_global_vars(mat_id, VarNames::gamma);
+        real_t csmin = eos_global_vars(mat_id, VarNames::min_sound_speed);
 
 
         // sound speed
-        MaterialPoints_sspd(mat_id, mat_pt_lid) = fmax(sqrt(gamma * (gamma - 1.0) * sie), csmin);
+        MaterialPoints_sspd(mat_id, mat_pt_lid) = Kokkos::fmax(Kokkos::sqrt(gamma * (gamma - (real_t)1.0) * sie), csmin);
 
 
         return;

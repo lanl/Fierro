@@ -10,7 +10,7 @@ on:
 jobs:
   Regression-Tests:
     name: Regression Tests (${{ matrix.name }})
-    runs-on: macos-latest
+    runs-on: macos-26
     strategy:
       fail-fast: false
       matrix:
@@ -39,12 +39,13 @@ jobs:
         brew update
         brew install cmake openmpi libomp openblas lapack python3 gcc bison@3.8
         echo "/opt/homebrew/opt/bison@3.8/bin" >> $GITHUB_PATH
+        # Use whatever gfortran version Homebrew's gcc currently ships
+        echo "FC=$(ls $(brew --prefix gcc)/bin/gfortran-* | head -1)" >> $GITHUB_ENV
 
     - name: Configure CMake
       env:
         CC: /usr/bin/cc
         CXX: /usr/bin/c++
-        FC: gfortran-14
         LDFLAGS: "-L/opt/homebrew/opt/libomp/lib"
         CPPFLAGS: "-I/opt/homebrew/opt/libomp/include"
         OpenMP_ROOT: "/opt/homebrew/opt/libomp"

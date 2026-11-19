@@ -176,33 +176,33 @@ namespace
 {
 
 // TG vortex 2D analytic fields, evaluated at a physical (x, y, z).
-//   v = (sin(pi x) cos(pi y), -cos(pi x) sin(pi y), 0)
-//   e = 1.5 + (3/8)(cos(2 pi x) + cos(2 pi y))
+//   v = (Kokkos::sin(pi x) Kokkos::cos(pi y), -Kokkos::cos(pi x) Kokkos::sin(pi y), 0)
+//   e = 1.5 + (3/8)(Kokkos::cos(2 pi x) + Kokkos::cos(2 pi y))
 KOKKOS_INLINE_FUNCTION
-void tg_velocity(const double x, const double y, const double /*z*/,
-                 double& vx, double& vy, double& vz)
+void tg_velocity(const real_t x, const real_t y, const double /*z*/,
+                 real_t& vx, real_t& vy, real_t& vz)
 {
-    const double tg_pi = 3.14159265358979323846;
-    vx =  sin(tg_pi * x) * cos(tg_pi * y);
-    vy = -cos(tg_pi * x) * sin(tg_pi * y);
+    const real_t tg_pi = 3.14159265358979323846;
+    vx =  Kokkos::sin(tg_pi * x) * Kokkos::cos(tg_pi * y);
+    vy = -Kokkos::cos(tg_pi * x) * Kokkos::sin(tg_pi * y);
     vz =  0.0;
 }
 
 KOKKOS_INLINE_FUNCTION
-double tg_sie(const double x, const double y, const double /*z*/)
+double tg_sie(const real_t x, const real_t y, const double /*z*/)
 {
-    const double tg_two_pi = 6.283185307179586;
-    return 1.5 + (3.0 / 8.0) * (cos(tg_two_pi * x) + cos(tg_two_pi * y));
+    const real_t tg_two_pi = 6.283185307179586;
+    return (real_t)1.5 + ((real_t)3.0 / (real_t)8.0) * (Kokkos::cos(tg_two_pi * x) + Kokkos::cos(tg_two_pi * y));
 }
 
 // TG energy source (Laghos TaylorCoefficient): keeps the analytic TG state
 // steady by balancing the p div(v) work done against the prescribed fields.
 KOKKOS_INLINE_FUNCTION
-double tg_energy_source(const double x, const double y, const double /*z*/)
+double tg_energy_source(const real_t x, const real_t y, const double /*z*/)
 {
-    const double tg_pi = 3.14159265358979323846;
-    return (3.0 / 8.0) * tg_pi * (cos(3.0 * tg_pi * x) * cos(tg_pi * y)
-                                - cos(tg_pi * x)       * cos(3.0 * tg_pi * y));
+    const real_t tg_pi = 3.14159265358979323846;
+    return ((real_t)3.0 / (real_t)8.0) * tg_pi * (Kokkos::cos((real_t)3.0 * tg_pi * x) * Kokkos::cos(tg_pi * y)
+                                - Kokkos::cos(tg_pi * x)       * Kokkos::cos((real_t)3.0 * tg_pi * y));
 }
 
 
@@ -220,7 +220,7 @@ inline std::vector<double> build_B_kine_at_thermo(const ref_elem_t& kine_ref,
     std::vector<double> B(nt * nk);
     for (size_t i = 0; i < nt; ++i) {
         for (size_t a = 0; a < nk; ++a) {
-            double v = 1.0;
+            real_t v = 1.0;
             for (size_t m = 0; m < nk; ++m) {
                 if (m != a) v *= (xi_thermo[i] - xi_kine[m]) / (xi_kine[a] - xi_kine[m]);
             }
@@ -237,11 +237,11 @@ inline std::vector<double> build_B_kine_at_thermo(const ref_elem_t& kine_ref,
 template<class FieldFn>
 void interpolate_at_thermo_dofs(FieldFn                            f,
                                 const swage::Mesh_t&                 mesh,
-                                const MPICArrayKokkos<double>&       node_coords,
+                                const MPICArrayKokkos<real_t>&       node_coords,
                                 const ref_elem_t&                  kine_ref,
                                 const ref_elem_t&                  thermo_ref,
                                 const size_t                       mat_id,
-                                DRaggedRightArrayKokkos<double>&   mat_zones_field)
+                                DRaggedRightArrayKokkos<real_t>&   mat_zones_field)
 {
     const size_t nk = kine_ref.num_dofs_1d;
     const size_t nt = thermo_ref.num_dofs_1d;
@@ -251,14 +251,14 @@ void interpolate_at_thermo_dofs(FieldFn                            f,
         for (size_t jz = 0; jz < nt; ++jz) {
             for (size_t jy = 0; jy < nt; ++jy) {
                 for (size_t jx = 0; jx < nt; ++jx) {
-                    double px = 0.0, py = 0.0, pz = 0.0;
+                    real_t px = 0.0, py = 0.0, pz = 0.0;
                     for (size_t c = 0; c < nk; ++c) {
-                        const double bz = B[jz * nk + c];
+                        const real_t bz = B[jz * nk + c];
                         for (size_t b = 0; b < nk; ++b) {
-                            const double by = B[jy * nk + b];
+                            const real_t by = B[jy * nk + b];
                             for (size_t a = 0; a < nk; ++a) {
-                                const double bx  = B[jx * nk + a];
-                                const double w   = bx * by * bz;
+                                const real_t bx  = B[jx * nk + a];
+                                const real_t w   = bx * by * bz;
                                 const size_t lex = a + b * nk + c * nk * nk;
                                 const size_t gid = mesh.nodes_in_elem.host(e, lex);
                                 px += w * node_coords.host(gid, 0);
@@ -282,14 +282,14 @@ void interpolate_at_thermo_dofs(FieldFn                            f,
 // Per-DoF set of the analytic TG velocity at the kine GLL nodes. tg_velocity
 // is called by name (a direct device call); routing it through a function
 // pointer would capture the host address and misbehave on the GPU backends.
-void set_tg_velocity(const MPICArrayKokkos<double>&   node_coords,
-                     MPICArrayKokkos<double>&         node_vel,
+void set_tg_velocity(const MPICArrayKokkos<real_t>&   node_coords,
+                     MPICArrayKokkos<real_t>&         node_vel,
                      const size_t                   num_nodes)
 {
     FOR_ALL(n, 0, num_nodes, {
-        double vx = 0.0;
-        double vy = 0.0;
-        double vz = 0.0;
+        real_t vx = 0.0;
+        real_t vy = 0.0;
+        real_t vz = 0.0;
         tg_velocity(node_coords(n, 0), node_coords(n, 1), node_coords(n, 2), vx, vy, vz);
         node_vel(n, 0) = vx;
         node_vel(n, 1) = vy;
@@ -302,11 +302,11 @@ void set_tg_velocity(const MPICArrayKokkos<double>&   node_coords,
 
 // Scatter a per-element thermo buffer into the (mat_id, zone_sid) slice
 // of a MaterialZones field. Single-material assumes zone_sid = e * n + lex.
-void scatter_per_elem_to_material_zones(const DCArrayKokkos<double>&    per_elem,
+void scatter_per_elem_to_material_zones(const DCArrayKokkos<real_t>&    per_elem,
                                         const size_t                    mat_id,
                                         const size_t                    num_elems,
                                         const size_t                    n_per_elem,
-                                        DRaggedRightArrayKokkos<double>& mat_zones_field)
+                                        DRaggedRightArrayKokkos<real_t>& mat_zones_field)
 {
     FOR_ALL(e, 0, num_elems, {
         for (size_t j = 0; j < n_per_elem; ++j) {
@@ -319,10 +319,10 @@ void scatter_per_elem_to_material_zones(const DCArrayKokkos<double>&    per_elem
 
 
 // Copy qpt physical positions into the single-material slice of MaterialPoints.coords.
-void scatter_qpt_coords_to_material_points(const DCArrayKokkos<double>&     qpt_coords,
+void scatter_qpt_coords_to_material_points(const DCArrayKokkos<real_t>&     qpt_coords,
                                            const size_t                     mat_id,
                                            const size_t                     num_gauss_pts,
-                                           DRaggedRightArrayKokkos<double>& mat_coords)
+                                           DRaggedRightArrayKokkos<real_t>& mat_coords)
 {
     FOR_ALL(g, 0, num_gauss_pts, {
         mat_coords(mat_id, g, 0) = qpt_coords(g, 0);
@@ -338,39 +338,39 @@ void scatter_qpt_coords_to_material_points(const DCArrayKokkos<double>&     qpt_
 //   sigma_min(J) = 1 / sigma_max(J^{-1}); sigma_max(J^{-1})^2 = lambda_max(K K^T), K = J^{-1}.
 // Eigenvalues of the symmetric 3x3 K K^T via Cardano (Smith 1961).
 KOKKOS_INLINE_FUNCTION
-double sigma_min_from_jinv(const double K00, const double K01, const double K02,
-                           const double K10, const double K11, const double K12,
-                           const double K20, const double K21, const double K22)
+double sigma_min_from_jinv(const real_t K00, const real_t K01, const real_t K02,
+                           const real_t K10, const real_t K11, const real_t K12,
+                           const real_t K20, const real_t K21, const real_t K22)
 {
-    const double M00 = K00*K00 + K01*K01 + K02*K02;
-    const double M01 = K00*K10 + K01*K11 + K02*K12;
-    const double M02 = K00*K20 + K01*K21 + K02*K22;
-    const double M11 = K10*K10 + K11*K11 + K12*K12;
-    const double M12 = K10*K20 + K11*K21 + K12*K22;
-    const double M22 = K20*K20 + K21*K21 + K22*K22;
+    const real_t M00 = K00*K00 + K01*K01 + K02*K02;
+    const real_t M01 = K00*K10 + K01*K11 + K02*K12;
+    const real_t M02 = K00*K20 + K01*K21 + K02*K22;
+    const real_t M11 = K10*K10 + K11*K11 + K12*K12;
+    const real_t M12 = K10*K20 + K11*K21 + K12*K22;
+    const real_t M22 = K20*K20 + K21*K21 + K22*K22;
 
-    const double p1 = M01*M01 + M02*M02 + M12*M12;
-    double eig_max;
-    if (p1 == 0.0) {
-        eig_max = fmax(M00, fmax(M11, M22));
+    const real_t p1 = M01*M01 + M02*M02 + M12*M12;
+    real_t eig_max;
+    if (p1 == (real_t)0.0) {
+        eig_max = Kokkos::fmax(M00, Kokkos::fmax(M11, M22));
     } else {
-        const double q  = (M00 + M11 + M22) / 3.0;
-        const double p2 = (M00 - q)*(M00 - q) + (M11 - q)*(M11 - q) + (M22 - q)*(M22 - q) + 2.0*p1;
-        const double p  = sqrt(p2 / 6.0);
-        const double B00 = (M00 - q) / p;
-        const double B01 = M01 / p;
-        const double B02 = M02 / p;
-        const double B11 = (M11 - q) / p;
-        const double B12 = M12 / p;
-        const double B22 = (M22 - q) / p;
-        const double r = 0.5 * (B00 * (B11 * B22 - B12 * B12)
+        const real_t q  = (M00 + M11 + M22) / (real_t)3.0;
+        const real_t p2 = (M00 - q)*(M00 - q) + (M11 - q)*(M11 - q) + (M22 - q)*(M22 - q) + (real_t)2.0*p1;
+        const real_t p  = Kokkos::sqrt(p2 / (real_t)6.0);
+        const real_t B00 = (M00 - q) / p;
+        const real_t B01 = M01 / p;
+        const real_t B02 = M02 / p;
+        const real_t B11 = (M11 - q) / p;
+        const real_t B12 = M12 / p;
+        const real_t B22 = (M22 - q) / p;
+        const real_t r = (real_t)0.5 * (B00 * (B11 * B22 - B12 * B12)
                               - B01 * (B01 * B22 - B12 * B02)
                               + B02 * (B01 * B12 - B11 * B02));
-        const double r_clamp = fmin(1.0, fmax(-1.0, r));
-        const double phi = acos(r_clamp) / 3.0;
-        eig_max = q + 2.0 * p * cos(phi);
+        const real_t r_clamp = Kokkos::fmin((real_t)1.0, Kokkos::fmax(-(real_t)1.0, r));
+        const real_t phi = Kokkos::acos(r_clamp) / (real_t)3.0;
+        eig_max = q + (real_t)2.0 * p * Kokkos::cos(phi);
     }
-    return 1.0 / sqrt(fmax(eig_max, 1.0e-30));
+    return (real_t)1.0 / Kokkos::sqrt(Kokkos::fmax(eig_max, (real_t)1.0e-30));
 }
 
 
@@ -378,31 +378,34 @@ double sigma_min_from_jinv(const double K00, const double K01, const double K02,
 // artificial-viscosity coefficient and h is the physical DoF spacing. On the
 // [-1, 1] reference element sigma_min(J) is half the physical cell size, so the
 // DoF spacing is h = 2 * sigma_min(J) / p_order.
-double compute_cfl_dt(const DCArrayKokkos<double>&            jac_inv,
-                      const DCArrayKokkos<double>&            detj,
-                      const DRaggedRightArrayKokkos<double>&  sspd,
-                      const DRaggedRightArrayKokkos<double>&  den,
-                      const DCArrayKokkos<double>&            visc_coeff,
+double compute_cfl_dt(const DCArrayKokkos<real_t>&            jac_inv,
+                      const DCArrayKokkos<real_t>&            detj,
+                      const DRaggedRightArrayKokkos<real_t>&  sspd,
+                      const DRaggedRightArrayKokkos<real_t>&  den,
+                      const DCArrayKokkos<real_t>&            visc_coeff,
                       const size_t                            num_gauss_pts,
                       const size_t                            mat_id,
                       const size_t                            p_order,
-                      const double                            cfl)
+                      const real_t                            cfl)
 {
-    const double inv_p = 1.0 / static_cast<double>(p_order);
-    double inv_dt_max = 0.0;
+    const real_t inv_p = (real_t)1.0 / static_cast<double>(p_order);
+    double inv_dt_max = (real_t)0.0;
     double inv_dt_local;
     FOR_REDUCE_MAX(g, 0, num_gauss_pts, inv_dt_local, {
-        if (detj(g) <= 0.0) {
-            inv_dt_local = 1.0e300;
+        if (detj(g) <= (real_t)0.0) {
+            // Force dt -> 0 on an inverted element. Use the accumulator type's
+            // own finite max rather than a 1e300 literal, which overflows to
+            // inf in any tier narrower than double.
+            inv_dt_local = mtr::prec::numeric_max<double>();
             return;
         }
-        const double sig_min = sigma_min_from_jinv(jac_inv(g, 0, 0), jac_inv(g, 0, 1), jac_inv(g, 0, 2),
+        const real_t sig_min = sigma_min_from_jinv(jac_inv(g, 0, 0), jac_inv(g, 0, 1), jac_inv(g, 0, 2),
                                                    jac_inv(g, 1, 0), jac_inv(g, 1, 1), jac_inv(g, 1, 2),
                                                    jac_inv(g, 2, 0), jac_inv(g, 2, 1), jac_inv(g, 2, 2));
-        const double h   = 2.0 * sig_min * inv_p;
-        const double c   = sspd(mat_id, g);
-        const double rho = den(mat_id, g);
-        const double inv = c / h + 2.5 * visc_coeff(g) / (rho * h * h);
+        const real_t h   = (real_t)2.0 * sig_min * inv_p;
+        const real_t c   = sspd(mat_id, g);
+        const real_t rho = den(mat_id, g);
+        const real_t inv = c / h + (real_t)2.5 * visc_coeff(g) / (rho * h * h);
         if (inv > inv_dt_local) inv_dt_local = inv;
     }, inv_dt_max);
     Kokkos::fence();
@@ -438,7 +441,7 @@ void update_state_from_coords(const swage::Mesh_t&     mesh,
                                   quad, num_elems, mat_id,
                                   State.MaterialPoints.den);
 
-    DCArrayKokkos<double> qpt_coords_tmp(num_gauss_pts, 3, "ao_sgh_qpt_coords_tmp");
+    DCArrayKokkos<real_t> qpt_coords_tmp(num_gauss_pts, 3, "ao_sgh_qpt_coords_tmp");
     compute_position_at_qpts(mesh.nodes_in_elem,
                              State.node.coords,
                              kine_ref, quad, num_elems,
@@ -446,16 +449,16 @@ void update_state_from_coords(const swage::Mesh_t&     mesh,
     scatter_qpt_coords_to_material_points(qpt_coords_tmp, mat_id, num_gauss_pts,
                                           State.MaterialPoints.coords);
 
-    DCArrayKokkos<double> sie_coef(num_elems, n_thermo_per_elem, "ao_sgh_sie_coef_tmp");
+    DCArrayKokkos<real_t> sie_coef(num_elems, n_thermo_per_elem, "ao_sgh_sie_coef_tmp");
     gather_thermo_dofs_per_elem(State.MaterialZones.sie, mat_id,
                                 num_elems, n_thermo_per_elem, sie_coef);
-    DCArrayKokkos<double> sie_at_qpt(num_gauss_pts, "ao_sgh_sie_at_qpt_tmp");
+    DCArrayKokkos<real_t> sie_at_qpt(num_gauss_pts, "ao_sgh_sie_at_qpt_tmp");
     reconstruct_thermo_at_qpts(sie_coef, thermo_ref, quad, num_elems, sie_at_qpt);
 
     // Laghos: clamp the interpolated qpt value (not the DoFs) before the
     // EOS sees it -- DG sie can undershoot negative near sharp gradients.
     FOR_ALL(g, 0, num_gauss_pts, {
-        sie_at_qpt(g) = fmax(0.0, sie_at_qpt(g));
+        sie_at_qpt(g) = Kokkos::fmax((real_t)0.0, sie_at_qpt(g));
     });
     Kokkos::fence();
 
@@ -487,19 +490,19 @@ void dump_viz(const swage::Mesh_t&    mesh,
     const size_t num_gauss_pts = num_elems * mesh.num_gauss_in_elem;
     const size_t n_thermo_per_elem = thermo_ref.num_dofs_in_elem;
 
-    DCArrayKokkos<double> sie_coef_e(num_elems, n_thermo_per_elem, "ao_sgh_viz_sie");
+    DCArrayKokkos<real_t> sie_coef_e(num_elems, n_thermo_per_elem, "ao_sgh_viz_sie");
     gather_thermo_dofs_per_elem(State.MaterialZones.sie, mat_id,
                                 num_elems, n_thermo_per_elem, sie_coef_e);
 
-    DCArrayKokkos<double> pres_qpt(num_gauss_pts, "ao_sgh_viz_pres_qpt");
+    DCArrayKokkos<real_t> pres_qpt(num_gauss_pts, "ao_sgh_viz_pres_qpt");
     gather_material_points_to_qpt(State.MaterialPoints.pres, mat_id, num_gauss_pts, pres_qpt);
-    DCArrayKokkos<double> pres_coef_e(num_elems, n_thermo_per_elem, "ao_sgh_viz_pres");
+    DCArrayKokkos<real_t> pres_coef_e(num_elems, n_thermo_per_elem, "ao_sgh_viz_pres");
     project_qpt_to_l2_basis(pres_qpt, State.GaussPoints.detj,
                             thermo_ref, quad, num_elems, pres_coef_e);
 
-    DCArrayKokkos<double> den_qpt(num_gauss_pts, "ao_sgh_viz_den_qpt");
+    DCArrayKokkos<real_t> den_qpt(num_gauss_pts, "ao_sgh_viz_den_qpt");
     gather_material_points_to_qpt(State.MaterialPoints.den, mat_id, num_gauss_pts, den_qpt);
-    DCArrayKokkos<double> den_coef_e(num_elems, n_thermo_per_elem, "ao_sgh_viz_den");
+    DCArrayKokkos<real_t> den_coef_e(num_elems, n_thermo_per_elem, "ao_sgh_viz_den");
     project_qpt_to_l2_basis(den_qpt, State.GaussPoints.detj,
                             thermo_ref, quad, num_elems, den_coef_e);
 
@@ -577,7 +580,7 @@ void AO_SGH3D::setup(SimulationParameters_t& SimulationParamaters,
     // Lumped thermo mass into MaterialZones.mass. Time-invariant under the
     // pointwise rho update.
     {
-        DCArrayKokkos<double> thermo_mass_per_elem(mesh.num_elems,
+        DCArrayKokkos<real_t> thermo_mass_per_elem(mesh.num_elems,
                                                    n_thermo_dofs_per_elem,
                                                    "ao_sgh_thermo_mass_per_elem");
         build_lumped_thermo_mass(State.GaussPoints.rho0_detj0_w,
@@ -658,14 +661,14 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     const size_t num_gauss_pts     = mesh.num_elems * mesh.num_gauss_in_elem;
     const size_t n_thermo_per_elem = thermo_ref.num_dofs_in_elem;
 
-    const double time_final = this->time_end;
-    const double dt_min     = SimulationParamaters.DynamicOptions.dt_min;
-    const double dt_max     = SimulationParamaters.DynamicOptions.dt_max;
-    const double dt_start   = SimulationParamaters.DynamicOptions.dt_start;
-    const double dt_cfl     = SimulationParamaters.DynamicOptions.dt_cfl;
+    const real_t time_final = this->time_end;
+    const real_t dt_min     = SimulationParamaters.DynamicOptions.dt_min;
+    const real_t dt_max     = SimulationParamaters.DynamicOptions.dt_max;
+    const real_t dt_start   = SimulationParamaters.DynamicOptions.dt_start;
+    const real_t dt_cfl     = SimulationParamaters.DynamicOptions.dt_cfl;
     const size_t cycle_stop = SimulationParamaters.DynamicOptions.cycle_stop;
 
-    const double graphics_dt = SimulationParamaters.OutputOptions.graphics_time_step;
+    const real_t graphics_dt = SimulationParamaters.OutputOptions.graphics_time_step;
 
     // Integrator from the YAML solver block: ssprk3 | rk2avg | rk3hc.
     const std::string rk_name =
@@ -679,14 +682,14 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                                         mesh.num_nodes, mesh.num_elems, n_thermo_per_elem);
     printf("AO_SGH3D::execute() : time integrator = %s\n", rk_name.c_str());
 
-    double time_value    = this->time_start;
-    double dt            = dt_start;
-    double graphics_next = time_value + graphics_dt;
+    real_t time_value    = this->time_start;
+    real_t dt            = dt_start;
+    real_t graphics_next = time_value + graphics_dt;
 
     boundary_velocity(mesh, Boundary, State.node.vel, time_value);
 
     std::vector<PvdEntry> pvd_entries;
-    auto record_viz = [&](double t, size_t cyc) {
+    auto record_viz = [&](real_t t, size_t cyc) {
         char kine_name[64];
         char thermo_name[64];
         std::snprintf(kine_name,   sizeof(kine_name),   "ao_sgh_kine_%05zu.vtu",   cyc);
@@ -702,43 +705,43 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
            time_value, dt);
 
     // Per-stage scratch for the force operators.
-    DCArrayKokkos<double> sigma_qpt   (num_gauss_pts, 3, 3, "ao_sgh_sigma_qpt");
-    DCArrayKokkos<double> stress_jinvt(num_gauss_pts, 3, 3, "ao_sgh_stress_jinvt");
-    DCArrayKokkos<double> ones_at_qpt (num_gauss_pts,       "ao_sgh_ones_at_qpt");
-    DCArrayKokkos<double> thermo_force(mesh.num_elems, n_thermo_per_elem, "ao_sgh_thermo_force");
-    DCArrayKokkos<double> src_w_qpt   (num_gauss_pts,       "ao_sgh_src_w_qpt");
-    DCArrayKokkos<double> e_source    (mesh.num_elems, n_thermo_per_elem, "ao_sgh_e_source");
-    DCArrayKokkos<double> visc_coeff  (num_gauss_pts,       "ao_sgh_visc_coeff");
+    DCArrayKokkos<real_t> sigma_qpt   (num_gauss_pts, 3, 3, "ao_sgh_sigma_qpt");
+    DCArrayKokkos<real_t> stress_jinvt(num_gauss_pts, 3, 3, "ao_sgh_stress_jinvt");
+    DCArrayKokkos<real_t> ones_at_qpt (num_gauss_pts,       "ao_sgh_ones_at_qpt");
+    DCArrayKokkos<real_t> thermo_force(mesh.num_elems, n_thermo_per_elem, "ao_sgh_thermo_force");
+    DCArrayKokkos<real_t> src_w_qpt   (num_gauss_pts,       "ao_sgh_src_w_qpt");
+    DCArrayKokkos<real_t> e_source    (mesh.num_elems, n_thermo_per_elem, "ao_sgh_e_source");
+    DCArrayKokkos<real_t> visc_coeff  (num_gauss_pts,       "ao_sgh_visc_coeff");
     ones_at_qpt.set_values(1.0);
     visc_coeff.set_values(0.0);
     e_source.set_values(0.0);
     Kokkos::fence();
 
     // Pre-step snapshot of the evolved state (x, v, e) for step rejection.
-    DCArrayKokkos<double> coords_save(mesh.num_nodes, 3, "ao_sgh_coords_save");
-    DCArrayKokkos<double> vel_save   (mesh.num_nodes, 3, "ao_sgh_vel_save");
-    DCArrayKokkos<double> sie_save   (mesh.num_elems, n_thermo_per_elem, "ao_sgh_sie_save");
+    DCArrayKokkos<real_t> coords_save(mesh.num_nodes, 3, "ao_sgh_coords_save");
+    DCArrayKokkos<real_t> vel_save   (mesh.num_nodes, 3, "ao_sgh_vel_save");
+    DCArrayKokkos<real_t> sie_save   (mesh.num_elems, n_thermo_per_elem, "ao_sgh_sie_save");
 
     // Initial-mesh length scale (Laghos): h0 = (V/Ne)^(1/3) / p_order.
-    const double total_vol0 = compute_total_volume_from_cache(State.GaussPoints.detj0,
+    const real_t total_vol0 = compute_total_volume_from_cache(State.GaussPoints.detj0,
                                                               quad, mesh.num_elems);
-    const double h0 = std::pow(total_vol0 / static_cast<double>(mesh.num_elems), 1.0 / 3.0)
+    const real_t h0 = Kokkos::pow(total_vol0 / static_cast<double>(mesh.num_elems), (real_t)1.0 / (real_t)3.0)
                     / static_cast<double>(p_order);
 
     // Mass-solve scratch (Neumann correction on linear spaces).
-    DCArrayKokkos<double> a_buf  (mesh.num_nodes, 3, "ao_sgh_a_buf");
-    DCArrayKokkos<double> r_buf  (mesh.num_nodes, 3, "ao_sgh_r_buf");
-    DCArrayKokkos<double> Ma_buf (mesh.num_nodes, 3, "ao_sgh_Ma_buf");
-    DCArrayKokkos<double> de_buf (mesh.num_elems, n_thermo_per_elem, "ao_sgh_de_buf");
-    DCArrayKokkos<double> re_buf (mesh.num_elems, n_thermo_per_elem, "ao_sgh_re_buf");
-    DCArrayKokkos<double> Mde_buf(mesh.num_elems, n_thermo_per_elem, "ao_sgh_Mde_buf");
+    DCArrayKokkos<real_t> a_buf  (mesh.num_nodes, 3, "ao_sgh_a_buf");
+    DCArrayKokkos<real_t> r_buf  (mesh.num_nodes, 3, "ao_sgh_r_buf");
+    DCArrayKokkos<real_t> Ma_buf (mesh.num_nodes, 3, "ao_sgh_Ma_buf");
+    DCArrayKokkos<real_t> de_buf (mesh.num_elems, n_thermo_per_elem, "ao_sgh_de_buf");
+    DCArrayKokkos<real_t> re_buf (mesh.num_elems, n_thermo_per_elem, "ao_sgh_re_buf");
+    DCArrayKokkos<real_t> Mde_buf(mesh.num_elems, n_thermo_per_elem, "ao_sgh_Mde_buf");
 
     // Solve M_v a = -F.1 from the clamped State.node.force into a_buf.
     // Lumped D^-1, plus one Neumann step for p_order = 1:
     //   a = a0 + D^-1 (r - M_v a0).
     auto solve_kine_mass = [&]() {
         FOR_ALL(n, 0, mesh.num_nodes, {
-            const double inv_m = 1.0 / State.node.mass(n);
+            const real_t inv_m = (real_t)1.0 / State.node.mass(n);
             r_buf(n, 0) = -State.node.force(n, 0);
             r_buf(n, 1) = -State.node.force(n, 1);
             r_buf(n, 2) = -State.node.force(n, 2);
@@ -762,7 +765,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // Keep the correction BC-consistent: no wall-normal residual.
             boundary_force(mesh, Boundary, Ma_buf);
             FOR_ALL(n, 0, mesh.num_nodes, {
-                const double inv_m = 1.0 / State.node.mass(n);
+                const real_t inv_m = (real_t)1.0 / State.node.mass(n);
                 a_buf(n, 0) += Ma_buf(n, 0) * inv_m;
                 a_buf(n, 1) += Ma_buf(n, 1) * inv_m;
                 a_buf(n, 2) += Ma_buf(n, 2) * inv_m;
@@ -810,7 +813,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // sigma(Y) [+ viscosity from vel_for_visc] -> stress_jinvt -> clamped
     // F.1 into State.node.force. stress_jinvt persists for the F^T apply.
-    auto assemble_forces = [&](MPICArrayKokkos<double>& vel_for_visc) {
+    auto assemble_forces = [&](MPICArrayKokkos<real_t>& vel_for_visc) {
         build_sigma_from_pressure(State.MaterialPoints.pres, num_gauss_pts, mat_id, sigma_qpt);
 
         if (use_viscosity) {
@@ -849,18 +852,18 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         }
         const size_t nq = quad.num_qpts_1d;
         const size_t n_qpts_3d = nq * nq * nq;
-        const DCArrayKokkos<double>& w1 = quad.qpt_weights_1d;
+        const DCArrayKokkos<real_t>& w1 = quad.qpt_weights_1d;
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
             const size_t base = elem_gid * n_qpts_3d;
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t qy = 0; qy < nq; ++qy) {
                     for (size_t qx = 0; qx < nq; ++qx) {
                         const size_t g = base + qx + qy * nq + qz * nq * nq;
-                        const double src = tg_energy_source(
+                        const real_t src = tg_energy_source(
                             State.MaterialPoints.coords(mat_id, g, 0),
                             State.MaterialPoints.coords(mat_id, g, 1),
                             State.MaterialPoints.coords(mat_id, g, 2));
-                        const double w_q = w1(qx) * w1(qy) * w1(qz);
+                        const real_t w_q = w1(qx) * w1(qy) * w1(qz);
                         src_w_qpt(g) = src * w_q * State.GaussPoints.detj(g);
                     }
                 }
@@ -948,14 +951,14 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     auto total_energy = [&]() -> double {
         State.node.vel.update_host();
         State.MaterialZones.sie.update_host();
-        double ke = 0.0;
+        real_t ke = 0.0;
         for (size_t n = 0; n < mesh.num_nodes; ++n) {
-            const double vx = State.node.vel.host(n, 0);
-            const double vy = State.node.vel.host(n, 1);
-            const double vz = State.node.vel.host(n, 2);
-            ke += 0.5 * State.node.mass.host(n) * (vx*vx + vy*vy + vz*vz);
+            const real_t vx = State.node.vel.host(n, 0);
+            const real_t vy = State.node.vel.host(n, 1);
+            const real_t vz = State.node.vel.host(n, 2);
+            ke += (real_t)0.5 * State.node.mass.host(n) * (vx*vx + vy*vy + vz*vz);
         }
-        double ie = 0.0;
+        real_t ie = 0.0;
         const size_t num_zones = mesh.num_elems * n_thermo_per_elem;
         for (size_t z = 0; z < num_zones; ++z) {
             ie += State.MaterialZones.mass.host(mat_id, z)
@@ -963,10 +966,10 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         }
         return ke + ie;
     };
-    const double E0 = total_energy();
+    const real_t E0 = total_energy();
 
     // One full step with the active integrator, in place on (x, v, e).
-    auto run_step = [&](double step_dt) {
+    auto run_step = [&](real_t step_dt) {
         if (use_imex) {
             imex_integrator.evolve(step_dt,
                                    State.node.coords, State.node.vel, State.MaterialZones.sie,
@@ -1012,11 +1015,11 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     };
     // Cap a proposed dt so the step lands exactly on the next output / final
     // time and stays within [dt_min, dt_max].
-    auto cap_dt = [&](double d) -> double {
-        d = std::min(d, dt_max);
+    auto cap_dt = [&](real_t d) -> real_t {
+        d = Kokkos::fmin(d, dt_max);
         if (time_value + d > time_final)    { d = time_final - time_value; }
         if (time_value + d > graphics_next) { d = graphics_next - time_value; }
-        return std::max(d, dt_min);
+        return Kokkos::fmax(d, dt_min);
     };
 
     auto time_start_wall = std::chrono::high_resolution_clock::now();
@@ -1027,7 +1030,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         // dt is carried across steps. It grows by at most 2% per accepted step
         // and backs off by 15% per rejected step, so it tracks the CFL limit
         // without jumping onto it. dt_taken is dt clamped to hit output times.
-        double dt_taken = cap_dt(dt);
+        real_t dt_taken = cap_dt(dt);
 
         save_state();
         bool accepted = false;
@@ -1036,7 +1039,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             run_step(dt_taken);
 
             // CFL estimate at the new state; ~0 if a cell inverted (detj<=0).
-            const double dt_est = compute_cfl_dt(State.GaussPoints.jac_inv,
+            const real_t dt_est = compute_cfl_dt(State.GaussPoints.jac_inv,
                                                  State.GaussPoints.detj,
                                                  State.MaterialPoints.sspd,
                                                  State.MaterialPoints.den,
@@ -1046,7 +1049,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             if (dt_est >= dt_taken) {
                 // step is CFL-safe; grow the carried dt gently if there is room
-                if (dt_est > 1.25 * dt) { dt = std::min(dt_max, 1.02 * dt); }
+                if (dt_est > (real_t)1.25 * dt) { dt = Kokkos::fmin(dt_max, (real_t)1.02 * dt); }
                 accepted = true;
                 break;
             }
@@ -1054,7 +1057,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // reject: 15% back-off, roll back, and retake
             restore_state();
             if (dt_taken <= dt_min) { break; }  // already at the floor
-            dt       = std::max(dt_min, 0.85 * dt);
+            dt       = Kokkos::fmax(dt_min, (real_t)0.85 * dt);
             dt_taken = cap_dt(dt);
         }
         if (!accepted) {
@@ -1066,54 +1069,55 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         time_value += dt_taken;
 
-        if (cycle % 10 == 0 || time_value >= time_final - 1.0e-12) {
-            double den_min =  1.0e300, den_max = -1.0e300;
-            double pres_min =  1.0e300, pres_max = -1.0e300;
+        if (cycle % 10 == 0 || time_value >= time_final - (real_t)1.0e-12) {
+            const real_t big = mtr::prec::numeric_max<real_t>();
+            real_t den_min  =  big, den_max  = -big;
+            real_t pres_min =  big, pres_max = -big;
             State.MaterialPoints.den.update_host();
             State.MaterialPoints.pres.update_host();
             State.node.vel.update_host();
             const size_t num_mat_pts = State.MaterialPoints.num_material_points.host(mat_id);
             for (size_t mp = 0; mp < num_mat_pts; ++mp) {
-                const double d = State.MaterialPoints.den.host(mat_id, mp);
-                const double p = State.MaterialPoints.pres.host(mat_id, mp);
+                const real_t d = State.MaterialPoints.den.host(mat_id, mp);
+                const real_t p = State.MaterialPoints.pres.host(mat_id, mp);
                 if (d < den_min)  den_min  = d;
                 if (d > den_max)  den_max  = d;
                 if (p < pres_min) pres_min = p;
                 if (p > pres_max) pres_max = p;
             }
-            double v_max = 0.0;
+            real_t v_max = 0.0;
             for (size_t n = 0; n < mesh.num_nodes; ++n) {
-                const double vx = State.node.vel.host(n, 0);
-                const double vy = State.node.vel.host(n, 1);
-                const double vz = State.node.vel.host(n, 2);
-                const double vm = std::sqrt(vx*vx + vy*vy + vz*vz);
+                const real_t vx = State.node.vel.host(n, 0);
+                const real_t vy = State.node.vel.host(n, 1);
+                const real_t vz = State.node.vel.host(n, 2);
+                const real_t vm = Kokkos::sqrt(vx*vx + vy*vy + vz*vz);
                 if (vm > v_max) v_max = vm;
             }
-            const double E_drift = total_energy() - E0;
+            const real_t E_drift = total_energy() - E0;
             printf("AO_SGH3D::execute() : cycle=%zu  t=%.6e  dt=%.3e  "
                    "den=[%.3e,%.3e]  pres=[%.3e,%.3e]  |v|_max=%.3e  E-E0=%+.3e\n",
                    cycle, time_value, dt_taken,
                    den_min, den_max, pres_min, pres_max, v_max, E_drift);
         }
 
-        if (time_value >= graphics_next - 1.0e-12 || time_value >= time_final - 1.0e-12) {
+        if (time_value >= graphics_next - (real_t)1.0e-12 || time_value >= time_final - (real_t)1.0e-12) {
             dump_viz(mesh, kine_ref, thermo_ref, quad, mat_id, p_order, cycle, State);
             record_viz(time_value, cycle);
             graphics_next += graphics_dt;
         }
 
-        if (time_value >= time_final - 1.0e-12) break;
+        if (time_value >= time_final - (real_t)1.0e-12) break;
     }
 
     auto time_end_wall = std::chrono::high_resolution_clock::now();
-    const double secs = std::chrono::duration<double>(time_end_wall - time_start_wall).count();
+    const real_t secs = std::chrono::duration<double>(time_end_wall - time_start_wall).count();
     printf("AO_SGH3D::execute() : finished at t=%.6e after %zu cycles in %.3f s\n",
            time_value, cycle, secs);
 
     // TG is steady (with source), so the velocity error against the analytic
     // field at the current qpt positions measures spatial convergence.
     if (tg_problem) {
-        DCArrayKokkos<double> v_qpt(num_gauss_pts, 3, "ao_sgh_err_v_qpt");
+        DCArrayKokkos<real_t> v_qpt(num_gauss_pts, 3, "ao_sgh_err_v_qpt");
         compute_position_at_qpts(mesh.nodes_in_elem, State.node.vel,
                                  kine_ref, quad, mesh.num_elems, v_qpt);
         State.MaterialPoints.coords.update_host();
@@ -1122,36 +1126,36 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         State.MaterialPoints.sie.update_host();
 
         const size_t nq = quad.num_qpts_1d;
-        double l1 = 0.0;
-        double l2 = 0.0;
-        double e_l1 = 0.0;
-        double e_l2 = 0.0;
-        double vol = 0.0;
+        real_t l1 = 0.0;
+        real_t l2 = 0.0;
+        real_t e_l1 = 0.0;
+        real_t e_l2 = 0.0;
+        real_t vol = 0.0;
         for (size_t e = 0; e < mesh.num_elems; ++e) {
             for (size_t qz = 0; qz < nq; ++qz) {
                 for (size_t qy = 0; qy < nq; ++qy) {
                     for (size_t qx = 0; qx < nq; ++qx) {
                         const size_t g = e * nq * nq * nq + qx + qy * nq + qz * nq * nq;
-                        const double w_dJ = quad.qpt_weights_1d.host(qx)
+                        const real_t w_dJ = quad.qpt_weights_1d.host(qx)
                                           * quad.qpt_weights_1d.host(qy)
                                           * quad.qpt_weights_1d.host(qz)
                                           * State.GaussPoints.detj.host(g);
-                        const double px = State.MaterialPoints.coords.host(mat_id, g, 0);
-                        const double py = State.MaterialPoints.coords.host(mat_id, g, 1);
-                        const double pz = State.MaterialPoints.coords.host(mat_id, g, 2);
-                        double vex = 0.0;
-                        double vey = 0.0;
-                        double vez = 0.0;
+                        const real_t px = State.MaterialPoints.coords.host(mat_id, g, 0);
+                        const real_t py = State.MaterialPoints.coords.host(mat_id, g, 1);
+                        const real_t pz = State.MaterialPoints.coords.host(mat_id, g, 2);
+                        real_t vex = 0.0;
+                        real_t vey = 0.0;
+                        real_t vez = 0.0;
                         tg_velocity(px, py, pz, vex, vey, vez);
-                        const double dx = v_qpt.host(g, 0) - vex;
-                        const double dy = v_qpt.host(g, 1) - vey;
-                        const double dz = v_qpt.host(g, 2) - vez;
-                        const double mag2 = dx*dx + dy*dy + dz*dz;
-                        l1  += w_dJ * std::sqrt(mag2);
+                        const real_t dx = v_qpt.host(g, 0) - vex;
+                        const real_t dy = v_qpt.host(g, 1) - vey;
+                        const real_t dz = v_qpt.host(g, 2) - vez;
+                        const real_t mag2 = dx*dx + dy*dy + dz*dz;
+                        l1  += w_dJ * Kokkos::sqrt(mag2);
                         l2  += w_dJ * mag2;
-                        const double de = State.MaterialPoints.sie.host(mat_id, g)
+                        const real_t de = State.MaterialPoints.sie.host(mat_id, g)
                                         - tg_sie(px, py, pz);
-                        e_l1 += w_dJ * std::fabs(de);
+                        e_l1 += w_dJ * Kokkos::fabs(de);
                         e_l2 += w_dJ * de * de;
                         vol  += w_dJ;
                     }
@@ -1159,9 +1163,9 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             }
         }
         printf("AO_SGH3D::execute() : TG velocity error  L1=%.8e  L2=%.8e  (vol=%.6e)\n",
-               l1, std::sqrt(l2), vol);
+               (double)l1, (double)Kokkos::sqrt(l2), (double)vol);
         printf("AO_SGH3D::execute() : TG sie error       L1=%.8e  L2=%.8e\n",
-               e_l1, std::sqrt(e_l2));
+               (double)e_l1, (double)Kokkos::sqrt(e_l2));
     }
 }
 

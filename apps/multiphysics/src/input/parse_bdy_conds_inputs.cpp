@@ -171,13 +171,13 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
 
     // temporary arrays for boundary condition variables
-    DCArrayKokkos<double> tempVelocityBCGlobalVars (num_bcs, 100, "temporary_velocity_bc_global_values");
-    DCArrayKokkos<double> tempDisplacementBCGlobalVars (num_bcs, 100, "temporary_displacement_bc_global_values");
+    DCArrayKokkos<real_t> tempVelocityBCGlobalVars (num_bcs, 100, "temporary_velocity_bc_global_values");
+    DCArrayKokkos<real_t> tempDisplacementBCGlobalVars (num_bcs, 100, "temporary_displacement_bc_global_values");
 
-    DCArrayKokkos<double> tempTemperatureBCGlobalVars (num_bcs, 100, "temporary_temperature_bc_global_values");
-    DCArrayKokkos<double> tempStressBCGlobalVars (num_bcs, 100, "temporary_stress_bc_global_values");
-    DCArrayKokkos<double> tempQstatxStressBCGlobalVars (num_bcs, 100, "temporary_qstatx_stress_bc_global_values");
-    // DCArrayKokkos<double> tempHeatFluxBCGlobalVars (num_bcs, 100, "temporary_heat_flux_bc_global_values");
+    DCArrayKokkos<real_t> tempTemperatureBCGlobalVars (num_bcs, 100, "temporary_temperature_bc_global_values");
+    DCArrayKokkos<real_t> tempStressBCGlobalVars (num_bcs, 100, "temporary_stress_bc_global_values");
+    DCArrayKokkos<real_t> tempQstatxStressBCGlobalVars (num_bcs, 100, "temporary_qstatx_stress_bc_global_values");
+    // DCArrayKokkos<real_t> tempHeatFluxBCGlobalVars (num_bcs, 100, "temporary_heat_flux_bc_global_values");
     
     BoundaryConditions.num_velocity_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_velocity_bc_global_vars");
     BoundaryConditions.num_displacement_bc_global_vars = CArrayKokkos <size_t>(num_bcs, "BoundaryConditions.num_displacement_bc_global_vars");
@@ -203,7 +203,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
 
     // state place holder is here
-    BoundaryConditions.bc_state_vars  = DCArrayKokkos<double>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
+    BoundaryConditions.bc_state_vars  = DCArrayKokkos<real_t>(num_bcs, 4, "bc_state_values");  // WARNING a place holder
 
     // loop over the BC specified
     for (size_t bc_id = 0; bc_id < num_bcs; bc_id++) {
@@ -797,20 +797,20 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                     } // end if type
                     else if (a_subfield_word.compare("plane_position") == 0) {
-                        double value = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<double>();
+                        real_t value = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<double>();
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
                     } // end if plane position
                     else if (a_subfield_word.compare("radius") == 0) {
-                        double value = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<double>();
+                        real_t value = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<double>();
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
                     } // end if radius
                     else if (a_subfield_word.compare("tolerance") == 0) {
                         // the tolerance to tag a surface
-                        double tolerance = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<double>();
+                        real_t tolerance = bc_yaml[bc_id]["boundary_condition"]["node"][a_subfield_word].As<double>();
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).tolerance = tolerance;
                         });
@@ -821,9 +821,9 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(origin, ",");
 
-                        double x1 = std::stod(numbers[0]);
-                        double y1 = std::stod(numbers[1]);
-                        double z1;
+                        real_t x1 = std::stod(numbers[0]);
+                        real_t y1 = std::stod(numbers[1]);
+                        real_t z1;
 
                         if(numbers.size()==3){ 
                             // 3D
@@ -899,20 +899,20 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                     } // end if type
                     else if (a_subfield_word.compare("plane_position") == 0) {
-                        double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        real_t value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
                     } // end if plane position
                     else if (a_subfield_word.compare("radius") == 0) {
-                        double value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        real_t value = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).value = value;
                         });
                     } // end if radius
                     else if (a_subfield_word.compare("tolerance") == 0) {
                         // the tolerance to tag a surface
-                        double tolerance = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
+                        real_t tolerance = bc_yaml[bc_id]["boundary_condition"]["surface"][a_subfield_word].As<double>();
                         RUN({
                             BoundaryConditions.BoundaryConditionSetup(bc_id).tolerance = tolerance;
                         });
@@ -923,9 +923,9 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                         // get the origin numbers, values are words
                         std::vector<std::string> numbers = exact_array_values(origin, ",");
 
-                        double x1 = std::stod(numbers[0]);
-                        double y1 = std::stod(numbers[1]);
-                        double z1;
+                        real_t x1 = std::stod(numbers[0]);
+                        real_t y1 = std::stod(numbers[1]);
+                        real_t z1;
 
                         if(numbers.size()==3){ 
                             // 3D
@@ -975,7 +975,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double velocity_bc_var = bc_yaml[bc_id]["boundary_condition"]["velocity_bc_global_vars"][global_var_id].As<double>();
+                    real_t velocity_bc_var = bc_yaml[bc_id]["boundary_condition"]["velocity_bc_global_vars"][global_var_id].As<double>();
                     
                     RUN({
                         tempVelocityBCGlobalVars(bc_id, global_var_id) = velocity_bc_var;
@@ -1002,7 +1002,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     std::string var_str = bc_yaml[bc_id]["boundary_condition"]["displacement_bc_global_vars"][global_var_id].As<std::string>();
 
-                    double displacement_bc_var = 0.0;
+                    real_t displacement_bc_var = 0.0;
 
                     if (var_str == "x" || var_str == "X") {
                         displacement_bc_var = 0.0;
@@ -1059,7 +1059,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 // Store the global temperature boundary condition variables
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double temperature_bc_var = bc_yaml[bc_id]["boundary_condition"]["temperature_bc_global_vars"][global_var_id].As<double>();
+                    real_t temperature_bc_var = bc_yaml[bc_id]["boundary_condition"]["temperature_bc_global_vars"][global_var_id].As<double>();
                     
                     RUN({
                         tempTemperatureBCGlobalVars(bc_id, global_var_id) = temperature_bc_var;
@@ -1087,7 +1087,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double stress_bc_var = bc_yaml[bc_id]["boundary_condition"]["stress_bc_global_vars"][global_var_id].As<double>();
+                    real_t stress_bc_var = bc_yaml[bc_id]["boundary_condition"]["stress_bc_global_vars"][global_var_id].As<double>();
                     
 
                     RUN({
@@ -1116,7 +1116,7 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
                     std::string var_str = bc_yaml[bc_id]["boundary_condition"]["qstatx_stress_bc_global_vars"][global_var_id].As<std::string>();
 
-                    double qstatx_stress_bc_var = 0.0;
+                    real_t qstatx_stress_bc_var = 0.0;
 
                     if (var_str == "x" || var_str == "X") {
                         qstatx_stress_bc_var = 0.0;
@@ -1188,15 +1188,15 @@ void parse_bcs(Yaml::Node& root, BoundaryCondition_t& BoundaryConditions, const 
 
 
      // allocate ragged right memory to hold the model global variables
-    BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
+    BoundaryConditions.velocity_bc_global_vars = RaggedRightArrayKokkos<real_t>(BoundaryConditions.num_velocity_bc_global_vars, "BoundaryConditions.velocity_bc_global_vars");
 
-    BoundaryConditions.displacement_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_displacement_bc_global_vars, "BoundaryConditions.displacement_bc_global_vars");
+    BoundaryConditions.displacement_bc_global_vars = RaggedRightArrayKokkos<real_t>(BoundaryConditions.num_displacement_bc_global_vars, "BoundaryConditions.displacement_bc_global_vars");
 
-    BoundaryConditions.temperature_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_temperature_bc_global_vars, "BoundaryConditions.temperature_bc_global_vars");
+    BoundaryConditions.temperature_bc_global_vars = RaggedRightArrayKokkos<real_t>(BoundaryConditions.num_temperature_bc_global_vars, "BoundaryConditions.temperature_bc_global_vars");
 
-    BoundaryConditions.stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_stress_bc_global_vars, "BoundaryConditions.stress_bc_global_vars");
+    BoundaryConditions.stress_bc_global_vars = RaggedRightArrayKokkos<real_t>(BoundaryConditions.num_stress_bc_global_vars, "BoundaryConditions.stress_bc_global_vars");
 
-    BoundaryConditions.qstatx_stress_bc_global_vars = RaggedRightArrayKokkos <double> (BoundaryConditions.num_qstatx_stress_bc_global_vars, "BoundaryConditions.qstatx_stress_bc_global_vars");
+    BoundaryConditions.qstatx_stress_bc_global_vars = RaggedRightArrayKokkos<real_t>(BoundaryConditions.num_qstatx_stress_bc_global_vars, "BoundaryConditions.qstatx_stress_bc_global_vars");
    
 
     // ... allocate other bc global vars here

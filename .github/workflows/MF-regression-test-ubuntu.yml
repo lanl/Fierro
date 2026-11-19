@@ -27,6 +27,16 @@ jobs:
             build_type: Debug
             cmake_args: -DFIERRO_ENABLE_OPENMP=OFF
             omp_threads: 1
+          # Exercises the host/device backend front door without needing a GPU.
+          # The device macros (FOR_ALL) run in OpenMP and the _HOST macros
+          # (FOR_ALL_HOST) in Serial, so the two spaces are genuinely distinct.
+          # The device backend has to outrank the host one in Kokkos's
+          # default-space priority, which is why OpenMP is the device side here;
+          # real overlap needs a GPU device backend with an OpenMP host.
+          - name: Mixed OpenMP device + Serial host
+            build_type: RelWithDebInfo
+            cmake_args: -DFIERRO_DEVICE_BACKEND=openmp -DFIERRO_HOST_BACKEND=serial
+            omp_threads: 2
 
     steps:
     - uses: actions/checkout@v4

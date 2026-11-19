@@ -45,10 +45,10 @@ Table_t::Table_t() : num_rows(0), num_columns(0)
 Table_t::Table_t(size_t num_rows_, size_t num_columns_, const char* name_) : num_rows(num_rows_), num_columns(num_columns_)
 {
     // Initialize data with dimensions and name
-    data = DCArrayKokkos<double>(num_rows_, num_columns_, name_);
+    data = DCArrayKokkos<real_t>(num_rows_, num_columns_, name_);
     
     // Hardcoded NaN. Here, we use a bit pattern for portability in device code. This is to verify that data has been initialized correctly. 
-    union { uint64_t i; double d; } nan_union;
+    union { uint64_t i; real_t d; } nan_union;
     nan_union.i = 0x7ff8000000000000ULL;
     data.set_values(nan_union.d);
 
@@ -60,7 +60,7 @@ Table_t::Table_t(size_t num_rows_, size_t num_columns_, const char* name_) : num
     name[i] = '\0';
 }
 
-void Table_t::set_value(size_t row, size_t col, double val)
+void Table_t::set_value(size_t row, size_t col, real_t val)
 {
     assert(row < num_rows && col < num_columns && "Row and column indices are out of bounds in Table_t::set_value");
     data.host(row, col) = val;
@@ -88,7 +88,7 @@ void Table_t::verify_data(size_t sorted_column_idx)
     // Check for NaN in each element; throw assertion if found
     for (size_t row = 0; row < num_rows; ++row) {
         for (size_t col = 0; col < num_columns; ++col) {
-            assert(!std::isnan(data.host(row, col)) &&
+            assert(!Kokkos::isnan(data.host(row, col)) &&
                    "NaN detected in Table_t::verify_data");
         }
     }

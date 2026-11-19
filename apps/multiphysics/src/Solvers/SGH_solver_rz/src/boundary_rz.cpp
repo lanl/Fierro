@@ -51,8 +51,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::boundary_velocity_rz(const swage::Mesh_t&      mesh,
                                  const BoundaryCondition_t& BoundaryConditions,
-                                 MPICArrayKokkos<double>& node_vel,
-                                 const double time_value) const
+                                 MPICArrayKokkos<real_t>& node_vel,
+                                 const real_t time_value) const
 {
 
     size_t num_vel_bdy_sets = BoundaryConditions.num_vel_bdy_sets_in_solver.host(this->solver_id); 
@@ -102,8 +102,8 @@ void SGHRZ::boundary_velocity_rz(const swage::Mesh_t&      mesh,
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::boundary_contact_rz(const swage::Mesh_t& mesh,
                                 const BoundaryCondition_t& BoundaryConditions,
-                                MPICArrayKokkos<double>& node_vel,
-                                const double time_value) const
+                                MPICArrayKokkos<real_t>& node_vel,
+                                const real_t time_value) const
 {
     return;
 } // end boundary_contact function

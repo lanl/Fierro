@@ -66,29 +66,29 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGHRZ::update_state_rz(
     const Material_t& Materials,
     const swage::Mesh_t& mesh,
-    const MPICArrayKokkos<double>& node_coords,
-    const MPICArrayKokkos<double>& node_coords_t0,
-    const MPICArrayKokkos<double>& node_vel,
-    const DCArrayKokkos<double>& GuassPoints_vel_grad,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_volfrac,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_geo_volfrac,
-    const DCArrayKokkos<double>& GaussPoints_vol,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_mass,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
+    const MPICArrayKokkos<real_t>& node_coords,
+    const MPICArrayKokkos<real_t>& node_coords_t0,
+    const MPICArrayKokkos<real_t>& node_vel,
+    const DCArrayKokkos<real_t>& GuassPoints_vel_grad,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress_n0,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_volfrac,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_geo_volfrac,
+    const DCArrayKokkos<real_t>& GaussPoints_vol,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_strength_state_vars,
     const DRaggedRightArrayKokkos<bool>&   MaterialPoints_eroded,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad_t0,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
-    const double time_value,
-    const double dt,
-    const double rk_alpha,
+    const real_t time_value,
+    const real_t dt,
+    const real_t rk_alpha,
     const size_t cycle,
     const size_t num_material_elems,
     const size_t mat_id) const
@@ -116,7 +116,7 @@ void SGHRZ::update_state_rz(
 
         // --- Density ---
         MaterialPoints_den(mat_id, mat_point_sid) = MaterialPoints_mass(mat_id, mat_point_sid) /
-           (GaussPoints_vol(gauss_gid)*MaterialPoints_volfrac(mat_id, mat_point_sid)*MaterialPoints_geo_volfrac(mat_id, mat_point_sid) + 1.0e-20);
+           (GaussPoints_vol(gauss_gid)*MaterialPoints_volfrac(mat_id, mat_point_sid)*MaterialPoints_geo_volfrac(mat_id, mat_point_sid) + (real_t)1.0e-20);
 
     }); // end parallel for over mat elem lid
     Kokkos::fence();
@@ -192,7 +192,7 @@ void SGHRZ::update_state_rz(
 
 
             // --- Density ---
-            MaterialPoints_den(mat_id, mat_point_sid) = MaterialPoints_mass(mat_id, mat_point_sid) / (GaussPoints_vol(gauss_gid) + 1.0e-20);
+            MaterialPoints_den(mat_id, mat_point_sid) = MaterialPoints_mass(mat_id, mat_point_sid) / (GaussPoints_vol(gauss_gid) + (real_t)1.0e-20);
 
 
             // --- call strength model ---
@@ -309,29 +309,29 @@ void SGHRZ::update_state_rz(
 /////////////////////////////////////////////////////////////////////////////
 void SGHRZ::update_stress(const Material_t& Materials,
                           const swage::Mesh_t& mesh,
-                          const DCArrayKokkos<double>& GaussPoints_vol,
-                          const MPICArrayKokkos<double>& node_coords,
-                          const MPICArrayKokkos<double>& node_coords_t0,
-                          const MPICArrayKokkos<double>& node_vel,
-                          const DCArrayKokkos<double>& GuassPoints_vel_grad,
-                          const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-                          const DRaggedRightArrayKokkos<double>& MaterialPoints_sie,
-                          const DRaggedRightArrayKokkos<double>& MaterialPoints_pres,
-                          const DRaggedRightArrayKokkos<double>& MaterialPoints_stress,
-                          const DRaggedRightArrayKokkos<double>& MaterialPoints_stress_n0,
-                          const DRaggedRightArrayKokkos<double>& MaterialPoints_sspd,
-                          const DRaggedRightArrayKokkos<double>& MaterialPoints_eos_state_vars,
-                          const DRaggedRightArrayKokkos<double>& MaterialPoints_strength_state_vars,
-                          const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
-                          const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad_t0,
+                          const DCArrayKokkos<real_t>& GaussPoints_vol,
+                          const MPICArrayKokkos<real_t>& node_coords,
+                          const MPICArrayKokkos<real_t>& node_coords_t0,
+                          const MPICArrayKokkos<real_t>& node_vel,
+                          const DCArrayKokkos<real_t>& GuassPoints_vel_grad,
+                          const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+                          const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie,
+                          const DRaggedRightArrayKokkos<real_t>& MaterialPoints_pres,
+                          const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress,
+                          const DRaggedRightArrayKokkos<real_t>& MaterialPoints_stress_n0,
+                          const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sspd,
+                          const DRaggedRightArrayKokkos<real_t>& MaterialPoints_eos_state_vars,
+                          const DRaggedRightArrayKokkos<real_t>& MaterialPoints_strength_state_vars,
+                          const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
+                          const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad_t0,
                           const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
                           const size_t num_mat_elems,
                           const size_t mat_id,
-                          const double fuzz,
-                          const double small,
-                          const double time_value,
-                          const double dt,
-                          const double rk_alpha,
+                          const real_t fuzz,
+                          const real_t small,
+                          const real_t time_value,
+                          const real_t dt,
+                          const real_t rk_alpha,
                           const size_t cycle) const
 {
     // --- Update Stress ---

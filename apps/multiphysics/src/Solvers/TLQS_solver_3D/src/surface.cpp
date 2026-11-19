@@ -41,13 +41,13 @@ void TLQS3D::get_qpt_area_normal(
         const swage::Mesh_t& mesh,
         const elements::ReferenceSurface_t& ref_surf,
         const elements::SurfaceQuadrature_t& SurfQuad,
-        const MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<real_t>& node_coords,
         const size_t qpt_lid,
         const size_t surf_gid,
-        const ViewCArrayKokkos<double>& jac,
-        const ViewCArrayKokkos<double>& inv_jac,
-        ViewCArrayKokkos<double>& normal,
-        double& qpt_weighted_area) const
+        const ViewCArrayKokkos<real_t>& jac,
+        const ViewCArrayKokkos<real_t>& inv_jac,
+        ViewCArrayKokkos<real_t>& normal,
+        real_t& qpt_weighted_area)
 {
     
     // temp vars needed for the calculation
@@ -55,12 +55,12 @@ void TLQS3D::get_qpt_area_normal(
     ViewCArrayKokkos<size_t> nodes_in_the_elem(&mesh.nodes_in_elem(elem_gid,0), mesh.num_nodes_in_elem);
     const size_t face_lid = mesh.faces_in_surf(surf_gid, 0);
     // extract the grad_basis at a single quadrature point (surf,qpt,dof,3D)
-    ViewCArrayKokkos<double> a_grad_basis(&ref_surf.qpt_grad_basis(face_lid,qpt_lid,0,0), mesh.num_nodes_in_elem, 3);
+    ViewCArrayKokkos<real_t> a_grad_basis(&ref_surf.qpt_grad_basis(face_lid,qpt_lid,0,0), mesh.num_nodes_in_elem, 3);
 
     // get the jacobian for Nanson's
     jacobian(jac, node_coords, nodes_in_the_elem, a_grad_basis);
 
-    const double det_jac = det_3x3(jac);
+    const real_t det_jac = det_3x3(jac);
 
     invert_3x3(jac,inv_jac,det_jac);
 
@@ -75,7 +75,7 @@ void TLQS3D::get_qpt_area_normal(
         normal(j) *= det_jac*SurfQuad.qpt_weights(face_lid,qpt_lid);
     } // end j
 
-    qpt_weighted_area = sqrt(normal(0)*normal(0) + normal(1)*normal(1) + normal(2)*normal(2));
+    qpt_weighted_area = Kokkos::sqrt(normal(0)*normal(0) + normal(1)*normal(1) + normal(2)*normal(2));
 
     // getting unit normal vector
     for (int i = 0; i < 3; i++) {
@@ -83,8 +83,8 @@ void TLQS3D::get_qpt_area_normal(
     }
 
     /* // allocate and intialize the vectors for the cross product
-    double dSdxi[3];
-    double dSdeta[3];
+    real_t dSdxi[3];
+    real_t dSdeta[3];
     for (int i = 0; i < 3; i++) {
         dSdxi[i] = 0.0;
         dSdeta[i] = 0.0;
@@ -108,7 +108,7 @@ void TLQS3D::get_qpt_area_normal(
     normal(2) = dSdxi[0] * dSdeta[1] - dSdxi[1] * dSdeta[0];
 
     // getting the magnitude
-    area = sqrt(normal(0)*normal(0) + normal(1)*normal(1) + normal(2)*normal(2));
+    area = Kokkos::sqrt(normal(0)*normal(0) + normal(1)*normal(1) + normal(2)*normal(2));
 
     // getting unit normal vector
     for (int i = 0; i < 3; i++) {
@@ -121,10 +121,10 @@ KOKKOS_FUNCTION
 void TLQS3D::get_surf_qpt_coords(
         const swage::Mesh_t& mesh,
         const elements::ReferenceSurface_t ref_surf,
-        const MPICArrayKokkos<double>& node_coords,
+        const MPICArrayKokkos<real_t>& node_coords,
         const size_t qpt_lid,
         const size_t surf_gid,
-        ViewCArrayKokkos<double>& qpt_coords) const
+        ViewCArrayKokkos<real_t>& qpt_coords)
 {
     // resetting output array
     qpt_coords(0) = 0.0;

@@ -62,10 +62,10 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void SGTM3D::update_properties(
     const Material_t& Materials,
     const swage::Mesh_t&     mesh,
-    const MPICArrayKokkos<double>& node_temp,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_den,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_conductivity,
-    const DRaggedRightArrayKokkos<double>& MaterialPoints_specific_heat,
+    const MPICArrayKokkos<real_t>& node_temp,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_den,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_conductivity,
+    const DRaggedRightArrayKokkos<real_t>& MaterialPoints_specific_heat,
     const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
     const size_t num_material_elems,
     const size_t mat_id) const
@@ -83,7 +83,7 @@ void SGTM3D::update_properties(
         // get elem gid
         size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid); 
 
-        double avg_temp = 0.0;
+        real_t avg_temp = 0.0;
         for(int node_lid = 0; node_lid < num_nodes_in_elem; node_lid++){
             size_t node_gid = mesh.nodes_in_elem(elem_gid, node_lid);
             avg_temp += node_temp(node_gid) / (double)num_nodes_in_elem;

@@ -23,3 +23,4 @@ apps/multiphysics/cuda_build
 apps/multiphysics/build*
 *Fierro_log*
 
+fp32_results/

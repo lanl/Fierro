@@ -62,7 +62,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /////////////////////////////////////////////////////////////////////////////
 namespace QSIsotropicLinearElastic {
 
-    const double fuzz = 1.e-16;
+    const real_t fuzz = 1.e-16;
     
     /**
      * @brief Initialize the strength state variables for the material points.
@@ -76,10 +76,10 @@ namespace QSIsotropicLinearElastic {
      * @param mat_id   Material ID.
      */
     static void init_strength_state_vars(
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
+        const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+        const RaggedRightArrayKokkos<real_t> &strength_global_vars,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
         const size_t num_material_points,
         const size_t mat_id)
@@ -123,27 +123,27 @@ namespace QSIsotropicLinearElastic {
      */
     KOKKOS_FUNCTION
     static void calc_stress(
-        const DCArrayKokkos<double>  &GaussPoints_vel_grad,
-        const MPICArrayKokkos<double> &node_coords,
-        const MPICArrayKokkos<double> &node_coords_t0,
-        const MPICArrayKokkos <double> &node_vel,
+        const DCArrayKokkos<real_t>  &GaussPoints_vel_grad,
+        const MPICArrayKokkos<real_t> &node_coords,
+        const MPICArrayKokkos<real_t> &node_coords_t0,
+        const MPICArrayKokkos<real_t> &node_vel,
         const DCArrayKokkos<size_t>  &nodes_in_elem,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_pres,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_stress_n0,
-        const DRaggedRightArrayKokkos<double>  &MaterialPoints_sspd,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_eos_state_vars,
-        const DRaggedRightArrayKokkos <double> &MaterialPoints_strength_state_vars,
-        const double MaterialPoints_den,
-        const double MaterialPoints_sie,
-        const DRaggedRightArrayKokkos<double>& MaterialPoints_deformation_grad,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_pres,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_stress,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_stress_n0,
+        const DRaggedRightArrayKokkos<real_t>  &MaterialPoints_sspd,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_eos_state_vars,
+        const DRaggedRightArrayKokkos<real_t> &MaterialPoints_strength_state_vars,
+        const real_t MaterialPoints_den,
+        const real_t MaterialPoints_sie,
+        const DRaggedRightArrayKokkos<real_t>& MaterialPoints_deformation_grad,
         const DRaggedRightArrayKokkos<size_t>& elem_in_mat_elem,
-        const RaggedRightArrayKokkos <double> &eos_global_vars,
-        const RaggedRightArrayKokkos <double> &strength_global_vars,
-        const double vol,
-        const double dt,
-        const double rk_alpha,
-        const double time,
+        const RaggedRightArrayKokkos<real_t> &eos_global_vars,
+        const RaggedRightArrayKokkos<real_t> &strength_global_vars,
+        const real_t vol,
+        const real_t dt,
+        const real_t rk_alpha,
+        const real_t time,
         const size_t cycle,
         const size_t MaterialPoints_lid,
         const size_t mat_id,
@@ -155,16 +155,16 @@ namespace QSIsotropicLinearElastic {
     } // end of user mat
 
     KOKKOS_FUNCTION
-    static void fill_C_matrix(const RaggedRightArrayKokkos <double> &strength_global_vars,
-        double C[6][6],
+    static void fill_C_matrix(const RaggedRightArrayKokkos<real_t> &strength_global_vars,
+        real_t C[6][6],
         const size_t mat_id)
     {
         // setting youngs modulus and poissons ratio
-        double E = strength_global_vars(mat_id,0);
-        double v = strength_global_vars(mat_id,1);
+        real_t E = strength_global_vars(mat_id,0);
+        real_t v = strength_global_vars(mat_id,1);
 
         // leading coefficient
-        double coef = E / ((1-2*v)*(1+v));
+        real_t coef = E / ((1-2*v)*(1+v));
 
         // filling C
         C[0][0] = coef*(1-v);

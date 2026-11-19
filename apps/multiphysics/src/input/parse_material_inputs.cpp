@@ -125,9 +125,9 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
     Materials.MaterialEnums = DCArrayKokkos<MaterialEnums_t>(num_materials, "material_enums");
 
     // these are temp arrays to store global variables given in the yaml input file for each material, 100 vars is the max allowable
-    DCArrayKokkos<double> tempGlobalEOSVars(num_materials, 100, "temp_array_eos_vars");
-    DCArrayKokkos<double> tempGlobalStrengthVars(num_materials, 100, "temp_array_strength_vars");
-    DCArrayKokkos<double> tempGlobalDissipationVars(num_materials, 10, "temp_array_dissipation_vars");
+    DCArrayKokkos<real_t> tempGlobalEOSVars(num_materials, 100, "temp_array_eos_vars");
+    DCArrayKokkos<real_t> tempGlobalStrengthVars(num_materials, 100, "temp_array_strength_vars");
+    DCArrayKokkos<real_t> tempGlobalDissipationVars(num_materials, 10, "temp_array_dissipation_vars");
     
     Materials.num_eos_global_vars      =  CArrayKokkos <size_t> (num_materials, "num_eos_global_vars");
     Materials.num_strength_global_vars =  CArrayKokkos <size_t> (num_materials, "num_strength_global_vars");
@@ -766,28 +766,28 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
             } // level set solver type
             //
             else if (a_word.compare("erode_tension_val") == 0) {
-                double erode_tension_val = root["materials"][m_id]["material"]["erode_tension_val"].As<double>();
+                real_t erode_tension_val = root["materials"][m_id]["material"]["erode_tension_val"].As<double>();
 
                 RUN({
                     Materials.MaterialFunctions(mat_id).erode_tension_val = erode_tension_val;
                 });
             } // erode_tension_val
             else if (a_word.compare("erode_density_val") == 0) {
-                double erode_density_val = root["materials"][m_id]["material"]["erode_density_val"].As<double>();
+                real_t erode_density_val = root["materials"][m_id]["material"]["erode_density_val"].As<double>();
 
                 RUN({
                     Materials.MaterialFunctions(mat_id).erode_density_val = erode_density_val;
                 });
             } // erode_density_val
             else if (a_word.compare("normal_velocity") == 0) {
-                double normal_velocity = root["materials"][m_id]["material"]["normal_velocity"].As<double>();
+                real_t normal_velocity = root["materials"][m_id]["material"]["normal_velocity"].As<double>();
 
                 RUN({
                     Materials.MaterialFunctions(mat_id).normal_velocity = normal_velocity;
                 });
             } // normal velocity to level set front
             else if (a_word.compare("curvature_velocity") == 0) {
-                double curvature_velocity = root["materials"][m_id]["material"]["curvature_velocity"].As<double>();
+                real_t curvature_velocity = root["materials"][m_id]["material"]["curvature_velocity"].As<double>();
 
                 RUN({
                     Materials.MaterialFunctions(mat_id).curvature_velocity = curvature_velocity;
@@ -809,7 +809,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double eos_var = root["materials"][m_id]["material"]["eos_global_vars"][global_var_id].As<double>();
+                    real_t eos_var = root["materials"][m_id]["material"]["eos_global_vars"][global_var_id].As<double>();
                     RUN({
                         tempGlobalEOSVars(mat_id, global_var_id) = eos_var;
                     });
@@ -833,7 +833,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
                 // store the global strength model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double strength_var = root["materials"][m_id]["material"]["strength_global_vars"][global_var_id].As<double>();
+                    real_t strength_var = root["materials"][m_id]["material"]["strength_global_vars"][global_var_id].As<double>();
                     
                     RUN({
                         tempGlobalStrengthVars(mat_id,global_var_id) = strength_var;
@@ -860,7 +860,7 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
 
                 // store the global eos model parameters
                 for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                    double dissipation_var = root["materials"][m_id]["material"]["dissipation_global_vars"][global_var_id].As<double>();
+                    real_t dissipation_var = root["materials"][m_id]["material"]["dissipation_global_vars"][global_var_id].As<double>();
                     
                     RUN({
                         tempGlobalDissipationVars(mat_id, global_var_id) = dissipation_var;
@@ -972,9 +972,9 @@ void parse_materials(Yaml::Node& root, Material_t& Materials, const size_t num_d
     } // end loop over materials
 
     // allocate ragged right memory to hold the model global variables
-    Materials.eos_global_vars = RaggedRightArrayKokkos <double> (Materials.num_eos_global_vars, "Materials.eos_global_vars");
-    Materials.strength_global_vars = RaggedRightArrayKokkos <double> (Materials.num_strength_global_vars, "Materials.strength_global_vars");
-    Materials.dissipation_global_vars = RaggedRightArrayKokkos <double> (Materials.num_dissipation_global_vars, "Materials.dissipation_global_vars");
+    Materials.eos_global_vars = RaggedRightArrayKokkos<real_t>(Materials.num_eos_global_vars, "Materials.eos_global_vars");
+    Materials.strength_global_vars = RaggedRightArrayKokkos<real_t>(Materials.num_strength_global_vars, "Materials.strength_global_vars");
+    Materials.dissipation_global_vars = RaggedRightArrayKokkos<real_t>(Materials.num_dissipation_global_vars, "Materials.dissipation_global_vars");
     
     // save the global variables
     FOR_ALL(mat_id, 0, num_materials, {
@@ -1198,7 +1198,7 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
 
             size_t num_global_vars = mat_global_vars_yaml.Size();
             Materials.num_equilibration_global_vars = num_global_vars;
-            Materials.equilibration_global_vars = CArrayKokkos <double> (num_global_vars, "Materials.equilibration_global_vars");
+            Materials.equilibration_global_vars = CArrayKokkos<real_t>(num_global_vars, "Materials.equilibration_global_vars");
 
             if(num_global_vars<2){
                 throw std::runtime_error("**** The Tipton material equilibration model requires 2 inputs ****");
@@ -1206,7 +1206,7 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
 
             // store the global eos model parameters
             for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                double equilibration_var = root["multimaterial_options"]["mat_equilibration_global_vars"][global_var_id].As<double>();
+                real_t equilibration_var = root["multimaterial_options"]["mat_equilibration_global_vars"][global_var_id].As<double>();
                 
                 RUN({
                     Materials.equilibration_global_vars(global_var_id) = equilibration_var;
@@ -1221,7 +1221,7 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
 
             size_t num_global_vars = mat_global_vars_yaml.Size();
             Materials.num_geo_equilibration_global_vars = num_global_vars;
-            Materials.geo_equilibration_global_vars = CArrayKokkos <double> (num_global_vars, "Materials.geo_equilibration_global_vars");
+            Materials.geo_equilibration_global_vars = CArrayKokkos<real_t>(num_global_vars, "Materials.geo_equilibration_global_vars");
 
             if(num_global_vars<2){
                 throw std::runtime_error("**** The Tipton material geo equilibration model requires 2 inputs ****");
@@ -1229,7 +1229,7 @@ void parse_multimaterial_options(Yaml::Node& root, Material_t& Materials)
 
             // store the global eos model parameters
             for (int global_var_id = 0; global_var_id < num_global_vars; global_var_id++) {
-                double equilibration_var = root["multimaterial_options"]["geo_equilibration_global_vars"][global_var_id].As<double>();
+                real_t equilibration_var = root["multimaterial_options"]["geo_equilibration_global_vars"][global_var_id].As<double>();
                 
                 RUN({
                     Materials.geo_equilibration_global_vars(global_var_id) = equilibration_var;

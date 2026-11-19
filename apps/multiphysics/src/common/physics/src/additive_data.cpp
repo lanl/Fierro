@@ -59,7 +59,7 @@ ToolPathInfo::ToolPathInfo(size_t npoints)
     tool_path_table = Table_t(npoints, num_columns, "ToolPathInfo_table");
 }
 
-void ToolPathInfo::set_data_point(size_t i, double time, double x, double y, double z, double power)
+void ToolPathInfo::set_data_point(size_t i, real_t time, real_t x, real_t y, real_t z, real_t power)
 {
     tool_path_table.set_value(i, Fields::time, time);
     tool_path_table.set_value(i, Fields::x, x);
