@@ -483,12 +483,12 @@ void get_bounding_boxes(const DCArrayKokkos<real_t>& bdy_node_coords,
                         CArrayKokkos<real_t>& bounding_boxes)
 {
     // getting max velocity and acceleration to make bounding box sizes conservatively sized
-    double vx_max = (real_t)0.0;
-    double vy_max = (real_t)0.0;
-    double vz_max = (real_t)0.0;
-    double ax_max = (real_t)0.0;
-    double ay_max = (real_t)0.0;
-    double az_max = (real_t)0.0;
+    double vx_max = 0.0;
+    double vy_max = 0.0;
+    double vz_max = 0.0;
+    double ax_max = 0.0;
+    double ay_max = 0.0;
+    double az_max = 0.0;
     get_max_vel_and_accel(vx_max, vy_max, vz_max, ax_max, ay_max, az_max, bdy_node_vels, bdy_node_accels);
 
     // kinematic padding over the load step
@@ -588,8 +588,8 @@ double get_min_bdy_elem_edge_length(const size_t num_bdy_surfs,
 {
     const size_t p = num_dofs_1d - 1;
 
-    double min_edge_length = (real_t)0.0;
-    double loc_min = (real_t)0.0;
+    double min_edge_length = 0.0;
+    double loc_min = 0.0;
 
     FOR_REDUCE_MIN(bdy_surf_lid, 0, num_bdy_surfs, loc_min, {
 

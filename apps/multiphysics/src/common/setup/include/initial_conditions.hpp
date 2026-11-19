@@ -154,7 +154,7 @@ struct RegionICs_t
     real_t sie = 0.0;  ///< specific internal energy
     real_t sie_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for sie or ie field
 
-    double den = (real_t)0.0;  ///< density
+    real_t den = 0.0;  ///< density
     real_t den_origin[3] = { 0.0, 0.0, 0.0 }; ///< Origin for den field
 
 
