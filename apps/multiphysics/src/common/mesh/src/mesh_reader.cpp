@@ -921,7 +921,7 @@ void MeshReader::read_vtk_hexN_mesh(swage::Mesh_t& mesh,
 
     // ---- infer Pn from the file, and check it against the YAML ----
     const size_t n0     = cell_data[0];
-    const size_t num_1D = (size_t)std::llround(std::cbrt((double)n0));
+    const size_t num_1D = (size_t)Kokkos::llround(Kokkos::cbrt((double)n0));
     if (num_1D * num_1D * num_1D != n0 || num_1D < 2) {
         throw std::runtime_error("read_vtk_hexN_mesh: cell node count is not (Pn+1)^3");
     }

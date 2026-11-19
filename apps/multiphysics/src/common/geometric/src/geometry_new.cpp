@@ -769,7 +769,7 @@ size_t check_bdy_node(const size_t node_gid,
                         (these_node_coords[1] - orig_y) * (these_node_coords[1] - orig_y) +
                         (these_node_coords[2] - orig_z) * (these_node_coords[2] - orig_z));
 
-        if (fabs(R - val) <= tolerance) {
+        if (Kokkos::fabs(R - val) <= tolerance) {
             is_on_bdy = 1;
         }
     } // end if on type

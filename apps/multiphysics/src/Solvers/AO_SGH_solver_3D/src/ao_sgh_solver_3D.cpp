@@ -725,7 +725,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     // Initial-mesh length scale (Laghos): h0 = (V/Ne)^(1/3) / p_order.
     const real_t total_vol0 = compute_total_volume_from_cache(State.GaussPoints.detj0,
                                                               quad, mesh.num_elems);
-    const real_t h0 = std::pow(total_vol0 / static_cast<double>(mesh.num_elems), (real_t)1.0 / (real_t)3.0)
+    const real_t h0 = Kokkos::pow(total_vol0 / static_cast<double>(mesh.num_elems), (real_t)1.0 / (real_t)3.0)
                     / static_cast<double>(p_order);
 
     // Mass-solve scratch (Neumann correction on linear spaces).
@@ -1015,11 +1015,11 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     };
     // Cap a proposed dt so the step lands exactly on the next output / final
     // time and stays within [dt_min, dt_max].
-    auto cap_dt = [&](real_t d) -> double {
-        d = std::min(d, dt_max);
+    auto cap_dt = [&](real_t d) -> real_t {
+        d = Kokkos::fmin(d, dt_max);
         if (time_value + d > time_final)    { d = time_final - time_value; }
         if (time_value + d > graphics_next) { d = graphics_next - time_value; }
-        return std::max(d, dt_min);
+        return Kokkos::fmax(d, dt_min);
     };
 
     auto time_start_wall = std::chrono::high_resolution_clock::now();
@@ -1049,7 +1049,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             if (dt_est >= dt_taken) {
                 // step is CFL-safe; grow the carried dt gently if there is room
-                if (dt_est > (real_t)1.25 * dt) { dt = std::min(dt_max, (real_t)1.02 * dt); }
+                if (dt_est > (real_t)1.25 * dt) { dt = Kokkos::fmin(dt_max, (real_t)1.02 * dt); }
                 accepted = true;
                 break;
             }
@@ -1057,7 +1057,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             // reject: 15% back-off, roll back, and retake
             restore_state();
             if (dt_taken <= dt_min) { break; }  // already at the floor
-            dt       = std::max(dt_min, (real_t)0.85 * dt);
+            dt       = Kokkos::fmax(dt_min, (real_t)0.85 * dt);
             dt_taken = cap_dt(dt);
         }
         if (!accepted) {
@@ -1090,7 +1090,7 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 const real_t vx = State.node.vel.host(n, 0);
                 const real_t vy = State.node.vel.host(n, 1);
                 const real_t vz = State.node.vel.host(n, 2);
-                const real_t vm = std::sqrt(vx*vx + vy*vy + vz*vz);
+                const real_t vm = Kokkos::sqrt(vx*vx + vy*vy + vz*vz);
                 if (vm > v_max) v_max = vm;
             }
             const real_t E_drift = total_energy() - E0;
@@ -1151,11 +1151,11 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                         const real_t dy = v_qpt.host(g, 1) - vey;
                         const real_t dz = v_qpt.host(g, 2) - vez;
                         const real_t mag2 = dx*dx + dy*dy + dz*dz;
-                        l1  += w_dJ * std::sqrt(mag2);
+                        l1  += w_dJ * Kokkos::sqrt(mag2);
                         l2  += w_dJ * mag2;
                         const real_t de = State.MaterialPoints.sie.host(mat_id, g)
                                         - tg_sie(px, py, pz);
-                        e_l1 += w_dJ * std::fabs(de);
+                        e_l1 += w_dJ * Kokkos::fabs(de);
                         e_l2 += w_dJ * de * de;
                         vol  += w_dJ;
                     }
@@ -1163,9 +1163,9 @@ void AO_SGH3D::execute(SimulationParameters_t& SimulationParamaters,
             }
         }
         printf("AO_SGH3D::execute() : TG velocity error  L1=%.8e  L2=%.8e  (vol=%.6e)\n",
-               l1, std::sqrt(l2), vol);
+               (double)l1, (double)Kokkos::sqrt(l2), (double)vol);
         printf("AO_SGH3D::execute() : TG sie error       L1=%.8e  L2=%.8e\n",
-               e_l1, std::sqrt(e_l2));
+               (double)e_l1, (double)Kokkos::sqrt(e_l2));
     }
 }
 

@@ -32,7 +32,6 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -61,7 +60,7 @@ static void check_close(const real_t actual,
                         const std::string& label)
 {
     g_num_checks++;
-    const real_t diff = std::fabs(actual - expected);
+    const real_t diff = Kokkos::fabs(actual - expected);
     if (diff > tol) {
         g_num_failures++;
         printf("  [FAIL] %s : actual=%.16e expected=%.16e diff=%.3e tol=%.3e\n",
@@ -109,7 +108,7 @@ static void test_gll_and_gl_nodes_1d()
     printf("\n=== Test 1: GLL and Gauss-Legendre 1D node values ===\n");
 
     // GLL(5) reference values.
-    const real_t sqrt_3_7 = std::sqrt((real_t)3.0 / (real_t)7.0);
+    const real_t sqrt_3_7 = Kokkos::sqrt((real_t)3.0 / (real_t)7.0);
     quadrature_t gll_quad; // misuse the quadrature struct here as a node holder for the test
     (void)gll_quad;
 
@@ -135,7 +134,7 @@ static void test_gll_and_gl_nodes_1d()
     ref_elem_t thermo_ref;
     thermo_ref.init(/*p_order=*/1, /*num_dim=*/3,
                     BasisType::LagrangeGL, shared_quad);
-    const real_t inv_sqrt_3 = (real_t)1.0 / std::sqrt((real_t)3.0);
+    const real_t inv_sqrt_3 = (real_t)1.0 / Kokkos::sqrt((real_t)3.0);
     check_close(thermo_ref.dof_positions_1d.host(0), -inv_sqrt_3, 1e-15, "GL(2) thermo dof 0");
     check_close(thermo_ref.dof_positions_1d.host(1),  inv_sqrt_3, 1e-15, "GL(2) thermo dof 1");
 } // end test_gll_and_gl_nodes_1d
@@ -219,7 +218,7 @@ static void test_gl_quadrature_exactness()
             for (size_t q = 0; q < n; q++) {
                 const real_t x = quad.qpt_positions_1d.host(q);
                 const real_t w = quad.qpt_weights_1d.host(q);
-                approx += w * std::pow(x, static_cast<double>(p));
+                approx += w * Kokkos::pow(x, static_cast<double>(p));
             }
             const real_t exact = (p % 2 == 0) ? ((real_t)2.0 / (static_cast<double>(p) + (real_t)1.0))
                                               : (real_t)0.0;
@@ -287,7 +286,7 @@ static void test_sum_factorization_equivalence()
         const std::vector<double> naive = to_host_1d(f_qpt_naive, nqpts);
         real_t max_abs_diff = (real_t)0.0;
         for (size_t i = 0; i < nqpts; i++) {
-            const real_t d = std::fabs(sf[i] - naive[i]);
+            const real_t d = Kokkos::fabs(sf[i] - naive[i]);
             if (d > max_abs_diff) {
                 max_abs_diff = d;
             }

@@ -88,7 +88,7 @@ void Table_t::verify_data(size_t sorted_column_idx)
     // Check for NaN in each element; throw assertion if found
     for (size_t row = 0; row < num_rows; ++row) {
         for (size_t col = 0; col < num_columns; ++col) {
-            assert(!std::isnan(data.host(row, col)) &&
+            assert(!Kokkos::isnan(data.host(row, col)) &&
                    "NaN detected in Table_t::verify_data");
         }
     }

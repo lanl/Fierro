@@ -1,7 +1,6 @@
 // End-to-end test: equispaced box -> GLL projection -> tg_vortex IC ->
 // VTK_LAGRANGE_HEXAHEDRON .vtu writer.
 
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -28,7 +27,7 @@ static void check_close(const real_t actual,
                         const std::string& label)
 {
     g_num_checks++;
-    const real_t diff = std::fabs(actual - expected);
+    const real_t diff = Kokkos::fabs(actual - expected);
     if (diff > tol) {
         g_num_failures++;
         printf("  [FAIL] %s : actual=%.16e expected=%.16e diff=%.3e tol=%.3e\n",
@@ -122,8 +121,8 @@ static void apply_tg_vortex_inline(const MPICArrayKokkos<real_t>& coords,
     for (size_t n = 0; n < num_nodes; ++n) {
         const real_t x = coords.host(n, 0);
         const real_t y = coords.host(n, 1);
-        vel.host(n, 0) =  std::sin(PI * x) * std::cos(PI * y);
-        vel.host(n, 1) = -std::cos(PI * x) * std::sin(PI * y);
+        vel.host(n, 0) =  Kokkos::sin(PI * x) * Kokkos::cos(PI * y);
+        vel.host(n, 1) = -Kokkos::cos(PI * x) * Kokkos::sin(PI * y);
         vel.host(n, 2) = (real_t)0.0;
     }
     vel.update_device();

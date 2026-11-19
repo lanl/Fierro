@@ -1,6 +1,5 @@
 // Tests for ao_sgh::equispaced_to_gll and gll_to_equispaced.
 
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -24,7 +23,7 @@ static void check_close(const real_t actual,
                         const std::string& label)
 {
     g_num_checks++;
-    const real_t diff = std::fabs(actual - expected);
+    const real_t diff = Kokkos::fabs(actual - expected);
     if (diff > tol) {
         g_num_failures++;
         printf("  [FAIL] %s : actual=%.16e expected=%.16e diff=%.3e tol=%.3e\n",
@@ -111,7 +110,7 @@ static void test_single_element_p3()
 
     // For [0,1]^3, the projected x-coord at GLL index i is (1 + xi_i)/2.
     // For p=3: xi_0 = -1, xi_1 = -1/Kokkos::sqrt(5), xi_2 = +1/Kokkos::sqrt(5), xi_3 = +1.
-    const real_t inv_sqrt5 = (real_t)1.0 / std::sqrt((real_t)5.0);
+    const real_t inv_sqrt5 = (real_t)1.0 / Kokkos::sqrt((real_t)5.0);
     const real_t xi[4]     = { -(real_t)1.0, -inv_sqrt5, +inv_sqrt5, +(real_t)1.0 };
     auto pos = [&](int i) { return (real_t)0.5 * ((real_t)1.0 + xi[i]); };
 

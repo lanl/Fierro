@@ -1070,7 +1070,7 @@ void distribute_frictionless_force(ViewCArrayKokkos<real_t> &pair_vars, size_t &
     phi(phi_k, pair_vars(0), pair_vars(1), xi, eta);
 
     // if tensile, then subtract left over fc_inc_total; if not, then distribute to nodes
-    if (force_val + pair_vars(7) < (real_t)0.0 || abs(pair_vars(0)) > (real_t)1.01 || abs(pair_vars(1)) > (real_t)1.01)
+    if (force_val + pair_vars(7) < (real_t)0.0 || Kokkos::fabs(pair_vars(0)) > (real_t)1.01 || Kokkos::fabs(pair_vars(1)) > (real_t)1.01)
     {
         // update penetrating node
         for (int i = 0; i < 3; i++)
@@ -1911,12 +1911,12 @@ void penetration_sweep(real_t x_min, real_t y_min, real_t z_min, real_t bounding
                        RaggedRightArrayKokkos<real_t> &pair_vars, const real_t &del_t, CArrayKokkos <size_t> &active_set, bool doing_preload)
 {
     // finding penetration depth criterion
-    real_t dim_min = std::min(std::min(x_max-x_min,y_max-y_min),z_max-z_min);
+    real_t dim_min = Kokkos::fmin(Kokkos::fmin(x_max-x_min,y_max-y_min),z_max-z_min);
     
     // comparing bucket size and mesh size to define penetration depth maximum (cap) for consideration
     // todo: the multiplication values are currently arbitrary and should be checked for performance
     // todo: bucket size is bad now after stability update to sort
-    real_t depth_cap = std::min(dim_min/4,3*bucket_size);
+    real_t depth_cap = Kokkos::fmin(dim_min/4,3*bucket_size);
 
     // setting all values to an initially impossible number for surf ids (i.e. greater than total number of patches)
     FOR_ALL(i,0,num_bdy_nodes,{

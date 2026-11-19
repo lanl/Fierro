@@ -211,13 +211,13 @@ vec_t normalize(const vec_t& v) {
 ///
 /// \brief returns a value clamped between low and high values
 ///
-/// \param double the value passed into the function to be clamped
-/// \param double the low value
-/// \param double the high value
+/// \param real_t the value passed into the function to be clamped
+/// \param real_t the low value
+/// \param real_t the high value
 ///
 ////////////////////////////////////////////////////////////////////////////// 
 KOKKOS_INLINE_FUNCTION
-double clamp(real_t v, real_t lo, real_t hi) {
+real_t clamp(real_t v, real_t lo, real_t hi) {
     return Kokkos::fmax(lo, Kokkos::fmin(v, hi));
 } // end function
 

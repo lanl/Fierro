@@ -896,7 +896,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
             // --- Step 3: determine how many history columns to use ---
             // On early iterations the buffer is only partially filled.
-            int m_anderson = std::min(iter + 1, (int)window_size);
+            int m_anderson = Kokkos::min(iter + 1, (int)window_size);
             int m_diff = m_anderson - 1;   // number of consecutive differences available
 
             bool run_acceleration = (iter >= startup_iters) && 
