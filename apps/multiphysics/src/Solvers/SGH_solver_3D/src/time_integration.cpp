@@ -127,7 +127,7 @@ void SGH3D::get_timestep(swage::Mesh_t& mesh,
                        const size_t mat_id) const
 {
     // increase dt by 10%, that is the largest dt value
-    dt = dt * real_t(1.1);
+    dt = dt * (real_t)1.1;
 
     double dt_lcl;
     double min_dt_calc;
@@ -161,9 +161,9 @@ void SGH3D::get_timestep(swage::Mesh_t& mesh,
             b = countB;
 
             // returns magnitude of distance between each node, 28 total options
-            dist(i) = Kokkos::fabs(Kokkos::sqrt((Kokkos::pow((coords(b, 0) - coords(a, 0)), real_t(2.0))
-            + Kokkos::pow((coords(b, 1) - coords(a, 1)), real_t(2.0))
-            + Kokkos::pow((coords(b, 2) - coords(a, 2)), real_t(2.0)))));
+            dist(i) = Kokkos::fabs(Kokkos::sqrt((Kokkos::pow((coords(b, 0) - coords(a, 0)), (real_t)2.0)
+            + Kokkos::pow((coords(b, 1) - coords(a, 1)), (real_t)2.0)
+            + Kokkos::pow((coords(b, 2) - coords(a, 2)), (real_t)2.0))));
 
             countB++;
             countA++;
@@ -186,7 +186,7 @@ void SGH3D::get_timestep(swage::Mesh_t& mesh,
         real_t dt_lcl_ = dt_cfl * dist_min / (MaterialPoints_sspd(mat_id, mat_elem_sid) + fuzz);
 
         if (MaterialPoints_eroded(mat_id, mat_elem_sid) == true) {
-            dt_lcl_ = real_t(1.0e32);  // a huge time step as this element doesn't exist
+            dt_lcl_ = (real_t)1.0e32;  // a huge time step as this element doesn't exist
         }
 
         // make dt be in bounds

@@ -71,9 +71,9 @@ static void build_equispaced_box(DCArrayKokkos<size_t>& nodes_in_elem,
     const size_t npk = nz * p_order + 1;
     const size_t num_nodes = npi * npj * npk;
 
-    const real_t dxe = real_t(1.0) / (nx * p_order);
-    const real_t dye = real_t(1.0) / (ny * p_order);
-    const real_t dze = real_t(1.0) / (nz * p_order);
+    const real_t dxe = (real_t)1.0 / (nx * p_order);
+    const real_t dye = (real_t)1.0 / (ny * p_order);
+    const real_t dze = (real_t)1.0 / (nz * p_order);
 
     coords        = MPICArrayKokkos<real_t>(num_nodes, 3, "vis_test_coords");
     nodes_in_elem = DCArrayKokkos<size_t>(num_elems, npe, "vis_test_nodes_in_elem");
@@ -118,13 +118,13 @@ static void apply_tg_vortex_inline(const MPICArrayKokkos<real_t>& coords,
                                    MPICArrayKokkos<real_t>&       vel,
                                    const size_t                 num_nodes)
 {
-    const real_t PI = real_t(3.14159265358979323846);
+    const real_t PI = (real_t)3.14159265358979323846;
     for (size_t n = 0; n < num_nodes; ++n) {
         const real_t x = coords.host(n, 0);
         const real_t y = coords.host(n, 1);
         vel.host(n, 0) =  std::sin(PI * x) * std::cos(PI * y);
         vel.host(n, 1) = -std::cos(PI * x) * std::sin(PI * y);
-        vel.host(n, 2) = real_t(0.0);
+        vel.host(n, 2) = (real_t)0.0;
     }
     vel.update_device();
 }

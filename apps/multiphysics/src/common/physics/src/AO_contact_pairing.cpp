@@ -49,9 +49,9 @@ void lagrange_1D(const CArrayKokkos<real_t>& dof_positions_1d,
 {
     const real_t xa = dof_positions_1d(a);
 
-    double num  = real_t(1.0);  // prod_{b != a} (x - x_b)
-    real_t dnum = real_t(0.0);  // derivative of num
-    double den  = real_t(1.0);  // prod_{b != a} (x_a - x_b)
+    double num  = (real_t)1.0;  // prod_{b != a} (x - x_b)
+    real_t dnum = (real_t)0.0;  // derivative of num
+    double den  = (real_t)1.0;  // prod_{b != a} (x_a - x_b)
 
     for (size_t b = 0; b < num_dofs_1d; b++) {
         if (b == a) continue;
@@ -83,8 +83,8 @@ void get_normal(const CArrayKokkos<real_t>& dof_positions_1d,
     real_t dx_dxi[3];
     real_t dx_deta[3];
     for (int i = 0; i < 3; i++) {
-        dx_dxi[i] = real_t(0.0);
-        dx_deta[i] = real_t(0.0);
+        dx_dxi[i] = (real_t)0.0;
+        dx_deta[i] = (real_t)0.0;
     }
 
     // loop over dof indices in the surface xi direction
@@ -115,8 +115,8 @@ void get_normal(const CArrayKokkos<real_t>& dof_positions_1d,
     // orientation from the face: fixed_val is the reference outward sign (even -1, odd +1),
     // and eta faces flip because cyclic order (mu, xi) reverses the surface (xi, eta) order
     const size_t fixed_dim = face_lid/2;
-    const real_t fixed_val = (face_lid % 2 == 0) ? -real_t(1.0) : real_t(1.0);
-    const real_t orient    = (fixed_dim == 1) ? -real_t(1.0) : real_t(1.0);
+    const real_t fixed_val = (face_lid % 2 == 0) ? -(real_t)1.0 : (real_t)1.0;
+    const real_t orient    = (fixed_dim == 1) ? -(real_t)1.0 : (real_t)1.0;
     const real_t sign      = fixed_val*orient;
 
     normal[0] = sign*(dx_dxi[1]*dx_deta[2] - dx_dxi[2]*dx_deta[1]);
@@ -126,7 +126,7 @@ void get_normal(const CArrayKokkos<real_t>& dof_positions_1d,
     // normalize (guard against a degenerate surface point)
     const real_t mag = Kokkos::sqrt(normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2]);
 
-    if (mag > real_t(0.0)) {
+    if (mag > (real_t)0.0) {
         for (size_t dim = 0; dim < 3; dim++) {
             normal[dim] /= mag;
         }
@@ -218,7 +218,7 @@ bool check_filters(const size_t bdy_node_lid,
         // filter 2: is the node outside wrt this surface node by more than filter_tol?
         // (skipped once any surface node shows the node is not outside)
         if (outside_all) {
-            real_t dot = real_t(0.0);
+            real_t dot = (real_t)0.0;
             for (size_t dim = 0; dim < 3; dim++) {
                 dot += (x_node[dim] - bdy_node_coords(surf_bdy_node_lid, dim))*surf_node_normals(surf_node_rid, dim);
             }
@@ -298,10 +298,10 @@ void lagrange_1D_d2(const CArrayKokkos<real_t>& dof_positions_1d,
 {
     const real_t xa = dof_positions_1d(a);
 
-    double num   = real_t(1.0);  // prod_{b != a} (x - x_b)
-    real_t dnum  = real_t(0.0);  // first derivative of num
-    real_t ddnum = real_t(0.0);  // second derivative of num
-    double den   = real_t(1.0);  // prod_{b != a} (x_a - x_b)
+    double num   = (real_t)1.0;  // prod_{b != a} (x - x_b)
+    real_t dnum  = (real_t)0.0;  // first derivative of num
+    real_t ddnum = (real_t)0.0;  // second derivative of num
+    double den   = (real_t)1.0;  // prod_{b != a} (x_a - x_b)
 
     for (size_t b = 0; b < num_dofs_1d; b++) {
         if (b == a) continue;
@@ -309,7 +309,7 @@ void lagrange_1D_d2(const CArrayKokkos<real_t>& dof_positions_1d,
         const real_t dx = x - dof_positions_1d(b);
 
         // update highest derivative first so each line uses the previous lower derivatives
-        ddnum = ddnum*dx + real_t(2.0)*dnum;
+        ddnum = ddnum*dx + (real_t)2.0*dnum;
         dnum  = dnum*dx  + num;
         num  *= dx;
 
@@ -356,12 +356,12 @@ void get_surf_point_and_derivs(const CArrayKokkos<real_t>& dof_positions_1d,
     const size_t num_dofs_1d = dof_positions_1d.dims(0);
 
     for (size_t dim = 0; dim < 3; dim++) {
-        x_s[dim]      = real_t(0.0);
-        x_xi[dim]     = real_t(0.0);
-        x_eta[dim]    = real_t(0.0);
-        x_xixi[dim]   = real_t(0.0);
-        x_xieta[dim]  = real_t(0.0);
-        x_etaeta[dim] = real_t(0.0);
+        x_s[dim]      = (real_t)0.0;
+        x_xi[dim]     = (real_t)0.0;
+        x_eta[dim]    = (real_t)0.0;
+        x_xixi[dim]   = (real_t)0.0;
+        x_xieta[dim]  = (real_t)0.0;
+        x_etaeta[dim] = (real_t)0.0;
     }
 
     // loop over dofs in the surface xi direction
@@ -443,7 +443,7 @@ bool closest_point_projected_newton(const real_t* x_I,
 {
     const size_t max_iters    = 25;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const size_t max_ls_iters = 5;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t newton_tol   = real_t(1.0e-12); // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t newton_tol   = (real_t)1.0e-12; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
 
     real_t x_s[3], x_xi[3], x_eta[3], x_xixi[3], x_xieta[3], x_etaeta[3];
     real_t d[3];
@@ -451,18 +451,18 @@ bool closest_point_projected_newton(const real_t* x_I,
     // surface state and objective at the seed
     get_surf_point_and_derivs(dof_positions_1d, bdy_nodes_in_the_surf, bdy_node_coords,
                               xi, eta, x_s, x_xi, x_eta, x_xixi, x_xieta, x_etaeta);
-    f = real_t(0.0);
+    f = (real_t)0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         d[dim] = x_I[dim] - x_s[dim];
-        f += real_t(0.5)*d[dim]*d[dim];
+        f += (real_t)0.5*d[dim]*d[dim];
     }
 
     for (size_t iter = 0; iter < max_iters; iter++) {
 
         // residual F (= -grad f), surface metric g, curvature terms k
-        real_t F0 = real_t(0.0), F1 = real_t(0.0);
-        real_t g00 = real_t(0.0), g01 = real_t(0.0), g11 = real_t(0.0);
-        real_t k00 = real_t(0.0), k01 = real_t(0.0), k11 = real_t(0.0);
+        real_t F0 = (real_t)0.0, F1 = (real_t)0.0;
+        real_t g00 = (real_t)0.0, g01 = (real_t)0.0, g11 = (real_t)0.0;
+        real_t k00 = (real_t)0.0, k01 = (real_t)0.0, k11 = (real_t)0.0;
         for (size_t dim = 0; dim < 3; dim++) {
             F0  += x_xi[dim]*d[dim];
             F1  += x_eta[dim]*d[dim];
@@ -475,15 +475,15 @@ bool closest_point_projected_newton(const real_t* x_I,
         }
 
         // active set: freeze a coordinate at a bound if descent (+F) pushes it off the face
-        const bool xi_active  = (xi  <= -real_t(1.0) && F0 < real_t(0.0)) || (xi  >= real_t(1.0) && F0 > real_t(0.0));
-        const bool eta_active = (eta <= -real_t(1.0) && F1 < real_t(0.0)) || (eta >= real_t(1.0) && F1 > real_t(0.0));
+        const bool xi_active  = (xi  <= -(real_t)1.0 && F0 < (real_t)0.0) || (xi  >= (real_t)1.0 && F0 > (real_t)0.0);
+        const bool eta_active = (eta <= -(real_t)1.0 && F1 < (real_t)0.0) || (eta >= (real_t)1.0 && F1 > (real_t)0.0);
 
         // corner minimum: constrained optimality satisfied
         if (xi_active && eta_active) return true;
 
         // Newton step on the free coordinates
-        real_t dxi  = real_t(0.0);
-        real_t deta = real_t(0.0);
+        real_t dxi  = (real_t)0.0;
+        real_t deta = (real_t)0.0;
 
         if (!xi_active && !eta_active) {
             // full 2x2 Newton
@@ -493,7 +493,7 @@ bool closest_point_projected_newton(const real_t* x_I,
             real_t det = H00*H11 - H01*H01;
 
             // not positive definite: fall back to Gauss-Newton (linearized surface metric)
-            if (!(H00 > real_t(0.0) && det > real_t(0.0))) {
+            if (!(H00 > (real_t)0.0 && det > (real_t)0.0)) {
                 H00 = g00;
                 H01 = g01;
                 H11 = g11;
@@ -501,7 +501,7 @@ bool closest_point_projected_newton(const real_t* x_I,
             }
 
             // degenerate surface (collapsed tangents)
-            if (det <= real_t(1.0e-14)*g00*g11) return false;
+            if (det <= (real_t)1.0e-14*g00*g11) return false;
 
             // Cramer's rule for H dX = F
             dxi  = ( H11*F0 - H01*F1)/det;
@@ -510,15 +510,15 @@ bool closest_point_projected_newton(const real_t* x_I,
         else if (xi_active) {
             // on a xi = +-1 edge: 1D Newton along eta
             real_t H11 = g11 - k11;
-            if (!(H11 > real_t(0.0))) H11 = g11;   // Gauss-Newton fallback
-            if (H11 <= real_t(0.0)) return false;  // degenerate edge
+            if (!(H11 > (real_t)0.0)) H11 = g11;   // Gauss-Newton fallback
+            if (H11 <= (real_t)0.0) return false;  // degenerate edge
             deta = F1/H11;
         }
         else {
             // on an eta = +-1 edge: 1D Newton along xi
             real_t H00 = g00 - k00;
-            if (!(H00 > real_t(0.0))) H00 = g00;   // Gauss-Newton fallback
-            if (H00 <= real_t(0.0)) return false;  // degenerate edge
+            if (!(H00 > (real_t)0.0)) H00 = g00;   // Gauss-Newton fallback
+            if (H00 <= (real_t)0.0) return false;  // degenerate edge
             dxi = F0/H00;
         }
 
@@ -526,30 +526,30 @@ bool closest_point_projected_newton(const real_t* x_I,
         // (f can't resolve a decrease this small through roundoff, so a line search
         //  here would just burn max_ls_iters evaluations on noise)
         if (Kokkos::fabs(dxi) + Kokkos::fabs(deta) < newton_tol) {
-            xi  = Kokkos::fmin(real_t(1.0), Kokkos::fmax(-real_t(1.0), xi  + dxi));
-            eta = Kokkos::fmin(real_t(1.0), Kokkos::fmax(-real_t(1.0), eta + deta));
+            xi  = Kokkos::fmin((real_t)1.0, Kokkos::fmax(-(real_t)1.0, xi  + dxi));
+            eta = Kokkos::fmin((real_t)1.0, Kokkos::fmax(-(real_t)1.0, eta + deta));
             return true;
         }
 
         // backtracking line search on the clamped trial point
-        real_t step     = real_t(1.0);
+        real_t step     = (real_t)1.0;
         real_t xi_new   = xi;
         real_t eta_new  = eta;
         bool   accepted = false;
 
         for (size_t ls = 0; ls < max_ls_iters; ls++) {
 
-            xi_new  = Kokkos::fmin(real_t(1.0), Kokkos::fmax(-real_t(1.0), xi  + step*dxi));
-            eta_new = Kokkos::fmin(real_t(1.0), Kokkos::fmax(-real_t(1.0), eta + step*deta));
+            xi_new  = Kokkos::fmin((real_t)1.0, Kokkos::fmax(-(real_t)1.0, xi  + step*dxi));
+            eta_new = Kokkos::fmin((real_t)1.0, Kokkos::fmax(-(real_t)1.0, eta + step*deta));
 
             // note: derivatives are fine to calculate here as they will be used for the following iteration
             get_surf_point_and_derivs(dof_positions_1d, bdy_nodes_in_the_surf, bdy_node_coords,
                                       xi_new, eta_new, x_s, x_xi, x_eta, x_xixi, x_xieta, x_etaeta);
 
-            real_t f_new = real_t(0.0);
+            real_t f_new = (real_t)0.0;
             for (size_t dim = 0; dim < 3; dim++) {
                 d[dim] = x_I[dim] - x_s[dim];
-                f_new += real_t(0.5)*d[dim]*d[dim];
+                f_new += (real_t)0.5*d[dim]*d[dim];
             }
 
             if (f_new <= f) {
@@ -558,7 +558,7 @@ bool closest_point_projected_newton(const real_t* x_I,
                 break;
             }
 
-            step *= real_t(0.5);
+            step *= (real_t)0.5;
         } // end for ls
 
         // no step decreases f: at the minimum to roundoff
@@ -597,15 +597,15 @@ double seed_vel_alignment(const real_t* x_I,
                           const real_t* v,
                           const real_t  v_mag)
 {
-    real_t dot   = real_t(0.0);
-    real_t mag2  = real_t(0.0);
+    real_t dot   = (real_t)0.0;
+    real_t mag2  = (real_t)0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         const real_t diff = x_c[dim] - x_I[dim];
         dot  += diff*v[dim];
         mag2 += diff*diff;
     }
 
-    if (v_mag <= real_t(1.0e-14) || mag2 <= real_t(1.0e-28)) return real_t(0.0);
+    if (v_mag <= (real_t)1.0e-14 || mag2 <= (real_t)1.0e-28) return (real_t)0.0;
 
     return Kokkos::fabs(dot)/(Kokkos::sqrt(mag2)*v_mag);
 
@@ -674,14 +674,14 @@ bool penetration_check(const size_t bdy_node_lid,
     // 1. seed: closest candidate among surface nodes and surface quadrature points
     //    ties (equal dist2) go to the candidate most collinear with the node velocity
     // ---------------------------------------------------------------
-    real_t seed_xi    = real_t(0.0);
-    real_t seed_eta   = real_t(0.0);
+    real_t seed_xi    = (real_t)0.0;
+    real_t seed_eta   = (real_t)0.0;
     real_t seed_dist2 = mtr::prec::numeric_max<double>();
-    real_t seed_align = real_t(0.0);   // |cos| between (seed - x_I) and the node velocity
+    real_t seed_align = (real_t)0.0;   // |cos| between (seed - x_I) and the node velocity
 
     // node velocity, used only to break ties
     real_t v_I[3];
-    real_t v_mag2 = real_t(0.0);
+    real_t v_mag2 = (real_t)0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         v_I[dim] = bdy_node_vels(bdy_node_lid, dim);
         v_mag2  += v_I[dim]*v_I[dim];
@@ -695,7 +695,7 @@ bool penetration_check(const size_t bdy_node_lid,
             const size_t surf_bdy_node_lid = bdy_nodes_in_the_surf(elements::get_dof_rid(a, b, num_dofs_1d));
 
             real_t x_c[3];
-            real_t dist2 = real_t(0.0);
+            real_t dist2 = (real_t)0.0;
             for (size_t dim = 0; dim < 3; dim++) {
                 x_c[dim] = bdy_node_coords(surf_bdy_node_lid, dim);
                 const real_t diff = x_I[dim] - x_c[dim];
@@ -727,9 +727,9 @@ bool penetration_check(const size_t bdy_node_lid,
         // (with GLL dofs every off-face volume basis is zero on the face,
         //  so summing over the face nodes only is exact)
         real_t x_q[3];
-        x_q[0] = real_t(0.0);
-        x_q[1] = real_t(0.0);
-        x_q[2] = real_t(0.0);
+        x_q[0] = (real_t)0.0;
+        x_q[1] = (real_t)0.0;
+        x_q[2] = (real_t)0.0;
 
         for (size_t b = 0; b < num_dofs_1d; b++) {
             for (size_t a = 0; a < num_dofs_1d; a++) {
@@ -750,7 +750,7 @@ bool penetration_check(const size_t bdy_node_lid,
             } // end for a
         } // end for b
 
-        real_t dist2 = real_t(0.0);
+        real_t dist2 = (real_t)0.0;
         for (size_t dim = 0; dim < 3; dim++) {
             const real_t diff = x_I[dim] - x_q[dim];
             dist2 += diff*diff;
@@ -779,7 +779,7 @@ bool penetration_check(const size_t bdy_node_lid,
     // ---------------------------------------------------------------
     real_t xi  = seed_xi;
     real_t eta = seed_eta;
-    real_t f   = real_t(0.0);
+    real_t f   = (real_t)0.0;
 
     if (!closest_point_projected_newton(x_I, bdy_nodes_in_the_surf, bdy_node_coords,
                                         dof_positions_1d, xi, eta, f)) return false;
@@ -793,7 +793,7 @@ bool penetration_check(const size_t bdy_node_lid,
 
     // vector from the closest point to the node
     real_t d[3];
-    real_t dist2 = real_t(0.0);
+    real_t dist2 = (real_t)0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         d[dim] = x_I[dim] - x_s[dim];
         dist2 += d[dim]*d[dim];
@@ -801,7 +801,7 @@ bool penetration_check(const size_t bdy_node_lid,
     const real_t dist = Kokkos::sqrt(dist2);
 
     // node is on the surface to roundoff: no penetration
-    if (dist <= real_t(1.0e-14)) return false;
+    if (dist <= (real_t)1.0e-14) return false;
 
     // outward unit normal at the closest point
     real_t normal[3];
@@ -809,11 +809,11 @@ bool penetration_check(const size_t bdy_node_lid,
                face_lid, xi, eta, normal);
 
     // side check: d . n < 0 means the node is inside
-    real_t gap = real_t(0.0);
+    real_t gap = (real_t)0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         gap += d[dim]*normal[dim];
     }
-    if (gap >= real_t(0.0)) return false;
+    if (gap >= (real_t)0.0) return false;
 
     // ---------------------------------------------------------------
     // collinearity check: at a true closest point d is parallel to n
@@ -825,12 +825,12 @@ bool penetration_check(const size_t bdy_node_lid,
     //   Kokkos::cos(theta) = (d . d_n) / (|d| |d_n|)
     // theta = 0 for pure normal penetration
     // ---------------------------------------------------------------
-    const real_t collinear_tol = real_t(5.0);   // degrees, TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t pi = Kokkos::acos(-real_t(1.0));
+    const real_t collinear_tol = (real_t)5.0;   // degrees, TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t pi = Kokkos::acos(-(real_t)1.0);
 
     real_t d_n[3];
-    real_t d_n_mag2 = real_t(0.0);
-    real_t d_dot_dn = real_t(0.0);
+    real_t d_n_mag2 = (real_t)0.0;
+    real_t d_dot_dn = (real_t)0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         d_n[dim]  = gap*normal[dim];        // normal part of d
         d_n_mag2 += d_n[dim]*d_n[dim];
@@ -840,9 +840,9 @@ bool penetration_check(const size_t bdy_node_lid,
 
     // clamp guards acos against roundoff pushing cos slightly past 1
     real_t cos_theta = d_dot_dn/(dist*d_n_mag);
-    cos_theta = Kokkos::fmin(real_t(1.0), Kokkos::fmax(-real_t(1.0), cos_theta));
+    cos_theta = Kokkos::fmin((real_t)1.0, Kokkos::fmax(-(real_t)1.0, cos_theta));
 
-    const real_t theta_deg = Kokkos::acos(cos_theta)*real_t(180.0)/pi;
+    const real_t theta_deg = Kokkos::acos(cos_theta)*(real_t)180.0/pi;
 
     if (theta_deg > collinear_tol) return false;
 
@@ -899,11 +899,11 @@ bool refresh_closest_point(const size_t bdy_node_lid,
 {
     const size_t num_dofs_1d = dof_positions_1d.dims(0);
     const size_t max_iter    = 20;        // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t step_tol    = real_t(1.0e-12);   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t step_tol    = (real_t)1.0e-12;   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
 
     // start on the face (constrained problem, Eqs. 3.5-3.7)
-    xi  = Kokkos::fmin(Kokkos::fmax(xi,  -real_t(1.0)), real_t(1.0));
-    eta = Kokkos::fmin(Kokkos::fmax(eta, -real_t(1.0)), real_t(1.0));
+    xi  = Kokkos::fmin(Kokkos::fmax(xi,  -(real_t)1.0), (real_t)1.0);
+    eta = Kokkos::fmin(Kokkos::fmax(eta, -(real_t)1.0), (real_t)1.0);
 
     for (size_t iter = 0; iter < max_iter; iter++) {
 
@@ -912,9 +912,9 @@ bool refresh_closest_point(const size_t bdy_node_lid,
         real_t dx_dxi[3];
         real_t dx_deta[3];
         for (size_t dim = 0; dim < 3; dim++) {
-            x_s[dim]     = real_t(0.0);
-            dx_dxi[dim]  = real_t(0.0);
-            dx_deta[dim] = real_t(0.0);
+            x_s[dim]     = (real_t)0.0;
+            dx_dxi[dim]  = (real_t)0.0;
+            dx_deta[dim] = (real_t)0.0;
         }
 
         for (size_t a = 0; a < num_dofs_1d; a++) {
@@ -943,11 +943,11 @@ bool refresh_closest_point(const size_t bdy_node_lid,
         } // end for a
 
         // residual and Gauss-Newton Hessian
-        real_t r_xi  = real_t(0.0);
-        real_t r_eta = real_t(0.0);
-        real_t h11   = real_t(0.0);
-        real_t h12   = real_t(0.0);
-        real_t h22   = real_t(0.0);
+        real_t r_xi  = (real_t)0.0;
+        real_t r_eta = (real_t)0.0;
+        real_t h11   = (real_t)0.0;
+        real_t h12   = (real_t)0.0;
+        real_t h22   = (real_t)0.0;
         for (size_t dim = 0; dim < 3; dim++) {
             const real_t d = bdy_node_coords(bdy_node_lid, dim) - x_s[dim];
             r_xi  += dx_dxi[dim]*d;
@@ -959,7 +959,7 @@ bool refresh_closest_point(const size_t bdy_node_lid,
 
         // degenerate tangents (collapsed surface point): stop and keep the current (on-face) iterate
         const real_t det = h11*h22 - h12*h12;
-        if (det <= real_t(1.0e-30)*h11*h22) break;
+        if (det <= (real_t)1.0e-30*h11*h22) break;
 
         // unclamped trial step = H^-1 r
         const real_t xi_trial  = xi  + (h22*r_xi  - h12*r_eta)/det;
@@ -968,14 +968,14 @@ bool refresh_closest_point(const size_t bdy_node_lid,
         // slid off: starting FROM an edge, the step still pushes past the margin.
         // (an overshoot from the interior is only clamped; the next iteration,
         // taken from the edge, decides)
-        const bool on_xi_edge  = (Kokkos::fabs(xi)  >= real_t(1.0));
-        const bool on_eta_edge = (Kokkos::fabs(eta) >= real_t(1.0));
+        const bool on_xi_edge  = (Kokkos::fabs(xi)  >= (real_t)1.0);
+        const bool on_eta_edge = (Kokkos::fabs(eta) >= (real_t)1.0);
         if ((on_xi_edge  && Kokkos::fabs(xi_trial)  > slide_tol) ||
             (on_eta_edge && Kokkos::fabs(eta_trial) > slide_tol)) return false;
 
         // clamp to the face: the surface is never evaluated outside [-1, 1]^2
-        const real_t xi_new  = Kokkos::fmin(Kokkos::fmax(xi_trial,  -real_t(1.0)), real_t(1.0));
-        const real_t eta_new = Kokkos::fmin(Kokkos::fmax(eta_trial, -real_t(1.0)), real_t(1.0));
+        const real_t xi_new  = Kokkos::fmin(Kokkos::fmax(xi_trial,  -(real_t)1.0), (real_t)1.0);
+        const real_t eta_new = Kokkos::fmin(Kokkos::fmax(eta_trial, -(real_t)1.0), (real_t)1.0);
 
         // convergence on the step actually taken (zero in a direction held at its edge)
         const real_t step = Kokkos::fabs(xi_new - xi) + Kokkos::fabs(eta_new - eta);
@@ -1064,9 +1064,9 @@ void penetration_sweep(const size_t num_bdy_surfs,
                        DRaggedRightArrayKokkos<real_t>& contact_pair_vars,
                        CArrayKokkos<size_t>& num_pairs_touching_node)
 {
-    const real_t no_pair_sentinel = real_t(100000.0);  // TODO: define once (shared with the test block)
-    const real_t dir_tol          = real_t(1.0e-2);    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t slide_tol        = real_t(1.01);      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t no_pair_sentinel = (real_t)100000.0;  // TODO: define once (shared with the test block)
+    const real_t dir_tol          = (real_t)1.0e-2;    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t slide_tol        = (real_t)1.01;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
 
     // ---------------------------------------------------------------
     // reset per-sweep data
@@ -1175,9 +1175,9 @@ void penetration_sweep(const size_t num_bdy_surfs,
             const size_t node_gid = bdy_nodes(bdy_node_lid);
 
             real_t centroid[3];
-            centroid[0] = real_t(0.0);
-            centroid[1] = real_t(0.0);
-            centroid[2] = real_t(0.0);
+            centroid[0] = (real_t)0.0;
+            centroid[1] = (real_t)0.0;
+            centroid[2] = (real_t)0.0;
 
             const size_t num_own_elems = elems_in_node.stride(node_gid);
             for (size_t e = 0; e < num_own_elems; e++) {
@@ -1191,7 +1191,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
             }
 
             real_t to_body[3];
-            real_t to_body_mag2 = real_t(0.0);
+            real_t to_body_mag2 = (real_t)0.0;
             for (size_t dim = 0; dim < 3; dim++) {
                 centroid[dim] /= (double)(num_own_elems*num_nodes_in_elem);
                 to_body[dim]   = centroid[dim] - bdy_node_coords(bdy_node_lid, dim);
@@ -1199,7 +1199,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
             }
             const real_t to_body_mag = Kokkos::sqrt(to_body_mag2);
 
-            if (to_body_mag <= real_t(1.0e-14)) {
+            if (to_body_mag <= (real_t)1.0e-14) {
                 // degenerate own element(s): direction undefined, skip the merge
                 // (existing pairs are still refreshed below)
                 Kokkos::atomic_add(&contact_counts(1), (size_t)1);
@@ -1217,7 +1217,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
                     const size_t col          = cols_in_node_boxes(bdy_node_lid, slot);
 
                     const real_t gap = pairing_check_vars(bdy_surf_lid, col, 0);
-                    if (gap > real_t(0.5)*no_pair_sentinel) continue;   // candidate, not penetrating
+                    if (gap > (real_t)0.5*no_pair_sentinel) continue;   // candidate, not penetrating
 
                     const real_t xi  = pairing_check_vars(bdy_surf_lid, col, 1);
                     const real_t eta = pairing_check_vars(bdy_surf_lid, col, 2);
@@ -1232,7 +1232,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
 
                                         // direction filter: target outward normal must face the node's body
                     // this_dot is also the tie-break when two surfaces of the same element have equal |gap|
-                    real_t this_dot = real_t(0.0);
+                    real_t this_dot = (real_t)0.0;
                     for (size_t dim = 0; dim < 3; dim++) {
                         this_dot += n_S[dim]*to_body[dim];
                     }
@@ -1281,7 +1281,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
                         // current best: |gap| from the scratch slot, alignment recomputed
                         // from its stored normal (no extra storage needed)
                         const real_t best_abs = contact_pair_vars(bdy_node_lid, pair, 6);   // scratch |gap|
-                        real_t best_dot = real_t(0.0);
+                        real_t best_dot = (real_t)0.0;
                         for (size_t dim = 0; dim < 3; dim++) {
                             best_dot += contact_pair_vars(bdy_node_lid, pair, 2 + dim)*to_body[dim];
                         }
@@ -1297,17 +1297,17 @@ void penetration_sweep(const size_t num_bdy_surfs,
                         contact_pair_vars(bdy_node_lid, pair, 2) = n_S[0];
                         contact_pair_vars(bdy_node_lid, pair, 3) = n_S[1];
                         contact_pair_vars(bdy_node_lid, pair, 4) = n_S[2];
-                        contact_pair_vars(bdy_node_lid, pair, 5) = real_t(0.0);        // F_tot: new pair starts unloaded
+                        contact_pair_vars(bdy_node_lid, pair, 5) = (real_t)0.0;        // F_tot: new pair starts unloaded
                         contact_pair_vars(bdy_node_lid, pair, 6) = this_abs;   // scratch |gap|, zeroed after the merge
-                        contact_pair_vars(bdy_node_lid, pair, 7) = real_t(0.0);        // F_prop
-                        contact_pair_vars(bdy_node_lid, pair, 8) = real_t(0.0);        // F_used: the last solve saw no force from it
-                        contact_pair_vars(bdy_node_lid, pair, 9) = real_t(0.0);        // r_prev
+                        contact_pair_vars(bdy_node_lid, pair, 7) = (real_t)0.0;        // F_prop
+                        contact_pair_vars(bdy_node_lid, pair, 8) = (real_t)0.0;        // F_used: the last solve saw no force from it
+                        contact_pair_vars(bdy_node_lid, pair, 9) = (real_t)0.0;        // r_prev
                     }
                 } // end for slot
 
                 // clear the scratch: new pairs start with f_inc = 0
                 for (size_t p = num_old; p < num_pairs; p++) {
-                    contact_pair_vars(bdy_node_lid, p, 6) = real_t(0.0);
+                    contact_pair_vars(bdy_node_lid, p, 6) = (real_t)0.0;
                 }
 
                 // penetrating, but no surface faces the node's body: upstream problem
@@ -1362,7 +1362,7 @@ void penetration_sweep(const size_t num_bdy_surfs,
             contact_pair_vars(bdy_node_lid, p, 3) = n_S[1];
             contact_pair_vars(bdy_node_lid, p, 4) = n_S[2];
             // index 5, F_tot: kept, the force persists with its pair
-            contact_pair_vars(bdy_node_lid, p, 6) = real_t(0.0);   // f_inc
+            contact_pair_vars(bdy_node_lid, p, 6) = (real_t)0.0;   // f_inc
         } // end for p
 
         num_pairs_in_node(bdy_node_lid) = num_pairs;

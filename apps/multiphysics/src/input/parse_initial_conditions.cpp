@@ -158,7 +158,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         real_t value = root["initial_conditions"][ic_id]["initial_condition"]["density"]["value"].As<double>();
 
                         // check for a valid density, and then save it if it is
-                        if (value < real_t(0.0)) {
+                        if (value < (real_t)0.0) {
                             std::cout << "ERROR: density is negative: " << value << std::endl;
                         }
 
@@ -684,7 +684,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         }
                         else {
                             // 2D
-                            z1 = real_t(0.0);
+                            z1 = (real_t)0.0;
                         } //
 
                         // storing the origin values as (x1,y1,z1)
@@ -956,7 +956,7 @@ void parse_initial_conditions(Yaml::Node& root,
                         }
                         else {
                             // 2D
-                            z1 = real_t(0.0);
+                            z1 = (real_t)0.0;
                         } //
 
                         // storing the origin values as (x1,y1,z1)

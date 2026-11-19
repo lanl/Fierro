@@ -148,10 +148,10 @@ void SGH3D::get_force(const Material_t& Materials,
             for (size_t dim = 0; dim < num_dims; dim++) {
 
                 // the -1 is for the inward surface area normal,
-                area_normal(node_lid, dim) = (-real_t(1.0)) * area_normal(node_lid, dim);
+                area_normal(node_lid, dim) = (-(real_t)1.0) * area_normal(node_lid, dim);
 
                 // initialize dissipation and anti-hourglass forces to zero
-                disp_corner_forces(node_lid, dim) = real_t(0.0);
+                disp_corner_forces(node_lid, dim) = (real_t)0.0;
             } // end for
         } // end for
 
@@ -215,8 +215,8 @@ void SGH3D::get_force(const Material_t& Materials,
             // loop over dimensions and calc corner forces
             if (MaterialPoints_eroded(mat_id, mat_point_sid) == true) { // material(mat_id).blank_mat_id)
                 for (size_t dim = 0; dim < num_dims; dim++) {
-                    corner_force(corner_gid, dim) = real_t(0.0);
-                    MaterialCorners_force(mat_id, mat_corner_lid, dim) = real_t(0.0);
+                    corner_force(corner_gid, dim) = (real_t)0.0;
+                    MaterialCorners_force(mat_id, mat_corner_lid, dim) = (real_t)0.0;
                 }
             }
             //

@@ -171,8 +171,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
     CArrayKokkos<real_t> DeltaF(3*mesh.num_nodes, max_hist);
     CArrayKokkos<real_t> DeltaG(3*mesh.num_nodes, max_hist);
     const int startup_iters = 3;       // Number of initial pure Picard steps
-    const real_t max_weight = real_t(50.0);     // Threshold to catch exploded weights
-    const real_t fine_floor = real_t(1e-10);     // Residual norm below which Anderson is unsafe
+    const real_t max_weight = (real_t)50.0;     // Threshold to catch exploded weights
+    const real_t fine_floor = (real_t)1e-10;     // Residual norm below which Anderson is unsafe
 
     // ***********************************************************
     // TEMPORARY ALLOCATION AS ANDERSON IS NOT BEING SET FOR MPI YET
@@ -266,16 +266,16 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
     // Picard convergence on the contact force the last solve has not seen
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t contact_force_tol = real_t(1.0e-6);
+    const real_t contact_force_tol = (real_t)1.0e-6;
 
     // Aitken relaxation of the contact force between Picard solves
     // omega_init: relaxation before any history exists (first load step); later load steps
     //             warm start from the omega the previous load step ended with
     // [omega_min, omega_max]: bounds on the adaptive omega
     // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t contact_aitken_omega_init = real_t(0.5);
-    const real_t contact_aitken_omega_min  = real_t(0.01);
-    const real_t contact_aitken_omega_max  = real_t(1.0);
+    const real_t contact_aitken_omega_init = (real_t)0.5;
+    const real_t contact_aitken_omega_min  = (real_t)0.01;
+    const real_t contact_aitken_omega_max  = (real_t)1.0;
 
     if (doing_contact) {
 
@@ -320,11 +320,11 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
 
         // this solver doesn't carry velocity or acceleration
         // velocities are set per load step from the previous step's displacement increment
-        AO_contact_state.bdy_node_vels.set_values(real_t(0.0));
-        AO_contact_state.bdy_node_accels.set_values(real_t(0.0));
+        AO_contact_state.bdy_node_vels.set_values((real_t)0.0);
+        AO_contact_state.bdy_node_accels.set_values((real_t)0.0);
 
         prev_displacement_step = CArrayKokkos<real_t>(mesh.num_nodes, 3, "prev_displacement_step");
-        prev_displacement_step.set_values(real_t(0.0));
+        prev_displacement_step.set_values((real_t)0.0);
         Kokkos::fence();
 
         // ---------------------------------------------------------------
@@ -335,7 +335,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---------------------------------------------------------------
         CArrayKokkos<real_t> scratch_disp(mesh.num_nodes, 3, "contact_scratch_disp");
         constrained_dof.set_values(false);
-        scratch_disp.set_values(real_t(0.0));
+        scratch_disp.set_values((real_t)0.0);
         Kokkos::fence();
 
         boundary_displacement(mesh, BoundaryConditions, constrained_dof, scratch_disp, dt, time_value, time_start, time_end);
@@ -435,7 +435,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             const CArrayKokkos<size_t> bdy_nodes      = mesh.bdy_nodes;
             const CArrayKokkos<real_t> bdy_node_vels  = AO_contact_state.bdy_node_vels;
             const CArrayKokkos<real_t> prev_disp_step = prev_displacement_step;
-            const real_t inv_dt = real_t(1.0)/dt;
+            const real_t inv_dt = (real_t)1.0/dt;
             FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes, {
                 for (size_t dim = 0; dim < 3; dim++) {
                     bdy_node_vels(bdy_node_lid, dim) = prev_disp_step(bdy_nodes(bdy_node_lid), dim)*inv_dt;
@@ -707,8 +707,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             // getting spectral bounds for chebyshev smoothing
             // We pass zk and temporary here safely because they are currently uninitialized 
             // scratch space before the CG loop kicks off.
-            real_t alpha = real_t(0.0);
-            real_t beta = real_t(0.0);
+            real_t alpha = (real_t)0.0;
+            real_t beta = (real_t)0.0;
             const int cheb_degree = 3; // Choose your Chebyshev polynomial degree (typically 2 to 5)
             
             get_chebyshev_bounds(alpha, beta, D_inv, K_elem, constrained_dof, mesh.num_elems, mesh.num_nodes,
@@ -755,8 +755,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             for (int cgm_iter = 0; cgm_iter < max_iter; cgm_iter++) {
 
                 // r_k^T * z_k
-                double rktzk = real_t(0.0);
-                double loc_rktzk = real_t(0.0);
+                double rktzk = (real_t)0.0;
+                double loc_rktzk = (real_t)0.0;
                 FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_rktzk, {
                     if(mesh.shared_tally_owned_nodes(i)) {
                         for (int j = 0; j < 3; j++) {
@@ -797,8 +797,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 Kokkos::fence(); */
 
                 // check convergence on true residual norm
-                double rkp1trkp1 = real_t(0.0);
-                double loc_rkp1trkp1 = real_t(0.0);
+                double rkp1trkp1 = (real_t)0.0;
+                double loc_rkp1trkp1 = (real_t)0.0;
                 FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_rkp1trkp1, {
                     if(mesh.shared_tally_owned_nodes(i)){
                         for (int j = 0; j < 3; j++) {
@@ -810,13 +810,13 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 MPI_Allreduce(MPI_IN_PLACE, &rkp1trkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
                 double norm = Kokkos::sqrt(rkp1trkp1);
                 //std::cout << "CGM iter " << cgm_iter << " residual norm: " << norm << "\n";
-                if (norm < real_t(0.01)/*real_t(1E-10)*/) {
+                if (norm < (real_t)0.01/*(real_t)1E-10*/) {
                     break;
                 }
 
                 // r_{k+1}^T * z_{k+1}
-                double rkp1tzkp1 = real_t(0.0);
-                double loc_rkp1tzkp1 = real_t(0.0);
+                double rkp1tzkp1 = (real_t)0.0;
+                double loc_rkp1tzkp1 = (real_t)0.0;
                 FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_rkp1tzkp1, {
                     if(mesh.shared_tally_owned_nodes(i)){
                         for (int j = 0; j < 3; j++) {
@@ -828,7 +828,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                 MPI_Allreduce(MPI_IN_PLACE, &rkp1tzkp1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                 // beta_k = (r_{k+1}^T * z_{k+1}) / (r_k^T * z_k)
-                real_t beta_k = rkp1tzkp1 / (rktzk + real_t(1e-16));
+                real_t beta_k = rkp1tzkp1 / (rktzk + (real_t)1e-16);
 
                 // p_{k+1} = z_{k+1} + beta_k * p_k
                 FOR_ALL(i, 0, (int)mesh.num_nodes,
@@ -994,8 +994,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             bool   contact_settled    = true;
             bool   contact_changed    = false;
             size_t contact_num_active = 0;
-            double contact_max_dF     = real_t(0.0);
-            double contact_max_F      = real_t(0.0);
+            double contact_max_dF     = (real_t)0.0;
+            double contact_max_F      = (real_t)0.0;
             if (doing_contact) {
 
                 // current configuration (coords is otherwise only updated at the end of the load step,
@@ -1064,8 +1064,8 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
             }, norm_den);
 
             double norm = Kokkos::sqrt(norm_num / norm_den); */
-            double norm = real_t(0.0);
-            double loc_norm = real_t(0.0);
+            double norm = (real_t)0.0;
+            double loc_norm = (real_t)0.0;
             FOR_REDUCE_SUM(i, 0, (int)mesh.num_owned_nodes, loc_norm, {
                 if(mesh.shared_tally_owned_nodes(i)){
                     for (int j = 0; j < 3; j++) {
@@ -1091,7 +1091,7 @@ void TLQS3D::execute(SimulationParameters_t& SimulationParamaters,
                           << ", max |F| = " << contact_max_F << std::endl;
             }
 
-            if (norm < real_t(1E-16) && iter > 1 && contact_converged) {
+            if (norm < (real_t)1E-16 && iter > 1 && contact_converged) {
                 std::cout << "PICARD CONVERGED AT ITER: " << iter+1 << std::endl;
                 break;
             }

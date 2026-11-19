@@ -157,7 +157,7 @@ void parse_mesh_inputs(Yaml::Node& root, MeshInput_t& MeshInput)
             }
             else {
                 // 2D
-                z1 = real_t(0.0);
+                z1 = (real_t)0.0;
             } // end if
 
             // storing the origin values as
@@ -181,7 +181,7 @@ void parse_mesh_inputs(Yaml::Node& root, MeshInput_t& MeshInput)
             }
             else {
                 // 2D
-                l3 = real_t(0.0);
+                l3 = (real_t)0.0;
             } // end if
 
             // storing the length values

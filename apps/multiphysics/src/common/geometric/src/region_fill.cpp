@@ -304,7 +304,7 @@ void fill_regions(
     DCArrayKokkos<real_t> elem_geo_volfrac_a_fill(mesh.num_elems);  // the geometric volfracs in elements for a region fill
     DCArrayKokkos<real_t> elem_geo_volfrac_region_fills(mesh.num_elems,max_num_mats_per_elem);  // the geo volfracs for all region fills in an element
     // NOTE: more then one material can be painted on a region, so for instance, elem_geo_volfrac_reg of 2 might apply to 4 materials
-    elem_geo_volfrac_region_fills.set_values(real_t(0.0));  // initialized to zero
+    elem_geo_volfrac_region_fills.set_values((real_t)0.0);  // initialized to zero
 
     
     // ----------------------------------------------------------------------------
@@ -318,9 +318,9 @@ void fill_regions(
     FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
         // calculate the coordinates and radius of the element     
-        elem_coords(elem_gid, 0) = real_t(0.0);
-        elem_coords(elem_gid, 1) = real_t(0.0);
-        elem_coords(elem_gid, 2) = real_t(0.0);
+        elem_coords(elem_gid, 0) = (real_t)0.0;
+        elem_coords(elem_gid, 1) = (real_t)0.0;
+        elem_coords(elem_gid, 2) = (real_t)0.0;
 
         // get the coordinates of the element center 
         for (int node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
@@ -330,7 +330,7 @@ void fill_regions(
                 elem_coords(elem_gid, 2) += node_coords(mesh.nodes_in_elem(elem_gid, node_lid), 2);
             }
             else{
-                elem_coords(elem_gid, 2) = real_t(0.0);
+                elem_coords(elem_gid, 2) = (real_t)0.0;
             }
         } // end loop over nodes in element
         elem_coords(elem_gid, 0) = (elem_coords(elem_gid, 0) / mesh.num_nodes_in_elem);
@@ -364,14 +364,14 @@ void fill_regions(
         switch (region_fills_host(reg_id).volume) {
             case region::global:
             {
-                elem_geo_volfrac_a_fill.set_values(real_t(1.0));
+                elem_geo_volfrac_a_fill.set_values((real_t)1.0);
                 Kokkos::fence();
                 break;
             } // end case
             // ---
             case region::box:
             {
-                elem_geo_volfrac_a_fill.set_values(real_t(0.0));  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
 
 
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
@@ -388,7 +388,7 @@ void fill_regions(
                     if (elem_coords(elem_gid,0) >= x_lower_bound && elem_coords(elem_gid,0) <= x_upper_bound &&
                         elem_coords(elem_gid,1) >= y_lower_bound && elem_coords(elem_gid,1) <= y_upper_bound &&
                         elem_coords(elem_gid,2) >= z_lower_bound && elem_coords(elem_gid,2) <= z_upper_bound) {
-                        elem_geo_volfrac_a_fill(elem_gid) = real_t(1.0);
+                        elem_geo_volfrac_a_fill(elem_gid) = (real_t)1.0;
                     } // end if
 
                 });
@@ -398,7 +398,7 @@ void fill_regions(
             // ---
             case region::cylinder:
             {
-                elem_geo_volfrac_a_fill.set_values(real_t(0.0));  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
 
                 RUN({
                     const real_t unit_x = region_fills(reg_id).unit_vector[0];
@@ -438,7 +438,7 @@ void fill_regions(
                     
                     bool is_inside = false;
                     
-                    if (projection >= real_t(0.0) && projection <= height) {
+                    if (projection >= (real_t)0.0 && projection <= height) {
 
                         // Only compute perpendicular distance if height check passes
                         const real_t length_squared = dist_x*dist_x + dist_y*dist_y + dist_z*dist_z;
@@ -457,7 +457,7 @@ void fill_regions(
                     } // end if
                     
                     if (is_inside) {
-                        elem_geo_volfrac_a_fill(elem_gid) = real_t(1.0);
+                        elem_geo_volfrac_a_fill(elem_gid) = (real_t)1.0;
                     }
 
                 });
@@ -468,7 +468,7 @@ void fill_regions(
             // ---
             case region::cone:
             {
-                elem_geo_volfrac_a_fill.set_values(real_t(0.0));  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
 
                 RUN({
                     const real_t unit_x = region_fills(reg_id).unit_vector[0];
@@ -504,7 +504,7 @@ void fill_regions(
                     bool is_inside_shell = false;
 
                     // checking to see if it is a cone with spherical radius on top and not a plane
-                    const bool ice_cream_cone = (region_fills(reg_id).radius2 > real_t(1.0e-13));
+                    const bool ice_cream_cone = (region_fills(reg_id).radius2 > (real_t)1.0e-13);
 
                     if(ice_cream_cone){
                         // spherical radius 
@@ -534,7 +534,7 @@ void fill_regions(
                         // cos^2(alpha) * |w|^2 <= (w dot d)^2
 
                         const real_t length_squared = dist_x*dist_x + dist_y*dist_y + dist_z*dist_z;
-                        const real_t cos_half_angle = Kokkos::cos(region_fills(reg_id).half_angle*PI/real_t(180.));
+                        const real_t cos_half_angle = Kokkos::cos(region_fills(reg_id).half_angle*PI/(real_t)180.);
                         const real_t lhs_squared = length_squared*cos_half_angle*cos_half_angle;
                         const real_t projection_squared = projection*projection;
                         
@@ -547,13 +547,13 @@ void fill_regions(
                     if(ice_cream_cone){
                         // must be inside both the spheres and the cone
                         if(is_inside_cone && is_inside_shell){
-                            elem_geo_volfrac_a_fill(elem_gid) = real_t(1.0);
+                            elem_geo_volfrac_a_fill(elem_gid) = (real_t)1.0;
                         }
                     }
                     else{
                         // only inside the cone
                         if(is_inside_cone){
-                            elem_geo_volfrac_a_fill(elem_gid) = real_t(1.0);
+                            elem_geo_volfrac_a_fill(elem_gid) = (real_t)1.0;
                         }
                     }
 
@@ -566,7 +566,7 @@ void fill_regions(
             case region::sphere:
             {
 
-                elem_geo_volfrac_a_fill.set_values(real_t(0.0));  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
             
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
@@ -582,7 +582,7 @@ void fill_regions(
 
                     if (radius >= region_fills(reg_id).radius1
                         && radius <= region_fills(reg_id).radius2) {
-                        elem_geo_volfrac_a_fill(elem_gid) = real_t(1.0);
+                        elem_geo_volfrac_a_fill(elem_gid) = (real_t)1.0;
                     }
 
                 });
@@ -594,7 +594,7 @@ void fill_regions(
             case region::readVoxelFile:
             {
 
-                elem_geo_volfrac_a_fill.set_values(real_t(0.0));  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
 
                 // read voxel mesh to get the values in the fcn interface
                 // voxel_elem_mat_id is read here
@@ -640,7 +640,7 @@ void fill_regions(
 
                         // if part_id matches the voxel_mat_id here, then fill elem_gid
                         if(region_fills(reg_id).part_id == voxel_elem_mat_id(elem_id0)){
-                            elem_geo_volfrac_a_fill(elem_gid) = real_t(1.0);
+                            elem_geo_volfrac_a_fill(elem_gid) = (real_t)1.0;
                         }
 
                     } // end if
@@ -652,7 +652,7 @@ void fill_regions(
             // ---
             case region::readSTLFile:
             {
-                elem_geo_volfrac_a_fill.set_values(real_t(0.0));  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
 
                 // read .STL file and paint vol fractions on mesh
                 int paint_sucessful = paint_stl_on_mesh(elem_geo_volfrac_a_fill, 
@@ -677,12 +677,12 @@ void fill_regions(
             // ---
             case region::readVTUFile:
             {
-                elem_geo_volfrac_a_fill.set_values(real_t(0.0));  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
 
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
                     // if the part id in .vtu file matches the specified id, then fill it
                     if(object_ids(elem_gid) == region_fills(reg_id).part_id){
-                        elem_geo_volfrac_a_fill(elem_gid) = real_t(1.0);
+                        elem_geo_volfrac_a_fill(elem_gid) = (real_t)1.0;
                     }
                 });
 
@@ -691,14 +691,14 @@ void fill_regions(
             // ---
             case region::no_volume:
             {
-                elem_geo_volfrac_a_fill.set_values(real_t(0.0));  // default is no, don't fill it
+                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // default is no, don't fill it
 
                 break;
             } // end case
             // ----
             default:
             {
-                elem_geo_volfrac_a_fill.set_values(real_t(0.0));  // default is no, don't fill it
+                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // default is no, don't fill it
 
                 break;
             } // end case
@@ -710,12 +710,12 @@ void fill_regions(
         FOR_ALL(elem_gid, 0, mesh.num_elems, {
 
             // paint the material state on the element if geo_volfrac>0
-            if (elem_geo_volfrac_a_fill(elem_gid) > real_t(1.e-8)) {
+            if (elem_geo_volfrac_a_fill(elem_gid) > (real_t)1.e-8) {
                 
                 // Note: material volume fractions is added to mesh when applying initial conditions
 
                 // if this fill is to add a geometroy to existing ones, do so
-                if (elem_geo_volfrac_a_fill(elem_gid) < real_t(1.0) - real_t(1.0e-8)){
+                if (elem_geo_volfrac_a_fill(elem_gid) < (real_t)1.0 - (real_t)1.0e-8){
 
                     // append the region_id and elem_geo_volfrac_region_fills in this element
                     append_fills_in_elem(elem_geo_volfrac_region_fills,
@@ -736,7 +736,7 @@ void fill_regions(
  
                     // save volume fractions
                     // ERROR HERE: needs to be elem region volfrac
-                    elem_geo_volfrac_region_fills(elem_gid, 0) = real_t(1.0); // entire element is a single region
+                    elem_geo_volfrac_region_fills(elem_gid, 0) = (real_t)1.0; // entire element is a single region
 
                     // only 1 material
                     elem_num_region_fills(elem_gid) = 1;
@@ -862,7 +862,7 @@ void fill_regions(
 
         // Important:
         // We verify that all geometric volume fractions sum to one
-        real_t check_unity = real_t(0.0);
+        real_t check_unity = (real_t)0.0;
         for(size_t reg_fill_lid=0; reg_fill_lid<elem_num_region_fills(elem_gid); reg_fill_lid++){
 
             // DEBUG:
@@ -874,7 +874,7 @@ void fill_regions(
         // DEBUG:
         //printf("geo_volfrac elem tally =%f \n\n",check_unity);
 
-        if(check_unity>real_t(1.0)+real_t(1e-8)){
+        if(check_unity>(real_t)1.0+(real_t)1e-8){
             Kokkos::abort("ERROR: Geometric volfraction exceeds 1. \n");
         }
 
@@ -943,8 +943,8 @@ void fill_regions(
                                                 mesh.num_dims,
                                                 region_ics(ic_id).mat_volfrac_field);
 
-                mat_vfrac = Kokkos::fmax(real_t(0.0), mat_vfrac);
-                mat_vfrac = Kokkos::fmin(real_t(1.0), mat_vfrac);
+                mat_vfrac = Kokkos::fmax((real_t)0.0, mat_vfrac);
+                mat_vfrac = Kokkos::fmin((real_t)1.0, mat_vfrac);
 
                 elem_mat_volfrac(elem_gid,bin) = mat_vfrac;
 
@@ -997,7 +997,7 @@ void fill_regions(
                     paint_multi_scalar(gauss_den,
                                     coords,
                                     region_ics(ic_id).den,
-                                    real_t(0.0),
+                                    (real_t)0.0,
                                     region_ics(ic_id).den_origin,
                                     gauss_gid,
                                     mesh.num_dims,
@@ -1008,7 +1008,7 @@ void fill_regions(
                     paint_multi_scalar(gauss_sie,
                                     coords,
                                     region_ics(ic_id).sie,
-                                    real_t(0.0),
+                                    (real_t)0.0,
                                     region_ics(ic_id).sie_origin,
                                     gauss_gid,
                                     mesh.num_dims,
@@ -1024,7 +1024,7 @@ void fill_regions(
                     paint_multi_scalar(gauss_ie,
                                     coords,
                                     region_ics(ic_id).ie,
-                                    real_t(0.0),
+                                    (real_t)0.0,
                                     region_ics(ic_id).sie_origin,
                                     gauss_gid,
                                     mesh.num_dims,
@@ -1035,7 +1035,7 @@ void fill_regions(
                     paint_multi_scalar(gauss_thermal_conductivity,
                                     coords,
                                     region_ics(ic_id).thermal_conductivity,
-                                    real_t(0.0),
+                                    (real_t)0.0,
                                     region_ics(ic_id).thermal_conductivity_origin,
                                     gauss_gid,
                                     mesh.num_dims,
@@ -1046,7 +1046,7 @@ void fill_regions(
                     paint_multi_scalar(gauss_specific_heat,
                                     coords,
                                     region_ics(ic_id).specific_heat,
-                                    real_t(0.0),
+                                    (real_t)0.0,
                                     region_ics(ic_id).specific_heat_origin,
                                     gauss_gid,
                                     mesh.num_dims,
@@ -1111,7 +1111,7 @@ void fill_regions(
                         paint_scalar(node_temp,
                                     a_node_coords,
                                     region_ics(ic_id).temperature,
-                                    real_t(0.0),
+                                    (real_t)0.0,
                                     node_gid,
                                     mesh.num_dims,
                                     region_ics(ic_id).temperature_field);
@@ -1286,7 +1286,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
 
     // --- set the level set field ---
     if( State.GaussPoints.level_set.size()>0 ){
-        State.GaussPoints.level_set.set_values(real_t(1.0e32)); // make level set have a default huge
+        State.GaussPoints.level_set.set_values((real_t)1.0e32); // make level set have a default huge
         Kokkos::fence();
         State.GaussPoints.level_set.update_host();
     }
@@ -1411,7 +1411,7 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
                 //}
 
                 // save state
-                State.MaterialZones.sie.host(mat_id,elem_gid) = real_t(0.0);  // a place holder, make least squares fit value
+                State.MaterialZones.sie.host(mat_id,elem_gid) = (real_t)0.0;  // a place holder, make least squares fit value
    
 
             } // 
@@ -1443,11 +1443,11 @@ void material_state_setup(SimulationParameters_t& SimulationParamaters,
             FOR_ALL(mat_point_sid, 0, num_mat_elems*num_gauss_points_in_elem, {
                 for(size_t i=0; i<3; i++){
                     for(size_t j=0; j<3; j++){
-                        State.MaterialPoints.deformation_grad(mat_id,mat_point_sid,i,j)    = real_t(0.0);
-                        State.MaterialPoints.deformation_grad_t0(mat_id,mat_point_sid,i,j) = real_t(0.0);
+                        State.MaterialPoints.deformation_grad(mat_id,mat_point_sid,i,j)    = (real_t)0.0;
+                        State.MaterialPoints.deformation_grad_t0(mat_id,mat_point_sid,i,j) = (real_t)0.0;
                     } // end j
-                    State.MaterialPoints.deformation_grad(mat_id,mat_point_sid,i,i)    = real_t(1.0);
-                    State.MaterialPoints.deformation_grad_t0(mat_id,mat_point_sid,i,i) = real_t(1.0);
+                    State.MaterialPoints.deformation_grad(mat_id,mat_point_sid,i,i)    = (real_t)1.0;
+                    State.MaterialPoints.deformation_grad_t0(mat_id,mat_point_sid,i,i) = (real_t)1.0;
                 } // end i
 
             }); // end parallel for
@@ -1754,9 +1754,9 @@ void user_voxel_init(DCArrayKokkos<size_t>& elem_values,
     dz = Lz / ((double) num_elems_k);
 
     // element mesh origin
-    orig_x = real_t(0.5) * (pt_coords_x(0) + pt_coords_x(1)),
-    orig_y = real_t(0.5) * (pt_coords_y(0) + pt_coords_y(1)),
-    orig_z = real_t(0.5) * (pt_coords_z(0) + pt_coords_z(1)),
+    orig_x = (real_t)0.5 * (pt_coords_x(0) + pt_coords_x(1)),
+    orig_y = (real_t)0.5 * (pt_coords_y(0) + pt_coords_y(1)),
+    orig_z = (real_t)0.5 * (pt_coords_z(0) + pt_coords_z(1)),
 
     // look for CELLS
     i = 0;
@@ -1905,7 +1905,7 @@ void append_fills_in_elem(const DCArrayKokkos<real_t>& elem_geo_volfrac_region_f
 
         for (size_t read_idx = 0; read_idx < elem_num_region_fills(elem_gid); ++read_idx) {
 
-            if (elem_geo_volfrac_region_fills(elem_gid, read_idx) > real_t(1.e-8)) {
+            if (elem_geo_volfrac_region_fills(elem_gid, read_idx) > (real_t)1.e-8) {
 
                 if (write_idx != read_idx){
                     elem_region_ids(elem_gid, write_idx) = elem_region_ids(elem_gid, read_idx);
@@ -1955,7 +1955,7 @@ bool bound_volfracs(const DCArrayKokkos<real_t>& volfracs,
 
     // ----------
     // checking to see if volfrac tally exceeds one, if true, push volume out 
-    real_t total_volfrac = real_t(0.0);
+    real_t total_volfrac = (real_t)0.0;
     for (size_t bin_id=0; bin_id < bin_stop; bin_id++){
         total_volfrac += volfracs(index, bin_id);
     } // end for bin_id
@@ -1966,15 +1966,15 @@ bool bound_volfracs(const DCArrayKokkos<real_t>& volfracs,
 
     // ----------
     // remove all excess volume, ensuring volfrac's tally to 1 in the element
-    if (total_volfrac>real_t(1.0)){
+    if (total_volfrac>(real_t)1.0){
 
-        real_t excess = Kokkos::fmax(real_t(0.0), total_volfrac - real_t(1.0));
+        real_t excess = Kokkos::fmax((real_t)0.0, total_volfrac - (real_t)1.0);
 
         // Step 2A:
         // loop over the region fills, remove excess
         for (size_t bin_id = 0; bin_id < bin_stop; ++bin_id){
             
-            if (excess <= real_t(1.e-8)) break;
+            if (excess <= (real_t)1.e-8) break;
 
             real_t subtract = Kokkos::fmin(excess, volfracs(index, bin_id));
 
@@ -2032,9 +2032,9 @@ double get_region_scalar(const ViewCArrayKokkos<real_t> mesh_coords,
                 // Setting up radial
                 //   vol = slope*Kokkos::sqrt( dx^2 + dy^2 - value )
                 real_t dir[2];
-                dir[0] = real_t(0.0);
-                dir[1] = real_t(0.0);
-                real_t radius_val = real_t(0.0);
+                dir[0] = (real_t)0.0;
+                dir[1] = (real_t)0.0;
+                real_t radius_val = (real_t)0.0;
 
                 for (int dim = 0; dim < 2; dim++) {
                     dir[dim]    = (mesh_coords(dim) - orig[dim]);
@@ -2052,10 +2052,10 @@ double get_region_scalar(const ViewCArrayKokkos<real_t> mesh_coords,
                 // Setting up spherical
                 //   val_out = slope*Kokkos::sqrt( dx^2 + dy^2 + dz^2 - value )
                 real_t dir[3];
-                dir[0] = real_t(0.0);
-                dir[1] = real_t(0.0);
-                dir[2] = real_t(0.0);
-                real_t radius_val = real_t(0.0);
+                dir[0] = (real_t)0.0;
+                dir[1] = (real_t)0.0;
+                dir[2] = (real_t)0.0;
+                real_t radius_val = (real_t)0.0;
 
                 for (int dim = 0; dim < 3; dim++) {
                     dir[dim]    = (mesh_coords(dim) - orig[dim]);
@@ -2089,8 +2089,8 @@ double get_region_scalar(const ViewCArrayKokkos<real_t> mesh_coords,
         case initial_conditions::tgVortexScalar:
             {
                 value_out = scalar
-                          + (real_t(3.0)/real_t(8.0)) * (Kokkos::cos(real_t(2.0) * PI * mesh_coords(0))
-                                       + Kokkos::cos(real_t(2.0) * PI * mesh_coords(1)));
+                          + ((real_t)3.0/(real_t)8.0) * (Kokkos::cos((real_t)2.0 * PI * mesh_coords(0))
+                                       + Kokkos::cos((real_t)2.0 * PI * mesh_coords(1)));
                 break;
             }
         case initial_conditions::noICsScalar:
@@ -2149,8 +2149,8 @@ void paint_multi_scalar(const DCArrayKokkos<real_t>& field_scalar,
             {
                  // Setting up radial
                 //   vol = slope*(dx^2 + dy^2)- value^2
-                real_t delta = real_t(0.0);
-                real_t radius_val = real_t(0.0);
+                real_t delta = (real_t)0.0;
+                real_t radius_val = (real_t)0.0;
 
                 for (int dim = 0; dim < 2; dim++) {
                     delta    = (mesh_coords(dim) - orig[dim]);
@@ -2167,8 +2167,8 @@ void paint_multi_scalar(const DCArrayKokkos<real_t>& field_scalar,
             {
                 // Setting up spherical
                 //   val_out = slope*Kokkos::sqrt( dx^2 + dy^2 + dz^2 ) - value
-                real_t delta = real_t(0.0);
-                real_t radius_val = real_t(0.0);
+                real_t delta = (real_t)0.0;
+                real_t radius_val = (real_t)0.0;
 
                 for (int dim = 0; dim < num_dims; dim++) {
                     delta    = (mesh_coords(dim) - orig[dim]);
@@ -2202,8 +2202,8 @@ void paint_multi_scalar(const DCArrayKokkos<real_t>& field_scalar,
         case initial_conditions::tgVortexScalar:
             {
                 field_scalar(mesh_gid,bin) = scalar
-                          + (real_t(3.0)/real_t(8.0)) * (Kokkos::cos(real_t(2.0) * PI * mesh_coords(0))
-                                       + Kokkos::cos(real_t(2.0) * PI * mesh_coords(1)));
+                          + ((real_t)3.0/(real_t)8.0) * (Kokkos::cos((real_t)2.0 * PI * mesh_coords(0))
+                                       + Kokkos::cos((real_t)2.0 * PI * mesh_coords(1)));
                 break;
             }
         case initial_conditions::noICsScalar:
@@ -2259,9 +2259,9 @@ void paint_scalar(const MPICArrayKokkos<real_t>& field_scalar,
                 {
                     // Setting up radial
                     real_t dir[2];
-                    dir[0] = real_t(0.0);
-                    dir[1] = real_t(0.0);
-                    real_t radius_val = real_t(0.0);
+                    dir[0] = (real_t)0.0;
+                    dir[1] = (real_t)0.0;
+                    real_t radius_val = (real_t)0.0;
 
                     for (int dim = 0; dim < 2; dim++) {
                         dir[dim]    = mesh_coords(dim);
@@ -2270,11 +2270,11 @@ void paint_scalar(const MPICArrayKokkos<real_t>& field_scalar,
                     radius_val = Kokkos::sqrt(radius_val);
 
                     for (int dim = 0; dim < 2; dim++) {
-                        if (radius_val > real_t(1.0e-14)) {
+                        if (radius_val > (real_t)1.0e-14) {
                             dir[dim] /= (radius_val);
                         }
                         else{
-                            dir[dim] = real_t(0.0);
+                            dir[dim] = (real_t)0.0;
                         }
                     } // end for
 
@@ -2287,10 +2287,10 @@ void paint_scalar(const MPICArrayKokkos<real_t>& field_scalar,
                 {
                     // Setting up spherical
                     real_t dir[3];
-                    dir[0] = real_t(0.0);
-                    dir[1] = real_t(0.0);
-                    dir[2] = real_t(0.0);
-                    real_t radius_val = real_t(0.0);
+                    dir[0] = (real_t)0.0;
+                    dir[1] = (real_t)0.0;
+                    dir[2] = (real_t)0.0;
+                    real_t radius_val = (real_t)0.0;
 
                     for (int dim = 0; dim < 3; dim++) {
                         dir[dim]    = mesh_coords(dim);
@@ -2299,11 +2299,11 @@ void paint_scalar(const MPICArrayKokkos<real_t>& field_scalar,
                     radius_val = Kokkos::sqrt(radius_val);
 
                     for (int dim = 0; dim < 3; dim++) {
-                        if (radius_val > real_t(1.0e-14)) {
+                        if (radius_val > (real_t)1.0e-14) {
                             dir[dim] /= (radius_val);
                         }
                         else{
-                            dir[dim] = real_t(0.0);
+                            dir[dim] = (real_t)0.0;
                         }
                     } // end for
 
@@ -2331,8 +2331,8 @@ void paint_scalar(const MPICArrayKokkos<real_t>& field_scalar,
             case initial_conditions::tgVortexScalar:
                 {
                     field_scalar(mesh_gid) = scalar
-                              + (real_t(3.0)/real_t(8.0)) * (Kokkos::cos(real_t(2.0) * PI * mesh_coords(0))
-                                           + Kokkos::cos(real_t(2.0) * PI * mesh_coords(1)));
+                              + ((real_t)3.0/(real_t)8.0) * (Kokkos::cos((real_t)2.0 * PI * mesh_coords(0))
+                                           + Kokkos::cos((real_t)2.0 * PI * mesh_coords(1)));
                     break;
                 }
             case initial_conditions::noICsScalar:
@@ -2396,9 +2396,9 @@ void paint_vector(const MPICArrayKokkos<real_t>& vector_field,
                 {
                     // Setting up radial
                     real_t dir[2];
-                    dir[0] = real_t(0.0);
-                    dir[1] = real_t(0.0);
-                    real_t radius_val = real_t(0.0);
+                    dir[0] = (real_t)0.0;
+                    dir[1] = (real_t)0.0;
+                    real_t radius_val = (real_t)0.0;
 
                     for (int dim = 0; dim < 2; dim++) {
                         dir[dim]    = mesh_coords(dim);
@@ -2407,18 +2407,18 @@ void paint_vector(const MPICArrayKokkos<real_t>& vector_field,
                     radius_val = Kokkos::sqrt(radius_val);
 
                     for (int dim = 0; dim < 2; dim++) {
-                        if (radius_val > real_t(1.0e-14)) {
+                        if (radius_val > (real_t)1.0e-14) {
                             dir[dim] /= (radius_val);
                         }
                         else{
-                            dir[dim] = real_t(0.0);
+                            dir[dim] = (real_t)0.0;
                         }
                     } // end for
 
                     vector_field(mesh_gid, 0) = scalar * dir[0];
                     vector_field(mesh_gid, 1) = scalar * dir[1];
                     if (num_dims == 3) {
-                        vector_field(mesh_gid, 2) = real_t(0.0);
+                        vector_field(mesh_gid, 2) = (real_t)0.0;
                     }
 
                     break;
@@ -2427,10 +2427,10 @@ void paint_vector(const MPICArrayKokkos<real_t>& vector_field,
                 {
                     // Setting up spherical
                     real_t dir[3];
-                    dir[0] = real_t(0.0);
-                    dir[1] = real_t(0.0);
-                    dir[2] = real_t(0.0);
-                    real_t radius_val = real_t(0.0);
+                    dir[0] = (real_t)0.0;
+                    dir[1] = (real_t)0.0;
+                    dir[2] = (real_t)0.0;
+                    real_t radius_val = (real_t)0.0;
 
                     for (int dim = 0; dim < 3; dim++) {
                         dir[dim]    = mesh_coords(dim);
@@ -2439,11 +2439,11 @@ void paint_vector(const MPICArrayKokkos<real_t>& vector_field,
                     radius_val = Kokkos::sqrt(radius_val);
 
                     for (int dim = 0; dim < 3; dim++) {
-                        if (radius_val > real_t(1.0e-14)) {
+                        if (radius_val > (real_t)1.0e-14) {
                             dir[dim] /= (radius_val);
                         }
                         else{
-                            dir[dim] = real_t(0.0);
+                            dir[dim] = (real_t)0.0;
                         }
                     } // end for
 
@@ -2469,10 +2469,10 @@ void paint_vector(const MPICArrayKokkos<real_t>& vector_field,
                 {
                     vector_field(mesh_gid, 0) = Kokkos::sin(PI * mesh_coords(0)) * 
                                                         Kokkos::cos(PI * mesh_coords(1));
-                    vector_field(mesh_gid, 1) = -real_t(1.0) * Kokkos::cos(PI * mesh_coords(0)) * 
+                    vector_field(mesh_gid, 1) = -(real_t)1.0 * Kokkos::cos(PI * mesh_coords(0)) * 
                                                         Kokkos::sin(PI * mesh_coords(1));
                     if (num_dims == 3) {
-                        vector_field(mesh_gid, 2) = real_t(0.0);
+                        vector_field(mesh_gid, 2) = (real_t)0.0;
                     }
 
                     break;
@@ -2480,10 +2480,10 @@ void paint_vector(const MPICArrayKokkos<real_t>& vector_field,
             case initial_conditions::stationary:
                 {
                     // no velocity
-                    vector_field(mesh_gid, 0) = real_t(0.0);
-                    vector_field(mesh_gid, 1) = real_t(0.0);
+                    vector_field(mesh_gid, 0) = (real_t)0.0;
+                    vector_field(mesh_gid, 1) = (real_t)0.0;
                     if (num_dims == 3) {
-                        vector_field(mesh_gid, 2) = real_t(0.0);
+                        vector_field(mesh_gid, 2) = (real_t)0.0;
                     }
 
                     break;
@@ -2546,9 +2546,9 @@ void paint_node_scalar(const real_t scalar,
                 {
                     // Setting up radial
                     real_t dir[2];
-                    dir[0] = real_t(0.0);
-                    dir[1] = real_t(0.0);
-                    real_t radius_val = real_t(0.0);
+                    dir[0] = (real_t)0.0;
+                    dir[1] = (real_t)0.0;
+                    real_t radius_val = (real_t)0.0;
 
                     for (int dim = 0; dim < 2; dim++) {
                         dir[dim]    = node_coords(node_gid, dim);
@@ -2557,11 +2557,11 @@ void paint_node_scalar(const real_t scalar,
                     radius_val = Kokkos::sqrt(radius_val);
 
                     for (int dim = 0; dim < 2; dim++) {
-                        if (radius_val > real_t(1.0e-14)) {
+                        if (radius_val > (real_t)1.0e-14) {
                             dir[dim] /= (radius_val);
                         }
                         else{
-                            dir[dim] = real_t(0.0);
+                            dir[dim] = (real_t)0.0;
                         }
                     } // end for
 
@@ -2574,10 +2574,10 @@ void paint_node_scalar(const real_t scalar,
                 {
                     // Setting up spherical
                     real_t dir[3];
-                    dir[0] = real_t(0.0);
-                    dir[1] = real_t(0.0);
-                    dir[2] = real_t(0.0);
-                    real_t radius_val = real_t(0.0);
+                    dir[0] = (real_t)0.0;
+                    dir[1] = (real_t)0.0;
+                    dir[2] = (real_t)0.0;
+                    real_t radius_val = (real_t)0.0;
 
                     for (int dim = 0; dim < 3; dim++) {
                         dir[dim]    = node_coords(node_gid, dim);
@@ -2586,11 +2586,11 @@ void paint_node_scalar(const real_t scalar,
                     radius_val = Kokkos::sqrt(radius_val);
 
                     for (int dim = 0; dim < 3; dim++) {
-                        if (radius_val > real_t(1.0e-14)) {
+                        if (radius_val > (real_t)1.0e-14) {
                             dir[dim] /= (radius_val);
                         }
                         else{
-                            dir[dim] = real_t(0.0);
+                            dir[dim] = (real_t)0.0;
                         }
                     } // end for
 
@@ -2600,8 +2600,8 @@ void paint_node_scalar(const real_t scalar,
             case initial_conditions::tgVortexScalar:
                 {
                     node_scalar(node_gid) = scalar
-                              + (real_t(3.0)/real_t(8.0)) * (Kokkos::cos(real_t(2.0) * PI * node_coords(node_gid, 0))
-                                           + Kokkos::cos(real_t(2.0) * PI * node_coords(node_gid, 1)));
+                              + ((real_t)3.0/(real_t)8.0) * (Kokkos::cos((real_t)2.0 * PI * node_coords(node_gid, 0))
+                                           + Kokkos::cos((real_t)2.0 * PI * node_coords(node_gid, 1)));
                     break;
                 }
             case initial_conditions::noICsScalar:
@@ -2719,7 +2719,7 @@ void init_press_sspd_stress(const Material_t& Materials,
                 // ===============
                 //  Call the strength model here
                 // ===============
-                MaterialPoints_stress(mat_id, mat_point_sid, i, j) = real_t(0.0);
+                MaterialPoints_stress(mat_id, mat_point_sid, i, j) = (real_t)0.0;
             }
         }  // end for i,j
                             
@@ -2814,7 +2814,7 @@ void calc_corner_mass(const Material_t& Materials,
 
         size_t elem_gid = elem_in_mat_elem(mat_id, mat_elem_sid);
 
-        real_t corner_frac = real_t(1.0)/((double)mesh.num_nodes_in_elem);  // =1/8
+        real_t corner_frac = (real_t)1.0/((double)mesh.num_nodes_in_elem);  // =1/8
 
         for(size_t corner_lid=0; corner_lid<mesh.num_nodes_in_elem; corner_lid++){
             size_t corner_gid = mesh.corners_in_elem(elem_gid, corner_lid);
@@ -2877,11 +2877,11 @@ void init_corner_node_masses_zero(const swage::Mesh_t& mesh,
 {
     // calculate the nodal mass
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        node_mass(node_gid) = real_t(0.0);
+        node_mass(node_gid) = (real_t)0.0;
     }); // end parallel over nodes
 
     FOR_ALL(corner_gid, 0, mesh.num_corners, {
-        corner_mass(corner_gid) = real_t(0.0);
+        corner_mass(corner_gid) = (real_t)0.0;
     });  // end parallel over corners
 
 } // end setting masses equal to zero

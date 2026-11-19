@@ -27,8 +27,8 @@ void capture_box(double &vx_max, double &vy_max, double &vz_max,
     {
         for (int j = 0; j < 3; j++)
         {
-            add_sub[0][j][i] = coords(nodes_in_patch(bdy_patches(surf_lid),i),j) + max_v_arr[j]*dt + real_t(0.5)*max_a_arr[j]*dt*dt;
-            add_sub[1][j][i] = coords(nodes_in_patch(bdy_patches(surf_lid),i),j) - max_v_arr[j]*dt - real_t(0.5)*max_a_arr[j]*dt*dt;
+            add_sub[0][j][i] = coords(nodes_in_patch(bdy_patches(surf_lid),i),j) + max_v_arr[j]*dt + (real_t)0.5*max_a_arr[j]*dt*dt;
+            add_sub[1][j][i] = coords(nodes_in_patch(bdy_patches(surf_lid),i),j) - max_v_arr[j]*dt - (real_t)0.5*max_a_arr[j]*dt*dt;
         }
     };
 
@@ -103,7 +103,7 @@ void construct_basis(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t>
                 a += corner_force(corners_in_node(node_gid, corner_lid), i);
             }
             a /= mass(node_gid);
-            A[i][j] = coords(node_gid,i) + vel(node_gid,i)*del_t + real_t(0.5)*a*del_t*del_t;
+            A[i][j] = coords(node_gid,i) + vel(node_gid,i)*del_t + (real_t)0.5*a*del_t*del_t;
         }
     }
 }  // end construct_basis
@@ -125,7 +125,7 @@ void phi(real_t phi_k[4], const real_t &xi_val, const real_t &eta_val, const CAr
 {
     for (int i = 0; i < 4; i++)
         {
-            phi_k[i] = real_t(0.25)*(real_t(1.0) + xi(i)*xi_val)*(real_t(1.0) + eta(i)*eta_val);
+            phi_k[i] = (real_t)0.25*((real_t)1.0 + xi(i)*xi_val)*((real_t)1.0 + eta(i)*eta_val);
         }
 }  // end phi
 
@@ -149,7 +149,7 @@ void d_phi_d_xi(real_t d_phi_d_xi[4], const real_t &xi_value, const real_t &eta_
 {
     for (int i = 0; i < 4; i++)
     {
-        d_phi_d_xi[i] = real_t(0.25)*xi(i)*(real_t(1.0) + eta(i)*eta_value);
+        d_phi_d_xi[i] = (real_t)0.25*xi(i)*((real_t)1.0 + eta(i)*eta_value);
     }
 } // end d_phi_d_xi
 
@@ -158,7 +158,7 @@ void d_phi_d_eta(real_t d_phi_d_eta[4], const real_t &xi_value, const real_t &et
 {
     for (int i = 0; i < 4; i++)
     {
-        d_phi_d_eta[i] = real_t(0.25)*(real_t(1.0) + xi(i)*xi_value)*eta(i);
+        d_phi_d_eta[i] = (real_t)0.25*((real_t)1.0 + xi(i)*xi_value)*eta(i);
     }
 }
 
@@ -306,7 +306,7 @@ void get_normal_derivatives(const MPICArrayKokkos<real_t> &coords, const real_t 
 
     // get the cross derivative of S
     for (int i = 0; i < 3; i++) {
-        cross_derivative[i] = real_t(0.25)*coords(node_gids[0],i) - real_t(0.25)*coords(node_gids[1],i) - real_t(0.25)*coords(node_gids[2],i) + real_t(0.25)*coords(node_gids[3],i);
+        cross_derivative[i] = (real_t)0.25*coords(node_gids[0],i) - (real_t)0.25*coords(node_gids[1],i) - (real_t)0.25*coords(node_gids[2],i) + (real_t)0.25*coords(node_gids[3],i);
     }
 
     // cross(d_S_d_xi, cross_derivative)
@@ -407,7 +407,7 @@ bool get_contact_point(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_
                 a += corner_force(corners_in_node(node_gid, corner_lid), j);
             }
             a /= mass(node_gid);
-            lhs = coords(node_gid,j) + vel(node_gid,j)*del_tc + real_t(0.5)*a*del_tc*del_tc;
+            lhs = coords(node_gid,j) + vel(node_gid,j)*del_tc + (real_t)0.5*a*del_tc*del_tc;
             F[j] = rhs[j] - lhs;
         }
 
@@ -554,7 +554,7 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
     real_t centroid[3];
     for (int i = 0; i < 3; i++)
     {
-        centroid[i] = real_t(0.0);
+        centroid[i] = (real_t)0.0;
         for (int j = 0; j < 4; j++)
         {
             centroid[i] += A[i][j];
@@ -572,7 +572,7 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
             a += corner_force(corners_in_node(node_gid, corner_lid), i);
         }
         a /= mass(node_gid);
-        node_later[i] = coords(node_gid,i) + vel(node_gid,i)*del_t/2 + real_t(0.25)*a*del_t*del_t;
+        node_later[i] = coords(node_gid,i) + vel(node_gid,i)*del_t/2 + (real_t)0.25*a*del_t*del_t;
     }
 
     // Construct the basis vectors. The first row of the matrix is the vector from the centroid to the reference point
@@ -581,11 +581,11 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
     real_t b1[3];
     real_t b2[3];
     real_t p1[2];
-    p1[0] = real_t(1.0);
-    p1[1] = real_t(0.0);
+    p1[0] = (real_t)1.0;
+    p1[1] = (real_t)0.0;
     real_t p2[2];
-    p2[0] = real_t(0.0);
-    p2[1] = real_t(1.0);
+    p2[0] = (real_t)0.0;
+    p2[1] = (real_t)1.0;
     ref_to_physical(p1, A, b1, xi, eta);
     ref_to_physical(p2, A, b2, xi, eta);
 
@@ -607,7 +607,7 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
     }
     // v also needs to be a normal vector, but if its norm is zero, then we leave it as is.
     real_t node_later_norm = Kokkos::sqrt(Kokkos::pow(node_later[0],2) + Kokkos::pow(node_later[1],2) + Kokkos::pow(node_later[2],2));
-    if (node_later_norm != real_t(0.0))
+    if (node_later_norm != (real_t)0.0)
     {
         for (int i = 0; i < 3; i++)
         {
@@ -645,7 +645,7 @@ bool contact_check(CArrayKokkos <size_t> nodes_in_patch, CArrayKokkos <size_t> b
 
     // checking if solutions falls within bounds for MAKING contact
     // else solution does NOT require a contact pair to be formed
-    if (solution_found && Kokkos::fabs(xi_val) <= real_t(1.0) + edge_tol && Kokkos::fabs(eta_val) <= real_t(1.0) + edge_tol && del_tc >= real_t(0.0) - tol &&
+    if (solution_found && Kokkos::fabs(xi_val) <= (real_t)1.0 + edge_tol && Kokkos::fabs(eta_val) <= (real_t)1.0 + edge_tol && del_tc >= (real_t)0.0 - tol &&
         del_tc <= del_t + tol)
     {
         return true;
@@ -785,7 +785,7 @@ void frictionless_increment(ViewCArrayKokkos<real_t> &pair_vars, size_t &contact
                     ak += corner_force(corners_in_node(node_gid, corner_lid), j);
                 }
                 ak /= mass(node_gid);
-                A[j][k] = coords(node_gid,j) + vel(node_gid,j)*del_t + real_t(0.5)*ak*del_t*del_t;
+                A[j][k] = coords(node_gid,j) + vel(node_gid,j)*del_t + (real_t)0.5*ak*del_t*del_t;
             }
         }
 
@@ -807,7 +807,7 @@ void frictionless_increment(ViewCArrayKokkos<real_t> &pair_vars, size_t &contact
                 as += corner_force(corners_in_node(bdy_nodes(contact_id), corner_lid), j);
             }
             as /= mass(bdy_nodes(contact_id));
-            lhs = coords(bdy_nodes(contact_id),j) + vel(bdy_nodes(contact_id),j)*del_t + real_t(0.5)*as*del_t*del_t;
+            lhs = coords(bdy_nodes(contact_id),j) + vel(bdy_nodes(contact_id),j)*del_t + (real_t)0.5*as*del_t*del_t;
             F[j] = lhs - rhs[j];
         }
         
@@ -825,9 +825,9 @@ void frictionless_increment(ViewCArrayKokkos<real_t> &pair_vars, size_t &contact
         for (int j = 0; j < 4; j++)
         {
             size_t node_gid = bdy_nodes(contact_surface_map(j));
-            outer1[j] = (real_t(0.5)*d_phi_d_xi_arr[j]*pair_vars(6)*del_t*del_t)/mass(node_gid);
-            outer2[j] = (real_t(0.5)*d_phi_d_eta_arr[j]*pair_vars(6)*del_t*del_t)/mass(node_gid);
-            outer3[j] = (real_t(0.5)*phi_k[j]*del_t*del_t)/mass(node_gid);
+            outer1[j] = ((real_t)0.5*d_phi_d_xi_arr[j]*pair_vars(6)*del_t*del_t)/mass(node_gid);
+            outer2[j] = ((real_t)0.5*d_phi_d_eta_arr[j]*pair_vars(6)*del_t*del_t)/mass(node_gid);
+            outer3[j] = ((real_t)0.5*phi_k[j]*del_t*del_t)/mass(node_gid);
         }
 
         for (int j = 0; j < 3; j++) {
@@ -903,7 +903,7 @@ void frictionless_increment(ViewCArrayKokkos<real_t> &pair_vars, size_t &contact
 
         for (int j = 0; j < 3; j++)
         {
-            J2[j] = (real_t(0.5)*del_t*del_t*pair_vars(j+3))/mass(bdy_nodes(contact_id)) - J2_second[j];
+            J2[j] = ((real_t)0.5*del_t*del_t*pair_vars(j+3))/mass(bdy_nodes(contact_id)) - J2_second[j];
         }
 
         for (int j = 0; j < 3; j++)
@@ -952,9 +952,9 @@ void frictionless_increment(ViewCArrayKokkos<real_t> &pair_vars, size_t &contact
 
         J_det = J[0][0]*(J[1][1]*J[2][2] - J[1][2]*J[2][1]) - J[0][1]*(J[1][0]*J[2][2] - J[1][2]*J[2][0]) +
                 J[0][2]*(J[1][0]*J[2][1] - J[1][1]*J[2][0]);  // there should be no singularities in this calculation
-        if (J_det == real_t(0.0))
+        if (J_det == (real_t)0.0)
         {
-            pair_vars(6) = real_t(0.0);
+            pair_vars(6) = (real_t)0.0;
             printf("Error: Singularity detected in frictionless_increment\n");
             break;
         }
@@ -1003,7 +1003,7 @@ void frictionless_increment(ViewCArrayKokkos<real_t> &pair_vars, size_t &contact
                     ak += corner_force(corners_in_node(node_gid, corner_lid), j);
                 }
                 ak /= mass(node_gid);
-                A[j][k] = coords(node_gid,j) + vel(node_gid,j)*del_t + real_t(0.5)*ak*del_t*del_t;
+                A[j][k] = coords(node_gid,j) + vel(node_gid,j)*del_t + (real_t)0.5*ak*del_t*del_t;
             }
         }
 
@@ -1060,7 +1060,7 @@ void distribute_frictionless_force(ViewCArrayKokkos<real_t> &pair_vars, size_t &
     real_t force_scale;
     /* force_scale = (num_pairs_in_node(contact_id)+num_pairs_in_node(contact_surface_map(0))+num_pairs_in_node(contact_surface_map(1))+num_pairs_in_node(contact_surface_map(2))+num_pairs_in_node(contact_surface_map(3)))/5;
     force_scale = 1/force_scale; */
-    force_scale = real_t(0.2);
+    force_scale = (real_t)0.2;
     real_t force_val = force_scale*(pair_vars(6) + corrector_term);
     //std::cout << "increment: " << pair_vars(6) << "   corrector: " << corrector_term << std::endl;
     //std::cout << "increment: " << pair_vars(6) << std::endl;
@@ -1070,7 +1070,7 @@ void distribute_frictionless_force(ViewCArrayKokkos<real_t> &pair_vars, size_t &
     phi(phi_k, pair_vars(0), pair_vars(1), xi, eta);
 
     // if tensile, then subtract left over fc_inc_total; if not, then distribute to nodes
-    if (force_val + pair_vars(7) < real_t(0.0) || abs(pair_vars(0)) > real_t(1.01) || abs(pair_vars(1)) > real_t(1.01))
+    if (force_val + pair_vars(7) < (real_t)0.0 || abs(pair_vars(0)) > (real_t)1.01 || abs(pair_vars(1)) > (real_t)1.01)
     {
         // update penetrating node
         for (int i = 0; i < 3; i++)
@@ -1091,8 +1091,8 @@ void distribute_frictionless_force(ViewCArrayKokkos<real_t> &pair_vars, size_t &
                 //patch_node.contact_force(i) += fc_inc_total*normal(i)*phi_k(k);
             }
         }
-        pair_vars(7) = real_t(0.0);
-        pair_vars(6) = real_t(0.0);
+        pair_vars(7) = (real_t)0.0;
+        pair_vars(6) = (real_t)0.0;
     } else
     {
         pair_vars(7) += force_val;
@@ -1128,9 +1128,9 @@ bool should_remove(ViewCArrayKokkos<real_t> &pair_vars,
                    MPICArrayKokkos<real_t> vel, const real_t &del_t,
                    const CArrayKokkos<real_t> &xi, const CArrayKokkos<real_t> &eta, int &surf_lid)
 {
-    if (pair_vars(7) == real_t(0.0) || Kokkos::fabs(pair_vars(0)) > real_t(1.0) + edge_tol || Kokkos::fabs(pair_vars(1)) > real_t(1.0) + edge_tol)
+    if (pair_vars(7) == (real_t)0.0 || Kokkos::fabs(pair_vars(0)) > (real_t)1.0 + edge_tol || Kokkos::fabs(pair_vars(1)) > (real_t)1.0 + edge_tol)
     {
-        pair_vars(7) = real_t(0.0);
+        pair_vars(7) = (real_t)0.0;
         return true;
     } else
     {
@@ -1143,7 +1143,7 @@ bool should_remove(ViewCArrayKokkos<real_t> &pair_vars,
         {
             pair_vars(i+3) = new_normal[i];
         }
-        pair_vars(7) = real_t(0.0);
+        pair_vars(7) = (real_t)0.0;
 
         return false;
     }
@@ -1242,7 +1242,7 @@ bool get_edge_pair(real_t normal1[3], real_t normal2[3], size_t &node_gid, const
     // zero node normal
     for (int i = 0; i < 3; i++)
     {
-        node_normal[i] = real_t(0.0);
+        node_normal[i] = (real_t)0.0;
     }
 
     size_t num_patches = num_surfs_in_node(contact_id);
@@ -1292,7 +1292,7 @@ bool get_edge_pair(real_t normal1[3], real_t normal2[3], size_t &node_gid, const
     {
         for (int i = 0; i < 3; i++)
         {
-            new_normal[i] = (normal1[i] + normal2[i])/real_t(2.0);
+            new_normal[i] = (normal1[i] + normal2[i])/(real_t)2.0;
         }
 
         // make new_normal a unit vector
@@ -1324,7 +1324,7 @@ void remove_pair(size_t &contact_id, const RaggedRightArrayKokkos <size_t> &node
 {
     node_patch_pairs(contact_id, el_id) = num_bdy_patches;
     for (int i = 0; i < 8; i++) {
-        pair_vars(contact_id,el_id*8 + i) = real_t(0.0);
+        pair_vars(contact_id,el_id*8 + i) = (real_t)0.0;
     }
 }  // end remove_pair
 
@@ -1432,32 +1432,32 @@ void isoparametric_inverse(const real_t pos[3], const real_t elem_pos[3][8], rea
     int max_iter = 1000;
     for (int i = 0; i < max_iter; i++) {
         // dphi_dxi
-        dphi[0][0] = -real_t(0.125)*(1-iso_pos_iter[1])*(1-iso_pos_iter[2]);
-        dphi[1][0] = real_t(0.125)*(1-iso_pos_iter[1])*(1-iso_pos_iter[2]);
-        dphi[2][0] = -real_t(0.125)*(1+iso_pos_iter[1])*(1-iso_pos_iter[2]);
-        dphi[3][0] = real_t(0.125)*(1+iso_pos_iter[1])*(1-iso_pos_iter[2]);
-        dphi[4][0] = -real_t(0.125)*(1-iso_pos_iter[1])*(1+iso_pos_iter[2]);
-        dphi[5][0] = real_t(0.125)*(1-iso_pos_iter[1])*(1+iso_pos_iter[2]);
-        dphi[6][0] = -real_t(0.125)*(1+iso_pos_iter[1])*(1+iso_pos_iter[2]);
-        dphi[7][0] = real_t(0.125)*(1+iso_pos_iter[1])*(1+iso_pos_iter[2]);
+        dphi[0][0] = -(real_t)0.125*(1-iso_pos_iter[1])*(1-iso_pos_iter[2]);
+        dphi[1][0] = (real_t)0.125*(1-iso_pos_iter[1])*(1-iso_pos_iter[2]);
+        dphi[2][0] = -(real_t)0.125*(1+iso_pos_iter[1])*(1-iso_pos_iter[2]);
+        dphi[3][0] = (real_t)0.125*(1+iso_pos_iter[1])*(1-iso_pos_iter[2]);
+        dphi[4][0] = -(real_t)0.125*(1-iso_pos_iter[1])*(1+iso_pos_iter[2]);
+        dphi[5][0] = (real_t)0.125*(1-iso_pos_iter[1])*(1+iso_pos_iter[2]);
+        dphi[6][0] = -(real_t)0.125*(1+iso_pos_iter[1])*(1+iso_pos_iter[2]);
+        dphi[7][0] = (real_t)0.125*(1+iso_pos_iter[1])*(1+iso_pos_iter[2]);
         // dphi_deta
-        dphi[0][1] = -real_t(0.125)*(1-iso_pos_iter[0])*(1-iso_pos_iter[2]);
-        dphi[1][1] = -real_t(0.125)*(1+iso_pos_iter[0])*(1-iso_pos_iter[2]);
-        dphi[2][1] = real_t(0.125)*(1-iso_pos_iter[0])*(1-iso_pos_iter[2]);
-        dphi[3][1] = real_t(0.125)*(1+iso_pos_iter[0])*(1-iso_pos_iter[2]);
-        dphi[4][1] = -real_t(0.125)*(1-iso_pos_iter[0])*(1+iso_pos_iter[2]);
-        dphi[5][1] = -real_t(0.125)*(1+iso_pos_iter[0])*(1+iso_pos_iter[2]);
-        dphi[6][1] = real_t(0.125)*(1-iso_pos_iter[0])*(1+iso_pos_iter[2]);
-        dphi[7][1] = real_t(0.125)*(1+iso_pos_iter[0])*(1+iso_pos_iter[2]);
+        dphi[0][1] = -(real_t)0.125*(1-iso_pos_iter[0])*(1-iso_pos_iter[2]);
+        dphi[1][1] = -(real_t)0.125*(1+iso_pos_iter[0])*(1-iso_pos_iter[2]);
+        dphi[2][1] = (real_t)0.125*(1-iso_pos_iter[0])*(1-iso_pos_iter[2]);
+        dphi[3][1] = (real_t)0.125*(1+iso_pos_iter[0])*(1-iso_pos_iter[2]);
+        dphi[4][1] = -(real_t)0.125*(1-iso_pos_iter[0])*(1+iso_pos_iter[2]);
+        dphi[5][1] = -(real_t)0.125*(1+iso_pos_iter[0])*(1+iso_pos_iter[2]);
+        dphi[6][1] = (real_t)0.125*(1-iso_pos_iter[0])*(1+iso_pos_iter[2]);
+        dphi[7][1] = (real_t)0.125*(1+iso_pos_iter[0])*(1+iso_pos_iter[2]);
         // dphi_dzeta
-        dphi[0][2] = -real_t(0.125)*(1-iso_pos_iter[0])*(1-iso_pos_iter[1]);
-        dphi[1][2] = -real_t(0.125)*(1+iso_pos_iter[0])*(1-iso_pos_iter[1]);
-        dphi[2][2] = -real_t(0.125)*(1-iso_pos_iter[0])*(1+iso_pos_iter[1]);
-        dphi[3][2] = -real_t(0.125)*(1+iso_pos_iter[0])*(1+iso_pos_iter[1]);
-        dphi[4][2] = real_t(0.125)*(1-iso_pos_iter[0])*(1-iso_pos_iter[1]);
-        dphi[5][2] = real_t(0.125)*(1+iso_pos_iter[0])*(1-iso_pos_iter[1]);
-        dphi[6][2] = real_t(0.125)*(1-iso_pos_iter[0])*(1+iso_pos_iter[1]);
-        dphi[7][2] = real_t(0.125)*(1+iso_pos_iter[0])*(1+iso_pos_iter[1]);
+        dphi[0][2] = -(real_t)0.125*(1-iso_pos_iter[0])*(1-iso_pos_iter[1]);
+        dphi[1][2] = -(real_t)0.125*(1+iso_pos_iter[0])*(1-iso_pos_iter[1]);
+        dphi[2][2] = -(real_t)0.125*(1-iso_pos_iter[0])*(1+iso_pos_iter[1]);
+        dphi[3][2] = -(real_t)0.125*(1+iso_pos_iter[0])*(1+iso_pos_iter[1]);
+        dphi[4][2] = (real_t)0.125*(1-iso_pos_iter[0])*(1-iso_pos_iter[1]);
+        dphi[5][2] = (real_t)0.125*(1+iso_pos_iter[0])*(1-iso_pos_iter[1]);
+        dphi[6][2] = (real_t)0.125*(1-iso_pos_iter[0])*(1+iso_pos_iter[1]);
+        dphi[7][2] = (real_t)0.125*(1+iso_pos_iter[0])*(1+iso_pos_iter[1]);
 
         // calculating Jacobian
         for (int j = 0; j < 3; j++) {
@@ -1497,14 +1497,14 @@ void isoparametric_inverse(const real_t pos[3], const real_t elem_pos[3][8], rea
         }
         
         // updating pos_iter
-        phi[0] = real_t(0.125) * (1 - iso_pos[0]) * (1 - iso_pos[1]) * (1 - iso_pos[2]);
-        phi[1] = real_t(0.125) * (1 + iso_pos[0]) * (1 - iso_pos[1]) * (1 - iso_pos[2]);
-        phi[2] = real_t(0.125) * (1 - iso_pos[0]) * (1 + iso_pos[1]) * (1 - iso_pos[2]);
-        phi[3] = real_t(0.125) * (1 + iso_pos[0]) * (1 + iso_pos[1]) * (1 - iso_pos[2]);
-        phi[4] = real_t(0.125) * (1 - iso_pos[0]) * (1 - iso_pos[1]) * (1 + iso_pos[2]);
-        phi[5] = real_t(0.125) * (1 + iso_pos[0]) * (1 - iso_pos[1]) * (1 + iso_pos[2]);
-        phi[6] = real_t(0.125) * (1 - iso_pos[0]) * (1 + iso_pos[1]) * (1 + iso_pos[2]);
-        phi[7] = real_t(0.125) * (1 + iso_pos[0]) * (1 + iso_pos[1]) * (1 + iso_pos[2]);
+        phi[0] = (real_t)0.125 * (1 - iso_pos[0]) * (1 - iso_pos[1]) * (1 - iso_pos[2]);
+        phi[1] = (real_t)0.125 * (1 + iso_pos[0]) * (1 - iso_pos[1]) * (1 - iso_pos[2]);
+        phi[2] = (real_t)0.125 * (1 - iso_pos[0]) * (1 + iso_pos[1]) * (1 - iso_pos[2]);
+        phi[3] = (real_t)0.125 * (1 + iso_pos[0]) * (1 + iso_pos[1]) * (1 - iso_pos[2]);
+        phi[4] = (real_t)0.125 * (1 - iso_pos[0]) * (1 - iso_pos[1]) * (1 + iso_pos[2]);
+        phi[5] = (real_t)0.125 * (1 + iso_pos[0]) * (1 - iso_pos[1]) * (1 + iso_pos[2]);
+        phi[6] = (real_t)0.125 * (1 - iso_pos[0]) * (1 + iso_pos[1]) * (1 + iso_pos[2]);
+        phi[7] = (real_t)0.125 * (1 + iso_pos[0]) * (1 + iso_pos[1]) * (1 + iso_pos[2]);
         pos_iter[0] = 0;
         pos_iter[1] = 0;
         pos_iter[2] = 0;
@@ -1554,22 +1554,22 @@ void find_penetrating_nodes(real_t depth_cap, MPICArrayKokkos<real_t> &coords,
             min_edge_len = Kokkos::fmin(min_edge_len, Kokkos::sqrt(Kokkos::pow(coords(nodes_gid[3],0) - coords(nodes_gid[2],0),2) + Kokkos::pow(coords(nodes_gid[3],1) - coords(nodes_gid[2],1),2) + Kokkos::pow(coords(nodes_gid[3],2) - coords(nodes_gid[2],2),2)));
             min_edge_len = Kokkos::fmin(min_edge_len, Kokkos::sqrt(Kokkos::pow(coords(nodes_gid[0],0) - coords(nodes_gid[3],0),2) + Kokkos::pow(coords(nodes_gid[0],1) - coords(nodes_gid[3],1),2) + Kokkos::pow(coords(nodes_gid[0],2) - coords(nodes_gid[3],2),2)));
             // defining a factor for distance cutoff (need to pass preload for here)
-            real_t dist_factor = real_t(0.1);
+            real_t dist_factor = (real_t)0.1;
             if (preload) {
                 // THIS NEEDS TO BE A USER INPUT
-                dist_factor = real_t(1.0);
+                dist_factor = (real_t)1.0;
             }
             
 
             penetration_capture_box(Kokkos::fmin(depth_cap,min_edge_len*dist_factor), bounding_box, nodes_gid, coords);
 
             // Determine the buckets that intersect with the capture box
-            real_t ibox_max_d = Kokkos::fmax(real_t(0.0), Kokkos::fmin((double)(Sx - 1), Kokkos::floor((bounding_box[0] - x_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
-            real_t jbox_max_d = Kokkos::fmax(real_t(0.0), Kokkos::fmin((double)(Sy - 1), Kokkos::floor((bounding_box[1] - y_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
-            real_t kbox_max_d = Kokkos::fmax(real_t(0.0), Kokkos::fmin((double)(Sz - 1), Kokkos::floor((bounding_box[2] - z_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
-            real_t ibox_min_d = Kokkos::fmax(real_t(0.0), Kokkos::fmin((double)(Sx - 1), Kokkos::floor((bounding_box[3] - x_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
-            real_t jbox_min_d = Kokkos::fmax(real_t(0.0), Kokkos::fmin((double)(Sy - 1), Kokkos::floor((bounding_box[4] - y_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
-            real_t kbox_min_d = Kokkos::fmax(real_t(0.0), Kokkos::fmin((double)(Sz - 1), Kokkos::floor((bounding_box[5] - z_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
+            real_t ibox_max_d = Kokkos::fmax((real_t)0.0, Kokkos::fmin((double)(Sx - 1), Kokkos::floor((bounding_box[0] - x_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
+            real_t jbox_max_d = Kokkos::fmax((real_t)0.0, Kokkos::fmin((double)(Sy - 1), Kokkos::floor((bounding_box[1] - y_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
+            real_t kbox_max_d = Kokkos::fmax((real_t)0.0, Kokkos::fmin((double)(Sz - 1), Kokkos::floor((bounding_box[2] - z_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
+            real_t ibox_min_d = Kokkos::fmax((real_t)0.0, Kokkos::fmin((double)(Sx - 1), Kokkos::floor((bounding_box[3] - x_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
+            real_t jbox_min_d = Kokkos::fmax((real_t)0.0, Kokkos::fmin((double)(Sy - 1), Kokkos::floor((bounding_box[4] - y_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
+            real_t kbox_min_d = Kokkos::fmax((real_t)0.0, Kokkos::fmin((double)(Sz - 1), Kokkos::floor((bounding_box[5] - z_min) / bucket_size))); // NOLINT(*-narrowing-conversions)
 
             size_t ibox_max = (size_t)ibox_max_d;
             size_t jbox_max = (size_t)jbox_max_d;
@@ -1676,7 +1676,7 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
 
     // Find the max and min for each dimension
     double temp = 0;
-    double local_x_max = real_t(0.0);
+    double local_x_max = (real_t)0.0;
     FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_x_max, {
         if (local_x_max < coords(bdy_nodes(i),0))
         {
@@ -1686,7 +1686,7 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
     Kokkos::fence();
     x_max = temp;
     temp = 0;
-    double local_y_max = real_t(0.0);
+    double local_y_max = (real_t)0.0;
     FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_y_max, {
         if (local_y_max < coords(bdy_nodes(i),1))
         {
@@ -1696,7 +1696,7 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
     Kokkos::fence();
     y_max = temp;
     temp = 0;
-    double local_z_max = real_t(0.0);
+    double local_z_max = (real_t)0.0;
     FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_z_max, {
         if (local_z_max < coords(bdy_nodes(i),2))
         {
@@ -1706,7 +1706,7 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
     Kokkos::fence();
     z_max = temp;
     temp = 0;
-    double local_x_min = real_t(0.0);
+    double local_x_min = (real_t)0.0;
     FOR_REDUCE_MIN(i, 0, num_bdy_nodes, local_x_min, {
         if (local_x_min > coords(bdy_nodes(i),0))
         {
@@ -1716,7 +1716,7 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
     Kokkos::fence();
     x_min = temp;
     temp = 0;
-    double local_y_min = real_t(0.0);
+    double local_y_min = (real_t)0.0;
     FOR_REDUCE_MIN(i, 0, num_bdy_nodes, local_y_min, {
         if (local_y_min > coords(bdy_nodes(i),1))
         {
@@ -1726,7 +1726,7 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
     Kokkos::fence();
     y_min = temp;
     temp = 0;
-    double local_z_min = real_t(0.0);
+    double local_z_min = (real_t)0.0;
     FOR_REDUCE_MIN(i, 0, num_bdy_nodes, local_z_min, {
         if (local_z_min > coords(bdy_nodes(i),2))
         {
@@ -1736,7 +1736,7 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
     Kokkos::fence();
     z_min = temp;
     temp = 0;
-    double local_vx_max = real_t(0.0);
+    double local_vx_max = (real_t)0.0;
     FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_vx_max, {
         if (local_vx_max < vel(bdy_nodes(i),0))
         {
@@ -1746,7 +1746,7 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
     Kokkos::fence();
     vx_max = temp;
     temp = 0;
-    double local_vy_max = real_t(0.0);
+    double local_vy_max = (real_t)0.0;
     FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_vy_max, {
         if (local_vy_max < vel(bdy_nodes(i),1))
         {
@@ -1756,7 +1756,7 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
     Kokkos::fence();
     vy_max = temp;
     temp = 0;
-    double local_vz_max = real_t(0.0);
+    double local_vz_max = (real_t)0.0;
     FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_vz_max, {
         if (local_vz_max < vel(bdy_nodes(i),2))
         {
@@ -1766,7 +1766,7 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
     Kokkos::fence();
     vz_max = temp;
     temp = 0;
-    double local_ax_max = real_t(0.0);
+    double local_ax_max = (real_t)0.0;
     FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_ax_max, {
         real_t ax = 0;
         for (size_t corner_lid = 0; corner_lid < num_corners_in_node(bdy_nodes(i)); corner_lid++)
@@ -1784,7 +1784,7 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
     Kokkos::fence();
     ax_max = temp;
     temp = 0;
-    double local_ay_max = real_t(0.0);
+    double local_ay_max = (real_t)0.0;
     FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_ay_max, {
         real_t ay = 0;
         for (size_t corner_lid = 0; corner_lid < num_corners_in_node(bdy_nodes(i)); corner_lid++)
@@ -1802,7 +1802,7 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
     Kokkos::fence();
     ay_max = temp;
     temp = 0;
-    double local_az_max = real_t(0.0);
+    double local_az_max = (real_t)0.0;
     FOR_REDUCE_MAX(i, 0, num_bdy_nodes, local_az_max, {
         real_t az = 0;
         for (size_t corner_lid = 0; corner_lid < num_corners_in_node(bdy_nodes(i)); corner_lid++)
@@ -1823,13 +1823,13 @@ void sort(MPICArrayKokkos<real_t> &coords, size_t num_bdy_nodes, CArrayKokkos <s
     // If the max velocity is zero, then we want to set it to a small value. The max velocity and acceleration are used
     // for creating a capture box around the contact patch. We want there to be at least some thickness to the box.
     if (vx_max == 0) {
-        vx_max = real_t(1.0e-3);
+        vx_max = (real_t)1.0e-3;
     }
     if (vy_max == 0) {
-        vy_max = real_t(1.0e-3);
+        vy_max = (real_t)1.0e-3;
     }
     if (vz_max == 0) {
-        vz_max = real_t(1.0e-3);
+        vz_max = (real_t)1.0e-3;
     }
     
     // calculate bucket size in each direction
@@ -2375,7 +2375,7 @@ void force_resolution(CArrayKokkos<real_t> &f_c_incs, DCArrayKokkos <size_t> num
                     //norm_incs(0) += 0.2*incs_view(j)*0.2*incs_view(j)/Kokkos::pow(mass(bdy_nodes(active_set(j))),2);
                     //norm_incs(0) += 0.2*incs_view(j)*0.2*incs_view(j);
                     //printf("%e\n", incs_view(j));
-                    norm_incs(0) += real_t(0.2)*pair_vars(contact_id,8*k + 6)*real_t(0.2)*pair_vars(contact_id,8*k + 6);
+                    norm_incs(0) += (real_t)0.2*pair_vars(contact_id,8*k + 6)*(real_t)0.2*pair_vars(contact_id,8*k + 6);
                 }
             }
             //printf("\n");
@@ -2383,7 +2383,7 @@ void force_resolution(CArrayKokkos<real_t> &f_c_incs, DCArrayKokkos <size_t> num
         });
         norm_incs.update_host();
         //std::cout << "iter: " << i << "   norm: " << norm_incs.host(0) << std::endl;
-        if (norm_incs.host(0) <= real_t(1E-8))
+        if (norm_incs.host(0) <= (real_t)1E-8)
             {
                 /* std::cout << "NEW" << std::endl;
                 for (int j = 0; j < num_active(0); j++) {
@@ -2397,7 +2397,7 @@ void force_resolution(CArrayKokkos<real_t> &f_c_incs, DCArrayKokkos <size_t> num
             }
         //testing = norm_incs.host(0);
     }
-    if (norm_incs.host(0) > real_t(1E-8))
+    if (norm_incs.host(0) > (real_t)1E-8)
     {
         //std::cout << "NOT CONVERGED at: " << norm_incs.host(0) << std::endl;
     }
@@ -2461,7 +2461,7 @@ void mat_mul(const ViewCArrayKokkos<real_t> &A, const ViewCArrayKokkos<real_t> &
     {
         for (size_t i = 0; i < m; i++)
         {
-            b(i) = real_t(0.0);
+            b(i) = (real_t)0.0;
             for (size_t k = 0; k < n; k++)
             {
                 b(i) += A(i, k)*x(k);
@@ -2474,7 +2474,7 @@ void mat_mul(const ViewCArrayKokkos<real_t> &A, const ViewCArrayKokkos<real_t> &
         {
             for (size_t j = 0; j < p; j++)
             {
-                b(i, j) = real_t(0.0);
+                b(i, j) = (real_t)0.0;
                 for (size_t k = 0; k < n; k++)
                 {
                     b(i, j) += A(i, k)*x(k, j);
@@ -2488,7 +2488,7 @@ void mat_mul(const ViewCArrayKokkos<real_t> &A, const ViewCArrayKokkos<real_t> &
 KOKKOS_FUNCTION
 double norm(const ViewCArrayKokkos<real_t> &x)
 {
-    double sum = real_t(0.0);
+    double sum = (real_t)0.0;
     for (size_t i = 0; i < x.size(); i++)
     {
         sum += Kokkos::pow(x(i), 2);
@@ -2521,7 +2521,7 @@ void inv(const ViewCArrayKokkos<real_t> &A, ViewCArrayKokkos<real_t> &A_inv, con
 KOKKOS_FUNCTION
 double dot(const ViewCArrayKokkos<real_t> &a, const ViewCArrayKokkos<real_t> &b)
 {
-    double sum = real_t(0.0);
+    double sum = (real_t)0.0;
     for (size_t i = 0; i < a.size(); i++)
     {
         sum += a(i)*b(i);
@@ -2598,14 +2598,14 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
     xi = CArrayKokkos<real_t>(4);
     eta = CArrayKokkos<real_t>(4);
     RUN_CLASS({
-        xi(0) = -real_t(1.0);
-        xi(1) = real_t(1.0);
-        xi(2) = real_t(1.0);
-        xi(3) = -real_t(1.0);
-        eta(0) = -real_t(1.0);
-        eta(1) = -real_t(1.0);
-        eta(2) = real_t(1.0);
-        eta(3) = real_t(1.0);
+        xi(0) = -(real_t)1.0;
+        xi(1) = (real_t)1.0;
+        xi(2) = (real_t)1.0;
+        xi(3) = -(real_t)1.0;
+        eta(0) = -(real_t)1.0;
+        eta(1) = -(real_t)1.0;
+        eta(2) = (real_t)1.0;
+        eta(3) = (real_t)1.0;
     });
 
     // sizing possible nodes and buckets
@@ -2811,7 +2811,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
                           size_t n1 = nodes_in_patch(bdy_patches(i),j); // current node
                           size_t n2 = nodes_in_patch(bdy_patches(i),j+1); // next node
 
-                          double sum_sq = real_t(0.0);
+                          double sum_sq = (real_t)0.0;
 
                           for (int k = 0; k < 3; k++)
                           {
@@ -2824,7 +2824,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
                           size_t n1 = nodes_in_patch(bdy_patches(i),0); // current node
                           size_t n2 = nodes_in_patch(bdy_patches(i),3); // next node
 
-                          double sum_sq = real_t(0.0);
+                          double sum_sq = (real_t)0.0;
 
                           for (int k = 0; k < 3; k++)
                           {
@@ -2839,7 +2839,7 @@ void contact_state_t::initialize(size_t num_dims, size_t num_nodes_in_patch, con
                       }
                   }, min_distance);
     Kokkos::fence();
-    contact_state_t::bucket_size = real_t(0.999)*min_distance;
+    contact_state_t::bucket_size = (real_t)0.999*min_distance;
 
 
 

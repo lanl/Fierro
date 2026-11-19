@@ -54,9 +54,9 @@ KOKKOS_FUNCTION
 void rotation_matrix_y(real_t angle, real_t R[3][3]) {
     real_t c = Kokkos::cos(angle);
     real_t s = Kokkos::sin(angle);
-    R[0][0] = c;   R[0][1] = real_t(0.0); R[0][2] = s;
-    R[1][0] = real_t(0.0); R[1][1] = real_t(1.0); R[1][2] = real_t(0.0);
-    R[2][0] = -s;  R[2][1] = real_t(0.0); R[2][2] = c;
+    R[0][0] = c;   R[0][1] = (real_t)0.0; R[0][2] = s;
+    R[1][0] = (real_t)0.0; R[1][1] = (real_t)1.0; R[1][2] = (real_t)0.0;
+    R[2][0] = -s;  R[2][1] = (real_t)0.0; R[2][2] = c;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -70,9 +70,9 @@ KOKKOS_FUNCTION
 void rotation_matrix_z(real_t angle, real_t R[3][3]) {
     real_t c = Kokkos::cos(angle);
     real_t s = Kokkos::sin(angle);
-    R[0][0] = c;   R[0][1] = -s;  R[0][2] = real_t(0.0);
-    R[1][0] = s;   R[1][1] = c;   R[1][2] = real_t(0.0);
-    R[2][0] = real_t(0.0); R[2][1] = real_t(0.0); R[2][2] = real_t(1.0);
+    R[0][0] = c;   R[0][1] = -s;  R[0][2] = (real_t)0.0;
+    R[1][0] = s;   R[1][1] = c;   R[1][2] = (real_t)0.0;
+    R[2][0] = (real_t)0.0; R[2][1] = (real_t)0.0; R[2][2] = (real_t)1.0;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -86,7 +86,7 @@ KOKKOS_FUNCTION
 void mat_mult_3x3(const real_t A[3][3], const real_t B[3][3], real_t C[3][3]) {
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
-            C[i][j] = real_t(0.0);
+            C[i][j] = (real_t)0.0;
             for (int k = 0; k < 3; ++k) {
                 C[i][j] += A[i][k] * B[k][j];
             }

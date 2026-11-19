@@ -83,7 +83,7 @@ struct Table_t{
     // Assumes that the data in `independent_idx` is sorted in ascending order.
     KOKKOS_INLINE_FUNCTION
     double linear_interpolation_host(real_t independent_value, size_t dependent_idx, size_t independent_idx = 0) const {
-        if (num_rows == 0) return real_t(0.0);
+        if (num_rows == 0) return (real_t)0.0;
         
         // Handle cases where independent_value is outside the range (clamping/extrapolation)
         // If independent_value is before the first point, return the first point's value
@@ -112,12 +112,12 @@ struct Table_t{
                 real_t y0 = data.host(i, dependent_idx);
                 real_t y1 = data.host(i + 1, dependent_idx);
                 
-                return (real_t(1.0) - alpha) * y0 + alpha * y1;
+                return ((real_t)1.0 - alpha) * y0 + alpha * y1;
             }
         }
         
         // Should not be reached given the boundary checks above
-        return real_t(0.0);
+        return (real_t)0.0;
     }
 
     // Linear interpolation function for device side access
@@ -126,7 +126,7 @@ struct Table_t{
     // Assumes that the data in `independent_idx` is sorted in ascending order.
     KOKKOS_INLINE_FUNCTION
     double linear_interpolation(real_t independent_value, size_t dependent_idx, size_t independent_idx = 0) const {
-        if (num_rows == 0) return real_t(0.0);
+        if (num_rows == 0) return (real_t)0.0;
         
         // Handle cases where independent_value is outside the range (clamping/extrapolation)
         // If independent_value is before the first point, return the first point's value
@@ -155,12 +155,12 @@ struct Table_t{
                 real_t y0 = data(i, dependent_idx);
                 real_t y1 = data(i + 1, dependent_idx);
                 
-                return (real_t(1.0) - alpha) * y0 + alpha * y1;
+                return ((real_t)1.0 - alpha) * y0 + alpha * y1;
             }
         }
         
         // Should not be reached given the boundary checks above
-        return real_t(0.0);
+        return (real_t)0.0;
     }
 
     // Print the table to the console

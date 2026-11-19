@@ -146,14 +146,14 @@ void scatter_pair_force(const size_t bdy_node_lid,
     // target surface nodes: equal and opposite, distributed by the basis
     for (size_t a = 0; a < num_dofs_1d; a++) {
 
-        real_t l_xi  = real_t(0.0);
-        real_t dl_xi = real_t(0.0);
+        real_t l_xi  = (real_t)0.0;
+        real_t dl_xi = (real_t)0.0;
         lagrange_1D(dof_positions_1d, num_dofs_1d, a, xi, l_xi, dl_xi);
 
         for (size_t b = 0; b < num_dofs_1d; b++) {
 
-            real_t l_eta  = real_t(0.0);
-            real_t dl_eta = real_t(0.0);
+            real_t l_eta  = (real_t)0.0;
+            real_t dl_eta = (real_t)0.0;
             lagrange_1D(dof_positions_1d, num_dofs_1d, b, eta, l_eta, dl_eta);
 
             const real_t N            = l_xi*l_eta;
@@ -189,7 +189,7 @@ void assemble_contact_forces(const size_t num_active,
                              const CArrayKokkos<real_t>& dof_positions_1d,
                              CArrayKokkos<real_t>& contact_forces)
 {
-    contact_forces.set_values(real_t(0.0));
+    contact_forces.set_values((real_t)0.0);
     Kokkos::fence();
 
     if (num_active == 0) return;
@@ -201,7 +201,7 @@ void assemble_contact_forces(const size_t num_active,
         for (size_t pair = 0; pair < num_pairs_in_node(bdy_node_lid); pair++) {
 
             const real_t F_tot = contact_pair_vars(bdy_node_lid, pair, 5);
-            if (F_tot <= real_t(0.0)) continue;   // separated (clamped) pair: no contribution
+            if (F_tot <= (real_t)0.0) continue;   // separated (clamped) pair: no contribution
 
             const size_t bdy_surf_lid = contact_pair_surfs(bdy_node_lid, pair);
             ViewCArrayKokkos<size_t> surf_nodes(&bdy_nodes_in_bdy_surf(bdy_surf_lid, 0), num_nodes_in_surf);
@@ -276,7 +276,7 @@ int frictionless_increment(const size_t bdy_node_lid,
     const size_t num_dofs_1d    = dof_positions_1d.dims(0);
     const size_t num_surf_nodes = num_dofs_1d*num_dofs_1d;
     const size_t max_iter       = 100;        // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t n_tol          = real_t(1.0e-10);   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t n_tol          = (real_t)1.0e-10;   // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
 
     // inputs, restored on failure
     const real_t xi_in  = xi;
@@ -284,21 +284,21 @@ int frictionless_increment(const size_t bdy_node_lid,
     real_t n_in[3];
     for (size_t dim = 0; dim < 3; dim++) n_in[dim] = n[dim];
 
-    f_inc = real_t(0.0);
+    f_inc = (real_t)0.0;
 
     // ---------------------------------------------------------------
     // compliance must be set (filled by the solver after initialize)
     // the pair can close the gap only if some node of it can move
     // (constrained dofs have c = 0; a fully fixed pair has a singular dR/df)
     // ---------------------------------------------------------------
-    double c_sum = real_t(0.0);
+    double c_sum = (real_t)0.0;
     for (size_t dim = 0; dim < 3; dim++) {
         c_sum += bdy_node_compliance(bdy_node_lid, dim);
         for (size_t k = 0; k < num_surf_nodes; k++) {
             c_sum += bdy_node_compliance(surf_nodes(k), dim);
         }
     }
-    if (!(c_sum > real_t(0.0))) return 2;
+    if (!(c_sum > (real_t)0.0)) return 2;
 
     // penetrating node: compliance and the f-independent part of its predicted position
     real_t c_I[3];
@@ -309,7 +309,7 @@ int frictionless_increment(const size_t bdy_node_lid,
                   + c_I[dim]*(contact_forces(bdy_node_lid, dim) - contact_forces_used(bdy_node_lid, dim));
     }
 
-    real_t f = real_t(0.0);
+    real_t f = (real_t)0.0;
     bool converged = false;
 
     for (size_t iter = 0; iter < max_iter; iter++) {
@@ -322,29 +322,29 @@ int frictionless_increment(const size_t bdy_node_lid,
         real_t t_xi[3];
         real_t t_eta[3];
         for (size_t dim = 0; dim < 3; dim++) {
-            S[dim]     = real_t(0.0);
-            t_xi[dim]  = real_t(0.0);
-            t_eta[dim] = real_t(0.0);
+            S[dim]     = (real_t)0.0;
+            t_xi[dim]  = (real_t)0.0;
+            t_eta[dim] = (real_t)0.0;
         }
         real_t s_NN[3];      // sum_k c_k phi_k^2,          per direction
         real_t s_NNxi[3];    // sum_k c_k phi_k dphi_k/dxi,  per direction
         real_t s_NNeta[3];   // sum_k c_k phi_k dphi_k/deta, per direction
         for (size_t dim = 0; dim < 3; dim++) {
-            s_NN[dim]    = real_t(0.0);
-            s_NNxi[dim]  = real_t(0.0);
-            s_NNeta[dim] = real_t(0.0);
+            s_NN[dim]    = (real_t)0.0;
+            s_NNxi[dim]  = (real_t)0.0;
+            s_NNeta[dim] = (real_t)0.0;
         }
 
         for (size_t a = 0; a < num_dofs_1d; a++) {
 
-            real_t l_xi  = real_t(0.0);
-            real_t dl_xi = real_t(0.0);
+            real_t l_xi  = (real_t)0.0;
+            real_t dl_xi = (real_t)0.0;
             lagrange_1D(dof_positions_1d, num_dofs_1d, a, xi, l_xi, dl_xi);
 
             for (size_t b = 0; b < num_dofs_1d; b++) {
 
-                real_t l_eta  = real_t(0.0);
-                real_t dl_eta = real_t(0.0);
+                real_t l_eta  = (real_t)0.0;
+                real_t dl_eta = (real_t)0.0;
                 lagrange_1D(dof_positions_1d, num_dofs_1d, b, eta, l_eta, dl_eta);
 
                 const real_t N       = l_xi*l_eta;
@@ -372,7 +372,7 @@ int frictionless_increment(const size_t bdy_node_lid,
 
         // residual: predicted node minus predicted surface point
         real_t R[3];
-        real_t R_norm2 = real_t(0.0);
+        real_t R_norm2 = (real_t)0.0;
         for (size_t dim = 0; dim < 3; dim++) {
             R[dim]   = x_I0[dim] + c_I[dim]*f*n[dim] - S[dim];
             R_norm2 += R[dim]*R[dim];
@@ -386,11 +386,11 @@ int frictionless_increment(const size_t bdy_node_lid,
         n_new[1] = t_xi[2]*t_eta[0] - t_xi[0]*t_eta[2];
         n_new[2] = t_xi[0]*t_eta[1] - t_xi[1]*t_eta[0];
         const real_t n_new_mag = Kokkos::sqrt(n_new[0]*n_new[0] + n_new[1]*n_new[1] + n_new[2]*n_new[2]);
-        if (n_new_mag <= real_t(1.0e-30)) break;   // collapsed surface point
+        if (n_new_mag <= (real_t)1.0e-30) break;   // collapsed surface point
 
         const real_t n_dot   = n_new[0]*n[0] + n_new[1]*n[1] + n_new[2]*n[2];
-        const real_t n_scale = (n_dot < real_t(0.0)) ? -real_t(1.0)/n_new_mag : real_t(1.0)/n_new_mag;   // keep outward orientation
-        real_t dn2 = real_t(0.0);
+        const real_t n_scale = (n_dot < (real_t)0.0) ? -(real_t)1.0/n_new_mag : (real_t)1.0/n_new_mag;   // keep outward orientation
+        real_t dn2 = (real_t)0.0;
         for (size_t dim = 0; dim < 3; dim++) {
             n_new[dim] *= n_scale;
             dn2 += (n_new[dim] - n[dim])*(n_new[dim] - n[dim]);
@@ -431,7 +431,7 @@ int frictionless_increment(const size_t bdy_node_lid,
         const real_t mag_xi  = Kokkos::sqrt(J_xi[0]*J_xi[0]   + J_xi[1]*J_xi[1]   + J_xi[2]*J_xi[2]);
         const real_t mag_eta = Kokkos::sqrt(J_eta[0]*J_eta[0] + J_eta[1]*J_eta[1] + J_eta[2]*J_eta[2]);
         const real_t mag_f   = Kokkos::sqrt(J_f[0]*J_f[0]     + J_f[1]*J_f[1]     + J_f[2]*J_f[2]);
-        if (Kokkos::fabs(det) <= real_t(1.0e-30)*mag_xi*mag_eta*mag_f) break;   // singular
+        if (Kokkos::fabs(det) <= (real_t)1.0e-30*mag_xi*mag_eta*mag_f) break;   // singular
 
         real_t cross_R_f[3];     // (-R) x J_f
         cross_R_f[0] = neg_R[1]*J_f[2] - neg_R[2]*J_f[1];
@@ -549,8 +549,8 @@ bool force_resolution(const size_t num_active,
 
     for (size_t iter = 0; iter < max_global_iter; iter++) {
 
-        double max_dF = real_t(0.0);
-        double max_F  = real_t(0.0);
+        double max_dF = (real_t)0.0;
+        double max_F  = (real_t)0.0;
 
         // -----------------------------------------------------------
         // 1. increment: one thread per active node, serial over its pairs
@@ -561,8 +561,8 @@ bool force_resolution(const size_t num_active,
             num_active,
             KOKKOS_LAMBDA(const size_t active_lid, double& dF_lcl, double& F_lcl)
             {
-                dF_lcl = Kokkos::fmax(dF_lcl, real_t(0.0));
-                F_lcl  = Kokkos::fmax(F_lcl,  real_t(0.0));
+                dF_lcl = Kokkos::fmax(dF_lcl, (real_t)0.0);
+                F_lcl  = Kokkos::fmax(F_lcl,  (real_t)0.0);
 
                 const size_t bdy_node_lid = active_nodes(active_lid);
                 size_t num_pairs = num_pairs_in_node(bdy_node_lid);
@@ -581,7 +581,7 @@ bool force_resolution(const size_t num_active,
                     n[1] = contact_pair_vars(bdy_node_lid, p, 3);
                     n[2] = contact_pair_vars(bdy_node_lid, p, 4);
                     const real_t F_tot = contact_pair_vars(bdy_node_lid, p, 5);
-                    real_t f_inc = real_t(0.0);
+                    real_t f_inc = (real_t)0.0;
 
                     const int status = frictionless_increment(bdy_node_lid, surf_nodes, bdy_node_coords,
                                                               bdy_node_compliance, contact_forces, contact_forces_used,
@@ -605,7 +605,7 @@ bool force_resolution(const size_t num_active,
 
                     if (status == 2) {
                         // failed local solve: keep the pair as is for this iteration
-                        contact_pair_vars(bdy_node_lid, p, 6) = real_t(0.0);
+                        contact_pair_vars(bdy_node_lid, p, 6) = (real_t)0.0;
                         contact_pair_vars(bdy_node_lid, p, 7) = F_tot;   // F_prop: no new information
                         F_lcl = Kokkos::fmax(F_lcl, F_tot);
                         Kokkos::atomic_add(&res_counts(1), (size_t)1);
@@ -618,10 +618,10 @@ bool force_resolution(const size_t num_active,
                     for (size_t a = 0; a < num_nodes_in_surf; a++) {
                         count_sum += (double)num_pairs_touching_node(surf_nodes(a));
                     }
-                    const real_t omega = (count_sum > real_t(0.0)) ? (double)(1 + num_nodes_in_surf)/count_sum : real_t(1.0);
+                    const real_t omega = (count_sum > (real_t)0.0) ? (double)(1 + num_nodes_in_surf)/count_sum : (real_t)1.0;
 
                     // clamp: separated pairs stay active at F_tot = 0 and can reactivate
-                    const real_t F_new = Kokkos::fmax(real_t(0.0), F_tot + omega*f_inc);
+                    const real_t F_new = Kokkos::fmax((real_t)0.0, F_tot + omega*f_inc);
 
                     // outer (Picard) proposal F_prop: the pair's full local correction, unclamped and
                     // without the sharing weight (omega only damps this inner Jacobi loop).
@@ -740,8 +740,8 @@ void get_contact_force_change(const size_t num_bdy_nodes,
                               double& max_dF,
                               double& max_F)
 {
-    max_dF = real_t(0.0);
-    max_F  = real_t(0.0);
+    max_dF = (real_t)0.0;
+    max_F  = (real_t)0.0;
 
     Kokkos::parallel_reduce(
         "contact_force_change",
@@ -835,9 +835,9 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
 {
     const size_t max_sweeps      = 10;      // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     const size_t max_global_iter = 100000;    // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t rel_tol         = real_t(1.0e-8); // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
-    const real_t slide_tol       = real_t(1.01);   // TODO: define once (shared with penetration_sweep)
-    const real_t res_tol         = real_t(1.0e-10)*max_gap;   // length scale from the mesh
+    const real_t rel_tol         = (real_t)1.0e-8; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t slide_tol       = (real_t)1.01;   // TODO: define once (shared with penetration_sweep)
+    const real_t res_tol         = (real_t)1.0e-10*max_gap;   // length scale from the mesh
 
     settled       = false;
     pairs_changed = false;
@@ -872,7 +872,7 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
 
         // no pairs this load step
         if (num_active == 0) {
-            contact_forces.set_values(real_t(0.0));
+            contact_forces.set_values((real_t)0.0);
             Kokkos::fence();
             settled = true;
             break;
@@ -937,7 +937,7 @@ void AO_contact_resolve(const size_t num_bdy_surfs,
 KOKKOS_INLINE_FUNCTION
 static double contact_outer_residual(const real_t F_prop, const real_t F_used)
 {
-    if (F_used <= real_t(0.0) && F_prop <= real_t(0.0)) return real_t(0.0);
+    if (F_used <= (real_t)0.0 && F_prop <= (real_t)0.0) return (real_t)0.0;
     return F_prop - F_used;
 } // end contact_outer_residual
 
@@ -1047,8 +1047,8 @@ void AO_contact_relax_forces(const size_t num_active,
     // ---------------------------------------------------------------
     if (have_history && !reset) {
 
-        double num = real_t(0.0);
-        double den = real_t(0.0);
+        double num = (real_t)0.0;
+        double den = (real_t)0.0;
 
         Kokkos::parallel_reduce(
             "contact_aitken_sums",
@@ -1069,7 +1069,7 @@ void AO_contact_relax_forces(const size_t num_active,
             Kokkos::Sum<double>(den));
 
         // unchanged residual: no slope information, keep omega
-        if (den > real_t(0.0)) {
+        if (den > (real_t)0.0) {
             omega = -omega*num/den;
         }
     }
@@ -1087,7 +1087,7 @@ void AO_contact_relax_forces(const size_t num_active,
         for (size_t p = 0; p < num_pairs_in_node(bdy_node_lid); p++) {
             const real_t F_used = contact_pair_vars(bdy_node_lid, p, 8);
             const real_t r      = contact_outer_residual(contact_pair_vars(bdy_node_lid, p, 7), F_used);
-            contact_pair_vars(bdy_node_lid, p, 5) = Kokkos::fmax(real_t(0.0), F_used + w*r);
+            contact_pair_vars(bdy_node_lid, p, 5) = Kokkos::fmax((real_t)0.0, F_used + w*r);
             contact_pair_vars(bdy_node_lid, p, 9) = r;
         }
     });

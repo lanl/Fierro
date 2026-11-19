@@ -64,7 +64,7 @@ double Solver::CPU_Time()
     auto time_duration = time.time_since_epoch();
 
     real_t calc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_duration - zero_time_duration).count();
-    calc_time *= real_t(1e-09);
+    calc_time *= (real_t)1e-09;
 
     return calc_time;
 }

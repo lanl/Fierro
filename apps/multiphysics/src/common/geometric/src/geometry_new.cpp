@@ -83,7 +83,7 @@ void geometry::get_bmatrix(const ViewCArrayKokkos<real_t>& B_matrix,
     }     // end for
 
 
-    real_t twelth = real_t(1.) / real_t(12.);
+    real_t twelth = (real_t)1. / (real_t)12.;
 
     B_matrix(0, 0) = (+y(1) * (-z(3) - z(2) + z(4) + z(5) )
         + y(3) * (+z(1) - z(2) )
@@ -272,7 +272,7 @@ void geometry::get_vol_quad(const DCArrayKokkos<real_t>& elem_vol,
     const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
-    elem_vol(elem_gid) = real_t(0.0);
+    elem_vol(elem_gid) = (real_t)0.0;
 
     const size_t num_nodes = 4;
 
@@ -294,9 +294,9 @@ void geometry::get_vol_quad(const DCArrayKokkos<real_t>& elem_vol,
     */
     elem_vol(elem_gid) =
         ( (y(2) + y(3) + y(0)) * ((y(2) - y(3)) * (x(0) - x(3)) - (y(0) - y(3)) * (x(2) - x(3)) )
-        + (y(0) + y(1) + y(2)) * ((y(0) - y(1)) * (x(2) - x(1)) - (y(2) - y(1)) * (x(0) - x(1))) ) / real_t(6.0);
+        + (y(0) + y(1) + y(2)) * ((y(0) - y(1)) * (x(2) - x(1)) - (y(2) - y(1)) * (x(0) - x(1))) ) / (real_t)6.0;
         
-    elem_vol(elem_gid) = Kokkos::fmax(elem_vol(elem_gid), real_t(1.0E-14));
+    elem_vol(elem_gid) = Kokkos::fmax(elem_vol(elem_gid), (real_t)1.0E-14);
     return;
 } // end get_vol_quad
 
@@ -336,7 +336,7 @@ void geometry::get_vol_hex(const DCArrayKokkos<real_t>& elem_vol,
         z(node_lid) = node_coords(elem_node_gids(node_lid), 2);
     }     // end for
 
-    real_t twelth = real_t(1.) / real_t(12.);
+    real_t twelth = (real_t)1. / (real_t)12.;
 
     // element volume
     elem_vol(elem_gid) =
@@ -352,7 +352,7 @@ void geometry::get_vol_hex(const DCArrayKokkos<real_t>& elem_vol,
         twelth;
 
     // std::cout<<"Calculating volume for hex = "<<elem_vol(elem_gid)<<std::endl;
-    elem_vol(elem_gid) = Kokkos::fmax(elem_vol(elem_gid), real_t(1.0E-14));
+    elem_vol(elem_gid) = Kokkos::fmax(elem_vol(elem_gid), (real_t)1.0E-14);
 
     return;
 } // end get_vol_hex
@@ -428,21 +428,21 @@ void geometry::get_bmatrix2D(const ViewCArrayKokkos<real_t>& B_matrix,
        Flanaghan node order 3 4 1 2
     */
 
-    B_matrix(0, 0) = -real_t(0.5) * (y(3) - y(1));
+    B_matrix(0, 0) = -(real_t)0.5 * (y(3) - y(1));
 
-    B_matrix(1, 0) = -real_t(0.5) * (y(0) - y(2));
+    B_matrix(1, 0) = -(real_t)0.5 * (y(0) - y(2));
 
-    B_matrix(2, 0) = -real_t(0.5) * (y(1) - y(3));
+    B_matrix(2, 0) = -(real_t)0.5 * (y(1) - y(3));
 
-    B_matrix(3, 0) = -real_t(0.5) * (y(2) - y(0));
+    B_matrix(3, 0) = -(real_t)0.5 * (y(2) - y(0));
 
-    B_matrix(0, 1) = -real_t(0.5) * (x(1) - x(3));
+    B_matrix(0, 1) = -(real_t)0.5 * (x(1) - x(3));
 
-    B_matrix(1, 1) = -real_t(0.5) * (x(2) - x(0));
+    B_matrix(1, 1) = -(real_t)0.5 * (x(2) - x(0));
 
-    B_matrix(2, 1) = -real_t(0.5) * (x(3) - x(1));
+    B_matrix(2, 1) = -(real_t)0.5 * (x(3) - x(1));
 
-    B_matrix(3, 1) = -real_t(0.5) * (x(0) - x(2));
+    B_matrix(3, 1) = -(real_t)0.5 * (x(0) - x(2));
 
     //
     /*
@@ -484,7 +484,7 @@ double geometry::get_area_quad(const size_t   elem_gid,
     const MPICArrayKokkos<real_t>&    node_coords,
     const ViewCArrayKokkos<size_t>& elem_node_gids)
 {
-    real_t elem_area = real_t(0.0);
+    real_t elem_area = (real_t)0.0;
 
     const size_t num_nodes = 4;
 
@@ -506,7 +506,7 @@ double geometry::get_area_quad(const size_t   elem_gid,
     */
 
     // element facial area
-    elem_area = real_t(0.5) * ((x(0) - x(2)) * (y(1) - y(3)) + (x(3) - x(1)) * (y(0) - y(2)));
+    elem_area = (real_t)0.5 * ((x(0) - x(2)) * (y(1) - y(3)) + (x(3) - x(1)) * (y(0) - y(2)));
 
     return elem_area;
 } // end get_area_quad
@@ -537,7 +537,7 @@ double geometry::heron(const real_t x1,
 {
     real_t S, a, b, c, area;
 
-    S  = real_t(0.0);
+    S  = (real_t)0.0;
     a  = Kokkos::sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
     S += a;
     b  = Kokkos::sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
@@ -545,7 +545,7 @@ double geometry::heron(const real_t x1,
     c  = Kokkos::sqrt((x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 - y1));
     S += c;
 
-    S   *= real_t(0.5);
+    S   *= (real_t)0.5;
     area = Kokkos::sqrt(S * (S - a) * (S - b) * (S - c));
 
     return area;
@@ -583,12 +583,12 @@ void geometry::get_area_weights2D(const ViewCArrayKokkos<real_t>& corner_areas,
     ViewCArrayKokkos<real_t> y(y_array, num_nodes);
 
     // get the coordinates of the nodes(rk,elem,node) in this element
-    rc = zc = real_t(0.0);
+    rc = zc = (real_t)0.0;
     for (int node_lid = 0; node_lid < num_nodes; node_lid++) {
         x(node_lid) = node_coords(elem_node_gids(node_lid), 0);
         y(node_lid) = node_coords(elem_node_gids(node_lid), 1);
-        rc += real_t(0.25) * y(node_lid);
-        zc += real_t(0.25) * x(node_lid);
+        rc += (real_t)0.25 * y(node_lid);
+        zc += (real_t)0.25 * x(node_lid);
     }     // end for
 
     /* ensight node order   0 1 2 3
@@ -600,10 +600,10 @@ void geometry::get_area_weights2D(const ViewCArrayKokkos<real_t>& corner_areas,
     A34 = heron(x(2), y(2), zc, rc, x(3), y(3));
     A41 = heron(x(3), y(3), zc, rc, x(0), y(0));
 
-    corner_areas(0) = (real_t(5.) * A41 + real_t(5.) * A12 + A23 + A34) / real_t(12.);
-    corner_areas(1) = (A41 + real_t(5.) * A12 + real_t(5.) * A23 + A34) / real_t(12.);
-    corner_areas(2) = (A41 + A12 + real_t(5.) * A23 + real_t(5.) * A34) / real_t(12.);
-    corner_areas(3) = (real_t(5.) * A41 + A12 + A23 + real_t(5.) * A34) / real_t(12.);
+    corner_areas(0) = ((real_t)5. * A41 + (real_t)5. * A12 + A23 + A34) / (real_t)12.;
+    corner_areas(1) = (A41 + (real_t)5. * A12 + (real_t)5. * A23 + A34) / (real_t)12.;
+    corner_areas(2) = (A41 + A12 + (real_t)5. * A23 + (real_t)5. * A34) / (real_t)12.;
+    corner_areas(3) = ((real_t)5. * A41 + A12 + A23 + (real_t)5. * A34) / (real_t)12.;
 
     return;
 } // end get_area_weights2D
@@ -811,7 +811,7 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     Kokkos::fence();
     
     // initialize the number of bdy patches in a set to zero
-    mesh.num_bdy_patches_in_set.set_values(real_t(0.0)); // array length is num_bdy_sets
+    mesh.num_bdy_patches_in_set.set_values((real_t)0.0); // array length is num_bdy_sets
 
     // If no boundaries, still build the (empty) boundary node sets so
     // mesh.num_bdy_nodes_in_set and mesh.bdy_nodes_in_set are allocated, then return

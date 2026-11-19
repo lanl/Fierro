@@ -112,7 +112,7 @@ void LevelSet::nodal_gradient(
             } // end loop over dimension
 
             // save the corner volume
-            corner_volume(corner_gid) = (real_t(1.0)/((double)mesh.num_nodes_in_elem))* elem_vol;
+            corner_volume(corner_gid) = ((real_t)1.0/((double)mesh.num_nodes_in_elem))* elem_vol;
 
 
         } // end for loop over corners in elem
@@ -130,7 +130,7 @@ void LevelSet::nodal_gradient(
 
         // initialize grad lvl set to zero
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            node_grad_level_set(node_gid, dim) = real_t(0.0);
+            node_grad_level_set(node_gid, dim) = (real_t)0.0;
         } // end for dim
 
         // loop over all corners around the node and calculate nodal quantities
@@ -155,7 +155,7 @@ void LevelSet::nodal_gradient(
         } // end for corner_lid
 
         // divide by the nodal vol to get the nodal gradient, also calculate its magnitude
-        real_t mag = real_t(0.0);
+        real_t mag = (real_t)0.0;
         for (int dim = 0; dim < mesh.num_dims; dim++) {
             node_grad_level_set(node_gid, dim) /= node_vol;
 
@@ -227,7 +227,7 @@ void LevelSet::update_level_set(
         // it is a 1-point quadrature point element
         size_t gauss_point = elem_gid;
 
-        real_t elem_HJ = real_t(0.0);  // the right hand side of level set equation, HJ
+        real_t elem_HJ = (real_t)0.0;  // the right hand side of level set equation, HJ
 
         // front velocity
         const real_t front_vel = Materials.MaterialFunctions(mat_id).normal_velocity;
@@ -235,15 +235,15 @@ void LevelSet::update_level_set(
         // reinitialization velocity
         real_t deltaX;
         if(mesh.num_dims == 3){
-            deltaX = real_t(2.0)*Kokkos::cbrt(GaussPoints_vol(gauss_point)); // length scale for smoothing signum function
+            deltaX = (real_t)2.0*Kokkos::cbrt(GaussPoints_vol(gauss_point)); // length scale for smoothing signum function
         }
         else {
-            deltaX = real_t(2.0)*Kokkos::sqrt(GaussPoints_vol(gauss_point));
+            deltaX = (real_t)2.0*Kokkos::sqrt(GaussPoints_vol(gauss_point));
         }
         const real_t signum = GaussPoints_level_set(gauss_point)/( Kokkos::sqrt(GaussPoints_level_set(gauss_point)*GaussPoints_level_set(gauss_point) + deltaX*deltaX));
 
         // loop over the each node in the elem
-        double sum_weights = real_t(0.0);  // the sum of all corner weights in element
+        double sum_weights = (real_t)0.0;  // the sum of all corner weights in element
         for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_elem; node_lid++) {
 
             // Get node gid
@@ -253,7 +253,7 @@ void LevelSet::update_level_set(
             // calculate the norm
 
             // nodal HJ = ||node grad phi||
-            real_t node_HJ = real_t(0.0);
+            real_t node_HJ = (real_t)0.0;
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
                 node_HJ += node_level_set_vel(node_gid, dim) * node_grad_level_set(node_gid, dim); // 
             } // end for dim
@@ -267,11 +267,11 @@ void LevelSet::update_level_set(
             // Get corner gid
             size_t corner_gid = mesh.corners_in_elem(elem_gid, node_lid);  // node_lid = corner_lid
 
-            real_t corner_weight = real_t(0.0);  // weight = max(0, (vel dot normal)), here the normal is inward to the element
+            real_t corner_weight = (real_t)0.0;  // weight = max(0, (vel dot normal)), here the normal is inward to the element
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
                 corner_weight += (front_vel + signum)*node_level_set_vel(node_gid, dim) * corner_normal(corner_gid, dim); 
             } // end for dim
-            corner_weight = Kokkos::fmax(real_t(0.0), corner_weight); // upwind will be positive, downwind is negative
+            corner_weight = Kokkos::fmax((real_t)0.0, corner_weight); // upwind will be positive, downwind is negative
 
             sum_weights += corner_weight; 
 
@@ -288,7 +288,7 @@ void LevelSet::update_level_set(
 
         // update level set field
         GaussPoints_level_set(gauss_point) = GaussPoints_level_set_n0(gauss_point) 
-                                           - rk_alpha*dt*( front_vel*elem_HJ + signum*(elem_HJ - real_t(1.0)) );  
+                                           - rk_alpha*dt*( front_vel*elem_HJ + signum*(elem_HJ - (real_t)1.0) );  
 
     }); // end parallel loop material elems
 

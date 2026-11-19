@@ -102,9 +102,9 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
 
     // extensive energy tallies over the entire mesh
-    real_t IE_t0 = real_t(0.0);
-    real_t KE_t0 = real_t(0.0);
-    real_t TE_t0 = real_t(0.0);
+    real_t IE_t0 = (real_t)0.0;
+    real_t KE_t0 = (real_t)0.0;
+    real_t TE_t0 = (real_t)0.0;
 
 
     // the number of materials specified by the user input
@@ -128,8 +128,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
 
     // domain mass for each material (they are at material points)
-    real_t mass_domain_all_mats_t0 = real_t(0.0);
-    real_t mass_domain_nodes_t0 = real_t(0.0);
+    real_t mass_domain_all_mats_t0 = (real_t)0.0;
+    real_t mass_domain_nodes_t0 = (real_t)0.0;
 
     for(size_t mat_id=0; mat_id<num_mats; mat_id++){
 
@@ -255,7 +255,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
 
             // ---- RK coefficient ----
-            real_t rk_alpha = real_t(1.0) / ((double)rk_num_stages - (double)rk_stage);
+            real_t rk_alpha = (real_t)1.0 / ((double)rk_num_stages - (double)rk_stage);
 
             // ---- Calculate velocity gradient for the element ----
             get_velgrad_rz(State.GaussPoints.vel_grad,
@@ -265,7 +265,7 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                            State.GaussPoints.vol);
                            
             // compute the shock detector at each gauss point for each material
-            State.GaussPoints.shock_detector.set_values(real_t(0.0));
+            State.GaussPoints.shock_detector.set_values((real_t)0.0);
             MATAR_FENCE();
 
             MachShockDetectorRZ::detect_shock(mesh,
@@ -502,9 +502,9 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
     if (log) log->info("\nCalculation time in seconds: %f \n", calc_time * 1e-9);
 
     // ---- Calculate energy tallies ----
-    real_t IE_tend = real_t(0.0);
-    real_t KE_tend = real_t(0.0);
-    real_t TE_tend = real_t(0.0);
+    real_t IE_tend = (real_t)0.0;
+    real_t KE_tend = (real_t)0.0;
+    real_t TE_tend = (real_t)0.0;
 
     // extensive IE
     for(size_t mat_id=0; mat_id<num_mats; mat_id++){
@@ -528,8 +528,8 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
 
 
     // domain mass for each material (they are at material points)
-    real_t mass_domain_all_mats_tend = real_t(0.0);
-    real_t mass_domain_nodes_tend = real_t(0.0);
+    real_t mass_domain_all_mats_tend = (real_t)0.0;
+    real_t mass_domain_nodes_tend = (real_t)0.0;
 
     for(size_t mat_id = 0; mat_id < num_mats; mat_id++){
 
@@ -560,9 +560,9 @@ double sum_domain_internal_energy_rz(
     const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie)
 {
 
-    double IE_sum = real_t(0.0);
-    double IE_loc_sum = real_t(0.0);
-    double IE_global_sum = real_t(0.0);
+    double IE_sum = (real_t)0.0;
+    double IE_loc_sum = (real_t)0.0;
+    double IE_global_sum = (real_t)0.0;
 
     FOR_REDUCE_SUM(elem_gid, 0, mesh.num_owned_elems, IE_sum, {
         size_t num_materials = MeshtoMaterialMaps.num_mats_in_elem(elem_gid);
@@ -586,9 +586,9 @@ double sum_domain_kinetic_energy_rz(
     const CArrayKokkos<real_t>& node_extensive_mass)
 {
     // extensive KE
-    double KE_sum = real_t(0.0);
-    double KE_loc_sum = real_t(0.0);
-    double KE_global_sum = real_t(0.0);
+    double KE_sum = (real_t)0.0;
+    double KE_loc_sum = (real_t)0.0;
+    double KE_global_sum = (real_t)0.0;
 
     FOR_REDUCE_SUM(node_gid, 0, mesh.num_owned_nodes, KE_loc_sum, {
         if(mesh.shared_tally_owned_nodes(node_gid)){
@@ -605,7 +605,7 @@ double sum_domain_kinetic_energy_rz(
 
     MPI_Allreduce(&KE_sum, &KE_global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-    return real_t(0.5) * KE_global_sum;
+    return (real_t)0.5 * KE_global_sum;
 } // end function
 
 
@@ -615,8 +615,8 @@ double sum_domain_material_mass_rz(
     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
     const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass)
 {
-    double mass_loc_sum = real_t(0.0);
-    double sum = real_t(0.0);
+    double mass_loc_sum = (real_t)0.0;
+    double sum = (real_t)0.0;
     FOR_REDUCE_SUM(elem_gid, 0, mesh.num_owned_elems, sum, {
         size_t num_materials = MeshtoMaterialMaps.num_mats_in_elem(elem_gid);
 
@@ -629,7 +629,7 @@ double sum_domain_material_mass_rz(
         }
     }, mass_loc_sum);
     Kokkos::fence();
-    double mass_sum = real_t(0.0);
+    double mass_sum = (real_t)0.0;
     MPI_Allreduce(&mass_loc_sum, &mass_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     return mass_sum;
 } // end function
@@ -638,9 +638,9 @@ double sum_domain_material_mass_rz(
 double sum_domain_node_mass_rz(const swage::Mesh_t& mesh,
     const CArrayKokkos<real_t>& node_extensive_mass)
 {
-    double mass_domain = real_t(0.0);
-    double mass_loc_domain = real_t(0.0);
-    real_t global_mass = real_t(0.0);
+    double mass_domain = (real_t)0.0;
+    double mass_loc_domain = (real_t)0.0;
+    real_t global_mass = (real_t)0.0;
 
     FOR_REDUCE_SUM(node_gid, 0, mesh.num_owned_nodes, mass_loc_domain, {
         if(mesh.shared_tally_owned_nodes(node_gid)){
@@ -707,7 +707,7 @@ void calc_node_areal_mass_rz(const swage::Mesh_t& mesh,
     // calculate the nodal areal mass
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
         
-        node_mass(node_gid) = real_t(0.0);
+        node_mass(node_gid) = (real_t)0.0;
 
         if (node_coords(node_gid, 1) > tiny) {
             node_mass(node_gid) = node_extensive_mass(node_gid) / node_coords(node_gid, 1);
@@ -730,7 +730,7 @@ void calc_node_areal_mass_rz(const swage::Mesh_t& mesh,
 
                 // if the node is off the axis, use it's areal mass on the boundary
                 if (node_coords(node_neighbor_gid, 1) > tiny) {
-                    node_mass(node_gid) = Kokkos::fmax(node_mass(node_gid), node_mass(node_neighbor_gid) / real_t(2.0));
+                    node_mass(node_gid) = Kokkos::fmax(node_mass(node_gid), node_mass(node_neighbor_gid) / (real_t)2.0);
                     // Why half, the on axis node is half the total area mass of the off-axis node
                     // node_mass = rho*A
                 }
@@ -750,7 +750,7 @@ void set_corner_force_zero_rz(const swage::Mesh_t& mesh,
     // set corner force to zero
     FOR_ALL(corner_gid, 0, mesh.num_corners, {
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            corner_force(corner_gid, dim) = real_t(0.0);
+            corner_force(corner_gid, dim) = (real_t)0.0;
         }
     }); // end parallel for corners
 } // end function

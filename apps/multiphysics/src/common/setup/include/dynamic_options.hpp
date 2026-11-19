@@ -48,12 +48,12 @@ struct DynamicOptions_t
 {
     unsigned long cycle_stop = 2000000;
 
-    real_t time_initial = real_t(1e-10); ///< Starting time
-    real_t time_final   = real_t(1.0);  ///< Final simulation time
-    real_t dt_min   = real_t(1e-8);     ///< Minimum time step
-    real_t dt_max   = real_t(1e-2);     ///< Maximum time step
-    real_t dt_start = real_t(1e-5);     ///< Starting time step
-    real_t dt_cfl   = real_t(0.4);      ///< CFL multiplier for time step calculation
+    real_t time_initial = (real_t)1e-10; ///< Starting time
+    real_t time_final   = (real_t)1.0;  ///< Final simulation time
+    real_t dt_min   = (real_t)1e-8;     ///< Minimum time step
+    real_t dt_max   = (real_t)1e-2;     ///< Maximum time step
+    real_t dt_start = (real_t)1e-5;     ///< Starting time step
+    real_t dt_cfl   = (real_t)0.4;      ///< CFL multiplier for time step calculation
 
     // Guard magnitudes, scaled to the working precision. These are used as
     // `x / (den + fuzz)` and `if (x > tiny)` throughout the solvers, so a
@@ -62,9 +62,9 @@ struct DynamicOptions_t
     // `if (x > fuzz)` degenerates to `if (x > 0)`. The max() keeps the
     // historical values exactly when real_t is double, so a default build is
     // unchanged. Still YAML-overridable.
-    real_t fuzz  = mtr::prec::fmax(real_t(1e-16), mtr::prec::epsilon<real_t>());               ///< machine precision
-    real_t tiny  = mtr::prec::fmax(real_t(1e-12), mtr::prec::epsilon<real_t>() * real_t(1e4));  ///< very very small
-    real_t small = mtr::prec::fmax(real_t(1e-8),  mtr::prec::epsilon<real_t>() * real_t(1e8));  ///< single precision
+    real_t fuzz  = mtr::prec::fmax((real_t)1e-16, mtr::prec::epsilon<real_t>());               ///< machine precision
+    real_t tiny  = mtr::prec::fmax((real_t)1e-12, mtr::prec::epsilon<real_t>() * (real_t)1e4);  ///< very very small
+    real_t small = mtr::prec::fmax((real_t)1e-8,  mtr::prec::epsilon<real_t>() * (real_t)1e8);  ///< single precision
 
     int rk_num_stages = 2;      ///< Number of RK stages
 

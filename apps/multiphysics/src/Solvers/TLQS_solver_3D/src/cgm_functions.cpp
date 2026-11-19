@@ -116,7 +116,7 @@ void TLQS3D::get_r0(
     FOR_ALL(node_gid, 0, num_nodes, {
         const size_t num_elems_in_node = elems_in_node.stride(node_gid);
         for (size_t q = 0; q < 3; q++) {
-            real_t F_val = real_t(0.0);
+            real_t F_val = (real_t)0.0;
             if (!constrained_dof(node_gid, q)) {
                 for (size_t elem_lid = 0; elem_lid < num_elems_in_node; elem_lid++) {
                     const size_t elem_gid = elems_in_node(node_gid, elem_lid);
@@ -154,8 +154,8 @@ double TLQS3D::get_alpha(
     temporary.communicate();
 
     // Kernel 2: p^T * temporary over owned nodes only, then Allreduce
-    double ptkp = real_t(0.0);
-    double loc_ptkp = real_t(0.0);
+    double ptkp = (real_t)0.0;
+    double loc_ptkp = (real_t)0.0;
     FOR_REDUCE_SUM(node_gid, 0, (int)num_owned_nodes, loc_ptkp, {
         if(shared_tally_owned_nodes(node_gid)){
             for (int j = 0; j < 3; j++) {
@@ -167,7 +167,7 @@ double TLQS3D::get_alpha(
 
     MPI_Allreduce(MPI_IN_PLACE, &ptkp, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-    return rktrk / (ptkp + real_t(1e-16));
+    return rktrk / (ptkp + (real_t)1e-16);
 } // end get_alpha
 
 void TLQS3D::get_rkp1(

@@ -166,7 +166,7 @@ void SGH3D::boundary_fracture_force(State_t& State, swage::Mesh_t &mesh, const r
     reset_delta_internal_vars(cohesive_zones_bank.delta_internal_vars);
 
     // reset F_cz for this stage
-    cohesive_zones_bank.F_cz.set_values(real_t(0.0));
+    cohesive_zones_bank.F_cz.set_values((real_t)0.0);
 
     // compute cohesive forces (orientation, openings, constitutive, loads)
     compute_cohesive_zone_nodal_forces(
@@ -253,9 +253,9 @@ void SGH3D::boundary_stress(const swage::Mesh_t&      mesh,
 
             // --- calculate surfaced area ---
             real_t avg_coords[3];
-            avg_coords[0] = real_t(0.0);
-            avg_coords[1] = real_t(0.0);
-            avg_coords[2] = real_t(0.0);
+            avg_coords[0] = (real_t)0.0;
+            avg_coords[1] = (real_t)0.0;
+            avg_coords[2] = (real_t)0.0;
             for (size_t node_lid=0; node_lid<mesh.num_nodes_in_patch; node_lid++){
                 
                 // get the node id
@@ -282,8 +282,8 @@ void SGH3D::boundary_stress(const swage::Mesh_t&      mesh,
             
             // inialize corner patch vector to zero
             for (size_t dim=0; dim<mesh.num_dims; dim++){
-                corn_patch_area_normal(dim) = real_t(0.0);
-                corn_patch_force(dim) = real_t(0.0);
+                corn_patch_area_normal(dim) = (real_t)0.0;
+                corn_patch_force(dim) = (real_t)0.0;
             } // end for dim
 
             real_t vec_a[3];

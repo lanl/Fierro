@@ -86,7 +86,7 @@ static void velocity(const swage::Mesh_t& mesh,
     // check if reorientation mode is active
     // since UserDefinedVelocityBC data type is RaggedRight <double>,
     // interpret reorienation_mode parameter as true if > 0.5, false otherwise
-    const bool reorientation_mode = vel_bc_global_vars(bdy_set, BCVars::reorientation_mode) > real_t(0.5); // interpret as bool 
+    const bool reorientation_mode = vel_bc_global_vars(bdy_set, BCVars::reorientation_mode) > (real_t)0.5; // interpret as bool 
 
     if (reorientation_mode) {
         // do nothing - kinematics handled in the solver

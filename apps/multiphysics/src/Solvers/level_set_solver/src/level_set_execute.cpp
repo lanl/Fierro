@@ -241,7 +241,7 @@ void LevelSet::execute(SimulationParameters_t& SimulationParamaters,
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
             
             // ---- RK coefficient ----
-            real_t rk_alpha = real_t(1.0) / ((double)rk_num_stages - (double)rk_stage);
+            real_t rk_alpha = (real_t)1.0 / ((double)rk_num_stages - (double)rk_stage);
           
             // calculate the gradient at the node, its calculated across the whole mesh
             nodal_gradient(

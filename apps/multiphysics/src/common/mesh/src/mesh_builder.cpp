@@ -259,8 +259,8 @@ void MeshBuilder::build_2d_polar(swage::Mesh_t& mesh,
     const real_t inner_radius = SimulationParamaters.MeshInput.inner_radius;
     const real_t outer_radius = SimulationParamaters.MeshInput.outer_radius;
 
-    const real_t start_angle = PI / real_t(180.0) * SimulationParamaters.MeshInput.starting_angle;
-    const real_t end_angle   = PI / real_t(180.0) * SimulationParamaters.MeshInput.ending_angle;
+    const real_t start_angle = PI / (real_t)180.0 * SimulationParamaters.MeshInput.starting_angle;
+    const real_t end_angle   = PI / (real_t)180.0 * SimulationParamaters.MeshInput.ending_angle;
 
     const int num_elems_i = SimulationParamaters.MeshInput.num_radial_elems;
     const int num_elems_j = SimulationParamaters.MeshInput.num_angular_elems;
@@ -311,7 +311,7 @@ void MeshBuilder::build_2d_polar(swage::Mesh_t& mesh,
             node_coords.host(node_gid, 0) = origin[0] + r_i * Kokkos::cos(theta_j);
             node_coords.host(node_gid, 1) = origin[1] + r_i * Kokkos::sin(theta_j);
 
-            if(node_coords.host(node_gid, 0) < real_t(0.0)){
+            if(node_coords.host(node_gid, 0) < (real_t)0.0){
                 throw std::runtime_error("**** NODE RADIUS FOR RZ MESH MUST BE POSITIVE ****");
             }
 

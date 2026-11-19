@@ -103,10 +103,10 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     // ---- Initialize the tool path information ---- //
     int number_of_points = 4;
     ToolPathInfo path(number_of_points);
-    path.set_data_point(0, real_t(0.0),  real_t(100.0), real_t(150.0), real_t(15.0), real_t(3000000.0));
-    path.set_data_point(1, real_t(5.0),  real_t(200.0), real_t(150.0), real_t(15.0), real_t(4000000.0));
-    path.set_data_point(2, real_t(5.0),  real_t(100.0), real_t(150.0), real_t(30.0), real_t(4000000.0));
-    path.set_data_point(3, real_t(10.0), real_t(200.0), real_t(150.0), real_t(30.0), real_t(3000000.0));
+    path.set_data_point(0, (real_t)0.0,  (real_t)100.0, (real_t)150.0, (real_t)15.0, (real_t)3000000.0);
+    path.set_data_point(1, (real_t)5.0,  (real_t)200.0, (real_t)150.0, (real_t)15.0, (real_t)4000000.0);
+    path.set_data_point(2, (real_t)5.0,  (real_t)100.0, (real_t)150.0, (real_t)30.0, (real_t)4000000.0);
+    path.set_data_point(3, (real_t)10.0, (real_t)200.0, (real_t)150.0, (real_t)30.0, (real_t)3000000.0);
 
     path.tool_path_table.print_table();
 
@@ -147,14 +147,14 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
     // ---- Set up sphere to act as a moving heat source ---- //
     DCArrayKokkos<real_t> sphere_position(3, "sphere_position");
 
-    sphere_position.host(0) = real_t(0.0);
-    sphere_position.host(1) = real_t(0.0);
-    sphere_position.host(2) = real_t(0.0);
+    sphere_position.host(0) = (real_t)0.0;
+    sphere_position.host(1) = (real_t)0.0;
+    sphere_position.host(2) = (real_t)0.0;
     sphere_position.update_device();
 
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
-        State.node.q_transfer(node_gid) = real_t(0.0);
+        State.node.q_transfer(node_gid) = (real_t)0.0;
     }); // end for parallel for over nodes
 
     // ---- Update the material properties ---- //
@@ -259,11 +259,11 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---- Integrate the solution forward to t(n+1) via Runge Kutta (RK) method ---- //
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
 
-            real_t rk_alpha = real_t(1.0) / ((double)rk_num_stages - (double)rk_stage);
+            real_t rk_alpha = (real_t)1.0 / ((double)rk_num_stages - (double)rk_stage);
 
             // ---- Initialize the nodal flux to zero for this RK stage ---- //
             FOR_ALL(node_gid, 0, mesh.num_nodes, {
-                State.node.q_transfer(node_gid) = real_t(0.0);
+                State.node.q_transfer(node_gid) = (real_t)0.0;
             }); // end for parallel for over nodes
 
             // ---- Calculate the corner heat flux from conduction per material ---- //
@@ -368,9 +368,9 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
         // ---- Move heat source ---- //
         if (SimulationParamaters.solver_inputs[this->solver_id].use_moving_heat_source) {
             RUN({
-                real_t x = real_t(0.0);
-                real_t y = real_t(0.0);
-                real_t z = real_t(0.0);
+                real_t x = (real_t)0.0;
+                real_t y = (real_t)0.0;
+                real_t z = (real_t)0.0;
                 path.get_position(time_value, x, y, z);
                 sphere_position(0) = x;
                 sphere_position(1) = y;

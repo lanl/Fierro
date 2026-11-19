@@ -148,7 +148,7 @@ void SGH3D::get_velgrad(DCArrayKokkos<real_t>& vel_grad,
         } // end for
 
         // --- calculate the velocity gradient terms ---
-        real_t inverse_vol = real_t(1.0) / elem_vol(elem_gid);
+        real_t inverse_vol = (real_t)1.0 / elem_vol(elem_gid);
         // x-dir
         vel_grad(elem_gid, 0, 0) = (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
             + u(2) * b_matrix(2, 0) + u(3) * b_matrix(3, 0)
@@ -259,9 +259,9 @@ void SGH3D::get_divergence(DCArrayKokkos<real_t>& elem_div,
         } // end for
 
         // --- calculate the velocity divergence terms ---
-        real_t inverse_vol = real_t(1.0) / elem_vol(elem_gid);
+        real_t inverse_vol = (real_t)1.0 / elem_vol(elem_gid);
 
-        elem_div(elem_gid) = real_t(0.0);
+        elem_div(elem_gid) = (real_t)0.0;
 
         // x-dir
         elem_div(elem_gid) += (u(0) * b_matrix(0, 0) + u(1) * b_matrix(1, 0)
@@ -317,15 +317,15 @@ void SGH3D::decompose_vel_grad(const ViewCArrayKokkos<real_t>& D_tensor,
     // initialize to zero
     for (size_t i = 0; i < num_dims; i++) {
         for (size_t j = 0; j < num_dims; j++) {
-            D_tensor(i, j) = real_t(0.0);
-            W_tensor(i, j) = real_t(0.0);
+            D_tensor(i, j) = (real_t)0.0;
+            W_tensor(i, j) = (real_t)0.0;
         }
     } // end for
 
     for (size_t i = 0; i < num_dims; i++) {
         for (size_t j = 0; j < num_dims; j++) {
-            D_tensor(i, j) = real_t(0.5) * (vel_grad(i, j) + vel_grad(j, i));
-            W_tensor(i, j) = real_t(0.5) * (vel_grad(i, j) - vel_grad(j, i));
+            D_tensor(i, j) = (real_t)0.5 * (vel_grad(i, j) + vel_grad(j, i));
+            W_tensor(i, j) = (real_t)0.5 * (vel_grad(i, j) - vel_grad(j, i));
         }
     } // end for
 

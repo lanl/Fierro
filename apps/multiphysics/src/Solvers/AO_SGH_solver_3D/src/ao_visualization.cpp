@@ -211,7 +211,7 @@ void sample_thermo_at_kine_gll(const DCArrayKokkos<real_t>& thermo_coef_per_elem
 
     for (size_t i = 0; i < nk; ++i) {
         for (size_t j = 0; j < nt; ++j) {
-            real_t phi = real_t(1.0);
+            real_t phi = (real_t)1.0;
             for (size_t m = 0; m < nt; ++m) {
                 if (m != j) {
                     phi *= (xi_kine[i] - xi_thermo[m])
@@ -231,7 +231,7 @@ void sample_thermo_at_kine_gll(const DCArrayKokkos<real_t>& thermo_coef_per_elem
         for (size_t lz = 0; lz < nt; ++lz) {
             for (size_t ly = 0; ly < nt; ++ly) {
                 for (size_t ix = 0; ix < nk; ++ix) {
-                    real_t acc = real_t(0.0);
+                    real_t acc = (real_t)0.0;
                     for (size_t lx = 0; lx < nt; ++lx) {
                         const size_t lex = lx + ly * nt + lz * nt * nt;
                         acc += B_cross(ix, lx) * thermo_coef_per_elem(elem_gid, lex);
@@ -247,7 +247,7 @@ void sample_thermo_at_kine_gll(const DCArrayKokkos<real_t>& thermo_coef_per_elem
         for (size_t lz = 0; lz < nt; ++lz) {
             for (size_t iy = 0; iy < nk; ++iy) {
                 for (size_t ix = 0; ix < nk; ++ix) {
-                    real_t acc = real_t(0.0);
+                    real_t acc = (real_t)0.0;
                     for (size_t ly = 0; ly < nt; ++ly) {
                         acc += B_cross(iy, ly) * T1(elem_gid, lz, ly, ix);
                     }
@@ -263,7 +263,7 @@ void sample_thermo_at_kine_gll(const DCArrayKokkos<real_t>& thermo_coef_per_elem
         for (size_t iz = 0; iz < nk; ++iz) {
             for (size_t iy = 0; iy < nk; ++iy) {
                 for (size_t ix = 0; ix < nk; ++ix) {
-                    real_t acc = real_t(0.0);
+                    real_t acc = (real_t)0.0;
                     for (size_t lz = 0; lz < nt; ++lz) {
                         acc += B_cross(iz, lz) * T2(elem_gid, lz, iy, ix);
                     }
@@ -295,8 +295,8 @@ void sample_qpt_field_element_average(const DCArrayKokkos<real_t>& qpt_field,
     const DCArrayKokkos<real_t>& w1 = quad.qpt_weights_1d;
 
     FOR_ALL(elem_gid, 0, num_elems, {
-        real_t num = real_t(0.0);
-        real_t den = real_t(0.0);
+        real_t num = (real_t)0.0;
+        real_t den = (real_t)0.0;
         for (size_t qk = 0; qk < nq; ++qk) {
             for (size_t qj = 0; qj < nq; ++qj) {
                 for (size_t qi = 0; qi < nq; ++qi) {
@@ -331,7 +331,7 @@ inline double lagrange_1d(const std::vector<double>& nodes,
                           const size_t              idx,
                           const real_t              x)
 {
-    real_t v = real_t(1.0);
+    real_t v = (real_t)1.0;
     const size_t n = nodes.size();
     for (size_t m = 0; m < n; ++m) {
         if (m != idx) {
@@ -369,7 +369,7 @@ void write_lagrange_thermo_hex_vtu(const std::string&            path,
     for (size_t a = 0; a < nk; ++a) xi_kine[a]   = kine_ref.dof_positions_1d.host(a);
     for (size_t j = 0; j < nt; ++j) xi_thermo[j] = thermo_ref.dof_positions_1d.host(j);
     for (size_t i = 0; i < nv_1d; ++i) {
-        xi_equi[i] = -real_t(1.0) + real_t(2.0) * static_cast<double>(i) / static_cast<double>(vis_order);
+        xi_equi[i] = -(real_t)1.0 + (real_t)2.0 * static_cast<double>(i) / static_cast<double>(vis_order);
     }
 
     std::vector<double> B_kine_at_vis  (nv_1d * nk);
@@ -418,7 +418,7 @@ void write_lagrange_thermo_hex_vtu(const std::string&            path,
     auto eval_thermo = [&](const DCArrayKokkos<real_t>& coef,
                            size_t e, size_t ix, size_t iy, size_t iz) -> double
     {
-        real_t v = real_t(0.0);
+        real_t v = (real_t)0.0;
         for (size_t jz = 0; jz < nt; ++jz) {
             const real_t bz = B_thermo_at_vis[iz * nt + jz];
             for (size_t jy = 0; jy < nt; ++jy) {
@@ -462,7 +462,7 @@ void write_lagrange_thermo_hex_vtu(const std::string&            path,
         for (size_t iz = 0; iz < nv_1d; ++iz) {
             for (size_t iy = 0; iy < nv_1d; ++iy) {
                 for (size_t ix = 0; ix < nv_1d; ++ix) {
-                    real_t px = real_t(0.0), py = real_t(0.0), pz = real_t(0.0);
+                    real_t px = (real_t)0.0, py = (real_t)0.0, pz = (real_t)0.0;
                     for (size_t c = 0; c < nk; ++c) {
                         const real_t bz = B_kine_at_vis[iz * nk + c];
                         for (size_t b = 0; b < nk; ++b) {
@@ -532,7 +532,7 @@ void write_lagrange_kine_hex_vtu(const std::string&            path,
     std::vector<double> xi_kine(nk), xi_equi(nv_1d);
     for (size_t a = 0; a < nk; ++a) xi_kine[a] = kine_ref.dof_positions_1d.host(a);
     for (size_t i = 0; i < nv_1d; ++i) {
-        xi_equi[i] = -real_t(1.0) + real_t(2.0) * static_cast<double>(i) / static_cast<double>(vis_order);
+        xi_equi[i] = -(real_t)1.0 + (real_t)2.0 * static_cast<double>(i) / static_cast<double>(vis_order);
     }
 
     std::vector<double> B_kine_at_vis(nv_1d * nk);
@@ -579,7 +579,7 @@ void write_lagrange_kine_hex_vtu(const std::string&            path,
         for (size_t iz = 0; iz < nv_1d; ++iz) {
             for (size_t iy = 0; iy < nv_1d; ++iy) {
                 for (size_t ix = 0; ix < nv_1d; ++ix) {
-                    real_t vx = real_t(0.0), vy = real_t(0.0), vz = real_t(0.0);
+                    real_t vx = (real_t)0.0, vy = (real_t)0.0, vz = (real_t)0.0;
                     for (size_t c = 0; c < nk; ++c) {
                         const real_t bz = B_kine_at_vis[iz * nk + c];
                         for (size_t b = 0; b < nk; ++b) {
@@ -610,7 +610,7 @@ void write_lagrange_kine_hex_vtu(const std::string&            path,
         for (size_t iz = 0; iz < nv_1d; ++iz) {
             for (size_t iy = 0; iy < nv_1d; ++iy) {
                 for (size_t ix = 0; ix < nv_1d; ++ix) {
-                    real_t px = real_t(0.0), py = real_t(0.0), pz = real_t(0.0);
+                    real_t px = (real_t)0.0, py = (real_t)0.0, pz = (real_t)0.0;
                     for (size_t c = 0; c < nk; ++c) {
                         const real_t bz = B_kine_at_vis[iz * nk + c];
                         for (size_t b = 0; b < nk; ++b) {

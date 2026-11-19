@@ -61,12 +61,12 @@ void SGHRZ::update_position_rz(
     FOR_ALL(node_gid, 0, num_nodes, {
 
         for (int dim = 0; dim < num_dims; dim++) {
-            real_t half_vel = (node_vel(node_gid, dim) + node_vel_n0(node_gid, dim)) * real_t(0.5);
+            real_t half_vel = (node_vel(node_gid, dim) + node_vel_n0(node_gid, dim)) * (real_t)0.5;
             node_coords(node_gid, dim) = node_coords_n0(node_gid, dim) + rk_alpha * dt * half_vel;
         }
 
         // radius must always be positive in RZ coordinates, the coords are (z,r)
-        node_coords(node_gid, 1) = Kokkos::fmax(real_t(0.0), node_coords(node_gid, 1));
+        node_coords(node_gid, 1) = Kokkos::fmax((real_t)0.0, node_coords(node_gid, 1));
 
     }); // end parallel for over nodes
     Kokkos::fence();

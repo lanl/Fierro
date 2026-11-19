@@ -79,7 +79,7 @@ namespace OrthotropicLinearElasticStrengthModel {
                    const T3& C) {
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                double sum = real_t(0.0);
+                double sum = (real_t)0.0;
                 for (int k = 0; k < 3; k++) {
                     sum += A(i,k) * B(k,j);
                 }
@@ -110,7 +110,7 @@ namespace OrthotropicLinearElasticStrengthModel {
                    const int N) {
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
-                double sum = real_t(0.0);
+                double sum = (real_t)0.0;
                 for (int k = 0; k < N; k++) {
                     sum += A(i,k) * B(k,j);
                 }
@@ -148,10 +148,10 @@ namespace OrthotropicLinearElasticStrengthModel {
         // Initialize eigvec to identity
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++)
-                eigvec(i,j) = (i == j) ? real_t(1.0) : real_t(0.0);
+                eigvec(i,j) = (i == j) ? (real_t)1.0 : (real_t)0.0;
 
         const int max_sweeps = 50;
-        const real_t tol = real_t(1.0e-14);
+        const real_t tol = (real_t)1.0e-14;
 
         for (int sweep = 0; sweep < max_sweeps; sweep++) {
             // Off-diagonal norm (convergence check)
@@ -164,20 +164,20 @@ namespace OrthotropicLinearElasticStrengthModel {
             for (auto& pq : pairs) {
                 int p = pq[0], q = pq[1];
 
-                if (Kokkos::fabs(A(p,q)) < real_t(1.0e-18)) continue;
+                if (Kokkos::fabs(A(p,q)) < (real_t)1.0e-18) continue;
 
-                real_t theta = (A(q,q) - A(p,p)) / (real_t(2.0) * A(p,q));
-                real_t t = (theta >= real_t(0.0) ? real_t(1.0) : -real_t(1.0)) /
-                        (Kokkos::fabs(theta) + Kokkos::sqrt(theta*theta + real_t(1.0)));
-                real_t c = real_t(1.0) / Kokkos::sqrt(t*t + real_t(1.0));
+                real_t theta = (A(q,q) - A(p,p)) / ((real_t)2.0 * A(p,q));
+                real_t t = (theta >= (real_t)0.0 ? (real_t)1.0 : -(real_t)1.0) /
+                        (Kokkos::fabs(theta) + Kokkos::sqrt(theta*theta + (real_t)1.0));
+                real_t c = (real_t)1.0 / Kokkos::sqrt(t*t + (real_t)1.0);
                 real_t s = t * c;
 
                 real_t App = A(p,p), Aqq = A(q,q), Apq = A(p,q);
 
                 A(p,p) = App - t * Apq;
                 A(q,q) = Aqq + t * Apq;
-                A(p,q) = real_t(0.0);
-                A(q,p) = real_t(0.0);
+                A(p,q) = (real_t)0.0;
+                A(q,p) = (real_t)0.0;
 
                 for (int k = 0; k < 3; k++) {
                     if (k != p && k != q) {
@@ -263,14 +263,14 @@ namespace OrthotropicLinearElasticStrengthModel {
 
         for (int i = 0; i < 3; i++)
             for (int j = 0; j < 3; j++) {
-                sqrtLambda(i,j) = real_t(0.0);
-                invSqrtLambda(i,j) = real_t(0.0);
+                sqrtLambda(i,j) = (real_t)0.0;
+                invSqrtLambda(i,j) = (real_t)0.0;
             }
 
         for (int i = 0; i < 3; i++) {
-            real_t lam = Kokkos::fmax(eigval(i), real_t(1.0e-30)); // guard against negative/zero
+            real_t lam = Kokkos::fmax(eigval(i), (real_t)1.0e-30); // guard against negative/zero
             sqrtLambda(i,i) = Kokkos::sqrt(lam);
-            invSqrtLambda(i,i) = real_t(1.0) / Kokkos::sqrt(lam);
+            invSqrtLambda(i,i) = (real_t)1.0 / Kokkos::sqrt(lam);
         }
 
         real_t temporary_1D[9];
@@ -312,25 +312,25 @@ namespace OrthotropicLinearElasticStrengthModel {
         M(0,0)=R11*R11; 
         M(0,1)=R12*R12; 
         M(0,2)=R13*R13;
-        M(0,3)=real_t(2.0)*R12*R13; 
-        M(0,4)=real_t(2.0)*R13*R11; 
-        M(0,5)=real_t(2.0)*R11*R12;
+        M(0,3)=(real_t)2.0*R12*R13; 
+        M(0,4)=(real_t)2.0*R13*R11; 
+        M(0,5)=(real_t)2.0*R11*R12;
 
         // Row 2
         M(1,0)=R21*R21; 
         M(1,1)=R22*R22; 
         M(1,2)=R23*R23;
-        M(1,3)=real_t(2.0)*R22*R23; 
-        M(1,4)=real_t(2.0)*R23*R21; 
-        M(1,5)=real_t(2.0)*R21*R22;
+        M(1,3)=(real_t)2.0*R22*R23; 
+        M(1,4)=(real_t)2.0*R23*R21; 
+        M(1,5)=(real_t)2.0*R21*R22;
 
         // Row 3
         M(2,0)=R31*R31; 
         M(2,1)=R32*R32; 
         M(2,2)=R33*R33;
-        M(2,3)=real_t(2.0)*R32*R33; 
-        M(2,4)=real_t(2.0)*R33*R31; 
-        M(2,5)=real_t(2.0)*R31*R32;
+        M(2,3)=(real_t)2.0*R32*R33; 
+        M(2,4)=(real_t)2.0*R33*R31; 
+        M(2,5)=(real_t)2.0*R31*R32;
 
         // Row 4
         M(3,0)=R21*R31; 
@@ -442,7 +442,7 @@ namespace OrthotropicLinearElasticStrengthModel {
 
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                E(i,j) = real_t(0.5) * (C(i,j) - (i == j ? real_t(1.0) : real_t(0.0)));
+                E(i,j) = (real_t)0.5 * (C(i,j) - (i == j ? (real_t)1.0 : (real_t)0.0));
             }
         }
     } // end function
@@ -457,9 +457,9 @@ namespace OrthotropicLinearElasticStrengthModel {
         E_voigt(0) = E(0,0);          // E11
         E_voigt(1) = E(1,1);          // E22
         E_voigt(2) = E(2,2);          // E33
-        E_voigt(3) = real_t(2.0) * E(1,2);    // 2*E23
-        E_voigt(4) = real_t(2.0) * E(0,2);    // 2*E13
-        E_voigt(5) = real_t(2.0) * E(0,1);    // 2*E12
+        E_voigt(3) = (real_t)2.0 * E(1,2);    // 2*E23
+        E_voigt(4) = (real_t)2.0 * E(0,2);    // 2*E13
+        E_voigt(5) = (real_t)2.0 * E(0,1);    // 2*E12
     }
 
 
@@ -474,7 +474,7 @@ namespace OrthotropicLinearElasticStrengthModel {
                                     const ViewCArrayKokkos<real_t>& S_voigt) {
 
         for (int i = 0; i < 6; i++) {
-            double sum = real_t(0.0);
+            double sum = (real_t)0.0;
             for (int j = 0; j < 6; j++) {
                 sum += C_ref[i][j] * E_voigt(j);
             }
@@ -513,12 +513,12 @@ namespace OrthotropicLinearElasticStrengthModel {
 
         for (int i = 0; i < 6; i++)
             for (int j = 0; j < 6; j++)
-                C_ref[i][j] = real_t(0.0);
+                C_ref[i][j] = (real_t)0.0;
 
         // Compliance sub-block (normal-normal), using symmetry nu_ij/E_i = nu_ji/E_j
-        const real_t S11 =  real_t(1.0) / E1;
-        const real_t S22 =  real_t(1.0) / E2;
-        const real_t S33 =  real_t(1.0) / E3;
+        const real_t S11 =  (real_t)1.0 / E1;
+        const real_t S22 =  (real_t)1.0 / E2;
+        const real_t S33 =  (real_t)1.0 / E3;
         const real_t S12 = -nu12 / E1;   // = -nu21/E2
         const real_t S13 = -nu13 / E1;   // = -nu31/E3
         const real_t S23 = -nu23 / E2;   // = -nu32/E3
@@ -528,7 +528,7 @@ namespace OrthotropicLinearElasticStrengthModel {
                           - S12*(S12*S33 - S23*S13)
                           + S13*(S12*S23 - S22*S13);
 
-        const real_t inv_detS = real_t(1.0) / detS;
+        const real_t inv_detS = (real_t)1.0 / detS;
 
         C_ref[0][0] = (S22*S33 - S23*S23) * inv_detS;
         C_ref[1][1] = (S11*S33 - S13*S13) * inv_detS;
@@ -561,9 +561,9 @@ namespace OrthotropicLinearElasticStrengthModel {
         const real_t E1, const real_t E2, const real_t E3,
         const real_t nu12, const real_t nu13, const real_t nu23) {
 
-        const real_t S11 = real_t(1.0)/E1;
-        const real_t S22 = real_t(1.0)/E2;
-        const real_t S33 = real_t(1.0)/E3;
+        const real_t S11 = (real_t)1.0/E1;
+        const real_t S22 = (real_t)1.0/E2;
+        const real_t S33 = (real_t)1.0/E3;
         const real_t S12 = -nu12/E1;
         const real_t S13 = -nu13/E1;
         const real_t S23 = -nu23/E2;
@@ -572,11 +572,11 @@ namespace OrthotropicLinearElasticStrengthModel {
                            - S11*S23*S23
                            - S22*S13*S13
                            - S33*S12*S12
-                           + real_t(2.0)*S12*S13*S23;
+                           + (real_t)2.0*S12*S13*S23;
 
-        const real_t C11 = (S22*S33 - S23*S23) / (Delta + real_t(1.e-16));
-        const real_t C22 = (S11*S33 - S13*S13) / (Delta + real_t(1.e-16));
-        const real_t C33 = (S11*S22 - S12*S12) / (Delta + real_t(1.e-16));
+        const real_t C11 = (S22*S33 - S23*S23) / (Delta + (real_t)1.e-16);
+        const real_t C22 = (S11*S33 - S13*S13) / (Delta + (real_t)1.e-16);
+        const real_t C33 = (S11*S22 - S12*S12) / (Delta + (real_t)1.e-16);
 
         return Kokkos::fmax(C11, Kokkos::fmax(C22, C33));
     } // end function
@@ -692,7 +692,7 @@ namespace OrthotropicLinearElasticStrengthModel {
         // 4) Push forward 2nd PK stress S to Cauchy stress sigma:
         //        sigma = (1/J) * F * S * F^T
         // -----------------------------------------------------------
-        const real_t detF = Kokkos::fmax(det_3x3(F), real_t(1.e-13));
+        const real_t detF = Kokkos::fmax(det_3x3(F), (real_t)1.e-13);
 
         real_t FS_1D[9];
         ViewCArrayKokkos<real_t> FS(&FS_1D[0], 3, 3);
@@ -745,7 +745,7 @@ namespace OrthotropicLinearElasticStrengthModel {
         const real_t G_max = Kokkos::fmax(G12, Kokkos::fmax(G13, G23));
 
         // sound speed
-        MaterialPoints_sspd(mat_id, mat_pt_lid) = Kokkos::fmax(csmin, Kokkos::sqrt((B_max + (real_t(4.0)/real_t(3.0))*G_max)/den));
+        MaterialPoints_sspd(mat_id, mat_pt_lid) = Kokkos::fmax(csmin, Kokkos::sqrt((B_max + ((real_t)4.0/(real_t)3.0)*G_max)/den));
 
         return;
     } // end func

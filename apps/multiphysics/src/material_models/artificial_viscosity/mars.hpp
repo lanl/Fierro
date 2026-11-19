@@ -113,7 +113,7 @@ namespace MARSDissipationModel {
 
         // initialize to Riemann velocity to zero
         for (size_t dim = 0; dim < num_dims; dim++) {
-            vel_star(dim) = real_t(0.0);
+            vel_star(dim) = (real_t)0.0;
         }
 
         // loop over nodes and calculate an average velocity, which is
@@ -123,20 +123,20 @@ namespace MARSDissipationModel {
             int node_gid = elem_node_gids(node_lid);
 
             //ViewCArrayKokkos<real_t> vel(&node_vel(node_gid, 0), num_dims);
-            vel_star(0) += real_t(0.125) * node_vel(node_gid, 0);
-            vel_star(1) += real_t(0.125) * node_vel(node_gid, 1);
-            vel_star(2) += real_t(0.125) * node_vel(node_gid, 2);
+            vel_star(0) += (real_t)0.125 * node_vel(node_gid, 0);
+            vel_star(1) += (real_t)0.125 * node_vel(node_gid, 1);
+            vel_star(2) += (real_t)0.125 * node_vel(node_gid, 2);
         } // end for loop over nodes
 
         // find shock direction and shock impedance associated with each node
 
         // initialize sum term in MARS to zero
         for (size_t i = 0; i < 4; i++) {
-            sum(i) = real_t(0.0);
+            sum(i) = (real_t)0.0;
         }
 
-        real_t mag = real_t(0.0);       // magnitude of the area normal
-        real_t mag_vel = real_t(0.0);   // magnitude of velocity
+        real_t mag = (real_t)0.0;       // magnitude of the area normal
+        real_t mag_vel = (real_t)0.0;   // magnitude of velocity
 
         // loop over the nodes of the elem
         for (size_t node_lid = 0; node_lid < num_nodes_in_elem; node_lid++) {
@@ -207,7 +207,7 @@ namespace MARSDissipationModel {
         }
         else{
             for (int i = 0; i < num_dims; i++) {
-                vel_star(i) = real_t(0.0);
+                vel_star(i) = (real_t)0.0;
             }
         } // end if
 
@@ -277,7 +277,7 @@ namespace MARSDissipationModel {
         
 
         // curl limiter on Q
-        real_t phi_curl = Kokkos::fmin(real_t(1.0), real_t(1.0) * Kokkos::fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
+        real_t phi_curl = Kokkos::fmin((real_t)1.0, (real_t)1.0 * Kokkos::fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
         phi_curl = Kokkos::fmax(phi_curl, phi_curl_floor); // dissables when phi_curl_floor = 1
         phi = Kokkos::fmin(phi, phi_curl);
 
@@ -450,7 +450,7 @@ namespace DirMARSDissipationModel {
 
                 for (size_t dim=0; dim<num_dims; dim++){
                     // outward of dual grid edge normal 
-                    dual_surf_normals(corner_lid, edge_lid, dim) = real_t(0.5)*(area_normal(corner_lid_plus, dim) - area_normal(corner_lid, dim));
+                    dual_surf_normals(corner_lid, edge_lid, dim) = (real_t)0.5*(area_normal(corner_lid_plus, dim) - area_normal(corner_lid, dim));
                 } // end for dim
 
             } // end loop over the edges
@@ -464,7 +464,7 @@ namespace DirMARSDissipationModel {
 
         // initialize to Riemann velocity to zero
         for (size_t dim = 0; dim < num_dims; dim++) {
-            vel_star(dim) = real_t(0.0);
+            vel_star(dim) = (real_t)0.0;
         }
 
         // loop over nodes and calculate an average velocity, which is
@@ -474,16 +474,16 @@ namespace DirMARSDissipationModel {
             int node_gid = elem_node_gids(node_lid);
 
             //ViewCArrayKokkos<real_t> vel(&node_vel(node_gid, 0), num_dims);
-            vel_star(0) += real_t(0.125) * node_vel(node_gid, 0);
-            vel_star(1) += real_t(0.125) * node_vel(node_gid, 1);
-            vel_star(2) += real_t(0.125) * node_vel(node_gid, 2);
+            vel_star(0) += (real_t)0.125 * node_vel(node_gid, 0);
+            vel_star(1) += (real_t)0.125 * node_vel(node_gid, 1);
+            vel_star(2) += (real_t)0.125 * node_vel(node_gid, 2);
         } // end for loop over nodes
 
         // find shock direction and shock impedance associated with each node
 
         // initialize sum term in MARS to zero
         for (size_t i = 0; i < 4; i++) {
-            sum(i) = real_t(0.0);
+            sum(i) = (real_t)0.0;
         }
 
         real_t mag;       // magnitude of the area normal
@@ -573,7 +573,7 @@ namespace DirMARSDissipationModel {
         }
         else{
             for (int i = 0; i < num_dims; i++) {
-                vel_star(i) = real_t(0.0);
+                vel_star(i) = (real_t)0.0;
             }
         } // end if
 
@@ -590,12 +590,12 @@ namespace DirMARSDissipationModel {
         //      phi = 1 first order solution
         //
 
-        real_t phi    = real_t(0.0);  // the shock detector
-        real_t r_face = real_t(1.0);  // the ratio on the face
-        real_t r_min  = real_t(1.0);  // the min ratio for the cell
-        real_t r_coef = real_t(0.9);  // 0.9; the coefficient on the ratio
+        real_t phi    = (real_t)0.0;  // the shock detector
+        real_t r_face = (real_t)1.0;  // the ratio on the face
+        real_t r_min  = (real_t)1.0;  // the min ratio for the cell
+        real_t r_coef = (real_t)0.9;  // 0.9; the coefficient on the ratio
                               //   (1=minmod and 2=superbee)
-        real_t n_coef = real_t(1.0);  // the power on the limiting coefficient
+        real_t n_coef = (real_t)1.0;  // the power on the limiting coefficient
                               //   (1=nominal, and n_coeff > 1 oscillatory)
 
         // loop over the neighboring cells
@@ -615,14 +615,14 @@ namespace DirMARSDissipationModel {
         } // end for elem_lid
 
         // calculate standard shock detector
-        phi = real_t(1.0) - Kokkos::fmax(real_t(0.0), r_min);
+        phi = (real_t)1.0 - Kokkos::fmax((real_t)0.0, r_min);
         phi = Kokkos::pow(phi, n_coef);
 
         //  Mach number shock detector
-        real_t omega    = real_t(20.0); // 20.0;    // weighting factor on Mach number
-        real_t third    = real_t(1.0) / real_t(3.0);
+        real_t omega    = (real_t)20.0; // 20.0;    // weighting factor on Mach number
+        real_t third    = (real_t)1.0 / (real_t)3.0;
         real_t c_length = Kokkos::pow(vol, third); // characteristic length
-        real_t alpha    = Kokkos::fmin(real_t(1.0), omega * (c_length * Kokkos::fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
+        real_t alpha    = Kokkos::fmin((real_t)1.0, omega * (c_length * Kokkos::fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 
         // use Mach based detector with standard shock detector
 
@@ -632,7 +632,7 @@ namespace DirMARSDissipationModel {
         phi = alpha * phi;
 
         // curl limiter on Q
-        real_t phi_curl = Kokkos::fmin(real_t(1.0), real_t(1.0) * Kokkos::fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
+        real_t phi_curl = Kokkos::fmin((real_t)1.0, (real_t)1.0 * Kokkos::fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
         phi_curl = Kokkos::fmax(phi_curl, phi_curl_floor); // dissables when phi_curl_floor = 1
         phi = Kokkos::fmin(phi, phi_curl);
 
@@ -734,7 +734,7 @@ namespace MARSRZDissipationModel {
 
     // initialize to Riemann velocity to zero
     for (size_t dim = 0; dim < num_dims; dim++) {
-        vel_star(dim) = real_t(0.0);
+        vel_star(dim) = (real_t)0.0;
     }
 
     // loop over nodes and calculate an average velocity, which is
@@ -745,15 +745,15 @@ namespace MARSRZDissipationModel {
 
         ViewCArrayKokkos<real_t> vel(&node_vel(node_gid, 0), num_dims);
 
-        vel_star(0) += real_t(0.25) * vel(0);
-        vel_star(1) += real_t(0.25) * vel(1);
+        vel_star(0) += (real_t)0.25 * vel(0);
+        vel_star(1) += (real_t)0.25 * vel(1);
     } // end for loop over nodes
 
     // find shock direction and shock impedance associated with each node
 
     // initialize sum term in MARS to zero
     for (int i = 0; i < 4; i++) {
-        sum(i) = real_t(0.0);
+        sum(i) = (real_t)0.0;
     }
 
     real_t mag;       // magnitude of the area normal
@@ -824,7 +824,7 @@ namespace MARSRZDissipationModel {
     }
     else{
         for (int i = 0; i < num_dims; i++) {
-            vel_star(i) = real_t(0.0);
+            vel_star(i) = (real_t)0.0;
         }
     } // end if
 
@@ -897,7 +897,7 @@ namespace MARSRZDissipationModel {
     
 
     // curl limiter on Q
-    real_t phi_curl = Kokkos::fmin(real_t(1.0), real_t(1.0) * Kokkos::fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
+    real_t phi_curl = Kokkos::fmin((real_t)1.0, (real_t)1.0 * Kokkos::fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
     phi_curl = Kokkos::fmax(phi_curl, phi_curl_floor); // dissables when phi_curl_floor = 1
     phi = Kokkos::fmin(phi, phi_curl);
 
@@ -1032,7 +1032,7 @@ namespace DirMARSRZDissipationModel {
 
             for (size_t dim=0; dim<num_dims; dim++){
                 // outward of dual grid edge normal 
-                dual_surf_normals(corner_lid, edge_lid, dim) = real_t(0.5)*(area_normal(corner_lid_plus, dim) - area_normal(corner_lid, dim));
+                dual_surf_normals(corner_lid, edge_lid, dim) = (real_t)0.5*(area_normal(corner_lid_plus, dim) - area_normal(corner_lid, dim));
             } // end for dim
 
         } // end loop over the edges
@@ -1046,7 +1046,7 @@ namespace DirMARSRZDissipationModel {
 
     // initialize to Riemann velocity to zero
     for (size_t dim = 0; dim < num_dims; dim++) {
-        vel_star(dim) = real_t(0.0);
+        vel_star(dim) = (real_t)0.0;
     }
 
     // loop over nodes and calculate an average velocity, which is
@@ -1057,15 +1057,15 @@ namespace DirMARSRZDissipationModel {
 
         ViewCArrayKokkos<real_t> vel(&node_vel(node_gid, 0), num_dims);
 
-        vel_star(0) += real_t(0.25) * vel(0);
-        vel_star(1) += real_t(0.25) * vel(1);
+        vel_star(0) += (real_t)0.25 * vel(0);
+        vel_star(1) += (real_t)0.25 * vel(1);
     } // end for loop over nodes
 
     // find shock direction and shock impedance associated with each node
 
     // initialize sum term in MARS to zero
     for (int i = 0; i < 4; i++) {
-        sum(i) = real_t(0.0);
+        sum(i) = (real_t)0.0;
     }
 
     real_t mag;       // magnitude of the area normal
@@ -1142,7 +1142,7 @@ namespace DirMARSRZDissipationModel {
     }
     else{
         for (int i = 0; i < num_dims; i++) {
-            vel_star(i) = real_t(0.0);
+            vel_star(i) = (real_t)0.0;
         }
     } // end if
 
@@ -1159,12 +1159,12 @@ namespace DirMARSRZDissipationModel {
     //      phi = 1 first order solution
     //
 
-    real_t phi    = real_t(0.0);  // the shock detector
-    real_t r_face = real_t(1.0);  // the ratio on the face
-    real_t r_min  = real_t(1.0);  // the min ratio for the cell
-    real_t r_coef = real_t(0.9);  // 0.9; the coefficient on the ratio
+    real_t phi    = (real_t)0.0;  // the shock detector
+    real_t r_face = (real_t)1.0;  // the ratio on the face
+    real_t r_min  = (real_t)1.0;  // the min ratio for the cell
+    real_t r_coef = (real_t)0.9;  // 0.9; the coefficient on the ratio
                             //   (1=minmod and 2=superbee)
-    real_t n_coef = real_t(1.0);  // the power on the limiting coefficient
+    real_t n_coef = (real_t)1.0;  // the power on the limiting coefficient
                             //   (1=nominal, and n_coeff > 1 oscillatory)
 
     // loop over the neighboring cells
@@ -1184,13 +1184,13 @@ namespace DirMARSRZDissipationModel {
     } // end for elem_lid
 
     // calculate standard shock detector
-    phi = real_t(1.0) - Kokkos::fmax(real_t(0.0), r_min);
+    phi = (real_t)1.0 - Kokkos::fmax((real_t)0.0, r_min);
     phi = Kokkos::pow(phi, n_coef);
 
     //  Mach number shock detector
-    real_t omega    = real_t(20.0); // 20.0;    // weighting factor on Mach number
+    real_t omega    = (real_t)20.0; // 20.0;    // weighting factor on Mach number
     real_t c_length = Kokkos::sqrt(elem_area); // characteristic length
-    real_t alpha    = Kokkos::fmin(real_t(1.0), omega * (c_length * Kokkos::fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
+    real_t alpha    = Kokkos::fmin((real_t)1.0, omega * (c_length * Kokkos::fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 
     // use Mach based detector with standard shock detector
 
@@ -1200,7 +1200,7 @@ namespace DirMARSRZDissipationModel {
     phi = alpha * phi;
 
     // curl limiter on Q
-    real_t phi_curl = Kokkos::fmin(real_t(1.0), real_t(4.0) * Kokkos::fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
+    real_t phi_curl = Kokkos::fmin((real_t)1.0, (real_t)4.0 * Kokkos::fabs(div) / (mag_curl + fuzz));  // disable Q when vorticity is high
     phi_curl = Kokkos::fmax(phi_curl, phi_curl_floor); // dissables when phi_curl_floor = 1
     phi = Kokkos::fmin(phi, phi_curl);
 

@@ -8,8 +8,8 @@ using namespace mtr;
 
 // solving options
 static constexpr size_t max_iter = 100;
-static constexpr real_t tol = real_t(1e-15);  // tolerance for the things that are supposed to be zero
-static constexpr real_t edge_tol = real_t(1e-3);  // tolerance for edge case solutions (see contact_check for more info)
+static constexpr real_t tol = (real_t)1e-15;  // tolerance for the things that are supposed to be zero
+static constexpr real_t edge_tol = (real_t)1e-3;  // tolerance for edge case solutions (see contact_check for more info)
 
 
 
@@ -81,18 +81,18 @@ struct contact_state_t
     static real_t bucket_size;  // bucket size (defined as 1.001*min_node_distance)
     static size_t num_contact_nodes;  // total number of contact nodes (always less than or equal to mesh.num_bdy_nodes)
     static size_t num_pen_nodes; // total number of nodes being considered for penetration checks
-    real_t x_max = real_t(0.0);  // maximum x coordinate
-    real_t y_max = real_t(0.0);  // maximum y coordinate
-    real_t z_max = real_t(0.0);  // maximum z coordinate
-    real_t x_min = real_t(0.0);  // minimum x coordinate
-    real_t y_min = real_t(0.0);  // minimum y coordinate
-    real_t z_min = real_t(0.0);  // minimum z coordinate
-    double vx_max = real_t(0.0);  // maximum x velocity
-    double vy_max = real_t(0.0);  // maximum y velocity
-    double vz_max = real_t(0.0);  // maximum z velocity
-    double ax_max = real_t(0.0);  // maximum x acceleration
-    double ay_max = real_t(0.0);  // maximum y acceleration
-    double az_max = real_t(0.0);  // maximum z acceleration
+    real_t x_max = (real_t)0.0;  // maximum x coordinate
+    real_t y_max = (real_t)0.0;  // maximum y coordinate
+    real_t z_max = (real_t)0.0;  // maximum z coordinate
+    real_t x_min = (real_t)0.0;  // minimum x coordinate
+    real_t y_min = (real_t)0.0;  // minimum y coordinate
+    real_t z_min = (real_t)0.0;  // minimum z coordinate
+    double vx_max = (real_t)0.0;  // maximum x velocity
+    double vy_max = (real_t)0.0;  // maximum y velocity
+    double vz_max = (real_t)0.0;  // maximum z velocity
+    double ax_max = (real_t)0.0;  // maximum x acceleration
+    double ay_max = (real_t)0.0;  // maximum y acceleration
+    double az_max = (real_t)0.0;  // maximum z acceleration
     size_t Sx = 8;  // number of buckets in the x direction
     size_t Sy = 8;  // number of buckets in the y direction
     size_t Sz = 8;  // number of buckets in the z direction

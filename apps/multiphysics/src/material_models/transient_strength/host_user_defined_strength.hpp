@@ -84,7 +84,7 @@ namespace HostUserDefinedStrengthModel {
             size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dims(1); 
             
             for(size_t var=0; var<num_strength_state_vars; var++){
-                MaterialPoints_strength_state_vars(mat_id, mat_points_lid,var) = real_t(0.0);
+                MaterialPoints_strength_state_vars(mat_id, mat_points_lid,var) = (real_t)0.0;
             } // end for
 
         });  // end parallel for
@@ -192,7 +192,7 @@ namespace HostNotionalStrengthModel {
             size_t num_strength_state_vars = MaterialPoints_strength_state_vars.dims(1); 
             
             for(size_t var=0; var<num_strength_state_vars; var++){
-                MaterialPoints_strength_state_vars(mat_id, mat_points_lid,var) = real_t(0.0);
+                MaterialPoints_strength_state_vars(mat_id, mat_points_lid,var) = (real_t)0.0;
             } // end for
 
         });  // end parallel for

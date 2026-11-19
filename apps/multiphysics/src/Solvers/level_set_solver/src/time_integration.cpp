@@ -111,7 +111,7 @@ void LevelSet::get_timestep(
 {
 
     // increase dt by 10%, that is the largest dt value
-    dt = dt * real_t(1.1);
+    dt = dt * (real_t)1.1;
 
     double dt_lcl;
     double min_dt_calc;
@@ -145,9 +145,9 @@ void LevelSet::get_timestep(
             b = countB;
 
             // returns magnitude of distance between each node, 28 total options
-            dist(i) = Kokkos::fabs(Kokkos::sqrt((Kokkos::pow((coords(b, 0) - coords(a, 0)), real_t(2.0))
-            + Kokkos::pow((coords(b, 1) - coords(a, 1)), real_t(2.0))
-            + Kokkos::pow((coords(b, 2) - coords(a, 2)), real_t(2.0)))));
+            dist(i) = Kokkos::fabs(Kokkos::sqrt((Kokkos::pow((coords(b, 0) - coords(a, 0)), (real_t)2.0)
+            + Kokkos::pow((coords(b, 1) - coords(a, 1)), (real_t)2.0)
+            + Kokkos::pow((coords(b, 2) - coords(a, 2)), (real_t)2.0))));
 
             countB++;
             countA++;
@@ -170,8 +170,8 @@ void LevelSet::get_timestep(
         const real_t normal_velocity = Materials.MaterialFunctions(mat_id).normal_velocity;
         const real_t curvature_velocity = Materials.MaterialFunctions(mat_id).curvature_velocity;
         
-        real_t kappa = real_t(1.0)/(real_t(3.0)*dist_min); // max curvature is around 3 DeltaX, curvature = 1/R
-        real_t front_velocity = real_t(1.5)+normal_velocity + curvature_velocity*kappa;
+        real_t kappa = (real_t)1.0/((real_t)3.0*dist_min); // max curvature is around 3 DeltaX, curvature = 1/R
+        real_t front_velocity = (real_t)1.5+normal_velocity + curvature_velocity*kappa;
         // the 1.5 is for redistancing velocity that has a value around 1.0, so using 1.5
 
         // local dt calc based on CFL
@@ -237,7 +237,7 @@ void LevelSet::get_timestep_2D(
     const real_t tiny) const
 {
     // increase dt by 10%, that is the largest dt value
-    dt = dt * real_t(1.1);
+    dt = dt * (real_t)1.1;
 
     double dt_lcl;
     double min_dt_calc;
@@ -265,8 +265,8 @@ void LevelSet::get_timestep_2D(
             for (size_t j = i + 1; j <= 3; j++) {
                 // returns magnitude of distance between each node, 6 total options
                 dist(count) = Kokkos::fabs(
-                        Kokkos::sqrt(Kokkos::pow((coords(i, 0) - coords(j, 0)), real_t(2.0))
-                + Kokkos::pow((coords(i, 1) - coords(j, 1)), real_t(2.0)) )
+                        Kokkos::sqrt(Kokkos::pow((coords(i, 0) - coords(j, 0)), (real_t)2.0)
+                + Kokkos::pow((coords(i, 1) - coords(j, 1)), (real_t)2.0) )
                 );
                 count++;
             } // end for j
@@ -283,8 +283,8 @@ void LevelSet::get_timestep_2D(
         const real_t normal_velocity = Materials.MaterialFunctions(mat_id).normal_velocity;
         const real_t curvature_velocity = Materials.MaterialFunctions(mat_id).curvature_velocity;
 
-        real_t kappa = real_t(1.0)/(real_t(3.0)*dist_min); // max curvature is around 3 DeltaX, curvature = 1/R
-        real_t front_velocity = real_t(1.5)+normal_velocity + curvature_velocity*kappa;
+        real_t kappa = (real_t)1.0/((real_t)3.0*dist_min); // max curvature is around 3 DeltaX, curvature = 1/R
+        real_t front_velocity = (real_t)1.5+normal_velocity + curvature_velocity*kappa;
         // the 1.5 is for redistancing velocity that has a value around 1.0, so using 1.5
 
         // local dt calc based on CFL

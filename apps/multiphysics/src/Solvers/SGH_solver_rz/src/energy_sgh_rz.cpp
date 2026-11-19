@@ -78,7 +78,7 @@ void SGHRZ::update_energy_rz(
 
         // the material point index = the material elem index for a 1-point element
         size_t mat_point_sid = mat_elem_sid;
-        real_t MaterialPoints_power = real_t(0.0);
+        real_t MaterialPoints_power = (real_t)0.0;
 
         // --- tally the contribution from each corner to the element ---
 
@@ -104,7 +104,7 @@ void SGHRZ::update_energy_rz(
             // calculate the Power=F dot V for this corner
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
 
-                real_t half_vel = (node_vel(node_gid, dim) + node_vel_n0(node_gid, dim)) * real_t(0.5);
+                real_t half_vel = (node_vel(node_gid, dim) + node_vel_n0(node_gid, dim)) * (real_t)0.5;
                 MaterialPoints_power += MaterialCorners_force(mat_id, mat_corner_lid, dim) * node_radius * half_vel;
 
             } // end for dim

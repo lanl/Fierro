@@ -56,18 +56,18 @@ struct cohesive_zones_t {
     CArrayKokkos<int> cz_info; // element/face connectivity info per cohesive zone node pair
     size_t max_elem_in_cohesive_zone = 0; // max number of elements attached to any cohesive zone node pair (used to size cz_info blocks)
     size_t num_nodes = 0; // total number of nodes in the mesh
-    real_t geom_tol = real_t(1.0e-8); // default value for geometric tolerance; will be set from SimulationParameters.dynamic_options.small in initialize()
+    real_t geom_tol = (real_t)1.0e-8; // default value for geometric tolerance; will be set from SimulationParameters.dynamic_options.small in initialize()
 
     // --- cohesive zone constiutive model parameters ---
     // Cohesive zone model bacsed on: Allen, D.H. and Searcy, C.R. (2001) 
     // "A micromechanical model for a viscoelastic cohesive zone"
     // International Journal of Fracture, 107:159-1765
     // https://doi.org/10.1023/A:1007693116116
-    real_t E_inf = real_t(0.0); // prony constant term
-    real_t a1 = real_t(0.0); // internal damage parameter
-    real_t n_exp = real_t(0.0); // power of damage evolution law
-    real_t u_n_star = real_t(1.0); // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0)
-    real_t u_t_star = real_t(1.0); // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0
+    real_t E_inf = (real_t)0.0; // prony constant term
+    real_t a1 = (real_t)0.0; // internal damage parameter
+    real_t n_exp = (real_t)0.0; // power of damage evolution law
+    real_t u_n_star = (real_t)1.0; // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0)
+    real_t u_t_star = (real_t)1.0; // normal empirical material length parameter; 1.0 = placeholder until fracture BC initialization (protect from div by 0
     int num_prony_terms = 0; // number of prony series terms
     CArrayKokkos<real_t> prony_params;  // (num_prony_terms, 2): row j = [E_j, tau_j] 
 
@@ -90,10 +90,10 @@ struct cohesive_zones_t {
 
     // --- fracture reorientation validation mode ---
     bool reorientation_validation_mode = false;
-    real_t omega_y = real_t(0.0); // rotation about x2 axis (rad/time)
-    real_t omega_z = real_t(0.0); // rotation about x3 axis (rad/time)
-    real_t cz_opening_rate = real_t(0.0); // constant rate of opening for cohesive zone interface
-    real_t x_interface = real_t(0.0); // x inferface location for reorientation validation mode
+    real_t omega_y = (real_t)0.0; // rotation about x2 axis (rad/time)
+    real_t omega_z = (real_t)0.0; // rotation about x3 axis (rad/time)
+    real_t cz_opening_rate = (real_t)0.0; // constant rate of opening for cohesive zone interface
+    real_t x_interface = (real_t)0.0; // x inferface location for reorientation validation mode
     CArrayKokkos<real_t> initial_coords; // initial nodal coordinates of the mesh
     CArrayKokkos<int> cz_b_side_flag; // flag for nodes on B side of interface for opening 
 

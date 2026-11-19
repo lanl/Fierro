@@ -11,10 +11,10 @@ namespace
 KOKKOS_INLINE_FUNCTION
 double smooth_step_01(const real_t x, const real_t eps)
 {
-    const real_t y = (x + eps) / (real_t(2.0) * eps);
-    if (y < real_t(0.0)) { return real_t(0.0); }
-    if (y > real_t(1.0)) { return real_t(1.0); }
-    return (real_t(3.0) - real_t(2.0) * y) * y * y;
+    const real_t y = (x + eps) / ((real_t)2.0 * eps);
+    if (y < (real_t)0.0) { return (real_t)0.0; }
+    if (y > (real_t)1.0) { return (real_t)1.0; }
+    return ((real_t)3.0 - (real_t)2.0 * y) * y * y;
 }
 
 
@@ -28,24 +28,24 @@ void sym3_min_eigpair(const real_t a00, const real_t a01, const real_t a02,
 {
     const real_t p1 = a01*a01 + a02*a02 + a12*a12;
 
-    if (p1 == real_t(0.0)) {
+    if (p1 == (real_t)0.0) {
         // Diagonal: pick the axis of the smallest entry.
         lam_min = a00;
-        ex = real_t(1.0); ey = real_t(0.0); ez = real_t(0.0);
+        ex = (real_t)1.0; ey = (real_t)0.0; ez = (real_t)0.0;
         if (a11 < lam_min) {
             lam_min = a11;
-            ex = real_t(0.0); ey = real_t(1.0); ez = real_t(0.0);
+            ex = (real_t)0.0; ey = (real_t)1.0; ez = (real_t)0.0;
         }
         if (a22 < lam_min) {
             lam_min = a22;
-            ex = real_t(0.0); ey = real_t(0.0); ez = real_t(1.0);
+            ex = (real_t)0.0; ey = (real_t)0.0; ez = (real_t)1.0;
         }
         return;
     }
 
-    const real_t q  = (a00 + a11 + a22) / real_t(3.0);
-    const real_t p2 = (a00 - q)*(a00 - q) + (a11 - q)*(a11 - q) + (a22 - q)*(a22 - q) + real_t(2.0)*p1;
-    const real_t p  = Kokkos::sqrt(p2 / real_t(6.0));
+    const real_t q  = (a00 + a11 + a22) / (real_t)3.0;
+    const real_t p2 = (a00 - q)*(a00 - q) + (a11 - q)*(a11 - q) + (a22 - q)*(a22 - q) + (real_t)2.0*p1;
+    const real_t p  = Kokkos::sqrt(p2 / (real_t)6.0);
 
     const real_t B00 = (a00 - q) / p;
     const real_t B01 = a01 / p;
@@ -53,14 +53,14 @@ void sym3_min_eigpair(const real_t a00, const real_t a01, const real_t a02,
     const real_t B11 = (a11 - q) / p;
     const real_t B12 = a12 / p;
     const real_t B22 = (a22 - q) / p;
-    const real_t r = real_t(0.5) * (B00 * (B11 * B22 - B12 * B12)
+    const real_t r = (real_t)0.5 * (B00 * (B11 * B22 - B12 * B12)
                           - B01 * (B01 * B22 - B12 * B02)
                           + B02 * (B01 * B12 - B11 * B02));
-    const real_t r_clamp = Kokkos::fmin(real_t(1.0), Kokkos::fmax(-real_t(1.0), r));
-    const real_t phi = Kokkos::acos(r_clamp) / real_t(3.0);
+    const real_t r_clamp = Kokkos::fmin((real_t)1.0, Kokkos::fmax(-(real_t)1.0, r));
+    const real_t phi = Kokkos::acos(r_clamp) / (real_t)3.0;
 
     // Roots: lam_max = q + 2p Kokkos::cos(phi); lam_min = q + 2p Kokkos::cos(phi + 2pi/3).
-    lam_min = q + real_t(2.0) * p * Kokkos::cos(phi + real_t(2.0) * real_t(3.14159265358979323846) / real_t(3.0));
+    lam_min = q + (real_t)2.0 * p * Kokkos::cos(phi + (real_t)2.0 * (real_t)3.14159265358979323846 / (real_t)3.0);
 
     // Eigenvector: cross products of two rows of (A - lam I); take the
     // largest for robustness.
@@ -100,10 +100,10 @@ void sym3_min_eigpair(const real_t a00, const real_t a01, const real_t a02,
     const real_t nn_floor = (double)mtr::prec::epsilon<real_t>() * (double)mtr::prec::epsilon<real_t>();
     if (nn < nn_floor) {
         // Degenerate (repeated eigenvalue): direction arbitrary.
-        ex = real_t(1.0); ey = real_t(0.0); ez = real_t(0.0);
+        ex = (real_t)1.0; ey = (real_t)0.0; ez = (real_t)0.0;
         return;
     }
-    const real_t inv_n = real_t(1.0) / Kokkos::sqrt(nn);
+    const real_t inv_n = (real_t)1.0 / Kokkos::sqrt(nn);
     ex = vx * inv_n;
     ey = vy * inv_n;
     ez = vz * inv_n;
@@ -180,13 +180,13 @@ void build_sigma_from_pressure(const DRaggedRightArrayKokkos<real_t>& mat_pres,
     FOR_ALL(g, 0, num_gauss_pts, {
         const real_t mp = -mat_pres(mat_id, g);
         sigma_qpt(g, 0, 0) = mp;
-        sigma_qpt(g, 0, 1) = real_t(0.0);
-        sigma_qpt(g, 0, 2) = real_t(0.0);
-        sigma_qpt(g, 1, 0) = real_t(0.0);
+        sigma_qpt(g, 0, 1) = (real_t)0.0;
+        sigma_qpt(g, 0, 2) = (real_t)0.0;
+        sigma_qpt(g, 1, 0) = (real_t)0.0;
         sigma_qpt(g, 1, 1) = mp;
-        sigma_qpt(g, 1, 2) = real_t(0.0);
-        sigma_qpt(g, 2, 0) = real_t(0.0);
-        sigma_qpt(g, 2, 1) = real_t(0.0);
+        sigma_qpt(g, 1, 2) = (real_t)0.0;
+        sigma_qpt(g, 2, 0) = (real_t)0.0;
+        sigma_qpt(g, 2, 1) = (real_t)0.0;
         sigma_qpt(g, 2, 2) = mp;
     });
     Kokkos::fence();
@@ -211,14 +211,14 @@ void add_artificial_viscosity(const DCArrayKokkos<real_t>&           vel_grad,
         const real_t e00 = vel_grad(g, 0, 0);
         const real_t e11 = vel_grad(g, 1, 1);
         const real_t e22 = vel_grad(g, 2, 2);
-        const real_t e01 = real_t(0.5) * (vel_grad(g, 0, 1) + vel_grad(g, 1, 0));
-        const real_t e02 = real_t(0.5) * (vel_grad(g, 0, 2) + vel_grad(g, 2, 0));
-        const real_t e12 = real_t(0.5) * (vel_grad(g, 1, 2) + vel_grad(g, 2, 1));
+        const real_t e01 = (real_t)0.5 * (vel_grad(g, 0, 1) + vel_grad(g, 1, 0));
+        const real_t e02 = (real_t)0.5 * (vel_grad(g, 0, 2) + vel_grad(g, 2, 0));
+        const real_t e12 = (real_t)0.5 * (vel_grad(g, 1, 2) + vel_grad(g, 2, 1));
 
-        real_t mu = real_t(0.0);
-        real_t cx = real_t(0.0);
-        real_t cy = real_t(0.0);
-        real_t cz = real_t(0.0);
+        real_t mu = (real_t)0.0;
+        real_t cx = (real_t)0.0;
+        real_t cy = (real_t)0.0;
+        real_t cz = (real_t)0.0;
         sym3_min_eigpair(e00, e01, e02, e11, e12, e22, mu, cx, cy, cz);
 
         // J = inv(K) = adj(K) * detJ with K = J^-1 (det K = 1/detJ).
@@ -263,9 +263,9 @@ void add_artificial_viscosity(const DCArrayKokkos<real_t>&           vel_grad,
         const real_t rho = mat_den(mat_id, g);
         const real_t c   = mat_sspd(mat_id, g);
 
-        real_t visc = real_t(2.0) * rho * h * h * Kokkos::fabs(mu);
-        const real_t eps_sw = real_t(1.0e-12);
-        visc += real_t(0.5) * rho * h * c * (real_t(1.0) - smooth_step_01(mu - real_t(2.0) * eps_sw, eps_sw));
+        real_t visc = (real_t)2.0 * rho * h * h * Kokkos::fabs(mu);
+        const real_t eps_sw = (real_t)1.0e-12;
+        visc += (real_t)0.5 * rho * h * c * ((real_t)1.0 - smooth_step_01(mu - (real_t)2.0 * eps_sw, eps_sw));
 
         sigma_qpt(g, 0, 0) += visc * e00;
         sigma_qpt(g, 0, 1) += visc * e01;

@@ -80,7 +80,7 @@ static void displacement(const swage::Mesh_t& mesh,
 
     const size_t constrained_dir  = static_cast<size_t>(disp_bc_global_vars(bdy_set, 2));
 
-    real_t ang_freq = 2*real_t(3.14159265358979323846)*disp_bc_global_vars(bdy_set, 1);
+    real_t ang_freq = 2*(real_t)3.14159265358979323846*disp_bc_global_vars(bdy_set, 1);
     real_t disp_curr = disp_bc_global_vars(bdy_set, 0)*Kokkos::sin((time_value-time_start)*ang_freq);
     real_t disp_next = disp_bc_global_vars(bdy_set, 0)*Kokkos::sin((time_value+dt-time_start)*ang_freq);
     const real_t total_step_target = disp_next - disp_curr;

@@ -401,8 +401,8 @@ struct MaterialFunctions_t
 
     // -- level set --
     // front_velocity = (normal_velocity - curvature*Kappa)
-    real_t normal_velocity = real_t(0.0);    ///< level set velocity in normal direction
-    real_t curvature_velocity = real_t(0.0); ///< level set velocity contribution from curvature
+    real_t normal_velocity = (real_t)0.0;    ///< level set velocity in normal direction
+    real_t curvature_velocity = (real_t)0.0; ///< level set velocity contribution from curvature
 
 
     // -- tabular --

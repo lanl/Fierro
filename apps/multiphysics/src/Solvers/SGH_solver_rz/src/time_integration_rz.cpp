@@ -130,7 +130,7 @@ void SGHRZ::get_timestep_rz(swage::Mesh_t& mesh,
                             const size_t mat_id) const
 {
     // increase dt by 10%, that is the largest dt value
-    dt = dt * real_t(1.1);
+    dt = dt * (real_t)1.1;
 
     double dt_lcl;
     double min_dt_calc;
@@ -158,8 +158,8 @@ void SGHRZ::get_timestep_rz(swage::Mesh_t& mesh,
             for (size_t j = i + 1; j <= 3; j++) {
                 // returns magnitude of distance between each node, 6 total options
                 dist(count) = Kokkos::fabs(
-                                 Kokkos::sqrt(Kokkos::pow((coords(i, 0) - coords(j, 0)), real_t(2.0))
-                        + Kokkos::pow((coords(i, 1) - coords(j, 1)), real_t(2.0)) )
+                                 Kokkos::sqrt(Kokkos::pow((coords(i, 0) - coords(j, 0)), (real_t)2.0)
+                        + Kokkos::pow((coords(i, 1) - coords(j, 1)), (real_t)2.0) )
                     );
                 count++;
             } // end for j
@@ -176,7 +176,7 @@ void SGHRZ::get_timestep_rz(swage::Mesh_t& mesh,
 
 
         if (MaterialPoints_eroded(mat_id, mat_elem_sid) == true){
-            dt_lcl_ = real_t(1.0e32);  // a huge time step as this element doesn't exist
+            dt_lcl_ = (real_t)1.0e32;  // a huge time step as this element doesn't exist
         }
 
         // make dt be in bounds

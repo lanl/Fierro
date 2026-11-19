@@ -200,8 +200,8 @@ double distance(const vec_t &a, const vec_t &b){
 KOKKOS_INLINE_FUNCTION
 vec_t normalize(const vec_t& v) {
     real_t len = magnitude(v);
-    if (len == real_t(0.0)) return {0,0,0};
-    return v * (real_t(1.0) / len);
+    if (len == (real_t)0.0) return {0,0,0};
+    return v * ((real_t)1.0 / len);
 }
 
 
@@ -243,10 +243,10 @@ vec_t closest_point_on_segment(const vec_t& p,
     real_t denom = dot(ab, ab);
 
     // degenerate segment
-    if (denom < real_t(1.e-30)) return a;
+    if (denom < (real_t)1.e-30) return a;
 
     real_t t = dot(p - a, ab) / denom;
-    t = clamp(t, real_t(0.0), real_t(1.0));
+    t = clamp(t, (real_t)0.0, (real_t)1.0);
 
     return a + ab * t;
 } // end function
@@ -277,31 +277,31 @@ vec_t closest_point_on_triangle(const vec_t& p,
     real_t d1 = dot(ab, ap);
     real_t d2 = dot(ac, ap);
 
-    if (d1 <= real_t(0.0) && d2 <= real_t(0.0)) return a;
+    if (d1 <= (real_t)0.0 && d2 <= (real_t)0.0) return a;
 
     vec_t bp = p - b;
     real_t d3 = dot(ab, bp);
     real_t d4 = dot(ac, bp);
-    if (d3 >= real_t(0.0) && d4 <= d3) return b;
+    if (d3 >= (real_t)0.0 && d4 <= d3) return b;
 
     real_t vc = d1 * d4 - d3 * d2;
-    if (vc <= real_t(0.0) && d1 >= real_t(0.0) && d3 <= real_t(0.0))
+    if (vc <= (real_t)0.0 && d1 >= (real_t)0.0 && d3 <= (real_t)0.0)
         return closest_point_on_segment(p, a, b);
 
     vec_t cp = p - c;
     real_t d5 = dot(ab, cp);
     real_t d6 = dot(ac, cp);
-    if (d6 >= real_t(0.0) && d5 <= d6) return c;
+    if (d6 >= (real_t)0.0 && d5 <= d6) return c;
 
     real_t vb = d5 * d2 - d1 * d6;
-    if (vb <= real_t(0.0) && d2 >= real_t(0.0) && d6 <= real_t(0.0))
+    if (vb <= (real_t)0.0 && d2 >= (real_t)0.0 && d6 <= (real_t)0.0)
         return closest_point_on_segment(p, a, c);
 
     real_t va = d3 * d6 - d5 * d4;
-    if (va <= real_t(0.0) && (d4 - d3) >= real_t(0.0) && (d5 - d6) >= real_t(0.0))
+    if (va <= (real_t)0.0 && (d4 - d3) >= (real_t)0.0 && (d5 - d6) >= (real_t)0.0)
         return closest_point_on_segment(p, b, c);
 
-    real_t denom = real_t(1.0) / (va + vb + vc + real_t(1.0e-16));
+    real_t denom = (real_t)1.0 / (va + vb + vc + (real_t)1.0e-16);
     real_t v = vb * denom;
     real_t w = vc * denom;
 
@@ -339,7 +339,7 @@ double signed_distance_to_triangle(const vec_t& p,
     real_t dist = magnitude(diff);
 
     // sign from orientation
-    real_t sign = (dot(diff, normal) >= real_t(0.0)) ? real_t(1.0) : -real_t(1.0);
+    real_t sign = (dot(diff, normal) >= (real_t)0.0) ? (real_t)1.0 : -(real_t)1.0;
 
     return sign * dist;
 } // end function

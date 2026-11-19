@@ -341,14 +341,14 @@ void MeshReader::read_ensight_mesh(swage::Mesh_t& mesh,
         // sizeof(double) bytes through the pointer, so it must never be
         // handed the address of an array slot whose element type may be
         // narrower than double.
-        real_t coord = real_t(0.0);
+        real_t coord = (real_t)0.0;
         fscanf(in, "%le", &coord);
         node_coords.host(node_id, 0) = coord * mesh_inps.scale_x;
     }
 
     // y-coords
     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
-        real_t coord = real_t(0.0);
+        real_t coord = (real_t)0.0;
         fscanf(in, "%le", &coord);
         node_coords.host(node_id, 1) = coord * mesh_inps.scale_y;
     }
@@ -356,7 +356,7 @@ void MeshReader::read_ensight_mesh(swage::Mesh_t& mesh,
     // z-coords
     for (int node_id = 0; node_id < mesh.num_nodes; node_id++) {
         if (num_dims == 3) {
-            real_t coord = real_t(0.0);
+            real_t coord = (real_t)0.0;
             fscanf(in, "%le", &coord);
             node_coords.host(node_id, 2) = coord * mesh_inps.scale_z;
         }
@@ -857,7 +857,7 @@ void MeshReader::read_vtk_hexN_mesh(swage::Mesh_t& mesh,
             throw std::runtime_error("read_vtk_hexN_mesh: missing '# vtk DataFile Version' header");
         }
         const real_t version = std::stod(header.substr(p + 7));
-        if (version >= real_t(5.0)) {
+        if (version >= (real_t)5.0) {
             // 5.x uses OFFSETS/CONNECTIVITY blocks and the newer Lagrange-hex edge ordering
             throw std::runtime_error("read_vtk_hexN_mesh: legacy VTK version 5.x is not supported; "
                                     "save the file as version 4.2 or lower");
@@ -1106,7 +1106,7 @@ void MeshReader::read_vtu_mesh(swage::Mesh_t& mesh,
     if(found==false){
         // throw std::runtime_error("ERROR: ObjectIDs were not found in the XML file!");
         std::cout << "ERROR: ObjectIDs were not found in the XML file!" << std::endl;
-        mesh_inps.object_ids.host.set_values(real_t(0.0));
+        mesh_inps.object_ids.host.set_values((real_t)0.0);
     }
     mesh_inps.object_ids.update_device();
 

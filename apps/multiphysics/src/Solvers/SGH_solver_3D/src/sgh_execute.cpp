@@ -152,9 +152,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value); // Time value = 0.0;
 
     // extensive energy tallies over the entire mesh
-    real_t IE_t0 = real_t(0.0);
-    real_t KE_t0 = real_t(0.0);
-    real_t TE_t0 = real_t(0.0);
+    real_t IE_t0 = (real_t)0.0;
+    real_t KE_t0 = (real_t)0.0;
+    real_t TE_t0 = (real_t)0.0;
 
     real_t cached_pregraphics_dt = fuzz;
 
@@ -182,7 +182,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         State.MaterialPoints.mass);
 
     // node mass of the domain. 
-    real_t mass_domain_nodes_t0 = real_t(0.0);
+    real_t mass_domain_nodes_t0 = (real_t)0.0;
     mass_domain_nodes_t0 = sum_domain_node_mass(mesh,
                                                 State.node.coords,
                                                 State.node.mass);
@@ -307,7 +307,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         // integrate solution forward in time
         for (size_t rk_stage = 0; rk_stage < rk_num_stages; rk_stage++) {
             // ---- RK coefficient ----
-            real_t rk_alpha = real_t(1.0) / ((double)rk_num_stages - (double)rk_stage);
+            real_t rk_alpha = (real_t)1.0 / ((double)rk_num_stages - (double)rk_stage);
 
             // dt_stage is the effective stage time increment used inside the cohesive
             // zone predictor/update so that the Forward-Euler-style incrementilization
@@ -344,7 +344,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
                 
                 // compute the shock detector at each gauss point for each material
-                State.GaussPoints.shock_detector.set_values(real_t(0.0));
+                State.GaussPoints.shock_detector.set_values((real_t)0.0);
                 MATAR_FENCE();
 
                 MachShockDetector::detect_shock(mesh,
@@ -428,7 +428,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 // ---- Calculate boundary and body forces ---- //
                 // setting nodal force to zero here, 
                 // the node force stores the BCs supplied forces and body forces
-                State.node.force.set_values(real_t(0.0));
+                State.node.force.set_values((real_t)0.0);
 
                 // call stress BC's routine
                 boundary_stress(mesh, 
@@ -439,7 +439,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             } else {
                 // kinematics-only: start forces at zero (you can still add cohesive forces below)
-                State.node.force.set_values(real_t(0.0));
+                State.node.force.set_values((real_t)0.0);
                 set_corner_force_zero(mesh, State.corner.force);
             }
 
@@ -670,7 +670,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     for (int print_rank = 0; print_rank < num_ranks; ++print_rank) {
         if (rank == print_rank) {
             if (log) log->info("SGH3D execute: rank %d / %d total nodal velocity communication time: %f s\n",
-                   rank, num_ranks, static_cast<double>(comm_time_ns_total) * real_t(1e-9));
+                   rank, num_ranks, static_cast<double>(comm_time_ns_total) * (real_t)1e-9);
 
             if (log) log->info("rank %d / %d owned nodes: %zu, ghost nodes: %zu\n",
                    rank, num_ranks, mesh.num_owned_nodes, mesh.num_ghost_nodes);
@@ -698,9 +698,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
         
     // ---- Calculate energy tallies ----
-    real_t IE_tend = real_t(0.0);
-    real_t KE_tend = real_t(0.0);
-    real_t TE_tend = real_t(0.0);
+    real_t IE_tend = (real_t)0.0;
+    real_t KE_tend = (real_t)0.0;
+    real_t TE_tend = (real_t)0.0;
 
     // // extensive IE
     IE_tend = sum_domain_internal_energy(mesh,
@@ -720,14 +720,14 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
     if (log) log->info("total energy change = %.15e \n", TE_tend - TE_t0);
 
     // domain mass for each material (they are at material points)
-    real_t mass_domain_all_mats_tend = real_t(0.0);
+    real_t mass_domain_all_mats_tend = (real_t)0.0;
     mass_domain_all_mats_tend = sum_domain_material_mass(
         mesh,
         State.MeshtoMaterialMaps,
         State.MaterialPoints.mass);
 
     // node mass of the domain
-    real_t mass_domain_nodes_tend = real_t(0.0);
+    real_t mass_domain_nodes_tend = (real_t)0.0;
     mass_domain_nodes_tend = sum_domain_node_mass(mesh,
                                                   State.node.coords,
                                                   State.node.mass);
@@ -751,19 +751,19 @@ double max_Eigen3D(const ViewCArrayKokkos<real_t> tensor)
 {
     // Compute largest eigenvalue of a 3x3 tensor
     // Algorithm only works if tensor is symmetric
-    real_t pi  = real_t(3.141592653589793);
+    real_t pi  = (real_t)3.141592653589793;
     size_t dim = tensor.dims(0);
     real_t trace, det;
     trace  = tensor(0, 0) + tensor(1, 1) + tensor(2, 2);
     det    = tensor(0, 0) * (tensor(1, 1) * tensor(2, 2) - tensor(1, 2) * tensor(2, 1));
     det   -= tensor(0, 1) * (tensor(1, 0) * tensor(2, 2) - tensor(1, 2) * tensor(2, 0));
     det   += tensor(0, 2) * (tensor(1, 0) * tensor(2, 1) - tensor(1, 1) * tensor(2, 0));
-    trace /= real_t(3.); // easier for computation
+    trace /= (real_t)3.; // easier for computation
     real_t p2 = Kokkos::pow((tensor(0, 0) - trace), 2) + Kokkos::pow((tensor(1, 1) - trace), 2) +
         Kokkos::pow((tensor(2, 2) - trace), 2);
-    p2 += real_t(2.) * (Kokkos::pow(tensor(0, 1), 2) + Kokkos::pow(tensor(0, 2), 2) + Kokkos::pow(tensor(1, 2), 2));
+    p2 += (real_t)2. * (Kokkos::pow(tensor(0, 1), 2) + Kokkos::pow(tensor(0, 2), 2) + Kokkos::pow(tensor(1, 2), 2));
 
-    real_t p = Kokkos::sqrt(p2 / real_t(6.));
+    real_t p = Kokkos::sqrt(p2 / (real_t)6.);
 
     // check for nan
     if (det != det) {
@@ -802,7 +802,7 @@ double max_Eigen3D(const ViewCArrayKokkos<real_t> tensor)
         phi = 0;
     }
     else{
-        phi = Kokkos::acos(r) / real_t(3.);
+        phi = Kokkos::acos(r) / (real_t)3.;
     } // end if
 
     real_t eig1, eig2, eig3;
@@ -822,8 +822,8 @@ double sum_domain_internal_energy(
     const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass,
     const DRaggedRightArrayKokkos<real_t>& MaterialPoints_sie)
 {
-    double IE_loc_sum = real_t(0.0);
-    double sum = real_t(0.0);
+    double IE_loc_sum = (real_t)0.0;
+    double sum = (real_t)0.0;
     FOR_REDUCE_SUM(elem_gid, 0, mesh.num_owned_elems, sum, {
         size_t num_materials = MeshtoMaterialMaps.num_mats_in_elem(elem_gid);
 
@@ -836,7 +836,7 @@ double sum_domain_internal_energy(
         }
     }, IE_loc_sum);
     Kokkos::fence();
-    double IE_sum = real_t(0.0);
+    double IE_sum = (real_t)0.0;
     MPI_Allreduce(&IE_loc_sum, &IE_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     return IE_sum;
 } // end function
@@ -863,9 +863,9 @@ double sum_domain_kinetic_energy(
     const DCArrayKokkos<real_t>& node_mass)
 {
     // extensive KE
-    double KE_sum = real_t(0.0);
-    double KE_loc_sum = real_t(0.0);
-    double KE_global_sum = real_t(0.0);
+    double KE_sum = (real_t)0.0;
+    double KE_loc_sum = (real_t)0.0;
+    double KE_global_sum = (real_t)0.0;
 
     FOR_REDUCE_SUM(node_gid, 0, mesh.num_owned_nodes, KE_loc_sum, {
         if(mesh.shared_tally_owned_nodes(node_gid)){
@@ -882,7 +882,7 @@ double sum_domain_kinetic_energy(
 
     MPI_Allreduce(&KE_sum, &KE_global_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-    return real_t(0.5) * KE_global_sum;
+    return (real_t)0.5 * KE_global_sum;
 } // end function
 
 // // a function to tally the material point masses
@@ -908,8 +908,8 @@ double sum_domain_material_mass(
     const MeshtoMaterialMap_t& MeshtoMaterialMaps,
     const DRaggedRightArrayKokkos<real_t>& MaterialPoints_mass)
 {
-    double mass_loc_sum = real_t(0.0);
-    double sum = real_t(0.0);
+    double mass_loc_sum = (real_t)0.0;
+    double sum = (real_t)0.0;
     FOR_REDUCE_SUM(elem_gid, 0, mesh.num_owned_elems, sum, {
         size_t num_materials = MeshtoMaterialMaps.num_mats_in_elem(elem_gid);
 
@@ -922,7 +922,7 @@ double sum_domain_material_mass(
         }
     }, mass_loc_sum);
     Kokkos::fence();
-    double mass_sum = real_t(0.0);
+    double mass_sum = (real_t)0.0;
     MPI_Allreduce(&mass_loc_sum, &mass_sum, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     return mass_sum;
 } // end function
@@ -947,9 +947,9 @@ double sum_domain_node_mass(const swage::Mesh_t& mesh,
     const MPICArrayKokkos<real_t>& node_coords,
     const DCArrayKokkos<real_t>& node_mass)
 {
-    double mass_domain = real_t(0.0);
+    double mass_domain = (real_t)0.0;
     double mass_loc_domain;
-    double total_mass = real_t(0.0);
+    double total_mass = (real_t)0.0;
 
     FOR_REDUCE_SUM(node_gid, 0, mesh.num_owned_nodes, mass_loc_domain, {
         if(mesh.shared_tally_owned_nodes(node_gid)){
@@ -976,7 +976,7 @@ void set_corner_force_zero(const swage::Mesh_t& mesh,
     // set corner force to zero
     FOR_ALL(corner_gid, 0, mesh.num_corners, {
         for (size_t dim = 0; dim < mesh.num_dims; dim++) {
-            corner_force(corner_gid, dim) = real_t(0.0);
+            corner_force(corner_gid, dim) = (real_t)0.0;
         }
     }); // end parallel for corners
 } // end function

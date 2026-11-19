@@ -103,7 +103,7 @@ namespace GammaLawGasEOSModel {
         real_t gamma = eos_global_vars(mat_id, VarNames::gamma);
 
         // pressure
-        MaterialPoints_pres(mat_id, mat_pt_lid) = (gamma - real_t(1.0)) * sie * den;
+        MaterialPoints_pres(mat_id, mat_pt_lid) = (gamma - (real_t)1.0) * sie * den;
 
         return;
     } // end func
@@ -127,7 +127,7 @@ namespace GammaLawGasEOSModel {
 
 
         // sound speed
-        MaterialPoints_sspd(mat_id, mat_pt_lid) = Kokkos::fmax(Kokkos::sqrt(gamma * (gamma - real_t(1.0)) * sie), csmin);
+        MaterialPoints_sspd(mat_id, mat_pt_lid) = Kokkos::fmax(Kokkos::sqrt(gamma * (gamma - (real_t)1.0) * sie), csmin);
 
 
         return;

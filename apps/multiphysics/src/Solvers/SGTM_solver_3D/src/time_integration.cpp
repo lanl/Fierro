@@ -120,7 +120,7 @@ void SGTM3D::get_timestep(swage::Mesh_t& mesh,
                        const size_t mat_id) const
 {
     // increase dt by 10%, that is the largest dt value
-    dt = dt * real_t(1.1);
+    dt = dt * (real_t)1.1;
 
     double dt_lcl;
     double min_dt_calc;
@@ -154,9 +154,9 @@ void SGTM3D::get_timestep(swage::Mesh_t& mesh,
             b = countB;
 
             // returns magnitude of distance between each node, 28 total options
-            dist(i) = Kokkos::fabs(Kokkos::sqrt((Kokkos::pow((coords(b, 0) - coords(a, 0)), real_t(2.0))
-            + Kokkos::pow((coords(b, 1) - coords(a, 1)), real_t(2.0))
-            + Kokkos::pow((coords(b, 2) - coords(a, 2)), real_t(2.0)))));
+            dist(i) = Kokkos::fabs(Kokkos::sqrt((Kokkos::pow((coords(b, 0) - coords(a, 0)), (real_t)2.0)
+            + Kokkos::pow((coords(b, 1) - coords(a, 1)), (real_t)2.0)
+            + Kokkos::pow((coords(b, 2) - coords(a, 2)), (real_t)2.0))));
 
             countB++;
             countA++;
@@ -176,7 +176,7 @@ void SGTM3D::get_timestep(swage::Mesh_t& mesh,
         }
 
         // local dt calc based on CFL
-        real_t dt_cfl = real_t(1.0); //dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_sid) + fuzz);
+        real_t dt_cfl = (real_t)1.0; //dt_cfl * dist_min / (MaterialPoints_sspd(mat_elem_sid) + fuzz);
 
         // Thermal diffusivity
         real_t alpha = MaterialPoints_conductivity(mat_id, mat_elem_sid) / 
@@ -190,10 +190,10 @@ void SGTM3D::get_timestep(swage::Mesh_t& mesh,
 
         
         real_t h = (dist_min); // maybe half?
-        real_t dt_vn = (h * h)/(real_t(2.0)*real_t(3.0)*alpha); 
+        real_t dt_vn = (h * h)/((real_t)2.0*(real_t)3.0*alpha); 
         // std::cout << "dt_vn: " << dt_vn << std::endl;
 
-        dt_vn *= real_t(0.3); // stability factor to account for BC flux terms, 
+        dt_vn *= (real_t)0.3; // stability factor to account for BC flux terms, 
  
         // if (MaterialPoints_eroded(mat_elem_sid) == true) {
         //     dt_cfl = 1.0e32;  // a huge time step as this element doesn't exist

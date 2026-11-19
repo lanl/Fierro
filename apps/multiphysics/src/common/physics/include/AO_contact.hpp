@@ -74,7 +74,7 @@ struct AO_contact_state_t
     // ---------------------------------------------------------------
     DRaggedRightArrayKokkos<real_t> pairing_check_vars;        // (surf, box node, 3) gap, xi, eta; sentinel if not penetrating
     CArrayKokkos<real_t> bdy_surf_node_normals;                 // outward normal at each node in each surface
-    const real_t filter_tol = real_t(0.0); // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
+    const real_t filter_tol = (real_t)0.0; // TODO: THIS NEEDS TO BE EITHER CALCULATED BASED ON MESH OR SET AS AN INPUT FROM THE YAML
     real_t max_gap;
     CArrayKokkos<size_t> num_pen_surfs_in_node;                 // (num_bdy_nodes) surfaces each node penetrates this sweep
     CArrayKokkos<size_t> pen_nodes;                             // (num_bdy_nodes) penetrating bdy node lids this sweep, valid to contact_counts(0)
@@ -109,7 +109,7 @@ struct AO_contact_state_t
     // ---------------------------------------------------------------
     // Aitken relaxation of the outer (Picard) contact force iteration
     // ---------------------------------------------------------------
-    real_t aitken_omega        = real_t(0.5);    // current relaxation factor
+    real_t aitken_omega        = (real_t)0.5;    // current relaxation factor
     bool   aitken_have_history = false;  // r_prev (pair slot 9) holds a valid previous residual
 
 

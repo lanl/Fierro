@@ -90,7 +90,7 @@ namespace LinearElasticEOS {
         const real_t den0 = eos_global_vars(mat_id,2); // ref density
 
         // pressure
-        MaterialPoints_pres(mat_id, mat_pt_lid) = B*(den/den0 - real_t(1.0));
+        MaterialPoints_pres(mat_id, mat_pt_lid) = B*(den/den0 - (real_t)1.0);
 
         return;
     } // end func
@@ -115,7 +115,7 @@ namespace LinearElasticEOS {
         const real_t csmin = eos_global_vars(mat_id,3); // minimum sound speed
 
         // sound speed
-        MaterialPoints_sspd(mat_id, mat_pt_lid) = Kokkos::fmax(csmin, Kokkos::sqrt((B + (real_t(4.0)/real_t(3.0))*G)/den));
+        MaterialPoints_sspd(mat_id, mat_pt_lid) = Kokkos::fmax(csmin, Kokkos::sqrt((B + ((real_t)4.0/(real_t)3.0)*G)/den));
 
         return;
     } // end func

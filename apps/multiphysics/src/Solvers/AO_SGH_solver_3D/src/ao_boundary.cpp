@@ -51,15 +51,15 @@ void AO_SGH3D::boundary_force(const swage::Mesh_t&         mesh,
             const size_t bdy_node_gid =
                 mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid);
 
-            real_t mag2 = real_t(0.0);
+            real_t mag2 = (real_t)0.0;
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
                 const real_t nd = BoundaryConditions.velocity_bc_global_vars(bdy_set, dim);
                 mag2 += nd * nd;
             }
-            if (mag2 == real_t(0.0)) return;
+            if (mag2 == (real_t)0.0) return;
             // Project out the component along the BC direction:
             //   f := f - (f.n / |n|^2) * n.
-            real_t fdotn = real_t(0.0);
+            real_t fdotn = (real_t)0.0;
             for (size_t dim = 0; dim < mesh.num_dims; dim++) {
                 const real_t nd = BoundaryConditions.velocity_bc_global_vars(bdy_set, dim);
                 fdotn += node_force(bdy_node_gid, dim) * nd;

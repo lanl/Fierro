@@ -109,7 +109,7 @@ static void test_gll_and_gl_nodes_1d()
     printf("\n=== Test 1: GLL and Gauss-Legendre 1D node values ===\n");
 
     // GLL(5) reference values.
-    const real_t sqrt_3_7 = std::sqrt(real_t(3.0) / real_t(7.0));
+    const real_t sqrt_3_7 = std::sqrt((real_t)3.0 / (real_t)7.0);
     quadrature_t gll_quad; // misuse the quadrature struct here as a node holder for the test
     (void)gll_quad;
 
@@ -135,7 +135,7 @@ static void test_gll_and_gl_nodes_1d()
     ref_elem_t thermo_ref;
     thermo_ref.init(/*p_order=*/1, /*num_dim=*/3,
                     BasisType::LagrangeGL, shared_quad);
-    const real_t inv_sqrt_3 = real_t(1.0) / std::sqrt(real_t(3.0));
+    const real_t inv_sqrt_3 = (real_t)1.0 / std::sqrt((real_t)3.0);
     check_close(thermo_ref.dof_positions_1d.host(0), -inv_sqrt_3, 1e-15, "GL(2) thermo dof 0");
     check_close(thermo_ref.dof_positions_1d.host(1),  inv_sqrt_3, 1e-15, "GL(2) thermo dof 1");
 } // end test_gll_and_gl_nodes_1d
@@ -163,7 +163,7 @@ static void test_partition_of_unity()
         ref.init(p_order, /*num_dim=*/3, BasisType::LagrangeGLL, quad);
 
         for (size_t q = 0; q < ref.num_qpts_1d; q++) {
-            double sum = real_t(0.0);
+            double sum = (real_t)0.0;
             for (size_t d = 0; d < ref.num_dofs_1d; d++) {
                 sum += ref.basis_1d.host(q, d);
             }
@@ -171,7 +171,7 @@ static void test_partition_of_unity()
             std::snprintf(label, sizeof(label),
                           "GLL p_order=%zu, partition of unity at qpt %zu",
                           p_order, q);
-            check_close(sum, real_t(1.0), real_t(1e-13), label);
+            check_close(sum, (real_t)1.0, (real_t)1e-13, label);
         }
     }
 
@@ -180,7 +180,7 @@ static void test_partition_of_unity()
         ref.init(p_order, /*num_dim=*/3, BasisType::LagrangeGL, quad);
 
         for (size_t q = 0; q < ref.num_qpts_1d; q++) {
-            double sum = real_t(0.0);
+            double sum = (real_t)0.0;
             for (size_t d = 0; d < ref.num_dofs_1d; d++) {
                 sum += ref.basis_1d.host(q, d);
             }
@@ -188,7 +188,7 @@ static void test_partition_of_unity()
             std::snprintf(label, sizeof(label),
                           "GL p_order=%zu, partition of unity at qpt %zu",
                           p_order, q);
-            check_close(sum, real_t(1.0), real_t(1e-13), label);
+            check_close(sum, (real_t)1.0, (real_t)1e-13, label);
         }
     }
 } // end test_partition_of_unity
@@ -215,19 +215,19 @@ static void test_gl_quadrature_exactness()
 
         const size_t max_deg = 2 * n - 1;
         for (size_t p = 0; p <= max_deg; p++) {
-            real_t approx = real_t(0.0);
+            real_t approx = (real_t)0.0;
             for (size_t q = 0; q < n; q++) {
                 const real_t x = quad.qpt_positions_1d.host(q);
                 const real_t w = quad.qpt_weights_1d.host(q);
                 approx += w * std::pow(x, static_cast<double>(p));
             }
-            const real_t exact = (p % 2 == 0) ? (real_t(2.0) / (static_cast<double>(p) + real_t(1.0)))
-                                              : real_t(0.0);
+            const real_t exact = (p % 2 == 0) ? ((real_t)2.0 / (static_cast<double>(p) + (real_t)1.0))
+                                              : (real_t)0.0;
             char label[128];
             std::snprintf(label, sizeof(label),
                           "GL(%zu) integrates x^%zu",
                           n, p);
-            check_close(approx, exact, real_t(1e-13), label);
+            check_close(approx, exact, (real_t)1e-13, label);
         }
     }
 } // end test_gl_quadrature_exactness
@@ -264,7 +264,7 @@ static void test_sum_factorization_equivalence()
         // Deterministic pseudo-random DoF values, filled on the device so the
         // buffer is valid in device memory for the evaluators below.
         FOR_ALL(i, 0, ndofs, {
-            f_dof(i) = Kokkos::sin(static_cast<double>(i + 1) * real_t(0.7)) + real_t(0.3);
+            f_dof(i) = Kokkos::sin(static_cast<double>(i + 1) * (real_t)0.7) + (real_t)0.3;
         });
         Kokkos::fence();
 
@@ -285,7 +285,7 @@ static void test_sum_factorization_equivalence()
 
         const std::vector<double> sf    = to_host_1d(f_qpt_sf,    nqpts);
         const std::vector<double> naive = to_host_1d(f_qpt_naive, nqpts);
-        real_t max_abs_diff = real_t(0.0);
+        real_t max_abs_diff = (real_t)0.0;
         for (size_t i = 0; i < nqpts; i++) {
             const real_t d = std::fabs(sf[i] - naive[i]);
             if (d > max_abs_diff) {
@@ -296,7 +296,7 @@ static void test_sum_factorization_equivalence()
         std::snprintf(label, sizeof(label),
                       "sum-fact vs naive eval at p_order=%zu (max abs diff)",
                       p_order);
-        check_close(max_abs_diff, real_t(0.0), real_t(1e-12), label);
+        check_close(max_abs_diff, (real_t)0.0, (real_t)1e-12, label);
     }
 } // end test_sum_factorization_equivalence
 

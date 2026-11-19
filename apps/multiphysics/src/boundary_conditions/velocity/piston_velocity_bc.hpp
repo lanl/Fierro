@@ -107,10 +107,10 @@ static void velocity(const swage::Mesh_t& mesh,
         const real_t time_delta = time_value - hydro_bc_vel_t_start;
 
         // the desired velocity
-        const real_t vel = hydro_bc_vel_0 + hydro_bc_vel_1*time_delta + real_t(0.5)*hydro_bc_vel_2*time_delta*time_delta;
+        const real_t vel = hydro_bc_vel_0 + hydro_bc_vel_1*time_delta + (real_t)0.5*hydro_bc_vel_2*time_delta*time_delta;
 
         // magnitude of the normal in the specified direction
-        real_t mag = real_t(0.0);
+        real_t mag = (real_t)0.0;
         for (size_t dim = 0; dim<mesh.num_dims; dim++){
             mag += vel_bc_global_vars(bdy_set,dim)*vel_bc_global_vars(bdy_set,dim);
         } // will make sure it's a unit vector

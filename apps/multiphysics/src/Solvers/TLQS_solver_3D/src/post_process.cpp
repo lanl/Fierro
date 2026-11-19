@@ -50,7 +50,7 @@ void TLQS3D::post_process(
     real_t J[3][3];
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            J[i][j] = real_t(0.0);
+            J[i][j] = (real_t)0.0;
         }
     }
 
@@ -90,7 +90,7 @@ void TLQS3D::post_process(
     // du_i / dX_j
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
-            grad_u[i][j] = real_t(0.0);
+            grad_u[i][j] = (real_t)0.0;
         }
     }
 
@@ -115,14 +115,14 @@ void TLQS3D::post_process(
     // WARNING: NEED TO PUT THIS INTO A SEPARATE FUNCTION
     // WARNING: POINTER CALLED CALC QUASI_STATIC STRESS
     // ***************************************************
-    strain(0,0) = grad_u[0][0] + real_t(0.5) * (grad_u[0][0]*grad_u[0][0] + grad_u[1][0]*grad_u[1][0] + grad_u[2][0]*grad_u[2][0]);
-    strain(1,1) = grad_u[1][1] + real_t(0.5) * (grad_u[0][1]*grad_u[0][1] + grad_u[1][1]*grad_u[1][1] + grad_u[2][1]*grad_u[2][1]);
-    strain(2,2) = grad_u[2][2] + real_t(0.5) * (grad_u[0][2]*grad_u[0][2] + grad_u[1][2]*grad_u[1][2] + grad_u[2][2]*grad_u[2][2]);
-    strain(1,2) = real_t(0.5) * (grad_u[1][2] + grad_u[2][1] + grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]);
+    strain(0,0) = grad_u[0][0] + (real_t)0.5 * (grad_u[0][0]*grad_u[0][0] + grad_u[1][0]*grad_u[1][0] + grad_u[2][0]*grad_u[2][0]);
+    strain(1,1) = grad_u[1][1] + (real_t)0.5 * (grad_u[0][1]*grad_u[0][1] + grad_u[1][1]*grad_u[1][1] + grad_u[2][1]*grad_u[2][1]);
+    strain(2,2) = grad_u[2][2] + (real_t)0.5 * (grad_u[0][2]*grad_u[0][2] + grad_u[1][2]*grad_u[1][2] + grad_u[2][2]*grad_u[2][2]);
+    strain(1,2) = (real_t)0.5 * (grad_u[1][2] + grad_u[2][1] + grad_u[0][1]*grad_u[0][2] + grad_u[1][1]*grad_u[1][2] + grad_u[2][1]*grad_u[2][2]);
     strain(2,1) = strain(1,2);
-    strain(0,2) = real_t(0.5) * (grad_u[0][2] + grad_u[2][0] + grad_u[0][0]*grad_u[0][2] + grad_u[1][0]*grad_u[1][2] + grad_u[2][0]*grad_u[2][2]);
+    strain(0,2) = (real_t)0.5 * (grad_u[0][2] + grad_u[2][0] + grad_u[0][0]*grad_u[0][2] + grad_u[1][0]*grad_u[1][2] + grad_u[2][0]*grad_u[2][2]);
     strain(2,0) = strain(0,2);
-    strain(0,1) = real_t(0.5) * (grad_u[0][1] + grad_u[1][0] + grad_u[0][0]*grad_u[0][1] + grad_u[1][0]*grad_u[1][1] + grad_u[2][0]*grad_u[2][1]);
+    strain(0,1) = (real_t)0.5 * (grad_u[0][1] + grad_u[1][0] + grad_u[0][0]*grad_u[0][1] + grad_u[1][0]*grad_u[1][1] + grad_u[2][0]*grad_u[2][1]);
     strain(1,0) = strain(0,1);
 
     /* for (int i = 0; i < 3; i++) {

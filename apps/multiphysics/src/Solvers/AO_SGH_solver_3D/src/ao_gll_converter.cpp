@@ -91,14 +91,14 @@ void equispaced_to_gll(DCArrayKokkos<size_t>& nodes_in_elem,
                     const real_t s = xi_gll(jj);
                     const real_t t = xi_gll(kk);
 
-                    const real_t N0 = (real_t(1.0) - r) * (real_t(1.0) - s) * (real_t(1.0) - t) * real_t(0.125);
-                    const real_t N1 = (real_t(1.0) + r) * (real_t(1.0) - s) * (real_t(1.0) - t) * real_t(0.125);
-                    const real_t N2 = (real_t(1.0) - r) * (real_t(1.0) + s) * (real_t(1.0) - t) * real_t(0.125);
-                    const real_t N3 = (real_t(1.0) + r) * (real_t(1.0) + s) * (real_t(1.0) - t) * real_t(0.125);
-                    const real_t N4 = (real_t(1.0) - r) * (real_t(1.0) - s) * (real_t(1.0) + t) * real_t(0.125);
-                    const real_t N5 = (real_t(1.0) + r) * (real_t(1.0) - s) * (real_t(1.0) + t) * real_t(0.125);
-                    const real_t N6 = (real_t(1.0) - r) * (real_t(1.0) + s) * (real_t(1.0) + t) * real_t(0.125);
-                    const real_t N7 = (real_t(1.0) + r) * (real_t(1.0) + s) * (real_t(1.0) + t) * real_t(0.125);
+                    const real_t N0 = ((real_t)1.0 - r) * ((real_t)1.0 - s) * ((real_t)1.0 - t) * (real_t)0.125;
+                    const real_t N1 = ((real_t)1.0 + r) * ((real_t)1.0 - s) * ((real_t)1.0 - t) * (real_t)0.125;
+                    const real_t N2 = ((real_t)1.0 - r) * ((real_t)1.0 + s) * ((real_t)1.0 - t) * (real_t)0.125;
+                    const real_t N3 = ((real_t)1.0 + r) * ((real_t)1.0 + s) * ((real_t)1.0 - t) * (real_t)0.125;
+                    const real_t N4 = ((real_t)1.0 - r) * ((real_t)1.0 - s) * ((real_t)1.0 + t) * (real_t)0.125;
+                    const real_t N5 = ((real_t)1.0 + r) * ((real_t)1.0 - s) * ((real_t)1.0 + t) * (real_t)0.125;
+                    const real_t N6 = ((real_t)1.0 - r) * ((real_t)1.0 + s) * ((real_t)1.0 + t) * (real_t)0.125;
+                    const real_t N7 = ((real_t)1.0 + r) * ((real_t)1.0 + s) * ((real_t)1.0 + t) * (real_t)0.125;
 
                     const real_t xp = N0 * cx0 + N1 * cx1 + N2 * cx2 + N3 * cx3
                                     + N4 * cx4 + N5 * cx5 + N6 * cx6 + N7 * cx7;
@@ -157,7 +157,7 @@ void gll_to_equispaced(const DCArrayKokkos<size_t>& nodes_in_elem,
     });
     Kokkos::fence();
 
-    const real_t inv_p = real_t(1.0) / static_cast<double>(p);
+    const real_t inv_p = (real_t)1.0 / static_cast<double>(p);
 
     FOR_ALL(elem_gid, 0, num_elems, {
         const size_t g0 = nodes_in_elem(elem_gid, corner_lex(0));
@@ -203,18 +203,18 @@ void gll_to_equispaced(const DCArrayKokkos<size_t>& nodes_in_elem,
         for (size_t kk = 0; kk <= p; ++kk) {
             for (size_t jj = 0; jj <= p; ++jj) {
                 for (size_t ii = 0; ii <= p; ++ii) {
-                    const real_t r = -real_t(1.0) + real_t(2.0) * static_cast<double>(ii) * inv_p;
-                    const real_t s = -real_t(1.0) + real_t(2.0) * static_cast<double>(jj) * inv_p;
-                    const real_t t = -real_t(1.0) + real_t(2.0) * static_cast<double>(kk) * inv_p;
+                    const real_t r = -(real_t)1.0 + (real_t)2.0 * static_cast<double>(ii) * inv_p;
+                    const real_t s = -(real_t)1.0 + (real_t)2.0 * static_cast<double>(jj) * inv_p;
+                    const real_t t = -(real_t)1.0 + (real_t)2.0 * static_cast<double>(kk) * inv_p;
 
-                    const real_t N0 = (real_t(1.0) - r) * (real_t(1.0) - s) * (real_t(1.0) - t) * real_t(0.125);
-                    const real_t N1 = (real_t(1.0) + r) * (real_t(1.0) - s) * (real_t(1.0) - t) * real_t(0.125);
-                    const real_t N2 = (real_t(1.0) - r) * (real_t(1.0) + s) * (real_t(1.0) - t) * real_t(0.125);
-                    const real_t N3 = (real_t(1.0) + r) * (real_t(1.0) + s) * (real_t(1.0) - t) * real_t(0.125);
-                    const real_t N4 = (real_t(1.0) - r) * (real_t(1.0) - s) * (real_t(1.0) + t) * real_t(0.125);
-                    const real_t N5 = (real_t(1.0) + r) * (real_t(1.0) - s) * (real_t(1.0) + t) * real_t(0.125);
-                    const real_t N6 = (real_t(1.0) - r) * (real_t(1.0) + s) * (real_t(1.0) + t) * real_t(0.125);
-                    const real_t N7 = (real_t(1.0) + r) * (real_t(1.0) + s) * (real_t(1.0) + t) * real_t(0.125);
+                    const real_t N0 = ((real_t)1.0 - r) * ((real_t)1.0 - s) * ((real_t)1.0 - t) * (real_t)0.125;
+                    const real_t N1 = ((real_t)1.0 + r) * ((real_t)1.0 - s) * ((real_t)1.0 - t) * (real_t)0.125;
+                    const real_t N2 = ((real_t)1.0 - r) * ((real_t)1.0 + s) * ((real_t)1.0 - t) * (real_t)0.125;
+                    const real_t N3 = ((real_t)1.0 + r) * ((real_t)1.0 + s) * ((real_t)1.0 - t) * (real_t)0.125;
+                    const real_t N4 = ((real_t)1.0 - r) * ((real_t)1.0 - s) * ((real_t)1.0 + t) * (real_t)0.125;
+                    const real_t N5 = ((real_t)1.0 + r) * ((real_t)1.0 - s) * ((real_t)1.0 + t) * (real_t)0.125;
+                    const real_t N6 = ((real_t)1.0 - r) * ((real_t)1.0 + s) * ((real_t)1.0 + t) * (real_t)0.125;
+                    const real_t N7 = ((real_t)1.0 + r) * ((real_t)1.0 + s) * ((real_t)1.0 + t) * (real_t)0.125;
 
                     const real_t xp = N0 * cx0 + N1 * cx1 + N2 * cx2 + N3 * cx3
                                     + N4 * cx4 + N5 * cx5 + N6 * cx6 + N7 * cx7;

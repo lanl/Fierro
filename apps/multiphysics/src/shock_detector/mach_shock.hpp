@@ -80,12 +80,12 @@ namespace MachShockDetector {
 
                     real_t vol = GaussPoints_vol(gauss_gid);
                     
-                    real_t phi    = real_t(0.0);  // the shock detector
-                    real_t r_face = real_t(1.0);  // the ratio on the face
-                    real_t r_min  = real_t(1.0);  // the min ratio for the cell
-                    real_t r_coef = real_t(0.9);  // 0.9; the coefficient on the ratio
+                    real_t phi    = (real_t)0.0;  // the shock detector
+                    real_t r_face = (real_t)1.0;  // the ratio on the face
+                    real_t r_min  = (real_t)1.0;  // the min ratio for the cell
+                    real_t r_coef = (real_t)0.9;  // 0.9; the coefficient on the ratio
                                         //   (1=minmod and 2=superbee)
-                    real_t n_coef = real_t(1.0);  // the power on the limiting coefficient
+                    real_t n_coef = (real_t)1.0;  // the power on the limiting coefficient
                                         //   (1=nominal, and n_coeff > 1 oscillatory)
 
                     real_t div = GaussPoints_vel_grad(gauss_gid, 0, 0) + 
@@ -109,14 +109,14 @@ namespace MachShockDetector {
                     } // end for elem_lid
 
                     // calculate standard shock detector
-                    phi = real_t(1.0) - Kokkos::fmax(real_t(0.0), r_min);
+                    phi = (real_t)1.0 - Kokkos::fmax((real_t)0.0, r_min);
                     phi = Kokkos::pow(phi, n_coef);
 
                     //  Mach number shock detector
-                    real_t omega    = real_t(20.0); // 20.0;    // weighting factor on Mach number
-                    real_t third    = real_t(1.0) / real_t(3.0);
+                    real_t omega    = (real_t)20.0; // 20.0;    // weighting factor on Mach number
+                    real_t third    = (real_t)1.0 / (real_t)3.0;
                     real_t c_length = Kokkos::pow(vol, third); // characteristic length
-                    real_t alpha    = Kokkos::fmin(real_t(1.0), omega * (c_length * Kokkos::fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
+                    real_t alpha    = Kokkos::fmin((real_t)1.0, omega * (c_length * Kokkos::fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 
                     // use Mach based detector with standard shock detector
 
@@ -125,7 +125,7 @@ namespace MachShockDetector {
 
                     phi = alpha * phi;
 
-                    phi = Kokkos::fmax(real_t(0.0), Kokkos::fmin(real_t(1.0), phi));
+                    phi = Kokkos::fmax((real_t)0.0, Kokkos::fmin((real_t)1.0, phi));
 
                     real_t prev_phi = GaussPoints_shock_detector(gauss_gid); // Phi for previous material in this element
                     
@@ -182,12 +182,12 @@ namespace MachShockDetectorRZ {
 
                     real_t vol = GaussPoints_vol(gauss_gid);
                     
-                    real_t phi    = real_t(0.0);  // the shock detector
-                    real_t r_face = real_t(1.0);  // the ratio on the face
-                    real_t r_min  = real_t(1.0);  // the min ratio for the cell
-                    real_t r_coef = real_t(0.9);  // 0.9; the coefficient on the ratio
+                    real_t phi    = (real_t)0.0;  // the shock detector
+                    real_t r_face = (real_t)1.0;  // the ratio on the face
+                    real_t r_min  = (real_t)1.0;  // the min ratio for the cell
+                    real_t r_coef = (real_t)0.9;  // 0.9; the coefficient on the ratio
                                         //   (1=minmod and 2=superbee)
-                    real_t n_coef = real_t(1.0);  // the power on the limiting coefficient
+                    real_t n_coef = (real_t)1.0;  // the power on the limiting coefficient
                                         //   (1=nominal, and n_coeff > 1 oscillatory)
 
                     real_t div = GaussPoints_vel_grad(gauss_gid, 0, 0) + 
@@ -211,14 +211,14 @@ namespace MachShockDetectorRZ {
                     } // end for elem_lid
 
                     // calculate standard shock detector
-                    phi = real_t(1.0) - Kokkos::fmax(real_t(0.0), r_min);
+                    phi = (real_t)1.0 - Kokkos::fmax((real_t)0.0, r_min);
                     phi = Kokkos::pow(phi, n_coef);
 
                     //  Mach number shock detector
-                    real_t omega    = real_t(20.0); // 20.0;    // weighting factor on Mach number
-                    real_t third    = real_t(1.0) / real_t(3.0);
+                    real_t omega    = (real_t)20.0; // 20.0;    // weighting factor on Mach number
+                    real_t third    = (real_t)1.0 / (real_t)3.0;
                     real_t c_length = Kokkos::pow(vol, third); // characteristic length
-                    real_t alpha    = Kokkos::fmin(real_t(1.0), omega * (c_length * Kokkos::fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
+                    real_t alpha    = Kokkos::fmin((real_t)1.0, omega * (c_length * Kokkos::fabs(div)) / (MaterialPoints_sspd(mat_id, mat_point_sid) + fuzz) );
 
                     // use Mach based detector with standard shock detector
 
@@ -227,7 +227,7 @@ namespace MachShockDetectorRZ {
 
                     phi = alpha * phi;
 
-                    phi = Kokkos::fmax(real_t(0.0), Kokkos::fmin(real_t(1.0), phi));
+                    phi = Kokkos::fmax((real_t)0.0, Kokkos::fmin((real_t)1.0, phi));
 
                     real_t prev_phi = GaussPoints_shock_detector(gauss_gid); // Phi for previous material in this element
                     

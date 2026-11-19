@@ -49,7 +49,7 @@
 
 using namespace mtr;
 
-const real_t PI = real_t(3.14159265358979323846);
+const real_t PI = (real_t)3.14159265358979323846;
 
 
 //
@@ -74,15 +74,15 @@ void get_bernstein_basis_fcns(const CArrayKokkos<real_t> &bern_basis,
     // Output: bern_basis[8] = shape functions
 
     real_t Bx[2];
-    Bx[0] = real_t(1.0) - xi;
+    Bx[0] = (real_t)1.0 - xi;
     Bx[1] = xi;
 
     real_t By[2];
-    By[0] = real_t(1.0) - eta;
+    By[0] = (real_t)1.0 - eta;
     By[1] = eta;
 
     real_t Bz[2];
-    Bz[0] = real_t(1.0) - mu;
+    Bz[0] = (real_t)1.0 - mu;
     Bz[1] = mu;
 
     size_t node_rid = 0;
@@ -234,10 +234,10 @@ int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill,
 
 
     // check for a closed surface and calculate volume
-    double sum0 = real_t(0.0);
-    double sum1 = real_t(0.0);
-    double sum2 = real_t(0.0);
-    double sum3 = real_t(0.0);
+    double sum0 = (real_t)0.0;
+    double sum1 = (real_t)0.0;
+    double sum2 = (real_t)0.0;
+    double sum3 = (real_t)0.0;
 
     // no MATAR reductions for multiple values yet, thus harding coding the kokkos loop
     Kokkos::parallel_reduce(
@@ -265,9 +265,9 @@ int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill,
             
             // area normal of triangle
             vec_t N;
-            N.x = real_t(0.5)*(A.y * B.z - A.z * B.y); 
-            N.y = real_t(0.5)*(A.z * B.x - A.x * B.z); 
-            N.z = real_t(0.5)*(A.x * B.y - A.y * B.x); 
+            N.x = (real_t)0.5*(A.y * B.z - A.z * B.y); 
+            N.y = (real_t)0.5*(A.z * B.x - A.x * B.z); 
+            N.z = (real_t)0.5*(A.x * B.y - A.y * B.x); 
 
             sum_lcl_0 += N.x; // checking area normal in x sums to zero
             sum_lcl_1 += N.y; // checking area normal in y sums to zero
@@ -292,9 +292,9 @@ int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill,
             mid_point[2] += v2Z(tri);
    
             // need to divide by 3 to get mid point location
-            mid_point[0] /= real_t(3.0);
-            mid_point[1] /= real_t(3.0);
-            mid_point[2] /= real_t(3.0);
+            mid_point[0] /= (real_t)3.0;
+            mid_point[1] /= (real_t)3.0;
+            mid_point[2] /= (real_t)3.0;
 
             // n dot x_mid_point, this is for getting the volume
             sum_lcl_3 += N.x*mid_point[0] + N.y*mid_point[1] + N.z*mid_point[2]; 
@@ -309,9 +309,9 @@ int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill,
     // DEBUG:
     //printf("closed surface checks, nx=%f, ny=%f, nz=%f \n", sum0, sum1, sum2);
 
-    if(Kokkos::fabs(sum0)>real_t(1.e-8) || 
-       Kokkos::fabs(sum1)>real_t(1.e-8) ||
-       Kokkos::fabs(sum2)>real_t(1.e-8) )
+    if(Kokkos::fabs(sum0)>(real_t)1.e-8 || 
+       Kokkos::fabs(sum1)>(real_t)1.e-8 ||
+       Kokkos::fabs(sum2)>(real_t)1.e-8 )
     {
        printf("*** Error in STL geometry, it is not a closed part surface \n");
        printf("error = (%f, %f, %f) \n", sum0, sum1, sum2);
@@ -321,12 +321,12 @@ int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill,
 
 
     // apply scaling and shifts if they are set
-    if (Kokkos::fabs(origin_x) > real_t(1.0e-13) ||
-        Kokkos::fabs(origin_y) > real_t(1.0e-13) ||
-        Kokkos::fabs(origin_z) > real_t(1.0e-13) || 
-        Kokkos::fabs(scale_x - real_t(1.0)) > real_t(1.0e-13) ||
-        Kokkos::fabs(scale_y - real_t(1.0)) > real_t(1.0e-13) ||
-        Kokkos::fabs(scale_z - real_t(1.0)) > real_t(1.0e-13))
+    if (Kokkos::fabs(origin_x) > (real_t)1.0e-13 ||
+        Kokkos::fabs(origin_y) > (real_t)1.0e-13 ||
+        Kokkos::fabs(origin_z) > (real_t)1.0e-13 || 
+        Kokkos::fabs(scale_x - (real_t)1.0) > (real_t)1.0e-13 ||
+        Kokkos::fabs(scale_y - (real_t)1.0) > (real_t)1.0e-13 ||
+        Kokkos::fabs(scale_z - (real_t)1.0) > (real_t)1.0e-13)
     {
         // loop over all facets
         FOR_ALL(tri,0, num_inp_triangles, {
@@ -361,7 +361,7 @@ int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill,
     FOR_ALL(node_gid, 0, num_nodes, {
 
         // initialize to a big value
-        node_sdf(node_gid) = real_t(1.e32);
+        node_sdf(node_gid) = (real_t)1.e32;
         
         // loop over all triangles in the file
         // Note: future work should make this an oct-tree search
@@ -397,7 +397,7 @@ int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill,
     printf("building reference element \n");
 
     const size_t num_eval_pnts_1D = 9;  
-    const real_t ref_pnts_1D[9]={real_t(0.0), real_t(0.125), real_t(0.24), real_t(0.375), real_t(0.5), real_t(0.625), real_t(0.75), real_t(0.875), real_t(1.0)};
+    const real_t ref_pnts_1D[9]={(real_t)0.0, (real_t)0.125, (real_t)0.24, (real_t)0.375, (real_t)0.5, (real_t)0.625, (real_t)0.75, (real_t)0.875, (real_t)1.0};
 
     const size_t num_eval_pnts = num_eval_pnts_1D*num_eval_pnts_1D*num_eval_pnts_1D;
     const size_t num_nodes_in_elem = 8; // WARNING WARNING WARNING
@@ -431,7 +431,7 @@ int paint_stl_on_mesh(DCArrayKokkos<real_t> &elem_geo_volfrac_fill,
     // evaluate SDF at this eval point
     FOR_ALL(elem_gid, 0, num_elems, {
 
-        real_t num_inside_part = real_t(0.0);
+        real_t num_inside_part = (real_t)0.0;
 
         // loop over the eval points in this element
         for(size_t k=0; k<num_eval_pnts_1D; k++){
