@@ -354,10 +354,10 @@ void SGHRZ::execute(SimulationParameters_t& SimulationParamaters,
                                State.node.mass,
                                State.corner.force);
 
-            // ---- apply velocity boundary conditions to the boundary patches----
+            // ---- apply velocity boundary conditions to the boundary surfaces----
             boundary_velocity_rz(mesh, BoundaryConditions, State.node.vel, time_value);
 
-            // ---- apply contact boundary conditions to the boundary patches----
+            // ---- apply contact boundary conditions to the boundary surfaces----
             //boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);
 
             // mpi_coms();

@@ -340,7 +340,7 @@ void SGTM3D::execute(SimulationParameters_t& SimulationParamaters,
                 dt);
 
 
-            // ---- apply temperature boundary conditions to the boundary patches----
+            // ---- apply temperature boundary conditions to the boundary surfaces----
             boundary_temperature(mesh, BoundaryConditions, State.node.temp, time_value);
 
             State.node.temp.communicate();
