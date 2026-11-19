@@ -42,9 +42,9 @@ using namespace mtr;
 
 // a vector type with 3 components
 struct vec_t{
-    real_t x;
-    real_t y;
-    real_t z;
+    real_t x = 0.0;
+    real_t y = 0.0;
+    real_t z = 0.0;
     
     // default constructor
     KOKKOS_INLINE_FUNCTION

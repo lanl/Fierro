@@ -429,19 +429,12 @@ void geometry::get_bmatrix2D(const ViewCArrayKokkos<real_t>& B_matrix,
     */
 
     B_matrix(0, 0) = -(real_t)0.5 * (y(3) - y(1));
-
     B_matrix(1, 0) = -(real_t)0.5 * (y(0) - y(2));
-
     B_matrix(2, 0) = -(real_t)0.5 * (y(1) - y(3));
-
     B_matrix(3, 0) = -(real_t)0.5 * (y(2) - y(0));
-
     B_matrix(0, 1) = -(real_t)0.5 * (x(1) - x(3));
-
     B_matrix(1, 1) = -(real_t)0.5 * (x(2) - x(0));
-
     B_matrix(2, 1) = -(real_t)0.5 * (x(3) - x(1));
-
     B_matrix(3, 1) = -(real_t)0.5 * (x(0) - x(2));
 
     //

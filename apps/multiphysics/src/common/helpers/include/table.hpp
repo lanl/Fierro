@@ -82,7 +82,7 @@ struct Table_t{
     // based on the independent variable value `x` in column `independent_idx`.
     // Assumes that the data in `independent_idx` is sorted in ascending order.
     KOKKOS_INLINE_FUNCTION
-    double linear_interpolation_host(real_t independent_value, size_t dependent_idx, size_t independent_idx = 0) const {
+    real_t linear_interpolation_host(real_t independent_value, size_t dependent_idx, size_t independent_idx = 0) const {
         if (num_rows == 0) return (real_t)0.0;
         
         // Handle cases where independent_value is outside the range (clamping/extrapolation)
@@ -125,7 +125,7 @@ struct Table_t{
     // based on the independent variable value `x` in column `independent_idx`.
     // Assumes that the data in `independent_idx` is sorted in ascending order.
     KOKKOS_INLINE_FUNCTION
-    double linear_interpolation(real_t independent_value, size_t dependent_idx, size_t independent_idx = 0) const {
+    real_t linear_interpolation(real_t independent_value, size_t dependent_idx, size_t independent_idx = 0) const {
         if (num_rows == 0) return (real_t)0.0;
         
         // Handle cases where independent_value is outside the range (clamping/extrapolation)

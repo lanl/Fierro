@@ -284,9 +284,20 @@ void fill_regions(
         std::vector <fill_node_state>& fill_node_states,
         const size_t max_num_mats_per_elem)
 {
-    real_t voxel_dx, voxel_dy, voxel_dz;          // voxel mesh resolution, set by input file
-    real_t orig_x, orig_y, orig_z;                // origin of voxel elem center mesh, set by input file
-    size_t voxel_num_i, voxel_num_j, voxel_num_k; // num voxel elements in each direction, set by input file
+    // voxel mesh resolution, set by input file
+    real_t voxel_dx = 0.0;          
+    real_t voxel_dy = 0.0;
+    real_t voxel_dz = 0.0;
+
+    // origin of voxel elem center mesh, set by input file
+    real_t orig_x = 0.0;
+    real_t orig_y = 0.0;
+    real_t orig_z = 0.0;
+    
+    // num voxel elements in each direction, set by input file
+    size_t voxel_num_i = 0;
+    size_t voxel_num_j = 0;
+    size_t voxel_num_k = 0; 
 
     size_t num_region_fills = region_fills.size();  // the total number of region fills in the input file
     size_t num_region_ics   = region_ics.size();    // the total number of ics in input file to apply
@@ -677,7 +688,7 @@ void fill_regions(
             // ---
             case region::readVTUFile:
             {
-                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // initialized to zero, so no fill
+                elem_geo_volfrac_a_fill.set_values(0.0);  // initialized to zero, so no fill
 
                 FOR_ALL(elem_gid, 0, mesh.num_elems, {
                     // if the part id in .vtu file matches the specified id, then fill it
@@ -691,14 +702,14 @@ void fill_regions(
             // ---
             case region::no_volume:
             {
-                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // default is no, don't fill it
+                elem_geo_volfrac_a_fill.set_values(0.0);  // default is no, don't fill it
 
                 break;
             } // end case
             // ----
             default:
             {
-                elem_geo_volfrac_a_fill.set_values((real_t)0.0);  // default is no, don't fill it
+                elem_geo_volfrac_a_fill.set_values(0.0);  // default is no, don't fill it
 
                 break;
             } // end case
