@@ -73,9 +73,9 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
         if (num_ranks > 1) {
             Kokkos::abort("MPI is not supported with contact.");
         }
-        Contact_State.initialize(mesh.num_dims, mesh.num_nodes_in_patch, mesh.bdy_patches, mesh.num_bdy_nodes, mesh.num_bdy_patches,
-                                 mesh.patches_in_elem, mesh.elems_in_patch, mesh.nodes_in_elem, mesh.nodes_in_patch,
-                                 mesh.bdy_nodes, mesh.num_patches, mesh.num_nodes, State.node.coords,
+        Contact_State.initialize(mesh.num_dims, mesh.num_nodes_in_surf, mesh.bdy_surfs, mesh.num_bdy_nodes, mesh.num_bdy_surfs,
+                                 mesh.surfs_in_elem, mesh.elems_in_surf, mesh.nodes_in_elem, mesh.nodes_in_surf,
+                                 mesh.bdy_nodes, mesh.num_surfs, mesh.num_nodes, State.node.coords,
                                  BoundaryConditions.contact_max_local_iter, BoundaryConditions.contact_max_global_iter);
         printf("MAX ITERATIONS PER CONTACT PAIR: %zu\n", Contact_State.max_local_iter);
         printf("MAX ITERATIONS FOR GLOBAL CONTACT: %zu\n", Contact_State.max_global_iter);
@@ -455,7 +455,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                 continue; // skip update velocity, boundary vel, contact, energy, position, etc.
             }
 
-            // apply contact forces to boundary patches
+            // apply contact forces to boundary surfaces
             if (doing_contact && rk_stage == rk_num_stages-1) 
             {
                 //contact_bank.update_nodes(mesh, State);
@@ -487,10 +487,10 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                             Contact_State.contact_force,
                             doing_contact);
 
-            // ---- apply velocity boundary conditions to the boundary patches----
+            // ---- apply velocity boundary conditions to the boundary surfaces----
             boundary_velocity(mesh, BoundaryConditions, State.node.vel, time_value);
 
-            // ---- apply contact boundary conditions to the boundary patches----
+            // ---- apply contact boundary conditions to the boundary surfaces----
             // boundary_contact(mesh, BoundaryConditions, State.node.vel, time_value);
 
             // ----- Communication of the nodal velocity -----

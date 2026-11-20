@@ -47,7 +47,7 @@ void TLQS3D::get_qpt_area_normal(
         const ViewCArrayKokkos<double>& jac,
         const ViewCArrayKokkos<double>& inv_jac,
         ViewCArrayKokkos<double>& normal,
-        double& qpt_weighted_area) const
+        double& qpt_weighted_area)
 {
     
     // temp vars needed for the calculation
@@ -124,7 +124,7 @@ void TLQS3D::get_surf_qpt_coords(
         const MPICArrayKokkos<double>& node_coords,
         const size_t qpt_lid,
         const size_t surf_gid,
-        ViewCArrayKokkos<double>& qpt_coords) const
+        ViewCArrayKokkos<double>& qpt_coords)
 {
     // resetting output array
     qpt_coords(0) = 0.0;

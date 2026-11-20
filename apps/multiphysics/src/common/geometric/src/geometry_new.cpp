@@ -611,11 +611,11 @@ void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn check_bdy
+/// \fn check_bdy_surf
 ///
-/// \brief routine for checking to see if a vertex is on a boundary
+/// \brief routine for checking to see if a surface is on a boundary
 ///
-/// \param Global id of a patch
+/// \param Global id of a surface
 /// \param Boundary condition tag (bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell)
 /// \param Plane value
 /// \param Simulation mesh
@@ -623,13 +623,20 @@ void geometry::get_area_weights2D(const ViewCArrayKokkos<double>& corner_areas,
 ///
 /////////////////////////////////////////////////////////////////////////////
 KOKKOS_FUNCTION
-size_t check_bdy(const size_t patch_gid,
+size_t check_bdy_surf(const size_t surf_gid,
     const int     this_bc_tag,
     const double  val,
     const double  tolerance,
     const double  orig_x,
     const double  orig_y,
     const double  orig_z,
+    double  height,
+    const double  dx,
+    const double  dy,
+    const double  dz,
+    const double  dir_x,
+    const double  dir_y,
+    const double  dir_z,
     const swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_coords)
 {
@@ -638,59 +645,115 @@ size_t check_bdy(const size_t patch_gid,
     // default bool is not on the boundary
     size_t is_on_bdy = 0;
 
-    // the patch coordinates
-    double these_patch_coords[3];  // Note: cannot allocated array with num_dims
+    // the surface node coordinates
+    double these_surf_coords[3];  // Note: cannot allocated array with num_dims
 
-    // loop over the nodes on the patch
-    for (size_t patch_node_lid = 0; patch_node_lid < mesh.num_nodes_in_patch; patch_node_lid++) {
-        // get the nodal_gid for this node in the patch
-        size_t node_gid = mesh.nodes_in_patch(patch_gid, patch_node_lid);
+    // loop over the nodes on the surface
+    for (size_t surf_node_lid = 0; surf_node_lid < mesh.num_nodes_in_surf; surf_node_lid++) {
+        // get the nodal_gid for this node in the surface
+        size_t node_gid = mesh.nodes_in_surf(surf_gid, surf_node_lid);
 
         for (size_t dim = 0; dim < num_dims; dim++) {
-            these_patch_coords[dim] = node_coords(node_gid, dim); 
+            these_surf_coords[dim] = node_coords(node_gid, dim); 
         } // end for dim
 
         // a x-plane
         if (this_bc_tag == 0) {
-            if (fabs(these_patch_coords[0] - val) <= tolerance) {
+            if (fabs(these_surf_coords[0] - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
         // a y-plane
         else if (this_bc_tag == 1) {
-            if (fabs(these_patch_coords[1] - val) <= tolerance) {
+            if (fabs(these_surf_coords[1] - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
         // a z-plane
         else if (this_bc_tag == 2) {
-            if (fabs(these_patch_coords[2] - val) <= tolerance) {
+            if (fabs(these_surf_coords[2] - val) <= tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
-        // cylinderical shell where radius = sqrt(dx^2 + dy^2)
+        // cylindrical shell
         else if (this_bc_tag == 3) {
-            real_t R = sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
-                            (these_patch_coords[1] - orig_y) * (these_patch_coords[1] - orig_y));
+            if (num_dims == 2) {
+                height = 1.0;
+            }
+            // origin is the center of the cylinder
+            // get vector from node to origin
+            const double vx = these_surf_coords[0] - orig_x;
+            const double vy = these_surf_coords[1] - orig_y;
+            const double vz = these_surf_coords[2] - orig_z;
+            // dot product with direction vector to get signed distance along orientation direction
+            double signed_dist;
+            if (num_dims == 3) {
+                signed_dist = vx*dir_x + vy*dir_y + vz*dir_z;
+            } else {
+                signed_dist = vx*dir_x + vy*dir_y;
+            }
+            // get distance from the axis
+            double rho;
+            if (num_dims == 3) {
+                rho = sqrt(fmax(((vx*vx + vy*vy + vz*vz) - signed_dist*signed_dist), 0.0));
+            } else {
+                rho = sqrt(fmax(((vx*vx + vy*vy) - signed_dist*signed_dist), 0.0));
+            }
 
-            if (fabs(R - val) <= tolerance) {
+            // inside the cylinder if:
+            // distance along orientation direction is less than half the height
+            // inside the radius of the cylinder
+            if (fabs(signed_dist) <= 0.5*height + tolerance && fabs(rho - val) <= tolerance) {
                 is_on_bdy += 1;
             }
+
         } // end if on type
-        // spherical shell where radius = sqrt(dx^2 + dy^2 + dz^2)
+        // spherical volume where radius = sqrt(dx^2 + dy^2 + dz^2)
         else if (this_bc_tag == 4) {
-            real_t R = sqrt((these_patch_coords[0] - orig_x) * (these_patch_coords[0] - orig_x) +
-                            (these_patch_coords[1] - orig_y) * (these_patch_coords[1] - orig_y) +
-                            (these_patch_coords[2] - orig_z) * (these_patch_coords[2] - orig_z));
+            real_t R = sqrt((these_surf_coords[0] - orig_x) * (these_surf_coords[0] - orig_x) +
+                            (these_surf_coords[1] - orig_y) * (these_surf_coords[1] - orig_y) +
+                            (these_surf_coords[2] - orig_z) * (these_surf_coords[2] - orig_z));
 
-            if (fabs(R - val) <= tolerance) {
+            if (R <= val + tolerance) {
                 is_on_bdy += 1;
             }
         } // end if on type
-    } // end for nodes in the patch
+        // conical volume
+        else if (this_bc_tag == 6) {
+            // origin is the tip of the cone
+            // radius is the radius at the height of the cone
+            // direction is from tip towards base of cone
 
-    // if all nodes in the patch are on the geometry
-    if (is_on_bdy == mesh.num_nodes_in_patch) {
+            // get vector from node to origin
+            const double vx = these_surf_coords[0] - orig_x;
+            const double vy = these_surf_coords[1] - orig_y;
+            const double vz = these_surf_coords[2] - orig_z;
+            // dot product with direction vector to get signed distance along orientation direction
+            const double signed_dist = vx*dir_x + vy*dir_y + vz*dir_z;
+            // get distance from the axis
+            const double rho = sqrt(fmax(((vx*vx + vy*vy + vz*vz) - signed_dist*signed_dist), 0.0));
+
+            // inside the cone if:
+            // 0 <= signed_dist <= height: since origin is at the tip the point of interest must be within the entire height of the cone
+            // inside the radius of the cone accounting for the linear variation of radius
+            if (signed_dist >= 0.0 - tolerance && signed_dist <= height + tolerance && rho <= (val / height) * signed_dist + tolerance) {
+                is_on_bdy += 1;
+            }
+
+        } // end if on type
+        // hexahedral volume
+        else if (this_bc_tag == 7) {
+
+            // origin is the center of the box
+            if (fabs(these_surf_coords[0] - orig_x) <= 0.5*dx + tolerance && fabs(these_surf_coords[1] - orig_y) <= 0.5*dy + tolerance && fabs(these_surf_coords[2] - orig_z) <= 0.5*dz + tolerance) {
+                is_on_bdy += 1;
+            }
+
+        } // end if on type
+    } // end for nodes in the surface
+
+    // if all nodes in the surface are on the geometry
+    if (is_on_bdy == mesh.num_nodes_in_surf) {
         is_on_bdy = 1;
     }
     else{
@@ -700,12 +763,152 @@ size_t check_bdy(const size_t patch_gid,
     return is_on_bdy;
 } // end method to check bdy
 
+/////////////////////////////////////////////////////////////////////////////
+///
+/// \fn check_bdy_node
+///
+/// \brief routine for checking to see if a node is on a boundary
+///
+/// \param Global id of a node
+/// \param Boundary condition tag (bc_tag = 0 xplane, 1 yplane, 2 zplane, 3 cylinder, 4 is shell)
+/// \param Plane value
+/// \param Simulation mesh
+/// \param Nodal coordinates
+///
+/////////////////////////////////////////////////////////////////////////////
+KOKKOS_FUNCTION
+size_t check_bdy_node(const size_t node_gid,
+    const int     this_bc_tag,
+    const double  val,
+    const double  tolerance,
+    const double  orig_x,
+    const double  orig_y,
+    const double  orig_z,
+    double  height,
+    const double  dx,
+    const double  dy,
+    const double  dz,
+    const double  dir_x,
+    const double  dir_y,
+    const double  dir_z,
+    const swage::Mesh_t& mesh,
+    const MPICArrayKokkos<double>& node_coords)
+{
+    size_t num_dims = mesh.num_dims;
+
+    // default bool is not on the boundary
+    size_t is_on_bdy = 0;
+
+    // the node coordinates
+    double these_node_coords[3];  // Note: cannot allocated array with num_dims
+
+    for (size_t dim = 0; dim < num_dims; dim++) {
+        these_node_coords[dim] = node_coords(node_gid, dim); 
+    } // end for dim
+
+    // a x-plane
+    if (this_bc_tag == 0) {
+        if (fabs(these_node_coords[0] - val) <= tolerance) {
+            is_on_bdy = 1;
+        }
+    } // end if on type
+    // a y-plane
+    else if (this_bc_tag == 1) {
+        if (fabs(these_node_coords[1] - val) <= tolerance) {
+            is_on_bdy = 1;
+        }
+    } // end if on type
+    // a z-plane
+    else if (this_bc_tag == 2) {
+        if (fabs(these_node_coords[2] - val) <= tolerance) {
+            is_on_bdy = 1;
+        }
+    } // end if on type
+    // cylindrical shell
+    else if (this_bc_tag == 3) {
+        if (num_dims == 2) {
+            height = 1.0;
+        }
+        // origin is the center of the cylinder
+        // get vector from node to origin
+        const double vx = these_node_coords[0] - orig_x;
+        const double vy = these_node_coords[1] - orig_y;
+        const double vz = these_node_coords[2] - orig_z;
+        // dot product with direction vector to get signed distance along orientation direction
+        double signed_dist;
+        if (num_dims == 3) {
+            signed_dist = vx*dir_x + vy*dir_y + vz*dir_z;
+        } else {
+            signed_dist = vx*dir_x + vy*dir_y;
+        }
+        // get distance from the axis
+        double rho;
+        if (num_dims == 3) {
+            rho = sqrt(fmax(((vx*vx + vy*vy + vz*vz) - signed_dist*signed_dist), 0.0));
+        } else {
+            rho = sqrt(fmax(((vx*vx + vy*vy) - signed_dist*signed_dist), 0.0));
+        }
+
+        // inside the cylinder if:
+        // distance along orientation direction is less than half the height
+        // inside the radius of the cylinder
+        if (fabs(signed_dist) <= 0.5*height + tolerance && fabs(rho - val) <= tolerance) {
+            is_on_bdy += 1;
+        }
+
+    } // end if on type
+    // spherical volume where radius = sqrt(dx^2 + dy^2 + dz^2)
+    else if (this_bc_tag == 4) {
+        real_t R = sqrt((these_node_coords[0] - orig_x) * (these_node_coords[0] - orig_x) +
+                        (these_node_coords[1] - orig_y) * (these_node_coords[1] - orig_y) +
+                        (these_node_coords[2] - orig_z) * (these_node_coords[2] - orig_z));
+
+        if (R <= val + tolerance) {
+            is_on_bdy = 1;
+        }
+    } // end if on type
+    // conical volume
+    else if (this_bc_tag == 6) {
+        // origin is the tip of the cone
+        // radius is the radius at the height of the cone
+        // direction is from tip towards base of cone
+
+        // get vector from node to origin
+        const double vx = these_node_coords[0] - orig_x;
+        const double vy = these_node_coords[1] - orig_y;
+        const double vz = these_node_coords[2] - orig_z;
+        // dot product with direction vector to get signed distance along orientation direction
+        const double signed_dist = vx*dir_x + vy*dir_y + vz*dir_z;
+        // get distance from the axis
+        const double rho = sqrt(fmax(((vx*vx + vy*vy + vz*vz) - signed_dist*signed_dist), 0.0));
+
+        // inside the cone if:
+        // 0 <= signed_dist <= height: since origin is at the tip the point of interest must be within the entire height of the cone
+        // inside the radius of the cone accounting for the linear variation of radius
+        if (signed_dist >= 0.0 - tolerance && signed_dist <= height + tolerance && rho <= (val / height) * signed_dist + tolerance) {
+            is_on_bdy += 1;
+        }
+
+    } // end if on type
+    // hexahedral volume
+    else if (this_bc_tag == 7) {
+
+        // origin is the center of the box
+        if (fabs(these_node_coords[0] - orig_x) <= 0.5*dx + tolerance && fabs(these_node_coords[1] - orig_y) <= 0.5*dy + tolerance && fabs(these_node_coords[2] - orig_z) <= 0.5*dz + tolerance) {
+            is_on_bdy += 1;
+        }
+
+    } // end if on type
+
+    return is_on_bdy;
+} // end method to check bdy
+
 
 /////////////////////////////////////////////////////////////////////////////
 ///
 /// \fn tag_bdys
 ///
-/// \brief set planes for tagging sub sets of boundary patches
+/// \brief set planes for tagging sub sets of boundary surfaces and nodes
 ///
 /// \param Boundary condition
 /// \param Simulation mesh
@@ -716,121 +919,156 @@ void tag_bdys(const BoundaryCondition_t& boundary,
     swage::Mesh_t& mesh,
     const MPICArrayKokkos<double>& node_coords)
 {
-    // size and initialize the number of boundary surfaces in set
-    mesh.num_bdy_surfs_in_set = DCArrayKokkos<size_t> (mesh.num_bdy_sets);
-    mesh.num_bdy_surfs_in_set.set_values(0);
+    // create a temporary storage for the bdy surfaces in a set
+    DynamicRaggedRightArrayKokkos<size_t> temp_bdy_surfs_in_set (mesh.num_bdy_sets, mesh.num_bdy_surfs, "temp_bdy_surfs_in_set");
 
-    // create a temporary storage for the bdy patches in a set
-    DynamicRaggedRightArrayKokkos<size_t> temp_bdy_patches_in_set (mesh.num_bdy_sets, mesh.num_bdy_patches, "temp_bdy_patches_in_set");
-    
-    // initialize the number of bdy patches in a set to zero
-    mesh.num_bdy_patches_in_set.set_values(0.0); // array length is num_bdy_sets
+    // create a temporary storage for the bdy nodes in a set
+    DynamicRaggedRightArrayKokkos<size_t> temp_bdy_nodes_in_set (mesh.num_bdy_sets, mesh.num_bdy_nodes, "temp_bdy_nodes_in_set");
 
-    // If no boundaries, return
-    if(mesh.num_bdy_sets == 0) return;
-
-
-
+    // in tag_bdys, right after constructing the temporaries
     FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
-        // tag boundaries
-        int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).surface;
-        double value  = boundary.BoundaryConditionSetup(bdy_set).value;
-        double tolerance = boundary.BoundaryConditionSetup(bdy_set).tolerance;
-        double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
-        double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
-        double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
-        
-
-
-        // save the boundary patches to this set that are on the plane, spheres, etc.
-        for (size_t bdy_patch_lid = 0; bdy_patch_lid < mesh.num_bdy_patches; bdy_patch_lid++) {
-            // save the patch index
-            size_t bdy_patch_gid = mesh.bdy_patches(bdy_patch_lid);
-
-            // check to see if this patch is on the specified plane
-            size_t is_on_bdy = check_bdy(bdy_patch_gid,
-                                         bc_tag_id,
-                                         value,
-                                         tolerance,
-                                         orig_x,
-                                         orig_y,
-                                         orig_z,
-                                         mesh,
-                                         node_coords); // no=0, yes=1
-
-            if (is_on_bdy == 1) {
-                size_t index =temp_bdy_patches_in_set.stride(bdy_set);
-
-                // increment the number of boundary patches saved
-                temp_bdy_patches_in_set.stride(bdy_set)++;
-                mesh.num_bdy_patches_in_set(bdy_set)++;
-
-                // save the bdy_patch_gid
-                temp_bdy_patches_in_set(bdy_set, index) = bdy_patch_gid;
-            } // end if
-        } // end for bdy_patch
-
-    });  // end FOR_ALL bdy_sets
+        temp_bdy_surfs_in_set.stride(bdy_set) = 0;
+        temp_bdy_nodes_in_set.stride(bdy_set) = 0;
+    });
     Kokkos::fence();
-    mesh.num_bdy_patches_in_set.update_host(); // save to host
+
+    // size and initialize the number of bdy surfaces in a set to zero
+    mesh.num_bdy_surfs_in_set = DCArrayKokkos<size_t> (mesh.num_bdy_sets, "mesh.num_bdy_surfs_in_set");
+    mesh.num_bdy_surfs_in_set.set_values(0); // array length is num_bdy_sets
+
+    // If no boundaries, still build the (empty) boundary node sets so
+    // mesh.num_bdy_nodes_in_set and mesh.bdy_nodes_in_set are allocated, then return
+    if(mesh.num_bdy_sets == 0) {
+        build_boundry_node_sets(mesh, temp_bdy_nodes_in_set, boundary.is_node);
+        return;
+    }
+
+
+    for (int bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
+        // tag boundaries
+        if (!boundary.is_node(bdy_set)) { // if surface tagging
+            // save the boundary surfaces to this set that are on the plane, spheres, etc.
+            FOR_ALL(bdy_surf_lid, 0, mesh.num_bdy_surfs, {
+                const int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).surface;
+                const double value  = boundary.BoundaryConditionSetup(bdy_set).value;
+                const double tolerance = boundary.BoundaryConditionSetup(bdy_set).tolerance;
+                const double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
+                const double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
+                const double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
+                double height = boundary.BoundaryConditionSetup(bdy_set).height;
+                const double dx = boundary.BoundaryConditionSetup(bdy_set).edge_lengths[0];
+                const double dy = boundary.BoundaryConditionSetup(bdy_set).edge_lengths[1];
+                const double dz = boundary.BoundaryConditionSetup(bdy_set).edge_lengths[2];
+                const double dir_x = boundary.BoundaryConditionSetup(bdy_set).direction[0];
+                const double dir_y = boundary.BoundaryConditionSetup(bdy_set).direction[1];
+                const double dir_z = boundary.BoundaryConditionSetup(bdy_set).direction[2];
+
+                // save the surface index
+                size_t bdy_surf_gid = mesh.bdy_surfs(bdy_surf_lid);
+
+                // check to see if this surface is on the specified plane
+                size_t is_on_bdy = check_bdy_surf(bdy_surf_gid,
+                                                  bc_tag_id,
+                                                  value,
+                                                  tolerance,
+                                                  orig_x,
+                                                  orig_y,
+                                                  orig_z,
+                                                  height,
+                                                  dx,
+                                                  dy,
+                                                  dz,
+                                                  dir_x,
+                                                  dir_y,
+                                                  dir_z,
+                                                  mesh,
+                                                  node_coords); // no=0, yes=1
+
+                if (is_on_bdy == 1) {
+                    // atomically claim a unique slot and increment the stride
+                    const size_t index = Kokkos::atomic_fetch_add(&temp_bdy_surfs_in_set.stride(bdy_set), static_cast<size_t>(1));
+
+                    Kokkos::atomic_increment(&mesh.num_bdy_surfs_in_set(bdy_set));
+
+                    // save the bdy_surf_gid
+                    temp_bdy_surfs_in_set(bdy_set, index) = bdy_surf_gid;
+                } // end if
+            });
+            Kokkos::fence();
+        } // end if
+        else { // else node tagging
+            // save the boundary nodes to this set that are on the plane, spheres, etc.
+            FOR_ALL(bdy_node_lid, 0, mesh.num_bdy_nodes, {
+                const int bc_tag_id = boundary.BoundaryConditionSetup(bdy_set).surface;
+                const double value  = boundary.BoundaryConditionSetup(bdy_set).value;
+                const double tolerance = boundary.BoundaryConditionSetup(bdy_set).tolerance;
+                const double orig_x = boundary.BoundaryConditionSetup(bdy_set).origin[0];
+                const double orig_y = boundary.BoundaryConditionSetup(bdy_set).origin[1];
+                const double orig_z = boundary.BoundaryConditionSetup(bdy_set).origin[2];
+                double height = boundary.BoundaryConditionSetup(bdy_set).height;
+                const double dx = boundary.BoundaryConditionSetup(bdy_set).edge_lengths[0];
+                const double dy = boundary.BoundaryConditionSetup(bdy_set).edge_lengths[1];
+                const double dz = boundary.BoundaryConditionSetup(bdy_set).edge_lengths[2];
+                const double dir_x = boundary.BoundaryConditionSetup(bdy_set).direction[0];
+                const double dir_y = boundary.BoundaryConditionSetup(bdy_set).direction[1];
+                const double dir_z = boundary.BoundaryConditionSetup(bdy_set).direction[2];
+                
+                // save the node index
+                size_t bdy_node_gid = mesh.bdy_nodes(bdy_node_lid);
+
+                // check to see if this node is on the specified plane
+                size_t is_on_bdy = check_bdy_node(bdy_node_gid,
+                                                  bc_tag_id,
+                                                  value,
+                                                  tolerance,
+                                                  orig_x,
+                                                  orig_y,
+                                                  orig_z,
+                                                  height,
+                                                  dx,
+                                                  dy,
+                                                  dz,
+                                                  dir_x,
+                                                  dir_y,
+                                                  dir_z,
+                                                  mesh,
+                                                  node_coords); // no=0, yes=1
+
+                if (is_on_bdy == 1) {
+                    // atomically claim a unique slot and increment the stride
+                    const size_t index = Kokkos::atomic_fetch_add(&temp_bdy_nodes_in_set.stride(bdy_set), static_cast<size_t>(1));
+
+                    // save the bdy_node_gid
+                    temp_bdy_nodes_in_set(bdy_set, index) = bdy_node_gid;
+                } // end if
+            });
+            Kokkos::fence();
+        } // end else
+    } // end for over boundary sets
+    mesh.num_bdy_surfs_in_set.update_host(); // save to host
 
 
     // allocate RaggedRightArray
-    mesh.bdy_patches_in_set = RaggedRightArrayKokkos<size_t>(mesh.num_bdy_patches_in_set, "mesh.bdy_patches_in_set");
+    mesh.bdy_surfs_in_set = RaggedRightArrayKokkos<size_t>(mesh.num_bdy_surfs_in_set, "mesh.bdy_surfs_in_set");
 
 
-    // save the bdy_patches_gid in temp_bdy_patches_in_set to bdy_patches_in_set
+    // save the bdy_surf_gid in temp_bdy_surfs_in_set to bdy_surfs_in_set
     for(size_t bdy_set = 0; bdy_set<mesh.num_bdy_sets; bdy_set++){
 
-        FOR_ALL(patch_lid, 0, mesh.num_bdy_patches_in_set.host(bdy_set), {
+        if (!boundary.is_node(bdy_set)) {
+            FOR_ALL(bdy_surf_lid, 0, mesh.num_bdy_surfs_in_set.host(bdy_set), {
 
-            // save the bdy_patch_gid to RaggedRightArray
-            mesh.bdy_patches_in_set(bdy_set, patch_lid) = temp_bdy_patches_in_set(bdy_set, patch_lid);
+                // save the bdy_surf_gid to RaggedRightArray
+                mesh.bdy_surfs_in_set(bdy_set, bdy_surf_lid) = temp_bdy_surfs_in_set(bdy_set, bdy_surf_lid);
 
-        }); // end FOR_ALL over all pathces
+            }); // end FOR_ALL over all surfaces
+        }
 
     } // end for bdy_set
+    Kokkos::fence();
 
-    // temporary array allocation for tracking which surfaces are in the set
-    CArrayKokkos<size_t> temp_bdy_surfs_in_set (mesh.num_bdy_sets, mesh.num_surfs, "temp_bdy_surfs_in_set");
-    temp_bdy_surfs_in_set.set_values(0);
-
-    // getting number of unique surfaces that appear in bdy_patches_in_set
-    for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
-
-        FOR_ALL(patch_lid, 0, mesh.num_bdy_patches_in_set.host(bdy_set), {
-            const size_t surf_gid = mesh.surf_in_patch(mesh.bdy_patches_in_set(bdy_set, patch_lid));
-            Kokkos::atomic_store(&temp_bdy_surfs_in_set(bdy_set, surf_gid), 1);
-        });
-
-        size_t sum = 0;
-        size_t sum_lcl = 0;
-
-        FOR_REDUCE_SUM(i, 0, mesh.num_surfs, sum_lcl, {
-            sum_lcl += temp_bdy_surfs_in_set(bdy_set, i);
-        }, sum);
-
-        mesh.num_bdy_surfs_in_set.host(bdy_set) = sum;
-
-    }
-    mesh.num_bdy_surfs_in_set.update_device();
-
-    // sizing bdy_surfs_in_set
-    mesh.bdy_surfs_in_set = RaggedRightArrayKokkos<size_t>(mesh.num_bdy_surfs_in_set, " bdy_surfs_in_set");
-
-    // getting the surface ids
-    for (size_t bdy_set = 0; bdy_set < mesh.num_bdy_sets; bdy_set++) {
-        FOR_ALL(surf_lid, 0, mesh.num_bdy_surfs_in_set.host(bdy_set), {
-            size_t tally = 0;
-            for (size_t i = 0; i < mesh.num_surfs; i++) {
-                tally += temp_bdy_surfs_in_set(bdy_set, i);
-                if (tally == surf_lid+1) {
-                    mesh.bdy_surfs_in_set(bdy_set, surf_lid) = i;
-                    break;
-                }
-            }
-        });
-    }
+    // build the boundary node sets
+    build_boundry_node_sets(mesh, temp_bdy_nodes_in_set, boundary.is_node);
 
     return;
 } // end tag
@@ -844,73 +1082,68 @@ void tag_bdys(const BoundaryCondition_t& boundary,
 /// \brief Build sets of boundary nodes
 ///
 /////////////////////////////////////////////////////////////////////////////
-void build_boundry_node_sets(swage::Mesh_t& mesh)
+void build_boundry_node_sets(swage::Mesh_t& mesh, DynamicRaggedRightArrayKokkos<size_t>& temp_bdy_nodes_in_set, const CArray<bool>& is_node)
 {
-    // build boundary nodes in each boundary set
+    const size_t num_bdy_sets       = mesh.num_bdy_sets;
+    const size_t num_nodes_in_surf  = mesh.num_nodes_in_surf;
 
-    mesh.num_bdy_nodes_in_set = DCArrayKokkos<size_t>(mesh.num_bdy_sets, "mesh.num_bdy_nodes_in_set");
-    mesh.num_bdy_nodes_in_set.set_values(0.0);
+    mesh.num_bdy_nodes_in_set = DCArrayKokkos<size_t>(num_bdy_sets, "mesh.num_bdy_nodes_in_set");
+    mesh.num_bdy_nodes_in_set.set_values(0);
 
-    CArrayKokkos<long long int> temp_count_num_bdy_nodes_in_set(mesh.num_bdy_sets, mesh.num_nodes, "temp_count_num_bdy_nodes_in_set");
+    // Shallow (view) copies so the lambdas don't capture the entire mesh struct
+    auto num_bdy_nodes_in_set = mesh.num_bdy_nodes_in_set;
+    auto bdy_surfs_in_set     = mesh.bdy_surfs_in_set;
+    auto nodes_in_surf        = mesh.nodes_in_surf;
 
-    DynamicRaggedRightArrayKokkos<size_t> temp_nodes_in_set(mesh.num_bdy_sets, mesh.num_bdy_patches * mesh.num_nodes_in_patch, "temp_nodes_in_set");
+    // last boundary set that claimed each node (-1 = never claimed)
+    CArrayKokkos<long long int> node_last_set(mesh.num_nodes, "node_last_set");
+    node_last_set.set_values(-1);
 
-    // Parallel loop over boundary sets on device
-    FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
-        // find the number of patches_in_set
+    // find the unique nodes in each set
+    for (size_t bdy_set = 0; bdy_set < num_bdy_sets; bdy_set++) {
+        if (!is_node(bdy_set)) {
+            // loop bound is evaluated on the host
+            const size_t num_surfs_in_set = mesh.num_bdy_surfs_in_set.host(bdy_set);
 
-        // Loop over boundary patches in boundary set
-        for (size_t bdy_patch_gid = 0; bdy_patch_gid < mesh.num_bdy_patches_in_set(bdy_set); bdy_patch_gid++) {
-            // get the global id for this boundary patch
-            size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+            FOR_ALL(bdy_surf_lid, 0, num_surfs_in_set,
+                    node_lid,     0, num_nodes_in_surf, {
 
-            // apply boundary condition at nodes on boundary
-            for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++) {
-                size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+                const size_t surf_gid = bdy_surfs_in_set(bdy_set, bdy_surf_lid);
+                const size_t node_gid = nodes_in_surf(surf_gid, node_lid);
 
-                temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = -1;
-            }     // end for node_lid
-        } // end for bdy_patch_gid
+                // only one thread per (set, node) sees a value != bdy_set
+                const long long int old =
+                    Kokkos::atomic_exchange(&node_last_set(node_gid), (long long int)bdy_set);
 
-        // Loop over boundary patches in boundary set
-        for (size_t bdy_patch_gid = 0; bdy_patch_gid < mesh.num_bdy_patches_in_set(bdy_set); bdy_patch_gid++) {
-            // get the global id for this boundary patch
-            size_t patch_gid = mesh.bdy_patches_in_set(bdy_set, bdy_patch_gid);
+                if (old != (long long int)bdy_set) {
+                    // reserve a unique slot; stride is incremented before the write,
+                    // matching the original stride++ then write ordering
+                    const size_t slot =
+                        Kokkos::atomic_fetch_add(&temp_bdy_nodes_in_set.stride(bdy_set), size_t(1));
 
-            // apply boundary condition at nodes on boundary
-            for (size_t node_lid = 0; node_lid < mesh.num_nodes_in_patch; node_lid++) {
-                size_t node_gid = mesh.nodes_in_patch(patch_gid, node_lid);
+                    temp_bdy_nodes_in_set(bdy_set, slot) = node_gid;
+                }
+            });
+        }
+    } // end for bdy_set
 
-                if (temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) == -1) {
-                    size_t num_saved = mesh.num_bdy_nodes_in_set(bdy_set);
-
-                    mesh.num_bdy_nodes_in_set(bdy_set)++;
-
-                    // replace -1 with node_gid to denote the node was already saved
-                    temp_count_num_bdy_nodes_in_set(bdy_set, node_gid) = node_gid;
-
-                    // increment the number of saved nodes, create memory
-                    temp_nodes_in_set.stride(bdy_set)++;
-                    temp_nodes_in_set(bdy_set, num_saved) = node_gid;
-                }     // end if
-            }     // end for node_lid
-        } // end for bdy_patch_gid
-    }); // end FOR_ALL bdy_set
+    // the counts are just the final strides
+    FOR_ALL(bdy_set, 0, num_bdy_sets, {
+        num_bdy_nodes_in_set(bdy_set) = temp_bdy_nodes_in_set.stride(bdy_set);
+    });
     Kokkos::fence();
+
+    // make sure the host has the counts before building the ragged array
+    mesh.num_bdy_nodes_in_set.update_host();
 
     // allocate the RaggedRight bdy_nodes_in_set array
     mesh.bdy_nodes_in_set = RaggedRightArrayKokkos<size_t>(mesh.num_bdy_nodes_in_set, "mesh.bdy_nodes_in_set");
+    auto bdy_nodes_in_set = mesh.bdy_nodes_in_set;
 
-    FOR_ALL(bdy_set, 0, mesh.num_bdy_sets, {
-        // Loop over boundary patches in boundary set
-        for (size_t bdy_node_lid = 0; bdy_node_lid < mesh.num_bdy_nodes_in_set(bdy_set); bdy_node_lid++) {
-            // save the bdy_node_gid
-            mesh.bdy_nodes_in_set(bdy_set, bdy_node_lid) = temp_nodes_in_set(bdy_set, bdy_node_lid);
-        } // end for
-    }); // end FOR_ALL bdy_set
-
-    // update the host side for the number nodes in a bdy_set
-    mesh.num_bdy_nodes_in_set.update_host();
-
-    return;
-} // end method to build boundary nodes
+    FOR_ALL(bdy_set, 0, num_bdy_sets, {
+        for (size_t bdy_node_lid = 0; bdy_node_lid < num_bdy_nodes_in_set(bdy_set); bdy_node_lid++) {
+            bdy_nodes_in_set(bdy_set, bdy_node_lid) = temp_bdy_nodes_in_set(bdy_set, bdy_node_lid);
+        }
+    });
+    Kokkos::fence();
+}
