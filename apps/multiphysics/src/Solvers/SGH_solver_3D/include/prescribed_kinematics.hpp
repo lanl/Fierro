@@ -32,15 +32,15 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 **********************************************************************************************/
 
-#ifndef REORIENTATION_KINEMATICS_H
-#define REORIENTATION_KINEMATICS_H
+#ifndef PRESCRIBED_KINEMATICS_H
+#define PRESCRIBED_KINEMATICS_H
 
 #include "matar.h"
 #include "ELEMENTS.h"
 #include "state.hpp"
 #include <cmath>
 
-namespace ReorientationKinematics
+namespace PrescribedKinematics
 {
 
 /////////////////////////////////////////////////////////////////////////////
@@ -96,13 +96,15 @@ void mat_mult_3x3(const double A[3][3], const double B[3][3], double C[3][3]) {
 
 /////////////////////////////////////////////////////////////////////////////
 ///
-/// \fn prescribe_reorientation_kinematics
+/// \fn prescribe_kinematics
 ///
-/// \brief Prescribes rigid-body rotation + cohesive zone opening
-///        Overrides solver's position/velocity update for validation testing
+/// \brief B-side nodes open along the rotated normal n(t) by
+///        s(t) = cz_opening_rate * t + cz_opening_beta * t^2
+///        reorientation test:          cz_opening_beta = 0 (constant opening rate)
+///        variable opening rate test:  omega_y = omega_z = 0, cz_opening_rate = 0, cz_opening_beta = beta
 ///
 /////////////////////////////////////////////////////////////////////////////
-inline void prescribe_reorientation_kinematics(
+inline void prescribe_kinematics(
     const swage::Mesh_t& mesh,
     State_t& State,
     const CArrayKokkos<double>& initial_coords,
@@ -111,15 +113,18 @@ inline void prescribe_reorientation_kinematics(
     double dt_stage,
     double omega_y,
     double omega_z,
-    double cz_opening_rate)
+    double cz_opening_rate,
+    double cz_opening_beta)
 {
     // compute scalar values on host
     const double angle_y_t   = omega_y * time_value;
     const double angle_z_t   = omega_z * time_value;
     const double angle_y_tdt = omega_y * (time_value + dt_stage);
     const double angle_z_tdt = omega_z * (time_value + dt_stage);
-    const double s_t   = cz_opening_rate * time_value;
-    const double s_tdt = cz_opening_rate * (time_value + dt_stage);
+    const double s_t   = cz_opening_rate * time_value
+                       + cz_opening_beta * time_value * time_value;
+    const double s_tdt = cz_opening_rate * (time_value + dt_stage)
+                       + cz_opening_beta * (time_value + dt_stage) * (time_value + dt_stage);
 
     FOR_ALL(node_gid, 0, mesh.num_nodes, {
         // declare rotation matrices as thread local storage
@@ -195,6 +200,6 @@ inline void prescribe_reorientation_kinematics(
     Kokkos::fence();
 }
 
-} // end namespace ReorientationKinematics
+} // end namespace PrescribedKinematics
 
-#endif // REORIENTATION_KINEMATICS_H
+#endif // PRESCRIBED_KINEMATICS_H

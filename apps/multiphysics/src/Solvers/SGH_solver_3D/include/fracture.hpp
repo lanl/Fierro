@@ -93,7 +93,8 @@ struct cohesive_zones_t {
     double omega_y = 0.0; // rotation about x2 axis (rad/time)
     double omega_z = 0.0; // rotation about x3 axis (rad/time)
     double cz_opening_rate = 0.0; // constant rate of opening for cohesive zone interface
-    double x_interface = 0.0; // x inferface location for reorientation validation mode
+    double cz_opening_beta = 0.0; // quadratic opening coefficient: s(t) = cz_opening_rate*t + cz_opening_beta*t^2
+    double x_interface = 0.0; // x interface location for reorientation validation mode
     CArrayKokkos<double> initial_coords; // initial nodal coordinates of the mesh
     CArrayKokkos<int> cz_b_side_flag; // flag for nodes on B side of interface for opening 
 

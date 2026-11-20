@@ -41,7 +41,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "geometry_new.hpp"
 #include "mesh_writer.hpp"
 #include "tipton_equilibration.hpp"
-#include "reorientation_kinematics.hpp"
+#include "prescribed_kinematics.hpp"
 #include "mach_shock.hpp"
 
 
@@ -319,7 +319,7 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
 
             if (reorient_mode) {
                 // prescribe reorientation kinematics to all nodes (skip over normal SGH evolution)
-                ReorientationKinematics::prescribe_reorientation_kinematics(
+                PrescribedKinematics::prescribe_kinematics(
                     mesh, State,
                     cohesive_zones_bank.initial_coords,
                     cohesive_zones_bank.cz_b_side_flag,
@@ -327,7 +327,8 @@ void SGH3D::execute(SimulationParameters_t& SimulationParamaters,
                     dt_stage,
                     cohesive_zones_bank.omega_y, 
                     cohesive_zones_bank.omega_z,
-                    cohesive_zones_bank.cz_opening_rate
+                    cohesive_zones_bank.cz_opening_rate,
+                    cohesive_zones_bank.cz_opening_beta
                 );
             }
 

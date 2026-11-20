@@ -66,7 +66,8 @@ enum BCVars {
     omega_z = 2, // rotation about x3
     cz_opening_rate = 3, // constant opening rate for cohesive zone nodes
     x_interface = 4, // for B side flagging
-    num_bc_vars = 5 // total number of parameters
+    cz_opening_beta = 5, // optional: quadratic opening coefficient beta [cm/us^2], s(t) = cz_opening_rate*t + beta*t^2 (0 if not given)
+    num_bc_vars = 6 // total number of parameters
 };
 
 KOKKOS_FUNCTION
